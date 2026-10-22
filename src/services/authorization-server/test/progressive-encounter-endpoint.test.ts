@@ -926,6 +926,22 @@ describe("the floors and the human-path disclosure (@spec discovery#lying-resour
     expect((as.kernel.get(approved.mission_id) as MissionRecord).encounter_id).toBe(facts?.encounter_id);
   });
 
+  it("an encounter stored before trusted taint and the floors is disclosed with its taint state unknown, claiming no floors, id or pinning, never as untainted", async () => {
+    const { code, facts } = await encounter("payments:invoice.read");
+    expect(as.expansionDeferrals.disclosure(code as string)?.encounter_disclosure?.taint).toBe("no_untrusted_content_reported");
+    // The facts stage 2 stored (identity pinning, no taint or floors), then those stage 1 stored (intake only).
+    for (const stored of [
+      { origin: facts?.origin, resources: facts?.resources, pinned: false, pin_failure: "origin_unauthenticated" },
+      { origin: facts?.origin, resources: facts?.resources },
+    ]) {
+      as.expansionDeferrals.db
+        .prepare("UPDATE expansion_deferrals SET encounter_json = ? WHERE deferral_code = ?")
+        .run(JSON.stringify(stored), code);
+      const shown = as.expansionDeferrals.disclosure(code as string)?.encounter_disclosure;
+      expect(shown, JSON.stringify(stored)).toEqual({ pinned: false, taint: "taint_state_unknown" });
+    }
+  });
+
   it("each adjudication has its own encounter_id", async () => {
     const first = (await encounter("payments:invoice.read")).facts?.encounter_id;
     const second = (await encounter("payments:invoice.read")).facts?.encounter_id;

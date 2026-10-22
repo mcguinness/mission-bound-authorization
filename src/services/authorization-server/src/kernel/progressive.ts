@@ -730,28 +730,35 @@ export function encounterFloors(
  * state is unknown, though the floor treats it as tainted.
  */
 export interface EncounterDisclosure {
-  encounter_id: string;
+  /** Absent for an encounter stored before encounter ids. */
+  encounter_id?: string;
   resource?: EncounteredResource;
+  /** True only when the stored facts record the identity as pinned. */
   pinned: boolean;
   declaration?: { claimed_by_resource: true; digest: string; operations?: string[] };
   taint: "untrusted_content_ingested" | "no_untrusted_content_reported" | "taint_state_unknown";
-  floors: EncounterFloor[];
+  /** Absent for an encounter stored before the floors were recorded, never read as none. */
+  floors?: EncounterFloor[];
 }
 
-export function encounterDisclosure(facts: EncounterFacts): EncounterDisclosure {
-  const reportedTainted = facts.taint_report?.tainted === true;
+export function encounterDisclosure(facts: Partial<EncounterFacts>): EncounterDisclosure {
+  // Only the harness's own report supports a statement. A tainted report,
+  // a stale one included (taint persists for the session), says untrusted
+  // content was ingested; a trusted report of untainted says none was
+  // reported; anything else is unknown, facts stored before trusted taint
+  // (#1469 stages 1 and 2) among them, which carry no report at all.
+  const reported = facts.taint_report?.tainted;
+  const trusted = facts.taint_failure === undefined;
   const taint =
-    facts.taint_failure === undefined
-      ? facts.tainted
-        ? "untrusted_content_ingested"
-        : "no_untrusted_content_reported"
-      : facts.taint_failure === "stale" && reportedTainted
-        ? "untrusted_content_ingested"
+    reported === true && (trusted || facts.taint_failure === "stale")
+      ? "untrusted_content_ingested"
+      : reported === false && trusted
+        ? "no_untrusted_content_reported"
         : "taint_state_unknown";
   return {
-    encounter_id: facts.encounter_id,
+    ...(facts.encounter_id ? { encounter_id: facts.encounter_id } : {}),
     ...(facts.resource ? { resource: facts.resource } : {}),
-    pinned: facts.pinned,
+    pinned: facts.pinned === true,
     ...(facts.declaration_digest
       ? {
           declaration: {
@@ -762,7 +769,7 @@ export function encounterDisclosure(facts: EncounterFacts): EncounterDisclosure 
         }
       : {}),
     taint,
-    floors: facts.floors,
+    ...(facts.floors ? { floors: facts.floors } : {}),
   };
 }
 
