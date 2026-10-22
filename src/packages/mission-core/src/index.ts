@@ -290,6 +290,7 @@ export {
   parseScopeProjectionMapping,
   projectScope,
   type RequestedScope,
+  requestedScopeEntries,
   SCOPE_CONTROL_KEYS,
   SCOPE_PROJECTION_MODES,
   SCOPE_RESOURCE_MATCHES,

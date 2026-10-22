@@ -719,3 +719,40 @@ export function earlyScopeRefusal(
   }
   return undefined;
 }
+
+/**
+ * @spec mission#scope-projection, resource-access#scope-projection: the
+ * entries requested `scope` values stand for, for configured-mapping
+ * derivation keyed on them (@spec mission#derivation-modes). Each value a
+ * `scope`-only audience's mapping names stands for one entry: that value's
+ * `resource` and match, the `actions` it stands for, no `constraints`, and
+ * the contract reference where the mapping names one. Such an entry projects
+ * back to the same value, so one mapping serves both directions.
+ *
+ * Entries come in request order, one per value and audience naming it. A
+ * value no `scope`-only audience names contributes none: the intake refuses
+ * it ({@link earlyScopeRefusal}), and the issuance refuses it again where no
+ * carried entry makes it safe.
+ */
+export function requestedScopeEntries(
+  mapping: ScopeProjectionMapping | undefined,
+  audiences: readonly string[],
+  requested: readonly string[],
+): AuthorityEntry[] {
+  const entries: AuthorityEntry[] = [];
+  for (const value of requested) {
+    for (const aud of audiences) {
+      const m = mapping?.audiences[aud];
+      if (m?.mode !== "scope_only" || !Object.hasOwn(m.scopes, value)) continue;
+      const { rights, resource_contract } = m.scopes[value] as ScopeValueMapping;
+      entries.push({
+        type: "mission_resource_access",
+        resource: rights.resource,
+        ...(rights.match === "prefix" ? { resource_match: "prefix" as const } : {}),
+        actions: [...rights.actions],
+        ...(resource_contract ? { resource_contract: { ...resource_contract } } : {}),
+      });
+    }
+  }
+  return entries;
+}
