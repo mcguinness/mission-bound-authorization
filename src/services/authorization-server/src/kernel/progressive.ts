@@ -326,6 +326,11 @@ const RUNTIME_ACTION_CLASSES: ReadonlySet<string> = new Set<RuntimeActionClass>(
   "privileged_administration",
 ]);
 
+/** Whether `v` names one of the runtime profile's action classes. */
+export function isRuntimeActionClass(v: unknown): v is RuntimeActionClass {
+  return typeof v === "string" && RUNTIME_ACTION_CLASSES.has(v);
+}
+
 /** @spec progressive#in-ceiling-expansion: the classes a drawdown never grants by policy alone. */
 const FRESH_APPROVAL_CLASSES: ReadonlySet<RuntimeActionClass> = new Set<RuntimeActionClass>([
   "irreversible_action",
@@ -879,7 +884,20 @@ export type DrawdownFallbackReason =
   | "entire_remaining_ceiling"
   | "per_drawdown_bound"
   | "chain_rate_bound"
-  | "encounter";
+  | "encounter"
+  // @spec approval-governance#recency-high-risk, approval-governance#recency-evaluation
+  // (#1470 slice 2, D626): where drawdowns are recorded, the Approval
+  // Governance eligibility gate over the whole successor.
+  | DrawdownGovernanceReason;
+
+/** Why the Approval Governance eligibility gate sends a recorded drawdown to a fresh human approval. */
+export type DrawdownGovernanceReason =
+  | "governance_policy_ineligible"
+  | "governance_consent_unverified"
+  | "governance_consent_ineligible"
+  | "governance_unclassified_action"
+  | "governance_high_risk"
+  | "governance_recency";
 
 export type DrawdownAdjudication =
   | { outcome: "out_of_ceiling" }
@@ -956,7 +974,7 @@ function authorizesPoint(
 }
 
 /** The Missions of an expansion chain, from `missionId` back to its root. */
-function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
+export function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
   const chain: MissionRecord[] = [];
   const seen = new Set<string>();
   let next: string | undefined = missionId;
@@ -968,6 +986,11 @@ function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
     next = m.predecessor;
   }
   return chain;
+}
+
+/** The creation instants of a chain's ceiling drawdowns: the rate history a drawdown decision reads. */
+export function chainDrawdownInstants(chain: readonly MissionRecord[]): string[] {
+  return chain.filter((m) => m.approval_basis.type === "ceiling_drawdown").map((m) => m.created_at);
 }
 
 /**
@@ -1008,6 +1031,154 @@ function overlaps(entry: AuthorityEntry, restricted: ContainmentSelector): boole
 }
 
 /**
+ * @spec progressive#in-ceiling-expansion, approval-governance#re-check (#1470
+ * slice 2): every value an in-ceiling drawdown adjudication reads, as
+ * observed, so the decision can be replayed from retained state alone. The
+ * deployment configuration it read (action classes, external-communication
+ * actions, the chain rate bound) is carried by value; the policy is carried as
+ * the reference whose held snapshot verified, with the rules it parsed.
+ */
+export interface DrawdownAdjudicationInputs {
+  predecessor_id: string;
+  /** The predecessor's ceiling. */
+  ceiling: AuthorityEntry[];
+  /** The predecessor's effective Authority Set (containment applied). */
+  effective: AuthorityEntry[];
+  /** The successor's complete derived Authority Set. */
+  requested: AuthorityEntry[];
+  drawdown_policy?: ActivationPolicyRef;
+  /** Whether the held snapshot reproduced the committed digest. */
+  policy_verified: boolean;
+  /** The parsed drawdown rules, when the snapshot verified and parsed. */
+  rules?: DrawdownPolicyRules;
+  ceiling_consented_at: string | null;
+  /** The adjudication instant. */
+  now: string;
+  action_classes: Record<string, RuntimeActionClass>;
+  external_communication_actions: string[];
+  /** Each widened resource's cross-domain determination. */
+  cross_domain: Record<string, boolean>;
+  /** The predecessor's non-terminal Child Missions. */
+  live_children: string[];
+  /** The chain's containment and discharge restrictions. */
+  restrictions: Array<{ resource: string; actions?: string[] }>;
+  /** The creation instants of the chain's ceiling drawdowns. */
+  chain_drawdowns: string[];
+  chain_rate_bound: { maxDrawdowns: number; windowSeconds: number };
+}
+
+/**
+ * @spec progressive#in-ceiling-expansion: read every input an adjudication
+ * uses from current state: the activation policy registry, the chain's
+ * records, the predecessor's children and the clock.
+ */
+export function gatherDrawdownInputs(
+  kernel: MissionKernel,
+  options: ProgressiveDrawdownOptions,
+  input: {
+    predecessor: MissionRecord;
+    requested: readonly AuthorityEntry[];
+    isCrossDomain: (resource: string) => boolean;
+    /** The adjudication instant; the kernel clock when absent. */
+    now?: Date;
+  },
+): { inputs: DrawdownAdjudicationInputs; snapshot?: RegisteredActivationPolicy } {
+  const { predecessor } = input;
+  const effective = kernel.effectiveAuthoritySet(predecessor);
+  const requested = [...input.requested];
+  const ref = predecessor.drawdown_policy;
+  // @spec mission#standing-consent-bases, progressive#in-ceiling-expansion: a
+  // snapshot that does not match the committed digest authorizes nothing.
+  const snapshot = ref ? verifiedActivationPolicy(predecessor.issuer, kernel.activationPolicies(), ref) : undefined;
+  const rules = snapshot ? drawdownRulesOf(snapshot) : undefined;
+  const cross_domain: Record<string, boolean> = {};
+  for (const { resource } of widenedPairs(requested, effective)) cross_domain[resource] = input.isCrossDomain(resource);
+  const chain = chainOf(kernel, predecessor.id);
+  return {
+    inputs: {
+      predecessor_id: predecessor.id,
+      ceiling: predecessor.authority_ceiling ?? [],
+      effective,
+      requested,
+      ...(ref ? { drawdown_policy: ref } : {}),
+      policy_verified: snapshot !== undefined,
+      ...(rules ? { rules } : {}),
+      ceiling_consented_at: predecessor.ceiling_consented_at ?? null,
+      now: (input.now ?? kernel.nowDate()).toISOString(),
+      action_classes: { ...options.actionClasses },
+      external_communication_actions: [...(options.externalCommunicationActions ?? [])],
+      cross_domain,
+      live_children: kernel
+        .findChildren(predecessor.id)
+        .filter((c) => !TERMINAL_STATES.has(kernel.observe(c).state))
+        .map((c) => c.id),
+      restrictions: chainRestrictions(chain),
+      chain_drawdowns: chainDrawdownInstants(chain),
+      chain_rate_bound: { ...options.chainRateBound },
+    },
+    ...(snapshot ? { snapshot } : {}),
+  };
+}
+
+/** A drawdown decision over inputs alone: the policy outcome names no snapshot. */
+export type DrawdownDecision = Exclude<DrawdownAdjudication, { outcome: "policy" }> | { outcome: "policy" };
+
+/**
+ * @spec progressive#in-ceiling-expansion: decide an in-ceiling drawdown from
+ * its inputs alone, so the same decision replays from retained state.
+ */
+export function decideDrawdown(i: DrawdownAdjudicationInputs): DrawdownDecision {
+  const { ceiling, requested } = i;
+  // @spec progressive#in-ceiling-expansion: in-ceiling when every successor
+  // entry is a subset of some ceiling entry; otherwise refused out_of_ceiling.
+  if (!isSubsetSetIgnoringCapabilitySources(requested, ceiling)) {
+    return { outcome: "out_of_ceiling" };
+  }
+  const fallback = (reason: DrawdownFallbackReason): DrawdownDecision => ({ outcome: "fresh_approval", reason });
+  // @spec discovery#encounter, discovery#adjudication (#1469 stage 1, D607): a
+  // widened resource no ceiling entry names is an encounter. Until identity
+  // pinning, trusted taint and the floors are in place, no encounter binds by
+  // policy, whatever its other guards: it falls back to a fresh human
+  // approval. Authority the predecessor already holds is no new encounter.
+  const named = new Set(ceiling.map((e) => e.resource));
+  const widened = widenedPairs(requested, i.effective);
+  const encountered = [...new Set(widened.filter((w) => !named.has(w.resource)).map((w) => w.resource))];
+  if (encountered.length) return { outcome: "fresh_approval", reason: "encounter", encountered };
+  if (!i.drawdown_policy) return fallback("no_drawdown_policy");
+  if (!i.policy_verified) return fallback("drawdown_policy_changed");
+  const rules = i.rules;
+  if (!rules) return fallback("drawdown_policy_unusable");
+  const nowMs = Date.parse(i.now);
+  // @spec progressive#ceiling-review: no policy adjudication for a chain whose
+  // ceiling consent, the initial consent or the latest re-consent, is older
+  // than the cadence.
+  const consentedAt = Date.parse(i.ceiling_consented_at ?? "");
+  if (!Number.isFinite(consentedAt) || !(nowMs - consentedAt <= rules.ceiling_review_cadence_s * 1000)) {
+    return fallback("ceiling_review_overdue");
+  }
+  const external = new Set(i.external_communication_actions);
+  for (const { resource, action } of widened) {
+    const cls = Object.hasOwn(i.action_classes, action) ? i.action_classes[action] : undefined;
+    if (cls === undefined) return fallback("unclassified_action");
+    if (FRESH_APPROVAL_CLASSES.has(cls)) return fallback("fresh_approval_class");
+    if (external.has(action)) return fallback("external_communication");
+    if (i.cross_domain[resource] !== false) return fallback("cross_domain");
+  }
+  // @spec progressive#in-ceiling-expansion: no policy adjudication while the
+  // predecessor has non-terminal Child Missions.
+  if (i.live_children.length) return fallback("live_children");
+  if (requested.some((e) => i.restrictions.some((r) => overlaps(e, r)))) return fallback("restricted_overlap");
+  // @spec progressive#drawdown-bounds: never the entire remaining ceiling by
+  // policy; the final increment takes a fresh human approval.
+  if (!ceilingAuthorityLeftUndrawn(requested, ceiling)) return fallback("entire_remaining_ceiling");
+  if (widened.length > rules.max_added_actions) return fallback("per_drawdown_bound");
+  const windowStart = nowMs - i.chain_rate_bound.windowSeconds * 1000;
+  const recent = i.chain_drawdowns.filter((at) => Date.parse(at) > windowStart).length;
+  if (recent >= i.chain_rate_bound.maxDrawdowns) return fallback("chain_rate_bound");
+  return { outcome: "policy" };
+}
+
+/**
  * @spec progressive#in-ceiling-expansion: adjudicate an expansion of a
  * Mission that carries an `authority_ceiling`. `requested` is the successor's
  * complete derived Authority Set. Reads only current state: the current
@@ -1022,78 +1193,25 @@ export function adjudicateDrawdown(
     isCrossDomain: (resource: string) => boolean;
   },
 ): DrawdownAdjudication {
-  const { predecessor, requested } = input;
-  const ceiling = predecessor.authority_ceiling ?? [];
-  // @spec progressive#in-ceiling-expansion: in-ceiling when every successor
-  // entry is a subset of some ceiling entry; otherwise refused out_of_ceiling.
-  if (!isSubsetSetIgnoringCapabilitySources(requested as AuthorityEntry[], ceiling)) {
-    return { outcome: "out_of_ceiling" };
-  }
-  const fallback = (reason: DrawdownFallbackReason): DrawdownAdjudication => ({ outcome: "fresh_approval", reason });
-  // @spec discovery#encounter, discovery#adjudication (#1469 stage 1, D607): a
-  // widened resource no ceiling entry names is an encounter. Until identity
-  // pinning, trusted taint and the floors are in place, no encounter binds by
-  // policy, whatever its other guards: it falls back to a fresh human
-  // approval. Authority the predecessor already holds is no new encounter.
-  const named = new Set(ceiling.map((e) => e.resource));
-  const encountered = [
-    ...new Set(
-      widenedPairs(requested, kernel.effectiveAuthoritySet(predecessor))
-        .filter((w) => !named.has(w.resource))
-        .map((w) => w.resource),
-    ),
-  ];
-  if (encountered.length) return { outcome: "fresh_approval", reason: "encounter", encountered };
-  const ref = predecessor.drawdown_policy;
-  if (!ref) return fallback("no_drawdown_policy");
-  // @spec mission#standing-consent-bases, progressive#in-ceiling-expansion: a
-  // snapshot that does not match the committed digest authorizes nothing.
-  const snapshot = verifiedActivationPolicy(predecessor.issuer, kernel.activationPolicies(), ref);
-  if (!snapshot) return fallback("drawdown_policy_changed");
-  const rules = drawdownRulesOf(snapshot);
-  if (!rules) return fallback("drawdown_policy_unusable");
-  const nowMs = kernel.nowDate().getTime();
-  // @spec progressive#ceiling-review: no policy adjudication for a chain whose
-  // ceiling consent, the initial consent or the latest re-consent, is older
-  // than the cadence.
-  const consentedAt = Date.parse(predecessor.ceiling_consented_at ?? "");
-  if (!Number.isFinite(consentedAt) || nowMs - consentedAt > rules.ceiling_review_cadence_s * 1000) {
-    return fallback("ceiling_review_overdue");
-  }
-  const widened = widenedPairs(requested, kernel.effectiveAuthoritySet(predecessor));
-  const external = new Set(options.externalCommunicationActions ?? []);
-  for (const { resource, action } of widened) {
-    const cls = Object.hasOwn(options.actionClasses, action) ? options.actionClasses[action] : undefined;
-    if (cls === undefined) return fallback("unclassified_action");
-    if (FRESH_APPROVAL_CLASSES.has(cls)) return fallback("fresh_approval_class");
-    if (external.has(action)) return fallback("external_communication");
-    if (input.isCrossDomain(resource)) return fallback("cross_domain");
-  }
-  // @spec progressive#in-ceiling-expansion: no policy adjudication while the
-  // predecessor has non-terminal Child Missions.
-  if (kernel.findChildren(predecessor.id).some((c) => !TERMINAL_STATES.has(kernel.observe(c).state))) {
-    return fallback("live_children");
-  }
-  const chain = chainOf(kernel, predecessor.id);
-  const restrictions = chainRestrictions(chain);
-  if (requested.some((e) => restrictions.some((r) => overlaps(e, r)))) return fallback("restricted_overlap");
-  // @spec progressive#drawdown-bounds: never the entire remaining ceiling by
-  // policy; the final increment takes a fresh human approval.
-  if (!ceilingAuthorityLeftUndrawn(requested, ceiling)) return fallback("entire_remaining_ceiling");
-  if (widened.length > rules.max_added_actions) return fallback("per_drawdown_bound");
-  const windowStart = nowMs - options.chainRateBound.windowSeconds * 1000;
-  const recent = chain.filter(
-    (m) => m.approval_basis.type === "ceiling_drawdown" && Date.parse(m.created_at) > windowStart,
-  ).length;
-  if (recent >= options.chainRateBound.maxDrawdowns) return fallback("chain_rate_bound");
-  return { outcome: "policy", ref, snapshot };
+  const { inputs, snapshot } = gatherDrawdownInputs(kernel, options, input);
+  const decision = decideDrawdown(inputs);
+  if (decision.outcome !== "policy") return decision;
+  return { outcome: "policy", ref: inputs.drawdown_policy as ActivationPolicyRef, snapshot: snapshot as RegisteredActivationPolicy };
 }
 
 /** A drawdown refused at its activating commit; nothing is created or superseded. */
 export class DrawdownRefusal extends Error {
   constructor(
-    readonly code: "derivations_exhausted" | "predecessor_not_active" | "authority_restricted_since_approval",
+    readonly code:
+      | "derivations_exhausted"
+      | "predecessor_not_active"
+      | "authority_restricted_since_approval"
+      // #1470 slice 2: a recorded drawdown its commit-time decision or the
+      // eligibility gate no longer admits; it falls back to a fresh approval.
+      | "governance_refused",
     message: string,
+    /** For `governance_refused`, why the drawdown falls back. */
+    readonly reason?: DrawdownFallbackReason,
   ) {
     super(message);
   }
@@ -1112,6 +1230,12 @@ export interface CeilingDrawdownInput {
   policy: { ref: ActivationPolicyRef; snapshot: RegisteredActivationPolicy };
   /** The predecessor's containment version and discharge-latch count as adjudicated. */
   restrictionsAtAdjudication: { containment: number; discharge: number };
+  /**
+   * @spec approval-governance#re-check (#1470 slice 2): the adjudication's
+   * configuration and cross-domain determination, which a kernel that records
+   * drawdowns reads again in this transaction. Required there.
+   */
+  governance?: { options: ProgressiveDrawdownOptions; isCrossDomain: (resource: string) => boolean };
 }
 
 /**
@@ -1213,7 +1337,12 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     activation_actor: input.activationActor,
     // @spec progressive#ceiling-drawdown-basis (#1438): the decision mechanism,
     // the drawdown policy this adjudication evaluated.
-    adjudication: { kind: "policy", policy: { id: input.policy.ref.id, version: input.policy.ref.version } },
+    adjudication: {
+      kind: "policy",
+      policy: { id: input.policy.ref.id, version: input.policy.ref.version },
+      // @spec approval-governance#issuance-relationship (#1470 slice 2).
+      ...(kernel.recordsCeilingDrawdowns ? { governance_record: true as const } : {}),
+    },
     // @spec progressive#ceiling-drawdown-basis (#1468): the latest explicitly
     // human-consented ceiling, never a hash a policy narrowing recomputed.
     root_commitment: ceilingConsentHash(predecessor) as string,
@@ -1270,6 +1399,20 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     // @spec progressive#audit-linkage: the chain's cumulative drawdown count.
     drawdown_count: (predecessor.drawdown_count ?? 0) + 1,
   };
+  // @spec approval-governance#atomic-commitment (#1470 slice 2): where
+  // drawdowns are recorded, decide again from inputs read in this
+  // transaction, gate, and sign before anything is written.
+  let governed: ReturnType<MissionKernel["prepareDrawdownRecordInCallerTx"]> | undefined;
+  if (kernel.recordsCeilingDrawdowns) {
+    if (!input.governance) throw new Error("a recorded ceiling drawdown needs the adjudication's configuration");
+    governed = kernel.prepareDrawdownRecordInCallerTx({
+      record,
+      predecessor,
+      deciding: input.policy.ref,
+      options: input.governance.options,
+      isCrossDomain: input.governance.isCrossDomain,
+    });
+  }
   kernel.insertRecord(record, undefined, {
     source: { inherited: root },
     // @spec mission#standing-consent-bases: the drawdown policy snapshot this
@@ -1279,5 +1422,6 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
   if (!kernel.supersedeInCallerTx(id)) {
     throw new Error("ceiling drawdown predecessor supersession failed inside the creation transaction");
   }
+  if (governed) kernel.retainDrawdownRecordInCallerTx(id, governed);
   return record;
 }

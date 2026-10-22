@@ -400,7 +400,7 @@ describe("the issuance-only launcher refuses every excluded path (#873)", () => 
   it("template dispatch is refused unsupported_grant_type, and the template admin routes answer 501", async () => {
     const r = await token(asUrl, deployment.as, { grant_type: DISPATCH, template_id: "x" }, await newKeys());
     expectUnsupportedGrant(r);
-    for (const path of ["/templates", "/templates/x/lifecycle"]) {
+    for (const path of ["/templates", "/templates/proposals", "/templates/x/lifecycle"]) {
       const res = await fetch(`${asUrl}${path}`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-service-token": deployment.credentials.lifecycleServiceToken },
