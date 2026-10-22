@@ -77,6 +77,7 @@ import { TokenIssuanceStore } from "./kernel/token-issuance-store.js";
 import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import type { GovernedPolicyApprovalConfig } from "./kernel/governed-policy-approval.js";
 import { directApprovalRuleFrom } from "./kernel/direct-approval-record.js";
+import { type DrawdownRecordingRule, drawdownRecordingRuleFrom } from "./kernel/drawdown-approval-record.js";
 import { type ModelAdvisor, MissionApprovalDeferralStore } from "./kernel/mission-approval-deferral.js";
 import {
   CreationIdempotencyStore,
@@ -609,6 +610,21 @@ export {
   type RegisteredDirectApprovalRule,
 } from "./kernel/direct-approval-record.js";
 export {
+  assertDrawdownRecord,
+  consentProvenanceOf,
+  DRAWDOWN_RECORDING_RULE_ID,
+  DrawdownApprovalRecordStore,
+  type DrawdownConsentProvenance,
+  drawdownGovernanceGate,
+  type DrawdownRecordingRule,
+  DrawdownRecordingRuleError,
+  drawdownRecordingRuleFrom,
+  drawdownRecordingRuleRef,
+  type DrawdownRecordInputs,
+  parseDrawdownRecordingRule,
+  type RegisteredDrawdownRecordingRule,
+} from "./kernel/drawdown-approval-record.js";
+export {
   DEFAULT_MAX_PENDING_PER_CLIENT,
   DELIVERY_CLAIM_STALE_S,
   type DeliveryConfirmation,
@@ -951,6 +967,15 @@ export async function buildAuthorizationServer(opts: {
    */
   directApprovalRecording?: boolean;
   /**
+   * @spec approval-governance#accountable-assertion, approval-governance#recency-declarations
+   * (#1470 slice 2, D626): record a voluntary Approval Governance Record for
+   * every policy-adjudicated ceiling drawdown, under a recording rule built
+   * from this deployment's drawdown policies, Progressive classification,
+   * approval-surface eligibility and catalog, with this recency declaration.
+   * Requires `progressive`. Default off.
+   */
+  ceilingDrawdownRecording?: { recency: DrawdownRecordingRule["recency"] };
+  /**
    * @spec mission#intent-submission-evidence — the deployment-GLOBAL
    * policy-required Intent Submission Evidence types (the anti-downgrade
    * hook), unioned per submission with the presenting client's registered
@@ -1243,6 +1268,9 @@ export async function buildAuthorizationServer(opts: {
   // @spec progressive#in-ceiling-expansion, mission#approval-authentication
   // (#1255): a configuration refusal, before any key, store or recovery is
   // touched. A drawdown mapping that disagrees with the approval floor does not start.
+  const noProgressiveForRecording = (): never => {
+    throw new Error("ceilingDrawdownRecording requires progressive: there is no drawdown to record without it");
+  };
   const progressive = opts.progressive
     ? validateProgressiveDrawdownOptions(opts.progressive, opts.approvalFloor ?? APPROVAL_FLOOR)
     : undefined;
@@ -1454,6 +1482,22 @@ export async function buildAuthorizationServer(opts: {
           directApprovalRecording: {
             rule: directApprovalRuleFrom({
               floor: approvalFloor,
+              knownSubjects,
+              approverApprovesFor,
+              approverRoleSubs,
+              writeActions: WRITE_ACTIONS,
+              catalog: opts.authoritySources ?? AUTHORITY_SOURCES,
+            }),
+          },
+        }
+      : {}),
+    ...(opts.ceilingDrawdownRecording
+      ? {
+          ceilingDrawdownRecording: {
+            rule: drawdownRecordingRuleFrom(opts.issuer, {
+              recency: opts.ceilingDrawdownRecording.recency,
+              activationPolicies: opts.activationPolicies ?? {},
+              actionClasses: (progressive ?? noProgressiveForRecording()).actionClasses,
               knownSubjects,
               approverApprovesFor,
               approverRoleSubs,
