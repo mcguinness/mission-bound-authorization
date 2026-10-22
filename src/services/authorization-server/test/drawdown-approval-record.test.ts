@@ -294,6 +294,31 @@ describe("a recorded ceiling drawdown (@spec approval-governance#accountable-ass
     expect(recheck(kernel, second.id)).toEqual({ rechecked: true });
   });
 
+  it("re-checks a drawdown from a contained predecessor, whose effective set containment narrowed within its Authority Set", () => {
+    const kernel = makeKernel();
+    const pred = predecessorOn(kernel, reads(["payments:invoice.read", "payments:vendor.read"]));
+    kernel.contain(pred.id, {
+      event: { type: "anomaly.detected", source: "svc:soc", observed_at: iso(T0), event_id: "evt-contain" },
+      remove: [{ resource: RESOURCE, actions: ["payments:vendor.read"] }],
+    });
+    clockMs = T0 + HOUR;
+    const successor = withTransaction(kernel.db, () =>
+      createCeilingDrawdownInCallerTx(kernel, {
+        predecessorId: pred.id,
+        intent: intentFor(`Widen ${seq++}`),
+        proposedAuthority: reads(["payments:invoice.read", "payments:invoice.list"]),
+        activationActor: { iss: ISS, sub: "parent-agent" },
+        policy: { ref: pred.drawdown_policy as never, snapshot: POLICY },
+        restrictionsAtAdjudication: { containment: 1, discharge: 0 },
+        governance: { options: OPTIONS, isCrossDomain: () => false },
+      }),
+    );
+    const effective = kernel.drawdownApprovalRecords.inputs(successor.id)?.inputs.adjudication.effective;
+    expect(pred.authority_set.map((e) => e.actions)).toEqual([["payments:invoice.read", "payments:vendor.read"]]);
+    expect(effective?.map((e) => e.actions)).toEqual([["payments:invoice.read"]]);
+    expect(recheck(kernel, successor.id)).toEqual({ rechecked: true });
+  });
+
   it("reads the inputs at the successor's creation instant, whatever the clock reads after it", () => {
     const kernel = makeKernel();
     const pred = predecessorOn(kernel);
