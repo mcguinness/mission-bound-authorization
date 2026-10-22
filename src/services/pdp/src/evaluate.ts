@@ -643,8 +643,10 @@ export interface EvaluateOptions {
   /**
    * @spec runtime#state-freshness, authority-server#mission-join rule 2
    * (#818): under `pdp` placement, the signed valid-through of that same own
-   * read (RFC 3339), a Mission Status Response's `mission.fresh_until`. The
-   * permit never outlives it (the `signed_state_fresh_until` ceiling), and
+   * read (RFC 3339): a Mission Status Response's reliance bound, the earliest
+   * of its `mission.fresh_until`, its `exp`, its `iat` plus the advertised
+   * `mission_max_stale_seconds` and, for `active`, the Mission's `expires_at`
+   * (@spec status#mission-status-caching). The permit never outlives it (the `signed_state_fresh_until` ceiling), and
    * one already passed establishes no state. Absent, the read reported only
    * its observation time. Unused under `pep` placement.
    */
@@ -1088,8 +1090,9 @@ async function evaluateInner(
   let acceptedObservationMs: number | undefined;
   let acceptedValidThroughMs: number | undefined;
   // @spec authzen#context-audience-freshness `assertion` (#1049 review P2-a):
-  // the signed `mission.fresh_until` of a verified Mission Status Response,
-  // set at step 2a, and one more ceiling on the permit regardless of the
+  // the signed reliance bound of a verified Mission Status Response (its
+  // `mission.fresh_until`, `exp` and, for `active`, the Mission's
+  // `expires_at`), set at step 2a, and one more ceiling on the permit regardless of the
   // class's posture or of what the observation repeats.
   let signedFreshUntilMs: number | undefined;
   // @spec authority-server#mission-join (#557 review point 1) — set once
@@ -1229,20 +1232,22 @@ async function evaluateInner(
     // One it cannot verify, or one that disagrees with the observation,
     // establishes nothing.
     if (observation.assertion !== undefined) {
-      const freshUntilMs = await verifyStateAssertion(
+      const relianceBoundMs = await verifyStateAssertion(
         { ...observation, assertion: observation.assertion },
         { missionId: req.context.mission.id, issuer: req.context.mission.issuer, audience },
         opts.stateAssertionKeys,
         now(),
         skewToleranceMs / 1000,
       );
-      if (freshUntilMs === undefined) return deny("stale_state");
-      // #1049 review P2-a: the signed `mission.fresh_until` binds whether or
-      // not the observation repeats it as `mission_status_expires_at`
-      // (OPTIONAL in `fresh` mode). Already passed, the signed state is no
-      // longer relied on; otherwise it caps the permit below.
-      if (freshUntilMs <= now().getTime()) return deny("stale_state");
-      signedFreshUntilMs = freshUntilMs;
+      if (relianceBoundMs === undefined) return deny("stale_state");
+      // #1049 review P2-a: the signed reliance bound binds whether or not the
+      // observation repeats `mission.fresh_until` as `mission_status_expires_at`
+      // (OPTIONAL in `fresh` mode). @spec status#mission-status-caching: it
+      // ends at the earliest of `fresh_until`, `exp` and, for `active`, the
+      // Mission's `expires_at`, with no skew allowance. Already passed, the
+      // signed state is no longer relied on; otherwise it caps the permit below.
+      if (relianceBoundMs <= now().getTime()) return deny("stale_state");
+      signedFreshUntilMs = relianceBoundMs;
     }
   }
 

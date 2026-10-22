@@ -4603,6 +4603,9 @@ export class MissionKernel {
           : {}),
         version: record.version,
         expires_at: record.expires_at,
+        // @spec status#mission-status-caching freshness cap: never later
+        // than the response's `exp` (below, the same instant) nor its `iat`
+        // plus the advertised ceiling (`freshness` is capped at it above).
         fresh_until: new Date((nowS + freshness) * 1000).toISOString(),
         ...(record.containment
           ? { containment_version: record.containment.containment_version }

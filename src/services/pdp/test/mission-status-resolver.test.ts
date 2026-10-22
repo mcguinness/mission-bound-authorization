@@ -113,6 +113,13 @@ function payload(nonce: string | null): Record<string, unknown> {
 
 const mission = (p: Record<string, unknown>) => p.mission as Record<string, unknown>;
 
+/** A signed lifetime: `iat` and `exp`, and `fresh_until` at `exp`, as the reference issuer stamps one. */
+const lifetime = (p: Record<string, unknown>, iat: number, exp: number) => {
+  p.iat = iat;
+  p.exp = exp;
+  mission(p).fresh_until = new Date(exp * 1000).toISOString();
+};
+
 async function sign(
   claims: Record<string, unknown>,
   opts: { key?: CryptoKey; kid?: string; typ?: string } = {},
@@ -245,11 +252,11 @@ describe("MissionStatusResolver: a response that does not verify establishes not
     await expectRefusedUncached(resolver(), "unverifiable");
   });
 
-  it("refuses a response whose mission names another issuer", async () => {
+  it("refuses a response whose mission.issuer is not its iss (consumer check 4, #1535)", async () => {
     handler = respond((p) => {
       mission(p).issuer = "https://impostor.example";
     });
-    await expectRefusedUncached(resolver(), "unverifiable");
+    await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
   });
 
   it("refuses a response signed by a key that is not the declared one under the declared kid", async () => {
@@ -298,24 +305,38 @@ describe("MissionStatusResolver: a response that does not verify establishes not
   });
 
   it("refuses a response that has expired", async () => {
-    handler = respond((p) => {
-      p.iat = nowS() - 600;
-      p.exp = nowS() - 300;
-    });
+    handler = respond((p) => lifetime(p, nowS() - 600, nowS() - 300));
     await expectRefusedUncached(resolver(), "unverifiable");
   });
 
-  it("allows no more clock skew than the issuer's mission_max_stale_seconds", async () => {
+  it("allows no more receipt-time clock skew than the issuer's mission_max_stale_seconds", async () => {
     // Expired 20 seconds ago: inside the profile's 30-second allowance, past
     // a 10-second advertised maximum staleness.
-    const expired = (p: Record<string, unknown>) => {
-      p.iat = nowS() - 80;
-      p.exp = nowS() - 20;
-    };
-    handler = respond(expired);
-    expect(await resolver().resolve(ref)).toMatchObject({ ok: true });
-    handler = respond(expired);
-    await expectRefusedUncached(resolver({ maxStaleSeconds: 10 }), "unverifiable");
+    handler = respond((p) => lifetime(p, nowS() - 80, nowS() - 20));
+    await expectRefusedUncached(resolver({ maxStaleSeconds: 10 }), "unverifiable", "signature or claims");
+  });
+
+  it("refuses a response whose signed fresh_until is later than its exp (consumer check 10, #1535)", async () => {
+    // Both still ahead: only the ordering of the two refuses it.
+    handler = respond((p) => {
+      lifetime(p, nowS(), nowS() + 60);
+      mission(p).fresh_until = new Date((nowS() + 80) * 1000).toISOString();
+    });
+    await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
+  });
+
+  it("refuses an active response that carries no mission.expires_at: its Mission expiry could not be enforced (#1535)", async () => {
+    handler = respond((p) => {
+      delete mission(p).expires_at;
+    });
+    await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
+  });
+
+  it("refuses a response whose mission.expires_at does not parse (#1535)", async () => {
+    handler = respond((p) => {
+      mission(p).expires_at = "next year";
+    });
+    await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
   });
 
   it("refuses a response that carries no signed fresh_until", async () => {
@@ -391,6 +412,9 @@ describe("MissionStatusResolver: an answer that does not arrive establishes noth
       [401, "unauthorized"],
       [403, "unauthorized"],
       [404, "not_found"],
+      // @spec status#mission-status-failures (#1535): rate_limited, like
+      // unavailable, is a transient failure that establishes nothing.
+      [429, "unavailable"],
       [500, "unavailable"],
       [503, "unavailable"],
     ] as const) {
@@ -461,12 +485,58 @@ describe("MissionStatusResolver: an answer that does not arrive establishes noth
   });
 });
 
+describe("MissionStatusResolver: a failed read never refreshes or extends a held answer (@spec status#mission-status-failures, #1535)", () => {
+  /** The issuer answering `code`, or dropping the connection for `transport`. */
+  const failing =
+    (cause: number | "transport"): Handler =>
+    (req, res) => {
+      if (cause === "transport") {
+        req.socket.destroy();
+        return;
+      }
+      res.writeHead(cause, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: cause === 429 ? "rate_limited" : "unavailable" }));
+    };
+
+  it("leaves a held answer usable until its original reliance bound through a rate-limited, unavailable or unreachable source, never past it, and never reads the failure as termination", async () => {
+    for (const cause of [429, 503, "transport"] as const) {
+      requests.length = 0;
+      const t0 = clockMs;
+      handler = respond((p) => lifetime(p, nowS(), nowS() + 20));
+      const r = resolver();
+      expect(await r.resolve(ref), String(cause)).toMatchObject({ ok: true, source: "fetched", relianceBoundMs: t0 + 20_000 });
+
+      // A read that must reach the source now fails: it establishes nothing.
+      handler = failing(cause);
+      clockMs = t0 + 5_000;
+      expect(await r.resolve(ref, { fresh: true }), String(cause)).toMatchObject({ ok: false, reason: "unavailable" });
+
+      // The held answer is unchanged: still `active`, still bounded where it was.
+      clockMs = t0 + 10_000;
+      expect(await r.resolve(ref), String(cause)).toMatchObject({
+        ok: true,
+        source: "cached",
+        view: { state: "active", version: 3 },
+        observedAtMs: t0,
+        relianceBoundMs: t0 + 20_000,
+      });
+
+      // At its original bound it is relied on no longer, and the failing
+      // source puts nothing in its place.
+      clockMs = t0 + 20_000;
+      expect(r.peek(ref), String(cause)).toBeUndefined();
+      expect(await r.resolve(ref), String(cause)).toMatchObject({ ok: false, reason: "unavailable" });
+      expect(requests.length, String(cause)).toBe(3);
+      clockMs = Math.floor(Date.now() / 1000) * 1000;
+    }
+  });
+});
+
 describe("MissionStatusResolver: an observation read now is held to the same reliance bounds as a cached one (@spec status#mission-status-caching)", () => {
   /** A verified response observed `seconds` ago, its `exp` and `fresh_until` still ahead. */
   const observedAgo = (seconds: number, version = 3) =>
     respond((p) => {
-      p.iat = nowS() - seconds;
-      p.exp = nowS() + 40;
+      lifetime(p, nowS() - seconds, nowS() + 40);
       mission(p).version = version;
     });
 
@@ -504,6 +574,14 @@ describe("MissionStatusResolver: an observation read now is held to the same rel
     expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "cached", view: { version: 3 } });
     expect(requests.length).toBe(before + 1);
   });
+
+  it("accepts a response up to 30 seconds past its exp at receipt, and relies on it for nothing: no skew allowance extends exp (#1535)", async () => {
+    // Check 9's receipt allowance admits it (not `unverifiable`); its
+    // reliance bound has passed all the same. The profile's allowance on
+    // `fresh_until` alone, were it taken, would still end at `exp`.
+    handler = respond((p) => lifetime(p, nowS() - 80, nowS() - 20));
+    await expectRefusedUncached(resolver(), "stale");
+  });
 });
 
 describe("MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching)", () => {
@@ -537,6 +615,47 @@ describe("MissionStatusResolver: the cache never outlives a signed bound (@spec 
     expect(await r.resolve(ref, { maxAgeSeconds: 5 })).toMatchObject({ ok: true, source: "fetched" });
   });
 
+  it("never relies on a reported active state at or after the Mission's expires_at, though fresh_until and exp are later, with no skew allowance (#1535)", async () => {
+    const t0 = clockMs;
+    const expiresAt = new Date(t0 + 10_000).toISOString();
+    handler = respond((p) => {
+      mission(p).expires_at = expiresAt;
+    });
+    const r = resolver();
+    expect(await r.resolve(ref)).toMatchObject({
+      ok: true,
+      source: "fetched",
+      view: { state: "active" },
+      freshUntilMs: t0 + 60_000,
+      relianceBoundMs: t0 + 10_000,
+    });
+    clockMs = t0 + 9_000;
+    expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "cached" });
+    // At expires_at: the held answer is no longer relied on, and a read now
+    // that still reports `active` under the same expiry is refused.
+    clockMs = t0 + 10_000;
+    expect(r.peek(ref)).toBeUndefined();
+    expect(await r.resolve(ref)).toMatchObject({ ok: false, reason: "stale", detail: "expires_at passed" });
+    expect(requests.length).toBe(2);
+  });
+
+  it("relies on a suspended response past the Mission's expires_at only until its own reliance bound (#1535)", async () => {
+    const t0 = clockMs;
+    handler = respond((p) => {
+      mission(p).state = "suspended";
+      mission(p).expires_at = new Date(t0 + 10_000).toISOString();
+      mission(p).fresh_until = new Date((nowS() + 20) * 1000).toISOString();
+    });
+    const r = resolver();
+    expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "fetched", relianceBoundMs: t0 + 20_000 });
+    clockMs = t0 + 15_000;
+    expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "cached", view: { state: "suspended" } });
+    clockMs = t0 + 20_000;
+    expect(r.peek(ref)).toBeUndefined();
+    expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "fetched" });
+    expect(requests.length).toBe(2);
+  });
+
   it("reads the source on every fresh request, whatever the cache holds", async () => {
     const r = resolver();
     await r.resolve(ref);
@@ -552,8 +671,7 @@ describe("MissionStatusResolver: the cache never outlives a signed bound (@spec 
       if (n === 1) {
         // The first read is observed earlier and answered last.
         const older = respond((p) => {
-          p.iat = nowS() - 5;
-          p.exp = nowS() + 55;
+          lifetime(p, nowS() - 5, nowS() + 55);
           mission(p).version = 1;
         });
         setTimeout(() => void older(req, res, query), 300);

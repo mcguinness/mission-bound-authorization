@@ -32,12 +32,17 @@
  *   cached: no negative entry outlives the request that met it.
  * - Relied on only within the signed bounds. Every observation `resolve`
  *   returns, read now or reused from the cache, is within each bound at that
- *   instant: before its signed `fresh_until`, within `iat` plus the issuer's
- *   advertised `mission_max_stale_seconds`, and within the caller's own
- *   `maxAgeSeconds` (its action class's staleness window), with no skew
- *   allowance on the old side ({@link MissionStatusResolver.boundPassed}).
- *   An observation read now that is already past one is refused `stale` and
- *   not cached. The cache is keyed on the Mission under this resolver's one
+ *   instant: its reliance bound (before its signed `fresh_until` and `exp`,
+ *   within `iat` plus the issuer's advertised `mission_max_stale_seconds`,
+ *   and, for `active`, before the Mission's `expires_at`), and within the
+ *   caller's own `maxAgeSeconds` (its action class's staleness window), with
+ *   no skew allowance on any of them
+ *   ({@link MissionStatusResolver.boundPassed}). An observation read now that
+ *   is already past one is refused `stale` and not cached.
+ * - A failed read changes nothing held. A failure, transient or not, never
+ *   refreshes, extends or replaces a cached answer: one still within its
+ *   bounds keeps serving non-fresh reads until its original bound, and none
+ *   serves past it. The cache is keyed on the Mission under this resolver's one
  *   issuer and enforcement scope; `fresh: true` bypasses it and reads the
  *   source now. An older observation never replaces a newer one.
  *
@@ -81,6 +86,14 @@ export interface ResolvedMission {
   observedAtMs: number;
   /** The signed `mission.fresh_until`, epoch milliseconds. */
   freshUntilMs: number;
+  /**
+   * @spec status#mission-status-caching: the end of reliance on this
+   * observation, epoch milliseconds: the earliest of its signed
+   * `fresh_until`, its `exp`, its `iat` plus the issuer's advertised
+   * `mission_max_stale_seconds` and, for `active`, the Mission's
+   * `expires_at`. A permit relying on it ends no later.
+   */
+  relianceBoundMs: number;
   /** Whether this answer was read from the source for this call, or reused from the cache. */
   source: "fetched" | "cached";
 }
@@ -93,8 +106,12 @@ export interface ResolvedMission {
  * anti-oracle not-found, or a reference naming another issuer.
  * `unverifiable`: a response arrived and did not verify or did not carry a
  * usable view. `stale`: a response verified, but the observation it carries
- * is already past a reliance bound (its signed `fresh_until`,
- * `mission_max_stale_seconds`, or the caller's `maxAgeSeconds`).
+ * is already past a reliance bound (its signed `fresh_until` or `exp`,
+ * `mission_max_stale_seconds`, the Mission's `expires_at` for `active`, or
+ * the caller's `maxAgeSeconds`).
+ *
+ * @spec status#mission-status-failures: none of these is evidence that the
+ * Mission terminated; each only leaves the decision without state.
  */
 export type MissionStatusFailure = "unavailable" | "unauthorized" | "not_found" | "unverifiable" | "stale";
 
@@ -242,7 +259,23 @@ async function readCapped(res: Response, max: number): Promise<string | undefine
   return new TextDecoder().decode(Buffer.concat(chunks));
 }
 
-type CachedMission = Omit<ResolvedMission, "source">;
+/** A verified observation as the cache holds it: the resolution, and the signed bounds it is held to. */
+type CachedMission = Omit<ResolvedMission, "source"> & {
+  /** The signed `exp`, epoch milliseconds. */
+  expMs: number;
+  /** For `active`, the Mission's signed `expires_at`, epoch milliseconds. */
+  activeUntilMs?: number;
+};
+
+/** The caller's view of a held observation: the resolution members only. */
+const resolution = (c: CachedMission, source: ResolvedMission["source"]): ResolvedMission => ({
+  ok: true,
+  view: c.view,
+  observedAtMs: c.observedAtMs,
+  freshUntilMs: c.freshUntilMs,
+  relianceBoundMs: c.relianceBoundMs,
+  source,
+});
 
 /**
  * A resolver for one Mission issuer and one enforcement scope. Construct one
@@ -265,8 +298,10 @@ export class MissionStatusResolver {
     if (!opts.serviceToken) throw new Error("MissionStatusResolver: a service credential is required");
     this.now = opts.now ?? (() => new Date());
     this.http = opts.fetch ?? fetch;
-    // @spec status#mission-status-caching: the tolerance "MUST NOT exceed the
-    // AS's advertised `mission_max_stale_seconds`".
+    // @spec status#mission-status-response check 9: up to 30 seconds of
+    // clock skew on `iat` and `exp` at receipt, which decides acceptance
+    // only, never reliance (status#mission-status-caching). Capped locally
+    // at the issuer's advertised `mission_max_stale_seconds` as well.
     this.toleranceSeconds = Math.min(MISSION_STATUS_SKEW_SECONDS, opts.maxStaleSeconds);
   }
 
@@ -281,7 +316,7 @@ export class MissionStatusResolver {
     if (ref.issuer !== this.opts.issuer) return undefined;
     const cached = this.cache.get(ref.id);
     if (cached === undefined || this.boundPassed(cached, maxAgeSeconds) !== undefined) return undefined;
-    return { ...cached, source: "cached" };
+    return resolution(cached, "cached");
   }
 
   /**
@@ -295,10 +330,13 @@ export class MissionStatusResolver {
     if (options.fresh !== true) {
       const cached = this.cache.get(ref.id);
       if (cached !== undefined && this.boundPassed(cached, options.maxAgeSeconds) === undefined) {
-        return { ...cached, source: "cached" };
+        return resolution(cached, "cached");
       }
     }
     const read = await this.read(ref.id);
+    // @spec status#mission-status-failures: a failed read establishes nothing
+    // and touches nothing held; a cached answer stays within its original
+    // bound, never refreshed or extended by the attempt.
     if (!read.ok) return read;
     // An answer read now is held to the same bounds as one reused from the
     // cache: a verified but already-old observation is relied on for nothing,
@@ -315,24 +353,29 @@ export class MissionStatusResolver {
     ) {
       this.cache.set(ref.id, read);
     }
-    return { ...read, source: "fetched" };
+    return resolution(read, "fetched");
   }
 
   /**
    * The ONE place the reliance bounds live, for an observation read now and
    * one reused from the cache alike: the first bound it has passed at this
-   * instant, or `undefined` while it is within all of them. Before its
-   * signed `fresh_until` (@spec status#mission-status-caching "Hard stop",
-   * no skew allowance for any state); no older than `iat` plus the issuer's
-   * `mission_max_stale_seconds`; and no older than the caller's
-   * `maxAgeSeconds` where it gives one. No skew allowance on the old side,
-   * as the decision point's own window check (`ageMs > enforceableWindowMs`)
-   * allows none; an `iat` slightly in the future, accepted at verification,
-   * is younger than every bound.
+   * instant, or `undefined` while it is within all of them. Its reliance
+   * bound (@spec status#mission-status-caching "Reliance bound"): before its
+   * signed `fresh_until` and its `exp`, never relied on as `active` at or
+   * after the Mission's `expires_at`, and no older than `iat` plus the
+   * issuer's `mission_max_stale_seconds`; and no older than the caller's
+   * `maxAgeSeconds` where it gives one. No skew allowance on any bound: the
+   * profile's allowance is a MAY on `fresh_until` alone and never extends
+   * `exp`, `expires_at` or the ceiling, and the decision point's own window
+   * check (`ageMs > enforceableWindowMs`) allows none either; an `iat`
+   * slightly in the future, accepted at verification, is younger than every
+   * bound.
    */
   private boundPassed(entry: CachedMission, maxAgeSeconds: number | undefined): string | undefined {
     const nowMs = this.now().getTime();
     if (nowMs >= entry.freshUntilMs) return "fresh_until passed";
+    if (nowMs >= entry.expMs) return "exp passed";
+    if (entry.activeUntilMs !== undefined && nowMs >= entry.activeUntilMs) return "expires_at passed";
     if (nowMs > entry.observedAtMs + this.opts.maxStaleSeconds * 1000) return "older than mission_max_stale_seconds";
     if (maxAgeSeconds !== undefined && !(nowMs <= entry.observedAtMs + maxAgeSeconds * 1000)) {
       return "older than maxAgeSeconds";
@@ -379,7 +422,7 @@ export class MissionStatusResolver {
       this.toleranceSeconds,
     );
     if (verified === undefined) return fail("unverifiable", "signature or claims");
-    const { payload, mission, freshUntilMs } = verified;
+    const { payload, mission, freshUntilMs, expMs, activeUntilMs } = verified;
     // @spec status#mission-status-response consumer check 7: the response
     // answers THIS request, never a replayed earlier one.
     if (payload.nonce !== nonce) return fail("unverifiable", "nonce");
@@ -390,6 +433,15 @@ export class MissionStatusResolver {
     if (iatMs - now.getTime() > this.toleranceSeconds * 1000) return fail("unverifiable", "iat");
     const view = viewOf(missionId, this.opts.issuer, mission, payload.authorization_details);
     if (typeof view === "string") return fail("unverifiable", view);
-    return { ok: true, view, observedAtMs: iatMs, freshUntilMs };
+    const relianceBoundMs = Math.min(verified.relianceBoundMs, iatMs + this.opts.maxStaleSeconds * 1000);
+    return {
+      ok: true,
+      view,
+      observedAtMs: iatMs,
+      freshUntilMs,
+      relianceBoundMs,
+      expMs,
+      ...(activeUntilMs !== undefined ? { activeUntilMs } : {}),
+    };
   }
 }

@@ -751,15 +751,17 @@ A consumer MUST verify, before honoring a response:
    rejecting `none` and any algorithm not listed;
 3. the JWS signature against a current `jwks_uri` entry for the
    `issuer` AS;
-4. `iss` equals the expected AS issuer URL;
+4. `iss` equals the expected AS issuer URL, and `mission.issuer`
+   equals `iss`;
 5. `aud` equals the `audience` the request named or, for a
    state-only response, the requesting client's `client_id`
    ({{mission-status-request}});
 6. `sub` equals the requesting client's identifier;
 7. `nonce` equals the request's nonce;
-8. `mission.id` equals the requested `mission_id`; and
+8. `mission.id` equals the requested `mission_id`;
 9. `iat` is not in the future and `exp` is not in the past, with up to
-   30 seconds clock-skew tolerance.
+   30 seconds clock-skew tolerance; and
+10. `mission.fresh_until` is not later than `exp`.
 
 ## Caching {#mission-status-caching}
 
@@ -767,28 +769,57 @@ Caching follows these rules:
 
 - **Cache key.** Consumers SHOULD cache a response keyed on
   (`mission_id`, audience), or on (`mission_id`, `client_id`) for a
-  state-only response, until `mission.fresh_until`.
-- **Hard stop.** Consumers MUST NOT use a cached response after
-  `mission.fresh_until`, subject only to the skew tolerance below. In
-  particular, a consumer MUST NOT extend
-  reliance on a cached `suspended` (or any non-`active`) response
-  beyond `mission.fresh_until`.
-- **Freshness cap.** When the AS advertises
-  `mission_max_stale_seconds` ({{as-metadata}}), it MUST NOT set
-  `mission.fresh_until` later than the response `iat` plus that
-  value.
+  state-only response, until its reliance bound (below).
+- **Freshness cap.** The AS MUST NOT set `mission.fresh_until` later
+  than the response's `exp`, nor, when it advertises
+  `mission_max_stale_seconds` ({{as-metadata}}), later than the
+  response's `iat` plus that value.
+- **Reliance bound.** A response's reliance bound is the earliest of
+  `mission.fresh_until`, the response's `exp`, and, when the AS
+  advertises `mission_max_stale_seconds`, the response's `iat` plus
+  that value. Consumers MUST NOT use a response after its reliance
+  bound, subject only to the skew tolerance below, and MUST NOT rely
+  on a reported `active` state at or after `mission.expires_at`. In
+  particular, a consumer MUST NOT extend reliance on a cached
+  `suspended` (or any non-`active`) response beyond its reliance
+  bound.
 - **Skew tolerance.** When comparing the current time to
   `mission.fresh_until`, a consumer MAY allow up to 30 seconds of
   tolerance for the `active` state only, and no tolerance for any
-  other state. The tolerance MUST NOT exceed the AS's advertised
-  `mission_max_stale_seconds` ({{as-metadata}}).
+  other state. The tolerance MUST NOT extend reliance past the
+  response's `exp`, `mission.expires_at`, or the response's `iat` plus
+  the advertised `mission_max_stale_seconds`.
 
-The freshness cap keeps report freshness within the deployment's
-advertised revocation-propagation tolerance. The skew tolerance is a
-clock-skew allowance on the reliance path, bounding the disagreement
+The freshness cap keeps report freshness within the signed response's
+own validity and the deployment's advertised revocation-propagation
+tolerance. The skew tolerance is a clock-skew allowance on the
+`mission.fresh_until` comparison only, bounding the disagreement
 between the AS's and the consumer's clocks, not a property of state
-reversibility. The hard stop is absolute for non-`active` states
-because a suspended Mission may be resumed to `active`.
+reversibility: the response's `exp`, the Mission's expiry and the
+advertised ceiling are hard bounds that no allowance extends. The
+clock-skew tolerance of the response checks
+({{mission-status-response}}) decides only whether a response is
+accepted, never how long it is relied on. The reliance bound is
+absolute for non-`active` states because a suspended Mission may be
+resumed to `active`.
+
+## Failed Status Checks {#mission-status-failures}
+
+A decision that requires Mission Status proceeds only on a response
+that passed every check of {{mission-status-response}}, is within its
+reliance bound ({{mission-status-caching}}), and reports `active`.
+Without one, the decision MUST NOT proceed, whatever the cause: an
+error response such as `unavailable`, `rate_limited` or `not_found`, a
+failed check, a network failure, or a lapsed reliance bound. For
+example, a resource server refuses the request it is deciding, and a
+consuming Authorization Server issues no token.
+
+That outcome establishes only that the decision cannot proceed; it is
+not evidence that the Mission terminated. A transient failure, such as
+`unavailable`, `rate_limited` or a network failure, leaves a response
+the consumer already holds usable within that response's original
+reliance bound; a failed request never refreshes or extends that
+bound.
 
 ## Anti-Oracle Property {#mission-status-anti-oracle}
 
@@ -1963,10 +1994,9 @@ A Mission Status Response is bound to (caller `sub`, audience,
 or beyond `mission.fresh_until`, is detectable by signature
 verification and by verifying the bindings; a consumer MUST verify all
 the checks of {{mission-status-response}} before honoring a response. A
-response cached and replayed by the same caller within
-`mission.fresh_until` is equivalent to a fresh response; a consumer MUST
-NOT use a cached response after `mission.fresh_until`, with the skew
-tolerance of {{mission-status-caching}}.
+response cached and replayed by the same caller within its reliance
+bound ({{mission-status-caching}}) is equivalent to a fresh response; a
+consumer MUST NOT use a cached response after that bound.
 
 ## Mission Status Denial of Service
 
