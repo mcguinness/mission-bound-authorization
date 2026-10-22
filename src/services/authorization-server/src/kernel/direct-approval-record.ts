@@ -362,9 +362,9 @@ const isAuthentication = (a: unknown): a is DirectApprovalAuthentication =>
  * (3) no separate evaluator decides a direct approval; (4) the retained inputs
  * are bound to this event and Intent, name this Mission's Approver and
  * Subject, the authority source its retained binding names and the ceiling it
- * consented, and record a well-formed authentication; (5) `evaluated_at` is an
- * RFC 3339 timestamp and the replay of the rule over the inputs at
- * `evaluation.evaluated_at` approves the committed Authority Set, the record
+ * consented, and record a well-formed authentication; (5) the replay of the
+ * rule over the inputs at `evaluation.evaluated_at` (bound in step 1 to the
+ * Mission's creation) approves the committed Authority Set, the record
  * passes the commit gate, its human assertion carries the authentication the
  * inputs record, and `contributing` is exactly that assertion; (6)
  * policy-approval recency does not apply to a `human` assertion, whose
@@ -423,7 +423,6 @@ export function recheckDirectApprovalRecord(
   if (auth.acr !== inputs.authentication.acr || auth.auth_time !== new Date(inputs.authentication.auth_time * 1000).toISOString()) {
     return no(5, "the human assertion is not the authentication the inputs record");
   }
-  if (!isRfc3339Instant(record.evaluation.evaluated_at)) return no(5, "evaluation.evaluated_at is not an RFC 3339 timestamp");
   const decision = evaluateDirectApprovalRule(rule, inputs, record.evaluation.evaluated_at);
   if (decision.decision !== "approve") return no(5, `the replay does not approve: ${decision.reason}`);
   if (authorityHash(mission.issuer, inputs.authority as never) !== mission.authority_hash) {

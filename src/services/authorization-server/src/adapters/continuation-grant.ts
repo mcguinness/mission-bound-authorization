@@ -3119,11 +3119,12 @@ async function completeCeilingDrawdown(
     return true;
   }
   const resourceToAs = opts.resourceToAs;
+  // Without a resource map no resource is known to be local: fail closed.
+  const isCrossDomain = (resource: string) => !resourceToAs || resourceToAs(resource) !== opts.issuer;
   const adjudication = adjudicateDrawdown(opts.kernel, progressive, {
     predecessor,
     requested: d.requested,
-    // Without a resource map no resource is known to be local: fail closed.
-    isCrossDomain: (resource) => !resourceToAs || resourceToAs(resource) !== opts.issuer,
+    isCrossDomain,
   });
   if (adjudication.outcome === "out_of_ceiling") {
     // @spec progressive#ceiling-test (#1413): never adjudicated by policy; by
@@ -3168,6 +3169,7 @@ async function completeCeilingDrawdown(
           containment: predecessor.containment?.containment_version ?? 0,
           discharge: predecessor.discharged?.length ?? 0,
         },
+        governance: { options: progressive, isCrossDomain },
       });
       return { missionId: created.id, value: created };
     });
@@ -3180,6 +3182,12 @@ async function completeCeilingDrawdown(
       }
     }
     if (e instanceof DrawdownRefusal) {
+      // @spec approval-governance#recency-high-risk, approval-governance#atomic-commitment
+      // (#1470 slice 2, D626): where drawdowns are recorded, a drawdown the
+      // commit-time decision or the eligibility gate over the whole successor
+      // does not admit rolled back with nothing written; it falls back to a
+      // fresh human approval, never to an unrecorded activation.
+      if (e.code === "governance_refused" && e.reason) return { reason: e.reason };
       // @spec progressive#in-ceiling-expansion (Derivation limits): refused as
       // Derivation Limits refuses a derivation; nothing was created.
       if (e.code === "derivations_exhausted") throw new MissionGrantError(e.message, "derivations_exhausted");
