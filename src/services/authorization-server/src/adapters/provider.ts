@@ -359,6 +359,7 @@ import {
   DISCHARGE_RECEIPT_MEDIA_TYPE,
   DischargeConflictError,
   DischargeNotFoundError,
+  type DischargeRequest,
   type DischargeTargetForm,
   EVIDENCE_REF_MAX_CHARS,
 } from "../kernel/discharge.js";
@@ -4038,15 +4039,36 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         refuseInvalidRequest("suspend_until and on_expiry are not supported by this deployment");
         return;
       }
+      // @spec discharge#discharge-operation: the discharge's own members are
+      // request syntax too, validated before its authorization.
+      let discharge: DischargeRequest | undefined;
       if (operation === "discharge") {
-        // @spec discharge#discharge-authority: the DISTINCT grant, checked
-        // before deduplication and before any selector work. A caller holding
-        // only `mission_lifecycle` (or acting as the Subject, Approver, or an
-        // administrator) is refused with the same indistinguishable not-found
-        // body every unauthorized reference gets. The target's own
-        // authorization stays with the operation (handleDischarge).
+        const parsed = parseDischargeMembers(body, kernel.nowDate());
+        if (!parsed.ok) {
+          refuseInvalidRequest(parsed.description);
+          return;
+        }
+        // The AUTHENTICATED discharge authority, never a request-supplied value.
+        discharge = { ...parsed.value, authority: principal.principal_id };
+      }
+      if (discharge !== undefined) {
+        // @spec discharge#discharge-authority, discharge#discharge-anti-oracle:
+        // the DISTINCT grant, then the whole not-found collapse (selector
+        // existence, condition membership, the discharge authority mapping),
+        // all before deduplication and read-only. A caller holding only
+        // `mission_lifecycle` (or acting as the Subject, Approver, or an
+        // administrator), and one outside the target's mapping, are refused
+        // with the same indistinguishable not-found body every unauthorized
+        // reference gets. A failed read is `unavailable`.
         if (!principal.scopes.includes(MISSION_DISCHARGE_SCOPE)) {
           refuseNotFound();
+          return;
+        }
+        try {
+          kernel.authorizeDischarge(missionId, discharge);
+        } catch (e) {
+          if (e instanceof DischargeNotFoundError) refuseNotFound();
+          else sendUnavailable();
           return;
         }
       } else {
@@ -4137,12 +4159,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // — the fifth operation: it changes no
       // Mission state, so it is handled entirely outside the state machine
       // below, under its own DISTINCT authority.
-      if (operation === "discharge") {
+      if (discharge !== undefined) {
         await handleDischarge({
           kernel,
           principal,
           missionId,
-          body,
+          request: discharge,
           nonce,
           mayReadStatus,
           // @spec control-plane#serialization — the discharge latch, the nonce
@@ -6304,7 +6326,8 @@ async function handleDischarge(input: {
   kernel: MissionKernel;
   principal: ServiceTokenPrincipal;
   missionId: string;
-  body: Record<string, unknown>;
+  /** The request's members, validated by {@link parseDischargeMembers}, with the authenticated authority. */
+  request: DischargeRequest;
   nonce?: string;
   /**
    * @spec status#mission-status-authentication — the Mission Status operation's
@@ -6323,92 +6346,18 @@ async function handleDischarge(input: {
   sendNotFound: () => void;
   sendInvalidRequest: (description: string, echoNonce?: boolean) => void;
 }): Promise<void> {
-  const { kernel, principal, missionId, body, nonce } = input;
+  const { kernel, principal, missionId, nonce } = input;
   // @spec discharge#discharge-operation — `nonce` is REQUIRED, and a request whose
   // nonce is absent or malformed is refused with NO nonce echoed.
   if (nonce === undefined) {
     input.sendInvalidRequest("discharge requires a well-formed nonce", false);
     return;
   }
-  // @spec discharge#discharge-authority, status#lifecycle-processing: the
-  // DISTINCT grant was checked by the Lifecycle engine before deduplication
-  // and before any selector work; what follows is the target's own syntax and
-  // authorization.
-  const entryDigestValue = body.entry_digest;
-  const conditionDigestValue = body.condition_digest;
-  const selectorValue = body.condition_selector;
-  const eventType = body.event_type;
-  const eventId = body.event_id;
-  // @spec discharge#discharge-operation — the target is named in EXACTLY ONE of
-  // two forms: a condition selector, or the digest pair. Both, or neither, is
-  // refused `invalid_request`.
-  const hasSelector = selectorValue !== undefined;
-  const hasDigests = entryDigestValue !== undefined || conditionDigestValue !== undefined;
-  if (hasSelector === hasDigests) {
-    input.sendInvalidRequest(
-      "discharge names its target by condition_selector or by entry_digest and condition_digest, exactly one",
-    );
-    return;
-  }
-  let target: DischargeTargetForm;
-  if (hasSelector) {
-    if (typeof selectorValue !== "string" || !CONDITION_SELECTOR_RE.test(selectorValue)) {
-      input.sendInvalidRequest("condition_selector must be 1*128 ALPHA / DIGIT / '-' / '_'");
-      return;
-    }
-    target = { condition_selector: selectorValue };
-  } else {
-    if (!isFamilyDigest(entryDigestValue)) {
-      input.sendInvalidRequest("entry_digest must be a sha-256: prefixed digest");
-      return;
-    }
-    if (!isFamilyDigest(conditionDigestValue)) {
-      input.sendInvalidRequest("condition_digest must be a sha-256: prefixed digest");
-      return;
-    }
-    target = { entry_digest: entryDigestValue, condition_digest: conditionDigestValue };
-  }
-  if (typeof eventType !== "string" || eventType.length === 0) {
-    input.sendInvalidRequest("event_type must be a non-empty string");
-    return;
-  }
-  if (typeof eventId !== "string" || !DISCHARGE_EVENT_ID_RE.test(eventId)) {
-    input.sendInvalidRequest("event_id must be 1*128 ALPHA / DIGIT / '-' / '_' / ':' / '.'");
-    return;
-  }
-  // `reason` belongs to the state-changing operations; discharge records its own
-  // request members in audit, so carrying it is an invalid member combination.
-  if (body.reason !== undefined) {
-    input.sendInvalidRequest("reason is not used by discharge");
-    return;
-  }
-  const evidenceRef = body.evidence_ref;
-  if (evidenceRef !== undefined) {
-    if (typeof evidenceRef !== "string" || evidenceRef.length > EVIDENCE_REF_MAX_CHARS) {
-      input.sendInvalidRequest(`evidence_ref must be a URI of at most ${EVIDENCE_REF_MAX_CHARS} characters`);
-      return;
-    }
-    try {
-      new URL(evidenceRef);
-    } catch {
-      input.sendInvalidRequest("evidence_ref must be a URI");
-      return;
-    }
-  }
-  const evidenceDigest = body.evidence_digest;
-  if (evidenceDigest !== undefined && !isFamilyDigest(evidenceDigest)) {
-    input.sendInvalidRequest("evidence_digest must be a sha-256: prefixed digest");
-    return;
-  }
-  const observedAt = body.observed_at;
-  if (observedAt !== undefined) {
-    const parsed =
-      typeof observedAt === "string" && RFC3339_RE.test(observedAt) ? Date.parse(observedAt) : Number.NaN;
-    if (Number.isNaN(parsed) || Math.abs(parsed - kernel.nowDate().getTime()) > OBSERVED_AT_SKEW_MS) {
-      input.sendInvalidRequest("observed_at must be an RFC 3339 date-time within reasonable clock bounds");
-      return;
-    }
-  }
+  // @spec discharge#discharge-authority, status#lifecycle-processing (#1535):
+  // the Lifecycle engine validated the members, checked the DISTINCT grant and
+  // authorized the target (kernel.authorizeDischarge) before deduplication;
+  // kernel.discharge repeats the target checks inside its transaction.
+  const { request } = input;
   // @spec control-plane#serialization — the expiry clock OUTSIDE the operation's
   // transaction (#844), as the lifecycle and `contain` handlers keep it: a
   // refused discharge (any not-found class, or a conflict) must never roll back
@@ -6434,16 +6383,7 @@ async function handleDischarge(input: {
     // one unit; the signature is the only work left outside, and it adds no
     // recency of its own.
     const signable = withTransaction(kernel.db, () => {
-      const { record: described, result } = kernel.discharge(missionId, {
-        // The AUTHENTICATED discharge authority, never a request-supplied value.
-        authority: principal.principal_id,
-        ...target,
-        event_type: eventType,
-        event_id: eventId,
-        ...(typeof evidenceRef === "string" ? { evidence_ref: evidenceRef } : {}),
-        ...(typeof evidenceDigest === "string" ? { evidence_digest: evidenceDigest } : {}),
-        ...(typeof observedAt === "string" ? { observed_at: observedAt } : {}),
-      });
+      const { record: described, result } = kernel.discharge(missionId, request);
       // @spec discharge#discharge-carryover ("Response") — a forwarded discharge
       // answers a caller NOT authorized for the Mission Status operation with a
       // Discharge Receipt naming only what it targeted.
@@ -6501,6 +6441,102 @@ async function handleDischarge(input: {
     }
     throw e;
   }
+}
+
+/**
+ * @spec discharge#discharge-operation, status#lifecycle-processing (#1535): the
+ * discharge's own request members, validated as request syntax before the
+ * Lifecycle engine authorizes or deduplicates the request. Nothing here reads
+ * the Mission; the value lacks only the authenticated authority.
+ */
+function parseDischargeMembers(
+  body: Record<string, unknown>,
+  now: Date,
+):
+  | { ok: true; value: DischargeTargetForm & Omit<DischargeRequest, "authority" | keyof DischargeTargetForm> }
+  | { ok: false; description: string } {
+  const entryDigestValue = body.entry_digest;
+  const conditionDigestValue = body.condition_digest;
+  const selectorValue = body.condition_selector;
+  const eventType = body.event_type;
+  const eventId = body.event_id;
+  // @spec discharge#discharge-operation: the target is named in EXACTLY ONE of
+  // two forms: a condition selector, or the digest pair. Both, or neither, is
+  // refused `invalid_request`.
+  const hasSelector = selectorValue !== undefined;
+  const hasDigests = entryDigestValue !== undefined || conditionDigestValue !== undefined;
+  if (hasSelector === hasDigests) {
+    return {
+      ok: false,
+      description: "discharge names its target by condition_selector or by entry_digest and condition_digest, exactly one",
+    };
+  }
+  let target: DischargeTargetForm;
+  if (hasSelector) {
+    if (typeof selectorValue !== "string" || !CONDITION_SELECTOR_RE.test(selectorValue)) {
+      return { ok: false, description: "condition_selector must be 1*128 ALPHA / DIGIT / '-' / '_'" };
+    }
+    target = { condition_selector: selectorValue };
+  } else {
+    if (!isFamilyDigest(entryDigestValue)) {
+      return { ok: false, description: "entry_digest must be a sha-256: prefixed digest" };
+    }
+    if (!isFamilyDigest(conditionDigestValue)) {
+      return { ok: false, description: "condition_digest must be a sha-256: prefixed digest" };
+    }
+    target = { entry_digest: entryDigestValue, condition_digest: conditionDigestValue };
+  }
+  if (typeof eventType !== "string" || eventType.length === 0) {
+    return { ok: false, description: "event_type must be a non-empty string" };
+  }
+  if (typeof eventId !== "string" || !DISCHARGE_EVENT_ID_RE.test(eventId)) {
+    return { ok: false, description: "event_id must be 1*128 ALPHA / DIGIT / '-' / '_' / ':' / '.'" };
+  }
+  // `reason` belongs to the state-changing operations; discharge records its own
+  // request members in audit, so carrying it is an invalid member combination.
+  if (body.reason !== undefined) {
+    return { ok: false, description: "reason is not used by discharge" };
+  }
+  const evidenceRef = body.evidence_ref;
+  if (evidenceRef !== undefined) {
+    if (typeof evidenceRef !== "string" || evidenceRef.length > EVIDENCE_REF_MAX_CHARS) {
+      return {
+        ok: false,
+        description: `evidence_ref must be a URI of at most ${EVIDENCE_REF_MAX_CHARS} characters`,
+      };
+    }
+    try {
+      new URL(evidenceRef);
+    } catch {
+      return { ok: false, description: "evidence_ref must be a URI" };
+    }
+  }
+  const evidenceDigest = body.evidence_digest;
+  if (evidenceDigest !== undefined && !isFamilyDigest(evidenceDigest)) {
+    return { ok: false, description: "evidence_digest must be a sha-256: prefixed digest" };
+  }
+  const observedAt = body.observed_at;
+  if (observedAt !== undefined) {
+    const parsed =
+      typeof observedAt === "string" && RFC3339_RE.test(observedAt) ? Date.parse(observedAt) : Number.NaN;
+    if (Number.isNaN(parsed) || Math.abs(parsed - now.getTime()) > OBSERVED_AT_SKEW_MS) {
+      return {
+        ok: false,
+        description: "observed_at must be an RFC 3339 date-time within reasonable clock bounds",
+      };
+    }
+  }
+  return {
+    ok: true,
+    value: {
+      ...target,
+      event_type: eventType,
+      event_id: eventId,
+      ...(typeof evidenceRef === "string" ? { evidence_ref: evidenceRef } : {}),
+      ...(typeof evidenceDigest === "string" ? { evidence_digest: evidenceDigest } : {}),
+      ...(typeof observedAt === "string" ? { observed_at: observedAt } : {}),
+    },
+  };
 }
 
 /**

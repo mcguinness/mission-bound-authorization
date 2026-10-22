@@ -1206,7 +1206,10 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     const first = await lifecycle(record.id, body, WITHDRAWABLE_DISCHARGE_TOKEN);
     expect(first.status).toBe(200);
     const firstJws = await first.text();
-    const withdrawn = withdrawableDischargeScopes.splice(0);
+    // The discharge grant is withdrawn and the lifecycle grant given in its
+    // place: the mapping still admits this caller, and mission_lifecycle never
+    // implies discharge.
+    const withdrawn = withdrawableDischargeScopes.splice(0, withdrawableDischargeScopes.length, MISSION_LIFECYCLE_SCOPE);
     try {
       const refused = await lifecycle(record.id, body, WITHDRAWABLE_DISCHARGE_TOKEN);
       expect(refused.status).toBe(404);
@@ -1216,11 +1219,59 @@ describe("the discharge operation on the lifecycle endpoint", () => {
         nonce: body.nonce,
       });
     } finally {
-      withdrawableDischargeScopes.push(...withdrawn);
+      withdrawableDischargeScopes.splice(0, withdrawableDischargeScopes.length, ...withdrawn);
     }
     const replay = await lifecycle(record.id, body, WITHDRAWABLE_DISCHARGE_TOKEN);
     expect(replay.status).toBe(200);
     expect(await replay.text()).toBe(firstJws);
+  });
+
+  it("authorizes the discharge target before deduplication: a mission_discharge holder outside the target's authority mapping is answered not_found on its first request and again on the same nonce with a different event_id, never invalid_request, and no retained response is written or changed (@spec status#lifecycle-processing, discharge#discharge-anti-oracle, #1535)", async () => {
+    const record = approveOnAs();
+    // A retained success of another caller for this Mission, which no refusal may touch.
+    expect((await lifecycle(record.id, { operation: "suspend", nonce: freshNonce() })).status).toBe(200);
+    const retainedResponses = (): unknown[] =>
+      as.kernel.db.prepare("SELECT * FROM lifecycle_responses ORDER BY principal, mission_id, nonce").all();
+    const retainedBefore = retainedResponses();
+    const recordBefore = as.kernel.get(record.id);
+    const body = dischargeBody(record);
+    const first = await lifecycle(record.id, body, UNMAPPED_SOURCE_TOKEN);
+    expect(first.status).toBe(404);
+    const refusal = await first.json();
+    expect(refusal).toEqual({
+      error: "not_found",
+      error_description: "Mission reference is not found or not visible.",
+      nonce: body.nonce,
+    });
+    const divergent = await lifecycle(record.id, { ...body, event_id: "close-divergent" }, UNMAPPED_SOURCE_TOKEN);
+    expect(divergent.status).toBe(404);
+    expect(await divergent.json()).toEqual(refusal);
+    expect(retainedResponses()).toEqual(retainedBefore);
+    expect(as.kernel.get(record.id)).toEqual(recordBefore);
+    expect(
+      (
+        as.kernel.db.prepare("SELECT COUNT(*) AS n FROM discharge_events WHERE mission_id = ?").get(record.id) as {
+          n: number;
+        }
+      ).n,
+    ).toBe(0);
+  });
+
+  it("validates the discharge's own members before its authorization: a malformed member is refused invalid_request to a caller without the discharge grant and to one outside the target's mapping, alike for an unknown Mission (@spec status#lifecycle-processing, #1535)", async () => {
+    const record = approveOnAs();
+    const before = as.kernel.get(record.id);
+    for (const token of [LIFECYCLE_ONLY_TOKEN, UNMAPPED_SOURCE_TOKEN]) {
+      for (const missionId of [record.id, "msn_unknown_0000000000000000000000"]) {
+        const res = await lifecycle(
+          missionId,
+          dischargeBody(record, { mission_id: missionId, event_id: "not a valid event id" }),
+          token,
+        );
+        expect(res.status, `${token} ${missionId}`).toBe(400);
+        expect(await res.json()).toMatchObject({ error: "invalid_request" });
+      }
+    }
+    expect(as.kernel.get(record.id)).toEqual(before);
   });
 
   it("replays a retained envelope signed before the migration byte for byte, and it verifies over those bytes with current_version before any reading normalizes it (#705 acceptance item 19)", async () => {
@@ -1766,6 +1817,12 @@ describe("the discharge operation on the lifecycle endpoint", () => {
  * existence so an unknown Mission still gets the one indistinguishable
  * not-found body. Its own AS carries a lifecycle-commit subscriber that
  * witnesses the publication.
+ *
+ * @spec status#lifecycle-processing (#1535): a selector or authorization
+ * refusal is now decided before deduplication, read-only. It writes nothing,
+ * the expiry included, so it has nothing to unwind; the expiry commits once,
+ * on the next read. A discharge that passes authorization still materializes
+ * expiry outside its transaction.
  */
 describe("discharge: a refused discharge keeps the expiry it discovered (#844)", () => {
   const EXPIRY_PORT = PORT + 3;
@@ -1834,7 +1891,7 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
     };
   };
 
-  it("a selector refusal on an expired Mission leaves it expired at version + 1, published once, latching nothing", async () => {
+  it("a selector refusal on an expired Mission writes nothing; the next read leaves it expired at version + 1, published once, latching nothing (#1535)", async () => {
     const record = approve();
     expireStored(record);
     commits.length = 0;
@@ -1843,7 +1900,13 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
     const res = await post(record.id, body);
     expect(res.status).toBe(404);
     expect(await res.json()).toMatchObject({ error: "not_found" });
+    // Refused before deduplication, read-only: no transition, no publication.
+    expect(expiryAs.kernel.get(record.id)?.termination).toBeUndefined();
+    expect(expiryAs.kernel.get(record.id)?.version).toBe(record.version);
+    expect(commits).toHaveLength(0);
 
+    // The expiry is the clock's, and the next read commits it.
+    expiryAs.kernel.materializeExpiry(record.id);
     const after = expiryAs.kernel.get(record.id);
     expect(after?.termination?.reason).toBe("expired");
     expect(after?.version).toBe(record.version + 1);
@@ -1919,8 +1982,10 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
       expect(unknown.nonce).toBe(unknownNonce);
       expect(known.nonce).toBe(knownNonce);
     }
-    // The guard touched only the known Mission: its expiry committed.
-    expect(expiryAs.kernel.get(record.id)?.termination?.reason).toBe("expired");
+    // Refused before deduplication, read-only (#1535): the known Mission's row
+    // is unchanged until a read commits its expiry.
+    expect(expiryAs.kernel.get(record.id)?.termination).toBeUndefined();
+    expect(expiryAs.kernel.get(record.id)?.version).toBe(record.version);
   });
 
   it("valid selectors on an expired Mission: terminal_noop, the expiry committed once, exact replay unchanged", async () => {
