@@ -823,7 +823,7 @@ Wire error codes (carried in the `error` member of a JSON body):
 
 | `error` | HTTP | Description |
 |---|---|---|
-| `invalid_request` | 400 | Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, a Lifecycle `operation` the AS does not serve ({{mission-lifecycle-endpoint}}), or a retransmitted `nonce` paired with a request that is not byte-identical to the original ({{idempotency}}). |
+| `invalid_request` | 400 | Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, a Lifecycle `operation` the AS does not serve ({{mission-lifecycle-endpoint}}), or a retransmitted `nonce` whose operation members differ from the original's, present or absent alike ({{idempotency}}). |
 | `invalid_client` | 400 | Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted ({{mission-status-auth-failures}}). |
 | `unauthorized` | 401 | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted; the response carries the challenges of {{mission-status-auth-failures}}. |
 | `not_found` | 404 | Reference does not exist OR is not visible. |
