@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-22T21:39:22Z
-Source repository commit: be3659c6e9ea4ca9eb261cf067096cbabc58529a
+Generated: 2026-10-22T23:41:11Z
+Source repository commit: 982498681a8c33bcd3a2ed99828ad7a32acff798
 Member count: 7
 
 Reading order:
@@ -15646,8 +15646,10 @@ Table of Contents
      3.4.  Request Example
      3.5.  Response
      3.6.  Caching
-     3.7.  Anti-Oracle Property
-     3.8.  Error Responses
+     3.7.  Failed Status Checks
+     3.8.  Anti-Oracle Property
+     3.9.  Processing Order
+     3.10. Error Responses
    4.  Token Introspection Mission Projection
    5.  Mission Lifecycle Endpoint
      5.1.  Operations
@@ -15657,8 +15659,9 @@ Table of Contents
      5.5.  Authorization
      5.6.  Lifecycle Examples
      5.7.  Idempotency and Conflicts
-     5.8.  Relationship to RFC 7009
-     5.9.  Deferred Lifecycle Capabilities
+     5.8.  Processing Order
+     5.9.  Relationship to RFC 7009
+     5.10. Deferred Lifecycle Capabilities
    6.  Revocation Propagation
    7.  Operational Considerations
    8.  Authorization Server Metadata
@@ -15859,7 +15862,7 @@ Table of Contents
    resource it issues tokens for.  The Mission Issuer MUST honor a
    request's audience only where that configuration authorizes the
    authenticated caller for it, and MUST otherwise refuse the request
-   with the not-found response of Section 3.8.  Entitlement to an
+   with the not-found response of Section 3.10.  Entitlement to an
    audience comes only from that configuration, never from string
    equality between audience and the caller's client_id or certificate
    subject.  The response's aud is the requested audience (Section 3.5).
@@ -15918,7 +15921,7 @@ Table of Contents
    client (mechanism 1 or 3) carries the deployment-defined equivalent
    grant, not a scope, and so resolves Mission state without holding an
    access token the AS issued.  A caller carrying no such authorization
-   is refused with the not-found response of Section 3.8 (Section 3.7).
+   is refused with the not-found response of Section 3.10 (Section 3.8).
 
    A presented access token (mechanism 2) MUST be audience-restricted to
    this endpoint's protected-resource identifier: the resource value the
@@ -15981,7 +15984,7 @@ Table of Contents
    Every challenge carries the resource_metadata parameter naming the
    endpoint's Protected Resource Metadata (Section 5.1 of [RFC9728]).
    An authenticated caller not authorized for the referenced Mission
-   receives not_found (404) with no challenge (Section 3.7).
+   receives not_found (404) with no challenge (Section 3.8).
 
 3.4.  Request Example
 
@@ -16208,28 +16211,31 @@ Table of Contents
 
    A consumer MUST verify, before honoring a response:
 
-   1.  the JWS header typ is mission-status-response+jwt;
+   1.   the JWS header typ is mission-status-response+jwt;
 
-   2.  the JWS header alg is one the AS advertises in
-       mission_status_signing_alg_values_supported (Section 8),
-       rejecting none and any algorithm not listed;
+   2.   the JWS header alg is one the AS advertises in
+        mission_status_signing_alg_values_supported (Section 8),
+        rejecting none and any algorithm not listed;
 
-   3.  the JWS signature against a current jwks_uri entry for the issuer
-       AS;
+   3.   the JWS signature against a current jwks_uri entry for the
+        issuer AS;
 
-   4.  iss equals the expected AS issuer URL;
+   4.   iss equals the expected AS issuer URL, and mission.issuer equals
+        iss;
 
-   5.  aud equals the audience the request named or, for a state-only
-       response, the requesting client's client_id (Section 3.1);
+   5.   aud equals the audience the request named or, for a state-only
+        response, the requesting client's client_id (Section 3.1);
 
-   6.  sub equals the requesting client's identifier;
+   6.   sub equals the requesting client's identifier;
 
-   7.  nonce equals the request's nonce;
+   7.   nonce equals the request's nonce;
 
-   8.  mission.id equals the requested mission_id; and
+   8.   mission.id equals the requested mission_id;
 
-   9.  iat is not in the future and exp is not in the past, with up to
-       30 seconds clock-skew tolerance.
+   9.   iat is not in the future and exp is not in the past, with up to
+        30 seconds clock-skew tolerance; and
+
+   10.  mission.fresh_until is not later than exp.
 
 3.6.  Caching
 
@@ -16237,31 +16243,60 @@ Table of Contents
 
    *  *Cache key.* Consumers SHOULD cache a response keyed on
       (mission_id, audience), or on (mission_id, client_id) for a state-
-      only response, until mission.fresh_until.
+      only response, until its reliance bound (below).
 
-   *  *Hard stop.* Consumers MUST NOT use a cached response after
-      mission.fresh_until, subject only to the skew tolerance below.  In
+   *  *Freshness cap.* The AS MUST NOT set mission.fresh_until later
+      than the response's exp, nor, when it advertises
+      mission_max_stale_seconds (Section 8), later than the response's
+      iat plus that value.
+
+   *  *Reliance bound.* A response's reliance bound is the earliest of
+      mission.fresh_until, the response's exp, and, when the AS
+      advertises mission_max_stale_seconds, the response's iat plus that
+      value.  Consumers MUST NOT use a response after its reliance
+      bound, subject only to the skew tolerance below, and MUST NOT rely
+      on a reported active state at or after mission.expires_at.  In
       particular, a consumer MUST NOT extend reliance on a cached
-      suspended (or any non-active) response beyond mission.fresh_until.
-
-   *  *Freshness cap.* When the AS advertises mission_max_stale_seconds
-      (Section 8), it MUST NOT set mission.fresh_until later than the
-      response iat plus that value.
+      suspended (or any non-active) response beyond its reliance bound.
 
    *  *Skew tolerance.* When comparing the current time to
       mission.fresh_until, a consumer MAY allow up to 30 seconds of
       tolerance for the active state only, and no tolerance for any
-      other state.  The tolerance MUST NOT exceed the AS's advertised
-      mission_max_stale_seconds (Section 8).
+      other state.  The tolerance MUST NOT extend reliance past the
+      response's exp, mission.expires_at, or the response's iat plus the
+      advertised mission_max_stale_seconds.
 
-   The freshness cap keeps report freshness within the deployment's
-   advertised revocation-propagation tolerance.  The skew tolerance is a
-   clock-skew allowance on the reliance path, bounding the disagreement
+   The freshness cap keeps report freshness within the signed response's
+   own validity and the deployment's advertised revocation-propagation
+   tolerance.  The skew tolerance is a clock-skew allowance on the
+   mission.fresh_until comparison only, bounding the disagreement
    between the AS's and the consumer's clocks, not a property of state
-   reversibility.  The hard stop is absolute for non-active states
-   because a suspended Mission may be resumed to active.
+   reversibility: the response's exp, the Mission's expiry and the
+   advertised ceiling are hard bounds that no allowance extends.  The
+   clock-skew tolerance of the response checks (Section 3.5) decides
+   only whether a response is accepted, never how long it is relied on.
+   The reliance bound is absolute for non-active states because a
+   suspended Mission may be resumed to active.
 
-3.7.  Anti-Oracle Property
+3.7.  Failed Status Checks
+
+   A decision that requires Mission Status proceeds only on a response
+   that passed every check of Section 3.5, is within its reliance bound
+   (Section 3.6), and reports active.  Without one, the decision MUST
+   NOT proceed, whatever the cause: an error response such as
+   unavailable, rate_limited or not_found, a failed check, a network
+   failure, or a lapsed reliance bound.  For example, a resource server
+   refuses the request it is deciding, and a consuming Authorization
+   Server issues no token.
+
+   That outcome establishes only that the decision cannot proceed; it is
+   not evidence that the Mission terminated.  A transient failure, such
+   as unavailable, rate_limited or a network failure, leaves a response
+   the consumer already holds usable within that response's original
+   reliance bound; a failed request never refreshes or extends that
+   bound.
+
+3.8.  Anti-Oracle Property
 
    A mission_id is never a bearer capability.  The AS MUST authenticate
    the requester and authorize it for the requested mission_id and
@@ -16269,14 +16304,37 @@ Table of Contents
 
    Unknown mission_id values and known-but-unauthorized references MUST
    produce indistinguishable responses (HTTP 404 with a generic not-
-   found body; see Section 3.8).  The AS MUST return an identical HTTP
+   found body; see Section 3.10).  The AS MUST return an identical HTTP
    status code, response body, and headers for the two cases.  The AS
    SHOULD NOT vary response timing in a way that distinguishes the two
    cases.  It SHOULD mitigate timing side channels (for example by
    padding response time or by taking a uniform lookup path for both the
    unknown and the unauthorized case).
 
-3.8.  Error Responses
+3.9.  Processing Order
+
+   The AS MUST process a Mission Status request in this order, refusing
+   it at the first step that fails:
+
+   1.  Authenticate the caller (Section 3.2), parsing the request body
+       only as far as authentication needs.  A failure is answered as
+       Section 3.3 assigns.
+
+   2.  Validate the request syntax (Section 3.1).  A malformed request
+       is refused invalid_request.
+
+   3.  Authorize the request: the caller's read authorization, the
+       Mission the mission_id names, and any requested audience
+       (Section 3.1).  An unknown Mission and every failed authorization
+       are refused alike with the not-found response.
+
+   4.  Read the Mission's current state and return the signed response
+       (Section 3.5).
+
+   No response that depends on the Mission's existence or state precedes
+   step 3.
+
+3.10.  Error Responses
 
    Mission Status outcomes are of two kinds.  A success outcome is a
    found, visible, authorized Mission: the AS returns HTTP 200 with a
@@ -16362,7 +16420,7 @@ Table of Contents
    authentication, whereas a request that is authenticated but not
    authorized for the referenced Mission returns not_found (404), never
    an authentication failure, so that an unauthorized reference is
-   indistinguishable from an unknown one (Section 3.7).  The error body
+   indistinguishable from an unknown one (Section 3.8).  The error body
    is:
 
    HTTP/1.1 404 Not Found
@@ -16609,7 +16667,7 @@ Table of Contents
 
    The AS MUST refuse an operation value it does not serve, a base
    operation its conformance claim omits (Section 9) or an extension
-   operation it has not adopted, with invalid_request (Section 3.8)
+   operation it has not adopted, with invalid_request (Section 3.10)
    before looking up the Mission, leaving the Mission unchanged, so the
    refusal discloses nothing about it.
 
@@ -16823,6 +16881,16 @@ Table of Contents
    transition.  The AS MUST refuse a caller that carries no such
    authorization.
 
+   A lifecycle authorization is necessary but not sufficient.  The AS
+   MUST authorize each request for its acting party (below), its
+   operation, and the specific Mission it names, under the deployment's
+   policy for that Mission, including the deployment or tenant boundary
+   the Mission belongs to: authorization for one Mission, or within one
+   tenant, authorizes nothing on another.  The AS evaluates the acting
+   party's validated identity and any validated delegation context; an
+   act claim identifies the parties to a delegation and is never by
+   itself a grant of lifecycle authority.
+
    The acting party, and where the AS checks the lifecycle
    authorization, follow from the authentication case:
 
@@ -16850,10 +16918,11 @@ Table of Contents
    sub, distinct from any access token's sub, or a deployment-defined
    audit member of the Mission Status Response.
 
-   Which parties may perform which operation is deployment-defined.
-   Typical deployments authorize revoke to the Mission's Subject or
-   Approver and to administrators; suspend and resume to administrators;
-   and complete to the requesting client or an administrator.
+   Which parties may perform which operation on which Missions is
+   deployment-defined.  Typical deployments authorize revoke to the
+   Mission's Subject or Approver and to administrators; suspend and
+   resume to administrators; and complete to the requesting client or an
+   administrator.
 
    Because resume returns a suspended Mission to active and so undoes
    the containment a suspend established, a deployment SHOULD require a
@@ -16861,22 +16930,22 @@ Table of Contents
    treatment of bulk resume in Mission Management
    ([I-D.draft-mcguinness-oauth-mission-management]).
 
-   A suspend whose on_expiry is resume schedules a later resume.  The AS
-   MUST authorize it against both the caller's authorization for suspend
-   and the authorization the deployment requires for a direct resume of
-   that Mission, including when it sets or replaces the schedule of a
-   Mission already suspended, whoever suspended it.  The AS checks both
-   before any change and refuses a caller lacking either as an
-   unauthorized lifecycle request (below), leaving the Mission's state
-   and schedule unchanged.  A suspend whose on_expiry is revoke needs
-   only the authorization for suspend.
+   A suspend that carries on_expiry schedules a later resume or revoke.
+   The AS MUST authorize it against both the caller's authorization for
+   suspend and the authorization the deployment requires for a direct
+   operation of the scheduled kind (resume or revoke) on that Mission,
+   including when it sets or replaces the schedule of a Mission already
+   suspended, whoever suspended it.  The AS checks both before any
+   change and refuses a caller lacking either as an unauthorized
+   lifecycle request (below), leaving the Mission's state and schedule
+   unchanged.
 
    The AS MUST record with each committed schedule its committing party,
    the acting party of the request that committed it; an authorized
    replacement records its own.
 
    The AS MUST refuse an unauthorized lifecycle request with the not-
-   found response shape of Section 3.8, so the endpoint does not act as
+   found response shape of Section 3.10, so the endpoint does not act as
    a Mission enumeration oracle.
 
 5.6.  Lifecycle Examples
@@ -17001,13 +17070,14 @@ Table of Contents
    mission_id, nonce) for a bounded window.  On a retransmit carrying a
    nonce already seen for that client and mission_id, together with
    request members identical to the original's, the AS MUST replay the
-   original response rather than re-execute the operation.  The
-   comparison covers the operation's request members (operation, reason,
+   original response rather than re-execute the operation, once the
+   retransmit has passed authorization (Section 5.8).  The comparison
+   covers the operation's request members (operation, reason,
    suspend_until, on_expiry, expected_version, and any member an
    extension operation defines), present or absent alike, and excludes
    client authentication parameters and HTTP headers, which a retry
    regenerates.  The same nonce paired with request members that differ
-   from the original's MUST be refused invalid_request (Section 3.8);
+   from the original's MUST be refused invalid_request (Section 3.10);
    the AS MUST NOT answer it with the unrelated original response.  A
    retransmit whose original response was rate_limited, or was
    unavailable or another 5xx response, is processed as a new request,
@@ -17070,7 +17140,41 @@ Table of Contents
    clears a deadline.  A suspend carrying only one of the two remains
    invalid (Section 5.1) and changes nothing.
 
-5.8.  Relationship to RFC 7009
+5.8.  Processing Order
+
+   The AS MUST process a lifecycle request in this order, refusing it at
+   the first step that fails:
+
+   1.  Authenticate the caller (Section 3.2), parsing the request body
+       only as far as authentication needs.  A failure is answered as
+       Section 3.3 assigns.
+
+   2.  Validate the request syntax and the operation (Section 5.1).  A
+       malformed request, or an operation the AS does not serve, is
+       refused invalid_request.
+
+   3.  Authorize the request.  For a base operation this is the
+       lifecycle authorization of Section 5.5 for the acting party, the
+       operation and the Mission, together with the authorization for
+       any transition the request schedules; for an extension operation
+       it is the authorization its companion defines.  An unknown
+       Mission and every failed authorization are refused alike with the
+       not-found response.
+
+   4.  Apply deduplication (Section 5.7): replay the original response
+       to a retransmit, or refuse a reused nonce whose request members
+       differ.
+
+   5.  Check expected_version, when present (Section 5.7).
+
+   6.  Apply the transition rules (Section 5.7) and commit the
+       transition.
+
+   Authorization therefore precedes every replayed or state-dependent
+   response: a caller not authorized for the Mission receives the not-
+   found response, never a replay, stale_version or conflict.
+
+5.9.  Relationship to RFC 7009
 
    A Mission revocation through this endpoint cascades to credentials
    derived from the Mission per the AS's advertised revocation
@@ -17079,7 +17183,7 @@ Table of Contents
    revocation of each token.  [RFC7009] alone does NOT revoke a Mission;
    the lifecycle endpoint is the authoritative Mission state change.
 
-5.9.  Deferred Lifecycle Capabilities
+5.10.  Deferred Lifecycle Capabilities
 
    This endpoint operates on one Mission at a time.  Mission enumeration
    and bulk lifecycle operations for incident response, such as revoking
@@ -17339,8 +17443,8 @@ Table of Contents
    *  *Mission Status*: serve the dedicated Mission Status operation
       (Section 3) with JWS-signed responses (application/mission-status-
       response+jwt), the authentication and read authorization of
-      Section 3.2, the anti-oracle property (Section 3.7), and the error
-      shape of Section 3.8; and advertise mission_status_endpoint,
+      Section 3.2, the anti-oracle property (Section 3.8), and the error
+      shape of Section 3.10; and advertise mission_status_endpoint,
       mission_status_endpoint_auth_methods_supported,
       mission_status_signing_alg_values_supported, and, when it lists
       private_key_jwt,
@@ -17405,9 +17509,9 @@ Table of Contents
 
 10.1.  Mission Status Enumeration
 
-   Per the anti-oracle property (Section 3.7), the AS MUST NOT let a
+   Per the anti-oracle property (Section 3.8), the AS MUST NOT let a
    caller readily distinguish an unknown mission_id from a known-but-
-   unauthorized one at the Status or Lifecycle endpoint.  Section 3.7
+   unauthorized one at the Status or Lifecycle endpoint.  Section 3.8
    requires identical body content, identical HTTP status, and identical
    headers between the two cases, and the AS SHOULD additionally
    suppress timing side channels (for example by padding response time
@@ -17421,16 +17525,16 @@ Table of Contents
    beyond mission.fresh_until, is detectable by signature verification
    and by verifying the bindings; a consumer MUST verify all the checks
    of Section 3.5 before honoring a response.  A response cached and
-   replayed by the same caller within mission.fresh_until is equivalent
-   to a fresh response; a consumer MUST NOT use a cached response after
-   mission.fresh_until, with the skew tolerance of Section 3.6.
+   replayed by the same caller within its reliance bound (Section 3.6)
+   is equivalent to a fresh response; a consumer MUST NOT use a cached
+   response after that bound.
 
 10.3.  Mission Status Denial of Service
 
    The Mission Status operation is on the consumption path of every
    Mission-bound credential validation in deployments where consumers
    query Mission Status per request.  The AS MUST implement per-consumer
-   rate limiting (returning rate_limited, Section 3.8) and SHOULD
+   rate limiting (returning rate_limited, Section 3.10) and SHOULD
    encourage consumer-side caching (Section 3.6) to reduce traffic.
 
 10.4.  Signed Response Format
@@ -17617,7 +17721,7 @@ Table of Contents
 
    *  Change Controller: IESG
 
-   *  Specification Document(s): this document, Section 3.8
+   *  Specification Document(s): this document, Section 3.10
 
    *  Error Name: not_found
 
@@ -17629,7 +17733,7 @@ Table of Contents
 
    *  Change Controller: IESG
 
-   *  Specification Document(s): this document, Section 3.8
+   *  Specification Document(s): this document, Section 3.10
 
    *  Error Name: conflict
 
@@ -17640,7 +17744,7 @@ Table of Contents
 
    *  Change Controller: IESG
 
-   *  Specification Document(s): this document, Section 3.8
+   *  Specification Document(s): this document, Section 3.10
 
    *  Error Name: stale_version
 
@@ -17651,7 +17755,7 @@ Table of Contents
 
    *  Change Controller: IESG
 
-   *  Specification Document(s): this document, Section 3.8
+   *  Specification Document(s): this document, Section 3.10
 
    *  Error Name: rate_limited
 
@@ -17663,7 +17767,7 @@ Table of Contents
 
    *  Change Controller: IESG
 
-   *  Specification Document(s): this document, Section 3.8
+   *  Specification Document(s): this document, Section 3.10
 
    *  Error Name: unavailable
 
@@ -17675,7 +17779,7 @@ Table of Contents
 
    *  Change Controller: IESG
 
-   *  Specification Document(s): this document, Section 3.8
+   *  Specification Document(s): this document, Section 3.10
 
 12.3.  Media Type Registration
 
