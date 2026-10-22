@@ -2829,7 +2829,7 @@ export async function handleExpansionExchange(
         const facts = await encounterFacts(opts.progressive, outcome.encountered, requested, hint, {
           missionId: active.id,
           clientId: (ctx.oidc.client as NonNullable<typeof ctx.oidc.client>).clientId,
-          now: opts.kernel.nowDate(),
+          now: () => opts.kernel.nowDate(),
         });
         if (typeof facts === "string") {
           txError(ctx, 400, "invalid_request", facts);

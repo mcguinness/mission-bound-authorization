@@ -100,7 +100,15 @@ const METADATA = metadataOf({ resource: ORIGIN, authorization_servers: [VENDOR_A
  * as the test sets it, and the sessions it was asked about. No report is
  * missing, so tainted.
  */
-const harness = { report: undefined as unknown, fail: false, calls: [] as Array<{ missionId: string; clientId: string }> };
+const harness = {
+  report: undefined as unknown,
+  fail: false,
+  calls: [] as Array<{ missionId: string; clientId: string }>,
+  /** Runs inside the port before it answers: a test simulates a slow lookup here. */
+  during: undefined as (() => void) | undefined,
+};
+/** The server's clock runs this far ahead of the system clock; a test advances it to simulate time passing during a lookup. */
+const clock = { aheadMs: 0 };
 const TAINT_MAX_AGE = 60;
 /** An RFC 3339 date-time the given number of seconds ago (negative: in the future). */
 const secondsAgo = (n: number): string => new Date(Date.now() - n * 1000).toISOString();
@@ -121,6 +129,7 @@ const PROGRESSIVE: ProgressiveDrawdownOptions = {
   },
   harnessTaint: async (session) => {
     harness.calls.push(session);
+    harness.during?.();
     if (harness.fail) throw new Error("harness unreachable");
     return harness.report as TaintReport | undefined;
   },
@@ -278,6 +287,7 @@ beforeAll(async () => {
     approvalSessions,
     activationPolicies: PUBLISHED.policies,
     progressive: PROGRESSIVE,
+    now: () => new Date(Date.now() + clock.aheadMs),
   });
   server = as.provider.listen(PORT);
   await new Promise<void>((r) => server.once("listening", () => r()));
@@ -398,7 +408,7 @@ describe("the encounter's hint names the encounter's own origin (@spec discovery
   it("a hint naming another origin the request seeks is refused, so its digest is never compared with a different resource's declaration", async () => {
     declarations.set(ORIGIN, declarationOf(["payments:invoice.read"]));
     const digest = catalogDigest(declarationOf(["payments:invoice.read"]));
-    const session = { missionId: "msn_unit", clientId: "ap-agent", now: new Date() };
+    const session = { missionId: "msn_unit", clientId: "ap-agent", now: () => new Date() };
     const facts = await encounterFacts(
       PROGRESSIVE,
       [ENCOUNTERED],
@@ -641,6 +651,8 @@ describe("the session taint state, from the harness through a channel the agent 
     harness.report = undefined;
     harness.fail = false;
     harness.calls.length = 0;
+    harness.during = undefined;
+    clock.aheadMs = 0;
   });
 
   /** An encounter at ENCOUNTERED from a fresh Mission, with optional hints and extra request parameters. */
@@ -702,6 +714,9 @@ describe("the session taint state, from the harness through a channel the agent 
       { tainted: false, reported_at: secondsAgo(5) },
       { ...fresh, source_class: 5 },
       { ...fresh, reported_at: "yesterday" },
+      // Date.parse accepts these; RFC 3339 does not.
+      { ...fresh, reported_at: new Date(Date.now() - 5000).toUTCString() },
+      { ...fresh, reported_at: secondsAgo(5).slice(0, 10) },
       { tainted: false, granularity: "session" },
       { ...fresh, reported_at: secondsAgo(-TAINT_MAX_AGE) },
       "untainted",
@@ -711,6 +726,29 @@ describe("the session taint state, from the harness through a channel the agent 
       const { body, facts } = await encounter();
       expect(body.error, JSON.stringify(report)).toBe("authorization_pending");
       expect(facts, JSON.stringify(report)).toMatchObject({ tainted: true, taint_failure: "unverifiable" });
+    }
+  });
+
+  it("freshness is judged when the report arrives, after the lookups: a report fresh when asked but past the bound by then is stale, and one the harness made during a slow lookup is not future-dated", async () => {
+    try {
+      // A 120-second lookup: the report was 5 seconds old when asked for, 125 when it arrived.
+      harness.report = { tainted: false, granularity: "session", reported_at: secondsAgo(5) };
+      harness.during = () => {
+        clock.aheadMs += 120_000;
+      };
+      const late = (await encounter()).facts;
+      expect(late).toMatchObject({ tainted: true, taint_failure: "stale" });
+      // The harness made its report 90 seconds into a 120-second lookup: 30 seconds old on arrival.
+      clock.aheadMs = 0;
+      harness.during = () => {
+        clock.aheadMs += 120_000;
+        harness.report = { tainted: false, granularity: "session", reported_at: secondsAgo(-90) };
+      };
+      const during = (await encounter()).facts;
+      expect(during?.tainted).toBe(false);
+      expect(during?.taint_failure).toBeUndefined();
+    } finally {
+      clock.aheadMs = 0;
     }
   });
 

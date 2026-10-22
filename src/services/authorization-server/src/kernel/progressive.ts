@@ -28,9 +28,9 @@ import { randomBytes } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { ApprovalFloorPolicy, ProgressiveProfile } from "@mission/demo-data";
 import {
-  catalogDigest,
   type ActivationPolicyRef,
   authorityHash,
+  catalogDigest,
   compareAmounts,
   computeAnchor,
   containmentAtEntries,
@@ -39,6 +39,7 @@ import {
   isSubsetSetIgnoringCapabilitySources,
   isValidAmount,
   type JsonValue,
+  parseRfc3339Instant,
   proposalHash,
   selectorOverlapsEntry,
 } from "@mission/core";
@@ -644,12 +645,15 @@ export async function pinEncounteredResource(
  * A missing report, one older than the deployment's bound, and one that is
  * malformed, future-dated or not session-scoped all count as tainted; a stale
  * tainted report is tainted too, so the rule has no asymmetry. A report is
- * fresh when 0 <= now - reported_at <= taintMaxAgeSeconds.
+ * fresh when 0 <= now - reported_at <= taintMaxAgeSeconds, `reported_at`
+ * being a strict RFC 3339 date-time and `now` read when the report is judged,
+ * after every lookup, so a slow one neither freshens a report nor dates one
+ * in the future.
  */
 export async function sessionTaint(
   options: ProgressiveDrawdownOptions,
   session: { missionId: string; clientId: string },
-  now: Date,
+  now: () => Date,
 ): Promise<{ tainted: boolean; taint_failure?: TaintFailure; taint_report?: Record<string, unknown> }> {
   let report: unknown;
   try {
@@ -667,9 +671,9 @@ export async function sessionTaint(
   if (typeof given.tainted !== "boolean") return unverifiable;
   if (given.granularity !== "session") return unverifiable;
   if (given.source_class !== undefined && typeof given.source_class !== "string") return unverifiable;
-  const at = typeof given.reported_at === "string" ? Date.parse(given.reported_at) : Number.NaN;
-  if (Number.isNaN(at)) return unverifiable;
-  const ageSeconds = (now.getTime() - at) / 1000;
+  const at = parseRfc3339Instant(given.reported_at);
+  if (at === undefined) return unverifiable;
+  const ageSeconds = now().getTime() / 1000 - (Number(at.seconds) + Number(`0.${at.fraction || "0"}`));
   if (ageSeconds < 0) return unverifiable;
   if (ageSeconds > (options.taintMaxAgeSeconds as number)) return { tainted: true, taint_failure: "stale", taint_report };
   return { tainted: given.tainted, taint_report };
@@ -700,8 +704,12 @@ export async function encounterFacts(
   encountered: readonly string[],
   requested: readonly AuthorityEntry[],
   hint: EncounterHint | undefined,
-  /** @spec discovery#adjudication (#1469 stage 3): the session, from the subject token and client authentication; the clock. */
-  session: { missionId: string; clientId: string; now: Date },
+  /**
+   * @spec discovery#adjudication (#1469 stage 3): the session, from the
+   * subject token and client authentication, and the clock, read when the taint
+   * report is judged.
+   */
+  session: { missionId: string; clientId: string; now: () => Date },
 ): Promise<EncounterFacts | string> {
   const origins = [...new Set(encountered.map(originOf))];
   const origin = origins[0];
