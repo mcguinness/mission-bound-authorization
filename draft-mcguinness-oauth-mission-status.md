@@ -2057,71 +2057,9 @@ Mission Termination Reasons registry
 
 \[\[ To be removed from the final specification ]]
 
-- Interface audit before the first submission: the response reports
-  the Effective Authority Set; `state`, `expires_at` and `fresh_until`
-  are REQUIRED; every class that signs advertises
-  `mission_status_signing_alg_values_supported`; a private-key-JWT
-  assertion's `aud` is the AS's issuer identifier; `expected_version`
-  is a defined request member, checked before the transition rule; a
-  retransmit is compared on its operation members, and a transient
-  failure is not replayed (#705).
+-00
 
-- Conformance gains a revoke-only Mission Lifecycle class: the
-  Lifecycle endpoint with `revoke` alone, under its authentication,
-  lifecycle authorization, idempotency and signed state-only response,
-  without the Mission Status operation. An `operation` the AS does not
-  serve is refused `invalid_request` before the Mission is looked up
-  (#1182).
-
-- Mission lifecycle: the states are `active`, `suspended` and
-  `terminated`. A terminated Mission's `mission.termination` carries
-  its reason, `terminated_at` and the `version` of the committing
-  transition; `completed` is a termination reason, `successor` and
-  `carried_to` live in `termination`, an operation is idempotent only
-  when its resulting state and reason both match, the `mission_error`
-  values are `suspended` and `completed`, and a Discharge Result
-  carries `new_version` (#705).
-- A `suspend` whose `on_expiry` is `resume` needs the authorization
-  the deployment requires for a direct `resume` as well as for
-  `suspend`, including when it replaces the schedule of a Mission
-  already suspended, and the AS records each schedule's committing
-  party. Omitting both schedule members preserves the recorded
-  schedule. A schedule applies only while current, never to a later
-  suspension, and expiry governs a `suspend_until` at or after
-  `expires_at` (#1002).
-
-- Authentication failures at the Status and Lifecycle endpoints: a
-  failed access token gets a 401 `WWW-Authenticate` challenge in its
-  scheme (`Bearer` or `DPoP`); a request with no credential gets a
-  challenge for each accepted access-token scheme, always with
-  `resource_metadata`; failed mTLS or private-key-JWT client
-  authentication, or no credential where no access-token scheme is
-  accepted, gets 400 `invalid_client` (#972 item 18).
-
-- A derivation refused because the Mission is `suspended` or
-  `completed` carries the `mission_error` value `suspended` or
-  `completed`, so a client can tell a refusal that a `resume`
-  lifts from a terminal one.
-- A caller may request the projection for an audience other than its
-  own, such as each resource a Mission Issuance Grant consuming
-  Authorization Server serves, only where the Mission Issuer's
-  configuration authorizes it; the consumer checks `aud` against the
-  `audience` its request named (#963).
-- The mutual-TLS method value is `tls_client_auth`, the registered
-  {{RFC8705}} spelling, and an absent endpoint auth-methods member is
-  never read from token-endpoint metadata. The Mission Authority Server
-  publishes the same per-endpoint members.
-- A refresh against a suspended Mission is checked, and refused, before
-  its refresh token is consumed, so a `resume` restores refresh with the
-  same token; issuance-time validation still governs a concurrent
-  suspension (#914).
-
-- Added conditional carryover correlation on an old child's cascaded
-  observation; no state or authority is inferred from the pointer (#576).
-- Operational Considerations added (#310): recovery sizing for the
-  advertised propagation ceiling, the per-surface distribution posture,
-  and the operator observations after a degraded surface recovers. No
-  freshness window is extended and no member is added.
+- Initial individual draft.
 
 # Acknowledgments
 {:numbered="false"}
