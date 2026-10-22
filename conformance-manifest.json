@@ -64006,7 +64006,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "A routed encounter's disclosure shows whether the session was tainted at adjudication.",
-    "local": "The disclosure carries a taint statement: untrusted_content_ingested, no_untrusted_content_reported, or taint_state_unknown. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The disclosure carries a taint statement: untrusted_content_ingested, no_untrusted_content_reported (only on an explicit, trusted untainted report), or taint_state_unknown (facts stored before trusted taint among them). Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -64020,6 +64020,12 @@
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > under taint every encounter meets the taint floor, whatever its class; the disclosure says untrusted content was ingested only when the harness reported it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > an encounter stored before trusted taint and the floors is disclosed with its taint state unknown, claiming no floors, id or pinning, never as untainted",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
@@ -65191,7 +65197,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "The disclosure for an encounter routed under taint states that the session had ingested untrusted content.",
-    "local": "The disclosure states untrusted_content_ingested when the harness reported taint, a stale tainted report included since taint persists for the session, and taint_state_unknown when no trustworthy report says either way. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The disclosure states untrusted_content_ingested when the harness reported taint, a stale tainted report included since taint persists for the session, and taint_state_unknown when no trustworthy report says either way, facts stored before trusted taint among them; only an explicit, trusted untainted report says none was reported. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -65199,6 +65205,12 @@
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > under taint every encounter meets the taint floor, whatever its class; the disclosure says untrusted content was ingested only when the harness reported it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > an encounter stored before trusted taint and the floors is disclosed with its taint state unknown, claiming no floors, id or pinning, never as untainted",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
