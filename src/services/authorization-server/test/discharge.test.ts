@@ -1180,6 +1180,32 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     expect(as.kernel.effectiveAuthoritySet(after)).toEqual([]);
   });
 
+  it("replays an authorized retry whose observed_at has since aged past the admission window: the window is checked only for a request processed fresh (@spec status#lifecycle-processing, status#idempotency, #1535)", async () => {
+    const record = approveOnAs();
+    const start = as.kernel.nowDate().getTime();
+    const clock = vi.spyOn(as.kernel, "nowDate").mockReturnValue(new Date(start));
+    try {
+      const body = dischargeBody(record, {
+        observed_at: new Date(start - 24 * 60 * 60 * 1000 + 500).toISOString(),
+      });
+      const first = await lifecycle(record.id, body);
+      const firstBytes = await first.text();
+      expect(first.status, firstBytes).toBe(200);
+      clock.mockReturnValue(new Date(start + 1000));
+      const replay = await lifecycle(record.id, body);
+      const replayBytes = await replay.text();
+      expect(replay.status, replayBytes).toBe(200);
+      expect(replayBytes).toBe(firstBytes);
+      // The same members under a fresh nonce are processed fresh, and the
+      // aged observed_at is now outside the window.
+      const fresh = await lifecycle(record.id, { ...body, nonce: freshNonce() });
+      expect(fresh.status).toBe(400);
+      expect(await fresh.json()).toMatchObject({ error: "invalid_request" });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it("replays the stored signed response verbatim on a byte-identical retransmission", async () => {
     const record = approveOnAs();
     const body = dischargeBody(record);

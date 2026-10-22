@@ -4115,7 +4115,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // request syntax too, validated before its authorization.
       let discharge: DischargeRequest | undefined;
       if (operation === "discharge") {
-        const parsed = parseDischargeMembers(body, kernel.nowDate());
+        const parsed = parseDischargeMembers(body);
         if (!parsed.ok) {
           refuseInvalidRequest(parsed.description);
           return;
@@ -6628,6 +6628,18 @@ async function handleDischarge(input: {
   // authorized the target (kernel.authorizeDischarge) before deduplication;
   // kernel.discharge repeats the target checks inside its transaction.
   const { request } = input;
+  // @spec discharge#discharge-operation ("observed_at"), status#idempotency:
+  // the reasonable clock bounds depend on elapsed time, so they are checked
+  // only here, for a request that passed authorization and deduplication and
+  // is processed fresh: an authorized retransmit replays its original
+  // response however far its `observed_at` has since aged.
+  if (
+    request.observed_at !== undefined &&
+    Math.abs(Date.parse(request.observed_at) - kernel.nowDate().getTime()) > OBSERVED_AT_SKEW_MS
+  ) {
+    input.sendInvalidRequest("observed_at must lie within reasonable clock bounds");
+    return;
+  }
   // @spec control-plane#serialization — the expiry clock OUTSIDE the operation's
   // transaction (#844), as the lifecycle and `contain` handlers keep it: a
   // refused discharge (any not-found class, or a conflict) must never roll back
@@ -6717,11 +6729,12 @@ async function handleDischarge(input: {
  * @spec discharge#discharge-operation, status#lifecycle-processing (#1535): the
  * discharge's own request members, validated as request syntax before the
  * Lifecycle engine authorizes or deduplicates the request. Nothing here reads
- * the Mission; the value lacks only the authenticated authority.
+ * the Mission or the clock: `observed_at`'s clock bounds depend on elapsed
+ * time, not on the request alone, so handleDischarge checks them for a
+ * request processed fresh. The value lacks only the authenticated authority.
  */
 function parseDischargeMembers(
   body: Record<string, unknown>,
-  now: Date,
 ):
   | { ok: true; value: DischargeTargetForm & Omit<DischargeRequest, "authority" | keyof DischargeTargetForm> }
   | { ok: false; description: string } {
@@ -6786,15 +6799,11 @@ function parseDischargeMembers(
     return { ok: false, description: "evidence_digest must be a sha-256: prefixed digest" };
   }
   const observedAt = body.observed_at;
-  if (observedAt !== undefined) {
-    const parsed =
-      typeof observedAt === "string" && RFC3339_RE.test(observedAt) ? Date.parse(observedAt) : Number.NaN;
-    if (Number.isNaN(parsed) || Math.abs(parsed - now.getTime()) > OBSERVED_AT_SKEW_MS) {
-      return {
-        ok: false,
-        description: "observed_at must be an RFC 3339 date-time within reasonable clock bounds",
-      };
-    }
+  if (
+    observedAt !== undefined &&
+    (typeof observedAt !== "string" || !RFC3339_RE.test(observedAt) || Number.isNaN(Date.parse(observedAt)))
+  ) {
+    return { ok: false, description: "observed_at must be an RFC 3339 date-time" };
   }
   return {
     ok: true,
