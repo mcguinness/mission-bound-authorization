@@ -49684,6 +49684,182 @@
    "notes": "D634 residue (D639). Before it the reference admitted a malformed amount at PAR (201 with a request_uri) and refused it only at derivation, through intersectAmount, when the ceiling also carried max_amount. Proved red-green: the witness fails against main ('1e300': expected 201 to be 400) and with the new check disabled, and passes with it. The lead sentence ('a consumer MUST reject it rather than attempt to parse it') and the resource server's bullet have no row of their own."
   },
   {
+   "id": "resource-access.decimal-values.grammar",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "decimal-values",
+   "text": "MUST match `^[0-9]+(\\.[0-9]{1,18})?$`: one or more decimal digits, optionally followed by a single `.` and one to 18 further decimal digits",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a decimal-string value in a Common Constraint matches the grammar: digits, optionally a single point and one to 18 further digits; the authorization server refuses a value outside it (19 fractional digits, an exponent, a sign, a separator, a non-numeric token) and admits one inside it",
+    "local": "max_amount's amount is the reference's only decimal-valued member; isValidAmount (mission-core) implements the grammar, and the published schema carries it as a pattern"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "decimal values at PAR (@spec resource-access#decimal-values) > refuses a malformed max_amount amount with invalid_authorization_details before any interaction, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "decimal values at PAR (@spec resource-access#decimal-values) > accepts a decimal string with up to 18 fractional digits (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "Decimal Values residue (owner's \"resolve\", 2026-10-22): the section's obligations had no rows besides the submission refusal (#1529). Proved by mutation: widening the grammar to 19 fractional digits fails the refusal witness."
+  },
+  {
+   "id": "resource-access.decimal-values.consumer-rejects-malformed",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "decimal-values",
+   "text": "a consumer MUST reject it rather than attempt to parse it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a malformed decimal value is rejected, never parsed or coerced: a candidate carrying one is not a subset of a granted entry, and a proposal carrying one refuses the derivation",
+    "local": "the submission refusal is resource-access.decimal-values.proposal-malformed-refused; the resource server side is resource-access.decimal-values.rs-malformed-unenforceable"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/derivation-delegation.test.ts",
+     "name": "isSubsetEntry compares max_amount by exact decimal value, not IEEE-754 float > a malformed candidate amount fails closed (not a subset), never silently permitted",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-delegation.test.ts",
+     "name": "isSubsetEntry compares max_amount by exact decimal value, not IEEE-754 float > a malformed proposed max_amount refuses derivation (IntentError), never silently coerced",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Decimal Values residue (owner's \"resolve\", 2026-10-22): the section's obligations had no rows besides the submission refusal (#1529). Proved by mutation: removing the malformed-amount checks from the subset rule (authority-subset.ts) and from derivation (derive.ts) fails both witnesses."
+  },
+  {
+   "id": "resource-access.decimal-values.rs-malformed-unenforceable",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "decimal-values",
+   "text": "a resource server treats a malformed decimal value the same as a `constraints` key it cannot enforce",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at the point of use, an applicable entry whose decimal constraint value is malformed provides no authority: the decision is a denial, never an unbounded cap",
+    "local": "in the reference the payments resource server's decision is the PDP's (runtime-enforced profile), which denies a malformed max_amount cap in the Mission view"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a malformed cap in the Mission view is denied (fail closed), never treated as unbounded",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Decimal Values residue (owner's \"resolve\", 2026-10-22): the section's obligations had no rows besides the submission refusal (#1529). Proved by mutation: removing the PDP's malformed-cap check (evaluate.ts) fails the witness."
+  },
+  {
+   "id": "resource-access.decimal-values.exact-decimal-arithmetic",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "decimal-values",
+   "text": "Comparison and intersection over two such decimal-string values MUST be computed as exact decimal arithmetic (for example, by scaling both values to integers by their fractional digit count and comparing the integers) and MUST NOT parse either value into an IEEE 754 binary floating-point type",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "two decimal values that round to the same IEEE 754 double compare by their exact values: a candidate one unit above the granted cap past 2^53 is not a subset",
+    "local": "compareAmounts (mission-core) scales to integers; the PDP's comparison is witnessed on resource-access.common-constraints.max-amount-predicate"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/derivation-delegation.test.ts",
+     "name": "isSubsetEntry compares max_amount by exact decimal value, not IEEE-754 float > a candidate 1 unit above the granted cap is NOT a subset, even though both amounts round to the same double",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/decimal-amount.test.ts",
+     "name": "compareAmounts > a value that float-compares wrong compares correctly under exact decimal arithmetic",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/decimal-amount.test.ts",
+     "name": "compareAmounts > is exact for arbitrarily large and arbitrarily precise values",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Decimal Values residue (owner's \"resolve\", 2026-10-22): the section's obligations had no rows besides the submission refusal (#1529). Proved by mutation: comparing the parsed floats in compareAmounts fails all three witnesses."
+  },
+  {
+   "id": "resource-access.decimal-values.jcs-numeric-range",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "decimal-values",
+   "text": "A numeric constraint value MUST lie within the range that the JSON Canonicalization Scheme (JCS) {{RFC8785}} serializes exactly.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Common Constraint value carried as a JSON number lies within the range JCS serializes exactly, so the committed digest is the same for every party"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Decimal Values residue (owner's \"resolve\", 2026-10-22): the section's obligations had no rows besides the submission refusal (#1529). Todo: no initial Common Constraint carries a JSON number and the reference implements none, so there is nothing to witness until a numeric constraint is defined. The adjacent SHOULD (reuse the decimal-string shape for a monetary value) is guidance to future registrants, not an implementer duty, and has no row."
+  },
+  {
    "id": "resource-access.common-constraints.no-drop-any-key",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "common-constraints",
