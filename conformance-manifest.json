@@ -111,8 +111,8 @@
     "content_sha256": "4c24262bd4ab09784922ab543c24d97cfb849c9a5845c70a664ef39d906803b3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "84b52a8fc422c85abedf768882e887524a99081e",
-    "content_sha256": "48ea6d93bdc42e5f69e8aaca0fa0e103e481733b742d780d3049fbe8109ea62c"
+    "revision": "720a916c01968d33337996dc937ae4a81d4472f1",
+    "content_sha256": "8a6393cc9e8e5dad832b419a6c6ce6f12362decf8f89bd12289463bd81502ee8"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
@@ -7473,9 +7473,33 @@
      "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > a parent that is not active refuses the child-creation exchange with invalid_request and parent_not_active, creating no child (@spec child-delegation#denial-reasons, mission#issuance-gating, #1154)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > code exchange: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same exchange without it delivers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > refresh: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same refresh without it delivers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > Token Exchange: an async-delegation exchange whose Mission is revoked after the gate and the signature is refused invalid_request with mission_error revoked and no token member (D369), where the same exchange without it delivers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > a revocation committed while the request-path drain runs, the last awaited step before release, is still refused invalid_grant with mission_error revoked and no token member",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1154 (D369). Partial (#250, by the owner's ruling): every cited witness acknowledges the revocation before the derivation request arrives. A revocation committed and acknowledged after the save-time gate and before the response is not refused: the reference re-checks no Mission state after the gate, so the token is delivered. The release fence after all awaited response preparation is #250's revoke-during-issuance step; this row returns to tested only when its witnesses cover the issuance paths the clause covers."
+   "notes": "#1154 (D369). Partial (#250): the release fence (`fenceRelease`, the outermost `provider.use`, after every awaited response step including the request-path drain) refuses a token whose Mission terminated after the save-time gate, with the gate's own code. Witnessed for a revocation committed during issuance on the code exchange, a refresh and the async-delegation creating exchange, and for one committed while the drain runs; the ICA continuation exchange keeps its own code (core.issuance-gating.profile-code-override). Fenced by the same wrapper but not witnessed during issuance: the device code grant, the deferred grant (AROP, Mission approval and expansion deferrals), the JWT bearer grant (child redemption, Dispatch Handoff redemption), the Mission dispatch grant, the delegation-handle, designation, delegated-redemption, child-creation, expansion and Dispatch Handoff exchanges, and a stored result served again. The fence orders a revocation against an issuance within one process only (#641). Returns to tested when those paths are witnessed."
   },
   {
    "id": "core.issuance-gating.profile-code-override",
@@ -7537,6 +7561,12 @@
     {
      "file": "src/services/authorization-server/test/continuation-grant.test.ts",
      "name": "continuation hop-count limit (@spec id-continuation-assertion) > refuses a continuation past the chain's limit with invalid_grant, recording no hop and counting no derivation; another chain of the same Mission is unaffected",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "the release fence on the continuation exchange (@spec mission#issuance-gating, id-continuation-assertion, #250) > a Mission revoked after the gate and the signature keeps ICA's code: invalid_continuation with mission_error revoked and no token member, where the same exchange without it delivers the ID-JAG",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -55211,6 +55241,70 @@
     }
    ],
    "notes": "#1304 (D486). The restriction clause is witnessed at the endpoint. That a list never creates the grant is witnessed at derivation (the grant flip in the subset rule) and at the kernel (the on-switch refuses though the policy permits), so the row is partial at its endpoint level. Proven by disabling the code it covers (each mutation restored byte for byte): recording the origin as list admits the policy-denied actor; lifting the on-switch fails the kernel witness."
+  },
+  {
+   "id": "child-delegation.fanout.children-unsupported-member-refused",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "fanout",
+   "text": "An authorization server MUST refuse an entry whose `children` carries any other member, whatever its value, unless a companion specification it implements defines that member's processing, and MUST NOT drop the member",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submitted entry whose children grant carries a member other than max_children, max_child_depth, allowed_child_actors and child_creation_policy, whose processing no implemented companion specification defines, is refused with invalid_authorization_details and no request_uri, never admitted without the member; an otherwise valid and authorized entry whose children grant carries only supported members is not refused by this check, and the approved Mission's entry carries it",
+    "local": "the reference implements no companion specification defining a further children member; unsupportedDelegationMember (mission-core) checks SUPPORTED_CHILDREN_MEMBERS at every intake, derivation and the config loaders"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "PAR refuses a delegation member the authorization server does not support (@spec resource-access#resource-access-type, D634) > refuses an entry whose children grant carries a member Child Delegation does not define",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "PAR refuses a delegation member the authorization server does not support (@spec resource-access#resource-access-type, D634) > admits the children grant Child Delegation defines, and the approved Mission's entry carries it, narrowed by the ceiling",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1528 (D660): a normative clarification of the closed children grant. The intro's 'an authorization server that does not implement this profile refuses an entry carrying it' points at Resource Access's delegation-member refusal (resource-access.type.delegation-unsupported-member-refused); the reference implements this profile. Proved by mutation: disabling the nested children check in unsupportedDelegationMember fails the negative witness ('expected 201 to be 400'), while the positive witness still passes; the existing refusal of child creation for an unenforceable control is unchanged."
+  },
+  {
+   "id": "child-delegation.fanout.children-unsupported-member-config-error",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "fanout",
+   "text": "a configured entry carrying one is a configuration error",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a configured ceiling entry whose children grant carries an undefined member is rejected when the configuration loads, never served or rebuilt without the member",
+    "local": "the reference's loader (parseCeilingEntry, policy.json) refuses to load, naming the entry and the member"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "the config loader refuses a ceiling entry whose delegation carries an unsupported member, naming it (D634) > parseCeilingEntry (policy.json) rejects an entry whose children grant carries a member Child Delegation does not define, naming it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1528 (D660). Proved by mutation: disabling the nested children check in unsupportedDelegationMember fails the witness (the configuration loads)."
   },
   {
    "id": "child-delegation.child-actor-eligibility.policy-creates-no-grant",

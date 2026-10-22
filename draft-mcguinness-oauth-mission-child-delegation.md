@@ -87,8 +87,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
@@ -97,6 +95,8 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
   RFC8126:
   I-D.draft-ietf-oauth-deferred-token-response:
   I-D.draft-mcguinness-oauth-client-instance-id:
@@ -338,9 +338,11 @@ projected to it; creating the child establishes neither condition.
 This profile's child delegation is distinct from the in-Mission
 delegation the issuance profile already defines. In-Mission delegation
 extends a single Mission's `act` chain to additional actors, bounded by
-the per-entry `delegation` policy (`allowed_delegates`, `max_depth`) of
-{{I-D.draft-mcguinness-oauth-mission}}; no new Mission is created and
-authority is exercised under the original Mission. Child delegation, by
+the per-entry `delegation` policy (`allowed_delegates`, `max_depth`)
+that Resource Access defines
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}); no new Mission
+is created and authority is exercised under the original Mission.
+Child delegation, by
 contrast, creates a separate Child Mission with its own `mission_id`,
 actor, lifecycle, and `act` chain.
 
@@ -1273,7 +1275,7 @@ A Child Mission MUST be bounded by the Parent Mission:
   `delegation` member carries a `children` object ({{fanout}});
 - a child entry's `delegation` policy MUST NOT be broader than the
   parent entry's, per the subset rule of
-  {{I-D.draft-mcguinness-oauth-mission}}:
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}}:
   - its `max_depth` MUST be no greater; and
   - its `allowed_delegates` MUST be no wider;
 - non-delegable parent entries MUST NOT appear in child authority; and
@@ -1391,11 +1393,14 @@ derivation, not one per refresh
 # Fan-Out Controls {#fanout}
 
 This profile defines the on-switch for child creation as a member of the
-issuance profile's per-entry `delegation` object. The issuance profile lets a
-companion profile define additional `delegation` members that are policy,
-not authority, are never broadened downstream, and are carried unchanged
-when not understood ({{I-D.draft-mcguinness-oauth-mission}}); this
-profile's `children` member is such a member.
+`delegation` object of a `mission_resource_access` entry. Resource Access
+lets a companion profile define additional `delegation` members: such a
+member is policy, not authority, is never broadened downstream, and is
+refused by an authorization server that implements no specification
+defining its processing
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). This profile's
+`children` member is such a member, so an authorization server that does
+not implement this profile refuses an entry carrying it.
 
 `children`:
 : OPTIONAL. An object. Its PRESENCE on a parent Authority Set entry's
@@ -1410,11 +1415,12 @@ profile's `children` member is such a member.
     Mission.
 
   `allowed_child_actors`:
-  : OPTIONAL. An array of matcher objects of the same form as the issuance profile's
-    `allowed_delegates` ({{I-D.draft-mcguinness-oauth-mission}}),
-    constraining which actors or actor classes may receive a Child
-    Mission from this entry. Matchers are evaluated under the issuance profile's
-    `allowed_delegates` matching rules, including the rule that a
+  : OPTIONAL. An array of matcher objects of the same form as Resource
+    Access's `allowed_delegates`
+    ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
+    "Matching `allowed_delegates`"), constraining which actors or actor
+    classes may receive a Child Mission from this entry. Matchers are
+    evaluated under those matching rules, including the rule that a
     `{ "sub_profile": ... }` matcher is satisfied when its value is
     among the actor's space-separated `sub_profile` values.
 
@@ -1437,6 +1443,18 @@ profile's `children` member is such a member.
     `version`, and `digest` ({{I-D.draft-mcguinness-oauth-mission}},
     Section "Standing-Consent Bases"), identifying the policy
     evaluated before each child creation and committing its content.
+
+`children` carries only the four members above. An authorization server
+MUST refuse an entry whose `children` carries any other member, whatever
+its value, unless a companion specification it implements defines that
+member's processing, and MUST NOT drop the member. A submitted
+`authorization_details` entry carrying one is refused with the
+`invalid_authorization_details` error code ({{Section 5 of RFC9396}});
+a configured entry carrying one is a configuration error. This admission
+check is separate from enforcement: a supported member is not refused by
+this check; other validation and authorization requirements still apply,
+and child creation is still refused when the Mission Issuer cannot
+enforce the member (below).
 
 Example parent Authority Set entry whose `delegation` carries `children`,
 so the entry permits Child Missions to depth 2, at most 5 concurrently,
@@ -2448,6 +2466,14 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- Fan-Out Controls cites Resource Access for the `delegation` extension
+  rules and drops the claim that an unrecognized member is carried
+  unchanged: an authorization server that does not implement this
+  profile refuses an entry carrying `children`, and `children` admits only
+  its four defined members, refusing any other unless an implemented
+  companion specification defines it (#1528). `allowed_child_actors`
+  cites Resource Access's `allowed_delegates` matching rules, and
+  Resource Access is a normative reference.
 - A `policy_drawdown` child of a Parent Mission activated under a
   standing-consent basis takes the Parent's own
   `approval_basis.approved_at` as its `approved_at`, not the Parent's
