@@ -32,9 +32,15 @@ import {
   resolveFreshCapabilitySources,
 } from "./capability-binding.js";
 import {
+  assertContainmentSelectors,
   buildContainmentEvidence,
+  containmentAtEntries,
+  containmentRemovalFor,
   type ContainmentEvidence,
   type ContainmentPolicy,
+  type ContainmentSelector,
+  mergeContainmentSelectors,
+  selectorOverlapsEntry,
   UnknownProtectedEventError,
 } from "./containment.js";
 import {
@@ -54,7 +60,8 @@ import {
   type BoundAuthoritySourceCatalog,
   type LocalPrincipal,
   authoritySourceOf,
-  parseAuthoritySource,
+  isRecognizedAuthoritySource,
+  parseRecordedAuthoritySource,
   resolveApprovalSource,
   resolveCommittedSource,
   resolveRenderingSource,
@@ -214,6 +221,7 @@ import {
   type MissionRecord,
   type MissionState,
   type ParentRef,
+  type RecordedAuthoritySource,
   type ScheduleRequest,
   type SuspensionSchedule,
   type TemplateRef,
@@ -2338,7 +2346,7 @@ export class MissionKernel {
   assertRenderedAuthoritySource(input: {
     /** The committed root of the rendered origin (#827). */
     binding: AuthoritySourceBinding;
-    source: AuthoritySource;
+    source: RecordedAuthoritySource;
     subject: { iss: string; sub: string };
     approver: { iss: string; sub: string };
     authoritySet: readonly AuthorityEntry[];
@@ -2709,7 +2717,8 @@ export class MissionKernel {
     id: string,
     input: {
       event: { type: string; source: string; observed_at: string; event_id: string };
-      remove: Array<{ resource: string; actions?: string[] }>;
+      /** Selectors (@spec containment#selector-matching): `exact` by default, `prefix` only by declaration. */
+      remove: ContainmentSelector[];
       /**
        * @spec containment#containment-policy — the ContainmentPolicy `rule_id`
        * that drove this narrowing when the event was applied via {@link
@@ -2738,6 +2747,10 @@ export class MissionKernel {
     if (!Array.isArray(input.remove) || input.remove.length === 0) {
       throw new Error("contain requires a non-empty remove list");
     }
+    // @spec containment#selector-matching (#1463): a selector the matcher
+    // cannot decide would contain nothing, so it is refused before anything
+    // commits, whichever intake supplied it.
+    assertContainmentSelectors(input.remove);
     const prior = record.containment;
     const nowIso = this.now().toISOString();
     const evidenceBase = {
@@ -2767,38 +2780,19 @@ export class MissionKernel {
       };
     }
 
-    // New contained set = UNION with the prior (monotonic). Merged by resource:
-    // an entry with no `actions` contains the whole resource and absorbs any
-    // per-action containment for it.
-    const merged = new Map<string, Set<string> | undefined>();
-    for (const e of prior?.contained ?? []) {
-      merged.set(e.resource, e.actions ? new Set(e.actions) : undefined);
-    }
-    for (const r of input.remove) {
-      if (!merged.has(r.resource)) {
-        merged.set(r.resource, r.actions ? new Set(r.actions) : undefined);
-        continue;
-      }
-      const cur = merged.get(r.resource);
-      if (cur === undefined) continue; // whole resource already contained
-      if (!r.actions) {
-        merged.set(r.resource, undefined);
-      } else {
-        for (const a of r.actions) cur.add(a);
-      }
-    }
-    const contained = [...merged.entries()].map(([resource, actions]) =>
-      actions ? { resource, actions: [...actions] } : { resource },
-    );
+    // New contained set = UNION with the prior (monotonic). Selectors merge
+    // only under the same `resource` AND mode (@spec containment#selector-
+    // matching, #1463): one with no `actions` absorbs per-action selectors of
+    // that key, and an `exact` and a `prefix` selector naming one string stay
+    // separate, since they select different resource sets.
+    const removed = mergeContainmentSelectors(input.remove);
+    const contained = mergeContainmentSelectors(prior?.contained ?? [], removed);
     const eventRecord: ContainmentEventRecord = {
       type: input.event.type,
       source: input.event.source,
       observed_at: input.event.observed_at,
       event_id: input.event.event_id,
-      removed: input.remove.map((r) => ({
-        resource: r.resource,
-        ...(r.actions ? { actions: [...r.actions] } : {}),
-      })),
+      removed,
     };
     const next: MissionContainment = {
       containment_version: (prior?.containment_version ?? 0) + 1,
@@ -2839,9 +2833,9 @@ export class MissionKernel {
     // @spec child-delegation#child-state — containment propagates entry-wise to
     // existing children justified by the now-contained parent entry, so a child
     // cannot keep deriving contained authority while the parent stays `active`.
-    // Only the NEWLY removed items (`input.remove`), not the whole merged
-    // overlay: earlier removals were already propagated when THEY were applied.
-    this.propagateContainmentToChildren(fresh, input.remove, input.event, input.policyRule);
+    // Only the NEWLY removed items, not the whole merged overlay: earlier
+    // removals were already propagated when THEY were applied.
+    this.propagateContainmentToChildren(fresh, removed, input.event, input.policyRule);
     return {
       record: fresh,
       evidence: buildContainmentEvidence({
@@ -2857,17 +2851,24 @@ export class MissionKernel {
 
   /**
    * @spec child-delegation#child-state — propagate a containment narrowing
-   * entry-wise to PARENT's existing children. A removed item applies to a
-   * child when the child holds an Authority Set entry for that SAME resource:
-   * a Child Mission's `authority_set` is proven (at creation,
-   * {@link createChildMission}) to be a strict subset of the parent's, so any
-   * child entry sharing a resource with a removed item is necessarily justified
-   * by the parent entry that removal narrowed (@spec
-   * child-delegation#fanout-accounting). Matching on the resource key alone
-   * (not a fresh subset probe) mirrors how {@link effectiveAuthoritySet} and
-   * `contain`'s own merge already correlate entries, and fails CLOSED: a
-   * subset re-probe here could spuriously fail on an unrelated malformed
-   * constraint and silently skip propagation, which containment must not do.
+   * entry-wise to PARENT's existing children. A Child Mission's
+   * `authority_set` is proven (at creation, {@link createChildMission}) to be
+   * a strict subset of the parent's, so each child entry lies within the
+   * parent entries that justify it (@spec child-delegation#fanout-accounting).
+   *
+   * @spec containment#selector-matching (#1463, D606): the removals are
+   * widened onto the parent's approved entries first ({@link
+   * containmentAtEntries}), so a child entry justified by a parent entry a
+   * selector applies to loses what that parent entry lost, the conservative
+   * over-containment included. A fine selector (one invoice) over a broad
+   * `prefix` parent entry removes its actions from the whole parent entry, so
+   * a child holding a sibling invoice under that entry loses them too, as a
+   * child created after the transition could not derive them. The original
+   * selectors ride along unchanged. Each child receives the removals whose
+   * selector overlaps one of its own entries ({@link selectorOverlapsEntry}),
+   * not a fresh subset probe, which fails CLOSED: a subset re-probe here could
+   * spuriously fail on an unrelated malformed constraint and silently skip
+   * propagation, which containment must not do.
    *
    * A terminal child cannot derive further and is skipped (mirrors {@link
    * cascadeChildren}'s active/suspended-only gate; `contain` itself also
@@ -2881,15 +2882,16 @@ export class MissionKernel {
    */
   private propagateContainmentToChildren(
     parent: MissionRecord,
-    removed: Array<{ resource: string; actions?: string[] }>,
+    removed: ContainmentSelector[],
     event: { type: string; source: string; observed_at: string; event_id: string },
     policyRule?: string,
   ): void {
+    const widened = mergeContainmentSelectors(removed, containmentAtEntries(parent.authority_set, removed));
     for (const child of this.findChildren(parent.id)) {
       const fresh = this.applyExpiry(child);
       if (TERMINAL_STATES.has(fresh.state)) continue;
-      const applicable = removed.filter((r) =>
-        fresh.authority_set.some((ce) => ce.resource === r.resource),
+      const applicable = widened.filter((r) =>
+        fresh.authority_set.some((ce) => selectorOverlapsEntry(r, ce)),
       );
       if (applicable.length === 0) continue;
       this.contain(fresh.id, {
@@ -3530,6 +3532,21 @@ export class MissionKernel {
   }
 
   /**
+   * @spec containment#selector-matching, runtime#input-authority (#1463): the
+   * containment overlay resolved onto the approved entries, one removal per
+   * affected entry naming that entry's own `resource` and mode
+   * ({@link containmentAtEntries}). For a consumer that materializes a policy
+   * view from this AS and pairs a contained capability with the approved
+   * entry it relies on by that entry's `resource` (a PDP's `containment`
+   * delta), so a `prefix` selector or a fine selector over a broad entry
+   * reaches it exactly as it reaches the effective set. Empty when nothing is
+   * contained.
+   */
+  containedEntryRemovals(record: MissionRecord): ContainmentSelector[] {
+    return containmentAtEntries(record.authority_set, record.containment?.contained ?? []);
+  }
+
+  /**
    * The Mission's EFFECTIVE Authority Set: the approved set minus the issuer-held
    * narrowing overlays, which are TWO (#569: this method is the single
    * composition point every derivation, projection, and Status surface draws on):
@@ -3573,16 +3590,21 @@ export class MissionKernel {
         out.push({ origin: entry, entry });
         continue;
       }
-      // A contained capability names an approved Authority Set entry or its
-      // actions (containment#overlay), so the overlay is keyed on the approved
-      // entry's own `resource` by string equality, never the shared matcher.
-      const contained = containment.contained.find((c) => c.resource === entry.resource);
-      if (!contained) {
+      // @spec containment#selector-matching (#1463, D606): a contained
+      // capability is a selector, applied to this entry when their resource
+      // sets overlap under Resource Access matching, and every overlapping
+      // selector contributes (a union, never the first match or a string key).
+      // A selector finer than the entry (one invoice under a `prefix` entry)
+      // removes its actions across the whole entry: an entry cannot express
+      // "this prefix except that resource", so this conservative
+      // over-containment removes more authority, never less.
+      const removal = containmentRemovalFor(entry, containment.contained);
+      if (!removal) {
         out.push({ origin: entry, entry });
         continue;
       }
-      if (!contained.actions) continue; // whole resource contained -> entry dropped
-      const actions = entry.actions.filter((a) => !(contained.actions as string[]).includes(a));
+      if (removal.whole) continue; // a selector with no actions -> entry dropped
+      const actions = entry.actions.filter((a) => !removal.actions.has(a));
       if (actions.length === 0) continue; // every action contained -> entry dropped
       out.push({ origin: entry, entry: { ...entry, actions } });
     }
@@ -4222,10 +4244,13 @@ export class MissionKernel {
             // `approval_basis.type` already gates on: `type` always, plus the
             // governed policy's `id` and `version` for `organizational`. The
             // policy `digest` stays off introspection and belongs to record
-            // access.
+            // access. An unrecognized `type` (#1503) is echoed alone: its
+            // other members are opaque, so none of them is projected.
             authority_source: {
               type: fresh.authority_source.type,
-              ...(fresh.authority_source.policy
+              ...(isRecognizedAuthoritySource(fresh.authority_source) &&
+              fresh.authority_source.type === "organizational" &&
+              fresh.authority_source.policy
                 ? {
                     policy: {
                       id: fresh.authority_source.policy.id,
@@ -4918,10 +4943,11 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     authority_hash: row.authority_hash as string,
     subject: { iss: row.subject_iss as string, sub: row.subject_sub as string },
     approval_basis: JSON.parse(row.approval_basis_json as string) as ApprovalBasis,
-    // @spec mission#mission-record, mission#lifecycle — fail closed on
-    // hydration: a stored row carrying an unrecognized `authority_source.type`
-    // is refused, never widened into the union.
-    authority_source: parseAuthoritySource(
+    // @spec mission#mission-record (#1503): a stored row carrying an
+    // unrecognized `authority_source.type` hydrates with the member unchanged
+    // as opaque provenance, and the Mission keeps its state; a recognized type
+    // is still held to its member rules.
+    authority_source: parseRecordedAuthoritySource(
       JSON.parse(row.authority_source_json as string),
       `mission ${String(row.id)}`,
     ),

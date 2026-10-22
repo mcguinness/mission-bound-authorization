@@ -347,7 +347,12 @@ import {
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
 import { withTransaction } from "@mission/store";
-import { UnknownProtectedEventError } from "../kernel/containment.js";
+import {
+  assertContainmentSelectors,
+  ContainmentSelectorError,
+  type ContainmentSelector,
+  UnknownProtectedEventError,
+} from "../kernel/containment.js";
 import {
   DIGEST_PREFIX,
   DISCHARGE_EVENT_ID_RE,
@@ -460,7 +465,7 @@ import {
   takeDeviceIntake,
   type DeviceClientView,
 } from "./device-authorization.js";
-import { pushedRequestIntake, takeParIntake } from "./par-intake.js";
+import { pushedRequestIntake, requestObjectIntake, takeParIntake, takeRequestObjectIntake } from "./par-intake.js";
 import type { MissionApprovalDeferralStore } from "../kernel/mission-approval-deferral.js";
 import {
   cancelOnRevocation,
@@ -1509,17 +1514,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
   }
 
   /**
-   * @spec mission#subset, mission#remediation-grains, mission#error-mapping
-   * (#1303) — a token request's `authorization_details` (Section 6 of
-   * RFC 9396) narrows the issued token. `ceiling` is what the grant carries
-   * as the effective set narrows it ({@link rarThroughEffectiveSet}); with no
-   * request the token carries the ceiling. A requested entry that is not a
-   * subset of the ceiling under its type's relation is refused
-   * `invalid_authorization_details`, never silently re-narrowed. An admitted
-   * request issues the requested entries projected through the ceiling, which
-   * keeps the ceiling's capability-source provenance. The refresh token keeps
-   * the grant, so a later refresh may ask for the whole ceiling again. An
-   * empty array names nothing, as in oidc-provider's checkRar.
+   * @spec mission#subset, mission#remediation-grains, mission#error-mapping,
+   * mission#refresh-tokens (#1303, #1503): a token request's
+   * `authorization_details` (Section 6 of RFC 9396) narrows the issued token.
+   * `ceiling` is what the grant carries as the effective set narrows it
+   * ({@link rarThroughEffectiveSet}); with no request the token carries the
+   * ceiling. A requested entry that is not a subset of the ceiling under its
+   * type's relation is refused `invalid_authorization_details`, never silently
+   * re-narrowed. An admitted request issues the requested entries projected
+   * through the ceiling, which keeps the ceiling's capability-source
+   * provenance. The projection drops a pairing it cannot prove (a
+   * `capability_sources` binding the ceiling does not record, a `max_amount`
+   * that is not a decimal), so an admitted entry can fail to come out whole;
+   * issuing the rest would be a narrower set than the one requested, so that
+   * request is refused too. The refresh token keeps the grant, so a later
+   * refresh may ask for the whole ceiling again. An empty array names nothing,
+   * as in oidc-provider's checkRar.
    */
   function narrowToRequestedRar(ctx: unknown, ceiling: unknown): unknown {
     const raw = (ctx as { oidc: { params: Record<string, unknown> } }).oidc.params.authorization_details;
@@ -1530,7 +1540,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const narrowed = isSubsetSetIgnoringCapabilitySources(requested, granted)
       ? projectThroughEffective(requested, granted)
       : [];
-    if (narrowed.length === 0) {
+    // Every requested entry is issued whole, or the request is refused. The
+    // comparison sets `capability_sources` aside, as the one above does: an
+    // issued entry carries the ceiling's bindings where the request names none.
+    if (!isSubsetSetIgnoringCapabilitySources(requested, narrowed)) {
       throw new InvalidAuthorizationDetails("requested authorization_details are not within the authority of the grant");
     }
     return narrowed;
@@ -1680,6 +1693,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         ? false
         : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
+    // @spec mission#submission-via-par (#1503): the one Request Object
+    // signing algorithm (features.requestObjects below); every other
+    // algorithm list keeps the provider's default.
+    enabledJWA: { requestObjectSigningAlgValues: ["ES256"] },
     interactions: {
       url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
       // @spec mission#approval-event (#1247), device-authorization#approval
@@ -1702,6 +1719,31 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // We serve our own approval interaction (the mission-kernel adapter).
       devInteractions: { enabled: false },
       pushedAuthorizationRequests: { enabled: true, requirePushedAuthorizationRequests: true },
+      // @spec mission#submission-via-par (#1503): the second carriage of the
+      // Submission envelope, a `mission_intent` claim in a signed Request
+      // Object (RFC 9101) pushed through PAR. Signed only: `enabledJWA` above
+      // accepts the ES256 every registered client already signs its client
+      // assertion with, verified against the client's registered JWKS, so an
+      // unsigned (`alg` none) object fails the provider's algorithm check
+      // with invalid_request_object. requireSignedRequestObject stays off, so
+      // the form-encoded carriage stays available. The hook (par-intake.ts)
+      // keeps the device authorization endpoint refusing a Request Object.
+      // @spec mission#submission-processing (#1512): the hook runs before
+      // the provider's RAR check, so it validates a carried Submission
+      // envelope and its Intent (steps 1 and 2) before a proposal inside the
+      // object is checked (step 3); evidence entries wait for their step.
+      requestObjects: {
+        enabled: true,
+        requireSignedRequestObject: false,
+        assertJwtClaimsAndHeader: requestObjectIntake((submission) => {
+          try {
+            kernel.validateSubmission(submission, undefined, { deferEvidenceEntries: true });
+          } catch (e) {
+            if (e instanceof IntentError) throw intentErrorToOidc(e);
+            throw e;
+          }
+        }),
+      },
       richAuthorizationRequests: {
         enabled: true,
         ack: "experimental-01",
@@ -1848,7 +1890,20 @@ export function buildProvider(opts: AdapterOptions): Provider {
           (ctx as { oidc: { route?: string } }).oidc.route === "pushed_authorization_request"
             ? takeParIntake((ctx as { req: IncomingMessage }).req)
             : undefined;
-        if (value === undefined) {
+        // @spec mission#submission-via-par (#1503): inside a client-signed
+        // Request Object the claim's value is the Submission envelope itself,
+        // a JSON object, which the Request Object hook read from the strictly
+        // parsed payload (the provider keeps only `String(value)`) and
+        // refused unless it is one. The envelope's serialization replaces the
+        // parameter, at PAR and again where the authorization endpoint reads
+        // the pushed object, so the envelope is validated, and its
+        // intent_hash computed, exactly as a form value's, and the approval
+        // reads it from the interaction as it reads a form value. A form
+        // value is that serialization already.
+        const requestObject = takeRequestObjectIntake((ctx as { req: IncomingMessage }).req);
+        const submitted = requestObject !== undefined ? requestObject.submission : value;
+        if (requestObject !== undefined) params.mission_intent = submitted;
+        if (submitted === undefined) {
           if (lifted) {
             params.authorization_details = lifted.proposal;
             checkPushedRar(ctx, params, oidc.client as { authorizationDetailsTypes?: string[] } | undefined);
@@ -1856,7 +1911,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           return;
         }
         try {
-          const submission = kernel.validateSubmission(String(value), undefined, { deferEvidenceEntries: true });
+          const submission = kernel.validateSubmission(String(submitted), undefined, { deferEvidenceEntries: true });
           const { intent } = submission;
           if (lifted) {
             params.authorization_details = lifted.proposal;
@@ -3414,12 +3469,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         }
         throw e;
       }
-      // @spec device-authorization#approval: the verification page also
-      // names the requesting client from registration data, whether the AS
+      // @spec mission#approval-event (step 5, #1503): the rendering identifies
+      // the OAuth client that receives the authority from this AS's
+      // registration of the interaction's client, the one the decision
+      // commits, never from a value the request supplies.
+      // @spec device-authorization#approval: the verification page names the
+      // same client from the same registration, with whether the AS
       // authenticated it, the Subject, and the `user_code` to confirm.
-      const deviceClient =
-        deviceSession && deviceSubject ? await provider.Client.find(String(params.client_id)) : undefined;
-      if (deviceJti && !deviceClient) {
+      const registeredClient = await provider.Client.find(String(params.client_id));
+      if (!registeredClient) {
         ctx.status = 400;
         ctx.body = { error: "invalid_client", error_description: "the requesting client is no longer registered" };
         return;
@@ -3457,13 +3515,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         interactionMatch[1] as string,
         intent,
         authority,
+        { clientId: registeredClient.clientId, clientName: registeredClient.clientName },
         proposal,
         provenance,
         authoritySource,
-        deviceSession && deviceSubject && deviceClient
+        deviceSession && deviceSubject
           ? {
               userCode: formatUserCode(deviceSession.userCode),
-              client: deviceClientView(deviceClient),
+              client: deviceClientView(registeredClient),
               subject: deviceSubject,
             }
           : undefined,
@@ -3962,6 +4021,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             );
             return;
           }
+          // @spec containment#selector-matching (#1463): each removal is a
+          // selector the matcher can decide (`exact` by default, `prefix` by
+          // declaration); one it cannot would contain nothing, so the request
+          // is refused before anything commits.
+          try {
+            assertContainmentSelectors(remove);
+          } catch (e) {
+            if (!(e instanceof ContainmentSelectorError)) throw e;
+            sendInvalidRequest(`contain ${e.message}`);
+            return;
+          }
           // @spec control-plane#serialization — the containment commit, the
           // nonce claim and the committed outcome are ONE transaction, so a
           // committed narrowing always leaves a replayable record behind.
@@ -3984,7 +4054,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             // transaction, before the narrowing commits (kernel.contain).
             const { record, evidence } = kernel.contain(missionId, {
               event: containEvent,
-              remove: remove as Array<{ resource: string; actions?: string[] }>,
+              remove: remove as ContainmentSelector[],
               ...(expectedVersion !== undefined ? { expectedVersion } : {}),
             });
             const outcome = {
@@ -5906,10 +5976,28 @@ function renderLines(lines: readonly string[], cls: string): string {
   return `<ul class="${cls}">${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`;
 }
 
+/**
+ * @spec mission#approval-event (step 5, #1503): the OAuth client that receives
+ * the authority, identified from this AS's registration of it: the registered
+ * `client_id` and display name. Registration here is the deployment's static
+ * client configuration (no dynamic registration), so the registered name is
+ * the AS's, never text the client supplies. Every value is inert text.
+ */
+function renderRegisteredClient(client: { clientId: string; clientName?: string | undefined }): string {
+  const name = client.clientName
+    ? `<p>Registered name: <span class="client-name">${escapeHtml(client.clientName)}</span></p>`
+    : "";
+  return `<section class="receiving-client"><h2>Client receiving this authority (from this authorization server's registration)</h2>
+<p>Client ID: <code class="client-id">${escapeHtml(client.clientId)}</code></p>${name}</section>
+`;
+}
+
 function renderApprovalPage(
   uid: string,
   intent: unknown,
   authority: readonly AuthorityEntry[],
+  /** @spec mission#approval-event (step 5): the receiving client, from the AS's registration. */
+  client: { clientId: string; clientName?: string | undefined },
   proposal?: unknown,
   provenance?: unknown[],
   authoritySource?: AuthoritySource,
@@ -5963,6 +6051,10 @@ function renderApprovalPage(
 <h2>Device code</h2><p>Code: <code class="user-code">${escapeHtml(device.userCode)}</code></p>
 `
     : "";
+  // @spec mission#approval-event (step 5, #1503): every other approval page
+  // names the receiving client from the AS's registration; the device page's
+  // own client section above names it from that same registration.
+  const clientSection = device ? "" : renderRegisteredClient(client);
   const deviceConfirmations = device
     ? `<label><input type="checkbox" name="confirm_user_code" value="true" required> This code matches the code the requesting client displays.</label>
 <label><input type="checkbox" name="confirm_started" value="true" required> I started this request.</label>
@@ -6003,7 +6095,7 @@ ${inheritance}`
       : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
-${deviceSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
+${deviceSection}${clientSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
 ${sourceSection}
 ${proposalSection}
 ${provenanceSection}

@@ -22,8 +22,8 @@
 
 import type { ActivationPolicyRef } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
-import { type AuthoritySourceBinding, parseAuthoritySource } from "./authority-source.js";
-import type { AuthorityEntry, AuthoritySource } from "./types.js";
+import { type AuthoritySourceBinding, parseRecordedAuthoritySource } from "./authority-source.js";
+import type { AuthorityEntry, AuthoritySource, RecordedAuthoritySource } from "./types.js";
 
 /**
  * @spec mission-template#the-mission-template — `allowed_recipients`: the
@@ -96,9 +96,11 @@ export interface MissionTemplate {
    * @spec mission#authority-sources — the source the template's standing
    * consent draws on, established at template consent from trusted
    * configuration. Every dispatched instance inherits it VERBATIM; provenance
-   * like `approval_basis`, so it is outside `template_hash`.
+   * like `approval_basis`, so it is outside `template_hash`. A stored value
+   * of unrecognized `type` reads as opaque provenance (#1503); dispatch from
+   * it refuses at its recipient root.
    */
-  authority_source: AuthoritySource;
+  authority_source: RecordedAuthoritySource;
   /** The template ceiling: one side of the double intersection at dispatch. */
   ceiling: AuthorityEntry[];
   /**
@@ -190,9 +192,9 @@ function rowToTemplate(row: TemplateRow): MissionTemplate {
     template_version: row.template_version,
     issuer: row.issuer,
     approver: { iss: row.approver_iss, sub: row.approver_sub },
-    // @spec mission#mission-record, mission#lifecycle — fail closed on
-    // hydration, exactly as a Mission Record's own member does.
-    authority_source: parseAuthoritySource(
+    // @spec mission#mission-record (#1503): read exactly as a Mission
+    // Record's own member is: an unrecognized type is opaque provenance.
+    authority_source: parseRecordedAuthoritySource(
       JSON.parse(row.authority_source_json),
       `template ${row.id}`,
     ),
@@ -321,7 +323,7 @@ export class TemplateStore {
     const raw = JSON.parse(row.binding_json) as AuthoritySourceBinding;
     return Object.freeze({
       ...raw,
-      provenance: parseAuthoritySource(raw.provenance, `template ${templateId} recipient binding`),
+      provenance: parseRecordedAuthoritySource(raw.provenance, `template ${templateId} recipient binding`),
     });
   }
 

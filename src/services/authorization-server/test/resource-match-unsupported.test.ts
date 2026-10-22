@@ -8,9 +8,11 @@
  * values (#1276): it refuses an unrecognized value and a `prefix` entry the
  * matcher cannot enforce, and carries `prefix` onto the derived entry. The
  * ceiling loaders admit both values and refuse the same unenforceable entries
- * (#1440); a containment removal stays `exact` only (see demo-data's
- * `rejectUnsupportedResourceMatch`). PAR intake is covered in
- * rar-carriage.test.ts; the config loaders and direct derivation are here.
+ * (#1440), beside containment rules too, since containment pairs by
+ * resource-set overlap (#1463). A containment removal is a selector, `exact`
+ * by default and `prefix` by declaration (see demo-data's
+ * `containmentRemoveEntry`). PAR intake is covered in rar-carriage.test.ts;
+ * the config loaders and direct derivation are here.
  */
 
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -22,7 +24,6 @@ import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { type AuthorityEntry, deriveAuthoritySet, IntentError, type MissionIntent } from "../src/index.js";
 
 const REAL_CONFIG_DIR = fileURLToPath(new URL("../../../config", import.meta.url));
-const UNSUPPORTED = /resource_match "prefix"; this deployment's containment removals are exact only/;
 
 describe("config loaders admit or refuse resource_match at load (#1264, #1440)", () => {
   let previous: string | undefined;
@@ -59,54 +60,48 @@ describe("config loaders admit or refuse resource_match at load (#1264, #1440)",
     vi.resetModules();
   }
 
-  /** containment.json with no rule: containment pairs exactly, so prefix ceilings load only without one. */
-  const NO_CONTAINMENT_RULES = {
-    "containment.json": (raw: unknown) => {
-      (raw as { rules: unknown[] }).rules = [];
-    },
-  };
-
-  it("parseCeilingEntry (policy.json) loads a ceiling entry naming resource_match prefix and keeps the member, where no containment rule is configured (#1440)", async () => {
-    configDirWith(
-      "policy.json",
-      (raw) => {
-        (raw as { ceiling: Record<string, unknown>[] }).ceiling[0].resource_match = "prefix";
-      },
-      NO_CONTAINMENT_RULES,
-    );
+  it("parseCeilingEntry (policy.json) loads a ceiling entry naming resource_match prefix and keeps the member (#1440)", async () => {
+    configDirWith("policy.json", (raw) => {
+      (raw as { ceiling: Record<string, unknown>[] }).ceiling[0].resource_match = "prefix";
+    });
     const mod = await import("@mission/demo-data");
     expect(mod.DERIVATION_POLICY.ceiling[0]?.resource_match).toBe("prefix");
     expect(mod.DERIVATION_POLICY.ceiling[1]?.resource_match).toBeUndefined();
   });
 
-  it("loadCeilingEntries (governed-policy.json) loads a governed ceiling entry naming resource_match prefix and keeps the member, where no containment rule is configured (#1440)", async () => {
-    configDirWith(
-      "governed-policy.json",
-      (raw) => {
-        (raw as { ceiling: Record<string, unknown>[] }[])[0].ceiling[0].resource_match = "prefix";
-      },
-      NO_CONTAINMENT_RULES,
-    );
+  it("loadCeilingEntries (governed-policy.json) loads a governed ceiling entry naming resource_match prefix and keeps the member (#1440)", async () => {
+    configDirWith("governed-policy.json", (raw) => {
+      (raw as { ceiling: Record<string, unknown>[] }[])[0].ceiling[0].resource_match = "prefix";
+    });
     const mod = await import("@mission/demo-data");
     expect(mod.GOVERNED_POLICIES[0]?.ceiling[0]?.resource_match).toBe("prefix");
   });
 
-  it("refuses a policy.json prefix ceiling entry at load while containment rules are configured, naming the entry and the reason (#1440)", async () => {
-    configDirWith("policy.json", (raw) => {
-      (raw as { ceiling: Record<string, unknown>[] }).ceiling[0].resource_match = "prefix";
-    });
-    await expect(import("@mission/demo-data")).rejects.toThrow(
-      /\[config:policy\.json\] policy\.ceiling\[0\] has resource_match "prefix", but containment\.json configures containment rules, which pair a removal with an approved entry by its exact resource/,
+  it("loads prefix ceiling entries in policy.json, governed-policy.json and authority-sources.json beside the configured containment rules (@spec containment#selector-matching, #1463)", async () => {
+    configDirWith(
+      "policy.json",
+      (raw) => {
+        (raw as { ceiling: Record<string, unknown>[] }).ceiling[0].resource_match = "prefix";
+      },
+      {
+        "governed-policy.json": (raw) => {
+          (raw as { ceiling: Record<string, unknown>[] }[])[0].ceiling[0].resource_match = "prefix";
+        },
+        "authority-sources.json": (raw) => {
+          const source = (raw as { sources: { id: string; ceiling?: unknown }[] }).sources.find((s) =>
+            Array.isArray(s.ceiling),
+          ) as { ceiling: Record<string, unknown>[] };
+          source.ceiling[0].resource_match = "prefix";
+        },
+      },
     );
-  });
-
-  it("refuses a governed-policy.json prefix ceiling entry at load while containment rules are configured, naming the entry (#1440)", async () => {
-    configDirWith("governed-policy.json", (raw) => {
-      (raw as { ceiling: Record<string, unknown>[] }[])[0].ceiling[0].resource_match = "prefix";
-    });
-    await expect(import("@mission/demo-data")).rejects.toThrow(
-      /\[config:governed-policy\.json\] governed-policy\[0\]\.ceiling\[0\] has resource_match "prefix", but containment\.json configures containment rules/,
-    );
+    const mod = await import("@mission/demo-data");
+    expect(mod.CONTAINMENT_POLICY.rules.length).toBeGreaterThan(0);
+    expect(mod.DERIVATION_POLICY.ceiling[0]?.resource_match).toBe("prefix");
+    expect(mod.GOVERNED_POLICIES[0]?.ceiling[0]?.resource_match).toBe("prefix");
+    expect(
+      mod.AUTHORITY_SOURCES.entries.some((s) => s.ceiling.some((c) => c.resource_match === "prefix")),
+    ).toBe(true);
   });
 
   it("a ceiling loader refuses an unrecognized resource_match, naming the entry (#1440)", async () => {
@@ -127,11 +122,36 @@ describe("config loaders admit or refuse resource_match at load (#1264, #1440)",
     await expect(import("@mission/demo-data")).rejects.toThrow(/\.ceiling\[0\] a prefix resource .* carries a query component/);
   });
 
-  it("the containment loader rejects a removal entry naming resource_match prefix", async () => {
+  it("the containment loader keeps a removal's declared prefix and reads an absent resource_match as exact (@spec containment#selector-matching, #1463)", async () => {
     configDirWith("containment.json", (raw) => {
-      (raw as { rules: { remove: Record<string, unknown>[] }[] }).rules[0].remove[0].resource_match = "prefix";
+      const remove = (raw as { rules: { remove: Record<string, unknown>[] }[] }).rules[0].remove;
+      remove.push({ resource: "http://localhost:4406/mcp", actions: ["ledger:journal.write"] });
     });
-    await expect(import("@mission/demo-data")).rejects.toThrow(UNSUPPORTED);
+    const mod = await import("@mission/demo-data");
+    expect(mod.CONTAINMENT_POLICY.rules[0]?.remove).toEqual([
+      { resource: mod.CANONICAL_RESOURCE, resource_match: "prefix", actions: ["payments:remittance.send"] },
+      { resource: "http://localhost:4406/mcp", actions: ["ledger:journal.write"] },
+    ]);
+  });
+
+  it("the containment loader refuses a removal the matcher cannot decide, naming the entry (@spec containment#selector-matching, #1463)", async () => {
+    const cases: Array<[string, (e: Record<string, unknown>) => void, RegExp]> = [
+      ["an unrecognized mode", (e) => { e.resource_match = "glob"; }, /remove\[0\]: resource_match "glob" is not a value Resource Access defines/],
+      ["a prefix base with a query", (e) => { e.resource = `${String(e.resource)}?tenant=a`; }, /remove\[0\]: a prefix resource .* carries a query component/],
+      ["an empty actions list", (e) => { e.actions = []; }, /remove\[0\]: a containment selector's actions, when present, must be a non-empty array of strings/],
+      ["a misspelled mode member", (e) => { e.resource_matc = "exact"; }, /remove\[0\]: a containment selector carries "resource_matc"/],
+    ];
+    for (const [label, mutate, message] of cases) {
+      configDirWith("containment.json", (raw) => {
+        mutate((raw as { rules: { remove: Record<string, unknown>[] }[] }).rules[0].remove[0]);
+      });
+      await expect(import("@mission/demo-data"), label).rejects.toThrow(message);
+      rmSync(dir as string, { recursive: true, force: true });
+      if (previous === undefined) delete process.env.MISSION_CONFIG_DIR;
+      else process.env.MISSION_CONFIG_DIR = previous;
+      dir = undefined;
+      vi.resetModules();
+    }
   });
 
   it("an explicit resource_match exact loads (positive control for the refusals)", async () => {

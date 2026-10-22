@@ -30,7 +30,7 @@ import {
 import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { APPROVAL_FLOOR, type ApprovalFloorPolicy } from "@mission/demo-data";
 import { evaluateApprovalFloor } from "./approval-floor.js";
-import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import { type ContainmentSelector, isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import {
   createExpansion,
   type ReconciliationStatus,
@@ -382,8 +382,8 @@ export interface ExpansionDisclosure {
   encounter?: EncounterFacts;
   /** The chain's outstanding restrictions, which no approval or re-consent clears. */
   restrictions: {
-    /** Each contained capability, with the event class that caused its containment. */
-    contained: Array<{ resource: string; actions?: string[]; event_class: string; mission: string }>;
+    /** Each contained capability (a selector, `prefix` named), with the event class that caused its containment. */
+    contained: Array<ContainmentSelector & { event_class: string; mission: string }>;
     /** Each discharged entry, with the condition that discharged it. */
     discharged: Array<{
       entry: AuthorityEntry;

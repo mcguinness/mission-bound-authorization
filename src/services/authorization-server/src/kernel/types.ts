@@ -1,4 +1,4 @@
-import type { ActivationPolicyRef, AuthorityEntry, JsonValue } from "@mission/core";
+import type { ActivationPolicyRef, AuthorityEntry, ContainmentSelector, JsonValue } from "@mission/core";
 import type { RetainedOrigin } from "./eligibility-provenance.js";
 export type { AuthorityEntry, DelegateMatcher, ChildFanoutControls, TerminalWhenCondition } from "@mission/core";
 
@@ -297,11 +297,14 @@ export interface MissionContainment {
   /** Increments once per applied contain transition (1-based). */
   containment_version: number;
   /**
-   * The contained capabilities, merged by resource. An entry with no `actions`
-   * member contains the whole resource (its Authority Set entry is dropped from
-   * the effective set); with `actions`, only those actions are contained.
+   * The contained capabilities, each a selector merged by its `resource` and
+   * mode (@spec containment#selector-matching, #1463). A selector applies to
+   * every approved entry whose resource set overlaps its own; one with no
+   * `actions` member drops each such entry from the effective set, and one
+   * with `actions` removes only those actions. `resource_match` is stored only
+   * when `prefix`.
    */
-  contained: Array<{ resource: string; actions?: string[] }>;
+  contained: ContainmentSelector[];
   /** The applied containment events, in order. `event_id` is the idempotency key. */
   events: ContainmentEventRecord[];
 }
@@ -337,7 +340,7 @@ export interface ContainmentEventRecord {
   source: string;
   observed_at: string;
   event_id: string;
-  removed: Array<{ resource: string; actions?: string[] }>;
+  removed: ContainmentSelector[];
 }
 
 /**
@@ -370,10 +373,10 @@ export type ApprovalBasisType = ApprovalBasis["type"];
  * @spec mission#authority-sources, mission#mission-record — the three sources
  * a Mission may draw its authority from: a delegating person's own authority,
  * a workload's own provisioned authority, or explicitly governed
- * organizational policy. Subject to the forward-compatibility rule of
- * mission#lifecycle, which admits no fail-open: an unrecognized value is
- * refused at config load and at record hydration, never widened into the
- * union.
+ * organizational policy. The AS never approves a source outside these three:
+ * an unrecognized value is refused at config load and at every approval-time
+ * resolution. A STORED record that carries one keeps it as opaque provenance
+ * ({@link UnrecognizedAuthoritySource}, #1503).
  */
 export type AuthoritySourceType = "user_delegated" | "service_owned" | "organizational";
 
@@ -396,6 +399,25 @@ export interface AuthoritySource {
    */
   policy?: { id: string; version: string; digest: string };
 }
+
+/**
+ * @spec mission#mission-record (#1503): a stored `authority_source` whose
+ * `type` this issuer does not recognize, preserved unchanged as opaque
+ * provenance, every member as stored. It does not by itself invalidate or
+ * deactivate the Mission; an operation that needs recognized source
+ * semantics (the source ceiling, the governed policy) refuses instead.
+ */
+export interface UnrecognizedAuthoritySource {
+  readonly type: string;
+  readonly [member: string]: unknown;
+}
+
+/**
+ * @spec mission#mission-record (#1503): the `authority_source` a stored
+ * record or committed root binding carries: a recognized source, held to its
+ * type's member rules, or an unrecognized one kept as opaque provenance.
+ */
+export type RecordedAuthoritySource = AuthoritySource | UnrecognizedAuthoritySource;
 
 /**
  * @spec mission#approval-basis — the default and strongest basis: a human
@@ -639,9 +661,10 @@ export interface MissionRecord {
    * draws on, established at the approval event and immutable thereafter. A
    * drawdown (template dispatch, child creation) INHERITS its predecessor's
    * value verbatim; only the source ceiling is re-asserted at the moment
-   * authority is drawn.
+   * authority is drawn. A stored value of unrecognized `type` hydrates as
+   * opaque provenance (#1503).
    */
-  authority_source: AuthoritySource;
+  authority_source: RecordedAuthoritySource;
   client_id: string;
   policy_version: string;
   approval_event_id: string;

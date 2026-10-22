@@ -93,7 +93,7 @@ beforeAll(async () => {
     entitlement: { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString() }) },
     entitlementStalenessBoundSeconds: 86_400,
   });
-  saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] } });
+  saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] }, trustedMissionIssuers: [AS_ISS] });
 });
 
 /** Approve a Mission over `authority`, cross into the SaaS domain, and redeem. */

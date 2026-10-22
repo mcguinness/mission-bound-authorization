@@ -54,7 +54,7 @@ Where it sits in the drafts:
     issuance-only example shape (§ Deployment Profile Example Shapes,
     `{#deployment-profile-examples}`), which §5 fills.
 - `draft-mcguinness-oauth-mission.md`:
-  - § Issuance Scope, Not Runtime Enforcement (`{#runtime-boundary}`), what
+  - § Issuance Scope and Runtime Enforcement (`{#runtime-boundary}`), what
     the OAuth binding does not do;
   - § Scope Projection (`{#scope-projection}`), how a `scope`-only target is
     served.

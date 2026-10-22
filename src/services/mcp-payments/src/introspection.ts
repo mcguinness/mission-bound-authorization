@@ -17,6 +17,11 @@
  *   an `iss` other than the estate's, a non-access token type, an `exp` that
  *   has passed, a missing `sub`, `client_id`, `aud` or `cnf.jkt`) throws
  *   {@link TokenInactiveError}: the route answers 401.
+ * - An active answer carrying a `mission` member throws
+ *   {@link TokenInactiveError} too (@spec mission#rs-requirements item 6,
+ *   #1503): the estate is not trusted to issue Mission-bound authorization
+ *   here, so the member is refused, as a JWT `mission` claim is, never
+ *   dropped to read the token as ordinary.
  *
  * A positive result is cached, keyed by the token's SHA-256, for at most
  * `cacheMaxSeconds` and never past the token's own `exp`; a negative result is
@@ -146,6 +151,7 @@ export class TokenIntrospector {
   private read(r: Record<string, unknown>, nowMs: number): IntrospectedToken {
     if (r.active !== true) throw new TokenInactiveError("not active");
     if (r.iss !== undefined && r.iss !== this.issuer) throw new TokenInactiveError("issued by another issuer");
+    if (r.mission !== undefined) throw new TokenInactiveError("carries a mission member, which this issuer is not trusted to issue");
     if (r.token_type !== undefined && (typeof r.token_type !== "string" || r.token_type.toLowerCase() !== "dpop")) {
       throw new TokenInactiveError("not a DPoP-bound access token");
     }
