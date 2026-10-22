@@ -420,6 +420,7 @@ export function deriveAuthoritySetWithProvenance(
   proposal?: readonly AuthorityEntry[],
   proposalProvenance?: readonly RetainedOrigin[],
   proposalChildActorProvenance?: readonly RetainedOrigin[],
+  requestedScope?: readonly AuthorityEntry[],
 ): DerivedAuthority {
   // @spec mission#common-constraints (issue #784, review on PR #803) — every
   // ceiling entry and every submitted proposal entry is checked for an
@@ -439,17 +440,32 @@ export function deriveAuthoritySetWithProvenance(
   if (proposal) assertWellFormedResources(proposal);
   assertWellFormedMatchers(policy.ceiling);
   if (proposal) assertWellFormedMatchers(proposal);
+  if (requestedScope) {
+    assertSupportedConstraints(requestedScope);
+    assertSupportedResourceMatch(requestedScope);
+    assertNoRefusedMembers(requestedScope);
+    assertWellFormedResources(requestedScope);
+  }
 
   // @spec mission#error-mapping — captured BEFORE the template-mode fallback
   // below reassigns `proposals`: whether the client actually submitted an
   // `authorization_details` proposal is the sole discriminator between the
   // two empty-result error codes this function can throw.
   const hasProposal = Boolean(proposal?.length);
+  // @spec mission#derivation-modes, mission#scope-projection: configured-
+  // mapping mode keyed on the requested `scope` values of a `scope`-only
+  // target. The entries those values stand for ({@link requestedScopeEntries})
+  // come from the trusted mapping but are not ceiling entries: each is
+  // narrowed against every ceiling entry governing it, as a proposal is,
+  // while no proposal was submitted, so the empty result stays access_denied.
+  const scopeKeyed = !hasProposal && Boolean(requestedScope?.length);
   const proposals = hasProposal
     ? (proposal as readonly AuthorityEntry[])
-    : // Template mode / configured-mapping: no concrete proposal derives the
-      // full policy ceiling narrowed to the Intent's target_resources.
-      policy.ceiling.filter((c) => intent.target_resources.includes(c.resource));
+    : scopeKeyed
+      ? (requestedScope as readonly AuthorityEntry[]).filter((c) => intent.target_resources.includes(c.resource))
+      : // Template mode / configured-mapping: no concrete proposal derives the
+        // full policy ceiling narrowed to the Intent's target_resources.
+        policy.ceiling.filter((c) => intent.target_resources.includes(c.resource));
 
   // @spec mission#authorization-derivation (#743, review #745 P2) — a
   // SUBMITTED proposal element is intersected against EVERY ceiling entry
@@ -488,9 +504,8 @@ export function deriveAuthoritySetWithProvenance(
     // ({@link derivedResource}): the same `exact` string, a `prefix` ceiling
     // admitting the proposal, or an `exact` ceiling naming a `prefix`
     // proposal's base.
-    const matchingCeilings = hasProposal
-      ? policy.ceiling.filter((c) => derivedResource(proposal, c) !== null)
-      : [proposal];
+    const matchingCeilings =
+      hasProposal || scopeKeyed ? policy.ceiling.filter((c) => derivedResource(proposal, c) !== null) : [proposal];
     // An already-derived proposal entry contributes the origin it carries; a
     // client proposal contributes none of its own.
     const inherited: RetainedOrigin =

@@ -48,6 +48,7 @@ import {
   createChildMission,
   type DischargeAuthorityPolicy,
   entryDigest,
+  recheckApprovalGovernanceRecord,
 } from "../src/index.js";
 import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { aiAgents } from "./actor-profiles.helper.js";
@@ -59,6 +60,9 @@ const OFF_ISSUER = `http://localhost:${OFF_PORT}`;
 /** A deployment whose policy refuses requests outside the ceiling (#1413). */
 const REFUSE_PORT = 14844;
 const REFUSE_ISSUER = `http://localhost:${REFUSE_PORT}`;
+// Records an Approval Governance Record for every policy drawdown (#1470 slice 2).
+const RECORDING_PORT = 14854;
+const RECORDING_ISSUER = `http://localhost:${RECORDING_PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
 const FAR_EXP = "2027-01-01T00:00:00Z";
@@ -71,10 +75,12 @@ type Client = { id: string; kid: string; key: CryptoKey; dpop: DpopKeys };
 let as: BuiltAs;
 let asOff: BuiltAs;
 let asRefuse: BuiltAs;
+let asRecording: BuiltAs;
 let servers: Server[] = [];
 let ap: Client;
 let apOff: Client;
 let apRefuse: Client;
+let apRecording: Client;
 let second: Client;
 let verifierSeq = 0;
 const commits: LifecycleCommit[] = [];
@@ -83,6 +89,7 @@ const approvalSessions = new Map([
   [ISSUER, new ApprovalSessionStore()],
   [OFF_ISSUER, new ApprovalSessionStore()],
   [REFUSE_ISSUER, new ApprovalSessionStore()],
+  [RECORDING_ISSUER, new ApprovalSessionStore()],
 ]);
 
 /** The deployment's drawdown policies: a JSON snapshot stating the per-drawdown bound and the review cadence. */
@@ -433,10 +440,64 @@ beforeAll(async () => {
     activationPolicies: POLICIES,
     progressive: { ...PROGRESSIVE, beyondCeiling: "refuse" },
   });
-  servers = [as.provider.listen(PORT), asOff.provider.listen(OFF_PORT), asRefuse.provider.listen(REFUSE_PORT)];
+  asRecording = await buildAuthorizationServer({
+    issuer: RECORDING_ISSUER,
+    approvalSessions: approvalSessions.get(RECORDING_ISSUER) as ApprovalSessionStore,
+    activationPolicies: POLICIES,
+    progressive: PROGRESSIVE,
+    ceilingDrawdownRecording: { recency: { ceilings: { default: 30 * 86400 }, clock_skew_s: 60 } },
+  });
+  servers = [
+    as.provider.listen(PORT),
+    asOff.provider.listen(OFF_PORT),
+    asRefuse.provider.listen(REFUSE_PORT),
+    asRecording.provider.listen(RECORDING_PORT),
+  ];
   ap = await shippedClient("ap-agent", "ap-agent-auth", as.agentClientJwk);
   apOff = await shippedClient("ap-agent", "ap-agent-auth", asOff.agentClientJwk);
   apRefuse = await shippedClient("ap-agent", "ap-agent-auth", asRefuse.agentClientJwk);
+  apRecording = await shippedClient("ap-agent", "ap-agent-auth", asRecording.agentClientJwk);
+});
+
+describe("recorded ceiling drawdowns at the token endpoint (@spec approval-governance#recency-high-risk, approval-governance#atomic-commitment, #1470 slice 2)", () => {
+  it("a policy drawdown activates with a signed record of the drawdown policy's assertion, and the record re-checks", async () => {
+    const root = await issueMission(READ, ceilingOf(), { client: apRecording, issuer: RECORDING_ISSUER });
+    const res = await tokenRequest(expansionParams(root.accessToken, crypto.randomUUID(), READ_LIST), apRecording, RECORDING_ISSUER);
+    const body = (await res.json()) as Completed;
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const successor = asRecording.kernel.get(body.mission_id) as MissionRecord;
+    expect(successor.approval_basis).toMatchObject({ type: "ceiling_drawdown", adjudication: { kind: "policy", governance_record: true } });
+    expect(asRecording.kernel.governanceRecords.forMission(successor.id)?.assertions).toEqual([
+      expect.objectContaining({
+        kind: "policy",
+        principal: successor.approval_basis.consent_principal,
+        decided_at: successor.created_at,
+        authority: { policy_id: "drawdown-std", version: "1", approved_at: (successor.approval_basis as { approved_at: string }).approved_at },
+      }),
+    ]);
+    expect(
+      recheckApprovalGovernanceRecord(asRecording.kernel, successor.id, { resolveKey: () => asRecording.kernel.statusVerificationKey() }),
+    ).toEqual({ rechecked: true });
+  });
+
+  it("a successor that keeps approved high-risk authority falls back to a fresh approval before activation, where the shipped deployment activates it by policy", async () => {
+    const EXECUTE = ["payments:invoice.read", "payments:payment.execute"];
+    const WIDENED = [...EXECUTE, "payments:invoice.list"];
+    const root = await issueMission(EXECUTE, ceilingOf(), { client: apRecording, issuer: RECORDING_ISSUER });
+    const before = asRecording.kernel.allMissions().length;
+    const res = await tokenRequest(expansionParams(root.accessToken, crypto.randomUUID(), WIDENED), apRecording, RECORDING_ISSUER);
+    const body = (await res.json()) as { error?: string; deferral_code?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("authorization_pending");
+    expect(asRecording.kernel.allMissions().length).toBe(before);
+    expect(asRecording.kernel.governanceRecords.forMission(root.missionId)).toBeUndefined();
+    expect(asRecording.kernel.get(root.missionId)?.state).toBe("active");
+    expect(asRecording.expansionDeferrals.disclosure(body.deferral_code as string)?.drawdown_fallback).toBe("governance_high_risk");
+    // Progressive alone checks only the newly widened action, so the shipped deployment activates it.
+    const shipped = await issueMission(EXECUTE, ceilingOf());
+    const activated = await drawdown(shipped.accessToken, crypto.randomUUID(), WIDENED);
+    expect(as.kernel.get(activated.mission_id)?.approval_basis.type).toBe("ceiling_drawdown");
+  });
 });
 
 afterAll(() => {

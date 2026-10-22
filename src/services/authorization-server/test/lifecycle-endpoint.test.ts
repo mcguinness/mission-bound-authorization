@@ -9,7 +9,8 @@
  *    algorithms, and the response-signing algorithms, all absent where no
  *    Lifecycle operation is served;
  *  - transport: a form body only, single-valued members;
- *  - client authentication: no credential, a foreign credential, the
+ *  - client authentication: no credential, a foreign credential, a missing
+ *    or foreign `client_assertion_type`, a type without an assertion, the
  *    assertion `aud` as the issuer identifier and nothing else, the permitted
  *    `typ` values, `exp`/`jti`, replay, signature and registration;
  *  - authorization: a client without the lifecycle grant gets the unknown
@@ -256,6 +257,31 @@ describe("Mission Lifecycle endpoint transport and client authentication (@spec 
       expect(a.json?.nonce).toBe(members.nonce);
       expect(a.wwwAuthenticate).toBeNull();
       expect(a.cacheControl).toBe("no-store");
+    }
+    expect(as.kernel.get(m.id)?.state).toBe("active");
+  });
+
+  it("refuses an assertion sent without client_assertion_type or under another type, and a client_assertion_type sent without an assertion, invalid_client (HTTP 400)", async () => {
+    // @spec status#mission-status-request, status#lifecycle-operations (#1535):
+    // private-key-JWT client authentication carries both parameters, the type
+    // with the jwt-bearer value.
+    const m = approve();
+    const members = { mission_id: m.id, operation: "revoke", nonce: nonce() };
+    const answers = [
+      await postLifecycleForm(ISSUER, {
+        ...members,
+        client_assertion: await lifecycleClientAssertion(ISSUER, consoleClient),
+      }),
+      await postLifecycleForm(ISSUER, {
+        ...members,
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:saml2-bearer",
+        client_assertion: await lifecycleClientAssertion(ISSUER, consoleClient),
+      }),
+      await postLifecycleForm(ISSUER, { ...members, client_assertion_type: CLIENT_ASSERTION_TYPE }),
+    ];
+    for (const a of answers) {
+      expect(a.status, a.text).toBe(400);
+      expect(a.json?.error).toBe("invalid_client");
     }
     expect(as.kernel.get(m.id)?.state).toBe("active");
   });
