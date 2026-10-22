@@ -95,7 +95,15 @@ import {
 } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
-import { adjudicateDrawdown, createCeilingDrawdownInCallerTx, DrawdownRefusal } from "../kernel/progressive.js";
+import {
+  adjudicateDrawdown,
+  createCeilingDrawdownInCallerTx,
+  DrawdownRefusal,
+  type EncounterFacts,
+  encounterFacts,
+  encounterHint,
+  refusesEncounter,
+} from "../kernel/progressive.js";
 import {
   type AuthorityEntry,
   type IntentSubmissionEvidenceFact,
@@ -2787,7 +2795,20 @@ export async function handleExpansionExchange(
   // @spec progressive#ceiling-review (#1017): why a drawdown request fell
   // back, recorded on the deferral for the chain's review disclosure.
   let drawdownFallback: string | undefined;
+  // @spec discovery#adjudication (#1469 stage 1): the encounter a fallback decides.
+  let encounter: EncounterFacts | undefined;
   if (opts.progressive && active.authority_ceiling) {
+    // @spec discovery#resource-identity: the agent's encounter hints, validated
+    // for shape and kept as its claim, never identity.
+    const hint = encounterHint(
+      (ctx.oidc.params as Record<string, unknown>).encountered_resource,
+      (ctx.oidc.params as Record<string, unknown>).resource_declaration_digest,
+      requested,
+    );
+    if (typeof hint === "string") {
+      txError(ctx, 400, "invalid_request", hint);
+      return;
+    }
     const outcome = await completeCeilingDrawdown(opts, provider, ctx, {
       predecessorId: active.id,
       requested,
@@ -2799,7 +2820,26 @@ export async function handleExpansionExchange(
       jkt: resolved.jkt,
     });
     if (outcome === true) return;
-    if (typeof outcome === "string") drawdownFallback = outcome;
+    if (outcome && typeof outcome === "object") {
+      drawdownFallback = outcome.reason;
+      if (outcome.encountered) {
+        const facts = await encounterFacts(opts.progressive, outcome.encountered, requested, hint);
+        if (typeof facts === "string") {
+          txError(ctx, 400, "invalid_request", facts);
+          return;
+        }
+        // @spec discovery#adjudication, discovery#resource-identity (#1469 stage
+        // 2): an encounter whose identity cannot be established, where the
+        // deployment does not escalate it, is refused before any deferral or
+        // reservation exists. The refusal is uniform: the draft defines no
+        // diagnostic for it, and the response names no pinning step.
+        if (refusesEncounter(opts.progressive, facts)) {
+          txError(ctx, 400, "invalid_request", "the encounter is refused");
+          return;
+        }
+        encounter = facts;
+      }
+    }
   }
 
   // @spec expansion#completion-modes (#1177): the deferred response goes only
@@ -2829,6 +2869,7 @@ export async function handleExpansionExchange(
       jkt: resolved.jkt,
       creationRequestId,
       ...(drawdownFallback ? { drawdownFallback } : {}),
+      ...(encounter ? { encounter } : {}),
     });
   } catch (e) {
     if (e instanceof ExpansionDeferralError) {
@@ -3066,7 +3107,7 @@ async function completeCeilingDrawdown(
     fingerprint: string;
     jkt: string;
   },
-): Promise<boolean | string> {
+): Promise<boolean | { reason: string; encountered?: string[] }> {
   const progressive = opts.progressive;
   const idem = opts.creationIdempotency;
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
@@ -3088,7 +3129,7 @@ async function completeCeilingDrawdown(
     // @spec progressive#ceiling-test (#1413): never adjudicated by policy; by
     // default it falls back to the fresh approval below, whose response carries
     // no denial reason (#1415).
-    if (progressive.beyondCeiling !== "refuse") return "beyond_ceiling";
+    if (progressive.beyondCeiling !== "refuse") return { reason: "beyond_ceiling" };
     // The deployment's policy refuses it instead. `out_of_ceiling` is a MAY on
     // that refusal, which this reference carries. Set on ctx directly: err_out
     // would strip mission_denial_reason.
@@ -3099,7 +3140,12 @@ async function completeCeilingDrawdown(
     ctx.set("cache-control", "no-store");
     return true;
   }
-  if (adjudication.outcome === "fresh_approval") return adjudication.reason;
+  if (adjudication.outcome === "fresh_approval") {
+    return {
+      reason: adjudication.reason,
+      ...(adjudication.encountered ? { encountered: adjudication.encountered } : {}),
+    };
+  }
   const reservation: CreationReservation = {
     clientId: client.clientId,
     creationRequestId: d.creationRequestId,

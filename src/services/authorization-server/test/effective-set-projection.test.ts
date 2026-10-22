@@ -161,7 +161,7 @@ describe("projectThroughEffective: entry-wise intersection (@spec issuance-grant
     expect(onlyEffective[0]?.delegation).toBeUndefined();
   });
 
-  it("narrows the nested children grant, and drops delegation carrying a member it cannot evaluate", () => {
+  it("narrows the nested children grant, and projects nothing from a pairing whose delegation carries a member it does not support (D634)", () => {
     const narrowed = project(
       [entry({ delegation: { max_depth: 2, children: { max_children: 5, max_child_depth: 2 } } })],
       [entry({ delegation: { max_depth: 2, children: { max_children: 1, max_child_depth: 3 } } })],
@@ -171,12 +171,15 @@ describe("projectThroughEffective: entry-wise intersection (@spec issuance-grant
       children: { max_children: 1, max_child_depth: 2 },
     });
 
+    // @spec resource-access#resource-access-type (D634): the authorization
+    // server refuses an entry whose `delegation` carries a member it does not
+    // implement, so the pairing yields no fragment rather than one rebuilt
+    // without the member or without `delegation`.
     const unknownMember = project(
       [entry({ delegation: { max_depth: 2 } })],
       [entry({ delegation: { max_depth: 2, future_policy: "tbd" } })],
     );
-    expect(unknownMember[0]).toBeDefined();
-    expect(unknownMember[0]?.delegation).toBeUndefined();
+    expect(unknownMember).toEqual([]);
   });
 
   // @spec child-delegation#fanout, mission#standing-consent-bases (#1119): the

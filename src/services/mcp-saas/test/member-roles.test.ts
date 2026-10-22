@@ -39,7 +39,7 @@ beforeAll(async () => {
   agentKeys = await generateKeyPair("ES256", { extractable: true });
   agentJkt = await calculateJwkThumbprint(await exportJWK(agentKeys.publicKey));
   const rasPub = { ...(await exportJWK(rasKeys.publicKey)), kid: "ras-token", alg: "ES256" };
-  saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] } });
+  saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] }, trustedMissionIssuers: ["https://as.test"] });
 });
 
 /** A clean entry: only the members SaaS enforces. */
@@ -136,6 +136,22 @@ describe("the SaaS resource gives each entry member its resource-server role (@s
     // The entry's own members still bind: an unlisted vendor and an unlisted action are refused.
     expect(await write(token, "globex")).toEqual(REFUSED);
     expect(await read(token, "acme")).toEqual(REFUSED);
+    expect(saas.journalEntries()).toHaveLength(before + 1);
+  });
+
+  // @spec resource-access#resource-access-type, resource-access#rs-enforcement
+  // (D634): the authorization server refuses a `delegation` member it does not
+  // implement; the resource server's permission to disregard `delegation` is
+  // unchanged, so such a member reaching it still leaves the entry enforced
+  // on its other members.
+  it("disregards a delegation member the authorization server would refuse as unsupported, and still enforces the entry's other members (D634)", async () => {
+    const delegation = { max_depth: 1, future_policy: { max_uses: 1 } };
+    const token = await mintedToken([entry([WRITE], { delegation, constraints: { vendors: ["acme"] } })]);
+    const before = saas.journalEntries().length;
+    const permitted = await write(token, "acme");
+    expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+    expect(saas.journalEntries()).toHaveLength(before + 1);
+    expect(await write(token, "globex")).toEqual(REFUSED);
     expect(saas.journalEntries()).toHaveLength(before + 1);
   });
 

@@ -32,9 +32,15 @@ import {
   resolveFreshCapabilitySources,
 } from "./capability-binding.js";
 import {
+  assertContainmentSelectors,
   buildContainmentEvidence,
+  containmentAtEntries,
+  containmentRemovalFor,
   type ContainmentEvidence,
   type ContainmentPolicy,
+  type ContainmentSelector,
+  mergeContainmentSelectors,
+  selectorOverlapsEntry,
   UnknownProtectedEventError,
 } from "./containment.js";
 import {
@@ -54,7 +60,8 @@ import {
   type BoundAuthoritySourceCatalog,
   type LocalPrincipal,
   authoritySourceOf,
-  parseAuthoritySource,
+  isRecognizedAuthoritySource,
+  parseRecordedAuthoritySource,
   resolveApprovalSource,
   resolveCommittedSource,
   resolveRenderingSource,
@@ -140,7 +147,19 @@ import {
   committedActivationPolicy,
   type EvaluatedActivationPolicy,
 } from "./activation-policy-snapshots.js";
-import { ApprovalGovernanceRecordStore } from "./approval-governance.js";
+import { ApprovalGovernanceRecordStore, signApprovalGovernanceRecord } from "./approval-governance.js";
+import {
+  assertDirectApprovalRecord,
+  buildDirectApprovalRecord,
+  type DirectApprovalAuthentication,
+  type DirectApprovalInputs,
+  DirectApprovalRecordStore,
+  type DirectApprovalRule,
+  directApprovalRuleRef,
+  evaluateDirectApprovalRule,
+  parseDirectApprovalRule,
+  type RegisteredDirectApprovalRule,
+} from "./direct-approval-record.js";
 import {
   type GovernedPolicyApprovalConfig,
   GovernedPolicyConsentStore,
@@ -183,6 +202,7 @@ import {
 } from "./status-list.js";
 import {
   type ApprovalBasis,
+  type ApprovalBasisDirect,
   type AuthorityEntry,
   type AuthoritySource,
   type ContainmentEventRecord,
@@ -201,6 +221,7 @@ import {
   type MissionRecord,
   type MissionState,
   type ParentRef,
+  type RecordedAuthoritySource,
   type ScheduleRequest,
   type SuspensionSchedule,
   type TemplateRef,
@@ -399,8 +420,23 @@ export interface ApproveInput {
    * the record carries neither `proposed_authority` nor `proposal_hash`.
    */
   proposedAuthority?: AuthorityEntry[];
+  /**
+   * @spec mission#derivation-modes, mission#scope-projection: the entries the
+   * request's `scope` values stand for at a `scope`-only target
+   * (`requestedScopeEntries`). Used only when no proposal was submitted, as
+   * the configured-mapping key; not a proposal, so never recorded or hashed
+   * as one.
+   */
+  requestedScope?: AuthorityEntry[];
   subject: { iss: string; sub: string };
   approver: { iss: string; sub: string };
+  /**
+   * @spec approval-governance#assertion-authority (#1470): the authentication
+   * the approval surface verified for the Approver, never anything the client
+   * sent. Read only where direct approval recording is configured, which
+   * refuses an approval without it.
+   */
+  authentication?: DirectApprovalAuthentication;
   clientId: string;
   approvalEventId: string;
   /**
@@ -631,6 +667,17 @@ export interface KernelOptions {
    */
   governedPolicyApproval?: GovernedPolicyApprovalConfig;
   /**
+   * @spec approval-governance#triggers (#1470, D597): voluntary Approval
+   * Governance Records for `direct` approvals. OPTIONAL and default off:
+   * absent, a direct approval records none. Present, every approval through
+   * {@link MissionKernel.approve} evaluates this rule again at the commit,
+   * refuses the Mission when it denies, and records the signed record, the
+   * rule snapshot and the evaluated inputs in the Mission's creation
+   * transaction. Build the rule with `directApprovalRuleFrom` from the
+   * configuration the approval surface enforces.
+   */
+  directApprovalRecording?: { rule: RegisteredDirectApprovalRule };
+  /**
    * @spec resource-access#resource-contract (#249, D553): the trusted
    * configuration "which states whether an entry's `resource` requires a
    * reference and which contract version is current for it": the contract
@@ -816,6 +863,19 @@ export class MissionKernel {
    */
   readonly governanceRecords: ApprovalGovernanceRecordStore;
   /**
+   * @spec approval-governance#approval-policy (#1470): the retained direct
+   * approval rule snapshots and the inputs each recorded direct approval
+   * evaluated. Always present, so records stay re-checkable after recording
+   * is turned off.
+   */
+  readonly directApprovalRecords: DirectApprovalRecordStore;
+  /** The configured direct approval rule, parsed, with its `approval_policy` reference. */
+  private readonly directRule?: {
+    registered: RegisteredDirectApprovalRule;
+    parsed: DirectApprovalRule;
+    ref: { id: string; version: string; digest: string };
+  };
+  /**
    * @spec approval-governance#governed-policy-root: the retained governance
    * state of the `governed_policy` basis (consented roots, human consents,
    * recorded activation inputs), on this kernel's database.
@@ -936,6 +996,16 @@ export class MissionKernel {
     if (opts.governedPolicyApproval) validateGovernedPolicyApprovalConfig(opts.governedPolicyApproval);
     this.governanceRecords = new ApprovalGovernanceRecordStore(this.db);
     this.governedPolicyConsents = new GovernedPolicyConsentStore(this.db);
+    this.directApprovalRecords = new DirectApprovalRecordStore(this.db);
+    // A malformed rule refuses construction, never an approval.
+    if (opts.directApprovalRecording) {
+      const registered = opts.directApprovalRecording.rule;
+      this.directRule = {
+        registered,
+        parsed: parseDirectApprovalRule(registered.content),
+        ref: directApprovalRuleRef(opts.issuer, registered),
+      };
+    }
   }
 
   validateIntent(raw: string): MissionIntent {
@@ -996,8 +1066,15 @@ export class MissionKernel {
    * and grants, with each entry's `resource_contract` assembled from
    * configuration ({@link assembleResourceContracts}, #249).
    */
-  derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {
-    return assembleResourceContracts(this.deriveWithProvenance(intent, proposal).entries, this.resourceContracts());
+  derive(
+    intent: MissionIntent,
+    proposal?: readonly AuthorityEntry[],
+    requestedScope?: readonly AuthorityEntry[],
+  ): AuthorityEntry[] {
+    return assembleResourceContracts(
+      this.deriveWithProvenance(intent, proposal, requestedScope).entries,
+      this.resourceContracts(),
+    );
   }
 
   /** @spec resource-access#resource-contract (#249): the configured contract declarations. */
@@ -1014,8 +1091,19 @@ export class MissionKernel {
    * separate child-actor origins as `child_actor_provenance` (@spec
    * child-delegation#fanout, #1304).
    */
-  deriveWithProvenance(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): DerivedAuthority {
-    const derived = deriveAuthoritySetWithProvenance(intent, this.opts.policy, proposal);
+  deriveWithProvenance(
+    intent: MissionIntent,
+    proposal?: readonly AuthorityEntry[],
+    requestedScope?: readonly AuthorityEntry[],
+  ): DerivedAuthority {
+    const derived = deriveAuthoritySetWithProvenance(
+      intent,
+      this.opts.policy,
+      proposal,
+      undefined,
+      undefined,
+      requestedScope,
+    );
     // @spec discharge#discharge-authority: resolve every `discharge_authority`
     // selector the derived entries carry, refusing the derivation when one maps
     // to nothing. Early and typed here (an IntentError the submission carriers
@@ -1368,7 +1456,7 @@ export class MissionKernel {
     // (IntentError) rather than being approved unbound.
     // @spec resource-access#delegate-eligibility: the derivation's origins
     // stay index-aligned through the two per-entry capability transforms.
-    const derived = this.deriveWithProvenance(input.intent, proposal);
+    const derived = this.deriveWithProvenance(input.intent, proposal, input.requestedScope);
     // @spec resource-access#resource-contract (#249): the reference is
     // assembled from configuration before `authorityHash` below, so
     // `authority_hash` commits it; the transform is one entry per entry, so
@@ -1511,6 +1599,9 @@ export class MissionKernel {
       activation: { approval_event_id: input.approvalEventId },
       activation_actor: input.approver,
       root_commitment: authorityHashValue,
+      // @spec approval-governance#issuance-relationship (#1470): a recorded
+      // direct approval names its mechanism and its record.
+      ...(this.directRule ? { adjudication: { kind: "human" as const, governance_record: true as const } } : {}),
     };
     const record: MissionRecord = {
       id,
@@ -1562,8 +1653,24 @@ export class MissionKernel {
       status_list_idx: null,
       ...(ceiling ?? {}),
     };
+    // @spec approval-governance#atomic-commitment (#1470): where direct
+    // approvals are recorded, the issuer evaluates the rule, then signs, then
+    // persists the record with the Mission in one transaction; a denial or a
+    // failure creates no Mission. A repeated event returns its Mission below.
+    const governance =
+      this.directRule && !this.findByApprovalEvent(input.approvalEventId)
+        ? this.prepareDirectRecord(record, input, resolvedSource.rootId, ceiling?.authority_ceiling)
+        : undefined;
     try {
-      this.insertRecord(record, undefined, { source: resolvedSource });
+      if (governance) {
+        withTransaction(this.db, () => {
+          this.insertRecord(record, undefined, { source: resolvedSource });
+          this.directApprovalRecords.retainInCallerTx(record.id, this.opts.issuer, governance.ref, governance.rule, governance.inputs);
+          this.governanceRecords.retainInCallerTx(record.id, governance.signed);
+        });
+      } else {
+        this.insertRecord(record, undefined, { source: resolvedSource });
+      }
     } catch (e) {
       if (e instanceof UniqueViolationError) {
         // Idempotent approval: return the record this event already created.
@@ -1585,6 +1692,39 @@ export class MissionKernel {
     // `findByGrant` first, so the gap before this write refuses nothing.
     if (input.grantId) this.missionBoundGrants.record({ grantId: input.grantId, missionId: id, kind: "approval" });
     return record;
+  }
+
+  /**
+   * @spec approval-governance#atomic-commitment, approval-governance#assertion-authority
+   * (#1470): evaluate the direct approval rule over the inputs this approval
+   * presents, at the creation instant; build the record with the Approver's
+   * `human` assertion; pass the commit gate; sign. A denial refuses the
+   * approval `access_denied`.
+   */
+  private prepareDirectRecord(record: MissionRecord, input: ApproveInput, sourceRoot: string, ceiling: AuthorityEntry[] | undefined) {
+    const rule = this.directRule as NonNullable<MissionKernel["directRule"]>;
+    if (!input.authentication) {
+      throw new Error("direct approval recording needs the authentication the approval surface verified");
+    }
+    const inputs: DirectApprovalInputs = {
+      approval_event_id: record.approval_event_id,
+      intent_hash: record.intent_hash,
+      approver: input.approver,
+      subject: record.subject,
+      source_root: sourceRoot,
+      authority: record.authority_set,
+      ...(ceiling?.length ? { ceiling } : {}),
+      authentication: {
+        acr: input.authentication.acr,
+        auth_time: input.authentication.auth_time,
+        interactive: input.authentication.interactive,
+      },
+    };
+    const decision = evaluateDirectApprovalRule(rule.parsed, inputs, record.created_at);
+    if (decision.decision !== "approve") throw new IntentError("access_denied", `the direct approval rule denies: ${decision.reason}`);
+    const unsigned = buildDirectApprovalRecord(record, rule.ref, inputs);
+    assertDirectApprovalRecord(unsigned, record.approval_basis as ApprovalBasisDirect, rule.ref);
+    return { ref: rule.ref, rule: rule.registered, inputs, signed: signApprovalGovernanceRecord(unsigned, this.statusSigner()) };
   }
 
   /** Insert a full record (shared by approve, expansion, template dispatch, and
@@ -2232,7 +2372,7 @@ export class MissionKernel {
   assertRenderedAuthoritySource(input: {
     /** The committed root of the rendered origin (#827). */
     binding: AuthoritySourceBinding;
-    source: AuthoritySource;
+    source: RecordedAuthoritySource;
     subject: { iss: string; sub: string };
     approver: { iss: string; sub: string };
     authoritySet: readonly AuthorityEntry[];
@@ -2603,7 +2743,8 @@ export class MissionKernel {
     id: string,
     input: {
       event: { type: string; source: string; observed_at: string; event_id: string };
-      remove: Array<{ resource: string; actions?: string[] }>;
+      /** Selectors (@spec containment#selector-matching): `exact` by default, `prefix` only by declaration. */
+      remove: ContainmentSelector[];
       /**
        * @spec containment#containment-policy — the ContainmentPolicy `rule_id`
        * that drove this narrowing when the event was applied via {@link
@@ -2632,6 +2773,10 @@ export class MissionKernel {
     if (!Array.isArray(input.remove) || input.remove.length === 0) {
       throw new Error("contain requires a non-empty remove list");
     }
+    // @spec containment#selector-matching (#1463): a selector the matcher
+    // cannot decide would contain nothing, so it is refused before anything
+    // commits, whichever intake supplied it.
+    assertContainmentSelectors(input.remove);
     const prior = record.containment;
     const nowIso = this.now().toISOString();
     const evidenceBase = {
@@ -2661,38 +2806,19 @@ export class MissionKernel {
       };
     }
 
-    // New contained set = UNION with the prior (monotonic). Merged by resource:
-    // an entry with no `actions` contains the whole resource and absorbs any
-    // per-action containment for it.
-    const merged = new Map<string, Set<string> | undefined>();
-    for (const e of prior?.contained ?? []) {
-      merged.set(e.resource, e.actions ? new Set(e.actions) : undefined);
-    }
-    for (const r of input.remove) {
-      if (!merged.has(r.resource)) {
-        merged.set(r.resource, r.actions ? new Set(r.actions) : undefined);
-        continue;
-      }
-      const cur = merged.get(r.resource);
-      if (cur === undefined) continue; // whole resource already contained
-      if (!r.actions) {
-        merged.set(r.resource, undefined);
-      } else {
-        for (const a of r.actions) cur.add(a);
-      }
-    }
-    const contained = [...merged.entries()].map(([resource, actions]) =>
-      actions ? { resource, actions: [...actions] } : { resource },
-    );
+    // New contained set = UNION with the prior (monotonic). Selectors merge
+    // only under the same `resource` AND mode (@spec containment#selector-
+    // matching, #1463): one with no `actions` absorbs per-action selectors of
+    // that key, and an `exact` and a `prefix` selector naming one string stay
+    // separate, since they select different resource sets.
+    const removed = mergeContainmentSelectors(input.remove);
+    const contained = mergeContainmentSelectors(prior?.contained ?? [], removed);
     const eventRecord: ContainmentEventRecord = {
       type: input.event.type,
       source: input.event.source,
       observed_at: input.event.observed_at,
       event_id: input.event.event_id,
-      removed: input.remove.map((r) => ({
-        resource: r.resource,
-        ...(r.actions ? { actions: [...r.actions] } : {}),
-      })),
+      removed,
     };
     const next: MissionContainment = {
       containment_version: (prior?.containment_version ?? 0) + 1,
@@ -2733,9 +2859,9 @@ export class MissionKernel {
     // @spec child-delegation#child-state — containment propagates entry-wise to
     // existing children justified by the now-contained parent entry, so a child
     // cannot keep deriving contained authority while the parent stays `active`.
-    // Only the NEWLY removed items (`input.remove`), not the whole merged
-    // overlay: earlier removals were already propagated when THEY were applied.
-    this.propagateContainmentToChildren(fresh, input.remove, input.event, input.policyRule);
+    // Only the NEWLY removed items, not the whole merged overlay: earlier
+    // removals were already propagated when THEY were applied.
+    this.propagateContainmentToChildren(fresh, removed, input.event, input.policyRule);
     return {
       record: fresh,
       evidence: buildContainmentEvidence({
@@ -2751,17 +2877,24 @@ export class MissionKernel {
 
   /**
    * @spec child-delegation#child-state — propagate a containment narrowing
-   * entry-wise to PARENT's existing children. A removed item applies to a
-   * child when the child holds an Authority Set entry for that SAME resource:
-   * a Child Mission's `authority_set` is proven (at creation,
-   * {@link createChildMission}) to be a strict subset of the parent's, so any
-   * child entry sharing a resource with a removed item is necessarily justified
-   * by the parent entry that removal narrowed (@spec
-   * child-delegation#fanout-accounting). Matching on the resource key alone
-   * (not a fresh subset probe) mirrors how {@link effectiveAuthoritySet} and
-   * `contain`'s own merge already correlate entries, and fails CLOSED: a
-   * subset re-probe here could spuriously fail on an unrelated malformed
-   * constraint and silently skip propagation, which containment must not do.
+   * entry-wise to PARENT's existing children. A Child Mission's
+   * `authority_set` is proven (at creation, {@link createChildMission}) to be
+   * a strict subset of the parent's, so each child entry lies within the
+   * parent entries that justify it (@spec child-delegation#fanout-accounting).
+   *
+   * @spec containment#selector-matching (#1463, D606): the removals are
+   * widened onto the parent's approved entries first ({@link
+   * containmentAtEntries}), so a child entry justified by a parent entry a
+   * selector applies to loses what that parent entry lost, the conservative
+   * over-containment included. A fine selector (one invoice) over a broad
+   * `prefix` parent entry removes its actions from the whole parent entry, so
+   * a child holding a sibling invoice under that entry loses them too, as a
+   * child created after the transition could not derive them. The original
+   * selectors ride along unchanged. Each child receives the removals whose
+   * selector overlaps one of its own entries ({@link selectorOverlapsEntry}),
+   * not a fresh subset probe, which fails CLOSED: a subset re-probe here could
+   * spuriously fail on an unrelated malformed constraint and silently skip
+   * propagation, which containment must not do.
    *
    * A terminal child cannot derive further and is skipped (mirrors {@link
    * cascadeChildren}'s active/suspended-only gate; `contain` itself also
@@ -2775,15 +2908,16 @@ export class MissionKernel {
    */
   private propagateContainmentToChildren(
     parent: MissionRecord,
-    removed: Array<{ resource: string; actions?: string[] }>,
+    removed: ContainmentSelector[],
     event: { type: string; source: string; observed_at: string; event_id: string },
     policyRule?: string,
   ): void {
+    const widened = mergeContainmentSelectors(removed, containmentAtEntries(parent.authority_set, removed));
     for (const child of this.findChildren(parent.id)) {
       const fresh = this.applyExpiry(child);
       if (TERMINAL_STATES.has(fresh.state)) continue;
-      const applicable = removed.filter((r) =>
-        fresh.authority_set.some((ce) => ce.resource === r.resource),
+      const applicable = widened.filter((r) =>
+        fresh.authority_set.some((ce) => selectorOverlapsEntry(r, ce)),
       );
       if (applicable.length === 0) continue;
       this.contain(fresh.id, {
@@ -3424,6 +3558,21 @@ export class MissionKernel {
   }
 
   /**
+   * @spec containment#selector-matching, runtime#input-authority (#1463): the
+   * containment overlay resolved onto the approved entries, one removal per
+   * affected entry naming that entry's own `resource` and mode
+   * ({@link containmentAtEntries}). For a consumer that materializes a policy
+   * view from this AS and pairs a contained capability with the approved
+   * entry it relies on by that entry's `resource` (a PDP's `containment`
+   * delta), so a `prefix` selector or a fine selector over a broad entry
+   * reaches it exactly as it reaches the effective set. Empty when nothing is
+   * contained.
+   */
+  containedEntryRemovals(record: MissionRecord): ContainmentSelector[] {
+    return containmentAtEntries(record.authority_set, record.containment?.contained ?? []);
+  }
+
+  /**
    * The Mission's EFFECTIVE Authority Set: the approved set minus the issuer-held
    * narrowing overlays, which are TWO (#569: this method is the single
    * composition point every derivation, projection, and Status surface draws on):
@@ -3467,16 +3616,21 @@ export class MissionKernel {
         out.push({ origin: entry, entry });
         continue;
       }
-      // A contained capability names an approved Authority Set entry or its
-      // actions (containment#overlay), so the overlay is keyed on the approved
-      // entry's own `resource` by string equality, never the shared matcher.
-      const contained = containment.contained.find((c) => c.resource === entry.resource);
-      if (!contained) {
+      // @spec containment#selector-matching (#1463, D606): a contained
+      // capability is a selector, applied to this entry when their resource
+      // sets overlap under Resource Access matching, and every overlapping
+      // selector contributes (a union, never the first match or a string key).
+      // A selector finer than the entry (one invoice under a `prefix` entry)
+      // removes its actions across the whole entry: an entry cannot express
+      // "this prefix except that resource", so this conservative
+      // over-containment removes more authority, never less.
+      const removal = containmentRemovalFor(entry, containment.contained);
+      if (!removal) {
         out.push({ origin: entry, entry });
         continue;
       }
-      if (!contained.actions) continue; // whole resource contained -> entry dropped
-      const actions = entry.actions.filter((a) => !(contained.actions as string[]).includes(a));
+      if (removal.whole) continue; // a selector with no actions -> entry dropped
+      const actions = entry.actions.filter((a) => !removal.actions.has(a));
       if (actions.length === 0) continue; // every action contained -> entry dropped
       out.push({ origin: entry, entry: { ...entry, actions } });
     }
@@ -4116,10 +4270,13 @@ export class MissionKernel {
             // `approval_basis.type` already gates on: `type` always, plus the
             // governed policy's `id` and `version` for `organizational`. The
             // policy `digest` stays off introspection and belongs to record
-            // access.
+            // access. An unrecognized `type` (#1503) is echoed alone: its
+            // other members are opaque, so none of them is projected.
             authority_source: {
               type: fresh.authority_source.type,
-              ...(fresh.authority_source.policy
+              ...(isRecognizedAuthoritySource(fresh.authority_source) &&
+              fresh.authority_source.type === "organizational" &&
+              fresh.authority_source.policy
                 ? {
                     policy: {
                       id: fresh.authority_source.policy.id,
@@ -4812,10 +4969,11 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     authority_hash: row.authority_hash as string,
     subject: { iss: row.subject_iss as string, sub: row.subject_sub as string },
     approval_basis: JSON.parse(row.approval_basis_json as string) as ApprovalBasis,
-    // @spec mission#mission-record, mission#lifecycle — fail closed on
-    // hydration: a stored row carrying an unrecognized `authority_source.type`
-    // is refused, never widened into the union.
-    authority_source: parseAuthoritySource(
+    // @spec mission#mission-record (#1503): a stored row carrying an
+    // unrecognized `authority_source.type` hydrates with the member unchanged
+    // as opaque provenance, and the Mission keeps its state; a recognized type
+    // is still held to its member rules.
+    authority_source: parseRecordedAuthoritySource(
       JSON.parse(row.authority_source_json as string),
       `mission ${String(row.id)}`,
     ),

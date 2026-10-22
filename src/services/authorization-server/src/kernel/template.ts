@@ -32,6 +32,7 @@ import {
   MISSION_TEMPLATE_TYP,
   proposalHash,
   refusedEntryMember,
+  unsupportedDelegationMember,
   unsupportedEntryMember,
 } from "@mission/core";
 import {
@@ -233,6 +234,15 @@ export function assertTemplateBody(input: TemplateProposalBody): void {
     if (unsupported !== undefined) {
       throw new TemplateError(
         `ceiling[${i}] carries ${unsupported}, which is not a supported member of the mission_resource_access type`,
+      );
+    }
+    // @spec resource-access#resource-access-type (D634): likewise a
+    // `delegation` member this authorization server does not implement, which
+    // dispatch derivation would otherwise carry unchanged.
+    const delegationMember = unsupportedDelegationMember(entry);
+    if (delegationMember !== undefined) {
+      throw new TemplateError(
+        `ceiling[${i}] carries ${delegationMember}, which is not a supported delegation member`,
       );
     }
     // @spec resource-access#resource-contract (#249, D553): template consent

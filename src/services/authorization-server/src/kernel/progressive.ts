@@ -28,15 +28,19 @@ import { randomBytes } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { ApprovalFloorPolicy, ProgressiveProfile } from "@mission/demo-data";
 import {
+  catalogDigest,
   type ActivationPolicyRef,
   authorityHash,
   compareAmounts,
   computeAnchor,
+  containmentAtEntries,
+  type ContainmentSelector,
   intentHash,
   isSubsetSetIgnoringCapabilitySources,
   isValidAmount,
   type JsonValue,
   proposalHash,
+  selectorOverlapsEntry,
 } from "@mission/core";
 import {
   type ActivationPolicyRegistry,
@@ -144,6 +148,13 @@ export interface MissionCeiling {
    */
   ceiling_consent_principal?: { iss: string; sub: string };
   drawdown_count: number;
+  /**
+   * @spec progressive#audit-linkage, discovery#resource-identity (#1469): the
+   * digest of the self-declaration this successor's adjudication evaluated,
+   * computed over the bytes the Mission Issuer retrieved. On that successor
+   * only; never carried forward.
+   */
+  resource_declaration_digest?: string;
 }
 
 /**
@@ -238,11 +249,15 @@ export type ReconsentedCeiling = Omit<MissionCeiling, "drawdown_count">;
 export function successorCeilingMembers(
   predecessor: MissionRecord,
   reconsent?: ReconsentedCeiling,
+  /** @spec progressive#audit-linkage (#1469): the digest of the declaration this successor's adjudication evaluated. */
+  resourceDeclarationDigest?: string,
 ): Partial<MissionCeiling> {
   const drawdownCount = predecessor.drawdown_count ?? 0;
-  if (reconsent) return { ...reconsent, drawdown_count: drawdownCount };
+  const digest = resourceDeclarationDigest ? { resource_declaration_digest: resourceDeclarationDigest } : {};
+  if (reconsent) return { ...reconsent, drawdown_count: drawdownCount, ...digest };
   if (!predecessor.authority_ceiling || !predecessor.ceiling_hash || !predecessor.ceiling_consented_at) return {};
   return {
+    ...digest,
     authority_ceiling: predecessor.authority_ceiling,
     ...(predecessor.drawdown_policy ? { drawdown_policy: predecessor.drawdown_policy } : {}),
     ceiling_hash: predecessor.ceiling_hash,
@@ -282,6 +297,7 @@ export function serializeCeiling(record: MissionRecord): string | null {
     ceiling_consented_at: record.ceiling_consented_at,
     ...(record.ceiling_consent_principal ? { ceiling_consent_principal: record.ceiling_consent_principal } : {}),
     drawdown_count: record.drawdown_count ?? 0,
+    ...(record.resource_declaration_digest ? { resource_declaration_digest: record.resource_declaration_digest } : {}),
   };
   return JSON.stringify(stored);
 }
@@ -349,6 +365,319 @@ export interface ProgressiveDrawdownOptions {
    * never reaches it.
    */
   ceilingOffer?: (request: { clientId: string; intent: MissionIntent }) => CeilingConsent | undefined;
+  /**
+   * @spec discovery#resource-identity, progressive#ceiling-test (#1469 stage
+   * 1): the deployment's port to a resource's self-declaration, retrieved
+   * server-side by origin. The Mission Issuer digests the exact bytes it
+   * returns; nothing the agent sends is consulted. Absent, or resolving to
+   * nothing, no declaration is evaluated and no digest is recorded.
+   */
+  resourceDeclarations?: (origin: string) => Promise<Uint8Array | string | undefined>;
+  /**
+   * @spec discovery#resource-identity (#1469 stage 2): the Mission Issuer's own
+   * connection to an encountered origin, through the deployment. It reports
+   * whether TLS authenticated the origin on that connection, and returns the
+   * exact bytes of the RFC 9728 Protected Resource Metadata it retrieved over
+   * it for the origin, if any. The reference performs no network retrieval
+   * itself: TLS authentication is this port's report, never the agent's.
+   * Absent, or resolving to nothing, no identity is pinned.
+   */
+  resourceMetadata?: (origin: string) => Promise<ResourceConnection | undefined>;
+  /**
+   * @spec discovery#resource-identity (#1469 stage 2): whether the issuer an
+   * encountered resource's metadata names is authorized for the resource's
+   * domain, through a deployment mechanism such as domain-authorized-issuer.
+   * Only `true` verifies it; anything else, a failure included, leaves it
+   * unverified.
+   */
+  issuerAuthorized?: (origin: string, issuer: string) => Promise<boolean | undefined>;
+  /**
+   * @spec discovery#resource-identity, discovery#adjudication (#1469 stage 2):
+   * the deployment's policy for an encounter whose identity cannot be
+   * established: an origin not TLS-authenticated, or metadata missing,
+   * unusable, or naming no single authorization server. `fresh_approval` (the
+   * default) routes it to a human; `refuse` refuses it. An encounter whose
+   * named issuer is not verified as authorized always routes to a human.
+   */
+  unpinnedEncounter?: "fresh_approval" | "refuse";
+}
+
+/** @spec discovery#resource-identity (#1469 stage 2): what the deployment's connection to an origin established. */
+export interface ResourceConnection {
+  /** Whether TLS authenticated the origin on the Mission Issuer's own connection. */
+  tls_authenticated: boolean;
+  /** The exact bytes of the origin's Protected Resource Metadata retrieved over that connection, if any. */
+  metadata?: Uint8Array | string;
+}
+
+/**
+ * @spec discovery#resource-identity (#1469 stage 2): the Encountered Resource
+ * object, holding only the Mission Issuer's own verified values. It exists once
+ * the origin is TLS-authenticated; `resource_metadata_digest` once usable
+ * metadata was retrieved over that connection; `issuer` once that metadata
+ * names exactly one authorization server.
+ */
+export interface EncounteredResource {
+  origin: string;
+  resource_metadata_digest?: string;
+  issuer?: string;
+}
+
+/** @spec discovery#resource-identity (#1469 stage 2): why an encountered resource's identity is not pinned. */
+export type PinFailure =
+  | "origin_unauthenticated"
+  | "metadata_unavailable"
+  | "metadata_invalid"
+  | "issuer_unnamed"
+  | "issuer_ambiguous"
+  | "issuer_unverified";
+
+/**
+ * @spec discovery#adjudication, progressive#ceiling-test (#1469 stage 1): the
+ * facts an encounter records for the human approval it falls back to, and
+ * for audit. The encountered resources come from the request's own entries,
+ * never from the agent's `encountered_resource` hint, which is kept only as
+ * the agent's claim.
+ */
+export interface EncounterFacts {
+  origin: string;
+  resources: string[];
+  /** @spec discovery#resource-identity (#1469 stage 2): the pinned identity, as far as it was established. */
+  resource?: EncounteredResource;
+  /** Whether the identity is fully pinned: TLS-authenticated origin, usable metadata, one verified issuer. */
+  pinned: boolean;
+  /** Why it is not, when it is not. */
+  pin_failure?: PinFailure;
+  /** The raw-octet digest of the declaration bytes the Mission Issuer retrieved; absent when it retrieved none. */
+  declaration_digest?: string;
+  /** Whether the declaration lists every action sought at the resource; absent without a usable declaration. */
+  declared?: boolean;
+  /** The agent's hint, recorded as its claim, and whether each value matched the Mission Issuer's own. */
+  hint?: EncounterHint & {
+    digest_matched?: boolean;
+    resource_metadata_digest_matched?: boolean;
+    issuer_matched?: boolean;
+  };
+}
+
+/** @spec discovery#resource-identity: the agent's Encountered Resource object and declaration digest, as claims. */
+export interface EncounterHint {
+  origin: string;
+  resource_metadata_digest?: string;
+  issuer?: string;
+  resource_declaration_digest?: string;
+}
+
+/** The `scheme://host[:port]` origin of a URI, or undefined when it has none. */
+function originOf(uri: string): string | undefined {
+  try {
+    const origin = new URL(uri).origin;
+    return origin === "null" ? undefined : origin;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * @spec discovery#resource-identity (#1469 stage 1): the agent's
+ * `encountered_resource` (an Encountered Resource object) and
+ * `resource_declaration_digest` are hints. Each is validated for shape and
+ * kept as the agent's claim, never as identity. A hint whose `origin` is not
+ * an origin, or names no resource the request seeks, and a digest hint
+ * without the object, are refused: the returned string is the reason.
+ */
+export function encounterHint(
+  raw: unknown,
+  digest: unknown,
+  requested: readonly AuthorityEntry[],
+): EncounterHint | undefined | string {
+  if (raw === undefined && digest === undefined) return undefined;
+  if (typeof raw !== "string") return "resource_declaration_digest rides only with encountered_resource";
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return "encountered_resource is not a JSON object";
+  }
+  const origin = (parsed as { origin?: unknown } | null)?.origin;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || typeof origin !== "string" || originOf(origin) !== origin) {
+    return "encountered_resource needs an origin";
+  }
+  // @spec discovery#resource-identity (#1469 stage 2): the object's other members, claims too.
+  const { resource_metadata_digest: metadataDigest, issuer } = parsed as { resource_metadata_digest?: unknown; issuer?: unknown };
+  if ((metadataDigest !== undefined && typeof metadataDigest !== "string") || (issuer !== undefined && typeof issuer !== "string")) {
+    return "encountered_resource members are strings";
+  }
+  if (digest !== undefined && typeof digest !== "string") return "resource_declaration_digest is a string";
+  if (!requested.some((e) => originOf(e.resource) === origin)) {
+    return "the encountered resource names no resource the request seeks";
+  }
+  return {
+    origin,
+    ...(typeof metadataDigest === "string" ? { resource_metadata_digest: metadataDigest } : {}),
+    ...(typeof issuer === "string" ? { issuer } : {}),
+    ...(typeof digest === "string" ? { resource_declaration_digest: digest } : {}),
+  };
+}
+
+/**
+ * @spec discovery#resource-identity (#1469 stage 2): an issuer identifier as
+ * RFC 9728 requires of `authorization_servers` (RFC 8414 Section 2): an
+ * `https` URL with no query or fragment component, even an empty one. Domain
+ * authorization does not make a malformed value an issuer.
+ */
+export function isIssuerIdentifier(value: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:" || !url.hostname) return false;
+  if (value.includes("?")) return false;
+  if (value.includes("#")) return false;
+  return true;
+}
+
+/**
+ * @spec discovery#resource-identity (#1469 stage 2): pin the encountered
+ * resource's identity from the Mission Issuer's own connection, never from the
+ * agent. The origin is the one that connection TLS-authenticated. Metadata
+ * retrieved over it is used only when its `resource` is exactly the origin it
+ * was retrieved for (RFC 9728 Section 3.3) and every authorization server it
+ * names is an issuer identifier ({@link isIssuerIdentifier}); it is digested from its exact
+ * bytes, and the one authorization server it names must be verified as
+ * authorized for the resource's domain. The reference requires the metadata
+ * and a named issuer: on the drawdown path, the resource's authorization
+ * server association is what pinning establishes.
+ */
+export async function pinEncounteredResource(
+  options: ProgressiveDrawdownOptions,
+  origin: string,
+): Promise<{ resource?: EncounteredResource; pinned: boolean; pin_failure?: PinFailure }> {
+  let connection: ResourceConnection | undefined;
+  try {
+    connection = await options.resourceMetadata?.(origin);
+  } catch {
+    connection = undefined;
+  }
+  if (connection?.tls_authenticated !== true) return { pinned: false, pin_failure: "origin_unauthenticated" };
+  const resource: EncounteredResource = { origin };
+  const bytes = connection.metadata;
+  if (bytes === undefined) return { resource, pinned: false, pin_failure: "metadata_unavailable" };
+  let doc: unknown;
+  try {
+    doc = JSON.parse(typeof bytes === "string" ? bytes : Buffer.from(bytes).toString("utf8"));
+  } catch {
+    doc = undefined;
+  }
+  const servers = (doc as { authorization_servers?: unknown } | undefined)?.authorization_servers;
+  if (
+    !doc ||
+    typeof doc !== "object" ||
+    Array.isArray(doc) ||
+    (doc as { resource?: unknown }).resource !== origin ||
+    (servers !== undefined && (!Array.isArray(servers) || !servers.every((s) => typeof s === "string" && isIssuerIdentifier(s))))
+  ) {
+    return { resource, pinned: false, pin_failure: "metadata_invalid" };
+  }
+  resource.resource_metadata_digest = catalogDigest(bytes);
+  // The same server listed twice is still one named issuer.
+  const named = [...new Set((servers ?? []) as string[])];
+  if (named.length === 0) return { resource, pinned: false, pin_failure: "issuer_unnamed" };
+  if (named.length > 1) return { resource, pinned: false, pin_failure: "issuer_ambiguous" };
+  const issuer = named[0] as string;
+  resource.issuer = issuer;
+  let authorized: boolean | undefined;
+  try {
+    authorized = await options.issuerAuthorized?.(origin, issuer);
+  } catch {
+    authorized = undefined;
+  }
+  if (authorized !== true) return { resource, pinned: false, pin_failure: "issuer_unverified" };
+  return { resource, pinned: true };
+}
+
+/**
+ * @spec discovery#adjudication (#1469 stage 2): whether the deployment refuses
+ * this encounter outright: its identity cannot be established and the
+ * deployment does not escalate such encounters. An issuer that is named but
+ * not verified always routes to a human.
+ */
+export function refusesEncounter(options: ProgressiveDrawdownOptions, facts: EncounterFacts): boolean {
+  return options.unpinnedEncounter === "refuse" && !facts.pinned && facts.pin_failure !== "issuer_unverified";
+}
+
+/**
+ * @spec discovery#resource-identity, discovery#adjudication,
+ * progressive#ceiling-test (#1469 stage 1): the facts of an encounter. The
+ * Mission Issuer retrieves the declaration itself, through the deployment's
+ * port, from the origin of the request's own entry, and digests the exact
+ * bytes; the hint is recorded beside them as the agent's claim. One origin per
+ * request in this reference, and a hint naming another origin is refused, so
+ * its digest is never compared with a different resource's declaration; the
+ * returned string is the reason.
+ */
+export async function encounterFacts(
+  options: ProgressiveDrawdownOptions,
+  encountered: readonly string[],
+  requested: readonly AuthorityEntry[],
+  hint: EncounterHint | undefined,
+): Promise<EncounterFacts | string> {
+  const origins = [...new Set(encountered.map(originOf))];
+  const origin = origins[0];
+  if (origins.length !== 1 || origin === undefined) return "one encountered resource origin per request";
+  if (hint && hint.origin !== origin) return "encountered_resource names an origin other than the encounter's";
+  const pin = await pinEncounteredResource(options, origin);
+  const identity = pin.resource;
+  let bytes: Uint8Array | string | undefined;
+  try {
+    bytes = await options.resourceDeclarations?.(origin);
+  } catch {
+    bytes = undefined;
+  }
+  const digest = bytes === undefined ? undefined : catalogDigest(bytes);
+  const sought = requested.filter((e) => encountered.includes(e.resource)).flatMap((e) => e.actions);
+  const declared = bytes === undefined ? undefined : declaresActions(bytes, sought);
+  return {
+    origin,
+    resources: [...encountered],
+    ...(identity ? { resource: identity } : {}),
+    pinned: pin.pinned,
+    ...(pin.pin_failure ? { pin_failure: pin.pin_failure } : {}),
+    ...(digest ? { declaration_digest: digest } : {}),
+    ...(declared === undefined ? {} : { declared }),
+    ...(hint
+      ? {
+          hint: {
+            ...hint,
+            ...(hint.resource_declaration_digest && digest ? { digest_matched: hint.resource_declaration_digest === digest } : {}),
+            ...(hint.resource_metadata_digest && identity?.resource_metadata_digest
+              ? { resource_metadata_digest_matched: hint.resource_metadata_digest === identity.resource_metadata_digest }
+              : {}),
+            ...(hint.issuer && identity?.issuer ? { issuer_matched: hint.issuer === identity.issuer } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+/**
+ * The reference's self-declaration form (a deployment assumption: the draft
+ * leaves the format to the deployment, R3 being one form): a JSON object whose
+ * `operations` lists the action identifiers the resource declares. Whether it
+ * lists every sought action; undefined when the bytes are not that form.
+ */
+export function declaresActions(bytes: Uint8Array | string, sought: readonly string[]): boolean | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(typeof bytes === "string" ? bytes : Buffer.from(bytes).toString("utf8"));
+  } catch {
+    return undefined;
+  }
+  const operations = (parsed as { operations?: unknown } | null)?.operations;
+  if (!Array.isArray(operations) || !operations.every((o) => typeof o === "string")) return undefined;
+  return sought.every((a) => operations.includes(a));
 }
 
 const isPositiveInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
@@ -419,6 +748,24 @@ export function validateProgressiveDrawdownOptions(
   }
   if (o.ceilingOffer !== undefined && typeof o.ceilingOffer !== "function") {
     throw new Error("progressive ceilingOffer must be a function of the request");
+  }
+  if (o.resourceDeclarations !== undefined && typeof o.resourceDeclarations !== "function") {
+    throw new Error("progressive resourceDeclarations must be a function of the origin");
+  }
+  if (o.resourceMetadata !== undefined && typeof o.resourceMetadata !== "function") {
+    throw new Error("progressive resourceMetadata must be a function of the origin");
+  }
+  if (o.issuerAuthorized !== undefined && typeof o.issuerAuthorized !== "function") {
+    throw new Error("progressive issuerAuthorized must be a function of the origin and issuer");
+  }
+  if (o.unpinnedEncounter !== undefined && o.unpinnedEncounter !== "fresh_approval" && o.unpinnedEncounter !== "refuse") {
+    throw new Error("progressive unpinnedEncounter must be fresh_approval or refuse");
+  }
+  // @spec discovery#resource-identity (#1469 stage 2): without a connection port
+  // no identity is ever pinned, so refusing unpinned encounters would refuse
+  // every encounter.
+  if (o.unpinnedEncounter === "refuse" && o.resourceMetadata === undefined) {
+    throw new Error("progressive unpinnedEncounter refuse needs a resourceMetadata port");
   }
   assertDrawdownClassesMeetApprovalFloor(o, approvalFloor);
   return o;
@@ -531,11 +878,12 @@ export type DrawdownFallbackReason =
   | "restricted_overlap"
   | "entire_remaining_ceiling"
   | "per_drawdown_bound"
-  | "chain_rate_bound";
+  | "chain_rate_bound"
+  | "encounter";
 
 export type DrawdownAdjudication =
   | { outcome: "out_of_ceiling" }
-  | { outcome: "fresh_approval"; reason: DrawdownFallbackReason }
+  | { outcome: "fresh_approval"; reason: DrawdownFallbackReason; encountered?: string[] }
   | { outcome: "policy"; ref: ActivationPolicyRef; snapshot: RegisteredActivationPolicy };
 
 /** One widened resource-action pair: authority the predecessor's effective set does not already hold. */
@@ -628,10 +976,16 @@ function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
  * restriction of the chain. The reference has no explicit restoration
  * disclosure, so no restriction clears.
  */
-function chainRestrictions(chain: readonly MissionRecord[]): Array<{ resource: string; actions?: string[] }> {
-  const out: Array<{ resource: string; actions?: string[] }> = [];
+function chainRestrictions(chain: readonly MissionRecord[]): ContainmentSelector[] {
+  const out: ContainmentSelector[] = [];
   for (const m of chain) {
-    for (const c of m.containment?.contained ?? []) out.push(c);
+    // @spec containment#selector-matching (#1463): each selector as named,
+    // and as it lands on the member's approved entries, the resolution the
+    // effective set uses. A fine selector over a broad approved entry removed
+    // its actions from the whole entry, so a drawdown restoring them for a
+    // sibling resource overlaps a restriction too.
+    const contained = m.containment?.contained ?? [];
+    out.push(...contained, ...containmentAtEntries(m.authority_set, contained));
     for (const d of m.discharged ?? []) {
       const entry = m.authority_set.find((e) => entryDigest(m.issuer, e) === d.entry_digest);
       if (entry) out.push({ resource: entry.resource, actions: entry.actions });
@@ -640,9 +994,15 @@ function chainRestrictions(chain: readonly MissionRecord[]): Array<{ resource: s
   return out;
 }
 
-/** Overlap in authority: the same resource and at least one shared action (a whole-resource restriction overlaps every action). */
-function overlaps(entry: AuthorityEntry, restricted: { resource: string; actions?: string[] }): boolean {
-  if (entry.resource !== restricted.resource) return false;
+/**
+ * Overlap in authority: overlapping resource sets and at least one shared
+ * action (a restriction with no `actions` overlaps every action). A
+ * containment restriction is a selector, so its resource set is compared by
+ * Resource Access matching, never by string (@spec
+ * containment#selector-matching, #1463).
+ */
+function overlaps(entry: AuthorityEntry, restricted: ContainmentSelector): boolean {
+  if (!selectorOverlapsEntry(restricted, entry)) return false;
   if (!restricted.actions) return true;
   return entry.actions.some((a) => (restricted.actions as string[]).includes(a));
 }
@@ -670,6 +1030,20 @@ export function adjudicateDrawdown(
     return { outcome: "out_of_ceiling" };
   }
   const fallback = (reason: DrawdownFallbackReason): DrawdownAdjudication => ({ outcome: "fresh_approval", reason });
+  // @spec discovery#encounter, discovery#adjudication (#1469 stage 1, D607): a
+  // widened resource no ceiling entry names is an encounter. Until identity
+  // pinning, trusted taint and the floors are in place, no encounter binds by
+  // policy, whatever its other guards: it falls back to a fresh human
+  // approval. Authority the predecessor already holds is no new encounter.
+  const named = new Set(ceiling.map((e) => e.resource));
+  const encountered = [
+    ...new Set(
+      widenedPairs(requested, kernel.effectiveAuthoritySet(predecessor))
+        .filter((w) => !named.has(w.resource))
+        .map((w) => w.resource),
+    ),
+  ];
+  if (encountered.length) return { outcome: "fresh_approval", reason: "encounter", encountered };
   const ref = predecessor.drawdown_policy;
   if (!ref) return fallback("no_drawdown_policy");
   // @spec mission#standing-consent-bases, progressive#in-ceiling-expansion: a

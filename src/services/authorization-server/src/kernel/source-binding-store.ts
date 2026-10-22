@@ -15,7 +15,7 @@
  */
 
 import type { Database } from "@mission/store";
-import { type AuthoritySourceBinding, parseAuthoritySource } from "./authority-source.js";
+import { type AuthoritySourceBinding, parseRecordedAuthoritySource } from "./authority-source.js";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS authority_source_bindings (
@@ -80,9 +80,10 @@ export class SourceBindingStore {
       deployment: row.deployment as string,
       principal: { iss: row.principal_iss as string, sub: row.principal_sub as string },
       clientId: row.client_id as string,
-      // @spec mission#lifecycle: fail closed on hydration, as the record's
-      // own member does: an unrecognized type refuses rather than widens.
-      provenance: parseAuthoritySource(
+      // @spec mission#mission-record (#1503): read as the record's own member
+      // is: an unrecognized type is kept as opaque provenance, and every
+      // drawdown from this root refuses at resolveCommittedSource.
+      provenance: parseRecordedAuthoritySource(
         JSON.parse(row.provenance_json as string),
         `authority-source binding of ${missionId}`,
       ),

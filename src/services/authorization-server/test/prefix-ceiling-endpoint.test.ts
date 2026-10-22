@@ -4,13 +4,14 @@
  *
  * A configured `prefix` ceiling through the real authorization server, booted
  * over a copy of the shipped `config/` whose payments read ceiling entry is
- * `prefix` and which configures no containment rule (containment pairs
- * exactly, so the loader refuses a `prefix` ceiling beside one): the typed
- * loader admits it, the approval decision derives a
- * narrower `exact` or `prefix` proposal under it and classifies the derived
- * entry through the shared matcher, and the issued token carries the derived
- * entry. The payments write ceiling stays `exact`, so a `prefix` request
- * against an `exact` grant naming the same resource is refused.
+ * `prefix`, beside the shipped containment rules (containment pairs by
+ * resource-set overlap, #1463): the typed loader admits it, the approval
+ * decision derives a narrower `exact` or `prefix` proposal under it and
+ * classifies the derived entry through the shared matcher, and the issued
+ * token carries the derived entry. The payments write ceiling stays `exact`,
+ * so a `prefix` request against an `exact` grant naming the same resource is
+ * refused. A containment selector through the lifecycle endpoint reaches an
+ * entry approved beneath the `prefix` ceiling.
  */
 
 const hoisted = await vi.hoisted(async () => {
@@ -24,12 +25,8 @@ const hoisted = await vi.hoisted(async () => {
   const policy = JSON.parse(readFileSync(file, "utf8")) as { ceiling: Record<string, unknown>[] };
   (policy.ceiling[0] as Record<string, unknown>).resource_match = "prefix";
   writeFileSync(file, JSON.stringify(policy, null, 2));
-  // Containment pairs a removal with an approved entry exactly, so a prefix
-  // ceiling loads only where no containment rule is configured (#1440).
-  const containment = join(dir, "containment.json");
-  const rules = JSON.parse(readFileSync(containment, "utf8")) as { rules: unknown[] };
-  rules.rules = [];
-  writeFileSync(containment, JSON.stringify(rules, null, 2));
+  // The shipped containment rules stay configured: since #1463 containment
+  // pairs by resource-set overlap, so a prefix ceiling loads beside them.
   const previous = process.env.MISSION_CONFIG_DIR;
   process.env.MISSION_CONFIG_DIR = dir;
   return { dir, previous };
@@ -37,7 +34,7 @@ const hoisted = await vi.hoisted(async () => {
 
 import { rmSync } from "node:fs";
 import type { Server } from "node:http";
-import { DERIVATION_POLICY, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { CONTAINMENT_POLICY, DERIVATION_POLICY, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
@@ -319,5 +316,65 @@ describe("a prefix request is never within an exact grant naming the same resour
     expect(resourcesOf(claims(exact.body.access_token as string).authorization_details as AuthorityEntry[])).toEqual([
       { resource: RESOURCE },
     ]);
+  });
+});
+
+describe("containment beside a configured prefix ceiling, through the lifecycle endpoint (@spec containment#selector-matching, #1463)", () => {
+  const LIST = "payments:invoice.list";
+  const READ = "payments:invoice.read";
+  const both = (resource: string): AuthorityEntry =>
+    ({
+      type: "mission_resource_access",
+      resource,
+      actions: [LIST, READ],
+      constraints: { vendors: ["acme"] },
+    }) as AuthorityEntry;
+
+  const contain = (missionId: string, event_id: string, remove: unknown[]) =>
+    fetch(`${ISSUER}/missions/${missionId}/lifecycle`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+      body: JSON.stringify({
+        nonce: crypto.randomUUID(),
+        operation: "contain",
+        event: { type: "anomaly.detected", source: "svc:soc", observed_at: new Date().toISOString(), event_id },
+        remove,
+      }),
+    });
+
+  const refreshedActions = async (issued: { rt: string; keys: Keys }) => {
+    const res = await token({ grant_type: "refresh_token", refresh_token: issued.rt, resource: RESOURCE }, issued.keys);
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    issued.rt = (res.body.refresh_token as string | undefined) ?? issued.rt;
+    return (claims(res.body.access_token as string).authorization_details as AuthorityEntry[]).map((e) => ({
+      resource: e.resource,
+      actions: e.actions,
+    }));
+  };
+
+  it("the authorization server boots with the shipped containment rules beside the prefix ceiling", () => {
+    expect(CONTAINMENT_POLICY.rules.length).toBeGreaterThan(0);
+    expect(DERIVATION_POLICY.ceiling[0]?.resource_match).toBe("prefix");
+  });
+
+  it("an exact service-root selector leaves an entry approved beneath the prefix ceiling untouched, and a declared prefix selector contains it", async () => {
+    const issued = await issue([both(INV1)], [RESOURCE, INV1]);
+    expect((await contain(issued.missionId, "evt-1463-exact", [{ resource: RESOURCE, actions: [LIST] }])).status).toBe(200);
+    expect(await refreshedActions(issued)).toEqual([{ resource: INV1, actions: [LIST, READ] }]);
+
+    const res = await contain(issued.missionId, "evt-1463-prefix", [{ resource: RESOURCE, resource_match: "prefix", actions: [LIST] }]);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as Json).containment_version).toBe(2);
+    expect(await refreshedActions(issued)).toEqual([{ resource: INV1, actions: [READ] }]);
+  });
+
+  it("refuses a selector the matcher cannot decide with invalid_request, committing nothing", async () => {
+    const issued = await issue([both(INV1)], [RESOURCE, INV1]);
+    const before = as.kernel.get(issued.missionId)?.version;
+    const res = await contain(issued.missionId, "evt-1463-glob", [{ resource: RESOURCE, resource_match: "glob", actions: [LIST] }]);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as Json).error).toBe("invalid_request");
+    expect(as.kernel.get(issued.missionId)?.version).toBe(before);
+    expect(as.kernel.get(issued.missionId)?.containment).toBeUndefined();
   });
 });

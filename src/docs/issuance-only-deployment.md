@@ -22,6 +22,18 @@ What the deployment is:
 - **Scope-only Resource Servers get a safe projection or no token.** A
   `scope`-only Resource Server receives only a `scope` projection the AS proved
   safe, or no token.
+- **Existing scopes request the authority.** A client that already requests
+  `reports.read` keeps requesting it. With no `authorization_details`, the AS
+  keys its configured mapping on the requested `scope` values of the
+  `scope`-only target (`requestedScopeEntries`, reading the same
+  `config/scope-projection.json` table the projection reads). The Mission then
+  approves only the entry each value stands for, and the token carries the same
+  value. Without a requested `scope`, the Intent's `target_resources` selects
+  the target's whole ceiling. Test: `configured-mapping mode keyed on a
+  requested scope (@spec mission#derivation-modes,
+  resource-access#scope-projection) > an Intent-only request naming
+  reports.read approves only the entry that value stands for, commits no
+  proposal, and its token carries that value`.
 - **Revocation cutoff.** Revocation stops new issuance at the issuance gate.
   Outstanding tokens run to their own `exp` plus the Resource Server's clock
   tolerance, or to the next request at a Resource Server that introspects. A
@@ -54,7 +66,7 @@ Where it sits in the drafts:
     issuance-only example shape (§ Deployment Profile Example Shapes,
     `{#deployment-profile-examples}`), which §5 fills.
 - `draft-mcguinness-oauth-mission.md`:
-  - § Issuance Scope, Not Runtime Enforcement (`{#runtime-boundary}`), what
+  - § Issuance Scope and Runtime Enforcement (`{#runtime-boundary}`), what
     the OAuth binding does not do;
   - § Scope Projection (`{#scope-projection}`), how a `scope`-only target is
     served.
