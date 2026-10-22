@@ -461,7 +461,7 @@ endpoint ({{as-metadata}}), not read from the token endpoint's
 `token_endpoint_auth_methods_supported` {{RFC8414}}. Both paths are
 therefore discoverable.
 
-### Authentication Failures {#mission-status-auth-failures}
+## Authentication Failures {#mission-status-auth-failures}
 
 A request that fails authentication receives the outcome for the
 credential it presented:
@@ -491,7 +491,7 @@ An authenticated caller not authorized for the referenced Mission
 receives `not_found` (404) with no challenge
 ({{mission-status-anti-oracle}}).
 
-## Worked Request Example
+## Request Example
 
 ~~~ http-message
 POST /as/mission/status HTTP/1.1
@@ -512,8 +512,9 @@ signed with a key published in the AS's `jwks_uri`. The JWS header
 carries `typ` of `mission-status-response+jwt` and a `kid` identifying
 the signing key. Per {{Section 4.1.9 of RFC7515}}, the `typ` header
 omits the `application/` prefix; the full media type
-`application/mission-status-response+jwt` (registered in {{iana}}) is
-used as the HTTP `Content-Type`. Exact validation of the protected
+`application/mission-status-response+jwt`
+({{media-type-registration}}) is used as the HTTP `Content-Type`.
+Exact validation of the protected
 `typ` value, together with mutually exclusive validation rules for
 the artifact profiles, implements the substitution defense of
 {{Section 3.11 of RFC8725}} and {{Section 3.12 of RFC8725}}.
@@ -1297,7 +1298,7 @@ The AS MUST refuse an unauthorized lifecycle request with the
 not-found response shape of {{mission-status-errors}}, so the endpoint
 does not act as a Mission enumeration oracle.
 
-## Worked Examples
+## Lifecycle Examples
 
 Revoke request:
 
@@ -1575,8 +1576,6 @@ target an effective bound under 300 seconds for the high-consequence
 classes; the 60-second value in this document's examples is a tight
 deployment's choice, not a floor.
 
-## Recommended Access-Token TTL
-
 Where Mission revocation must take effect but only the baseline
 derivation-time check is in use, Mission-bound access tokens SHOULD use
 TTLs no longer than the declared `mission_max_stale_seconds`.
@@ -1717,8 +1716,6 @@ this document defines no separate sender-constraint member. When the
 introspection projection ({{introspection-projection}}) is signed, the
 signing is discovered through the standard
 `introspection_signing_alg_values_supported` metadata.
-
-## Worked Metadata Example
 
 A discovery response from
 `https://as.example.com/.well-known/oauth-authorization-server`,
@@ -1868,7 +1865,7 @@ The AS MUST implement per-consumer rate limiting (returning
 `rate_limited`, {{mission-status-errors}}) and SHOULD encourage
 consumer-side caching ({{mission-status-caching}}) to reduce traffic.
 
-## RFC 9701 vs. New Media Type {#rfc-9701-vs-media-type}
+## Signed Response Format {#rfc-9701-vs-media-type}
 
 When the introspection projection is signed
 ({{introspection-projection}}), it uses {{RFC9701}}, which is scoped to
@@ -1945,6 +1942,10 @@ Discharge companion registers `terminal_when` in the Mission Resource
 Access Profile's Mission Common Constraints registry this way
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
+This document registers no new Well-Known URI: the metadata members of
+{{as-metadata}} are published in the OAuth Authorization Server Metadata
+document at `/.well-known/oauth-authorization-server` {{RFC8414}}.
+
 ## OAuth Authorization Server Metadata Registration
 
 IANA is requested to register the following in the "OAuth
@@ -1960,11 +1961,10 @@ Change Controller IETF; Reference this document, {{as-metadata}}.
 - `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
 - `mission_max_stale_seconds`
 
-## Media Type Registration
+## Media Type Registration {#media-type-registration}
 
-IANA is requested to register one media type per {{RFC6838}}.
-
-### application/mission-status-response+jwt
+IANA is requested to register the following media type per
+{{RFC6838}}:
 
 - Type name: application
 - Subtype name: mission-status-response+jwt
@@ -2004,12 +2004,6 @@ Mission Termination Reasons registry
 | Value | Semantics | Members | Change Controller | Reference |
 |---|---|---|---|---|
 | `completed` | The Mission completed successfully. | none | IETF | this document, {{mission-lifecycle-endpoint}} |
-
-## Well-Known URI
-
-This document registers no new Well-Known URI. The metadata members of
-{{as-metadata}} are added to the OAuth Authorization Server Metadata
-document at `/.well-known/oauth-authorization-server` {{RFC8414}}.
 
 --- back
 
