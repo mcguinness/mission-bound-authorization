@@ -13,15 +13,21 @@
  *    assertion `aud` as the issuer identifier and nothing else, the permitted
  *    `typ` values, `exp`/`jti`, replay, signature and registration;
  *  - authorization: a client without the lifecycle grant gets the unknown
- *    Mission's answer;
+ *    Mission's answer, and so does one whose deployment policy places the
+ *    Mission outside the tenant, Subject or requesting client it may act on
+ *    (#1535);
+ *  - processing order: authorization precedes deduplication, so a caller
+ *    whose grant was withdrawn after a success gets the not-found response,
+ *    never a replay, and a refusal decided before deduplication retains
+ *    nothing (#1535);
  *  - the request members: `nonce`, `mission_id`, `reason`, `expected_version`
  *    and the schedule members;
  *  - the signed state-only response for every base operation, idempotent
  *    success included;
  *  - retries: byte-for-byte replay under a regenerated assertion, divergent
  *    refusal, and recovery of a lost response at its original observation;
- *  - transient failures: `unavailable`, never retained, against the retained
- *    unknown-Mission `not_found`;
+ *  - transient failures: `unavailable`, never retained, and the unknown
+ *    Mission's `not_found`, refused at authorization and not retained either;
  *  - the dev-only path route runs the same engine.
  */
 
@@ -61,6 +67,8 @@ const BARE_ISSUER = `http://localhost:${BARE_PORT}`;
 const ENDPOINT = `${ISSUER}${LIFECYCLE_ENDPOINT_PATH}`;
 const EXPIRES_AT = "2027-01-01T00:00:00Z";
 const UNKNOWN = "msn_unknown_0000000000000000000000";
+/** Another tenant's Subject issuer, beside this AS's own. */
+const TENANT_B = "https://tenant-b.example";
 
 let as: BuiltAs;
 let server: Server;
@@ -74,22 +82,31 @@ let readerClient: LifecycleTestClient;
 let ungrantedClient: LifecycleTestClient;
 /** Holds `mission_lifecycle`, but its registered key signs ES384, an algorithm the endpoint does not advertise. */
 let es384Client: LifecycleTestClient;
+/** Holds `mission_lifecycle` under a policy reaching only Missions whose Subject belongs to tenant B, another issuer namespace. */
+let tenantClient: LifecycleTestClient;
+/** Holds `mission_lifecycle` under a policy reaching every Mission whose Subject belongs to this AS's own namespace. */
+let homeTenantClient: LifecycleTestClient;
+/** Holds `mission_lifecycle` under a policy reaching only dana's Missions requested by `ap-agent`. */
+let danaClient: LifecycleTestClient;
+/** Holds `mission_lifecycle` through a grant list a test withdraws and restores. */
+let withdrawableClient: LifecycleTestClient;
+const withdrawableGrants: string[] = [MISSION_LIFECYCLE_SCOPE];
 let approvals = 0;
 
 const proposal = (): AuthorityEntry[] => [
   { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
 ];
 
-function approve(): MissionRecord {
+function approve(subject = { iss: ISSUER, sub: "alice" }, clientId = "ap-agent"): MissionRecord {
   approvals += 1;
   return as.kernel.approve({
     intent: validateMissionIntent(
       JSON.stringify({ goal: "Read invoices for the close", target_resources: [CANONICAL_RESOURCE], expires_at: EXPIRES_AT }),
     ),
     proposedAuthority: proposal(),
-    subject: { iss: ISSUER, sub: "alice" },
+    subject,
     approver: { iss: ISSUER, sub: "bob" },
-    clientId: "ap-agent",
+    clientId,
     approvalEventId: `apev-lce-${approvals}`,
   });
 }
@@ -128,13 +145,33 @@ beforeAll(async () => {
   readerClient = await newLifecycleClient("status-reader");
   ungrantedClient = await newLifecycleClient("ungranted-tool");
   es384Client = await newLifecycleClient("es384-tool", "ES384");
+  tenantClient = await newLifecycleClient("tenant-b-console");
+  homeTenantClient = await newLifecycleClient("home-tenant-console");
+  danaClient = await newLifecycleClient("dana-console");
+  withdrawableClient = await newLifecycleClient("withdrawable-console");
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    testClients: [consoleClient.metadata, readerClient.metadata, ungrantedClient.metadata, es384Client.metadata],
+    testClients: [
+      consoleClient.metadata,
+      readerClient.metadata,
+      ungrantedClient.metadata,
+      es384Client.metadata,
+      tenantClient.metadata,
+      homeTenantClient.metadata,
+      danaClient.metadata,
+      withdrawableClient.metadata,
+    ],
     lifecycleClientGrants: {
       [consoleClient.clientId]: [MISSION_LIFECYCLE_SCOPE],
       [es384Client.clientId]: [MISSION_LIFECYCLE_SCOPE],
       [readerClient.clientId]: [MISSION_STATUS_SCOPE],
+      [tenantClient.clientId]: { grants: [MISSION_LIFECYCLE_SCOPE], missions: { subjects: [{ iss: TENANT_B }] } },
+      [homeTenantClient.clientId]: { grants: [MISSION_LIFECYCLE_SCOPE], missions: { subjects: [{ iss: ISSUER }] } },
+      [danaClient.clientId]: {
+        grants: [MISSION_LIFECYCLE_SCOPE],
+        missions: { subjects: [{ iss: ISSUER, sub: "dana" }], clients: ["ap-agent"] },
+      },
+      [withdrawableClient.clientId]: withdrawableGrants,
     },
   });
   server = as.provider.listen(PORT);
@@ -473,6 +510,135 @@ describe("Mission Lifecycle endpoint authorization and request members (@spec st
   });
 });
 
+describe("Mission Lifecycle authorization for the acting party, operation and Mission (@spec status#lifecycle-authorization, #1535)", () => {
+  it("refuses at boot a lifecycle policy naming an operation the lifecycle grant does not govern", async () => {
+    await expect(
+      buildAuthorizationServer({
+        issuer: "http://localhost:1",
+        lifecycleClientGrants: { [consoleClient.clientId]: { grants: [MISSION_LIFECYCLE_SCOPE], operations: ["discharge"] } },
+      }),
+    ).rejects.toThrow(/unknown operation discharge/);
+  });
+
+  it("answers a client holding the lifecycle grant for another tenant exactly as it answers an unknown Mission: revoke, complete on a revoked Mission and a stale expected_version alike, leaving the Mission unchanged; a client whose policy names the Mission's tenant acts on it", async () => {
+    const m = approve();
+    const before = as.kernel.get(m.id);
+    const shape = (a: LifecycleAnswer) => ({
+      status: a.status,
+      contentType: a.contentType,
+      cacheControl: a.cacheControl,
+      wwwAuthenticate: a.wwwAuthenticate,
+      json: a.json,
+    });
+    const n = nonce();
+    const refused = await lifecycleRequest(ISSUER, tenantClient, { mission_id: m.id, operation: "revoke", nonce: n });
+    const unknown = await lifecycleRequest(ISSUER, tenantClient, { mission_id: UNKNOWN, operation: "revoke", nonce: n });
+    expect(refused.status, refused.text).toBe(404);
+    expect(refused.json).toEqual({
+      error: "not_found",
+      error_description: "Mission reference is not found or not visible.",
+      nonce: n,
+    });
+    expect(shape(refused)).toEqual(shape(unknown));
+    expect(refused.text).toBe(unknown.text);
+    // A stale guard, which the authorized console is refused 409 stale_version.
+    const stale = await lifecycleRequest(ISSUER, tenantClient, {
+      mission_id: m.id,
+      operation: "suspend",
+      nonce: nonce(),
+      expected_version: String(m.version + 1),
+    });
+    expect(stale.status, stale.text).toBe(404);
+    expect(stale.json?.error).toBe("not_found");
+    expect(as.kernel.get(m.id)).toEqual(before);
+    // `complete` on a Mission the console revoked, which it is refused 409 conflict.
+    const revoked = approve();
+    expect((await op({ mission_id: revoked.id, operation: "revoke", nonce: nonce() })).status).toBe(200);
+    const revokedBefore = as.kernel.get(revoked.id);
+    const conflict = await op({ mission_id: revoked.id, operation: "complete", nonce: nonce() });
+    expect(conflict.json?.error).toBe("conflict");
+    const complete = await lifecycleRequest(ISSUER, tenantClient, {
+      mission_id: revoked.id,
+      operation: "complete",
+      nonce: nonce(),
+    });
+    expect(complete.status, complete.text).toBe(404);
+    expect(complete.json?.error).toBe("not_found");
+    expect(as.kernel.get(revoked.id)).toEqual(revokedBefore);
+    // A client whose policy names this tenant acts on the same Mission.
+    const acted = await lifecycleRequest(ISSUER, homeTenantClient, { mission_id: m.id, operation: "revoke", nonce: nonce() });
+    expect(acted.status, acted.text).toBe(200);
+    expect(as.kernel.get(m.id)?.termination?.reason).toBe("revoked");
+  });
+
+  it("scopes a client's lifecycle grant to the Subject and the requesting client its policy names, refusing every other Mission as an unknown one", async () => {
+    const alices = approve();
+    const anotherClients = approve({ iss: ISSUER, sub: "dana" }, "agent-A1");
+    for (const outside of [alices, anotherClients]) {
+      const refused = await lifecycleRequest(ISSUER, danaClient, { mission_id: outside.id, operation: "suspend", nonce: nonce() });
+      expect(refused.status, refused.text).toBe(404);
+      expect(refused.json?.error).toBe("not_found");
+      expect(as.kernel.get(outside.id)?.state).toBe("active");
+    }
+    const danas = approve({ iss: ISSUER, sub: "dana" });
+    const acted = await lifecycleRequest(ISSUER, danaClient, { mission_id: danas.id, operation: "suspend", nonce: nonce() });
+    expect(acted.status, acted.text).toBe(200);
+    expect(as.kernel.get(danas.id)?.state).toBe("suspended");
+  });
+});
+
+describe("Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535)", () => {
+  it("authorizes a retransmit before deduplication: after the client's grant is withdrawn, the same nonce and members under a fresh assertion get the not-found response, not the replayed success, and the success replays once the grant returns", async () => {
+    const m = approve();
+    const n = nonce();
+    const members = { mission_id: m.id, operation: "revoke", nonce: n };
+    const first = await lifecycleRequest(ISSUER, withdrawableClient, members);
+    expect(first.status, first.text).toBe(200);
+    const withdrawn = withdrawableGrants.splice(0);
+    try {
+      const refused = await lifecycleRequest(ISSUER, withdrawableClient, members);
+      expect(refused.status, refused.text).toBe(404);
+      expect(refused.json).toEqual({
+        error: "not_found",
+        error_description: "Mission reference is not found or not visible.",
+        nonce: n,
+      });
+    } finally {
+      withdrawableGrants.push(...withdrawn);
+    }
+    const replay = await lifecycleRequest(ISSUER, withdrawableClient, members);
+    expect(replay.status).toBe(200);
+    expect(replay.text).toBe(first.text);
+  });
+
+  it("retains nothing for a refusal decided before deduplication, so a committed success whose bytes were lost survives a refused retransmit and is recovered once the grant returns", async () => {
+    const m = approve();
+    const n = nonce();
+    const members = { mission_id: m.id, operation: "revoke", nonce: n };
+    const first = await lifecycleRequest(ISSUER, withdrawableClient, members);
+    expect(first.status, first.text).toBe(200);
+    // The crash after the commit and before the bytes were retained.
+    as.kernel.db
+      .prepare(
+        `UPDATE lifecycle_responses SET state = 'committed', body = ''
+         WHERE endpoint = ? AND principal = ? AND mission_id = ? AND nonce = ?`,
+      )
+      .run(LIFECYCLE_ENDPOINT_KEY, withdrawableClient.clientId, m.id, n);
+    const claimed = retainedRow(withdrawableClient.clientId, m.id, n);
+    const withdrawn = withdrawableGrants.splice(0);
+    try {
+      const refused = await lifecycleRequest(ISSUER, withdrawableClient, members);
+      expect(refused.status, refused.text).toBe(404);
+    } finally {
+      withdrawableGrants.push(...withdrawn);
+    }
+    expect(retainedRow(withdrawableClient.clientId, m.id, n)).toEqual(claimed);
+    const recovered = await lifecycleRequest(ISSUER, withdrawableClient, members);
+    expect(recovered.status, recovered.text).toBe(200);
+    expect(decodeStatusResponse(recovered.text).payload).toEqual(decodeStatusResponse(first.text).payload);
+  });
+});
+
 describe("Mission Lifecycle endpoint signed state-only response (@spec status#mission-status-response, status#mission-lifecycle-endpoint, #1191)", () => {
   it("answers revoke with the signed state-only Mission Status Response: requester aud and sub, the request's nonce, and every required member", async () => {
     const m = approve();
@@ -611,15 +777,16 @@ describe("Mission Lifecycle endpoint transient failures (@spec status#idempotenc
     expect(as.kernel.get(m.id)?.state).toBe("active");
   });
 
-  it("answers an unknown Mission not_found and retains it, so the same-nonce retry replays the 404", async () => {
+  it("answers an unknown Mission not_found at authorization, before deduplication, retaining nothing, so the same-nonce retry is processed afresh and answers the same 404 (#1535)", async () => {
     const n = nonce();
     const unknown = await op({ mission_id: UNKNOWN, operation: "revoke", nonce: n });
     expect(unknown.status, unknown.text).toBe(404);
     expect(unknown.json).toMatchObject({ error: "not_found", nonce: n });
-    expect(retainedRow(consoleClient.clientId, UNKNOWN, n)?.status).toBe(404);
-    const replay = await op({ mission_id: UNKNOWN, operation: "revoke", nonce: n });
-    expect(replay.status).toBe(404);
-    expect(replay.text).toBe(unknown.text);
+    expect(retainedRow(consoleClient.clientId, UNKNOWN, n)).toBeUndefined();
+    const retry = await op({ mission_id: UNKNOWN, operation: "revoke", nonce: n });
+    expect(retry.status).toBe(404);
+    expect(retry.text).toBe(unknown.text);
+    expect(retainedRow(consoleClient.clientId, UNKNOWN, n)).toBeUndefined();
   });
 });
 
