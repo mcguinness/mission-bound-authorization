@@ -2106,9 +2106,23 @@ existing <code>not_found</code> treatment
 Responses"). A <code>condition_selector</code> that does not resolve, or that
 resolves to a target outside the request's <code>mission_id</code>, joins the
 same collapse, and its resolution is part of selector existence
-below. Authentication failure remains <code>unauthorized</code> (401).
-Detailed refusal reasons live only in issuer audit records.<a href="#section-4.3.2-1" class="pilcrow">¶</a></p>
-<p id="section-4.3.2-2">The AS validates selector existence (<code>mission_id</code>, <code>entry_digest</code>, and
+below. Authentication failure keeps the outcome the Status profile
+assigns its mechanism, <code>unauthorized</code> or <code>invalid_client</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Authentication Failures"). Detailed refusal reasons live only in
+issuer audit records.<a href="#section-4.3.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-2">Validation that depends only on the request precedes that collapse.
+After authentication and before any authorization, a discharge member
+of the wrong type or grammar, or an invalid combination of target
+forms, is refused <code>invalid_request</code>, identically whether or not the
+Mission exists and whatever target authority the caller holds. Such a
+refusal reads no target state, and the AS retains no response for its
+<code>nonce</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Idempotency and Conflicts"). A well-formed request whose selectors do
+not resolve, whose condition is not a member of the named entry, whose
+<code>event_type</code> does not match the stored condition, or whose target the
+caller is not authorized for joins the not-found collapse above.<a href="#section-4.3.2-2" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-3">The AS validates selector existence (<code>mission_id</code>, <code>entry_digest</code>, and
 <code>condition_digest</code> all resolve, the entry carries <code>terminal_when</code>, and
 <code>event_type</code> matches the named condition), then condition membership
 (the named condition belongs to the named entry), then target
@@ -2117,7 +2131,7 @@ authorization (the discharge authority mapping of
 acknowledgement (<a href="#discharge-result" class="auto internal xref">Section 4.3.4</a>). This order keeps a terminal
 Mission from acting as a selector-existence oracle: every case the
 collapse above refuses is checked before a terminal Mission is ever
-distinguished from one whose selectors do not resolve.<a href="#section-4.3.2-2" class="pilcrow">¶</a></p>
+distinguished from one whose selectors do not resolve.<a href="#section-4.3.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="discharge-idempotency">
