@@ -51,8 +51,8 @@
     "content_sha256": "0cf9c0c15240b62a32a5bd9bf0dddbb93cfe86d6390685e3c5c5fd7858b87a4f"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
-    "content_sha256": "2734f08663aaa41f3d3f58b885c7036833c88a7286b889647bfa426dd2835872"
+    "revision": "fb06431ab4097ecb13a45efbff7c2cc8f25ef7d0",
+    "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "e73433db46d3026f2ff50eff9f8366db8d5944e4",
@@ -11526,6 +11526,150 @@
    "notes": "All six cases raise the kernel's DischargeNotFoundError (whose `reason` is issuer-audit only) and the endpoint renders ONE body. The test drives every case, including the unauthorized-target arm (a second AS whose mapping admits a different principal), and asserts the responses are identical apart from each request's own echoed nonce, which cannot be shared: two requests differing only in nonce would trip the divergent-retry rule. Response TIMING is not equalized (the profile's SHOULD on timing side channels is not claimed by this row)."
   },
   {
+   "id": "status.discharge.auth-failure-outcome",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-anti-oracle",
+   "text": "Authentication failure keeps the outcome the Status profile assigns its mechanism, `unauthorized` or `invalid_client` ({{I-D.draft-mcguinness-oauth-mission-status}}, Section \"Authentication Failures\").",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an unauthenticated discharge request is refused with its authentication mechanism's outcome (invalid_client for private-key JWT at the advertised endpoint) even when its discharge members are malformed",
+    "local": "the dev-only path route's service-token stand-in answers a missing token 401 unauthorized"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > authenticates the caller before validating the request: an unauthenticated request is refused invalid_client whatever its operation, members or Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 (#1544 review ruling): re-worded from 'remains unauthorized (401)', which no row quoted. The advertised Lifecycle endpoint accepts private_key_jwt only, so the served outcome is invalid_client; the access-token mechanism's 401 is not served there. Proved by validating the discharge members before authentication (the authentication-order test gets invalid_request)."
+  },
+  {
+   "id": "status.discharge.request-only-validation",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-anti-oracle",
+   "text": "Validation that depends only on the request precedes that collapse. After authentication and before any authorization, a discharge member of the wrong type or grammar, or an invalid combination of target forms, is refused `invalid_request`, identically whether or not the Mission exists and whatever target authority the caller holds.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "after authentication, a discharge member of the wrong type, of the wrong grammar, or an invalid combination of target forms is refused invalid_request with one byte-identical response (status, body and headers) for a caller without the discharge grant, a caller outside the target's authority mapping, an authorized caller on an existing Mission, and an unknown Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > validates the discharge's own members before its authorization: a wrong type, a bad grammar and an invalid target-form combination each get one byte-identical invalid_request for a caller without the grant, a caller outside the target's mapping, an authorized caller on an existing Mission and an unknown Mission, and the refusal reads no Mission (@spec discharge#discharge-anti-oracle, status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > authenticates the caller before validating the request: an unauthenticated request is refused invalid_client whatever its operation, members or Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 (#1544 review ruling). Proved by checking the grant before the members (the matrix gets 404 for the caller without the grant), by refusing an unknown Mission before the members (the unknown Mission's column gets 404), by refusing the caller outside the mapping not_found instead (its column gets 404), and by dropping each class's own check in turn, the event_type type, the event_id grammar and the one-target-form rule (the matrix gets 404 for that class)."
+  },
+  {
+   "id": "status.discharge.syntax-refusal-no-state",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-anti-oracle",
+   "text": "Such a refusal reads no target state, and the AS retains no response for its `nonce` ({{I-D.draft-mcguinness-oauth-mission-status}}, Section \"Idempotency and Conflicts\").",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a discharge refused on its syntax reads no Mission and reaches no target authorization, and retains no response for its nonce: the same nonce with well-formed members is then processed fresh (a discharge for an authorized caller, the not-found response for one outside the target's mapping), never refused as a divergent retry",
+    "local": "the matrix spies kernel.get (calls naming the request's Mission) and kernel.authorizeDischarge"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > validates the discharge's own members before its authorization: a wrong type, a bad grammar and an invalid target-form combination each get one byte-identical invalid_request for a caller without the grant, a caller outside the target's mapping, an authorized caller on an existing Mission and an unknown Mission, and the refusal reads no Mission (@spec discharge#discharge-anti-oracle, status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > retains nothing for a discharge refused on its syntax: the same nonce with well-formed members is then processed fresh, a discharge for an authorized caller and the not-found response for one outside the target's mapping, never a divergent retry (@spec discharge#discharge-anti-oracle, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 (#1544 review ruling). Proved by reading the Mission before the members (the matrix's read spy fails) and by retaining the syntax refusal (the same-nonce well-formed request is refused 400 as a divergent retry). D175 narrowly superseded (#1544 review ruling): pre-deduplication refusals are read-only; post-authorization processing keeps D175's hoisted expiry. A refusal decided during syntax validation or target authorization commits no expiry, schedule, discharge event, latch or nonce response; the effective expiry still governs authorization and issuance at once, and its persistence and publication wait for the next expiry-materializing path. Proved post-authorization by removing the hoisted materialization (the fingerprint-conflict test fails: the conflict's rollback undoes the expiry)."
+  },
+  {
+   "id": "status.discharge.well-formed-resolution-not-found",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-anti-oracle",
+   "text": "A well-formed request whose selectors do not resolve, whose condition is not a member of the named entry, whose `event_type` does not match the stored condition, or whose target the caller is not authorized for joins the not-found collapse above.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a well-formed discharge whose selector does not resolve, whose condition is not in the named entry, whose event_type does not match the stored condition, or whose target the caller is not authorized for gets the not-found response of an unknown Mission, decided before deduplication"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > collapses all six anti-oracle cases to one identical not_found body",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > authorizes the discharge target before deduplication: a mission_discharge holder outside the target's authority mapping is answered not_found on its first request and again on the same nonce with a different event_id, never invalid_request, and no retained response is written or changed (@spec status#lifecycle-processing, discharge#discharge-anti-oracle, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 (#1544 review ruling): the well-formed half of the syntax-versus-resolution boundary. The not-found collapse itself is status.discharge.anti-oracle-collapse; its being decided before deduplication is status.discharge.processing-order (proved by dropping the pre-deduplication target authorization: the mapping test gets 400 on the changed event_id)."
+  },
+  {
    "id": "status.discharge.selector-mismatch-refusal",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-operation",
@@ -12030,14 +12174,14 @@
    "assertion": "refusal",
    "observation": {
     "normative": "for discharge, the request syntax, its own members included, precedes the authorization its companion defines, and that whole authorization (the distinct grant, then selector existence, condition membership and the discharge authority mapping) precedes deduplication: a malformed member is refused invalid_request to a caller without the grant or outside the target's mapping, alike for an unknown Mission; a caller without the grant, or outside the mapping, gets the not-found response, never a replayed discharge response or a divergent-retry invalid_request; and that refusal retains nothing",
-    "local": "parseDischargeMembers validates the members; kernel.authorizeDischarge decides the not-found collapse read-only (no expiry or schedule commit, no latch, no event record, no purge) against the target the shared dischargeRoute names (a recorded occurrence's target, a forwarded discharge's replacement, otherwise the named target), and kernel.discharge repeats it in its transaction. A refused discharge on an expired Mission therefore no longer commits the expiry it observes; the next read does."
+    "local": "parseDischargeMembers validates the members; kernel.authorizeDischarge decides the not-found collapse read-only (no expiry or schedule commit, no latch, no event record, no purge) against the target the shared dischargeRoute names (a recorded occurrence's target, a forwarded discharge's replacement, otherwise the named target), and kernel.discharge repeats it in its transaction. A refused discharge on an expired Mission therefore no longer commits the expiry it observes; the next expiry-materializing path does."
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/discharge.test.ts",
-     "name": "the discharge operation on the lifecycle endpoint > validates the discharge's own members before its authorization: a malformed member is refused invalid_request to a caller without the discharge grant and to one outside the target's mapping, alike for an unknown Mission (@spec status#lifecycle-processing, #1535)",
+     "name": "the discharge operation on the lifecycle endpoint > validates the discharge's own members before its authorization: a wrong type, a bad grammar and an invalid target-form combination each get one byte-identical invalid_request for a caller without the grant, a caller outside the target's mapping, an authorized caller on an existing Mission and an unknown Mission, and the refusal reads no Mission (@spec discharge#discharge-anti-oracle, status#lifecycle-processing, #1535)",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     },
@@ -12052,9 +12196,15 @@
      "name": "the discharge operation on the lifecycle endpoint > authorizes the discharge target before deduplication: a mission_discharge holder outside the target's authority mapping is answered not_found on its first request and again on the same nonce with a different event_id, never invalid_request, and no retained response is written or changed (@spec status#lifecycle-processing, discharge#discharge-anti-oracle, #1535)",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > retains nothing for a discharge refused on its syntax: the same nonce with well-formed members is then processed fresh, a discharge for an authorized caller and the not-found response for one outside the target's mapping, never a divergent retry (@spec discharge#discharge-anti-oracle, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 finding 3 (D649); #1544 review P2 moved the target authorization ahead of deduplication. Proved by dropping the pre-deduplication target authorization (the mapping test gets 400 invalid_request on the changed event_id), by retaining that refusal (the mapping test fails on the retained responses), by checking the grant before the discharge members (the syntax test gets 404), and by dropping the grant check (the grant test replays the discharge). No fixture pins a different mapping on a carryover replacement than on its old child, so the route's forwarded and recorded targets are not distinguished by a test; one route decides them for both checks."
+   "notes": "#1535 finding 3 (D649); #1544 review P2 moved the target authorization ahead of deduplication. Proved by dropping the pre-deduplication target authorization (the mapping test gets 400 invalid_request on the changed event_id), by retaining that refusal (the mapping test fails on the retained responses), by checking the grant before the discharge members (the syntax test gets 404), and by dropping the grant check (the grant test replays the discharge). No fixture pins a different mapping on a carryover replacement than on its old child, so the route's forwarded and recorded targets are not distinguished by a test; one route decides them for both checks. D175 narrowly superseded (#1544 review ruling): pre-deduplication refusals are read-only; post-authorization processing keeps D175's hoisted expiry. A refusal decided during syntax validation or target authorization commits no expiry, schedule, discharge event, latch or nonce response; the effective expiry still governs authorization and issuance at once, and its persistence and publication wait for the next expiry-materializing path. Proved post-authorization by removing the hoisted materialization (the fingerprint-conflict test fails: the conflict's rollback undoes the expiry)."
   },
   {
    "id": "status.lifecycle.authorization-precedes-replay",
