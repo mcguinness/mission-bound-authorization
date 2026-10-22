@@ -61041,7 +61041,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "An encounter whose identity the Mission Issuer has not pinned never yields a `bound` outcome.",
-    "local": "The reference pins no identity yet, so every encounter is unpinned and none binds: the witness is a prefix-ceiling encounter that every other guard would admit falling back to a human (proved by admitting it, which issues a token). It discriminates pinned from unpinned only once identity pinning lands (#1469 stage 2)."
+    "local": "No encounter binds by policy before stage 6, pinned or not, so the witness is that every encounter falls back to a human, an unpinned one included (proved by admitting it, which issues a token). It discriminates pinned from unpinned only once policy binding lands (#1469 stage 6)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -61051,9 +61051,15 @@
      "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > a drawdown onto a resource no ceiling entry names falls back to a fresh human approval though every other guard would admit it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-binding-unpinned-contextual",
@@ -61092,12 +61098,26 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "For every adjudicated encounter the Mission Issuer retrieves the resource itself, and the pinned identity matches what that retrieval returned."
+    "normative": "For every adjudicated encounter the Mission Issuer retrieves the resource itself, and the pinned identity matches what that retrieval returned.",
+    "local": "The pinned Encountered Resource object comes only from the Mission Issuer's own connection, never from the agent's hint. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.issuer-establishes-identity-contextual",
@@ -61136,12 +61156,26 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "An agent-supplied origin that differs from the origin the issuer's own connection authenticated is not pinned: adjudication and evidence carry the issuer's origin."
+    "normative": "An agent-supplied origin that differs from the origin the issuer's own connection authenticated is not pinned: adjudication and evidence carry the issuer's origin.",
+    "local": "The pinned origin is the request entry's origin as the connection authenticated it; an agent hint naming another origin, or no origin the request seeks, is refused as request validation."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's hint names the encounter's own origin (@spec discovery#resource-identity, #1469) > a hint naming another origin the request seeks is refused, so its digest is never compared with a different resource's declaration",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > an encountered_resource that is not an origin object or names no resource the request seeks, and a digest hint without one, are refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-origin-contextual",
@@ -61180,12 +61214,20 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "An agent-supplied metadata digest is not pinned: adjudication and evidence carry the digest of the metadata bytes the issuer retrieved."
+    "normative": "An agent-supplied metadata digest is not pinned: adjudication and evidence carry the digest of the metadata bytes the issuer retrieved.",
+    "local": "A forged metadata digest in the hint is recorded as the agent's claim (resource_metadata_digest_matched false) and never fills the pinned object, pinned or not. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-metadata-digest-contextual",
@@ -61224,12 +61266,20 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "An agent-supplied issuer is not pinned: adjudication and evidence carry the issuer named in the metadata the Mission Issuer retrieved."
+    "normative": "An agent-supplied issuer is not pinned: adjudication and evidence carry the issuer named in the metadata the Mission Issuer retrieved.",
+    "local": "A forged issuer in the hint, even one the deployment would verify, is recorded as the agent's claim (issuer_matched false) and never fills the pinned object. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-issuer-contextual",
@@ -61327,7 +61377,7 @@
    "assertion": "ignore",
    "observation": {
     "normative": "An `encountered_resource` request parameter whose values the issuer's own retrieval does not confirm is not adopted as the pinned identity.",
-    "local": "The encountered_resource object is checked for shape and kept on the deferral as the agent's claim, never adopted; the encountered resources come from the request's own entries, and a hint naming any origin but the encounter's is refused. Verifying the hint against a TLS-authenticated origin arrives with identity pinning (#1469 stage 2)."
+    "local": "The encountered_resource object is checked for shape and kept on the deferral as the agent's claim, each member compared with the Mission Issuer's own values and never adopted; the encountered resources come from the request's own entries, and a hint naming any origin but the encounter's is refused."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -61349,9 +61399,15 @@
      "name": "the encounter's hint names the encounter's own origin (@spec discovery#resource-identity, #1469) > a hint naming another origin the request seeks is refused, so its digest is never compared with a different resource's declaration",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.request-object-is-hint-contextual",
@@ -61390,12 +61446,26 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Every Discovery Evidence object carries the pinned identity, and that identity was established before the outcome was decided."
+    "normative": "Every Discovery Evidence object carries the pinned identity, and that identity was established before the outcome was decided.",
+    "local": "The identity is established, and recorded on the expansion deferral's encounter facts with whether it is pinned and why not, before the human decides. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.established-and-recorded-contextual",
@@ -61434,12 +61504,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "The pinned `origin` is one the Mission Issuer's own TLS connection authenticated at encounter; an origin the issuer cannot TLS-authenticate is not pinned and does not bind."
+    "normative": "The pinned `origin` is one the Mission Issuer's own TLS connection authenticated at encounter; an origin the issuer cannot TLS-authenticate is not pinned and does not bind.",
+    "local": "Witnessed through the port's report: an origin the connection did not TLS-authenticate is not pinned and nothing retrieved over it is used. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > where the deployment refuses unpinnable encounters, an encounter whose identity cannot be established is refused uniformly, with no deferral and no Mission; a pinned one still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.tls-authenticated-origin-contextual",
@@ -61478,12 +61562,32 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "For a resource that names an authorization server, the Mission Issuer fetches its protected-resource metadata itself during adjudication."
+    "normative": "For a resource that names an authorization server, the Mission Issuer fetches its protected-resource metadata itself during adjudication.",
+    "local": "The metadata comes from the deployment's connection port, retrieved for the origin as the resource identifier, and is used only when its resource is exactly the origin (RFC 9728 Section 3.3) and every authorization server it names is an issuer identifier (RFC 8414 Section 2), checked before any authorization. The reference requires the metadata, stricter than the object's conditional members. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata that is absent, not a JSON object, or whose resource is not exactly the origin (RFC 9728 Section 3.3) is not used: no digest, no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.prm-retrieved-server-side-contextual",
@@ -61522,12 +61626,20 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The evidence `resource_metadata_digest` equals the digest of the exact metadata bytes the issuer retrieved."
+    "normative": "The evidence `resource_metadata_digest` equals the digest of the exact metadata bytes the issuer retrieved.",
+    "local": "The digest is over the exact bytes the port returned, not a re-serialization, and is recorded on the deferral's Encountered Resource object. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.prm-exact-bytes-digest-contextual",
@@ -61566,12 +61678,20 @@
    "surface": "evidence-emission",
    "assertion": "ignore",
    "observation": {
-    "normative": "When the agent supplies a metadata digest that differs from the digest of the retrieved bytes, the evidence carries the issuer's computed digest, not the agent's."
+    "normative": "When the agent supplies a metadata digest that differs from the digest of the retrieved bytes, the evidence carries the issuer's computed digest, not the agent's.",
+    "local": "Where the agent's metadata digest differs, the recorded digest is the one over the retrieved bytes. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-digest-reuse-contextual",
@@ -61610,12 +61730,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An encounter whose metadata names an issuer not authorized for the resource's domain never binds by policy."
+    "normative": "An encounter whose metadata names an issuer not authorized for the resource's domain never binds by policy.",
+    "local": "The named issuer is verified through the deployment's issuer-authorization port (domain-authorized-issuer being one mechanism); unverified, the identity is not pinned. No encounter binds by policy before stage 6, so the binding half is not yet discriminated. The reference pins only metadata naming exactly one authorization server."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > a named issuer not verified as authorized for the domain is not pinned, and the encounter routes to a human even where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.issuer-authorized-for-domain-contextual",
@@ -61654,12 +61788,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When issuer authorization for the resource's domain cannot be verified, the outcome is `routed_to_approval`, never `bound`."
+    "normative": "When issuer authorization for the resource's domain cannot be verified, the outcome is `routed_to_approval`, never `bound`.",
+    "local": "An unverified issuer routes to a human (a deferral), even where the deployment refuses unpinnable encounters. `routed_to_approval` is recorded only in Discovery Evidence, a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > a named issuer not verified as authorized for the domain is not pinned, and the encounter routes to a human even where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.unverified-issuer-routes-contextual",
@@ -61802,12 +61944,26 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "No origin, digest, issuer, or taint value that the agent mediated is used for adjudication; each comes from the issuer's own retrieval or the harness's attested channel."
+    "normative": "No origin, digest, issuer, or taint value that the agent mediated is used for adjudication; each comes from the issuer's own retrieval or the harness's attested channel.",
+    "local": "Origin, metadata digest and issuer come from the deployment's connection and issuer-authorization ports, never the agent; trusted taint is a later stage (#1469 stage 3)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.non-agent-channel-contextual",
@@ -61847,7 +62003,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "An encounter whose identity cannot be pinned (TLS failure, unretrievable metadata, unverifiable issuer) yields `routed_to_approval` or `refused`, never `bound`.",
-    "local": "Every encounter routes to a human, since the reference obtains no trustworthy identity yet; the TLS, metadata and issuer failure cases arrive with identity pinning (#1469 stage 2)."
+    "local": "An encounter whose identity cannot be pinned (origin not TLS-authenticated, metadata missing or unusable, a malformed issuer identifier among them, no single named issuer, issuer unverified) routes to a human, or, where the deployment refuses unpinnable encounters, is refused before any deferral exists; an unverified issuer always routes."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -61857,9 +62013,33 @@
      "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > a drawdown onto a resource no ceiling entry names falls back to a fresh human approval though every other guard would admit it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata that is absent, not a JSON object, or whose resource is not exactly the origin (RFC 9728 Section 3.3) is not used: no digest, no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > where the deployment refuses unpinnable encounters, an encounter whose identity cannot be established is refused uniformly, with no deferral and no Mission; a pinned one still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.untrustworthy-identity-route-or-refuse-contextual",
@@ -62074,12 +62254,20 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Every Encountered Resource object carries `origin` as a URI string naming the TLS-authenticated origin; an object without it is malformed."
+    "normative": "Every Encountered Resource object carries `origin` as a URI string naming the TLS-authenticated origin; an object without it is malformed.",
+    "local": "Data-construction witness: the Encountered Resource object recorded on the deferral carries origin; no Discovery Evidence is emitted yet."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.member-origin-contextual",
@@ -62118,12 +62306,26 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "An Encountered Resource object for a resource whose protected-resource metadata was retrieved carries `resource_metadata_digest`, an integrity-anchor encoded digest of the exact retrieved bytes."
+    "normative": "An Encountered Resource object for a resource whose protected-resource metadata was retrieved carries `resource_metadata_digest`, an integrity-anchor encoded digest of the exact retrieved bytes.",
+    "local": "Data-construction witness: the recorded object carries resource_metadata_digest exactly when usable metadata was retrieved; no Discovery Evidence is emitted yet."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata that is absent, not a JSON object, or whose resource is not exactly the origin (RFC 9728 Section 3.3) is not used: no digest, no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.member-resource-metadata-digest-contextual",
@@ -62162,12 +62364,32 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "An Encountered Resource object whose metadata names an authorization server carries `issuer` equal to that issuer identifier."
+    "normative": "An Encountered Resource object whose metadata names an authorization server carries `issuer` equal to that issuer identifier.",
+    "local": "Data-construction witness: the recorded object carries the one issuer the metadata names, always an issuer identifier (https, no query or fragment), and none when it names zero, several, or a malformed one; no Discovery Evidence is emitted yet."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming no authorization server, or more than one, pins no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.member-issuer-contextual",
@@ -65089,12 +65311,26 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "The pinned identity of every adjudicated encounter comes from the issuer's own retrieval; agent-supplied identity values are not adopted."
+    "normative": "The pinned identity of every adjudicated encounter comes from the issuer's own retrieval; agent-supplied identity values are not adopted.",
+    "local": "Identity comes from the Mission Issuer's own connection, independent of the agent's hints. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.identity-independent-of-agent-contextual",
@@ -65221,12 +65457,32 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An encounter with unpinnable identity, an unclassifiable operation, or no trustworthy taint state yields `routed_to_approval` or `refused`, never `bound`."
+    "normative": "An encounter with unpinnable identity, an unclassifiable operation, or no trustworthy taint state yields `routed_to_approval` or `refused`, never `bound`.",
+    "local": "Only the cannot-pin clause: an unpinnable encounter routes to a human or, where the deployment refuses, is refused with no deferral. Classification and trusted taint are later stages."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > where the deployment refuses unpinnable encounters, an encounter whose identity cannot be established is refused uniformly, with no deferral and no Mission; a pinned one still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > a named issuer not verified as authorized for the domain is not pinned, and the encounter routes to a human even where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.route-or-refuse-unresolvable-contextual",
