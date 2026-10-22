@@ -734,7 +734,8 @@ A consumer MUST verify, before honoring a response:
    rejecting `none` and any algorithm not listed;
 3. the JWS signature against a current `jwks_uri` entry for the
    `issuer` AS;
-4. `iss` equals the expected AS issuer URL;
+4. `iss` equals the expected AS issuer URL, and `mission.issuer`
+   equals `iss`;
 5. `aud` equals the `audience` the request named or, for a
    state-only response, the requesting client's `client_id`
    ({{mission-status-request}});
@@ -784,6 +785,24 @@ clock-skew tolerance of the response checks
 accepted, never how long it is relied on. The reliance bound is
 absolute for non-`active` states because a suspended Mission may be
 resumed to `active`.
+
+## Failed Status Checks {#mission-status-failures}
+
+A decision that requires Mission Status proceeds only on a response
+that passed every check of {{mission-status-response}}, is within its
+reliance bound ({{mission-status-caching}}), and reports `active`.
+Without one, the decision MUST NOT proceed, whatever the cause: an
+error response such as `unavailable`, `rate_limited` or `not_found`, a
+failed check, a network failure, or a lapsed reliance bound. For
+example, a resource server refuses the request it is deciding, and a
+consuming Authorization Server issues no token.
+
+That outcome establishes only that the decision cannot proceed; it is
+not evidence that the Mission terminated. A transient failure, such as
+`unavailable`, `rate_limited` or a network failure, leaves a response
+the consumer already holds usable within that response's original
+reliance bound; a failed request never refreshes or extends that
+bound.
 
 ## Anti-Oracle Property {#mission-status-anti-oracle}
 
