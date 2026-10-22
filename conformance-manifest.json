@@ -6441,9 +6441,21 @@
      "name": "an approval cannot consent to a child grant whose per-child figure it cannot disclose (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > refuses the approval while the entry's committed child creation policy is not held, creating no Mission; once held again, a fresh approval discloses the figure and children are created under it",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders each dispatched instance's derivation-limit rule, its maximum and its local scope beside max_active and the dispatch rate (@spec derivation-limits#approval-rendering)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses the consent while the Dispatch Policy the template was proposed under has changed: the page states why and offers no decision, and no template is created; restored, the same proposal is approved",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Not witnessed: the Template basis, since the reference has no human template-consent approval surface (the service-token stand-in returns the rule only in its creation response, which is not a rendering at approval); and the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails)."
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis on the human template consent page (GET /templates/proposals/{id}): each dispatched instance's rule and the maximum the Dispatch Policy the proposal pinned states, or that no finite maximum is guaranteed, with the consent refused while that policy has changed (template-consent-page.test.ts). Not witnessed: the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-scope",
@@ -6471,9 +6483,15 @@
      "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders each dispatched instance's derivation-limit rule, its maximum and its local scope beside max_active and the dispatch rate (@spec derivation-limits#approval-rendering)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis: the parent's approval page states, for each entry admitting policy_drawdown children, that the per-child maximum is local to each child Mission and is no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (child-derivation-limit-endpoint.test.ts). Not witnessed: the Template basis, since the reference has no human template-consent approval surface (the service-token stand-in returns the rule only in its creation response, which is not a rendering at approval); and the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. Proved by removing the scope line (the page witness fails)."
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis: the parent's approval page states, for each entry admitting policy_drawdown children, that the per-child maximum is local to each child Mission and is no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis: the template consent page states that each dispatched instance's maximum is local to it and no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (template-consent-page.test.ts). Not witnessed: the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. Proved by removing the scope line (the page witness fails)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-evidence",
@@ -37226,6 +37244,47 @@
    "notes": "The reference implementation measures from the template's created_at, which every instance records as approval_basis.approved_at. Its refusal reason review_overdue is implementation-local on access_denied (D205); the draft registers none."
   },
   {
+   "id": "template.consent.minimum-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "template-consent",
+   "text": "The consent disclosure MUST render, at minimum:",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the template-creation approval's disclosure renders the Template Ceiling as the maximum authority any dispatched Mission may reach, that instances issue at machine speed, by policy, with no per-instance human approval, and that the high-consequence classes are never dispatched by policy and still require a fresh human decision"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders the minimum disclosure before any template exists: the Template Ceiling as the maximum authority, machine-speed dispatch with no per-instance approval, and the high-consequence classes policy never dispatches",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders the Template Ceiling with its trusted capability bindings, discarding caller-supplied ones, and the approval commits exactly the ceiling rendered (@spec capability-binding#conformance)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses the consent while a trusted capability definition of the ceiling has changed since the proposal: the page offers no decision and no template is created; restored, the same proposal is approved (@spec capability-binding#conformance)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). The human template consent page (GET /templates/proposals/{id}) renders the Template Ceiling and the three statements before any template exists. The ceiling rendered is the one the template commits: the proposal discards caller-supplied capability bindings and resolves the trusted ones, and a trusted definition changed since then refuses the page and the decision. Proved by removing each statement alone, by keeping caller-supplied bindings, and by ignoring a changed binding (each fails a witness). The service-token stand-in (POST /templates) renders nothing and is not a witness."
+  },
+  {
    "id": "template.consent.derivation-limit-rendering",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "template-consent",
@@ -37244,9 +37303,22 @@
     "local": "requires the deployment to also adopt Mission Derivation Limits"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327). Todo: the reference has no human template-consent approval surface. The service-token stand-in (POST /templates) returns the per-instance rule and maximum the committed Dispatch Policy states, beside max_active and the dispatch rate, in its creation response (template-dispatch-endpoint.test.ts); that is disclosure preparation returned after creation, not a rendering at a human approval, so it is not a witness here (owner ruling, #1453 review). The cap itself is witnessed under template.dispatch.derivation-limit-within-dispatch-policy."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders each dispatched instance's derivation-limit rule, its maximum and its local scope beside max_active and the dispatch rate (@spec derivation-limits#approval-rendering)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses the consent while the Dispatch Policy the template was proposed under has changed: the page states why and offers no decision, and no template is created; restored, the same proposal is approved",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). Witnessed on the human template consent page (GET /templates/proposals/{id}): the page lists max_active, the dispatch rate and, beside them in the same list, each dispatched instance's derivation-limit rule with the maximum the Dispatch Policy states, or that no finite maximum is guaranteed, its local scope and the async-family statement. The figure comes from the Dispatch Policy snapshot whose digest the proposal pinned, the snapshot the template then commits; while the held snapshot differs from that pin, the page renders no figure and offers no decision, and the decision is refused access_denied with no template created. Proved by removing the lines, by moving them out of the bounds list, and by disabling the decision's refusal (each fails a witness). The service-token stand-in (POST /templates) is not a witness (owner ruling, #1453 review). The cap itself is witnessed under template.dispatch.derivation-limit-within-dispatch-policy."
   },
   {
    "id": "template.consent.source-retained-per-version",
@@ -37266,9 +37338,22 @@
     "normative": "the authority source established at template consent, including an organizational source's policy id, version and digest, is retained with the authenticated consent record for that exact template_version, so every instance dispatched under that version carries it even after the source's configuration or governed policy changes"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1118 (D326) specification slice. The reference AS establishes the template's authority_source at template consent and keeps it outside template_hash (src/services/authorization-server/src/kernel/template.ts); no test is mapped or mutation-proved under this row."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > an approval by the authenticated Approver creates the template, with that Approver of record and the authority source it activates retained beside the consented template_version",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > retains an organizational authority source with its governed policy reference, with the consenting Approver and the consented template_version",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1118 (D326); #1119. Partial. A template consented through the human template consent page retains the authority source its consent established (a user_delegated source; an organizational source with its governed policy id, version and digest) with the authenticated Approver of record and the consented template_version, outside template_hash. Proved by dropping the retained source's policy reference (the organizational witness fails). Not witnessed: that an instance dispatched under that version still carries the source after the source's configuration or governed policy changes."
   },
   {
    "id": "template.dispatch.source-check",
