@@ -22,6 +22,7 @@ import {
   TOPOLOGY,
   USERS,
   APPROVAL_FLOOR,
+  WRITE_ACTIONS,
   type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import { randomBytes } from "node:crypto";
@@ -75,6 +76,8 @@ import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
 import { TokenIssuanceStore } from "./kernel/token-issuance-store.js";
 import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import type { GovernedPolicyApprovalConfig } from "./kernel/governed-policy-approval.js";
+import { directApprovalRuleFrom } from "./kernel/direct-approval-record.js";
+import { type DrawdownRecordingRule, drawdownRecordingRuleFrom } from "./kernel/drawdown-approval-record.js";
 import { type ModelAdvisor, MissionApprovalDeferralStore } from "./kernel/mission-approval-deferral.js";
 import {
   CreationIdempotencyStore,
@@ -154,6 +157,8 @@ export {
   CONTAINMENT_EVIDENCE_MEDIA_TYPE,
   type ContainmentEvidence,
   type ContainmentPolicy,
+  type ContainmentSelector,
+  ContainmentSelectorError,
   UnknownProtectedEventError,
 } from "./kernel/containment.js";
 export {
@@ -591,6 +596,35 @@ export {
   withdrawGovernedPolicyConsent,
 } from "./kernel/governed-policy-approval.js";
 export {
+  assertDirectApprovalRecord,
+  DIRECT_APPROVAL_RULE_ID,
+  type DirectApprovalAuthentication,
+  type DirectApprovalInputs,
+  DirectApprovalRecordStore,
+  type DirectApprovalRule,
+  DirectApprovalRuleError,
+  directApprovalRuleFrom,
+  directApprovalRuleRef,
+  evaluateDirectApprovalRule,
+  parseDirectApprovalRule,
+  type RegisteredDirectApprovalRule,
+} from "./kernel/direct-approval-record.js";
+export {
+  assertDrawdownRecord,
+  consentProvenanceOf,
+  DRAWDOWN_RECORDING_RULE_ID,
+  DrawdownApprovalRecordStore,
+  type DrawdownConsentProvenance,
+  drawdownGovernanceGate,
+  type DrawdownRecordingRule,
+  DrawdownRecordingRuleError,
+  drawdownRecordingRuleFrom,
+  drawdownRecordingRuleRef,
+  type DrawdownRecordInputs,
+  parseDrawdownRecordingRule,
+  type RegisteredDrawdownRecordingRule,
+} from "./kernel/drawdown-approval-record.js";
+export {
   DEFAULT_MAX_PENDING_PER_CLIENT,
   DELIVERY_CLAIM_STALE_S,
   type DeliveryConfirmation,
@@ -643,14 +677,21 @@ export {
   type LocalPrincipal,
   authoritySourceOf,
   isAuthoritySourceType,
+  isRecognizedAuthoritySource,
   parseAuthoritySource,
+  parseRecordedAuthoritySource,
   validateAuthoritySourceCatalog,
 } from "./kernel/authority-source.js";
 export type {
   AuthoritySourceReconciliation,
   HistoricalAuthoritySourceCatalog,
 } from "./kernel/source-binding-reconciliation.js";
-export type { AuthoritySource, AuthoritySourceType } from "./kernel/types.js";
+export type {
+  AuthoritySource,
+  AuthoritySourceType,
+  RecordedAuthoritySource,
+  UnrecognizedAuthoritySource,
+} from "./kernel/types.js";
 export {
   DeferralStore,
   DeferralError,
@@ -918,6 +959,22 @@ export async function buildAuthorizationServer(opts: {
    * {@link APPROVAL_FLOOR}.
    */
   approvalFloor?: ApprovalFloorPolicy;
+  /**
+   * @spec approval-governance#triggers (#1470, D597): record a voluntary
+   * Approval Governance Record for every `direct` approval, under the direct
+   * approval rule built from the approval surface's own floor and
+   * eligibility. Default off.
+   */
+  directApprovalRecording?: boolean;
+  /**
+   * @spec approval-governance#accountable-assertion, approval-governance#recency-declarations
+   * (#1470 slice 2, D626): record a voluntary Approval Governance Record for
+   * every policy-adjudicated ceiling drawdown, under a recording rule built
+   * from this deployment's drawdown policies, Progressive classification,
+   * approval-surface eligibility and catalog, with this recency declaration.
+   * Requires `progressive`. Default off.
+   */
+  ceilingDrawdownRecording?: { recency: DrawdownRecordingRule["recency"] };
   /**
    * @spec mission#intent-submission-evidence — the deployment-GLOBAL
    * policy-required Intent Submission Evidence types (the anti-downgrade
@@ -1211,6 +1268,9 @@ export async function buildAuthorizationServer(opts: {
   // @spec progressive#in-ceiling-expansion, mission#approval-authentication
   // (#1255): a configuration refusal, before any key, store or recovery is
   // touched. A drawdown mapping that disagrees with the approval floor does not start.
+  const noProgressiveForRecording = (): never => {
+    throw new Error("ceilingDrawdownRecording requires progressive: there is no drawdown to record without it");
+  };
   const progressive = opts.progressive
     ? validateProgressiveDrawdownOptions(opts.progressive, opts.approvalFloor ?? APPROVAL_FLOOR)
     : undefined;
@@ -1370,6 +1430,12 @@ export async function buildAuthorizationServer(opts: {
   const schedulesAdopted =
     opts.suspensionSchedules !== undefined && capabilityEnabled(opts, "lifecycle-extended");
   let suspensionScheduler: SuspensionScheduler | undefined;
+  // The approval surface's eligibility and floor: given to the adapter and,
+  // where direct approvals are recorded, the rule each record names (#1470).
+  const approverApprovesFor = new Map(USERS.map((u) => [u.sub, new Set(u.approves_for)]));
+  const knownSubjects = new Set([...USERS.map((u) => u.sub), ...AUTHORITY_SOURCES.entries.flatMap((e) => e.principals ?? [])]);
+  const approverRoleSubs = new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub));
+  const approvalFloor = opts.approvalFloor ?? APPROVAL_FLOOR;
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
@@ -1411,6 +1477,36 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.childCreationPolicy ? { childCreationPolicy: opts.childCreationPolicy } : {}),
     ...(opts.activationPolicies ? { activationPolicies: opts.activationPolicies } : {}),
     ...(opts.governedPolicyApproval ? { governedPolicyApproval: opts.governedPolicyApproval } : {}),
+    ...(opts.directApprovalRecording
+      ? {
+          directApprovalRecording: {
+            rule: directApprovalRuleFrom({
+              floor: approvalFloor,
+              knownSubjects,
+              approverApprovesFor,
+              approverRoleSubs,
+              writeActions: WRITE_ACTIONS,
+              catalog: opts.authoritySources ?? AUTHORITY_SOURCES,
+            }),
+          },
+        }
+      : {}),
+    ...(opts.ceilingDrawdownRecording
+      ? {
+          ceilingDrawdownRecording: {
+            rule: drawdownRecordingRuleFrom(opts.issuer, {
+              recency: opts.ceilingDrawdownRecording.recency,
+              activationPolicies: opts.activationPolicies ?? {},
+              actionClasses: (progressive ?? noProgressiveForRecording()).actionClasses,
+              knownSubjects,
+              approverApprovesFor,
+              approverRoleSubs,
+              writeActions: WRITE_ACTIONS,
+              catalog: opts.authoritySources ?? AUTHORITY_SOURCES,
+            }),
+          },
+        }
+      : {}),
     ...(opts.resourceContracts ? { resourceContracts: opts.resourceContracts } : {}),
     // @spec mission#authority-sources, mission#approval-event — the deployment's
     // TRUSTED authority-source catalog (config/authority-sources.json plus the
@@ -1615,13 +1711,13 @@ export async function buildAuthorizationServer(opts: {
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),
     ...(opts.approverLogin ? { approverLogin: new ApproverLoginRelyingParty(opts.approverLogin, opts.issuer) } : {}),
-    approverApprovesFor: new Map(USERS.map(u => [u.sub, new Set(u.approves_for)])),
-    knownSubjects: new Set([...USERS.map(u => u.sub), ...AUTHORITY_SOURCES.entries.flatMap(e => e.principals ?? [])]),
+    approverApprovesFor,
+    knownSubjects,
     ...(opts.requiredIntentEvidenceTypes
       ? { requiredIntentEvidenceTypes: opts.requiredIntentEvidenceTypes }
       : {}),
-    approverRoleSubs: new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub)),
-    approvalFloor: opts.approvalFloor ?? APPROVAL_FLOOR,
+    approverRoleSubs,
+    approvalFloor,
     accessTokenTTL: TOPOLOGY.ttls.accessTokenSeconds,
     // @spec mission#caller-authorization-and-minimization — the registered
     // RFC 7662 introspection principals (config/introspection.json).

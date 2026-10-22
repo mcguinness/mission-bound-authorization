@@ -40,6 +40,7 @@ import {
   projectScope,
   readMissionAccessProfile,
   type RequestedScope,
+  requestedScopeEntries,
   type ScopeProjectionMapping,
   type ScopeProjectionOutcome,
   splitScope,
@@ -69,6 +70,34 @@ const HEADLESS_APPROVAL_RESULT = "mission_headless_approval";
 export function clientProposalParam(params: Record<string, unknown>): string | undefined {
   if (params[DERIVED_AUTHORIZATION_DETAILS_MARKER] === true) return undefined;
   return typeof params.authorization_details === "string" ? params.authorization_details : undefined;
+}
+
+/**
+ * @spec mission#derivation-modes, mission#scope-projection — the
+ * configured-mapping key a request's `scope` values supply: the entries they
+ * stand for at its `scope`-only targets ({@link requestedScopeEntries}), the
+ * targets being the pushed RFC 8707 `resource` values or, absent those, the
+ * Intent's `target_resources`. Read from the same pushed parameters at the
+ * rendering and the decision, so both derive the same Authority Set.
+ * Undefined when no value names a `scope`-only target; the derivation reads it
+ * only when no proposal was submitted.
+ */
+export function requestedScopeKey(
+  mapping: ScopeProjectionMapping | undefined,
+  params: Record<string, unknown>,
+  intent: MissionIntent,
+): AuthorityEntry[] | undefined {
+  const requested = splitScope(params.scope).resource;
+  if (!requested.length) return undefined;
+  const resourceParam = params.resource;
+  const audiences =
+    typeof resourceParam === "string"
+      ? [resourceParam]
+      : Array.isArray(resourceParam)
+        ? (resourceParam as string[])
+        : intent.target_resources;
+  const entries = requestedScopeEntries(mapping, audiences, requested);
+  return entries.length ? entries : undefined;
 }
 
 /**
@@ -370,7 +399,12 @@ import {
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
 import { withTransaction } from "@mission/store";
-import { UnknownProtectedEventError } from "../kernel/containment.js";
+import {
+  assertContainmentSelectors,
+  ContainmentSelectorError,
+  type ContainmentSelector,
+  UnknownProtectedEventError,
+} from "../kernel/containment.js";
 import {
   DIGEST_PREFIX,
   DISCHARGE_EVENT_ID_RE,
@@ -450,17 +484,27 @@ import type { ContinuationIssuer } from "../kernel/continuation-assertion.js";
 import type { ContinuationStore } from "../kernel/continuation-store.js";
 import type { DelegationFamilyStore } from "../kernel/delegation-family-store.js";
 import {
+  assertTemplateBody,
   createTemplate,
   dispatchFromTemplate,
   DispatchError,
   DispatchMismatchError,
   findDispatch,
+  pinDispatchPolicy,
   TemplateError,
   type CreateTemplateInput,
   type DispatchInput,
   type DispatchPolicies,
   type DispatchReason,
+  type TemplateProposalBody,
+  templateCeiling,
 } from "../kernel/template.js";
+import {
+  renderTemplateConsentPage,
+  TemplateConsentProposals,
+  templateConsentDisclosure,
+  type TemplateProposal,
+} from "./template-consent.js";
 import type { TemplateStore } from "../kernel/template-store.js";
 import { TokenIssuanceStore } from "../kernel/token-issuance-store.js";
 import {
@@ -484,7 +528,7 @@ import {
   takeDeviceIntake,
   type DeviceClientView,
 } from "./device-authorization.js";
-import { pushedRequestIntake, takeParIntake } from "./par-intake.js";
+import { pushedRequestIntake, requestObjectIntake, takeParIntake, takeRequestObjectIntake } from "./par-intake.js";
 import type { MissionApprovalDeferralStore } from "../kernel/mission-approval-deferral.js";
 import {
   cancelOnRevocation,
@@ -1536,17 +1580,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
   }
 
   /**
-   * @spec mission#subset, mission#remediation-grains, mission#error-mapping
-   * (#1303) — a token request's `authorization_details` (Section 6 of
-   * RFC 9396) narrows the issued token. `ceiling` is what the grant carries
-   * as the effective set narrows it ({@link rarThroughEffectiveSet}); with no
-   * request the token carries the ceiling. A requested entry that is not a
-   * subset of the ceiling under its type's relation is refused
-   * `invalid_authorization_details`, never silently re-narrowed. An admitted
-   * request issues the requested entries projected through the ceiling, which
-   * keeps the ceiling's capability-source provenance. The refresh token keeps
-   * the grant, so a later refresh may ask for the whole ceiling again. An
-   * empty array names nothing, as in oidc-provider's checkRar.
+   * @spec mission#subset, mission#remediation-grains, mission#error-mapping,
+   * mission#refresh-tokens (#1303, #1503): a token request's
+   * `authorization_details` (Section 6 of RFC 9396) narrows the issued token.
+   * `ceiling` is what the grant carries as the effective set narrows it
+   * ({@link rarThroughEffectiveSet}); with no request the token carries the
+   * ceiling. A requested entry that is not a subset of the ceiling under its
+   * type's relation is refused `invalid_authorization_details`, never silently
+   * re-narrowed. An admitted request issues the requested entries projected
+   * through the ceiling, which keeps the ceiling's capability-source
+   * provenance. The projection drops a pairing it cannot prove (a
+   * `capability_sources` binding the ceiling does not record, a `max_amount`
+   * that is not a decimal), so an admitted entry can fail to come out whole;
+   * issuing the rest would be a narrower set than the one requested, so that
+   * request is refused too. The refresh token keeps the grant, so a later
+   * refresh may ask for the whole ceiling again. An empty array names nothing,
+   * as in oidc-provider's checkRar.
    */
   function narrowToRequestedRar(ctx: unknown, ceiling: unknown): unknown {
     const raw = (ctx as { oidc: { params: Record<string, unknown> } }).oidc.params.authorization_details;
@@ -1557,7 +1606,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const narrowed = isSubsetSetIgnoringCapabilitySources(requested, granted)
       ? projectThroughEffective(requested, granted)
       : [];
-    if (narrowed.length === 0) {
+    // Every requested entry is issued whole, or the request is refused. The
+    // comparison sets `capability_sources` aside, as the one above does: an
+    // issued entry carries the ceiling's bindings where the request names none.
+    if (!isSubsetSetIgnoringCapabilitySources(requested, narrowed)) {
       throw new InvalidAuthorizationDetails("requested authorization_details are not within the authority of the grant");
     }
     return narrowed;
@@ -1707,6 +1759,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         ? false
         : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
+    // @spec mission#submission-via-par (#1503): the one Request Object
+    // signing algorithm (features.requestObjects below); every other
+    // algorithm list keeps the provider's default.
+    enabledJWA: { requestObjectSigningAlgValues: ["ES256"] },
     interactions: {
       url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
       // @spec mission#approval-event (#1247), device-authorization#approval
@@ -1729,6 +1785,31 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // We serve our own approval interaction (the mission-kernel adapter).
       devInteractions: { enabled: false },
       pushedAuthorizationRequests: { enabled: true, requirePushedAuthorizationRequests: true },
+      // @spec mission#submission-via-par (#1503): the second carriage of the
+      // Submission envelope, a `mission_intent` claim in a signed Request
+      // Object (RFC 9101) pushed through PAR. Signed only: `enabledJWA` above
+      // accepts the ES256 every registered client already signs its client
+      // assertion with, verified against the client's registered JWKS, so an
+      // unsigned (`alg` none) object fails the provider's algorithm check
+      // with invalid_request_object. requireSignedRequestObject stays off, so
+      // the form-encoded carriage stays available. The hook (par-intake.ts)
+      // keeps the device authorization endpoint refusing a Request Object.
+      // @spec mission#submission-processing (#1512): the hook runs before
+      // the provider's RAR check, so it validates a carried Submission
+      // envelope and its Intent (steps 1 and 2) before a proposal inside the
+      // object is checked (step 3); evidence entries wait for their step.
+      requestObjects: {
+        enabled: true,
+        requireSignedRequestObject: false,
+        assertJwtClaimsAndHeader: requestObjectIntake((submission) => {
+          try {
+            kernel.validateSubmission(submission, undefined, { deferEvidenceEntries: true });
+          } catch (e) {
+            if (e instanceof IntentError) throw intentErrorToOidc(e);
+            throw e;
+          }
+        }),
+      },
       richAuthorizationRequests: {
         enabled: true,
         ack: "experimental-01",
@@ -1875,7 +1956,20 @@ export function buildProvider(opts: AdapterOptions): Provider {
           (ctx as { oidc: { route?: string } }).oidc.route === "pushed_authorization_request"
             ? takeParIntake((ctx as { req: IncomingMessage }).req)
             : undefined;
-        if (value === undefined) {
+        // @spec mission#submission-via-par (#1503): inside a client-signed
+        // Request Object the claim's value is the Submission envelope itself,
+        // a JSON object, which the Request Object hook read from the strictly
+        // parsed payload (the provider keeps only `String(value)`) and
+        // refused unless it is one. The envelope's serialization replaces the
+        // parameter, at PAR and again where the authorization endpoint reads
+        // the pushed object, so the envelope is validated, and its
+        // intent_hash computed, exactly as a form value's, and the approval
+        // reads it from the interaction as it reads a form value. A form
+        // value is that serialization already.
+        const requestObject = takeRequestObjectIntake((ctx as { req: IncomingMessage }).req);
+        const submitted = requestObject !== undefined ? requestObject.submission : value;
+        if (requestObject !== undefined) params.mission_intent = submitted;
+        if (submitted === undefined) {
           if (lifted) {
             params.authorization_details = lifted.proposal;
             checkPushedRar(ctx, params, oidc.client as { authorizationDetailsTypes?: string[] } | undefined);
@@ -1883,7 +1977,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           return;
         }
         try {
-          const submission = kernel.validateSubmission(String(value), undefined, { deferEvidenceEntries: true });
+          const submission = kernel.validateSubmission(String(submitted), undefined, { deferEvidenceEntries: true });
           const { intent } = submission;
           if (lifted) {
             params.authorization_details = lifted.proposal;
@@ -2478,6 +2572,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         "resource",
         "requested_token_type",
         "authorization_details",
+        // @spec discovery#adjudication (#1469 stage 1): the encounter hints,
+        // kept as the agent's claim, never identity.
+        "encountered_resource",
+        "resource_declaration_digest",
         // @spec async-delegation — the async-delegation discriminator. Declared here
         // or the token endpoint strips it (the file documents `resource` was
         // empirically stripped for this custom grant); a test asserts its survival.
@@ -3331,6 +3429,49 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const requireServiceToken = (ctx: KoaCtx): boolean => authenticateService(ctx) !== undefined;
 
   /**
+   * @spec mission#approval-authentication (#826, #1320): the Approver of one
+   * decision, keyed by what it decides (an interaction uid or a template
+   * proposal id): the login this user agent established for that key, on a
+   * same-origin request carrying its CSRF secret (in the `x-csrf-token`
+   * header unless the caller passes the one a form submitted), or a trusted
+   * headless approval service. `interactive` is true for the browser login.
+   */
+  const approvalPrincipal = (
+    ctx: KoaCtx,
+    key: string,
+    csrf: string = ctx.get("x-csrf-token"),
+  ): { principal: ApprovalPrincipal; interactive: boolean } | undefined => {
+    const origin = ctx.get("origin");
+    const browser = (!origin || origin === new URL(opts.issuer).origin)
+      ? opts.approvalSessions?.resolve(ctx.get("cookie"), csrf, key)
+      : undefined;
+    const token = ctx.get("x-service-token");
+    const service = token && Object.hasOwn(serviceTokenPrincipals, token) ? serviceTokenPrincipals[token] : undefined;
+    // @spec mission#approval-event (step 2) (#826): a trusted headless
+    // approval service names the Subject it resolved on its own
+    // authenticated request; a browser session carries the selection its
+    // trusted login recorded. Neither comes from the client.
+    const headless = !browser && opts.allowHeadlessAdjudication && service?.scopes.includes(MISSION_APPROVAL_SCOPE) &&
+      validApprovalPrincipal(service.approver) ? service.approver : undefined;
+    const selected = ctx.get(APPROVAL_SUBJECT_HEADER);
+    const principal = browser ?? (headless ? { ...headless, ...(selected ? { subject: selected } : {}) } : undefined);
+    if (!principal || principal.auth_time > Math.floor(opts.kernel.nowDate().getTime() / 1000)) return undefined;
+    return { principal, interactive: browser !== undefined };
+  };
+
+  /** @spec mission-template#template-consent: template proposals and their decisions. */
+  const templateProposals = new TemplateConsentProposals(() => kernel.nowDate().getTime());
+  /** A proposal's consent disclosure against this issuer's current Dispatch Policies and capability catalog. */
+  const templateDisclosure = (proposal: TemplateProposal) => {
+    const { capabilityResolver } = kernel.authoritySourceOptions();
+    return templateConsentDisclosure(proposal, opts.dispatchPolicies, {
+      issuer: opts.issuer,
+      asyncDelegation: opts.familyStore !== undefined,
+      ...(capabilityResolver ? { capabilityResolver } : {}),
+    });
+  };
+
+  /**
    * @spec status#mission-status-authentication — the Mission Status operation's
    * authorization check, in ONE place: the deployment serves the operation and
    * the authenticated caller carries the `mission_status` grant. The Status
@@ -3476,7 +3617,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // way (400, the mapped error code) rather than let it propagate uncaught.
       let authority: ReturnType<typeof kernel.derive>;
       try {
-        authority = kernel.derive(intent, proposal);
+        authority = kernel.derive(intent, proposal, requestedScopeKey(opts.scopeProjection, params, intent));
       } catch (e) {
         if (e instanceof IntentError) {
           ctx.status = 400;
@@ -3535,12 +3676,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         }
         throw e;
       }
-      // @spec device-authorization#approval: the verification page also
-      // names the requesting client from registration data, whether the AS
+      // @spec mission#approval-event (step 5, #1503): the rendering identifies
+      // the OAuth client that receives the authority from this AS's
+      // registration of the interaction's client, the one the decision
+      // commits, never from a value the request supplies.
+      // @spec device-authorization#approval: the verification page names the
+      // same client from the same registration, with whether the AS
       // authenticated it, the Subject, and the `user_code` to confirm.
-      const deviceClient =
-        deviceSession && deviceSubject ? await provider.Client.find(String(params.client_id)) : undefined;
-      if (deviceJti && !deviceClient) {
+      const registeredClient = await provider.Client.find(String(params.client_id));
+      if (!registeredClient) {
         ctx.status = 400;
         ctx.body = { error: "invalid_client", error_description: "the requesting client is no longer registered" };
         return;
@@ -3578,13 +3722,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         interactionMatch[1] as string,
         intent,
         authority,
+        { clientId: registeredClient.clientId, clientName: registeredClient.clientName },
         proposal,
         provenance,
         authoritySource,
-        deviceSession && deviceSubject && deviceClient
+        deviceSession && deviceSubject
           ? {
               userCode: formatUserCode(deviceSession.userCode),
-              client: deviceClientView(deviceClient),
+              client: deviceClientView(registeredClient),
               subject: deviceSubject,
             }
           : undefined,
@@ -3631,11 +3776,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       }
       const { uid, principal } = completed;
       const session = opts.approvalSessions.establish(uid, principal);
-      ctx.res.setHeader("set-cookie", `${session.cookie}; Path=/interaction/${uid}; HttpOnly; SameSite=Lax`);
+      // A template proposal's login returns to its consent page; every other
+      // login, to its interaction.
+      const base = templateProposals.get(uid) ? "/templates/proposals" : "/interaction";
+      ctx.res.setHeader("set-cookie", `${session.cookie}; Path=${base}/${uid}; HttpOnly; SameSite=Lax`);
       ctx.set("cache-control", "no-store");
       ctx.set("content-type", "text/html; charset=utf-8");
       ctx.status = 200;
-      ctx.body = `<!doctype html><html><head><meta charset="utf-8"><meta name="mission-approval-csrf" content="${session.csrf}"><title>Signed in</title></head><body><p>Signed in. <a href="/interaction/${encodeURIComponent(uid)}">Continue to the approval</a>.</p></body></html>`;
+      ctx.body = `<!doctype html><html><head><meta charset="utf-8"><meta name="mission-approval-csrf" content="${session.csrf}"><title>Signed in</title></head><body><p>Signed in. <a href="${base}/${encodeURIComponent(uid)}">Continue to the approval</a>.</p></body></html>`;
       return;
     }
     const decideMatch = ctx.path.match(/^\/interaction\/([^/]+)\/decide$/);
@@ -3648,26 +3796,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         return;
       }
       const uid = decideMatch[1]!;
-      const origin = ctx.get("origin");
-      const browser = (!origin || origin === new URL(opts.issuer).origin)
-        ? opts.approvalSessions?.resolve(ctx.get("cookie"), ctx.get("x-csrf-token"), uid)
-        : undefined;
-      const token = ctx.get("x-service-token");
-      const service = token && Object.hasOwn(serviceTokenPrincipals, token) ? serviceTokenPrincipals[token] : undefined;
-      // @spec mission#approval-event (step 2) (#826): a trusted headless
-      // approval service names the Subject it resolved on its own
-      // authenticated request; a browser session carries the selection its
-      // trusted login recorded. Neither comes from the client.
-      const headless = !browser && opts.allowHeadlessAdjudication && service?.scopes.includes(MISSION_APPROVAL_SCOPE) &&
-        validApprovalPrincipal(service.approver) ? service.approver : undefined;
-      const selected = ctx.get(APPROVAL_SUBJECT_HEADER);
-      const principal = browser ?? (headless ? { ...headless, ...(selected ? { subject: selected } : {}) } : undefined);
-      if (!principal || principal.auth_time > Math.floor(opts.kernel.nowDate().getTime() / 1000)) {
+      const resolved = approvalPrincipal(ctx, uid);
+      if (!resolved) {
         ctx.status = 401;
         ctx.body = { error: "unauthorized" };
         return;
       }
-      await decide(provider, opts, ctx, body, principal, browser !== undefined);
+      await decide(provider, opts, ctx, body, resolved.principal, resolved.interactive);
       return;
     }
 
@@ -4083,6 +4218,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             );
             return;
           }
+          // @spec containment#selector-matching (#1463): each removal is a
+          // selector the matcher can decide (`exact` by default, `prefix` by
+          // declaration); one it cannot would contain nothing, so the request
+          // is refused before anything commits.
+          try {
+            assertContainmentSelectors(remove);
+          } catch (e) {
+            if (!(e instanceof ContainmentSelectorError)) throw e;
+            sendInvalidRequest(`contain ${e.message}`);
+            return;
+          }
           // @spec control-plane#serialization — the containment commit, the
           // nonce claim and the committed outcome are ONE transaction, so a
           // committed narrowing always leaves a replayable record behind.
@@ -4105,7 +4251,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             // transaction, before the narrowing commits (kernel.contain).
             const { record, evidence } = kernel.contain(missionId, {
               event: containEvent,
-              remove: remove as Array<{ resource: string; actions?: string[] }>,
+              remove: remove as ContainmentSelector[],
               ...(expectedVersion !== undefined ? { expectedVersion } : {}),
             });
             const outcome = {
@@ -4683,8 +4829,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
 
     // --- Mission Template admin plane (@spec mission-template) ---
     // POST /templates -- create a Mission Template (service-token admin plane).
-    // Demo/test stand-in: a real deployment runs template consent through the full
-    // approval + consent-evidence surface.
+    // Demo/test stand-in: the service asserts the approver. The human consent
+    // is POST /templates/proposals and its consent page, below.
     if (ctx.path === "/templates" && ctx.method === "POST") {
       if (!requireServiceToken(ctx)) return;
       if (!opts.templateStore || !enabled("templates")) {
@@ -4730,6 +4876,202 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         } else {
           throw e;
         }
+      }
+      return;
+    }
+    // @spec mission-template#template-consent: the human consent to a
+    // Mission Template. An administrator proposes the body on the service-token
+    // admin plane; the Approver reads the consent disclosure and decides. The
+    // proposal id is the capability the consent URI carries.
+    if (ctx.path === "/templates/proposals" && ctx.method === "POST") {
+      if (!requireServiceToken(ctx)) return;
+      if (!opts.templateStore || !enabled("templates")) {
+        ctx.status = 501;
+        ctx.body = { error: "temporarily_unavailable" };
+        return;
+      }
+      const body = await readJsonBody(ctx.req);
+      // The Mission Issuer and the consent supply these; a proposal names none.
+      const supplied = ["issuer", "approver", "approval_event_id"].find((k) => Object.hasOwn(body, k));
+      if (supplied) {
+        ctx.status = 400;
+        ctx.body = {
+          error: "invalid_request",
+          error_description: `a template proposal carries no ${supplied}: the Mission Issuer and the consent supply it`,
+        };
+        return;
+      }
+      try {
+        const proposed = { ...body, issuer: opts.issuer } as unknown as TemplateProposalBody;
+        assertTemplateBody(proposed);
+        // @spec capability-binding#conformance: the ceiling as the template
+        // will commit it, caller-supplied bindings discarded and the trusted
+        // ones resolved, so the consent page renders what approval commits.
+        const ceiling = templateCeiling(proposed.ceiling, kernel.authoritySourceOptions().capabilityResolver);
+        const proposal = templateProposals.propose(
+          { ...proposed, ceiling },
+          pinDispatchPolicy(opts.issuer, opts.dispatchPolicies, proposed.dispatch_policy),
+        );
+        ctx.status = 201;
+        ctx.body = { proposal_id: proposal.id, consent_uri: `${opts.issuer}/templates/proposals/${proposal.id}` };
+      } catch (e) {
+        if (e instanceof IntentError) throw intentErrorToOidc(e);
+        if (!(e instanceof TemplateError)) throw e;
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: e.message };
+      }
+      return;
+    }
+    const proposalMatch = ctx.path.match(/^\/templates\/proposals\/([^/]+)$/);
+    if (proposalMatch && ctx.method === "GET" && opts.templateStore && enabled("templates")) {
+      const proposal = templateProposals.get(proposalMatch[1] as string);
+      ctx.set("cache-control", "no-store");
+      if (!proposal) {
+        ctx.status = 404;
+        ctx.body = { error: "not_found" };
+        return;
+      }
+      // The user agent holding the Approver's login for this proposal gets
+      // that login's CSRF secret in the form; any other is offered the login.
+      const csrf = opts.approvalSessions?.csrfFor(ctx.get("cookie"), proposal.id);
+      ctx.set("content-type", "text/html; charset=utf-8");
+      ctx.status = 200;
+      ctx.body = renderTemplateConsentPage(proposal, templateDisclosure(proposal), {
+        ...(opts.approverLogin && opts.approvalSessions
+          ? { loginHref: `/templates/proposals/${encodeURIComponent(proposal.id)}/approver-login` }
+          : {}),
+        ...(csrf ? { csrf } : {}),
+      });
+      return;
+    }
+    // @spec mission#approval-authentication (#1320): the Approver's login for
+    // one template consent. A template consent selects no Subject.
+    const proposalLoginMatch = ctx.path.match(/^\/templates\/proposals\/([^/]+)\/approver-login$/);
+    if (proposalLoginMatch && ctx.method === "GET" && opts.approverLogin && opts.approvalSessions && enabled("templates")) {
+      const id = proposalLoginMatch[1] as string;
+      if (templateProposals.get(id)?.state !== "pending" || ctx.query.subject !== undefined) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: "no pending template consent to log in for, with no Subject" };
+        return;
+      }
+      const started = await opts.approverLogin.start(id, undefined);
+      ctx.res.setHeader("set-cookie", started.cookie);
+      ctx.set("cache-control", "no-store");
+      ctx.set("location", started.location);
+      ctx.status = 303;
+      ctx.body = "";
+      return;
+    }
+    const proposalDecideMatch = ctx.path.match(/^\/templates\/proposals\/([^/]+)\/decide$/);
+    if (proposalDecideMatch && ctx.method === "POST" && opts.templateStore && enabled("templates")) {
+      const body = await readJsonBody(ctx.req);
+      const id = proposalDecideMatch[1] as string;
+      // The consent page's form posts form-encoded with the login's CSRF
+      // secret as a field; an approval service posts JSON with it in the
+      // header. The form is answered with a redirect back to the page.
+      const form = (ctx.get("content-type") ?? "").startsWith("application/x-www-form-urlencoded");
+      const refuse = (status: number, error: string, description?: string) => {
+        ctx.status = status;
+        if (form) {
+          ctx.set("content-type", "text/html; charset=utf-8");
+          ctx.body = `<!doctype html><title>Template consent</title>\n<p class="decision-refused">${escapeHtml(description ?? error)}</p>`;
+        } else {
+          ctx.body = { error, ...(description ? { error_description: description } : {}) };
+        }
+      };
+      const decided = (status: number, result: Record<string, unknown>) => {
+        if (form) {
+          ctx.status = 303;
+          ctx.set("location", `/templates/proposals/${encodeURIComponent(id)}`);
+          ctx.body = "";
+        } else {
+          ctx.status = status;
+          ctx.body = result;
+        }
+      };
+      if (["approver", "subject", "approver_acr", "approver_auth_time"].some(k => Object.hasOwn(body, k)) ||
+          (body.decision !== "approve" && body.decision !== "deny")) {
+        refuse(400, "invalid_request", "decide accepts a decision, not resolving identity");
+        return;
+      }
+      const proposal = templateProposals.get(id);
+      if (!proposal) {
+        refuse(404, "not_found");
+        return;
+      }
+      const resolved = approvalPrincipal(
+        ctx,
+        id,
+        form ? (typeof body.csrf_token === "string" ? body.csrf_token : "") : ctx.get("x-csrf-token"),
+      );
+      if (!resolved) {
+        refuse(401, "unauthorized");
+        return;
+      }
+      const { principal } = resolved;
+      // The template's recipients name its Subjects; its consent selects none.
+      if (principal.subject !== undefined && principal.subject !== principal.sub) {
+        refuse(400, "invalid_request", "a template consent selects no Subject");
+        return;
+      }
+      if (proposal.state !== "pending") {
+        refuse(400, "invalid_request", "the template proposal is no longer pending");
+        return;
+      }
+      if (body.decision !== "approve") {
+        templateProposals.settle(id, { state: "denied" });
+        decided(200, { proposal_id: id, state: "denied" });
+        return;
+      }
+      // @spec mission#approval-authentication (#826, D425): dispatch later
+      // grants authority within the Template Ceiling under this consent's
+      // `consent_principal` and `approved_at`, with no Approver authenticating,
+      // so the consent itself meets the approval-authentication floor for
+      // everything the ceiling admits, as a Progressive ceiling consent does.
+      const floor = evaluateApprovalFloor(
+        opts.approvalFloor,
+        proposal.body.ceiling,
+        { acr: principal.acr, auth_time: principal.auth_time },
+        { interactive: resolved.interactive, nowSeconds: Math.floor(opts.kernel.nowDate().getTime() / 1000) },
+      );
+      if (floor.outcome === "refused") {
+        refuse(403, "access_denied", floor.reason);
+        return;
+      }
+      // @spec mission-template#template-consent, derivation-limits#approval-rendering
+      // (#1119): no consent to a template whose disclosure cannot be
+      // rendered, so a Dispatch Policy, or a trusted capability binding of
+      // the ceiling, changed since the proposal refuses it.
+      const rendered = templateDisclosure(proposal);
+      if ("refusal" in rendered) {
+        refuse(403, "access_denied", rendered.refusal);
+        return;
+      }
+      try {
+        // The template commits the policy snapshot and the ceiling just
+        // verified against the proposal: nothing runs between.
+        const template = createTemplate(
+          opts.templateStore,
+          {
+            ...proposal.body,
+            approver: { iss: opts.issuer, sub: principal.sub },
+            approval_event_id: `apev_${proposal.id}`,
+          },
+          {
+            ...kernel.authoritySourceOptions(),
+            ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
+          },
+        );
+        templateProposals.settle(id, { state: "approved", template_id: template.id });
+        decided(201, {
+          template_id: template.id,
+          template_version: template.template_version,
+          template_hash: template.template_hash,
+        });
+      } catch (e) {
+        if (e instanceof IntentError) throw intentErrorToOidc(e);
+        if (!(e instanceof TemplateError)) throw e;
+        refuse(400, "invalid_request", e.message);
       }
       return;
     }
@@ -5515,9 +5857,10 @@ async function decide(
   // `invalid_authorization_details` when the client submitted a proposal that
   // yields nothing, `access_denied` when configured-mapping mode (no
   // proposal) yields nothing.
+  const scopeKey = requestedScopeKey(opts.scopeProjection, params, intent);
   let authority: ReturnType<typeof opts.kernel.derive>;
   try {
-    authority = opts.kernel.derive(intent, proposedAuthority);
+    authority = opts.kernel.derive(intent, proposedAuthority, scopeKey);
   } catch (e) {
     if (e instanceof IntentError) {
       await finish({
@@ -5669,6 +6012,7 @@ async function decide(
   const approveInput: ApproveInput = {
     intent: intent as MissionIntent,
     ...(proposedAuthority ? { proposedAuthority } : {}),
+    ...(scopeKey ? { requestedScope: scopeKey } : {}),
     ...(ceiling ? { ceiling } : {}),
     // @spec mission#intent-submission-evidence — the verified facts land on
     // the Mission Record (outside all anchors), request-derived, never
@@ -5676,6 +6020,10 @@ async function decide(
     ...(submissionEvidence?.length ? { submissionEvidence } : {}),
     subject: { iss: opts.issuer, sub: subject },
     approver: { iss: opts.issuer, sub: approver },
+    // @spec approval-governance#assertion-authority (#1470): the approval
+    // surface's verified authentication, read where direct approvals are
+    // recorded; never the request's acr_values or max_age.
+    authentication: { acr: principal.acr, auth_time: principal.auth_time, interactive },
     clientId: String(params.client_id),
     approvalEventId,
   };
@@ -6023,10 +6371,28 @@ function renderLines(lines: readonly string[], cls: string): string {
   return `<ul class="${cls}">${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`;
 }
 
+/**
+ * @spec mission#approval-event (step 5, #1503): the OAuth client that receives
+ * the authority, identified from this AS's registration of it: the registered
+ * `client_id` and display name. Registration here is the deployment's static
+ * client configuration (no dynamic registration), so the registered name is
+ * the AS's, never text the client supplies. Every value is inert text.
+ */
+function renderRegisteredClient(client: { clientId: string; clientName?: string | undefined }): string {
+  const name = client.clientName
+    ? `<p>Registered name: <span class="client-name">${escapeHtml(client.clientName)}</span></p>`
+    : "";
+  return `<section class="receiving-client"><h2>Client receiving this authority (from this authorization server's registration)</h2>
+<p>Client ID: <code class="client-id">${escapeHtml(client.clientId)}</code></p>${name}</section>
+`;
+}
+
 function renderApprovalPage(
   uid: string,
   intent: unknown,
   authority: readonly AuthorityEntry[],
+  /** @spec mission#approval-event (step 5): the receiving client, from the AS's registration. */
+  client: { clientId: string; clientName?: string | undefined },
   proposal?: unknown,
   provenance?: unknown[],
   authoritySource?: AuthoritySource,
@@ -6080,6 +6446,10 @@ function renderApprovalPage(
 <h2>Device code</h2><p>Code: <code class="user-code">${escapeHtml(device.userCode)}</code></p>
 `
     : "";
+  // @spec mission#approval-event (step 5, #1503): every other approval page
+  // names the receiving client from the AS's registration; the device page's
+  // own client section above names it from that same registration.
+  const clientSection = device ? "" : renderRegisteredClient(client);
   const deviceConfirmations = device
     ? `<label><input type="checkbox" name="confirm_user_code" value="true" required> This code matches the code the requesting client displays.</label>
 <label><input type="checkbox" name="confirm_started" value="true" required> I started this request.</label>
@@ -6120,7 +6490,7 @@ ${inheritance}`
       : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
-${deviceSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
+${deviceSection}${clientSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
 ${sourceSection}
 ${proposalSection}
 ${provenanceSection}

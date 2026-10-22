@@ -794,11 +794,13 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     },
     activation_actor: { iss: parent.issuer, sub: parent.client_id },
     root_commitment: primaryPolicy?.digest ?? parent.authority_hash,
-    // @spec mission#mission-record (#580) — the consented root (the parent's
-    // authority_hash, or the entry-carried child_creation_policy digest
-    // riding the committed entry) was approved at the PARENT's approval
-    // event: retained state, never the child-creation request.
-    approved_at: parent.created_at,
+    // @spec mission#mission-record (#580), child-delegation#record-requirements
+    // (#1514) — the human approval instant of the root the child's authority
+    // traces to, from the retained Parent record, never the request. A
+    // `direct` Parent's approval event was that human approval. A
+    // standing-consent Parent's approval event was an activation, so its own
+    // `approved_at` carries the human approval instant behind its root.
+    approved_at: parent.approval_basis.type === "direct" ? parent.created_at : parent.approval_basis.approved_at,
   };
 
   const child: MissionRecord = {

@@ -32,6 +32,7 @@ import {
   MISSION_TEMPLATE_TYP,
   proposalHash,
   refusedEntryMember,
+  unsupportedDelegationMember,
   unsupportedEntryMember,
 } from "@mission/core";
 import {
@@ -176,13 +177,20 @@ export interface CreateTemplateInput {
   expires_at: string;
 }
 
+/**
+ * A template proposed for consent: the body without the approver and the
+ * approval event, which the human consent supplies (@spec
+ * mission-template#template-consent).
+ */
+export type TemplateProposalBody = Omit<CreateTemplateInput, "approver" | "approval_event_id">;
+
 const nonEmptyString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
 
 /**
  * @spec mission-template#the-mission-template — the typed `allowed_dispatchers`
  * and `allowed_recipients` entries, refused at template consent when malformed.
  */
-function assertDispatchersAndRecipients(input: CreateTemplateInput): void {
+function assertDispatchersAndRecipients(input: TemplateProposalBody): void {
   if (!Array.isArray(input.dispatchers) || input.dispatchers.length === 0 || !input.dispatchers.every(nonEmptyString)) {
     throw new TemplateError("template dispatchers must be a non-empty array of client_id strings");
   }
@@ -204,38 +212,12 @@ function assertDispatchersAndRecipients(input: CreateTemplateInput): void {
 }
 
 /**
- * @spec mission-template — create (consent to) a Mission Template.
- * `template_hash = computeAnchor(MISSION_TEMPLATE_TYP, issuer, body)` commits to
- * the consented body. IDEMPOTENT by `approval_event_id`: a repeat returns the
- * template that approval already created (so a retried consent never mints a
- * second template nor a mismatched hash).
- *
- * @spec mission#approval-event (step 3), mission#authority-sources — template
- * consent IS an approval event, so it establishes the template's
- * `authority_source` from the injected trusted catalog, keyed on the
- * `recipients` (each recipient Subject through each recipient Agent, #827)
- * and never from the request body. Each pair commits its own root, and every
- * pair MUST share one provenance, or the template is refused: a template
- * whose instances would draw on two kinds of authority has no single
- * provenance to inherit. The established source and the per-recipient roots
- * are provenance and stay OUTSIDE `template_hash`, exactly as
- * `authority_source` stays outside both Mission anchors.
+ * @spec mission-template#the-mission-template, mission-template#template-consent:
+ * the checks on a template body that need no approver, refused at a
+ * proposal and again at consent: the same body is refused at both.
  */
-export function createTemplate(
-  store: TemplateStore,
-  input: CreateTemplateInput,
-  options: {
-    authoritySourceCatalog: BoundAuthoritySourceCatalog;
-    authoritySourceResolver?: AuthoritySourceResolver;
-    capabilityResolver?: CapabilitySourceResolver;
-    /**
-     * @spec mission#standing-consent-bases — the Dispatch Policies this issuer
-     * holds; the template commits the named policy's snapshot digest.
-     */
-    dispatchPolicies?: DispatchPolicies;
-  },
-): MissionTemplate {
-  if (input.ceiling.length === 0) {
+export function assertTemplateBody(input: TemplateProposalBody): void {
+  if (!Array.isArray(input.ceiling) || input.ceiling.length === 0) {
     throw new TemplateError("template ceiling must be non-empty");
   }
   // @spec resource-access#entry-validation (#1278, D457): a template ceiling
@@ -252,6 +234,15 @@ export function createTemplate(
     if (unsupported !== undefined) {
       throw new TemplateError(
         `ceiling[${i}] carries ${unsupported}, which is not a supported member of the mission_resource_access type`,
+      );
+    }
+    // @spec resource-access#resource-access-type (D634): likewise a
+    // `delegation` member this authorization server does not implement, which
+    // dispatch derivation would otherwise carry unchanged.
+    const delegationMember = unsupportedDelegationMember(entry);
+    if (delegationMember !== undefined) {
+      throw new TemplateError(
+        `ceiling[${i}] carries ${delegationMember}, which is not a supported delegation member`,
       );
     }
     // @spec resource-access#resource-contract (#249, D553): template consent
@@ -297,6 +288,81 @@ export function createTemplate(
   ) {
     throw new TemplateError("dispatch_policy must be an object with a non-empty id and version");
   }
+}
+
+/**
+ * @spec capability-binding#conformance: the Template Ceiling a template
+ * commits. At this trusted establishment boundary, request-body bindings are
+ * never facts: every caller-supplied capability binding is discarded and the
+ * trusted bindings are resolved fresh. The consent page renders this ceiling,
+ * so the human reviews what the template commits.
+ */
+export function templateCeiling(ceiling: AuthorityEntry[], resolver?: CapabilitySourceResolver): AuthorityEntry[] {
+  return resolver
+    ? resolveFreshCapabilitySources(ceiling.map(({ capability_sources: _drop, ...entry }) => entry), resolver)
+    : ceiling;
+}
+
+/**
+ * @spec mission#standing-consent-bases: the consented template commits the
+ * Dispatch Policy's content: the issuer mints the reference from the snapshot
+ * it holds for that id and version, and refuses a policy it does not hold.
+ */
+export function pinDispatchPolicy(
+  issuer: string,
+  dispatchPolicies: DispatchPolicies | undefined,
+  named: { id: string; version: string },
+): NonNullable<ReturnType<typeof mintActivationPolicyRef>> {
+  const dispatch_policy = mintActivationPolicyRef(issuer, dispatchPolicies, named.id, named.version);
+  if (!dispatch_policy) {
+    throw new TemplateError(`dispatch_policy ${named.id} version ${named.version} is not a Dispatch Policy this issuer holds`);
+  }
+  // @spec mission-template#template-consent, derivation-limits#effective-limit
+  // (#1119, D327): the Dispatch Policy states the per-instance derivation-limit
+  // maximum the consent commits under `template_hash`. A malformed statement
+  // is refused here, at consent, never discovered at a dispatch.
+  const held = dispatchPolicies?.[named.id];
+  if (held && standingConsentMaximumOf(held) === undefined) {
+    throw new TemplateError(
+      `dispatch_policy ${named.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}: an integer of at least 1, or null`,
+    );
+  }
+  return dispatch_policy;
+}
+
+/**
+ * @spec mission-template — create (consent to) a Mission Template.
+ * `template_hash = computeAnchor(MISSION_TEMPLATE_TYP, issuer, body)` commits to
+ * the consented body. IDEMPOTENT by `approval_event_id`: a repeat returns the
+ * template that approval already created (so a retried consent never mints a
+ * second template nor a mismatched hash).
+ *
+ * @spec mission#approval-event (step 3), mission#authority-sources — template
+ * consent IS an approval event, so it establishes the template's
+ * `authority_source` from the injected trusted catalog, keyed on the
+ * `recipients` (each recipient Subject through each recipient Agent, #827)
+ * and never from the request body. Each pair commits its own root, and every
+ * pair MUST share one provenance, or the template is refused: a template
+ * whose instances would draw on two kinds of authority has no single
+ * provenance to inherit. The established source and the per-recipient roots
+ * are provenance and stay OUTSIDE `template_hash`, exactly as
+ * `authority_source` stays outside both Mission anchors.
+ */
+export function createTemplate(
+  store: TemplateStore,
+  input: CreateTemplateInput,
+  options: {
+    authoritySourceCatalog: BoundAuthoritySourceCatalog;
+    authoritySourceResolver?: AuthoritySourceResolver;
+    capabilityResolver?: CapabilitySourceResolver;
+    /**
+     * @spec mission#standing-consent-bases — the Dispatch Policies this issuer
+     * holds; the template commits the named policy's snapshot digest.
+     */
+    dispatchPolicies?: DispatchPolicies;
+  },
+): MissionTemplate {
+  assertTemplateBody(input);
 
   // @spec mission#approval-event (step 3), mission#authority-sources (#829) ,
   // the approver is a principal of this deployment's issuer namespace, checked
@@ -317,35 +383,9 @@ export function createTemplate(
   if (existing) return existing;
 
   const { authority_source, source_bindings } = establishTemplateAuthoritySource(input, options);
-  // At this trusted establishment boundary, request-body bindings are never facts.
-  const ceiling = options.capabilityResolver
-    ? resolveFreshCapabilitySources(input.ceiling.map(({ capability_sources: _drop, ...entry }) => entry), options.capabilityResolver)
-    : input.ceiling;
+  const ceiling = templateCeiling(input.ceiling, options.capabilityResolver);
 
-  // @spec mission#standing-consent-bases — the consented template commits the
-  // Dispatch Policy's content: the issuer mints the reference from the snapshot
-  // it holds for that id and version, and refuses a policy it does not hold.
-  const dispatch_policy = mintActivationPolicyRef(
-    input.issuer,
-    options.dispatchPolicies,
-    input.dispatch_policy.id,
-    input.dispatch_policy.version,
-  );
-  if (!dispatch_policy) {
-    throw new TemplateError(
-      `dispatch_policy ${input.dispatch_policy.id} version ${input.dispatch_policy.version} is not a Dispatch Policy this issuer holds`,
-    );
-  }
-  // @spec mission-template#template-consent, derivation-limits#effective-limit
-  // (#1119, D327): the Dispatch Policy states the per-instance derivation-limit
-  // maximum the consent commits under `template_hash`. A malformed statement
-  // is refused here, at consent, never discovered at a dispatch.
-  const heldDispatchPolicy = options.dispatchPolicies?.[input.dispatch_policy.id];
-  if (heldDispatchPolicy && standingConsentMaximumOf(heldDispatchPolicy) === undefined) {
-    throw new TemplateError(
-      `dispatch_policy ${input.dispatch_policy.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}: an integer of at least 1, or null`,
-    );
-  }
+  const dispatch_policy = pinDispatchPolicy(input.issuer, options.dispatchPolicies, input.dispatch_policy);
   const templateBody = {
     template_version: input.template_version,
     ceiling,

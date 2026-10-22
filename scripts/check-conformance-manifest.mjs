@@ -347,20 +347,23 @@ for (const row of rows) {
       fail("schema", `${id}: capability "${app.capability}" not declared in model.capabilities`);
     }
   } else if (app.kind === "capabilities") {
-    // All of several independently optional capabilities: the row applies
-    // only where the deployment claims every one of them.
-    const all = app.all_of;
-    const extra = Object.keys(app).filter((k) => k !== "kind" && k !== "all_of");
+    // all_of: several independently optional capabilities, and the row
+    // applies only where the deployment claims every one of them. any_of:
+    // alternative capabilities sharing a duty, and the row applies wherever
+    // the deployment claims at least one. Exactly one of the two.
+    const key = Object.hasOwn(app, "all_of") ? "all_of" : "any_of";
+    const list = app[key];
+    const extra = Object.keys(app).filter((k) => k !== "kind" && k !== key);
     if (
       extra.length ||
-      !Array.isArray(all) ||
-      all.length < 2 ||
-      !all.every(nonEmptyString) ||
-      new Set(all).size !== all.length
+      !Array.isArray(list) ||
+      list.length < 2 ||
+      !list.every(nonEmptyString) ||
+      new Set(list).size !== list.length
     ) {
-      fail("schema", `${id}: capabilities applicability is {kind, all_of}, naming at least two distinct capabilities`);
+      fail("schema", `${id}: capabilities applicability is {kind, all_of} or {kind, any_of}, naming at least two distinct capabilities`);
     } else if (Array.isArray(model.capabilities)) {
-      for (const c of all) {
+      for (const c of list) {
         if (!model.capabilities.includes(c)) fail("schema", `${id}: capability "${c}" not declared in model.capabilities`);
       }
     }

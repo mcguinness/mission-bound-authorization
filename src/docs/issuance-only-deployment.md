@@ -22,6 +22,18 @@ What the deployment is:
 - **Scope-only Resource Servers get a safe projection or no token.** A
   `scope`-only Resource Server receives only a `scope` projection the AS proved
   safe, or no token.
+- **Existing scopes request the authority.** A client that already requests
+  `reports.read` keeps requesting it. With no `authorization_details`, the AS
+  keys its configured mapping on the requested `scope` values of the
+  `scope`-only target (`requestedScopeEntries`, reading the same
+  `config/scope-projection.json` table the projection reads). The Mission then
+  approves only the entry each value stands for, and the token carries the same
+  value. Without a requested `scope`, the Intent's `target_resources` selects
+  the target's whole ceiling. Test: `configured-mapping mode keyed on a
+  requested scope (@spec mission#derivation-modes,
+  resource-access#scope-projection) > an Intent-only request naming
+  reports.read approves only the entry that value stands for, commits no
+  proposal, and its token carries that value`.
 - **Revocation cutoff.** Revocation stops new issuance at the issuance gate.
   Outstanding tokens run to their own `exp` plus the Resource Server's clock
   tolerance, or to the next request at a Resource Server that introspects. A
@@ -55,7 +67,7 @@ Where it sits in the drafts:
     issuance-only example shape (§ Deployment Profile Example Shapes,
     `{#deployment-profile-examples}`), which §5 fills.
 - `draft-mcguinness-oauth-mission.md`:
-  - § Issuance Scope, Not Runtime Enforcement (`{#runtime-boundary}`), what
+  - § Issuance Scope and Runtime Enforcement (`{#runtime-boundary}`), what
     the OAuth binding does not do;
   - § Scope Projection (`{#scope-projection}`), how a `scope`-only target is
     served.
@@ -632,7 +644,7 @@ launcher refuses every excluded path (#873)` unless the row says otherwise.
 | Expansion exchange | Off | 400 `unsupported_grant_type` | `the expansion exchange (requested_token_type access_token) is refused unsupported_grant_type` |
 | AROP deferred grant (DTR) | Off | 400 `unsupported_grant_type` | `the AROP deferred grant is refused unsupported_grant_type` |
 | Deferred Mission Approval (`deferred-approval`: `completion_mode=deferred` creation, its `mdfr_` poll and `governed_policy` completion) | Off (opt-in) | The hint is ignored and the request reaches the approval interaction; with the AROP grant off too, the deferred grant is not registered (400 `unsupported_grant_type`) | no test in this launcher; on the default assembly, `services/authorization-server/test/deferred-mission-approval-endpoint.test.ts`, `Deferred Mission Approval capability (@spec deferred-approval#deferred-approval, deferred-approval#policy-completion) > is off by default (the hint is ignored, an mdfr_ code is unknown, nothing is advertised), and where on advertises deferral and its cancellation` |
-| Templates: dispatch grant and the admin routes | Off | 400 `unsupported_grant_type`; `/templates` and `/templates/{id}/lifecycle` answer 501 `temporarily_unavailable` | `template dispatch is refused unsupported_grant_type, and the template admin routes answer 501` |
+| Templates: dispatch grant and the admin routes | Off | 400 `unsupported_grant_type`; `/templates`, `/templates/proposals` and `/templates/{id}/lifecycle` answer 501 `temporarily_unavailable` | `template dispatch is refused unsupported_grant_type, and the template admin routes answer 501` |
 | Containment: lifecycle `contain` | Off | 400 `invalid_request`; the Mission stays `active` at version 1 | `the lifecycle contain operation is refused invalid_request and the Mission stays active` |
 | Containment: protected-event ingestion | Off | 501 `temporarily_unavailable` | `protected-event ingestion answers 501 temporarily_unavailable` |
 | Entry discharge (lifecycle `discharge`) | Off | 400 `invalid_request` | `the lifecycle discharge operation is refused invalid_request` |

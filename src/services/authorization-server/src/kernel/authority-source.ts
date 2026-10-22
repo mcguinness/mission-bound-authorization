@@ -37,7 +37,12 @@
 import { createHash } from "node:crypto";
 import { canonicalize, entryWithinCeiling, type JsonValue } from "@mission/core";
 import { IntentError } from "./intent.js";
-import type { AuthorityEntry, AuthoritySource, AuthoritySourceType } from "./types.js";
+import type {
+  AuthorityEntry,
+  AuthoritySource,
+  AuthoritySourceType,
+  RecordedAuthoritySource,
+} from "./types.js";
 
 /** @spec mission#mission-record — the closed `authority_source.type` enum. */
 export const AUTHORITY_SOURCE_TYPES: readonly AuthoritySourceType[] = [
@@ -47,13 +52,37 @@ export const AUTHORITY_SOURCE_TYPES: readonly AuthoritySourceType[] = [
 ];
 
 /**
- * @spec mission#mission-record, mission#lifecycle — the enum is "subject to the
- * forward-compatibility rule of {{lifecycle}}", which admits no fail-open: an
- * unrecognized `type` is refused wherever it appears, at config load and at
- * record hydration alike, rather than widened into the union.
+ * @spec mission#mission-record (#1503): "An AS MUST NOT approve a Mission
+ * whose authority source it does not recognize", so an unrecognized `type` is
+ * refused wherever the issuer establishes a source: at config load and at
+ * every approval-time resolution. A stored record keeps one as opaque
+ * provenance ({@link parseRecordedAuthoritySource}).
  */
 export function isAuthoritySourceType(value: unknown): value is AuthoritySourceType {
   return typeof value === "string" && (AUTHORITY_SOURCE_TYPES as readonly string[]).includes(value);
+}
+
+/** @spec mission#mission-record (#1503): a recorded source of recognized `type`. */
+export function isRecognizedAuthoritySource(source: RecordedAuthoritySource): source is AuthoritySource {
+  return isAuthoritySourceType(source.type);
+}
+
+/**
+ * @spec mission#mission-record (#1503): "only an operation that itself
+ * requires recognized source semantics refuses". Applying a committed
+ * source's ceiling or its governed policy is such an operation, so a source
+ * of unrecognized `type` refuses `access_denied`, the refusal every source
+ * that cannot be established gets. The Mission's own state is untouched.
+ */
+export function assertRecognizedAuthoritySource(
+  source: RecordedAuthoritySource,
+): asserts source is AuthoritySource {
+  if (!isRecognizedAuthoritySource(source)) {
+    throw new IntentError(
+      "access_denied",
+      `the committed authority source has unrecognized type '${source.type}', so its source semantics cannot be established`,
+    );
+  }
 }
 
 /**
@@ -366,7 +395,9 @@ export interface AuthoritySourceBinding {
   readonly deployment: string;
   readonly principal: LocalPrincipal;
   readonly clientId: string;
-  readonly provenance: AuthoritySource;
+  /** As stored: a source of unrecognized `type` is kept opaque (#1503), and
+   *  every drawdown from it refuses at {@link resolveCommittedSource}. */
+  readonly provenance: RecordedAuthoritySource;
 }
 
 /**
@@ -476,6 +507,7 @@ export function catalogAuthoritySourceResolver(
       if (binding.deployment !== catalog.deployment) {
         throw new IntentError("access_denied", "the committed authority source belongs to another deployment");
       }
+      assertRecognizedAuthoritySource(binding.provenance);
       const local = assertLocalPrincipal(catalog, binding.principal, "subject");
       const entry = catalog.entries.find((e) => e.id === binding.rootId);
       if (!entry) {
@@ -568,6 +600,16 @@ export function resolveApprovalSource(
       "the authority-source resolver answered for a different Subject, client, deployment or source",
     );
   }
+  // @spec mission#mission-record (#1503): "An AS MUST NOT approve a Mission
+  // whose authority source it does not recognize". The catalog resolver
+  // cannot answer one (its catalog is validated at load); an injected
+  // resolver can, and is refused here, before any record exists.
+  if (!isAuthoritySourceType(r.entry.type)) {
+    throw new IntentError(
+      "access_denied",
+      `the authority-source resolver answered a source of unrecognized type '${String(r.entry.type)}'`,
+    );
+  }
   return r;
 }
 
@@ -577,7 +619,7 @@ export function resolveApprovalSource(
  * root), byte for byte.
  */
 export function assertRecordedSourceResolved(
-  recorded: AuthoritySource,
+  recorded: RecordedAuthoritySource,
   resolved: AuthoritySourceResolution,
 ): void {
   if (
@@ -600,7 +642,7 @@ export function assertRecordedSourceResolved(
  */
 export function historicalRootFor(
   catalog: AuthoritySourceCatalog,
-  context: { clientId: string; sub: string; provenance: AuthoritySource },
+  context: { clientId: string; sub: string; provenance: RecordedAuthoritySource },
 ): string | undefined {
   const bytes = canonicalize(context.provenance as unknown as JsonValue);
   const roots = selectingEntries(catalog, context.clientId, context.sub).filter(
@@ -636,6 +678,11 @@ export function bindingOf(resolution: AuthoritySourceResolution): AuthoritySourc
  * answer for another root, deployment, root context or source refuses, as
  * does a declaration whose client or Subject selector no longer selects the
  * binding's own context.
+ *
+ * A committed source of unrecognized `type` (#1503) refuses here, before any
+ * resolver runs: every drawdown needs the source's ceiling, so this is the one
+ * point at which child creation, template dispatch, a progressive successor
+ * and a carryover replacement refuse it.
  */
 export function resolveCommittedSource(
   resolver: AuthoritySourceResolver,
@@ -645,6 +692,7 @@ export function resolveCommittedSource(
   if (binding.deployment !== input.deployment) {
     throw new IntentError("access_denied", "the committed authority source belongs to another deployment");
   }
+  assertRecognizedAuthoritySource(binding.provenance);
   let r: AuthoritySourceResolution;
   try {
     r = resolver.resolveCommittedRoot({ deployment: input.deployment, binding });
@@ -798,10 +846,10 @@ export function assertPolicyDigestMatches(
 }
 
 /**
- * @spec mission#mission-record, mission#lifecycle — parse a persisted
- * `authority_source`, refusing rather than widening. `JSON.parse` on a stored
- * row otherwise admits any string into the union, so hydration is the second
- * fail-closed point (the typed config loader is the first).
+ * @spec mission#mission-record: parse an `authority_source` the issuer is
+ * about to rely on as established (a resolver's answer), refusing an
+ * unrecognized `type` rather than widening the union. A STORED value goes
+ * through {@link parseRecordedAuthoritySource} instead (#1503).
  */
 export function parseAuthoritySource(raw: unknown, context: string): AuthoritySource {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
@@ -827,4 +875,26 @@ export function parseAuthoritySource(raw: unknown, context: string): AuthoritySo
     throw new Error(`${context}: authority_source.policy is absent outside organizational`);
   }
   return { type };
+}
+
+/**
+ * @spec mission#mission-record (#1503): parse a STORED `authority_source` (a
+ * Mission Record, a committed root binding, a template). A recognized `type`
+ * is held to {@link parseAuthoritySource}'s member rules, so a stored
+ * organizational source without its policy reference still refuses. An
+ * unrecognized `type` "is preserved unchanged as opaque provenance and does
+ * not by itself invalidate or deactivate the Mission": it is returned with
+ * every member as stored, and only an operation needing recognized source
+ * semantics refuses ({@link assertRecognizedAuthoritySource}).
+ */
+export function parseRecordedAuthoritySource(raw: unknown, context: string): RecordedAuthoritySource {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${context}: authority_source must be an object`);
+  }
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.type !== "string" || obj.type.length === 0) {
+    throw new Error(`${context}: authority_source.type must be a non-empty string`);
+  }
+  if (isAuthoritySourceType(obj.type)) return parseAuthoritySource(raw, context);
+  return obj as RecordedAuthoritySource;
 }
