@@ -71,12 +71,12 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "55cf3223cf1dc695238776b86522c6be6b82f25d",
-    "content_sha256": "3e3d1d6b5a01f8914a4d2add04fd25d9a94d4582839796ba5a4fc81deb275c68"
+    "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
+    "content_sha256": "e758acf47c3dd2043c6db6ff53ede2cb108950287315b0d289f54e444b193780"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "e226e962ac68b8c26ef8f0388783ff9d8a289c91",
-    "content_sha256": "dd5500805fdc490e49580f195685f65afa4a29bce9a742b24af26de356ded11e"
+    "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
+    "content_sha256": "52dcce6f6f809438190f6b8685a9c24cf0d4f261f13f04f63f078d4ca8e44a54"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
@@ -111,8 +111,8 @@
     "content_sha256": "4c24262bd4ab09784922ab543c24d97cfb849c9a5845c70a664ef39d906803b3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
-    "content_sha256": "03313926575c29814dc3d56328f76dc778a00ba9697df39c1a377588bd08e934"
+    "revision": "84b52a8fc422c85abedf768882e887524a99081e",
+    "content_sha256": "48ea6d93bdc42e5f69e8aaca0fa0e103e481733b742d780d3049fbe8109ea62c"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
@@ -3647,6 +3647,43 @@
    "notes": "D559 (#1411): ruled qualified A + C. #1512 (D625): the Request Object path is cited too. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
   },
   {
+   "id": "core.derivation.configured-mapping-scope-key",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "derivation-modes",
+   "text": "or on the requested `scope` values for a `scope`-only target",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where no authority proposal was submitted, the configured mapping can key on the requested scope values of a scope-only target: the Authority Set is the entries those values stand for, narrowed to policy, not the mapping a target_resources key would select"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > an Intent-only request naming reports.read approves only the entry that value stands for, commits no proposal, and its token carries that value",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > each requested value stands for its own entry, and without a requested scope the same Intent approves the target's whole ceiling (control)",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). The control in the second witness shows the target_resources key still approving the target's whole ceiling when no scope is requested. Proved by mutation: disabling the scope key in the derivation (deriveAuthoritySetWithProvenance's scopeKeyed) fails all three witnesses (the whole ceiling is approved for reports.read, one entry for two values, and a Mission is created where nothing should derive)."
+  },
+  {
    "id": "core.derivation.candidate-complete-before-rendering",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "derivation-modes",
@@ -4108,7 +4145,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "where a deployment declares a recency ceiling for a consequence class, a standing-consent activation older than the ceiling is refused rather than activated",
-    "local": "Witnessed for governed_policy, whose root declares the ceilings: an older approved_at, one beyond the skew, and the strictest per-class ceiling refuse at the creation instant. Template's review_cadence and the other bases are not cited here."
+    "local": "Witnessed for governed_policy, whose root declares the ceilings: an older approved_at, one beyond the skew, and the strictest per-class ceiling refuse at the creation instant. Template's review_cadence and the other bases are not cited here. Where ceiling drawdowns are recorded, a ceiling consent older than the recording rule's ceiling at the decision instant falls back to a fresh human approval instead of activating by policy (#1470 slice 2); template and policy_drawdown are not cited here."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -4124,9 +4161,21 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a high-risk class only under a committed, class-named exception, whose age then binds",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends an unclassified action, a stale consent, an ineligible deciding policy or consent to a fresh approval, nothing written",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 6: replays the eligibility gate and recency at the creation instant",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation."
+   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation. #1470 slice 2 (D626): ceiling_drawdown records."
   },
   {
    "id": "core.approval-basis.adjudication-direct-human",
@@ -4470,7 +4519,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "where a governed Mission populates approval_basis.adjudication with governance_record true and the Approval Governance Record carries an accountable assertion, that assertion's kind equals adjudication.kind, which the approval basis fixes (human for direct, policy for governed_policy); governance_record never changes kind and kind never names the record itself",
-    "local": "Witnessed for governed_policy (adjudication.kind policy, accountable assertion kind policy, a mismatched kind refused) and for direct (a recorded direct approval carries adjudication {kind human, governance_record true}, its accountable assertion is kind human, and the direct commit gate refuses a mismatched kind). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy."
+    "local": "Witnessed for governed_policy (adjudication.kind policy, accountable assertion kind policy, a mismatched kind refused) and for direct (a recorded direct approval carries adjudication {kind human, governance_record true}, its accountable assertion is kind human, and the direct commit gate refuses a mismatched kind). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy. A recorded ceiling drawdown carries adjudication {kind policy, governance_record true}; its record carries no accountable assertion, so the kind-equality clause does not bind it (#1470 slice 2)."
    },
    "level": "unit",
    "coverage": "tested",
@@ -4504,9 +4553,15 @@
      "name": "a recorded direct approval carries the approval surface's authentication (@spec approval-governance#assertion-authority, #1470) > records the browser login's acr and auth_time as the Approver's human assertion, and the record re-checks",
      "level": "endpoint",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > commits one signed record whose one contributing policy assertion is the drawdown policy's, by the ceiling's consenting human",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable)."
+   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). #1470 slice 2 (D626): ceiling_drawdown records."
   },
   {
    "id": "approval-governance.triggers.required-under-adopting-profile",
@@ -4546,7 +4601,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a record kept although no profile or basis requires it meets every requirement on the record (authenticated, event-bound, policy-authorized assertions; the accountable-approver rule for its basis; atomic commitment; the envelope); one that does not, does not commit",
-    "local": "Witnessed on the reference's voluntary direct records (MissionKernel.approve under the default-off directApprovalRecording, which no profile requires): the committed record verifies (envelope) and is bound to its approval event and Mission; its human assertion carries the approval surface's verified authentication; it is policy-authorized by the direct approval rule (the approval-authentication floor, the Subjects, approve-for and write eligibility the approval surface enforces, and the authority-source activators the kernel enforces; its floor passes the approval-floor policy's strict validation), which the issuer evaluates again at the commit and which refuses the Mission when it denies; it satisfies the accountable-approver rule; and it commits atomically with the Mission (a signing or persistence fault leaves no Mission, record or inputs). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy."
+    "local": "Witnessed on the reference's voluntary direct records (MissionKernel.approve under the default-off directApprovalRecording, which no profile requires): the committed record verifies (envelope) and is bound to its approval event and Mission; its human assertion carries the approval surface's verified authentication; it is policy-authorized by the direct approval rule (the approval-authentication floor, the Subjects, approve-for and write eligibility the approval surface enforces, and the authority-source activators the kernel enforces; its floor passes the approval-floor policy's strict validation), which the issuer evaluates again at the commit and which refuses the Mission when it denies; it satisfies the accountable-approver rule; and it commits atomically with the Mission (a signing or persistence fault leaves no Mission, record or inputs). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy. Policy-adjudicated ceiling_drawdown successors are recorded too under the default-off ceilingDrawdownRecording (#1470 slice 2): the record verifies, is bound to its event and Mission, carries one contributing policy assertion authorized by the recording rule, commits with the Mission, and a drawdown the eligibility gate does not admit falls back to a fresh human approval with nothing written."
    },
    "level": "unit",
    "coverage": "tested",
@@ -4616,9 +4671,39 @@
      "name": "the direct approval rule (@spec approval-governance#approval-policy, approval-governance#assertion-validation) > denies at an evaluation instant that is not an RFC 3339 timestamp, rather than measuring no age",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > commits one signed record whose one contributing policy assertion is the drawdown policy's, by the ceiling's consenting human",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > retains the recording rule and the inputs the commit-time decision read",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends an unclassified action, a stale consent, an ineligible deciding policy or consent to a fresh approval, nothing written",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the ceiling-drawdown record commit gate (@spec approval-governance#accountable-assertion, approval-governance#assertion-authority) > admits the one contributing policy assertion, and refuses another principal, policy, instant, or contributing set",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "recorded ceiling drawdowns at the token endpoint (@spec approval-governance#recency-high-risk, approval-governance#atomic-commitment, #1470 slice 2) > a policy drawdown activates with a signed record of the drawdown policy's assertion, and the record re-checks",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 1 (D568). The reference implementation records an Approval Governance Record only where governed_policy requires one, never voluntarily, so this row has no witness surface yet. #1470 Q1 proposes a default-off voluntary record for direct approvals, which would witness this row. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). On owner review of #1484 at 41a1f750 (three P2s): the direct replay bound neither the consented ceiling nor the source root to the Mission; a malformed evaluated_at made the floor's age comparisons false; and the rule parser accepted an unknown action class, disabling a floor. Fixed: step 4 binds the inputs to the Mission's retained source binding and consented ceiling and refuses a malformed recorded authentication, step 5 refuses an evaluated_at that is not an RFC 3339 timestamp (as does the evaluator), and the rule's floor passes the approval-floor policy's strict validation. Each regression case fails on 41a1f750."
+   "notes": "#1436 ruling 1 (D568). The reference implementation records an Approval Governance Record only where governed_policy requires one, never voluntarily, so this row has no witness surface yet. #1470 Q1 proposes a default-off voluntary record for direct approvals, which would witness this row. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). On owner review of #1484 at 41a1f750 (three P2s): the direct replay bound neither the consented ceiling nor the source root to the Mission; a malformed evaluated_at made the floor's age comparisons false; and the rule parser accepted an unknown action class, disabling a floor. Fixed: step 4 binds the inputs to the Mission's retained source binding and consented ceiling and refuses a malformed recorded authentication, step 5 refuses an evaluated_at that is not an RFC 3339 timestamp (as does the evaluator), and the rule's floor passes the approval-floor policy's strict validation. Each regression case fails on 41a1f750. #1470 slice 2 (D626): ceiling_drawdown records."
   },
   {
    "id": "approval-governance.triggers.approver-differs-from-subject",
@@ -4784,7 +4869,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a policy assertion counts only when the policy it names may decide under the record's approval_policy and its principal was eligible to approve that policy version; otherwise it does not contribute",
-    "local": "Witnessed for the governed_policy accountable assertion: the deciding policy is the root or the evaluator the root commits, and an unauthorized approving human yields no consent and no activation. A human's eligibility under approval_policy is exercised on recorded direct approvals (the direct approval rule's authority-source activators, Subjects, approve-for and write eligibility, #1470 slice 1); service eligibility is not exercised."
+    "local": "Witnessed for the governed_policy accountable assertion: the deciding policy is the root or the evaluator the root commits, and an unauthorized approving human yields no consent and no activation. A human's eligibility under approval_policy is exercised on recorded direct approvals (the direct approval rule's authority-source activators, Subjects, approve-for and write eligibility, #1470 slice 1); service eligibility is not exercised. A contributing policy assertion is authorized on recorded ceiling drawdowns (#1470 slice 2): the drawdown policy must be one the recording rule admits and the one the ceiling consent committed, and the consenting human eligible under the rule's consent eligibility; otherwise the drawdown falls back to a fresh human approval and nothing contributes. That eligibility is a current check backed by the retained authenticated consent: the configuration current at the drawdown's commit, retained with it. It does not reproduce consent-time eligibility (the configuration at consent time is not retained) or consent-time authentication strength. The row stays partial for those specific gaps: service eligibility under approval_policy is not exercised, and a drawdown's consent eligibility is not checked as of consent time."
    },
    "level": "unit",
    "coverage": "partial",
@@ -4800,9 +4885,27 @@
      "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > decides by the root itself or by the evaluator the root commits, with that policy's typed digest",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends an unclassified action, a stale consent, an ineligible deciding policy or consent to a fresh approval, nothing written",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > verifies the consent's commitment to the exact drawdown policy version, and its principal's eligibility as the consenting approval enforced it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 6: replays the eligibility gate and recency at the creation instant",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 item 5 edge case (b), an assumed ruling: since #1442 a policy assertion's principal is the human who approved the policy version, so policy-authorization names both checks. Human and service eligibility: #1470 Q1 and Q2. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. Ruled D597 (#1470 Q2): no multi-decider rule for coverage alone; stays partial until a deployment needs it."
+   "notes": "#1436 item 5 edge case (b), an assumed ruling: since #1442 a policy assertion's principal is the human who approved the policy version, so policy-authorization names both checks. Human and service eligibility: #1470 Q1 and Q2. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. Ruled D597 (#1470 Q2): no multi-decider rule built solely for coverage; the ruling limits what is built, not the row's coverage. #1470 slice 2 (D626): ceiling_drawdown records. On owner review of #1522 at 58f9ede1: partial for its specific remaining gaps (service eligibility; consent-time eligibility and authentication), with the consent-eligibility limitation kept explicit."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -6404,9 +6507,21 @@
      "name": "an approval cannot consent to a child grant whose per-child figure it cannot disclose (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > refuses the approval while the entry's committed child creation policy is not held, creating no Mission; once held again, a fresh approval discloses the figure and children are created under it",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders each dispatched instance's derivation-limit rule, its maximum and its local scope beside max_active and the dispatch rate (@spec derivation-limits#approval-rendering)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses the consent while the Dispatch Policy the template was proposed under has changed: the page states why and offers no decision, and no template is created; restored, the same proposal is approved",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Not witnessed: the Template basis, since the reference has no human template-consent approval surface (the service-token stand-in returns the rule only in its creation response, which is not a rendering at approval); and the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails)."
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis on the human template consent page (GET /templates/proposals/{id}): each dispatched instance's rule and the maximum the Dispatch Policy the proposal pinned states, or that no finite maximum is guaranteed, with the consent refused while that policy has changed (template-consent-page.test.ts). Not witnessed: the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-scope",
@@ -6434,9 +6549,15 @@
      "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders each dispatched instance's derivation-limit rule, its maximum and its local scope beside max_active and the dispatch rate (@spec derivation-limits#approval-rendering)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis: the parent's approval page states, for each entry admitting policy_drawdown children, that the per-child maximum is local to each child Mission and is no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (child-derivation-limit-endpoint.test.ts). Not witnessed: the Template basis, since the reference has no human template-consent approval surface (the service-token stand-in returns the rule only in its creation response, which is not a rendering at approval); and the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. Proved by removing the scope line (the page witness fails)."
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis: the parent's approval page states, for each entry admitting policy_drawdown children, that the per-child maximum is local to each child Mission and is no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis: the template consent page states that each dispatched instance's maximum is local to it and no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (template-consent-page.test.ts). Not witnessed: the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. Proved by removing the scope line (the page witness fails)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-evidence",
@@ -9291,6 +9412,81 @@
     }
    ],
    "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption."
+  },
+  {
+   "id": "core.scope-projection.requested-scope-stands-for-entries",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "Each requested value stands for the entries that the type's specification derives from the mapping",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with no proposal, the requested scope values of a scope-only target yield as candidates exactly the entries the target's trusted mapping says they stand for; the Authority Set is those entries narrowed to policy (one that narrows to nothing is refused, creating no Mission), never the target's whole ceiling, and the token for that target carries their projection",
+    "local": "the reference derives the candidates with requestedScopeEntries over the pushed resource values, or the Intent's target_resources, and narrows each against every ceiling entry governing it, as a proposal is narrowed"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > an Intent-only request naming reports.read approves only the entry that value stands for, commits no proposal, and its token carries that value",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > each requested value stands for its own entry, and without a requested scope the same Intent approves the target's whole ceiling (control)",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > a requested value whose mapped rights the ceiling does not cover derives nothing: access_denied, and no Mission",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). Proved by mutation: disabling the scope key in the derivation (deriveAuthoritySetWithProvenance's scopeKeyed) fails all three witnesses (the whole ceiling is approved for reports.read, one entry for two values, and a Mission is created where nothing should derive)."
+  },
+  {
+   "id": "core.scope-projection.requested-scope-unnamed-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "A requested value the target's trusted mapping does not name cannot be granted, and is refused with `invalid_scope`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a pushed resource scope value that the scope-only target's trusted mapping does not name is refused invalid_scope at submission, before any Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "ungrantable requested scope (@spec mission#scope-projection, mission#error-mapping) > refuses invalid_scope at PAR a resource scope for an authorization_details target, and a value the scope-only target's mapping does not name",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). The reference already refused such a value at PAR (earlyScopeRefusal). Proved by mutation: disabling the unnamed-value check fails the witness ('expected 201 to be 400')."
   },
   {
    "id": "core.scope-projection.refresh-preserved-on-projection-refusal",
@@ -13241,7 +13437,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke",
+     "status.revocation-propagation"
+    ]
    },
    "profiles": [
     "runtime-enforced"
@@ -13249,12 +13450,12 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every issuer-held narrowing mechanism a deployment runs (an adopted Entry Discharge companion's discharge mechanism and any companion profile's own overlay, such as Mission Containment) feeds one shared Effective Authority Set computation, and every derivation and every authority-reporting surface (Mission Status, the introspection projection, and any other surface reporting a Mission's authority) uses that same computation rather than an independently computed view"
+    "normative": "in a Mission Issuer claiming any extension of this document, whichever companion profiles it adopts, every issuer-held narrowing mechanism the deployment runs (an adopted Entry Discharge companion's discharge mechanism and any companion profile's own overlay, such as Mission Containment) feeds one shared Effective Authority Set computation, and every derivation and every authority-reporting surface (Mission Status, the introspection projection, and any other surface reporting a Mission's authority) uses that same computation rather than an independently computed view. An issuer duty: it binds no consumer, and no implementation claiming none of the extensions"
    },
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
+   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation. #1535 finding 6 (D649): scoped to a Mission Issuer claiming any extension of this document. The gate names the extensions the model has capabilities for; the Mission Status operation and the introspection projection have none, so a deployment claiming only those is not gated in until the model gains them."
   },
   {
    "id": "status.conformance.revoke-only-class",
@@ -13470,6 +13671,66 @@
     }
    ],
    "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+  },
+  {
+   "id": "status.lifecycle.private-key-jwt-params",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "The request also carries the client authentication parameters of the mechanism it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
+   "facet": "private-key-jwt",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Lifecycle request authenticating by private-key JWT carries `client_assertion_type` with the jwt-bearer value and `client_assertion` in its form body; an assertion sent without the type or under another type, and a type sent without an assertion, are refused `invalid_client` (HTTP 400), leaving the Mission unchanged",
+    "local": "private_key_jwt is the only method the reference Lifecycle endpoint accepts. A type sent without an assertion is refused structurally (there is nothing to verify), so only the type comparison is separately witnessable"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint transport and client authentication (@spec status#mission-status-authentication, status#mission-status-auth-failures, #1191) > refuses an assertion sent without client_assertion_type or under another type, and a client_assertion_type sent without an assertion, invalid_client (HTTP 400)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 finding 12 (D649). Witness: dropping the client_assertion_type comparison from authenticateLifecycleClient fails the cited test (an untyped assertion is answered 200)."
+  },
+  {
+   "id": "status.lifecycle.client-id-mtls",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "The request also carries the client authentication parameters of the mechanism it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
+   "facet": "mtls-client-id",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Lifecycle request authenticating by mTLS carries `client_id` in its form body, and one that omits it is not authenticated and is refused `invalid_client`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented."
   },
   {
    "id": "status.lifecycle.unserved-operation-refused",
@@ -13753,7 +14014,7 @@
    "id": "status.request.served-audience-authorization",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-request",
-   "text": "The Mission Issuer MUST honor a request naming an audience other than the caller's own only where its configuration authorizes the authenticated caller for that audience",
+   "text": "The Mission Issuer MUST honor a request's `audience` only where that configuration authorizes the authenticated caller for it, and MUST otherwise refuse the request with the not-found response of {{mission-status-errors}}.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -13763,12 +14024,75 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Mission Status request naming an audience other than the caller's own (for example a Mission Issuance Grant consuming Authorization Server's per-resource request) is honored only where the Mission Issuer's configuration authorizes that caller for the audience, and is otherwise refused with the not-found response, indistinguishable from an unknown Mission"
+    "normative": "a Mission Status request's `audience`, the caller's own audience included, is honored only where the Mission Issuer's configuration authorizes the authenticated caller for it (for example a Mission Issuance Grant consuming Authorization Server's per-resource request), and is otherwise refused with the not-found response, indistinguishable from an unknown Mission"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
+   "notes": "#963 decision D1; #1535 finding 12 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status, which passes the request's `audience` straight through to the signed response (provider.ts, the signed Status route), checked against neither a per-caller audience configuration nor the caller's client_id; no such configuration exists, and no consuming-Authorization-Server caller class or issuance-grant redemption path exists in src."
+  },
+  {
+   "id": "status.request.audience-entitlement-configuration-only",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "Entitlement to an audience comes only from that configuration, never from string equality between `audience` and the caller's `client_id` or certificate subject.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose `audience` equals the authenticated caller's `client_id` or certificate subject, for an audience the Mission Issuer's configuration does not authorize that caller to request, is refused with the not-found response: equality confers no entitlement"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#963 decision D1; #1535 finding 12 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status, which passes the request's `audience` straight through to the signed response (provider.ts, the signed Status route), checked against neither a per-caller audience configuration nor the caller's client_id; no such configuration exists, and no consuming-Authorization-Server caller class or issuance-grant redemption path exists in src."
+  },
+  {
+   "id": "status.request.client-id-mtls",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "`client_id`, REQUIRED with mTLS client authentication ({{Section 2 of RFC8705}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Status request authenticating by mTLS carries `client_id` in its form body, and one that omits it is not authenticated and is refused `invalid_client`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 12 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented."
+  },
+  {
+   "id": "status.request.private-key-jwt-params",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "`client_assertion_type` and `client_assertion`, REQUIRED with private-key-JWT client authentication {{RFC7523}}",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Status request authenticating by private-key JWT carries `client_assertion_type` (the jwt-bearer value) and `client_assertion`; one missing either, or under another type, is not authenticated and is refused `invalid_client`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 12 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status. The Lifecycle endpoint's twin, status.lifecycle.private-key-jwt-params, is tested. D405: specified, not implemented."
   },
   {
    "id": "status.response.served-audience-aud",
@@ -13969,6 +14293,41 @@
     }
    ],
    "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.response.audience-projection-present",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "When the request names an `audience`, the response MUST carry `authorization_details`, as an empty array when no entry is relevant to that audience.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Status Response to a request naming an `audience` carries `authorization_details`, as `[]` when no Effective Authority Set entry is relevant to that audience (for example after containment removed the only matching entry), while a response to a request naming none carries no such member, so an audience holding no authority stays distinguishable from a state-only response",
+    "local": "the empty array is witnessed on the kernel's signed Status payload, which the Status route and the Lifecycle endpoint share; the omitted-audience shape on the Lifecycle endpoint, whose requests carry no audience"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment.test.ts",
+     "name": "authority_hash immutability + projections > keeps authority_hash byte-identical while signedStatus omits the contained entry and carries containment_version",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint signed state-only response (@spec status#mission-status-response, status#mission-lifecycle-endpoint, #1191) > answers revoke with the signed state-only Mission Status Response: requester aud and sub, the request's nonce, and every required member",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 finding 13 (D649). Witnesses: making the kernel's signed Status payload omit an empty projection fails the containment test (expects []); making it always carry the member fails the Lifecycle state-only test. The omitted-audience MUST NOT is status.response.state-only-no-authority."
   },
   {
    "id": "status.response.state-required",
@@ -14226,18 +14585,21 @@
    "id": "status.metadata.lifecycle-auth-methods",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "as-metadata",
-   "text": "Present, and SHOULD be advertised, when the AS serves the Mission Lifecycle endpoint.",
+   "text": "REQUIRED when the AS serves the Mission Lifecycle endpoint.",
    "role": "AS",
-   "strength": "SHOULD",
+   "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "status.lifecycle"
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment serving the Lifecycle endpoint advertises `mission_lifecycle_endpoint_auth_methods_supported` naming exactly the methods it accepts",
+    "normative": "a deployment serving the Lifecycle endpoint, in either Lifecycle conformance class, advertises `mission_lifecycle_endpoint_auth_methods_supported` naming exactly the methods it accepts",
     "local": "[\"private_key_jwt\"]"
    },
    "level": "endpoint",
@@ -14256,24 +14618,27 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 finding 5 (D649): REQUIRED for a served endpoint, no longer a SHOULD; gated on either Lifecycle class, since both conformance classes advertise it. Witness: dropping the member from the discovery builder fails both cited tests."
   },
   {
    "id": "status.metadata.lifecycle-assertion-algs",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "as-metadata",
-   "text": "values the AS accepts for the `private_key_jwt` client-assertion JWT ({{mission-status-authentication}}) at the Mission Lifecycle endpoint.",
+   "text": "REQUIRED when `mission_lifecycle_endpoint_auth_methods_supported` lists `private_key_jwt`.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "status.lifecycle"
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where the Lifecycle endpoint lists `private_key_jwt`, `mission_lifecycle_endpoint_auth_signing_alg_values_supported` names the algorithms it accepts, never `none`, and an assertion signed with any other is refused",
+    "normative": "a deployment whose Lifecycle endpoint lists `private_key_jwt` advertises `mission_lifecycle_endpoint_auth_signing_alg_values_supported`, naming the algorithms it accepts for that client assertion and never `none`, and an assertion signed with any other is refused",
     "local": "[\"ES256\"]"
    },
    "level": "endpoint",
@@ -14290,9 +14655,57 @@
      "name": "Mission Lifecycle endpoint client-assertion algorithms (@spec status#mission-status-authentication, status#as-metadata, #1191) > refuses an assertion signed with an algorithm the endpoint does not advertise, none included, from a client registered for it",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: the advertised endpoint (@spec status#conformance, status#as-metadata, status#mission-status-response, #1191) > advertises the endpoint, its private_key_jwt method and the response-signing algorithms with the Status operation and discharge both off",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 finding 5 (D649): REQUIRED whenever the endpoint lists private_key_jwt, which the reference always does; gated on either Lifecycle class. Witness: dropping the member from the discovery builder fails both discovery tests."
+  },
+  {
+   "id": "status.metadata.status-auth-methods",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "REQUIRED when the AS serves the Mission Status endpoint.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS serving the Mission Status endpoint advertises `mission_status_endpoint_auth_methods_supported` naming exactly the methods that endpoint accepts"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 5 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status, and it publishes neither `mission_status_endpoint` nor this member (absence of `mission_status_endpoint` is asserted in lifecycle-revoke-only.test.ts). D405: specified, not implemented. Unconditional like the other Mission Status operation rows: the model has no capability for that extension."
+  },
+  {
+   "id": "status.metadata.status-assertion-algs",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "REQUIRED when `mission_status_endpoint_auth_methods_supported` lists `private_key_jwt`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS whose Mission Status endpoint lists `private_key_jwt` advertises `mission_status_endpoint_auth_signing_alg_values_supported`, naming the algorithms it accepts for that client assertion and never `none`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 5 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status, and it publishes neither `mission_status_endpoint` nor this member (absence of `mission_status_endpoint` is asserted in lifecycle-revoke-only.test.ts). D405: specified, not implemented. Unconditional like the other Mission Status operation rows: the model has no capability for that extension."
   },
   {
    "id": "status.lifecycle.auth-discovery",
@@ -37156,6 +37569,47 @@
    "notes": "The reference implementation measures from the template's created_at, which every instance records as approval_basis.approved_at. Its refusal reason review_overdue is implementation-local on access_denied (D205); the draft registers none."
   },
   {
+   "id": "template.consent.minimum-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "template-consent",
+   "text": "The consent disclosure MUST render, at minimum:",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the template-creation approval's disclosure renders the Template Ceiling as the maximum authority any dispatched Mission may reach, that instances issue at machine speed, by policy, with no per-instance human approval, and that the high-consequence classes are never dispatched by policy and still require a fresh human decision"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders the minimum disclosure before any template exists: the Template Ceiling as the maximum authority, machine-speed dispatch with no per-instance approval, and the high-consequence classes policy never dispatches",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders the Template Ceiling with its trusted capability bindings, discarding caller-supplied ones, and the approval commits exactly the ceiling rendered (@spec capability-binding#conformance)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses the consent while a trusted capability definition of the ceiling has changed since the proposal: the page offers no decision and no template is created; restored, the same proposal is approved (@spec capability-binding#conformance)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). The human template consent page (GET /templates/proposals/{id}) renders the Template Ceiling and the three statements before any template exists. The ceiling rendered is the one the template commits: the proposal discards caller-supplied capability bindings and resolves the trusted ones, and a trusted definition changed since then refuses the page and the decision. Proved by removing each statement alone, by keeping caller-supplied bindings, and by ignoring a changed binding (each fails a witness). The service-token stand-in (POST /templates) renders nothing and is not a witness."
+  },
+  {
    "id": "template.consent.derivation-limit-rendering",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "template-consent",
@@ -37174,9 +37628,22 @@
     "local": "requires the deployment to also adopt Mission Derivation Limits"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327). Todo: the reference has no human template-consent approval surface. The service-token stand-in (POST /templates) returns the per-instance rule and maximum the committed Dispatch Policy states, beside max_active and the dispatch rate, in its creation response (template-dispatch-endpoint.test.ts); that is disclosure preparation returned after creation, not a rendering at a human approval, so it is not a witness here (owner ruling, #1453 review). The cap itself is witnessed under template.dispatch.derivation-limit-within-dispatch-policy."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders each dispatched instance's derivation-limit rule, its maximum and its local scope beside max_active and the dispatch rate (@spec derivation-limits#approval-rendering)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses the consent while the Dispatch Policy the template was proposed under has changed: the page states why and offers no decision, and no template is created; restored, the same proposal is approved",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). Witnessed on the human template consent page (GET /templates/proposals/{id}): the page lists max_active, the dispatch rate and, beside them in the same list, each dispatched instance's derivation-limit rule with the maximum the Dispatch Policy states, or that no finite maximum is guaranteed, its local scope and the async-family statement. The figure comes from the Dispatch Policy snapshot whose digest the proposal pinned, the snapshot the template then commits; while the held snapshot differs from that pin, the page renders no figure and offers no decision, and the decision is refused access_denied with no template created. Proved by removing the lines, by moving them out of the bounds list, and by disabling the decision's refusal (each fails a witness). The service-token stand-in (POST /templates) is not a witness (owner ruling, #1453 review). The cap itself is witnessed under template.dispatch.derivation-limit-within-dispatch-policy."
   },
   {
    "id": "template.consent.source-retained-per-version",
@@ -37196,9 +37663,22 @@
     "normative": "the authority source established at template consent, including an organizational source's policy id, version and digest, is retained with the authenticated consent record for that exact template_version, so every instance dispatched under that version carries it even after the source's configuration or governed policy changes"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1118 (D326) specification slice. The reference AS establishes the template's authority_source at template consent and keeps it outside template_hash (src/services/authorization-server/src/kernel/template.ts); no test is mapped or mutation-proved under this row."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > an approval by the authenticated Approver creates the template, with that Approver of record and the authority source it activates retained beside the consented template_version",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > retains an organizational authority source with its governed policy reference, with the consenting Approver and the consented template_version",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1118 (D326); #1119. Partial. A template consented through the human template consent page retains the authority source its consent established (a user_delegated source; an organizational source with its governed policy id, version and digest) with the authenticated Approver of record and the consented template_version, outside template_hash. Proved by dropping the retained source's policy reference (the organizational witness fails). Not witnessed: that an instance dispatched under that version still carries the source after the source's configuration or governed policy changes."
   },
   {
    "id": "template.dispatch.source-check",
@@ -45803,6 +46283,36 @@
    "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn."
   },
   {
+   "id": "resource-access.resource-contract.no-new-approval-non-current",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "No new approval references a version that is not current.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval never commits a resource_contract reference to a version the authorization server's configuration does not name as current, whatever supplied the reference; a scope mapping value naming a superseded version is refused at the approval, creating no Mission",
+    "local": "implementation-specific: the reference refuses it with invalid_authorization_details, the code Resource Access names for a proposed entry, although this request carries no proposal; the witness's error-code assertion checks that choice, not the clause. assembleResourceContracts checks every carried reference with isCurrentFor before authority_hash; a proposed reference is also refused at intake (resource-access.resource-contract.unconfigured-reference-refused)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > a value whose mapping names a contract version that is not current is refused at the approval: invalid_authorization_details, and no Mission (@spec resource-access#resource-contract)",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1)."
+  },
+  {
    "id": "resource-access.resource-contract.assembled-from-configuration",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-contract",
@@ -47150,6 +47660,49 @@
     }
    ],
    "notes": "#1258 item 11. #1276: the resource condition applies the subset rule's resource step to the mapping's declared rights, so a prefix entry projects to a value over that prefix or a narrower resource within it (pj-05's shape) and never to a sibling, a dot-segment escape or an ancestor (pj-06's shape). Unit level: the shipped configuration's ceilings are exact only, so no token-endpoint issuance carries a prefix entry. Mutation: restoring the byte-exact comparison fails the witness. Cases pj-05 and pj-06 stay skipped: the case reader has no projection executor."
+  },
+  {
+   "id": "resource-access.scope-projection.requested-scope-entry",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "the value stands for one entry: the mapping's `resource` and `resource_match`, the `actions` the value stands for, no `constraints`, and, where the mapping names a contract for the value, that contract's reference as `resource_contract`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a requested scope value of a scope-only target stands for one mission_resource_access entry with the mapping's resource and match, the actions the value stands for, no constraints, and the reference of the contract the mapping names for the value, if any; that entry projects back to the same value"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > an Intent-only request naming reports.read approves only the entry that value stands for, commits no proposal, and its token carries that value",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > each requested value stands for its own entry, and without a requested scope the same Intent approves the target's whole ceiling (control)",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > a value whose mapping names the current contract stands for an entry carrying that reference; the approval keeps it and the token projects (@spec resource-access#scope-projection)",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Scope adoption (#1537). The contract clause is witnessed: a mapping value naming the current contract yields an approved entry carrying exactly that reference, and its token projects to the value. Proved by mutation: dropping the contract from requestedScopeEntries fails the contract witness (the entry lacks the reference) and the not-current witness on resource-access.resource-contract.no-new-approval-non-current (a Mission is created); disabling the scope key fails the other two."
   },
   {
    "id": "resource-access.rs-enforcement.no-fragment-combination",
@@ -49390,7 +49943,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a record for a Mission under any named standing-consent basis other than governed_policy satisfies the accountable-approver rule with no matching assertion, its approval_basis standing in; contributing policy and service assertions are accepted and none is required",
-    "local": "Witnessed at the reference validator (assertAccountableApprover) for template, policy_drawdown and ceiling_drawdown. The reference commits no Approval Governance Record under these bases."
+    "local": "Witnessed at the reference validator (assertAccountableApprover) for template, policy_drawdown and ceiling_drawdown. The reference commits no Approval Governance Record under template or policy_drawdown. Committed records witness it for ceiling_drawdown (#1470 slice 2): no accountable assertion is matched, and one contributing policy assertion is accepted. template and policy_drawdown record nothing (D626 Q5), so the row stays partial."
    },
    "level": "unit",
    "coverage": "partial",
@@ -49400,9 +49953,21 @@
      "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > other standing-consent bases: the approval_basis stands in, so no assertion is required or matched",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > commits one signed record whose one contributing policy assertion is the drawdown policy's, by the ceiling's consenting human",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the ceiling-drawdown record commit gate (@spec approval-governance#accountable-assertion, approval-governance#assertion-authority) > admits the one contributing policy assertion, and refuses another principal, policy, instant, or contributing set",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness. Committed-record witness: #1470 Q1 (second slice). Ruled D597 (#1470 Q1): standing-consent bases follow direct recording, as a separate slice."
+   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness. Committed-record witness: #1470 Q1 (second slice). Ruled D597 (#1470 Q1): standing-consent bases follow direct recording, as a separate slice. #1470 slice 2 (D626): ceiling_drawdown records."
   },
   {
    "id": "approval-governance.record.service-authority-logic-version",
@@ -49492,7 +50057,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a policy assertion's principal is the human who approved the exact policy version its authority names (where a consented root commits a separate evaluator that decides, the human who approved that root; where several humans approved the version together, the one human the retained governance state names as accountable), never an identity for the policy itself",
-    "local": "Witnessed only for the governed_policy accountable assertion, the one policy assertion the reference produces: its principal is the consent principal who approved the root. The reference never produces a contributing policy assertion, the case this rule settles (#1436 item 5), and has no jointly approved policy version."
+    "local": "Witnessed only for the governed_policy accountable assertion, the one policy assertion the reference produces: its principal is the consent principal who approved the root. The reference has no jointly approved policy version. The contributing case is witnessed on recorded ceiling drawdowns (#1470 slice 2): the drawdown policy's assertion names the human who consented the ceiling, and with it that exact policy version, and the commit gate refuses another principal. A jointly approved policy version has no reference case, so the row stays partial."
    },
    "level": "unit",
    "coverage": "partial",
@@ -49502,9 +50067,21 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a bounded Mission and commits a signed Approval Governance Record with it",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > commits one signed record whose one contributing policy assertion is the drawdown policy's, by the ceiling's consenting human",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the ceiling-drawdown record commit gate (@spec approval-governance#accountable-assertion, approval-governance#assertion-authority) > admits the one contributing policy assertion, and refuses another principal, policy, instant, or contributing set",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 3 (D568) resolves the contributing-policy principal question (#1436 item 5) this way, matching the governed_policy accountable assertion; mutation: naming the policy as principal fails the witness. A contributing policy assertion needs a multi-decider rule: #1470 Q2. Ruled D597 (#1470 Q2): no multi-decider rule for coverage alone; stays partial until a deployment needs it."
+   "notes": "#1436 ruling 3 (D568) resolves the contributing-policy principal question (#1436 item 5) this way, matching the governed_policy accountable assertion; mutation: naming the policy as principal fails the witness. Ruled D597 (#1470 Q2): no multi-decider rule built solely for coverage. #1470 slice 2 (D626): ceiling_drawdown records."
   },
   {
    "id": "approval-governance.authority.human-members",
@@ -49845,7 +50422,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id, the Mission's intent_hash and the authority_hash of the set recorded as evaluated, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
-    "local": "Witnessed on committed governed_policy records, the one basis under which the reference commits a record and retains the deciding policy's inputs: recheckApprovalGovernanceRecord, a reference Relying Auditor reading the issuer's retained store, replays each step, counting what the deciding policy counts rather than what the record lists, and each step's refusal is witnessed alone, including missing root, evaluator and input evidence and a high-risk class's recency exception. Recorded direct approvals re-check too (#1470 slice 1): the retained rule snapshot reproduces approval_policy.digest; no separate evaluator decides; the retained inputs are bound to the event and Intent, name the Mission's Approver and Subject, the authority source its retained binding names and the ceiling it consented, and record a well-formed authentication; evaluated_at is an RFC 3339 timestamp; the rule replays at evaluated_at over them with the human assertion equal to the recorded authentication, the committed Authority Set and exactly the human assertion contributing; policy-approval recency does not apply to it. Standing-consent bases other than governed_policy commit no record, so are not re-checked."
+    "local": "Witnessed on committed governed_policy records, the one basis under which the reference commits a record and retains the deciding policy's inputs: recheckApprovalGovernanceRecord, a reference Relying Auditor reading the issuer's retained store, replays each step, counting what the deciding policy counts rather than what the record lists, and each step's refusal is witnessed alone, including missing root, evaluator and input evidence and a high-risk class's recency exception. Recorded direct approvals re-check too (#1470 slice 1): the retained rule snapshot reproduces approval_policy.digest; no separate evaluator decides; the retained inputs are bound to the event and Intent, name the Mission's Approver and Subject, the authority source its retained binding names and the ceiling it consented, and record a well-formed authentication; the rule replays at evaluated_at over them with the human assertion equal to the recorded authentication, the committed Authority Set and exactly the human assertion contributing; policy-approval recency does not apply to it. Standing-consent bases other than governed_policy commit no record, so are not re-checked. Recorded ceiling drawdowns re-check too (#1470 slice 2), from retained state alone: the recording rule's snapshot reproduces approval_policy.digest; the deciding drawdown policy's retained snapshot verifies and parses to the recorded rules; the inputs are bound to the event, Intent and Authority Set, to the predecessor as committed (its own ceiling, narrowed or not, separately from the consented one; an effective set within its Authority Set, which a contained predecessor's narrowed set satisfies; its chain's drawdown instants), and the consent provenance to the consenting ancestor's own record; the drawdown decision replays to a policy activation over the retained inputs (children, restrictions, rate history, classes, cross-domain, instant), the record passes the commit gate, and the eligibility gate and recency replay at evaluated_at. For every basis, step 1 binds evaluation.evaluated_at to the Mission's creation, the atomic-commitment instant, so a re-signed evaluation instant is refused and each replay and recency check runs at the actual decision time; the replays' own refusals are witnessed on faulty-issuer records whose Mission commits at the moved instant. The drawdown replay's other inputs (live children, restrictions, external-communication actions, cross-domain, the rate bound) have no committed counterpart and replay as retained; the gate replays the committed rule's classification, which covers the decision's class check."
    },
    "level": "unit",
    "coverage": "tested",
@@ -49888,7 +50465,7 @@
     },
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
-     "name": "re-checking an evaluation (@spec approval-governance#re-check) > step 6: re-applies recency at evaluated_at, including a high-risk class's committed exception",
+     "name": "re-checking an evaluation (@spec approval-governance#re-check) > step 6: re-applies recency at evaluated_at, the creation instant, including a high-risk class's committed exception",
      "level": "unit",
      "surface": "governance-record"
     },
@@ -49939,9 +50516,87 @@
      "name": "re-checking a direct record (@spec approval-governance#re-check) > step 4: refuses inputs that drop the Mission's consented ceiling, whose irreversible action the floor holds to mfa",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > re-checks the committed record from retained state",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 2: refuses a recording rule snapshot that is missing or does not reproduce approval_policy.digest",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 3: refuses a drawdown policy whose retained snapshot does not verify, or another deciding policy than the inputs name",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 4: refuses missing inputs, and inputs not bound to the event, Intent, Authority Set, predecessor, consent, Subject, source or instant",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 5: refuses a decision that replays to a fallback, and a record failing the commit gate",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 6: replays the eligibility gate and recency at the creation instant",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "recorded ceiling drawdowns at the token endpoint (@spec approval-governance#recency-high-risk, approval-governance#atomic-commitment, #1470 slice 2) > a policy drawdown activates with a signed record of the drawdown policy's assertion, and the record re-checks",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > finds the consent through a narrowed chain: the oldest Mission carrying it, whose ceiling reproduces the commitment",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 1: refuses a backdated decision: the signed assertion, the evaluation and both replay instants agreeing on another instant than the creation",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 4: binds the replay to the predecessor as committed: its own narrowed ceiling, an effective set within its Authority Set, its chain's drawdowns",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "re-checking a direct record (@spec approval-governance#re-check) > step 1: refuses an evaluation instant other than the Mission's creation, where the replay would run",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "re-checking an evaluation (@spec approval-governance#re-check) > step 1: refuses an evaluation instant other than the Mission's creation, where recency is measured",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > re-checks a drawdown from a contained predecessor, whose effective set containment narrowed within its Authority Set",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked. #1313 follow-up: tested by the reference re-check auditor. On owner review of #1471 at cebf665b (two P2s, D597): the counted set came from the record's own assertions, so removing assertions with their contributing entries re-checked (skipping recency when all were removed), and the event and Intent bindings held only per model output. The replay now counts the accountable policy assertion plus one service assertion per consulted model output, and the inputs as a whole carry the event and Intent; the regression cases fail on cebf665b. Mutations: each of 21 checks (record verification, root snapshot presence and digest, evaluator identity and snapshot, root-decided deciding digest, input presence, the set-level event and Intent bindings, each model output's event, Intent and evaluated-set bindings, service-assertion matching, approval, Authority Set, the governed record gate, one service assertion per model output, contributing, recency order, age and class exception) disabled alone fails a witness. #1470 slice 1: the direct replay; each of its checks disabled alone fails a witness. On owner review of #1484 at 41a1f750 (three P2s): the direct replay bound neither the consented ceiling nor the source root to the Mission; a malformed evaluated_at made the floor's age comparisons false; and the rule parser accepted an unknown action class, disabling a floor. Fixed: step 4 binds the inputs to the Mission's retained source binding and consented ceiling and refuses a malformed recorded authentication, step 5 refuses an evaluated_at that is not an RFC 3339 timestamp (as does the evaluator), and the rule's floor passes the approval-floor policy's strict validation. Each regression case fails on 41a1f750."
+   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked. #1313 follow-up: tested by the reference re-check auditor. On owner review of #1471 at cebf665b (two P2s, D597): the counted set came from the record's own assertions, so removing assertions with their contributing entries re-checked (skipping recency when all were removed), and the event and Intent bindings held only per model output. The replay now counts the accountable policy assertion plus one service assertion per consulted model output, and the inputs as a whole carry the event and Intent; the regression cases fail on cebf665b. Mutations: each of 21 checks at the time (record verification, root snapshot presence and digest, evaluator identity and snapshot, root-decided deciding digest, input presence, the set-level event and Intent bindings, each model output's event, Intent and evaluated-set bindings, service-assertion matching, approval, Authority Set, the governed record gate, one service assertion per model output, contributing, recency order, age and class exception) disabled alone fails a witness. #1470 slice 1: the direct replay; each of its checks disabled alone fails a witness. On owner review of #1484 at 41a1f750 (three P2s): the direct replay bound neither the consented ceiling nor the source root to the Mission; a malformed evaluated_at made the floor's age comparisons false; and the rule parser accepted an unknown action class, disabling a floor. Fixed: step 4 binds the inputs to the Mission's retained source binding and consented ceiling and refuses a malformed recorded authentication, step 5 refuses an evaluated_at that is not an RFC 3339 timestamp (as does the evaluator), and the rule's floor passes the approval-floor policy's strict validation. Each regression case fails on 41a1f750. #1470 slice 2 (D626): ceiling_drawdown records; the consent walk is witnessed through a narrowed chain. On owner review of #1522 at 58f9ede1 (two P2s): the drawdown replay took the predecessor's ceiling from the inputs alone, so a narrowed predecessor's replay ceiling replaced by the original consented one re-checked; and the signed assertion, the evaluation and both replay instants could agree on a backdated instant. Fixed: step 4 binds the replay to the predecessor as committed (its ceiling, an effective set within its Authority Set, and its chain's drawdown instants), and step 1 binds evaluated_at to the Mission's creation for every basis, which also closes the same backdating in the direct and governed re-checks and subsumes the RFC 3339 check on evaluated_at. Each regression case fails on 58f9ede1. Mutations: 58, one per check across the consent walk, the gate, the record gate, every re-check step (including the creation-instant and predecessor bindings), the commit and the adapter, all caught; rerun with the creation-instant binding, the governed re-check's 22 all caught, and the direct record's 52 all caught but the commit's own gate call, unreachable as in slice 1; the direct replay-instant mutant became equivalent and was dropped."
   },
   {
    "id": "approval-governance.conformance.auditor-obtains-retained-policy",
@@ -50682,6 +51337,42 @@
     }
    ],
    "notes": "#1436 item 7: the stricter value, which the reference already takes (the minimum of the default ceiling, the class ceiling and the exception). Mutation: ignoring the class ceiling when an exception applies."
+  },
+  {
+   "id": "approval-governance.recency.high-risk-standing-consent-no-record",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-high-risk",
+   "text": "absent it, the record MUST NOT be created and, by {{atomic-commitment}}, the Mission MUST NOT be created `active`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where an issuer records an Approval Governance Record for a Mission whose basis stands in for the accountable assertion, and the Mission's whole Authority Set or Intent carries a high-risk class with no committed class-named exception, no record is created and no Mission is activated on it",
+    "local": "Witnessed for ceiling_drawdown, the one standing-consent basis the reference records (#1470 Q5, D626): a successor that keeps an irreversible action its predecessor's human approval granted passes Progressive (which checks only newly widened actions) but carries a high-risk class with no exception in the recording rule, so it falls back to a fresh human approval before activation, with no record and no policy-activated successor (kernel and token endpoint). template and policy_drawdown record nothing; the reference's closed Intent admits no consumption bound."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends a successor that keeps approved high-risk authority to a fresh approval, though Progressive would activate it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "recorded ceiling drawdowns at the token endpoint (@spec approval-governance#recency-high-risk, approval-governance#atomic-commitment, #1470 slice 2) > a successor that keeps approved high-risk authority falls back to a fresh approval before activation, where the shipped deployment activates it by policy",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1470 slice 2 (D626 Q8): the eligibility gate checks the whole successor, its Intent included. Mutation: dropping the gate's high-risk clause activates the successor."
   },
   {
    "id": "approval-governance.governed-policy.check-event-binding",
@@ -52466,6 +53157,54 @@
     }
    ],
    "notes": "Both forms: without and with a child_creation_policy, the record's approval_event_id equals activation.activation_event_id and differs from the Parent Mission's approval_event_id. Proved by recording the parent's approval_event_id on the child (both tests fail). Scoped to child-delegation.policy-drawdown: a direct human-approved child records activation.approval_event_id, not an activation_event_id, so this requirement never applies to it."
+  },
+  {
+   "id": "child-delegation.record.policy-drawdown-approved-at",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "`approved_at` (the issuance profile's standing-consent requirement) is the human approval instant of the consented root that `root_commitment` traces to, and it follows the root",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.policy-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy_drawdown child's approved_at is its Parent's approval instant where the Parent was approved direct, and the Parent's own approval_basis.approved_at where the Parent was activated under a standing-consent basis, through every generation; never a Parent's activation instant, and never a value from the child-creation request",
+    "local": "Witnessed at the kernel for a direct Parent and for each standing-consent Parent type (template dispatch, governed_policy activation, ceiling_drawdown successor), each through the two generations the reference admits (its hard maximum child depth), with every consent and activation an hour apart so an activation instant cannot pass for the consent instant. A child of a child is the policy_drawdown Parent case. The separately re-approved child_creation_policy case is not implemented by the reference (no governance record exists for child policies)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a direct Parent: every generation carries the Parent's approval instant, its approval event",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a template instance: the child and its descendants carry the template's approval, not the dispatch",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a governed_policy activation: the child carries the root consent's approval, not the activation",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a ceiling_drawdown successor: the child carries the ceiling consent, not the drawdown",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1514 (D626): a child of a standing-consent Parent recorded the Parent's created_at, an activation instant. Mutations: the reviewed behavior (always created_at) fails all four witnesses; always the basis instant fails the direct-Parent witness."
   },
   {
    "id": "child-delegation.subject.policy-drawdown-parent-subject",
@@ -61083,7 +61822,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "An encounter whose identity the Mission Issuer has not pinned never yields a `bound` outcome.",
-    "local": "The reference pins no identity yet, so every encounter is unpinned and none binds: the witness is a prefix-ceiling encounter that every other guard would admit falling back to a human (proved by admitting it, which issues a token). It discriminates pinned from unpinned only once identity pinning lands (#1469 stage 2)."
+    "local": "No encounter binds by policy before stage 6, pinned or not, so the witness is that every encounter falls back to a human, an unpinned one included (proved by admitting it, which issues a token). It discriminates pinned from unpinned only once policy binding lands (#1469 stage 6)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -61093,9 +61832,15 @@
      "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > a drawdown onto a resource no ceiling entry names falls back to a fresh human approval though every other guard would admit it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-binding-unpinned-contextual",
@@ -61134,12 +61879,26 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "For every adjudicated encounter the Mission Issuer retrieves the resource itself, and the pinned identity matches what that retrieval returned."
+    "normative": "For every adjudicated encounter the Mission Issuer retrieves the resource itself, and the pinned identity matches what that retrieval returned.",
+    "local": "The pinned Encountered Resource object comes only from the Mission Issuer's own connection, never from the agent's hint. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.issuer-establishes-identity-contextual",
@@ -61178,12 +61937,26 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "An agent-supplied origin that differs from the origin the issuer's own connection authenticated is not pinned: adjudication and evidence carry the issuer's origin."
+    "normative": "An agent-supplied origin that differs from the origin the issuer's own connection authenticated is not pinned: adjudication and evidence carry the issuer's origin.",
+    "local": "The pinned origin is the request entry's origin as the connection authenticated it; an agent hint naming another origin, or no origin the request seeks, is refused as request validation."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's hint names the encounter's own origin (@spec discovery#resource-identity, #1469) > a hint naming another origin the request seeks is refused, so its digest is never compared with a different resource's declaration",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > an encountered_resource that is not an origin object or names no resource the request seeks, and a digest hint without one, are refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-origin-contextual",
@@ -61222,12 +61995,20 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "An agent-supplied metadata digest is not pinned: adjudication and evidence carry the digest of the metadata bytes the issuer retrieved."
+    "normative": "An agent-supplied metadata digest is not pinned: adjudication and evidence carry the digest of the metadata bytes the issuer retrieved.",
+    "local": "A forged metadata digest in the hint is recorded as the agent's claim (resource_metadata_digest_matched false) and never fills the pinned object, pinned or not. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-metadata-digest-contextual",
@@ -61266,12 +62047,20 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "An agent-supplied issuer is not pinned: adjudication and evidence carry the issuer named in the metadata the Mission Issuer retrieved."
+    "normative": "An agent-supplied issuer is not pinned: adjudication and evidence carry the issuer named in the metadata the Mission Issuer retrieved.",
+    "local": "A forged issuer in the hint, even one the deployment would verify, is recorded as the agent's claim (issuer_matched false) and never fills the pinned object. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-issuer-contextual",
@@ -61369,7 +62158,7 @@
    "assertion": "ignore",
    "observation": {
     "normative": "An `encountered_resource` request parameter whose values the issuer's own retrieval does not confirm is not adopted as the pinned identity.",
-    "local": "The encountered_resource object is checked for shape and kept on the deferral as the agent's claim, never adopted; the encountered resources come from the request's own entries, and a hint naming any origin but the encounter's is refused. Verifying the hint against a TLS-authenticated origin arrives with identity pinning (#1469 stage 2)."
+    "local": "The encountered_resource object is checked for shape and kept on the deferral as the agent's claim, each member compared with the Mission Issuer's own values and never adopted; the encountered resources come from the request's own entries, and a hint naming any origin but the encounter's is refused."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -61391,9 +62180,15 @@
      "name": "the encounter's hint names the encounter's own origin (@spec discovery#resource-identity, #1469) > a hint naming another origin the request seeks is refused, so its digest is never compared with a different resource's declaration",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.request-object-is-hint-contextual",
@@ -61432,12 +62227,26 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Every Discovery Evidence object carries the pinned identity, and that identity was established before the outcome was decided."
+    "normative": "Every Discovery Evidence object carries the pinned identity, and that identity was established before the outcome was decided.",
+    "local": "The identity is established, and recorded on the expansion deferral's encounter facts with whether it is pinned and why not, before the human decides. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.established-and-recorded-contextual",
@@ -61476,12 +62285,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "The pinned `origin` is one the Mission Issuer's own TLS connection authenticated at encounter; an origin the issuer cannot TLS-authenticate is not pinned and does not bind."
+    "normative": "The pinned `origin` is one the Mission Issuer's own TLS connection authenticated at encounter; an origin the issuer cannot TLS-authenticate is not pinned and does not bind.",
+    "local": "Witnessed through the port's report: an origin the connection did not TLS-authenticate is not pinned and nothing retrieved over it is used. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > where the deployment refuses unpinnable encounters, an encounter whose identity cannot be established is refused uniformly, with no deferral and no Mission; a pinned one still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.tls-authenticated-origin-contextual",
@@ -61520,12 +62343,32 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "For a resource that names an authorization server, the Mission Issuer fetches its protected-resource metadata itself during adjudication."
+    "normative": "For a resource that names an authorization server, the Mission Issuer fetches its protected-resource metadata itself during adjudication.",
+    "local": "The metadata comes from the deployment's connection port, retrieved for the origin as the resource identifier, and is used only when its resource is exactly the origin (RFC 9728 Section 3.3) and every authorization server it names is an issuer identifier (RFC 8414 Section 2), checked before any authorization. The reference requires the metadata, stricter than the object's conditional members. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata that is absent, not a JSON object, or whose resource is not exactly the origin (RFC 9728 Section 3.3) is not used: no digest, no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.prm-retrieved-server-side-contextual",
@@ -61564,12 +62407,20 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The evidence `resource_metadata_digest` equals the digest of the exact metadata bytes the issuer retrieved."
+    "normative": "The evidence `resource_metadata_digest` equals the digest of the exact metadata bytes the issuer retrieved.",
+    "local": "The digest is over the exact bytes the port returned, not a re-serialization, and is recorded on the deferral's Encountered Resource object. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.prm-exact-bytes-digest-contextual",
@@ -61608,12 +62459,20 @@
    "surface": "evidence-emission",
    "assertion": "ignore",
    "observation": {
-    "normative": "When the agent supplies a metadata digest that differs from the digest of the retrieved bytes, the evidence carries the issuer's computed digest, not the agent's."
+    "normative": "When the agent supplies a metadata digest that differs from the digest of the retrieved bytes, the evidence carries the issuer's computed digest, not the agent's.",
+    "local": "Where the agent's metadata digest differs, the recorded digest is the one over the retrieved bytes. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-digest-reuse-contextual",
@@ -61652,12 +62511,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An encounter whose metadata names an issuer not authorized for the resource's domain never binds by policy."
+    "normative": "An encounter whose metadata names an issuer not authorized for the resource's domain never binds by policy.",
+    "local": "The named issuer is verified through the deployment's issuer-authorization port (domain-authorized-issuer being one mechanism); unverified, the identity is not pinned. No encounter binds by policy before stage 6, so the binding half is not yet discriminated. The reference pins only metadata naming exactly one authorization server."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > a named issuer not verified as authorized for the domain is not pinned, and the encounter routes to a human even where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.issuer-authorized-for-domain-contextual",
@@ -61696,12 +62569,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When issuer authorization for the resource's domain cannot be verified, the outcome is `routed_to_approval`, never `bound`."
+    "normative": "When issuer authorization for the resource's domain cannot be verified, the outcome is `routed_to_approval`, never `bound`.",
+    "local": "An unverified issuer routes to a human (a deferral), even where the deployment refuses unpinnable encounters. `routed_to_approval` is recorded only in Discovery Evidence, a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > a named issuer not verified as authorized for the domain is not pinned, and the encounter routes to a human even where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.unverified-issuer-routes-contextual",
@@ -61844,12 +62725,32 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "No origin, digest, issuer, or taint value that the agent mediated is used for adjudication; each comes from the issuer's own retrieval or the harness's attested channel."
+    "normative": "No origin, digest, issuer, or taint value that the agent mediated is used for adjudication; each comes from the issuer's own retrieval or the harness's attested channel.",
+    "local": "Origin, metadata digest and issuer come from the deployment's connection and issuer-authorization ports, never the agent; the taint state comes from the deployment's taint port, and agent-sent taint values are ignored."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > the agent cannot supply the taint state: a tainted=false parameter and a tainted member in its hint change nothing, and the harness is asked about the subject token's Mission and the authenticated client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.non-agent-channel-contextual",
@@ -61889,7 +62790,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "An encounter whose identity cannot be pinned (TLS failure, unretrievable metadata, unverifiable issuer) yields `routed_to_approval` or `refused`, never `bound`.",
-    "local": "Every encounter routes to a human, since the reference obtains no trustworthy identity yet; the TLS, metadata and issuer failure cases arrive with identity pinning (#1469 stage 2)."
+    "local": "An encounter whose identity cannot be pinned (origin not TLS-authenticated, metadata missing or unusable, a malformed issuer identifier among them, no single named issuer, issuer unverified) routes to a human, or, where the deployment refuses unpinnable encounters, is refused before any deferral exists; an unverified issuer always routes."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -61899,9 +62800,33 @@
      "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > a drawdown onto a resource no ceiling entry names falls back to a fresh human approval though every other guard would admit it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata that is absent, not a JSON object, or whose resource is not exactly the origin (RFC 9728 Section 3.3) is not used: no digest, no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > where the deployment refuses unpinnable encounters, an encounter whose identity cannot be established is refused uniformly, with no deferral and no Mission; a pinned one still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.untrustworthy-identity-route-or-refuse-contextual",
@@ -62116,12 +63041,20 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Every Encountered Resource object carries `origin` as a URI string naming the TLS-authenticated origin; an object without it is malformed."
+    "normative": "Every Encountered Resource object carries `origin` as a URI string naming the TLS-authenticated origin; an object without it is malformed.",
+    "local": "Data-construction witness: the Encountered Resource object recorded on the deferral carries origin; no Discovery Evidence is emitted yet."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.member-origin-contextual",
@@ -62160,12 +63093,26 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "An Encountered Resource object for a resource whose protected-resource metadata was retrieved carries `resource_metadata_digest`, an integrity-anchor encoded digest of the exact retrieved bytes."
+    "normative": "An Encountered Resource object for a resource whose protected-resource metadata was retrieved carries `resource_metadata_digest`, an integrity-anchor encoded digest of the exact retrieved bytes.",
+    "local": "Data-construction witness: the recorded object carries resource_metadata_digest exactly when usable metadata was retrieved; no Discovery Evidence is emitted yet."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata that is absent, not a JSON object, or whose resource is not exactly the origin (RFC 9728 Section 3.3) is not used: no digest, no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.member-resource-metadata-digest-contextual",
@@ -62204,12 +63151,32 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "An Encountered Resource object whose metadata names an authorization server carries `issuer` equal to that issuer identifier."
+    "normative": "An Encountered Resource object whose metadata names an authorization server carries `issuer` equal to that issuer identifier.",
+    "local": "Data-construction witness: the recorded object carries the one issuer the metadata names, always an issuer identifier (https, no query or fragment), and none when it names zero, several, or a malformed one; no Discovery Evidence is emitted yet."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming no authorization server, or more than one, pins no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.member-issuer-contextual",
@@ -62270,12 +63237,26 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Each adjudication's record reflects the Mission reference, the verified Encountered Resource object, the declaration digest where one exists, the sought authority's action classes, the requesting actor, and the session's taint state."
+    "normative": "Each adjudication's record reflects the Mission reference, the verified Encountered Resource object, the declaration digest where one exists, the sought authority's action classes, the requesting actor, and the session's taint state.",
+    "local": "Data-construction witness: the expansion deferral records the predecessor Mission, the requested entries, the requesting client, the Encountered Resource object, the declaration digest where one exists, and the taint state; no Discovery Evidence is emitted yet, and action classes are a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a fresh, session-scoped report is believed, tainted or not, and recorded apart from the effective state; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.minimum-inputs-contextual",
@@ -62314,12 +63295,26 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "A taint value carried in the encounter request is ignored: the evidence `tainted` member and the floors follow the harness attestation."
+    "normative": "A taint value carried in the encounter request is ignored: the evidence `tainted` member and the floors follow the harness attestation.",
+    "local": "An agent-sent tainted=false parameter and a tainted member in its hint are ignored while the harness reports tainted; the port is asked about the subject token's Mission and the authenticated client only. The harness attestation is verified behind the deployment's taint port, as TLS is behind the connection port: an attestation the port cannot verify reaches the kernel as no report (missing) or a malformed one (unverifiable), and both count as tainted."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > the agent cannot supply the taint state: a tainted=false parameter and a tainted member in its hint change nothing, and the harness is asked about the subject token's Mission and the authenticated client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a fresh, session-scoped report is believed, tainted or not, and recorded apart from the effective state; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.taint-from-harness-contextual",
@@ -62358,12 +63353,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "With no harness taint report available, an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true."
+    "normative": "With no harness taint report available, an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true.",
+    "local": "No harness port, no answer, and a failing port each record the effective state tainted with taint_failure missing. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a missing report counts as tainted: no harness port, no answer, or a failing port",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.taint-missing-is-tainted-contextual",
@@ -62402,12 +63405,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "With a stale harness taint report (one past its attested validity), an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true."
+    "normative": "With a stale harness taint report (one past its attested validity), an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true.",
+    "local": "Staleness is the deployment's bound (taintMaxAgeSeconds), not an attested validity: a report older than it when it arrives, after every lookup, records tainted with taint_failure stale, an untainted one included; one the harness made during a slow lookup is not future-dated. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a report older than the deployment's bound counts as tainted, an untainted one included",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > freshness is judged when the report arrives, after the lookups: a report fresh when asked but past the bound by then is stale, and one the harness made during a slow lookup is not future-dated",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.taint-stale-is-tainted-contextual",
@@ -62446,12 +63463,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "With a harness taint report whose attestation fails verification, an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true."
+    "normative": "With a harness taint report whose attestation fails verification, an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true.",
+    "local": "A report that is malformed (non-boolean tainted, a reported_at that is not a strict RFC 3339 date-time, non-string source_class, not an object), future-dated, or not session-scoped records tainted with taint_failure unverifiable. The harness attestation is verified behind the deployment's taint port, as TLS is behind the connection port: an attestation the port cannot verify reaches the kernel as no report (missing) or a malformed one (unverifiable), and both count as tainted. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a report that is malformed, future-dated or not session-scoped is unverifiable and counts as tainted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.taint-unverifiable-is-tainted-contextual",
@@ -63981,12 +65006,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "With `tainted` true, every encounter that would otherwise bind yields `routed_to_approval`."
+    "normative": "With `tainted` true, every encounter that would otherwise bind yields `routed_to_approval`.",
+    "local": "A tainted encounter routes to a human (a deferral). Every encounter does before stage 6, tainted or not, so the witness does not yet discriminate taint; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a fresh, session-scoped report is believed, tainted or not, and recorded apart from the effective state; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.injection-discovery.tainted-no-policy-bind-contextual",
@@ -65131,12 +66164,26 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "The pinned identity of every adjudicated encounter comes from the issuer's own retrieval; agent-supplied identity values are not adopted."
+    "normative": "The pinned identity of every adjudicated encounter comes from the issuer's own retrieval; agent-supplied identity values are not adopted.",
+    "local": "Identity comes from the Mission Issuer's own connection, independent of the agent's hints. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.identity-independent-of-agent-contextual",
@@ -65175,12 +66222,20 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "The taint state applied at adjudication comes from the harness attestation, never from the agent's request."
+    "normative": "The taint state applied at adjudication comes from the harness attestation, never from the agent's request.",
+    "local": "The taint state comes only from the deployment's taint port; agent-sent taint values are ignored. The harness attestation is verified behind the deployment's taint port, as TLS is behind the connection port: an attestation the port cannot verify reaches the kernel as no report (missing) or a malformed one (unverifiable), and both count as tainted."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > the agent cannot supply the taint state: a tainted=false parameter and a tainted member in its hint change nothing, and the harness is asked about the subject token's Mission and the authenticated client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.taint-non-agent-channel-contextual",
@@ -65219,12 +66274,32 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "A missing, stale, or unverifiable taint report leads to the tainted outcome: no bind by policy, `tainted` true in the evidence."
+    "normative": "A missing, stale, or unverifiable taint report leads to the tainted outcome: no bind by policy, `tainted` true in the evidence.",
+    "local": "Missing, stale and unverifiable reports each record tainted. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a missing report counts as tainted: no harness port, no answer, or a failing port",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a report older than the deployment's bound counts as tainted, an untainted one included",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a report that is malformed, future-dated or not session-scoped is unverifiable and counts as tainted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.untrustworthy-taint-tainted-contextual",
@@ -65263,12 +66338,38 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An encounter with unpinnable identity, an unclassifiable operation, or no trustworthy taint state yields `routed_to_approval` or `refused`, never `bound`."
+    "normative": "An encounter with unpinnable identity, an unclassifiable operation, or no trustworthy taint state yields `routed_to_approval` or `refused`, never `bound`.",
+    "local": "Only the cannot-pin clause: an unpinnable encounter routes to a human or, where the deployment refuses, is refused with no deferral. An encounter without a trustworthy taint state counts as tainted and routes to a human, never refused, since the adjudication section's rule (treat as tainted) controls. Classification is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > where the deployment refuses unpinnable encounters, an encounter whose identity cannot be established is refused uniformly, with no deferral and no Mission; a pinned one still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > a named issuer not verified as authorized for the domain is not pinned, and the encounter routes to a human even where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a missing report counts as tainted: no harness port, no answer, or a failing port",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.route-or-refuse-unresolvable-contextual",

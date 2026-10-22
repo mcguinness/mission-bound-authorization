@@ -141,6 +141,18 @@ const resign = (kernel: MissionKernel, missionId: string, edit: (r: UnsignedAppr
     .run(JSON.stringify(signed), approvalGovernanceRecordDigest(signed), missionId);
 };
 
+/**
+ * A faulty issuer: the Mission committed at `at` and its record re-signed to
+ * evaluate there, so the evaluation instant is still the creation instant.
+ */
+const committedAt = (kernel: MissionKernel, missionId: string, at: string, edit: (r: UnsignedApprovalGovernanceRecord) => void = () => {}) => {
+  kernel.db.prepare("UPDATE missions SET created_at = ? WHERE id = ?").run(at, missionId);
+  resign(kernel, missionId, (r) => {
+    r.evaluation.evaluated_at = at;
+    edit(r);
+  });
+};
+
 describe("a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment)", () => {
   it("records nothing by default: a direct approval carries no adjudication and commits no record", () => {
     const kernel = makeKernel(false);
@@ -480,6 +492,13 @@ describe("re-checking a direct record (@spec approval-governance#re-check)", () 
     expect(recheck(kernel, mission.id)).toEqual({ rechecked: false, step: 1, reason: "record differs from its signed payload" });
   });
 
+  it("step 1: refuses an evaluation instant other than the Mission's creation, where the replay would run", () => {
+    // Committed later than the floor admits the authentication, while the record still evaluates inside it.
+    const { kernel, mission } = committed();
+    kernel.db.prepare("UPDATE missions SET created_at = ? WHERE id = ?").run(iso((AUTH.auth_time + 301) * 1000), mission.id);
+    expect(recheck(kernel, mission.id)).toEqual({ rechecked: false, step: 1, reason: "evaluation.evaluated_at is not the Mission's creation instant" });
+  });
+
   it("step 2: refuses when the rule snapshot is missing or does not reproduce approval_policy.digest", () => {
     const altered = committed();
     altered.kernel.db.prepare("UPDATE direct_approval_rules SET content = ?").run(Buffer.from("{}", "utf8"));
@@ -586,24 +605,22 @@ describe("re-checking a direct record (@spec approval-governance#re-check)", () 
       .prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.authentication.interactive', json('false'))")
       .run();
     expect(recheck(headless.kernel, headless.mission.id)).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(/^the replay does not approve/) });
-    // An evaluation instant that is not a timestamp, beside an authentication the floor would find too old.
+    // A creation instant that is not a timestamp, beside an authentication the floor would find too old.
     const malformedAt = committed();
     malformedAt.kernel.db
       .prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.authentication.auth_time', ?)")
       .run(AUTH.auth_time - 3600);
-    resign(malformedAt.kernel, malformedAt.mission.id, (r) => {
+    committedAt(malformedAt.kernel, malformedAt.mission.id, "not-a-date", (r) => {
       (r.assertions[0] as { authority: { auth_time: string } }).authority.auth_time = iso((AUTH.auth_time - 3600) * 1000);
-      r.evaluation.evaluated_at = "not-a-date";
     });
     expect(recheck(malformedAt.kernel, malformedAt.mission.id)).toEqual({
       rechecked: false,
       step: 5,
-      reason: "evaluation.evaluated_at is not an RFC 3339 timestamp",
+      reason: "the replay does not approve: the evaluation instant is not an RFC 3339 timestamp",
     });
+    // An issuer that committed the Mission later than the floor admits the authentication.
     const late = committed();
-    resign(late.kernel, late.mission.id, (r) => {
-      r.evaluation.evaluated_at = iso((AUTH.auth_time + 301) * 1000);
-    });
+    committedAt(late.kernel, late.mission.id, iso((AUTH.auth_time + 301) * 1000));
     expect(recheck(late.kernel, late.mission.id)).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(/older than the high-risk-authority floor allows/) });
     const otherSet = committed();
     otherSet.kernel.db

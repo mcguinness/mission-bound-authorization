@@ -57,6 +57,15 @@ export class ApprovalSessionStore {
   }
 
   /**
+   * The CSRF secret of the session this user agent holds for `uid`, for the
+   * page that submits the decision. Only the cookie's holder receives it, on
+   * a same-origin page; the decision still checks it against the session.
+   */
+  csrfFor(cookie: string, uid: string): string | undefined {
+    return this.sessionFor(cookie, uid)?.csrf;
+  }
+
+  /**
    * The Subject the session for this interaction selected (its own `sub` for
    * a self-approval), for the read-only approval rendering. No CSRF: it
    * changes nothing and authorizes nothing; the decision re-resolves the

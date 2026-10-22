@@ -18,7 +18,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import { DERIVATION_POLICY, demoReconciliationTemplate, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, loginCookieName } from "../src/index.js";
@@ -520,5 +520,111 @@ describe("the approval surface's upstream Approver login (@spec mission#approval
     expect(replay.status).toBe(401);
     expect(replay.description).toMatch(/names no login this server started/);
     expect((await decide(uid, jar, approver, undefined)).status).toBe(401);
+  });
+});
+
+describe("the Approver login for a template consent (@spec mission-template#template-consent, mission#approval-authentication, #1119)", () => {
+  /** A proposal of the demo reconciliation template, and its consent page URL. */
+  const proposeTemplate = async (): Promise<{ id: string; consentPage: string }> => {
+    const { approver: _approver, approval_event_id: _event, issuer: _issuer, ...body } = demoReconciliationTemplate(ISSUER);
+    const res = await fetch(`${ISSUER}/templates/proposals`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+      body: JSON.stringify(body),
+    });
+    expect(res.status).toBe(201);
+    const { proposal_id: id } = (await res.json()) as { proposal_id: string };
+    return { id, consentPage: `${ISSUER}/templates/proposals/${id}` };
+  };
+
+  /**
+   * The Approver's browser: open the consent page, follow its sign-in link
+   * through the provider, then the callback page's Continue link back to the
+   * consent page. Returns the browser's cookies and that page.
+   */
+  const logInThroughPage = async (consentPage: string): Promise<{ browser: PathJar; html: string }> => {
+    const browser: PathJar = new Map();
+    const first = await (await fetch(consentPage)).text();
+    const signIn = /<a href="([^"]+)">Sign in to decide<\/a>/.exec(first)?.[1] as string;
+    expect(signIn).toBe(`${new URL(consentPage).pathname}/approver-login`);
+    let url = new URL(signIn, ISSUER).toString();
+    let res = await fetch(url, { redirect: "manual" });
+    expect(res.status).toBe(303);
+    storeByPath(browser, url, res);
+    res = await fetch(res.headers.get("location") as string, { redirect: "manual" });
+    url = res.headers.get("location") as string;
+    res = await fetch(url, { redirect: "manual", headers: { cookie: cookiesFor(browser, url) } });
+    expect(res.status).toBe(200);
+    storeByPath(browser, url, res);
+    const callback = await res.text();
+    const next = /<a href="([^"]+)">Continue to the approval<\/a>/.exec(callback)?.[1] as string;
+    expect(next).toBe(new URL(consentPage).pathname);
+    url = new URL(next, ISSUER).toString();
+    const html = await (await fetch(url, { headers: { cookie: cookiesFor(browser, url) } })).text();
+    return { browser, html };
+  };
+
+  /**
+   * Submit the consent page's form as a browser does: to its action, with its
+   * hidden fields and the pressed button's value, form-encoded, from the
+   * issuer's origin, carrying the cookies the action's path receives.
+   */
+  const submitConsentForm = async (
+    browser: PathJar,
+    html: string,
+    decision: "approve" | "deny",
+    tamper: (fields: URLSearchParams) => void = () => {},
+  ): Promise<Response> => {
+    const action = /<form method="post" action="([^"]+)">/.exec(html)?.[1] as string;
+    expect(action).toBeDefined();
+    expect(html).toContain(`<button name="decision" value="${decision}">`);
+    const fields = new URLSearchParams();
+    for (const m of html.matchAll(/<input type="hidden" name="([^"]+)" value="([^"]*)">/g)) fields.set(m[1] as string, m[2] as string);
+    fields.set("decision", decision);
+    tamper(fields);
+    const url = new URL(action, ISSUER).toString();
+    return fetch(url, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/x-www-form-urlencoded", origin: ISSUER, cookie: cookiesFor(browser, url) },
+      body: fields.toString(),
+    });
+  };
+
+  it("login, Continue, then the page's Approve: the session cookie is scoped to the consent page, the form carries the login's CSRF secret, and the logged-in Approver is the template's approver of record", async () => {
+    op.shape = (b) => ({ claims: b });
+    const { id, consentPage } = await proposeTemplate();
+    // A template consent selects no Subject.
+    expect((await fetch(`${consentPage}/approver-login?subject=alice`, { redirect: "manual" })).status).toBe(400);
+    const { browser, html } = await logInThroughPage(consentPage);
+    const session = [...browser.values()].find((c) => c.name === "mission_approver_session");
+    expect(session?.path).toBe(`/templates/proposals/${id}`);
+    const res = await submitConsentForm(browser, html, "approve");
+    expect(res.status, await res.clone().text()).toBe(303);
+    expect(res.headers.get("location")).toBe(`/templates/proposals/${id}`);
+    const after = await (await fetch(consentPage, { headers: { cookie: cookiesFor(browser, consentPage) } })).text();
+    const templateId = /approved as template <code>([^<]+)<\/code>/.exec(after)?.[1] as string;
+    expect(as.templateStore.get(templateId)?.approver).toEqual({ iss: ISSUER, sub: "bob" });
+  });
+
+  it("login, Continue, then the page's Deny: the proposal is denied and no template is created", async () => {
+    op.shape = (b) => ({ claims: b });
+    const { id, consentPage } = await proposeTemplate();
+    const { browser, html } = await logInThroughPage(consentPage);
+    const res = await submitConsentForm(browser, html, "deny");
+    expect(res.status).toBe(303);
+    expect(await (await fetch(consentPage)).text()).toContain("This proposal was denied.");
+    expect(as.templateStore.getByApprovalEvent(`apev_${id}`)).toBeUndefined();
+  });
+
+  it("refuses the page's form when its CSRF secret is not the login's, deciding nothing", async () => {
+    op.shape = (b) => ({ claims: b });
+    const { id, consentPage } = await proposeTemplate();
+    const { browser, html } = await logInThroughPage(consentPage);
+    const res = await submitConsentForm(browser, html, "approve", (f) => f.set("csrf_token", "not-the-login-secret"));
+    expect(res.status).toBe(401);
+    expect(as.templateStore.getByApprovalEvent(`apev_${id}`)).toBeUndefined();
+    // The genuine form still decides.
+    expect((await submitConsentForm(browser, html, "approve")).status).toBe(303);
   });
 });
