@@ -64568,7 +64568,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "Each adjudication's record reflects the Mission reference, the verified Encountered Resource object, the declaration digest where one exists, the sought authority's action classes, the requesting actor, and the session's taint state.",
-    "local": "Data-construction witness: the expansion deferral records the predecessor Mission, the requested entries, the requesting client, the Encountered Resource object, the declaration digest where one exists, and the taint state; no Discovery Evidence is emitted yet, and action classes are a later stage."
+    "local": "Data-construction witness: the expansion deferral records the predecessor Mission, the requested entries, the requesting client, the Encountered Resource object, the declaration digest where one exists, the sought action classes, and the taint state; no Discovery Evidence is emitted yet."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -64584,9 +64584,15 @@
      "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a fresh, session-scoped report is believed, tainted or not, and recorded apart from the effective state; the encounter still routes to a human",
      "level": "endpoint",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the classes sought come from the deployment's classification; an encounter no floor touches records none, and still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.minimum-inputs-contextual",
@@ -64845,12 +64851,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An encounter seeking an operation with no action class under the deployment's classification yields `routed_to_approval` or `refused`, never `bound`."
+    "normative": "An encounter seeking an operation with no action class under the deployment's classification yields `routed_to_approval` or `refused`, never `bound`.",
+    "local": "An action the deployment's classification cannot assign records the unclassified floor and routes to a human, never refused. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > an action the deployment's classification cannot assign a class is a floor",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.unclassifiable-no-policy-bind-contextual",
@@ -65132,7 +65146,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "A routed encounter produces an expansion proposal that carries the pinned Encountered Resource object and the declaration digest.",
-    "local": "Data-construction witness: the deferral's disclosure carries the encounter's origin, resources and declaration digest, not a pinned Encountered Resource object; no approval surface renders it yet (#1469 human-path disclosure)."
+    "local": "The deferral (the expansion proposal) carries the Encountered Resource object and the declaration digest, in its encounter facts and its encounter_disclosure. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -65148,9 +65162,15 @@
      "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > the declaration digest is the Mission Issuer's own, over the bytes it retrieved; the agent's hint is kept as its claim, and the human-approved successor records the digest",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.route-proposal-carries-identity-contextual",
@@ -65211,12 +65231,20 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A routed encounter's disclosure shows the Approver the issuer-verified Encountered Resource object."
+    "normative": "A routed encounter's disclosure shows the Approver the issuer-verified Encountered Resource object.",
+    "local": "The disclosure carries the Encountered Resource object of the Mission Issuer's own verified values, with whether it is pinned. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.disclosure-resource-contextual",
@@ -65255,12 +65283,20 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A routed encounter's disclosure presents the self-declaration labelled as the resource's own claim, not as a verified fact."
+    "normative": "A routed encounter's disclosure presents the self-declaration labelled as the resource's own claim, not as a verified fact.",
+    "local": "The disclosure presents the declaration with claimed_by_resource true and its claimed operations. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.disclosure-declaration-as-claim-contextual",
@@ -65299,12 +65335,32 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A routed encounter's disclosure shows whether the session was tainted at adjudication."
+    "normative": "A routed encounter's disclosure shows whether the session was tainted at adjudication.",
+    "local": "The disclosure carries a taint statement: untrusted_content_ingested, no_untrusted_content_reported (only on an explicit, trusted untainted report), or taint_state_unknown (facts stored before trusted taint among them). Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > under taint every encounter meets the taint floor, whatever its class; the disclosure says untrusted content was ingested only when the harness reported it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > an encounter stored before trusted taint and the floors is disclosed with its taint state unknown, claiming no floors, id or pinning, never as untainted",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.disclosure-taint-status-contextual",
@@ -65343,12 +65399,26 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The approval or expansion evidence that resolves a routed encounter carries the same `encounter_id` as its Discovery Evidence."
+    "normative": "The approval or expansion evidence that resolves a routed encounter carries the same `encounter_id` as its Discovery Evidence.",
+    "local": "The human-approved successor's record carries the deferral's encounter_id, unique per adjudication; Discovery Evidence, which carries it on the encounter's side, is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > each adjudication has its own encounter_id",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.resolution-carries-encounter-id-contextual",
@@ -65940,12 +66010,26 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "A self-declaration labelling an operation read-only or reversible does not change its class: `sought_classes` and the floors follow the deployment's classification."
+    "normative": "A self-declaration labelling an operation read-only or reversible does not change its class: `sought_classes` and the floors follow the deployment's classification.",
+    "local": "sought_classes and the floors come from the deployment's classification only; a declaration labelling an operation laxer or stricter changes neither. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the classes sought come from the deployment's classification; an encounter no floor touches records none, and still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > a declaration never classifies: one that relaxes a class, or makes one stricter, changes neither the classes nor the floors",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.lying-resource.classes-from-deployment-contextual",
@@ -65989,7 +66073,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "notes": "Not applicable to the current reference deployments: the reference lets no declaration classify, so the option to make a class stricter goes unused (#1469 stage 4)."
   },
   {
    "id": "discovery.lying-resource.declaration-may-stricten-contextual",
@@ -66028,12 +66112,20 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "A declaration claiming a laxer class than the deployment assigns leaves the assigned class, and the floors it triggers, unchanged."
+    "normative": "A declaration claiming a laxer class than the deployment assigns leaves the assigned class, and the floors it triggers, unchanged.",
+    "local": "The reference lets no declaration classify, so none relaxes a class: a declaration labelling an irreversible action non_consequential leaves sought_classes and the irreversible floor unchanged."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > a declaration never classifies: one that relaxes a class, or makes one stricter, changes neither the classes nor the floors",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.lying-resource.declaration-must-not-relax-contextual",
@@ -66072,12 +66164,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An encounter seeking irreversible-class authority yields `routed_to_approval` or `refused` even when a consented ceiling entry covers it."
+    "normative": "An encounter seeking irreversible-class authority yields `routed_to_approval` or `refused` even when a consented ceiling entry covers it.",
+    "local": "An encounter seeking irreversible-class authority records the irreversible_action floor. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > each high-consequence class is a floor: irreversible, external-commitment and privileged-administration authority each require a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.lying-resource.irreversible-human-floor-contextual",
@@ -66116,12 +66216,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An encounter seeking external-commitment-class authority yields `routed_to_approval` or `refused` even when a consented ceiling entry covers it."
+    "normative": "An encounter seeking external-commitment-class authority yields `routed_to_approval` or `refused` even when a consented ceiling entry covers it.",
+    "local": "An encounter seeking external-commitment-class authority records the external_commitment floor. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > each high-consequence class is a floor: irreversible, external-commitment and privileged-administration authority each require a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.lying-resource.external-commitment-human-floor-contextual",
@@ -66160,12 +66268,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An encounter seeking privileged-administration-class authority yields `routed_to_approval` or `refused` even when a consented ceiling entry covers it."
+    "normative": "An encounter seeking privileged-administration-class authority yields `routed_to_approval` or `refused` even when a consented ceiling entry covers it.",
+    "local": "An encounter seeking privileged-administration-class authority records the privileged_administration floor. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > each high-consequence class is a floor: irreversible, external-commitment and privileged-administration authority each require a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.lying-resource.privileged-administration-human-floor-contextual",
@@ -66204,12 +66320,20 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The disclosure for a high-consequence encounter presents the declaration labelled as the resource's claim, not as a verified fact."
+    "normative": "The disclosure for a high-consequence encounter presents the declaration labelled as the resource's claim, not as a verified fact.",
+    "local": "The disclosure presents the declaration with claimed_by_resource true, its digest and its claimed operations, the same for every encounter, high-consequence or not. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.lying-resource.routed-declaration-as-claim-contextual",
@@ -66292,12 +66416,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "In a tainted session, an encounter seeking only a non-egress class such as `data_read` is treated as egress-capable and does not bind by policy."
+    "normative": "In a tainted session, an encounter seeking only a non-egress class such as `data_read` is treated as egress-capable and does not bind by policy.",
+    "local": "Under taint (reported, missing, stale or unverifiable), a consequential_read encounter records the tainted floor. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > under taint every encounter meets the taint floor, whatever its class; the disclosure says untrusted content was ingested only when the harness reported it",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.injection-discovery.tainted-encounter-egress-capable-contextual",
@@ -66337,7 +66469,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "With `tainted` true, every encounter that would otherwise bind yields `routed_to_approval`.",
-    "local": "A tainted encounter routes to a human (a deferral). Every encounter does before stage 6, tainted or not, so the witness does not yet discriminate taint; Discovery Evidence is a later stage."
+    "local": "A tainted encounter records the tainted floor and routes to a human (a deferral). Every encounter routes before stage 6, tainted or not, so the witness does not yet discriminate taint; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -66347,9 +66479,15 @@
      "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a fresh, session-scoped report is believed, tainted or not, and recorded apart from the effective state; the encounter still routes to a human",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > under taint every encounter meets the taint floor, whatever its class; the disclosure says untrusted content was ingested only when the harness reported it",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.injection-discovery.tainted-no-policy-bind-contextual",
@@ -66388,12 +66526,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The disclosure for an encounter routed under taint states that the session had ingested untrusted content."
+    "normative": "The disclosure for an encounter routed under taint states that the session had ingested untrusted content.",
+    "local": "The disclosure states untrusted_content_ingested when the harness reported taint, a stale tainted report included since taint persists for the session, and taint_state_unknown when no trustworthy report says either way, facts stored before trusted taint among them; only an explicit, trusted untainted report says none was reported. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > under taint every encounter meets the taint floor, whatever its class; the disclosure says untrusted content was ingested only when the harness reported it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > an encounter stored before trusted taint and the floors is disclosed with its taint state unknown, claiming no floors, id or pinning, never as untainted",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.injection-discovery.disclosure-states-untrusted-content-contextual",
@@ -66526,12 +66678,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An encounter whose binding would satisfy the external-communication predicate yields `routed_to_approval` in an untainted session too."
+    "normative": "An encounter whose binding would satisfy the external-communication predicate yields `routed_to_approval` in an untainted session too.",
+    "local": "An action in the deployment's external-communication set records the external_communication floor, whatever its class. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > an action satisfying the external-communication predicate is a floor, whatever its class",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.injection-discovery.external-communication-routes-contextual",
@@ -67669,7 +67829,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "An encounter with unpinnable identity, an unclassifiable operation, or no trustworthy taint state yields `routed_to_approval` or `refused`, never `bound`.",
-    "local": "Only the cannot-pin clause: an unpinnable encounter routes to a human or, where the deployment refuses, is refused with no deferral. An encounter without a trustworthy taint state counts as tainted and routes to a human, never refused, since the adjudication section's rule (treat as tainted) controls. Classification is a later stage."
+    "local": "Only the cannot-pin clause: an unpinnable encounter routes to a human or, where the deployment refuses, is refused with no deferral. An encounter without a trustworthy taint state counts as tainted and routes to a human, never refused, since the adjudication section's rule (treat as tainted) controls. An unclassifiable operation records the unclassified floor and routes to a human."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -67697,9 +67857,15 @@
      "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a missing report counts as tainted: no harness port, no answer, or a failing port",
      "level": "endpoint",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > an action the deployment's classification cannot assign a class is a floor",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.route-or-refuse-unresolvable-contextual",
@@ -67738,12 +67904,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "A self-declaration never lowers an operation's class, and irreversible, external-commitment, or privileged-administration authority never binds by policy."
+    "normative": "A self-declaration never lowers an operation's class, and irreversible, external-commitment, or privileged-administration authority never binds by policy.",
+    "local": "No declaration lowers a class, and each high-consequence class records its floor. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > a declaration never classifies: one that relaxes a class, or makes one stricter, changes neither the classes nor the floors",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > each high-consequence class is a floor: irreversible, external-commitment and privileged-administration authority each require a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.self-declaration-floor-contextual",
@@ -67782,12 +67962,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "In a tainted session no encounter binds by policy; every would-be binding routes to a human."
+    "normative": "In a tainted session no encounter binds by policy; every would-be binding routes to a human.",
+    "local": "Every encounter under taint records the tainted floor. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > under taint every encounter meets the taint floor, whatever its class; the disclosure says untrusted content was ingested only when the harness reported it",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.taint-floor-contextual",
