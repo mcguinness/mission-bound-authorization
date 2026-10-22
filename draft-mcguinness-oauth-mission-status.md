@@ -1123,15 +1123,41 @@ state ({{legal-transitions}}) and never changes a `terminated` Mission.
 
 ## Legal Transitions {#legal-transitions}
 
+{{lifecycle-states}} shows the Mission lifecycle states and the
+transitions this profile defines. An approval event creates a Mission
+in `active` ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+Lifecycle"), and only `active` permits derivation. A deadline is a
+schedule's `suspend_until` ({{lifecycle-operations}}). A companion
+profile can define further transitions to `terminated`, each
+recording a termination reason of its own.
+
+~~~
+      approval
+         |
+         v
+   +-----------+    suspend    +-----------+
+   |  active   |-------------->| suspended |
+   |           |<--------------|           |
+   +-----------+    resume,    +-----------+
+         |       or deadline         |
+         |    (on_expiry=resume)     |
+         | revoke, complete,         | revoke, complete, expiry,
+         | expiry                    | deadline (on_expiry=revoke)
+         v                           v
+   +-------------------------------------------+
+   |                terminated                 |
+   |   reason: revoked, completed or expired   |
+   +-------------------------------------------+
+~~~
+{: #lifecycle-states title="Mission lifecycle states and transitions"}
+
 An operation is legal only from the source states below. The
 `terminated` state admits no transition, whatever its termination
 reason. An operation whose resulting state and, for `terminated`,
 termination reason equal the current ones is idempotent success
-({{idempotency}}). This table governs Mission-level
-state; a companion-registered extension operation such as `discharge`
-produces no Mission-state transition and is not a row of it,
-following instead the entry-grain rules the Entry Discharge companion
-defines ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
+({{idempotency}}). This table governs Mission-level state; an
+extension operation that changes no Mission state is not a row of
+it.
 
 `resume` is the sole exception: it is legal only from `suspended`
 (its resulting state, `active`, is also the baseline a Mission holds
@@ -1163,60 +1189,6 @@ every decision whether or not the transition is persisted. When a
 schedule's `suspend_until` is at or after the Mission's `expires_at`,
 expiry governs: the Mission is `terminated` with reason `expired` at
 `expires_at`, and the AS MUST NOT apply that schedule's `on_expiry`.
-
-## Consolidated State Machine {#state-machine}
-
-This profile owns the extension of the issuance profile's lifecycle
-state space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Lifecycle"). The table below is the authoritative view of
-that space: every state, every transition, the source of the event
-that drives it, and the termination reason a transition to
-`terminated` records.
-
-Event sources are the lifecycle endpoint (an operation
-of {{mission-lifecycle-endpoint}}), the expiry clock (a deadline
-reached without a request), and companion adjudication (a transition a
-companion profile commits). The lifecycle-endpoint rows are exactly the
-Mission-state-changing operations of {{legal-transitions}}; a
-companion-registered extension operation such as `discharge`
-({{I-D.draft-mcguinness-oauth-mission-discharge}}) is a
-lifecycle-endpoint operation that changes no Mission state and so is
-not a row of this table. Only `active` permits derivation; every
-other state is non-deriving.
-
-| From | Event | Event source | To | Reason |
-|---|---|---|---|---|
-| (none) | approval event | issuance profile | `active` | |
-| `active` | `revoke` | lifecycle endpoint | `terminated` | `revoked` |
-| `suspended` | `revoke` | lifecycle endpoint | `terminated` | `revoked` |
-| `active` | `suspend` | lifecycle endpoint | `suspended` | |
-| `suspended` | `resume` | lifecycle endpoint | `active` | |
-| `active` | `complete` | lifecycle endpoint | `terminated` | `completed` |
-| `suspended` | `complete` | lifecycle endpoint | `terminated` | `completed` |
-| `active` | `expires_at` reached | expiry clock | `terminated` | `expired` |
-| `suspended` | `expires_at` reached | expiry clock | `terminated` | `expired` |
-| `suspended` | `suspend_until` reached, `on_expiry` = `resume` | expiry clock | `active` | |
-| `suspended` | `suspend_until` reached, `on_expiry` = `revoke` | expiry clock | `terminated` | `revoked` |
-| `active` | successor activates | expansion profile | `terminated` | `superseded` |
-| `active` | parent terminates | child-delegation profile | `terminated` | `parent_terminated` |
-| `suspended` | parent terminates | child-delegation profile | `terminated` | `parent_terminated` |
-{: title="Consolidated Mission state machine"}
-
-`revoke` and the Mission's `expires_at` both apply in `suspended` as
-well as `active`, so a suspended Mission can still be terminated or
-expire. A `suspend_until` row fires only for a current schedule whose
-deadline falls before `expires_at` ({{lifecycle-operations}},
-{{legal-transitions}}). The `superseded` and
-`parent_terminated` rows are companion-defined and shown here for
-reference: a `superseded` termination is committed by the expansion
-profile and requires an `active` predecessor
-({{I-D.draft-mcguinness-oauth-mission-expansion}}); a
-`parent_terminated` termination is committed by the child-delegation
-profile only when a parent terminates, and a child's own expiry takes
-precedence over it. A `suspended` parent holds a dependent Child
-Mission non-active reversibly rather than terminating it
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Neither
-companion reason is produced by this profile's endpoint.
 
 ## Authentication
 
