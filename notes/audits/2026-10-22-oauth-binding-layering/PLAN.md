@@ -366,6 +366,14 @@ the binding's Delegated Exchange rules.
   issues it. This is a normative broadening, not an editorial move. It
   needs its own obligation-map entries and ledger rows (see 5.6), and a
   check of every other path that issues `act`-bearing tokens.
+
+  It also interacts with P1's main goal. The `act`-chain bullet (lines
+  3602-3608) cites the Actor Profile for "the members that profile
+  defines (for example, `sub`, `iss`, and the `sub_profile` actor-type
+  classification)". Under option (a), that bullet is rewritten to
+  depend on RFC 8693 Section 4.1 alone, with the Actor Profile members
+  moving to the companion. Otherwise the Actor Profile reference stays
+  normative in the base.
 - *Option (b):* the properties move with the exchange, keeping today's
   scope. Cross-Domain line 821 then repoints to the companion, giving
   Cross-Domain a companion dependency, and Token Claims line 2515
@@ -378,7 +386,7 @@ the binding's Delegated Exchange rules.
 | Variant | What moves | Assessment |
 |---|---|---|
 | A. Status quo (D559) | nothing | The base keeps two individual-draft normative references for an optional capability, and its RFC publication couples to both drafts. |
-| B. Designation protocol only (recommended) | as above | Both individual-draft references leave the `normative:` block, and the shared invariants stay. |
+| B. Designation protocol only (recommended) | as above | Both individual-draft references leave the `normative:` block (under P1-R1 option (a), only if line 3602-3608 is rewritten against RFC 8693 alone), and the shared invariants stay. |
 | C. All of the Section "Delegation Within a Mission" | B plus Delegation Constraints and Self-Exchange | Resource Access `-00`, Continuation, Cross-Domain and Derivation Limits would gain a dependency on an unsubmitted companion. |
 | D. Host it in Child Delegation | as B, into Child Delegation | Different contract: Child Delegation creates new Missions with lineage. It does not use designations. |
 | E. Fence it as a part of the binding | nothing | The references stay normative, so nothing changes for publication. |
@@ -468,11 +476,10 @@ the binding's Delegated Exchange rules.
       for its basis class. For `standing-consent`, that means lines
       3913-3939; for `direct`, the direct-approval rules (`kind`
       `human`, a human approval event);
-    - reject a registration that redefines the unknown-type rule;
-    - reject a registration that lets a basis supply or widen
-      authority.
+    - reject a registration that redefines the unknown-type rule.
 
-    These instructions restate checks; they create no obligation.
+    These instructions restate checks against body rules; they create
+    no obligation.
   - Extension-name policy, following the Namespace Taxonomy's postures:
     a short name is registered before use; a collision-resistant name
     (RFC 7519 Section 4.2 style) may be used unregistered, and the
@@ -638,7 +645,9 @@ Each step is one issue under the Issue Convention.
 
 **Dependency reduction (measurable):**
 - the binding's `normative:` block holds one Internet-Draft
-  (rar-metadata-remediation) instead of three;
+  (rar-metadata-remediation) instead of three; under P1-R1 option (a),
+  this holds only once the `act`-chain bullet (lines 3602-3608) no
+  longer needs the Actor Profile;
 - no individual draft is a normative dependency of the binding;
 - the binding's RFC publication no longer couples to the Actor Profile
   or client-instance-id;
