@@ -209,7 +209,9 @@ The binding's `normative:` block holds three Internet-Drafts:
    - Every anchor the binding defines is an envelope anchor (line 4654).
    - The substrate's Default Commitment Construction already defines
      all three species (`draft-mcguinness-mission-substrate.md` line
-     534 onward); line 4616 says this section instantiates it.
+     534 onward); line 4616 says this section instantiates it. That
+     reference is informative, so "instantiates" creates no normative
+     dependency on the substrate (C1, D140).
    - Only Discharge cites the binding's section for the other two
      species (`draft-mcguinness-oauth-mission-discharge.md` lines 682
      and 849).
@@ -414,6 +416,13 @@ sections):**
   `act` structure, so they stay valid if that heading stays. The 5
   citations of Delegation Constraints stay valid. Transaction
   Authorization already cites the Actor Profile itself.
+- **Uncited dependence (checked, none found).** No other draft uses the
+  phrase "delegated exchange".
+  - `actor_token` appears in Child Delegation (8 times) and Expansion
+    (10). Each defines its own RFC 8693 exchange "per RFC 8693":
+    - Child Delegation lines 452-461, 790 and 2301;
+    - Expansion lines 450-458, 684 and 2354.
+  - Neither relies on the binding's Delegated Exchange rules.
 - **Pending finding.** #1503 finding 11 (a delegated token's lifetime
   and "that credential's grant"; Sections 12.2 and 8.1.2 in that
   issue's numbering) touches the delegation sections. Rule it before
@@ -554,10 +563,18 @@ disposition (kept, moved to X, or cut as duplicate) in the issue.
   normative, as the bindings' substrate references already are.
 - No ledger rows move.
 
-**Open.** Check that no other companion relies on the base's
-"imports this section normatively" sentence (line 4654) for a
-non-envelope species. The sweep found citations only from Discharge,
-but companions may cite the base without naming the section.
+**Open.**
+- Check that no other companion relies on the base's "imports this
+  section normatively" sentence (line 4654) for a non-envelope species.
+  The sweep found citations only from Discharge, but companions may
+  cite the base without naming the section.
+- The reference runs both ways. The substrate says the binding
+  instantiates its construction (`draft-mcguinness-mission-substrate.md`
+  line 541), and the binding says it instantiates the substrate's (line
+  4616). Both references are informative since #708, so pointing the
+  binding at the substrate for the two species creates no normative
+  cycle. Reviewer, please confirm the base would still state every rule
+  its own anchors need.
 
 ### P5. Keep #207 (the Mission Model split) parked
 
