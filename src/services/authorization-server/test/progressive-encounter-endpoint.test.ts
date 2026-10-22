@@ -14,6 +14,9 @@
  * whose successor records the digest. Stage 2 pins the encountered resource's
  * identity from the Mission Issuer's own connection, through the deployment's
  * ports, and refuses an unpinnable encounter where the deployment says so.
+ * Stage 3 takes the session taint state from the harness through a port the
+ * agent does not mediate, counting a missing, stale or unverifiable report as
+ * tainted.
  */
 
 const hoisted = await vi.hoisted(async () => {
@@ -52,6 +55,7 @@ import {
   type ProgressiveDrawdownOptions,
   progressiveFromProfile,
   type ResourceConnection,
+  type TaintReport,
 } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
@@ -91,6 +95,24 @@ const VENDOR_AS = "https://auth.vendor.example";
 const metadataOf = (doc: Record<string, unknown>): string => JSON.stringify(doc, null, 2);
 const METADATA = metadataOf({ resource: ORIGIN, authorization_servers: [VENDOR_AS] });
 
+/**
+ * #1469 stage 3: what the harness reports through the deployment's taint port,
+ * as the test sets it, and the sessions it was asked about. No report is
+ * missing, so tainted.
+ */
+const harness = {
+  report: undefined as unknown,
+  fail: false,
+  calls: [] as Array<{ missionId: string; clientId: string }>,
+  /** Runs inside the port before it answers: a test simulates a slow lookup here. */
+  during: undefined as (() => void) | undefined,
+};
+/** The server's clock runs this far ahead of the system clock; a test advances it to simulate time passing during a lookup. */
+const clock = { aheadMs: 0 };
+const TAINT_MAX_AGE = 60;
+/** An RFC 3339 date-time the given number of seconds ago (negative: in the future). */
+const secondsAgo = (n: number): string => new Date(Date.now() - n * 1000).toISOString();
+
 const PUBLISHED = progressiveFromProfile(PROGRESSIVE_PROFILE);
 const PROGRESSIVE: ProgressiveDrawdownOptions = {
   ...PUBLISHED.options,
@@ -105,6 +127,13 @@ const PROGRESSIVE: ProgressiveDrawdownOptions = {
     const key = `${origin} ${issuer}`;
     return authorizedIssuers.has(key) ? true : deniedIssuers.has(key) ? false : undefined;
   },
+  harnessTaint: async (session) => {
+    harness.calls.push(session);
+    harness.during?.();
+    if (harness.fail) throw new Error("harness unreachable");
+    return harness.report as TaintReport | undefined;
+  },
+  taintMaxAgeSeconds: TAINT_MAX_AGE,
 };
 
 type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
@@ -258,6 +287,7 @@ beforeAll(async () => {
     approvalSessions,
     activationPolicies: PUBLISHED.policies,
     progressive: PROGRESSIVE,
+    now: () => new Date(Date.now() + clock.aheadMs),
   });
   server = as.provider.listen(PORT);
   await new Promise<void>((r) => server.once("listening", () => r()));
@@ -378,13 +408,23 @@ describe("the encounter's hint names the encounter's own origin (@spec discovery
   it("a hint naming another origin the request seeks is refused, so its digest is never compared with a different resource's declaration", async () => {
     declarations.set(ORIGIN, declarationOf(["payments:invoice.read"]));
     const digest = catalogDigest(declarationOf(["payments:invoice.read"]));
-    const facts = await encounterFacts(PROGRESSIVE, [ENCOUNTERED], requested, {
-      origin: new URL(OTHER).origin,
-      resource_declaration_digest: digest,
-    });
+    const session = { missionId: "msn_unit", clientId: "ap-agent", now: () => new Date() };
+    const facts = await encounterFacts(
+      PROGRESSIVE,
+      [ENCOUNTERED],
+      requested,
+      { origin: new URL(OTHER).origin, resource_declaration_digest: digest },
+      session,
+    );
     expect(facts).toBe("encountered_resource names an origin other than the encounter's");
     // Control: the same hint naming the encounter's origin is recorded, its digest compared.
-    const control = await encounterFacts(PROGRESSIVE, [ENCOUNTERED], requested, { origin: ORIGIN, resource_declaration_digest: digest });
+    const control = await encounterFacts(
+      PROGRESSIVE,
+      [ENCOUNTERED],
+      requested,
+      { origin: ORIGIN, resource_declaration_digest: digest },
+      session,
+    );
     expect(control).toMatchObject({ origin: ORIGIN, hint: { origin: ORIGIN, digest_matched: true } });
   });
 });
@@ -603,5 +643,146 @@ describe("the encountered resource's identity, pinned from the Mission Issuer's 
         progressive: { ...PROGRESSIVE, unpinnedEncounter: "refuse", resourceMetadata: undefined },
       }),
     ).rejects.toThrow("progressive unpinnedEncounter refuse needs a resourceMetadata port");
+  });
+});
+
+describe("the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3)", () => {
+  beforeEach(() => {
+    harness.report = undefined;
+    harness.fail = false;
+    harness.calls.length = 0;
+    harness.during = undefined;
+    clock.aheadMs = 0;
+  });
+
+  /** An encounter at ENCOUNTERED from a fresh Mission, with optional hints and extra request parameters. */
+  async function encounter(hints: Record<string, string> = {}, extra: Record<string, string> = {}) {
+    const root = await issueMission();
+    const res = await tokenRequest({ ...expansion(root.accessToken, [entry(ENCOUNTERED, ["payments:invoice.read"])], hints), ...extra });
+    const body = (await res.json()) as { error?: string; deferral_code?: string };
+    const facts = body.deferral_code ? (as.expansionDeferrals.disclosure(body.deferral_code)?.encounter as EncounterFacts | undefined) : undefined;
+    return { missionId: root.missionId, body, facts };
+  }
+
+  it("a fresh, session-scoped report is believed, tainted or not, and recorded apart from the effective state; the encounter still routes to a human", async () => {
+    for (const report of [
+      { tainted: false, granularity: "session", reported_at: secondsAgo(5) },
+      { tainted: true, granularity: "session", source_class: "web_fetch", reported_at: secondsAgo(5) },
+    ]) {
+      harness.report = report;
+      const { body, facts } = await encounter();
+      expect(body.error, JSON.stringify(report)).toBe("authorization_pending");
+      expect(facts?.tainted, JSON.stringify(report)).toBe(report.tainted);
+      expect(facts?.taint_failure, JSON.stringify(report)).toBeUndefined();
+      expect(facts?.taint_report, JSON.stringify(report)).toEqual(report);
+    }
+  });
+
+  it("a missing report counts as tainted: no harness port, no answer, or a failing port", async () => {
+    const port = PROGRESSIVE.harnessTaint;
+    try {
+      delete PROGRESSIVE.harnessTaint;
+      const none = (await encounter()).facts;
+      expect(none).toMatchObject({ tainted: true, taint_failure: "missing" });
+      expect(none?.taint_report).toBeUndefined();
+    } finally {
+      PROGRESSIVE.harnessTaint = port;
+    }
+    const unanswered = (await encounter()).facts;
+    expect(unanswered).toMatchObject({ tainted: true, taint_failure: "missing" });
+    harness.fail = true;
+    const failed = (await encounter()).facts;
+    expect(failed).toMatchObject({ tainted: true, taint_failure: "missing" });
+    expect(failed?.taint_report).toBeUndefined();
+  });
+
+  it("a report older than the deployment's bound counts as tainted, an untainted one included", async () => {
+    for (const tainted of [false, true]) {
+      const report = { tainted, granularity: "session", reported_at: secondsAgo(TAINT_MAX_AGE * 2) };
+      harness.report = report;
+      const { facts } = await encounter();
+      expect(facts, String(tainted)).toMatchObject({ tainted: true, taint_failure: "stale" });
+      expect(facts?.taint_report, String(tainted)).toEqual(report);
+    }
+  });
+
+  it("a report that is malformed, future-dated or not session-scoped is unverifiable and counts as tainted", async () => {
+    const fresh = { tainted: false, granularity: "session", reported_at: secondsAgo(5) };
+    for (const report of [
+      { ...fresh, tainted: "false" },
+      { ...fresh, granularity: "parameter" },
+      { tainted: false, reported_at: secondsAgo(5) },
+      { ...fresh, source_class: 5 },
+      { ...fresh, reported_at: "yesterday" },
+      // Date.parse accepts these; RFC 3339 does not.
+      { ...fresh, reported_at: new Date(Date.now() - 5000).toUTCString() },
+      { ...fresh, reported_at: secondsAgo(5).slice(0, 10) },
+      { tainted: false, granularity: "session" },
+      { ...fresh, reported_at: secondsAgo(-TAINT_MAX_AGE) },
+      "untainted",
+      [fresh],
+    ] as unknown[]) {
+      harness.report = report;
+      const { body, facts } = await encounter();
+      expect(body.error, JSON.stringify(report)).toBe("authorization_pending");
+      expect(facts, JSON.stringify(report)).toMatchObject({ tainted: true, taint_failure: "unverifiable" });
+    }
+  });
+
+  it("freshness is judged when the report arrives, after the lookups: a report fresh when asked but past the bound by then is stale, and one the harness made during a slow lookup is not future-dated", async () => {
+    try {
+      // A 120-second lookup: the report was 5 seconds old when asked for, 125 when it arrived.
+      harness.report = { tainted: false, granularity: "session", reported_at: secondsAgo(5) };
+      harness.during = () => {
+        clock.aheadMs += 120_000;
+      };
+      const late = (await encounter()).facts;
+      expect(late).toMatchObject({ tainted: true, taint_failure: "stale" });
+      // The harness made its report 90 seconds into a 120-second lookup: 30 seconds old on arrival.
+      clock.aheadMs = 0;
+      harness.during = () => {
+        clock.aheadMs += 120_000;
+        harness.report = { tainted: false, granularity: "session", reported_at: secondsAgo(-90) };
+      };
+      const during = (await encounter()).facts;
+      expect(during?.tainted).toBe(false);
+      expect(during?.taint_failure).toBeUndefined();
+    } finally {
+      clock.aheadMs = 0;
+    }
+  });
+
+  it("the agent cannot supply the taint state: a tainted=false parameter and a tainted member in its hint change nothing, and the harness is asked about the subject token's Mission and the authenticated client", async () => {
+    harness.report = { tainted: true, granularity: "session", source_class: "inbound_message", reported_at: secondsAgo(5) };
+    const { missionId, body, facts } = await encounter(
+      { encountered_resource: JSON.stringify({ origin: ORIGIN, tainted: false }) },
+      { tainted: "false", taint: JSON.stringify({ tainted: false, granularity: "session" }) },
+    );
+    expect(body.error, JSON.stringify(body)).toBe("authorization_pending");
+    expect(facts).toMatchObject({ tainted: true });
+    expect(facts?.taint_failure).toBeUndefined();
+    expect(facts?.hint).toEqual({ origin: ORIGIN });
+    expect(JSON.stringify(facts)).not.toContain('"tainted":false');
+    expect(harness.calls).toEqual([{ missionId, clientId: "ap-agent" }]);
+  });
+
+  it("the harness is asked only on an encounter: a named widening drawn by policy never consults it", async () => {
+    const root = await issueMission();
+    const named = await tokenRequest(expansion(root.accessToken, [entry(RESOURCE, ["payments:invoice.list"])]));
+    expect(named.status, await named.clone().text()).toBe(200);
+    expect(harness.calls).toEqual([]);
+  });
+
+  it("a harness port without a freshness bound, or a bound that is not a positive integer, is a configuration error before the server starts", async () => {
+    for (const [taintMaxAgeSeconds, message] of [
+      [undefined, "progressive harnessTaint needs taintMaxAgeSeconds"],
+      [0, "progressive taintMaxAgeSeconds must be a positive integer"],
+      [1.5, "progressive taintMaxAgeSeconds must be a positive integer"],
+    ] as const) {
+      await expect(
+        buildAuthorizationServer({ issuer: "http://localhost:1", progressive: { ...PROGRESSIVE, taintMaxAgeSeconds } }),
+        String(taintMaxAgeSeconds),
+      ).rejects.toThrow(message);
+    }
   });
 });
