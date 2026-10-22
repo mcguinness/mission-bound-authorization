@@ -6927,9 +6927,33 @@
      "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > a parent that is not active refuses the child-creation exchange with invalid_request and parent_not_active, creating no child (@spec child-delegation#denial-reasons, mission#issuance-gating, #1154)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > code exchange: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same exchange without it delivers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > refresh: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same refresh without it delivers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > Token Exchange: an async-delegation exchange whose Mission is revoked after the gate and the signature is refused invalid_request with mission_error revoked and no token member (D369), where the same exchange without it delivers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > a revocation committed while the request-path drain runs, the last awaited step before release, is still refused invalid_grant with mission_error revoked and no token member",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1154 (D369). Partial (#250, by the owner's ruling): every cited witness acknowledges the revocation before the derivation request arrives. A revocation committed and acknowledged after the save-time gate and before the response is not refused: the reference re-checks no Mission state after the gate, so the token is delivered. The release fence after all awaited response preparation is #250's revoke-during-issuance step; this row returns to tested only when its witnesses cover the issuance paths the clause covers."
+   "notes": "#1154 (D369). Partial (#250): the release fence (`fenceRelease`, the outermost `provider.use`, after every awaited response step including the request-path drain) refuses a token whose Mission terminated after the save-time gate, with the gate's own code. Witnessed for a revocation committed during issuance on the code exchange, a refresh and the async-delegation creating exchange, and for one committed while the drain runs; the ICA continuation exchange keeps its own code (core.issuance-gating.profile-code-override). Fenced by the same wrapper but not witnessed during issuance: the device code grant, the deferred grant (AROP, Mission approval and expansion deferrals), the JWT bearer grant (child redemption, Dispatch Handoff redemption), the Mission dispatch grant, the delegation-handle, designation, delegated-redemption, child-creation, expansion and Dispatch Handoff exchanges, and a stored result served again. The fence orders a revocation against an issuance within one process only (#641). Returns to tested when those paths are witnessed."
   },
   {
    "id": "core.issuance-gating.profile-code-override",
@@ -6991,6 +7015,12 @@
     {
      "file": "src/services/authorization-server/test/continuation-grant.test.ts",
      "name": "continuation hop-count limit (@spec id-continuation-assertion) > refuses a continuation past the chain's limit with invalid_grant, recording no hop and counting no derivation; another chain of the same Mission is unaffected",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "the release fence on the continuation exchange (@spec mission#issuance-gating, id-continuation-assertion, #250) > a Mission revoked after the gate and the signature keeps ICA's code: invalid_continuation with mission_error revoked and no token member, where the same exchange without it delivers the ID-JAG",
      "level": "endpoint",
      "surface": "token-endpoint"
     }

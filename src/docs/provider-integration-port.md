@@ -550,7 +550,8 @@ the store.
   `save()` returns, `createRefreshToken` (L129, through `issueRefreshToken`)
   and `issueIdToken` (L133) run. Middleware in `buildProvider` then sets the
   response `scope` and, for `authorization_code`, `mission_id` and
-  `mission_expires_at`.
+  `mission_expires_at`. The request-path drain runs next, and the release
+  fence last (§4.2).
 - **`gateDerivation`.** The state half (`gateDerivable`: the expiry clock in
   its own write, `active`, the ancestor walk, a non-empty effective set) runs
   first. Then `countDerivationInCallerTx` runs one
@@ -559,7 +560,8 @@ the store.
   no `await` between them, so no other request runs between them in the one
   process. This path has no caller transaction, so the `UPDATE` autocommits.
 - **Boundary.** §4.2. The count commits before the token is signed. No
-  transaction spans the count, the signature and the index row.
+  transaction spans the count, the signature and the index row. The release
+  fence decides whether the response leaves; it records nothing.
 - **Asynchronous work.** None before delivery, and none is used.
 - **Crash and recovery.** §4.3 and §4.5.
 - **Tests (HTTP):**
@@ -604,12 +606,24 @@ the store.
     expiry,** before the gate: `invalid_grant` with no `mission_error`, and no
     lazy expiry commit. This holds for the approval grant and a delegation
     family alike.
-  - **Revoke versus issue.** Between the gate and the signature, `save()`
-    awaits the customizer and `JWT.sign`. A lifecycle request can commit and
-    acknowledge a revocation in that window, and the gated token is still
-    signed and returned. `{#issuance-gating}` refuses a derivation answered
-    after an acknowledged revocation. Code reading; no test yet; #250 owns the
-    race (§4.6).
+  - **Revoke versus issue.** `{#issuance-gating}` refuses a derivation
+    answered after an acknowledged revocation, and the AS answers when it
+    decides to release the result. After the gate, `save()` awaits the
+    customizer and `JWT.sign`, the grant saves the refresh token, and the
+    request-path drain is awaited. A revocation that commits anywhere in that
+    window is refused by the release fence (§4.2): the response becomes the
+    gate's own refusal, `invalid_grant` with `mission_error` `revoked`, with
+    no token member. One that commits after the fence is acknowledged after
+    the token was answered. Only a terminated Mission is refused; a
+    suspension in the window still delivers. Tests:
+    - `the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > code exchange: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same exchange without it delivers` (`issuance-release-fence.test.ts`)
+    - `the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > a revocation committed while the request-path drain runs, the last awaited step before release, is still refused invalid_grant with mission_error revoked and no token member`
+    - `the release fence refuses only an ended Mission (@spec mission#issuance-gating, #250) > a suspension committed at the same point, after the gate and the signature, still delivers the code exchange's tokens`
+
+    The fence holds for one process. Still #250's (§4.6): a crash after the
+    count, a lost response, the replay of a lost response, the window between
+    the approval commit and the code (#916, §3.4), the refund of a fenced
+    derivation's count (#935, §4.3), and multi-process issuance (#641).
   - No operation identity: nothing replays a lost token response. A retry
     of the same authorization code, or of a rotated refresh token, is reuse
     and revokes the grant; a retry of a refresh token that has not rotated
@@ -862,8 +876,8 @@ on the in-memory default it does not.
 The reference has no acceptance point in the sense of
 [control-plane-deployment.md](control-plane-deployment.md)'s reservations: the
 provider access-token hook offers neither an operation identity nor an
-acceptance callback. The observable points inside `AccessToken#save()`, in
-order:
+acceptance callback. The observable points inside `AccessToken#save()`
+(steps 1 to 4) and after it, in order:
 
 1. `extraTokenClaims`: projection, state gate, counter `UPDATE`
    (autocommitted in the kernel database).
@@ -873,17 +887,36 @@ order:
    row (in-memory handle). From here introspection can answer `active: true`
    for the token.
 5. `save()` returns; then refresh-token creation, the ID token, and the
-   response.
+   response body, which the response middleware completes.
+6. The request-path drain (`drainLifecycleOutbox`), awaited.
+7. The release fence (`fenceRelease`,
+   `services/authorization-server/src/adapters/provider.ts:2315`), the AS's
+   decision to answer. It is the first `provider.use` in `buildProvider`
+   (`:2369-2372`). `Provider#use` splices each middleware ahead of the route
+   dispatcher in registration order, so the fence's code after `next()` runs
+   after every other wrapper's, the drain's (`:2609`) included. It reads the
+   state of every Mission the released `access_token` names, through its
+   `mission` claim or the grant the minted AccessToken rides, and replaces
+   the response with the gate's own refusal when one has terminated. The
+   read is synchronous, and nothing in the AS awaits after it: Koa's
+   `respond` writes the body it leaves. The fence covers every 200 that
+   releases an `access_token` on the token route and at the transaction
+   endpoint, a stored result served again included.
 
-A JWT-only Resource Server accepts the token from step 3 on, without the AS
-knowing it was delivered. No authoritative issuance commit exists across the
-provider and Mission stores. Defining one is #250's first acceptance item
-(§4.6). The boundary cases this leaves open (a revocation between the gate
-and signing, a failure after counting, a failure after signing, a failure
-after index acceptance, a lost code-exchange or refresh response), each with
-its outcome and owner, are listed in
+A JWT-only Resource Server would accept the token from step 3 on, but the AS
+releases it only at step 7. A revocation committed before step 7 is refused
+there; one committed after it is acknowledged after the token was answered.
+The fence records nothing, so no authoritative issuance commit exists across
+the provider and Mission stores. Defining one is #250's first acceptance item
+(§4.6). The boundary cases this leaves open (a failure after counting, a
+failure after signing, a failure after index acceptance, a lost code-exchange
+or refresh response), each with its outcome and owner, are listed in
 [issuance-only-deployment.md](issuance-only-deployment.md) §4; D408 accepts
-them as unsupported for that reference deployment.
+them as unsupported for that reference deployment. Also open: a crash after
+the count, the replay of a lost response under one operation identity, the
+window between the approval commit and the code (#916), the refund of a
+fenced derivation's count (#935), and multi-process issuance (#641), where
+the fence orders a revocation against an issuance only within one process.
 
 ### 4.3 Failed-issuance counting
 
@@ -1496,8 +1529,10 @@ validates a token as the resource does (D402, §3.8).
    code (`{#approval-event}` step 7). §3.4.
 2. An authoritative issuance commit that couples the derivation count to the
    access token (#250). §4.2, §4.3.
-3. Refusing a derivation answered after an acknowledged revocation when its
-   gate ran before the revocation commit (`{#issuance-gating}`). §3.5.
+3. Ordering a revocation against an issuance across processes
+   (`{#issuance-gating}`; #641). Within one process the release fence
+   refuses a derivation whose Mission is revoked before the AS answers it,
+   even when its gate ran first. §3.5, §4.2.
 4. External Subjects (`{#approval-event}` step 2), refused
    `approval_forbidden`. §3.2.
 5. An operation identity and artifact replay for provider mints. §4.4.
@@ -1569,7 +1604,6 @@ Runtime overlay:
   and refuses at the token endpoint (§3.3).
 - Binding: record and code atomicity; an abandoned redirect; a lost code
   response; a lineage resolving to more than one Mission (§3.4).
-- Issuance: revoke versus issue (§3.5).
 - Gating: refresh against an earlier grant after revocation (§3.6).
 - Scope projection: `derivation_count` after a code or refresh projection
   refusal (§3.7).

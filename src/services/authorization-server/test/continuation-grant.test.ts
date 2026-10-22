@@ -36,7 +36,7 @@ import {
   jwtVerify,
   SignJWT,
 } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import {
   UNSUPPORTED_MEMBER_DESCRIPTION,
@@ -1203,6 +1203,49 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(body.error).toBe("invalid_continuation");
     // The STORE path (proves the fan-out wiring), distinct from the gate path.
     expect(body.error_description).toMatch(/terminal continuation handle/);
+  });
+});
+
+describe("the release fence on the continuation exchange (@spec mission#issuance-gating, id-continuation-assertion, #250)", () => {
+  /**
+   * Revoke `missionId` once, from inside the grant's issuance: the kernel
+   * releases the derivation reservation after the gate admitted the grant and
+   * after the ID-JAG was signed, before the response is set.
+   */
+  function revokeAtRelease(missionId: string): () => boolean {
+    const release = as.kernel.releaseDerivation.bind(as.kernel);
+    let committed = false;
+    vi.spyOn(as.kernel, "releaseDerivation").mockImplementation((...args: Parameters<typeof release>) => {
+      if (!committed) {
+        committed = true;
+        as.kernel.transition(missionId, "revoke");
+      }
+      return release(...args);
+    });
+    return () => committed;
+  }
+
+  it("a Mission revoked after the gate and the signature keeps ICA's code: invalid_continuation with mission_error revoked and no token member, where the same exchange without it delivers the ID-JAG", async () => {
+    const control = newLineage("apev-release-fence-control");
+    const delivered = await tokenExchange({ subjectToken: await mintICA(control.handle) });
+    const deliveredBody = (await delivered.json()) as Record<string, unknown>;
+    expect(delivered.status, JSON.stringify(deliveredBody)).toBe(200);
+    expect(deliveredBody.issued_token_type).toBe(ID_JAG_TOKEN_TYPE);
+    expect(typeof deliveredBody.access_token).toBe("string");
+
+    const { missionId, handle } = newLineage("apev-release-fence");
+    const ica = await mintICA(handle);
+    const committed = revokeAtRelease(missionId);
+    const res = await tokenExchange({ subjectToken: ica });
+    vi.restoreAllMocks();
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(committed()).toBe(true);
+    expect(as.kernel.get(missionId)?.termination?.reason).toBe("revoked");
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_continuation");
+    expect(body.mission_error).toBe("revoked");
+    expect(Object.keys(body).sort()).toEqual(["error", "error_description", "mission_error"]);
+    expect(res.headers.get("cache-control")).toContain("no-store");
   });
 });
 
