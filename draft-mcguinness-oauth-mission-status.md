@@ -1846,9 +1846,9 @@ the Entry Discharge companion's `terminal_when` and `discharge`
 capability is conformant to its own document, not to this one
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
-An implementation meets the following requirement independent of
-which extensions above it claims, and independent of which companion
-profiles it adopts. Every issuer-held narrowing mechanism a
+A Mission Issuer that claims any extension above meets the following
+requirement, whichever companion profiles it adopts. Every
+issuer-held narrowing mechanism a
 deployment runs, an adopted companion's discharge mechanism or
 another companion profile's own overlay alike, MUST feed the single
 Effective Authority Set computation. Every derivation and every
