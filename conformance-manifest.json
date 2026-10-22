@@ -55,8 +55,8 @@
     "content_sha256": "2734f08663aaa41f3d3f58b885c7036833c88a7286b889647bfa426dd2835872"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "d6c36ca320263498afb5cb9bf41a5f90030ef38a",
-    "content_sha256": "1ec9516c1753531da6e30711e64b62ff931c86e3132aa924312f86e8702879e5"
+    "revision": "cdff533f071108dcbffa22529cd8e541eb9c6d5d",
+    "content_sha256": "e11ec1d79ab7aeba3bfc58df2f7c6a191a27816c61116737387eae648f66c4ca"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
@@ -13472,6 +13472,66 @@
    "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
   },
   {
+   "id": "status.lifecycle.private-key-jwt-params",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "The request also carries the client authentication parameters of the mechanism it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
+   "facet": "private-key-jwt",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Lifecycle request authenticating by private-key JWT carries `client_assertion_type` with the jwt-bearer value and `client_assertion` in its form body; an assertion sent without the type or under another type, and a type sent without an assertion, are refused `invalid_client` (HTTP 400), leaving the Mission unchanged",
+    "local": "private_key_jwt is the only method the reference Lifecycle endpoint accepts. A type sent without an assertion is refused structurally (there is nothing to verify), so only the type comparison is separately witnessable"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint transport and client authentication (@spec status#mission-status-authentication, status#mission-status-auth-failures, #1191) > refuses an assertion sent without client_assertion_type or under another type, and a client_assertion_type sent without an assertion, invalid_client (HTTP 400)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 finding 12 (D649). Witness: dropping the client_assertion_type comparison from authenticateLifecycleClient fails the cited test (an untyped assertion is answered 200)."
+  },
+  {
+   "id": "status.lifecycle.client-id-mtls",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "The request also carries the client authentication parameters of the mechanism it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
+   "facet": "mtls-client-id",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Lifecycle request authenticating by mTLS carries `client_id` in its form body, and one that omits it is not authenticated and is refused `invalid_client`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented."
+  },
+  {
    "id": "status.lifecycle.unserved-operation-refused",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
@@ -13753,7 +13813,7 @@
    "id": "status.request.served-audience-authorization",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-request",
-   "text": "The Mission Issuer MUST honor a request naming an audience other than the caller's own only where its configuration authorizes the authenticated caller for that audience",
+   "text": "The Mission Issuer MUST honor a request's `audience` only where that configuration authorizes the authenticated caller for it, and MUST otherwise refuse the request with the not-found response of {{mission-status-errors}}.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -13763,12 +13823,75 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Mission Status request naming an audience other than the caller's own (for example a Mission Issuance Grant consuming Authorization Server's per-resource request) is honored only where the Mission Issuer's configuration authorizes that caller for the audience, and is otherwise refused with the not-found response, indistinguishable from an unknown Mission"
+    "normative": "a Mission Status request's `audience`, the caller's own audience included, is honored only where the Mission Issuer's configuration authorizes the authenticated caller for it (for example a Mission Issuance Grant consuming Authorization Server's per-resource request), and is otherwise refused with the not-found response, indistinguishable from an unknown Mission"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
+   "notes": "#963 decision D1; #1535 finding 12 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status, which passes the request's `audience` straight through to the signed response (provider.ts, the signed Status route), checked against neither a per-caller audience configuration nor the caller's client_id; no such configuration exists, and no consuming-Authorization-Server caller class or issuance-grant redemption path exists in src."
+  },
+  {
+   "id": "status.request.audience-entitlement-configuration-only",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "Entitlement to an audience comes only from that configuration, never from string equality between `audience` and the caller's `client_id` or certificate subject.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose `audience` equals the authenticated caller's `client_id` or certificate subject, for an audience the Mission Issuer's configuration does not authorize that caller to request, is refused with the not-found response: equality confers no entitlement"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#963 decision D1; #1535 finding 12 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status, which passes the request's `audience` straight through to the signed response (provider.ts, the signed Status route), checked against neither a per-caller audience configuration nor the caller's client_id; no such configuration exists, and no consuming-Authorization-Server caller class or issuance-grant redemption path exists in src."
+  },
+  {
+   "id": "status.request.client-id-mtls",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "`client_id`, REQUIRED with mTLS client authentication ({{Section 2 of RFC8705}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Status request authenticating by mTLS carries `client_id` in its form body, and one that omits it is not authenticated and is refused `invalid_client`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 12 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented."
+  },
+  {
+   "id": "status.request.private-key-jwt-params",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "`client_assertion_type` and `client_assertion`, REQUIRED with private-key-JWT client authentication {{RFC7523}}",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Status request authenticating by private-key JWT carries `client_assertion_type` (the jwt-bearer value) and `client_assertion`; one missing either, or under another type, is not authenticated and is refused `invalid_client`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 12 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status. The Lifecycle endpoint's twin, status.lifecycle.private-key-jwt-params, is tested. D405: specified, not implemented."
   },
   {
    "id": "status.response.served-audience-aud",
@@ -13969,6 +14092,41 @@
     }
    ],
    "notes": "Status interface audit (#705)."
+  },
+  {
+   "id": "status.response.audience-projection-present",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "When the request names an `audience`, the response MUST carry `authorization_details`, as an empty array when no entry is relevant to that audience.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Status Response to a request naming an `audience` carries `authorization_details`, as `[]` when no Effective Authority Set entry is relevant to that audience (for example after containment removed the only matching entry), while a response to a request naming none carries no such member, so an audience holding no authority stays distinguishable from a state-only response",
+    "local": "the empty array is witnessed on the kernel's signed Status payload, which the Status route and the Lifecycle endpoint share; the omitted-audience shape on the Lifecycle endpoint, whose requests carry no audience"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment.test.ts",
+     "name": "authority_hash immutability + projections > keeps authority_hash byte-identical while signedStatus omits the contained entry and carries containment_version",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint signed state-only response (@spec status#mission-status-response, status#mission-lifecycle-endpoint, #1191) > answers revoke with the signed state-only Mission Status Response: requester aud and sub, the request's nonce, and every required member",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 finding 13 (D649). Witnesses: making the kernel's signed Status payload omit an empty projection fails the containment test (expects []); making it always carry the member fails the Lifecycle state-only test. The omitted-audience MUST NOT is status.response.state-only-no-authority."
   },
   {
    "id": "status.response.state-required",
