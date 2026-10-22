@@ -1257,21 +1257,68 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     ).toBe(0);
   });
 
-  it("validates the discharge's own members before its authorization: a malformed member is refused invalid_request to a caller without the discharge grant and to one outside the target's mapping, alike for an unknown Mission (@spec status#lifecycle-processing, #1535)", async () => {
+  it("validates the discharge's own members before its authorization: a wrong type, a bad grammar and an invalid target-form combination each get one byte-identical invalid_request for a caller without the grant, a caller outside the target's mapping, an authorized caller on an existing Mission and an unknown Mission, and the refusal reads no Mission (@spec discharge#discharge-anti-oracle, status#lifecycle-processing, #1535)", async () => {
     const record = approveOnAs();
     const before = as.kernel.get(record.id);
-    for (const token of [LIFECYCLE_ONLY_TOKEN, UNMAPPED_SOURCE_TOKEN]) {
-      for (const missionId of [record.id, "msn_unknown_0000000000000000000000"]) {
-        const res = await lifecycle(
-          missionId,
-          dischargeBody(record, { mission_id: missionId, event_id: "not a valid event id" }),
-          token,
-        );
-        expect(res.status, `${token} ${missionId}`).toBe(400);
-        expect(await res.json()).toMatchObject({ error: "invalid_request" });
+    const unknownId = "msn_unknown_0000000000000000000000";
+    const malformed: Array<[string, Record<string, unknown>]> = [
+      ["type", { event_type: 42 }],
+      ["grammar", { event_id: "not a valid event id" }],
+      // Beside the digest pair dischargeBody sends: both target forms at once.
+      ["target-form combination", { condition_selector: "close-target" }],
+    ];
+    const callers: Array<[string, string]> = [
+      [LIFECYCLE_ONLY_TOKEN, record.id],
+      [UNMAPPED_SOURCE_TOKEN, record.id],
+      [DEV_SERVICE_TOKEN, record.id],
+      [DEV_SERVICE_TOKEN, unknownId],
+    ];
+    const read = vi.spyOn(as.kernel, "get");
+    const authorize = vi.spyOn(as.kernel, "authorizeDischarge");
+    try {
+      for (const [kind, over] of malformed) {
+        const nonce = freshNonce();
+        const answers: Array<Record<string, unknown>> = [];
+        for (const [token, missionId] of callers) {
+          const res = await lifecycle(missionId, dischargeBody(record, { mission_id: missionId, nonce, ...over }), token);
+          answers.push({
+            status: res.status,
+            contentType: res.headers.get("content-type"),
+            cacheControl: res.headers.get("cache-control"),
+            text: await res.text(),
+          });
+        }
+        expect(answers[0]?.status, kind).toBe(400);
+        expect(JSON.parse(answers[0]?.text as string)).toMatchObject({ error: "invalid_request", nonce });
+        for (const answer of answers) expect(answer, kind).toEqual(answers[0]);
       }
+      // The syntax path reads no Mission and reaches no target authorization.
+      expect(read.mock.calls.filter(([id]) => id === record.id || id === unknownId)).toEqual([]);
+      expect(authorize).not.toHaveBeenCalled();
+    } finally {
+      read.mockRestore();
+      authorize.mockRestore();
     }
     expect(as.kernel.get(record.id)).toEqual(before);
+  });
+
+  it("retains nothing for a discharge refused on its syntax: the same nonce with well-formed members is then processed fresh, a discharge for an authorized caller and the not-found response for one outside the target's mapping, never a divergent retry (@spec discharge#discharge-anti-oracle, status#idempotency, #1535)", async () => {
+    const record = approveOnAs();
+    for (const [token, expected] of [
+      [DEV_SERVICE_TOKEN, 200],
+      [UNMAPPED_SOURCE_TOKEN, 404],
+    ] as const) {
+      const nonce = freshNonce();
+      const malformed = await lifecycle(record.id, dischargeBody(record, { nonce, event_id: "not a valid event id" }), token);
+      expect(malformed.status, token).toBe(400);
+      const wellFormed = await lifecycle(record.id, dischargeBody(record, { nonce }), token);
+      expect(wellFormed.status, token).toBe(expected);
+      if (expected === 200) {
+        expect((await dischargeResultOf(wellFormed)).outcome).toBe("discharged");
+      } else {
+        expect(await wellFormed.json()).toMatchObject({ error: "not_found", nonce });
+      }
+    }
   });
 
   it("replays a retained envelope signed before the migration byte for byte, and it verifies over those bytes with current_version before any reading normalizes it (#705 acceptance item 19)", async () => {
@@ -1818,11 +1865,16 @@ describe("the discharge operation on the lifecycle endpoint", () => {
  * not-found body. Its own AS carries a lifecycle-commit subscriber that
  * witnesses the publication.
  *
- * @spec status#lifecycle-processing (#1535): a selector or authorization
- * refusal is now decided before deduplication, read-only. It writes nothing,
- * the expiry included, so it has nothing to unwind; the expiry commits once,
- * on the next read. A discharge that passes authorization still materializes
- * expiry outside its transaction.
+ * @spec status#lifecycle-processing (#1535), narrowly superseding D175 for
+ * refusals decided during syntax validation or target authorization: such a
+ * refusal is decided before deduplication, read-only, and commits no expiry,
+ * schedule, discharge event, latch or nonce response, so it has nothing to
+ * unwind. The effective expiry still governs authorization and issuance at
+ * once; its persistence and publication wait for the next
+ * expiry-materializing path (kernel.materializeExpiry below), not for any
+ * read. Once an authorized request enters operation processing, D175 holds:
+ * the expiry is materialized outside the operation's transaction, so a later
+ * conflict or rollback cannot undo it.
  */
 describe("discharge: a refused discharge keeps the expiry it discovered (#844)", () => {
   const EXPIRY_PORT = PORT + 3;
@@ -1891,7 +1943,7 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
     };
   };
 
-  it("a selector refusal on an expired Mission writes nothing; the next read leaves it expired at version + 1, published once, latching nothing (#1535)", async () => {
+  it("a selector refusal on an expired Mission writes nothing; the next expiry-materializing path, here kernel.materializeExpiry, leaves it expired at version + 1, published once, latching nothing (#1535)", async () => {
     const record = approve();
     expireStored(record);
     commits.length = 0;
@@ -1905,7 +1957,7 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
     expect(expiryAs.kernel.get(record.id)?.version).toBe(record.version);
     expect(commits).toHaveLength(0);
 
-    // The expiry is the clock's, and the next read commits it.
+    // The expiry is the clock's; the next expiry-materializing path commits it.
     expiryAs.kernel.materializeExpiry(record.id);
     const after = expiryAs.kernel.get(record.id);
     expect(after?.termination?.reason).toBe("expired");
@@ -1983,7 +2035,7 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
       expect(known.nonce).toBe(knownNonce);
     }
     // Refused before deduplication, read-only (#1535): the known Mission's row
-    // is unchanged until a read commits its expiry.
+    // is unchanged until an expiry-materializing path commits its expiry.
     expect(expiryAs.kernel.get(record.id)?.termination).toBeUndefined();
     expect(expiryAs.kernel.get(record.id)?.version).toBe(record.version);
   });

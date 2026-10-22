@@ -593,6 +593,7 @@ describe("Mission Lifecycle endpoint processing order (@spec status#lifecycle-pr
     for (const members of [
       { mission_id: m.id, operation: "rename", nonce: nonce() },
       { mission_id: m.id, operation: "suspend", nonce: nonce(), on_expiry: "resume" },
+      { mission_id: m.id, operation: "discharge", nonce: nonce(), event_type: "close", event_id: "not a valid event id" },
       { mission_id: UNKNOWN, operation: "revoke", nonce: nonce() },
     ]) {
       const refused = await postLifecycleForm(ISSUER, members);
