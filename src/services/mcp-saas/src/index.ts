@@ -139,12 +139,23 @@ export class SaasMcpServer {
   private readonly resolveKey;
   private readonly resource: string;
   private readonly contracts: SaasOperationContracts;
+  private readonly trustedMissionIssuers: ReadonlySet<string>;
   private readonly journal: Array<{ vendor_id: string; amount: string; mission_id: string }> = [];
 
   constructor(
     private readonly deps: {
       rasIssuer: string;
       rasJwks: { keys: JWK[] };
+      /**
+       * @spec mission#rs-requirements item 6, cross-domain (#1503): the
+       * originating Mission Issuers whose `mission` claim this resource
+       * accepts on a token the Resource AS minted. The Resource AS is the
+       * token's `iss` and the originating AS its `mission.issuer`, the
+       * relationship the Cross-Domain profile establishes; trusting the
+       * Resource AS's signature admits no other `mission.issuer`. Never
+       * defaulted.
+       */
+      trustedMissionIssuers: readonly string[];
       resource?: string;
       /** The tools' operation contracts; defaults to {@link serviceLevelContracts} over `resource`. */
       operationContracts?: SaasOperationContracts;
@@ -153,6 +164,8 @@ export class SaasMcpServer {
     this.resolveKey = createLocalJWKSet(deps.rasJwks as never);
     this.resource = deps.resource ?? SAAS_RESOURCE;
     this.contracts = deps.operationContracts ?? serviceLevelContracts(this.resource);
+    if (deps.trustedMissionIssuers.length === 0) throw new Error("trustedMissionIssuers must name at least one Mission Issuer");
+    this.trustedMissionIssuers = new Set(deps.trustedMissionIssuers);
   }
 
   /** RFC 9728 PRM + EMA declaration (client uses ID-JAG/EMA, not local login). */
@@ -180,6 +193,12 @@ export class SaasMcpServer {
     if (proof.htu !== htu) throw new Error("DPoP htu mismatch");
     const mission = payload.mission as SaasToken["mission"] | undefined;
     if (!mission?.id) throw new Error("token missing mission claim");
+    // @spec mission#rs-requirements item 6 (#1503): the Resource AS's
+    // signature makes it the trusted `iss`; `mission.issuer` must name an
+    // originating Mission Issuer this resource accepts through it.
+    if (typeof mission.issuer !== "string" || !this.trustedMissionIssuers.has(mission.issuer)) {
+      throw new Error("token mission.issuer is not a Mission Issuer this resource trusts through the Resource AS");
+    }
     return {
       sub: payload.sub as string,
       mission,
@@ -202,12 +221,14 @@ export class SaasMcpServer {
     args: Record<string, unknown>,
     accessToken: string,
     dpopProof: string,
-  ): Promise<{ ok: boolean; result?: unknown; error?: string }> {
+  ): Promise<{ ok: boolean; result?: unknown; error?: string; error_description?: string }> {
     let token: SaasToken;
     try {
       token = await this.validate(accessToken, dpopProof, this.resource);
     } catch (e) {
-      return { ok: false, error: (e as Error).message };
+      // @spec mission#rs-requirements, RFC 6750 Section 3.1: a token that
+      // fails validation is `invalid_token`; the reason is descriptive only.
+      return { ok: false, error: "invalid_token", error_description: (e as Error).message };
     }
     const def = SAAS_TOOLS.find((t) => t.name === tool);
     if (!def) return { ok: false, error: "unknown_tool" };

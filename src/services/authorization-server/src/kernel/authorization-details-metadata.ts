@@ -17,11 +17,13 @@ import {
   isAbsoluteUri,
   isActivationPolicyRef,
   isImplementedCommonConstraint,
+  isValidAmount,
   refusedEntryMember,
   resourceContractViolation,
   resourceMatchViolation,
   SUPPORTED_CONSTRAINT_KEYS,
   type JsonValue,
+  unsupportedDelegationMember,
   unsupportedEntryMember,
   validCommonConstraint,
 } from "@mission/core";
@@ -87,8 +89,10 @@ export interface AuthorizationDetailsTypeMetadata {
  * {@link SUPPORTED_ENTRY_MEMBERS}, the type's own members and
  * `capability_sources`, which Capability Binding defines for it. Any other
  * member is refused rather than admitted and then dropped by derivation's
- * member-by-member rebuild. {@link validateMissionResourceAccessSchema}
- * enforces both prohibitions.
+ * member-by-member rebuild. @spec resource-access#resource-access-type
+ * (D634): `delegation` and its `children` grant are CLOSED likewise, to the
+ * members this authorization server implements.
+ * {@link validateMissionResourceAccessSchema} enforces each prohibition.
  */
 export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -116,7 +120,11 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
       properties: {
         max_amount: {
           type: "object",
-          properties: { amount: { type: "string" }, currency: { type: "string" } },
+          // @spec resource-access#decimal-values: the decimal-string grammar.
+          properties: {
+            amount: { type: "string", pattern: "^[0-9]+(\\.[0-9]{1,18})?$" },
+            currency: { type: "string" },
+          },
           required: ["amount", "currency"],
           additionalProperties: false,
         },
@@ -166,6 +174,10 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
       // not admitted then dropped at derivation.
       additionalProperties: false,
     },
+    // @spec resource-access#resource-access-type (D634): CLOSED to
+    // SUPPORTED_DELEGATION_MEMBERS, and `children` to SUPPORTED_CHILDREN_MEMBERS:
+    // a member this authorization server does not implement is refused, never
+    // carried unchanged.
     delegation: {
       type: "object",
       description: "@spec attenuation#delegation, child-delegation#fanout",
@@ -194,11 +206,11 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
               additionalProperties: false,
             },
           },
-          additionalProperties: true,
+          additionalProperties: false,
         },
       },
       required: ["max_depth"],
-      additionalProperties: true,
+      additionalProperties: false,
     },
     // @spec capability-binding#capability-source-binding: recorded by the
     // authorization server at derivation; a proposal's value is never carried.
@@ -292,8 +304,8 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   }
   // @spec resource-access#resource-access-type, resource-access#entry-validation
   // (#1276): `exact` or `prefix`, and "A `resource` value under `prefix` MUST
-  // NOT carry a query or fragment component; the authorization server
-  // refuses such an entry with the `invalid_authorization_details` error
+  // NOT carry a query or fragment component; the authorization server MUST
+  // refuse such an entry with the `invalid_authorization_details` error
   // code." The shared rule also refuses a `prefix` base with no `//`
   // authority, where the matcher draws no boundary. Refused at intake, never
   // admitted and then rebuilt as an exact entry.
@@ -359,6 +371,13 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
         typeof (c.max_amount as Record<string, unknown>).currency !== "string"
       ) {
         return "constraints.max_amount must be an object with string amount and currency";
+      }
+      // @spec resource-access#decimal-values: "the authorization server MUST
+      // refuse an authority proposal carrying one at submission", here rather
+      // than at derivation, and whatever the ceiling carries.
+      const amount = (c.max_amount as Record<string, unknown>).amount as string;
+      if (!isValidAmount(amount)) {
+        return `constraints.max_amount.amount ${JSON.stringify(amount)} is not a decimal string`;
       }
     }
     if (c.vendors !== undefined) {
@@ -451,9 +470,12 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
  * (#1399, D538): the violation for a `mission_resource_access` entry carrying
  * a member this type refuses by name ({@link refusedEntryMember}:
  * `locations`), or any other member outside the supported set
- * ({@link unsupportedEntryMember}), or undefined. Shared by the schema check
- * above and by the token-exchange and deferred intakes that read requested
- * entries without it, each refusing `invalid_authorization_details`.
+ * ({@link unsupportedEntryMember}), or, @spec
+ * resource-access#resource-access-type (D634), a `delegation` member this
+ * authorization server does not implement ({@link unsupportedDelegationMember}),
+ * or undefined. Shared by the schema check above and by the token-exchange and
+ * deferred intakes that read requested entries without it, each refusing
+ * `invalid_authorization_details`.
  */
 export function refusedMemberViolation(entry: unknown): string | undefined {
   const member = refusedEntryMember(entry);
@@ -461,9 +483,18 @@ export function refusedMemberViolation(entry: unknown): string | undefined {
     return `${member} must be absent: the ${MISSION_RESOURCE_ACCESS_TYPE} type does not use this RFC 9396 common field`;
   }
   const unsupported = unsupportedEntryMember(entry);
-  return unsupported === undefined
+  if (unsupported !== undefined) {
+    return `${unsupported} is not a supported member of the ${MISSION_RESOURCE_ACCESS_TYPE} type; refusing rather than dropping it`;
+  }
+  // @spec resource-access#resource-access-type (D634): "The authorization
+  // server MUST refuse an entry whose `delegation` carries a member other than
+  // `max_depth` and `allowed_delegates` with the `invalid_authorization_details`
+  // error code, unless a companion profile it implements defines that member's
+  // processing." Child Delegation's `children` is the one such member here.
+  const delegationMember = unsupportedDelegationMember(entry);
+  return delegationMember === undefined
     ? undefined
-    : `${unsupported} is not a supported member of the ${MISSION_RESOURCE_ACCESS_TYPE} type; refusing rather than dropping it`;
+    : `${delegationMember} is not a supported delegation member; refusing rather than carrying it unchanged`;
 }
 
 /**

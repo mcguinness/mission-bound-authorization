@@ -124,7 +124,7 @@ test('the real CLI exits nonzero for a fabricated punctuation mapping', () => {
   }
 });
 
-test('the real CLI accepts applicability on all of several capabilities and refuses malformed lists', () => {
+test('the real CLI accepts applicability on all of or any of several capabilities and refuses malformed lists', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mission-conformance-applicability-'));
   try {
@@ -146,13 +146,19 @@ test('the real CLI accepts applicability on all of several capabilities and refu
       });
       return { status: r.status, out: r.stdout + r.stderr };
     };
-    const good = run({ kind: 'capabilities', all_of: [a, b] });
-    assert.equal(good.status, 0, good.out);
+    for (const applicability of [{ kind: 'capabilities', all_of: [a, b] }, { kind: 'capabilities', any_of: [a, b] }]) {
+      const good = run(applicability);
+      assert.equal(good.status, 0, good.out);
+    }
     for (const [applicability, message] of [
       [{ kind: 'capabilities', all_of: [a] }, /at least two distinct capabilities/],
       [{ kind: 'capabilities', all_of: [a, a] }, /at least two distinct capabilities/],
       [{ kind: 'capabilities', all_of: [a, b], capability: a }, /at least two distinct capabilities/],
       [{ kind: 'capabilities', all_of: [a, 'not.declared'] }, /"not\.declared" not declared in model\.capabilities/],
+      [{ kind: 'capabilities', any_of: [a] }, /at least two distinct capabilities/],
+      [{ kind: 'capabilities', any_of: [a, b], all_of: [a, b] }, /at least two distinct capabilities/],
+      [{ kind: 'capabilities', any_of: [a, 'not.declared'] }, /"not\.declared" not declared in model\.capabilities/],
+      [{ kind: 'capabilities' }, /at least two distinct capabilities/],
       [{ kind: 'any', all_of: [a, b] }, /must be "unconditional", "capability" or "capabilities"/],
     ]) {
       const bad = run(applicability);

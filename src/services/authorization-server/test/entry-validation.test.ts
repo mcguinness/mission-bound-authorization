@@ -230,6 +230,40 @@ describe("entry validation at PAR (@spec resource-access#entry-validation, #1376
   });
 });
 
+// @spec resource-access#decimal-values: "the authorization server MUST refuse
+// an authority proposal carrying one at submission with the
+// `invalid_authorization_details` error code". The refusal is at PAR, not
+// deferred to the derivation, and whatever the ceiling carries.
+describe("decimal values at PAR (@spec resource-access#decimal-values)", () => {
+  it("refuses a malformed max_amount amount with invalid_authorization_details before any interaction, creating no Mission", async () => {
+    for (const amount of [
+      "1e300",
+      "NaN",
+      "Infinity",
+      "-1",
+      "+1",
+      "1,000",
+      "1.",
+      ".5",
+      " 1",
+      "0x10",
+      "１",
+      "1.0000000000000000001",
+    ]) {
+      await expectRefused(
+        entry({ constraints: { max_amount: { amount, currency: "USD" } } }),
+        /constraints\.max_amount\.amount .* is not a decimal string/,
+      );
+    }
+  });
+
+  it("accepts a decimal string with up to 18 fractional digits (positive control)", async () => {
+    for (const amount of ["0", "250", "10.50", "1.000000000000000001"]) {
+      await expectAccepted(entry({ constraints: { max_amount: { amount, currency: "USD" } } }));
+    }
+  });
+});
+
 describe("max_depth 0 and an empty allowed_delegates (@spec resource-access#entry-validation, #1376)", () => {
   const ISS = "https://as.entry-validation.test";
   const ERP = "https://erp.example.com";

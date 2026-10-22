@@ -15,6 +15,8 @@ import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jos
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   CANONICAL_RESOURCE,
+  canonicalHtu,
+  createHttpMcpChannel,
   type DpopKeys,
   dpopProofFor,
   McpPaymentsServer,
@@ -100,6 +102,37 @@ describe("estate route: ordinary credentials only (@spec authority-server#limita
     expect(asMissionIssuer.mission?.id).toBe("msn_818_estate");
     // The estate route never reads it as Mission-bound.
     await expect(present(server(true), token)).rejects.toThrow(/not a Mission Issuer/);
+  });
+
+  it("answers an estate token carrying a mission claim 401 invalid_token over HTTP, while an ordinary estate token opens a session (@spec mission#rs-requirements, #1503)", async () => {
+    const channel = await createHttpMcpChannel(server(true), { masGoverned: true });
+    const initialize = async (token: string) =>
+      fetch(channel.url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          authorization: `DPoP ${token}`,
+          dpop: await dpopProofFor(holder, canonicalHtu(channel.url), "POST", token),
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "0" } },
+        }),
+      });
+    try {
+      const refused = await initialize(await mint(MISSION_BOUND));
+      expect(refused.status).toBe(401);
+      expect(await refused.json()).toMatchObject({ error: "invalid_token" });
+      const opened = await initialize(await mint());
+      await opened.text();
+      expect(opened.status).toBe(200);
+      expect(opened.headers.get("mcp-session-id")).toBeTruthy();
+    } finally {
+      await channel.close();
+    }
   });
 
   it("refuses every other credential format: a non-at+jwt type, a missing client_id or jti, and an opaque token", async () => {

@@ -1142,6 +1142,38 @@ one request member and one evidence member:
   containing an ISO 8601 duration (the `duration` rule in Appendix A of
   {{RFC3339}}): the PEP's measured duration for the executed action.
 
+The PDP judges whether an activity has ended against the activity's
+current lease boundary, not the expiry of an earlier permit that
+leased it. The PDP MUST refuse a renewal at or after that boundary: a
+renewal never revives an ended activity.
+
+The PDP MUST deny `out_of_authority`
+({{I-D.draft-mcguinness-mission-authzen}}) a renewal whose
+`prior_evaluation_id` names no lease the PDP issued or an ended
+activity, or that fails the match this section requires. The PDP MUST
+also apply the current authorization, lifecycle and consumption checks
+to a renewal: `prior_evaluation_id` establishes none of them, and a
+renewal that fails one keeps that check's denial.
+
+A renewal's permit continues the same activity and its reservation. It
+never authorizes executing the action's effect again and never resets
+the activity's consumption.
+
+Where the renewed action is keyed
+({{I-D.draft-mcguinness-mission-runtime}}), the PEP MUST send a fresh
+`idempotency_key` on each logical renewal and MUST reuse it on that
+renewal's retransmissions. The idempotency claim on a renewal's key
+MUST bind the renewal's operation identity and its
+`prior_evaluation_id` together, so the key presented for another
+renewal or for the operation itself is `idempotency_conflict`, never a
+permit for an unrelated renewal. The underlying operation's
+resource-side idempotency identity is unchanged by a renewal. A
+renewal's idempotency claim settles when the PDP commits the lease
+extension, and no Execution Evidence is expected for it. A
+retransmission of a renewal whose claim has settled receives that
+renewal's permit while the permit is valid, and a different renewal
+under the key is `idempotency_conflict`.
+
 In the ERP examples in this document, the operation contract identifies
 `https://erp.example.com` as the operation target
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
@@ -1317,6 +1349,15 @@ this registry.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Duration-Lease Renewal: the PDP refuses a renewal at or after the
+  activity's current lease boundary and denies `out_of_authority` a
+  renewal that continues nothing; a renewal passes every current check,
+  and its permit never re-executes the effect or resets consumption. A
+  keyed renewal carries a fresh `idempotency_key`, claimed with the
+  renewal's operation identity and `prior_evaluation_id`; its claim
+  settles when the PDP commits the lease extension, and a retransmission
+  receives the renewal's permit while it is valid (#1464).
 
 - Editorial (#1176): examples of the canonical Mission follow one
   dated history; an example line too long for the page is folded per

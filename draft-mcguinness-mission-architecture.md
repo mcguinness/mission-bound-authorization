@@ -760,6 +760,15 @@ Anchors, and Canonicalization Rules sections). The record is immutable
 except for its state and, written once when the Mission terminates,
 its `termination` (the Mission Record section).
 
+The anchors do not cover the approval basis, which records who
+consented, who activated the Mission, and under which basis. Only the
+Mission Issuer enforces the record's immutability. Where a deployment
+needs the approval basis checkable outside the Mission Issuer, Mission
+Audit Transparency's approval-event registration
+({{I-D.draft-mcguinness-mission-audit}}) and Approval Governance's
+Approval Context Commitment
+({{I-D.draft-mcguinness-mission-approval-governance}}) commit it.
+
 In the OAuth binding the lifecycle states are `active` and
 `terminated`, and only `active` permits issuance or a new positive
 governance decision. A terminated Mission's `termination` gives the
@@ -1992,7 +2001,7 @@ Work products:
   Work Products companion carries the rule through non-transitive
   Mission-to-Mission handoff
   ({{I-D.draft-mcguinness-oauth-mission-work-products}}), and the
-  OAuth binding states it in its "Authority Does Not Propagate With
+  OAuth binding states it in its "Authority and Propagated
   Information" section ({{I-D.draft-mcguinness-oauth-mission}}).
 
 Composition:
@@ -2378,7 +2387,7 @@ discharges the equivalence through its own conformance rule.
 The Mission-Bound Credential is a credential carrying the `mission`
 claim (`id`, `issuer`) and Mission-derived authorization details,
 issued only while the Mission is `active`. Its home is the OAuth
-binding's Mission-Bound Access Tokens and The Mission Claim sections.
+binding's Mission-Bound Access Tokens and Mission Claim sections.
 The claim's `id` and `issuer` are the Mission-identity condition; a
 token-carried Authority Set commitment is never required for it, per
 condition 2 of `credential-mission-bound` ({{binding-properties}}).
@@ -4318,6 +4327,12 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The integrity-anchor description says the anchors do not cover the
+  approval basis, and names Mission Audit Transparency's
+  approval-event registration and Approval Governance's Approval
+  Context Commitment as where a deployment commits it. No requirement
+  changed.
 
 - The Project verb bounds downstream revocation latency by the
   projection grant's remaining lifetime, matching Cross-Domain

@@ -7,6 +7,7 @@
       "remove": [
         {
           "resource": "http://localhost:4403/mcp",
+          "resource_match": "prefix",
           "actions": ["payments:remittance.send"]
         }
       ]

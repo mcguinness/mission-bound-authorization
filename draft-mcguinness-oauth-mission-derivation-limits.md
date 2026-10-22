@@ -476,7 +476,7 @@ audience-filtered enforcement projection without it.
 An AS MUST NOT include `derivations_remaining` in an introspection
 response unless it holds the Mission, that is, unless it is the
 Mission `issuer` ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Only the Issuer Reports Mission State").
+"Issuer-Only Members").
 
 The following is an example of an introspection response to a caller
 granted the `derivations_remaining` disclosure privilege:

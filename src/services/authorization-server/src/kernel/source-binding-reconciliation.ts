@@ -29,11 +29,11 @@ import {
   type AuthoritySourceBinding,
   type AuthoritySourceCatalog,
   historicalRootFor,
-  parseAuthoritySource,
+  parseRecordedAuthoritySource,
   validateAuthoritySourceCatalog,
 } from "./authority-source.js";
 import type { SourceBindingStore } from "./source-binding-store.js";
-import type { AuthoritySource } from "./types.js";
+import type { RecordedAuthoritySource } from "./types.js";
 
 /** One trusted historical catalog and the interval `[from, until)` it was in force. */
 export interface HistoricalAuthoritySourceCatalog {
@@ -199,7 +199,11 @@ function evidenceFor(
   mappings: Readonly<Record<string, string>>,
   intervals: readonly Interval[],
 ): AuthoritySourceBinding | undefined {
-  const provenance: AuthoritySource = parseAuthoritySource(
+  // @spec mission#mission-record (#1503): a row of unrecognized source type
+  // is read, not refused, so it cannot stop the AS from starting. No
+  // historical catalog declares such a type, so it binds only from an
+  // explicit mapping, and every drawdown from that root still refuses.
+  const provenance: RecordedAuthoritySource = parseRecordedAuthoritySource(
     JSON.parse(row.authority_source_json),
     `mission ${row.id}`,
   );
