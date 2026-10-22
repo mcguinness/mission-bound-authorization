@@ -51,16 +51,16 @@
     "content_sha256": "0cf9c0c15240b62a32a5bd9bf0dddbb93cfe86d6390685e3c5c5fd7858b87a4f"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
-    "content_sha256": "2734f08663aaa41f3d3f58b885c7036833c88a7286b889647bfa426dd2835872"
+    "revision": "fb06431ab4097ecb13a45efbff7c2cc8f25ef7d0",
+    "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "9b139bfb5720ac0e561cd85d9e4207ba769e8a70",
-    "content_sha256": "42bf3935b5bf964be88b731862505c02d753ae70652aaf395e92edee06775bce"
+    "revision": "68e1f5bd73f8064fc38868efb0b0d802ee3c4b73",
+    "content_sha256": "7cdb61ec7cf61ab41fd8e54f7bfc944f523482abd68335a3773c6ee6019663d6"
    },
    "draft-mcguinness-oauth-mission-management.md": {
-    "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
-    "content_sha256": "a92688ff501f19932221d8f3c50149a5a0399b60b69c84d88505bc2fd9b930a0"
+    "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
+    "content_sha256": "483287bedfb2209de40290df596ca9bc2ea3178e485e6eaa226a46e903e1d6c2"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
@@ -1439,6 +1439,48 @@
     }
    ],
    "notes": "GET /missions/:id/status requires mayReadStatus (the status capability enabled and MISSION_STATUS_SCOPE on the authenticated service principal), the same predicate that decides a forwarded discharge's response shape (status.discharge.receipt-aud-nonce). The test shows a principal holding the lifecycle and discharge grants but not mission_status gets exactly the not-found body an unknown Mission gets (nonce echoed), while a principal holding only mission_status, and the shipped dev principal, get the signed Status response. Capability and surface follow the neighbouring Mission Status operation row status.caching.freshness-cap: the model has no dedicated Status-operation capability or surface."
+  },
+  {
+   "id": "status.read.processing-order",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-processing",
+   "text": "The AS MUST process a Mission Status request in this order, refusing it at the first step that fails:",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Status request is refused at the first failing step of authentication, request syntax and authorization: an unauthenticated request is refused as its authentication failure assigns whatever its members or Mission; a malformed request is refused invalid_request alike for a known and an unknown Mission; an unknown Mission, a caller without read authorization and an audience it is not authorized for are refused alike with the not-found response; only then is the Mission's state read and signed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 3 (D649). The served Status surface is GET /missions/:id/status, the dev service-token route (service-token authentication answered 401, then mayReadStatus answered not_found, then the signed observation), not this POST Mission Status endpoint, which the reference AS does not serve: mission_status_endpoint is never advertised. Todo until it is."
+  },
+  {
+   "id": "status.read.no-state-before-authorization",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-processing",
+   "text": "No response that depends on the Mission's existence or state precedes step 3.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "no Mission Status response that depends on the Mission's existence or state (a signed response, or any refusal other than an authentication or malformed-request refusal) reaches a caller that has not passed authorization for that Mission and audience"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 3 (D649). The served Status surface is GET /missions/:id/status, the dev service-token route (service-token authentication answered 401, then mayReadStatus answered not_found, then the signed observation), not this POST Mission Status endpoint, which the reference AS does not serve: mission_status_endpoint is never advertised. Todo until it is."
   },
   {
    "id": "runtime.operational.ride-through-declared",
@@ -11631,9 +11673,15 @@
      "name": "the discharge operation on the lifecycle endpoint > mission_lifecycle does not imply mission_discharge",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > checks the discharge grant before deduplication: once the grant is withdrawn, the same-nonce retransmit gets the not-found response, not the replayed discharge, and it replays once the grant returns (@spec status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "The lifecycle endpoint's service-token auth now resolves a { principal_id, scopes } principal (provider.ts DEFAULT_SERVICE_TOKEN_PRINCIPALS): `mission_discharge` gates `discharge` alone and is checked before any selector work, so a caller holding only `mission_lifecycle` is refused with the endpoint's indistinguishable not_found. The test registers a lifecycle-only token, watches it perform `suspend`, and watches the same token be refused `discharge`. This is the minimal stand-in for the profile's mechanism set (mTLS / sender-constrained token / private-key JWT): what is proven is the DISTINCTNESS of the two grants, not the authentication mechanism."
+   "notes": "The lifecycle endpoint's service-token auth now resolves a { principal_id, scopes } principal (provider.ts DEFAULT_SERVICE_TOKEN_PRINCIPALS): `mission_discharge` gates `discharge` alone and is checked before any selector work, so a caller holding only `mission_lifecycle` is refused with the endpoint's indistinguishable not_found. The test registers a lifecycle-only token, watches it perform `suspend`, and watches the same token be refused `discharge`. This is the minimal stand-in for the profile's mechanism set (mTLS / sender-constrained token / private-key JWT): what is proven is the DISTINCTNESS of the two grants, not the authentication mechanism. #1535: the existing test's lifecycle-only caller is also outside the authority mapping, so it does not distinguish the grant check; the grant test does (a caller the mapping admits, holding mission_lifecycle with mission_discharge withdrawn, is refused). Proved by dropping the grant check (that test replays the discharge)."
   },
   {
    "id": "status.discharge.lifecycle-grant-not-implied",
@@ -11662,9 +11710,15 @@
      "name": "the discharge operation on the lifecycle endpoint > mission_lifecycle does not imply mission_discharge",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > checks the discharge grant before deduplication: once the grant is withdrawn, the same-nonce retransmit gets the not-found response, not the replayed discharge, and it replays once the grant returns (@spec status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Same observable from the other direction. This deployment authenticates operational callers as service-token principals, so the administrator caller IS the principal holding `mission_lifecycle` (it can revoke, suspend, resume, complete): there is no separate Subject/Approver caller identity at this endpoint to test independently. The test's lifecycle-only token performs a state transition and is then refused `discharge`, which is exactly the non-implication the clause requires; a deployment that models Subject/Approver callers must re-prove it for those identities."
+   "notes": "Same observable from the other direction. This deployment authenticates operational callers as service-token principals, so the administrator caller IS the principal holding `mission_lifecycle` (it can revoke, suspend, resume, complete): there is no separate Subject/Approver caller identity at this endpoint to test independently. The test's lifecycle-only token performs a state transition and is then refused `discharge`, which is exactly the non-implication the clause requires; a deployment that models Subject/Approver callers must re-prove it for those identities. #1535: the existing test's lifecycle-only caller is also outside the authority mapping, so it does not distinguish the grant check; the grant test does (a caller the mapping admits, holding mission_lifecycle with mission_discharge withdrawn, is refused). Proved by dropping the grant check (that test replays the discharge)."
   },
   {
    "id": "status.discharge.anti-oracle-collapse",
@@ -11696,6 +11750,150 @@
     }
    ],
    "notes": "All six cases raise the kernel's DischargeNotFoundError (whose `reason` is issuer-audit only) and the endpoint renders ONE body. The test drives every case, including the unauthorized-target arm (a second AS whose mapping admits a different principal), and asserts the responses are identical apart from each request's own echoed nonce, which cannot be shared: two requests differing only in nonce would trip the divergent-retry rule. Response TIMING is not equalized (the profile's SHOULD on timing side channels is not claimed by this row)."
+  },
+  {
+   "id": "status.discharge.auth-failure-outcome",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-anti-oracle",
+   "text": "Authentication failure keeps the outcome the Status profile assigns its mechanism, `unauthorized` or `invalid_client` ({{I-D.draft-mcguinness-oauth-mission-status}}, Section \"Authentication Failures\").",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an unauthenticated discharge request is refused with its authentication mechanism's outcome (invalid_client for private-key JWT at the advertised endpoint) even when its discharge members are malformed",
+    "local": "the dev-only path route's service-token stand-in answers a missing token 401 unauthorized"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > authenticates the caller before validating the request: an unauthenticated request is refused invalid_client whatever its operation, members or Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 (#1544 review ruling): re-worded from 'remains unauthorized (401)', which no row quoted. The advertised Lifecycle endpoint accepts private_key_jwt only, so the served outcome is invalid_client; the access-token mechanism's 401 is not served there. Proved by validating the discharge members before authentication (the authentication-order test gets invalid_request)."
+  },
+  {
+   "id": "status.discharge.request-only-validation",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-anti-oracle",
+   "text": "Validation that depends only on the request precedes that collapse. After authentication and before any authorization, a discharge member of the wrong type or grammar, or an invalid combination of target forms, is refused `invalid_request`, identically whether or not the Mission exists and whatever target authority the caller holds.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "after authentication, a discharge member of the wrong type, of the wrong grammar, or an invalid combination of target forms is refused invalid_request with one byte-identical response (status, body and headers) for a caller without the discharge grant, a caller outside the target's authority mapping, an authorized caller on an existing Mission, and an unknown Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > validates the discharge's own members before its authorization: a wrong type, a bad grammar and an invalid target-form combination each get one byte-identical invalid_request for a caller without the grant, a caller outside the target's mapping, an authorized caller on an existing Mission and an unknown Mission, and the refusal reads no Mission (@spec discharge#discharge-anti-oracle, status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > authenticates the caller before validating the request: an unauthenticated request is refused invalid_client whatever its operation, members or Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 (#1544 review ruling). Proved by checking the grant before the members (the matrix gets 404 for the caller without the grant), by refusing an unknown Mission before the members (the unknown Mission's column gets 404), by refusing the caller outside the mapping not_found instead (its column gets 404), and by dropping each class's own check in turn, the event_type type, the event_id grammar and the one-target-form rule (the matrix gets 404 for that class)."
+  },
+  {
+   "id": "status.discharge.syntax-refusal-no-state",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-anti-oracle",
+   "text": "Such a refusal reads no target state, and the AS retains no response for its `nonce` ({{I-D.draft-mcguinness-oauth-mission-status}}, Section \"Idempotency and Conflicts\").",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a discharge refused on its syntax reads no Mission and reaches no target authorization, and retains no response for its nonce: the same nonce with well-formed members is then processed fresh (a discharge for an authorized caller, the not-found response for one outside the target's mapping), never refused as a divergent retry",
+    "local": "the matrix spies kernel.get (calls naming the request's Mission) and kernel.authorizeDischarge"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > validates the discharge's own members before its authorization: a wrong type, a bad grammar and an invalid target-form combination each get one byte-identical invalid_request for a caller without the grant, a caller outside the target's mapping, an authorized caller on an existing Mission and an unknown Mission, and the refusal reads no Mission (@spec discharge#discharge-anti-oracle, status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > retains nothing for a discharge refused on its syntax: the same nonce with well-formed members is then processed fresh, a discharge for an authorized caller and the not-found response for one outside the target's mapping, never a divergent retry (@spec discharge#discharge-anti-oracle, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 (#1544 review ruling). Proved by reading the Mission before the members (the matrix's read spy fails) and by retaining the syntax refusal (the same-nonce well-formed request is refused 400 as a divergent retry). D175 narrowly superseded (#1544 review ruling): pre-deduplication refusals are read-only; post-authorization processing keeps D175's hoisted expiry. A refusal decided during syntax validation or target authorization commits no expiry, schedule, discharge event, latch or nonce response; the effective expiry still governs authorization and issuance at once, and its persistence and publication wait for the next expiry-materializing path. Proved post-authorization by removing the hoisted materialization (the fingerprint-conflict test fails: the conflict's rollback undoes the expiry)."
+  },
+  {
+   "id": "status.discharge.well-formed-resolution-not-found",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-anti-oracle",
+   "text": "A well-formed request whose selectors do not resolve, whose condition is not a member of the named entry, whose `event_type` does not match the stored condition, or whose target the caller is not authorized for joins the not-found collapse above.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a well-formed discharge whose selector does not resolve, whose condition is not in the named entry, whose event_type does not match the stored condition, or whose target the caller is not authorized for gets the not-found response of an unknown Mission, decided before deduplication"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > collapses all six anti-oracle cases to one identical not_found body",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > authorizes the discharge target before deduplication: a mission_discharge holder outside the target's authority mapping is answered not_found on its first request and again on the same nonce with a different event_id, never invalid_request, and no retained response is written or changed (@spec status#lifecycle-processing, discharge#discharge-anti-oracle, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 (#1544 review ruling): the well-formed half of the syntax-versus-resolution boundary. The not-found collapse itself is status.discharge.anti-oracle-collapse; its being decided before deduplication is status.discharge.processing-order (proved by dropping the pre-deduplication target authorization: the mapping test gets 400 on the changed event_id)."
   },
   {
    "id": "status.discharge.selector-mismatch-refusal",
@@ -11769,7 +11967,7 @@
    "id": "status.discharge.nonce-replay",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "idempotency",
-   "text": "retransmit carrying a `nonce` already seen for that client and `mission_id`, together with request members identical to the original's, the AS MUST replay the original response rather than re-execute the operation.",
+   "text": "retransmit carrying a `nonce` already seen for that client and `mission_id`, together with request members identical to the original's, the AS MUST replay the original response rather than re-execute the operation, once the retransmit has passed authorization ({{lifecycle-processing}}).",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -11782,7 +11980,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a retransmitted lifecycle request with the same nonce and the same operation members replays the original signed response rather than re-executing the operation, even when its client authentication parameters or member order differ"
+    "normative": "a retransmitted lifecycle request with the same nonce and the same operation members replays the original signed response rather than re-executing the operation, even when its client authentication parameters or member order differ, once it has passed authorization: a retransmit whose caller no longer holds the authorization gets the not-found response instead, and the original replays once the caller holds it again"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -11810,9 +12008,27 @@
      "name": "Mission Lifecycle endpoint retries (@spec status#idempotency, control-plane#serialization, #1191) > replays a same-nonce retry byte for byte under a regenerated client assertion, and refuses the same nonce with different members",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > authorizes a retransmit before deduplication: after the client's grant is withdrawn, the same nonce and members under a fresh assertion get the not-found response, not the replayed success, and the success replays once the grant returns",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > checks the discharge grant before deduplication: once the grant is withdrawn, the same-nonce retransmit gets the not-found response, not the replayed discharge, and it replays once the grant returns (@spec status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays an authorized retry whose observed_at has since aged past the admission window: the window is checked only for a request processed fresh (@spec status#lifecycle-processing, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "LifecycleResponseStore, keyed by (endpoint, principal, mission_id, nonce), stores the response's exact bytes with the digest of the request's operation members (client authentication parameters excluded, members in canonical order); the retransmission replays it without re-executing. Proven on `discharge` and on the four state operations, whose responses are signed envelopes (string equality is meaningful). `nonce` is REQUIRED on every operation (#1191)."
+   "notes": "LifecycleResponseStore, keyed by (endpoint, principal, mission_id, nonce), stores the response's exact bytes with the digest of the request's operation members (client authentication parameters excluded, members in canonical order); the retransmission replays it without re-executing. Proven on `discharge` and on the four state operations, whose responses are signed envelopes (string equality is meaningful). `nonce` is REQUIRED on every operation (#1191). #1535 finding 3 (D649): re-quoted for the authorization qualification; the replay runs after authorization. Proved by letting a retained row skip authorization (the processing-order retransmit test replays the success to the withdrawn client and fails) and by dropping the discharge grant check ahead of deduplication (the discharge retransmit replays and fails). #1544 re-review: an authorized discharge retransmit replays byte for byte after its observed_at has aged past the admission window, which applies only to a request processed fresh."
   },
   {
    "id": "status.discharge.nonce-conflict-refusal",
@@ -11909,7 +12125,7 @@
    "assertion": "replay",
    "observation": {
     "normative": "a same-nonce retry after an `unavailable`, `rate_limited` or other 5xx response is processed afresh and can succeed; no transient failure is retained for the nonce",
-    "local": "every unexpected failure on the Lifecycle endpoint (the nonce lookup, the transition's storage, signing) is 503 unavailable, delivered without retention, and the kernel's unknown Mission is a typed error answered not_found and retained; the reference emits no rate_limited. A fault after a commit (grant destruction, signing, delivery) leaves the commit's claim, so the same-nonce retry recovers the committed outcome at its original observation rather than re-executing it; the #1240 review ruled this recovery correct, and the ephemeral 503 itself is never a retained result"
+    "local": "every unexpected failure on the Lifecycle endpoint (the nonce lookup, the transition's storage, signing) is 503 unavailable, delivered without retention, and an unknown Mission is refused not_found at authorization, before deduplication, and is not retained either (#1535), so its same-nonce retry is processed afresh and answers the same 404; the reference emits no rate_limited. A fault after a commit (grant destruction, signing, delivery) leaves the commit's claim, so the same-nonce retry recovers the committed outcome at its original observation rather than re-executing it; the #1240 review ruled this recovery correct, and the ephemeral 503 itself is never a retained result"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -11928,7 +12144,7 @@
     },
     {
      "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
-     "name": "Mission Lifecycle endpoint transient failures (@spec status#idempotency, status#mission-status-errors, #1191) > answers an unknown Mission not_found and retains it, so the same-nonce retry replays the 404",
+     "name": "Mission Lifecycle endpoint transient failures (@spec status#idempotency, status#mission-status-errors, #1191) > answers an unknown Mission not_found at authorization, before deduplication, retaining nothing, so the same-nonce retry is processed afresh and answers the same 404 (#1535)",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     }
@@ -12101,6 +12317,167 @@
     }
    ],
    "notes": "Status interface audit (#705); #1191 (D416)."
+  },
+  {
+   "id": "status.lifecycle.processing-order",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-processing",
+   "text": "The AS MUST process a lifecycle request in this order, refusing it at the first step that fails:",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a lifecycle request for a base operation is refused at the first failing step of authentication, request syntax and served operation, authorization, deduplication, expected_version and the transition rules: an unauthenticated request is refused invalid_client whatever its operation, members or Mission; a malformed request or an unserved operation is refused invalid_request alike for a known and an unknown Mission; a caller not authorized for the Mission gets the not-found response, never a replay, stale_version or conflict; an authorized retransmit replays before expected_version and the transition rules apply; and a stale expected_version is refused before the transition rule",
+    "local": "Form-level parsing (media type, body size, a repeated member) precedes authentication, since the body carries the client assertion. Refusals decided before deduplication are delivered without retention, so they never finalize a committed claim made under the same request digest. The past-deadline check of a schedule runs after deduplication, so an identical retry arriving after its deadline replays."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > authenticates the caller before validating the request: an unauthenticated request is refused invalid_client whatever its operation, members or Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint extension operations and the common guard (@spec status#idempotency, discharge#discharge-operation, #1191) > refuses the schedule members on contain and discharge, and expected_version on discharge, before any Mission is read",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: operations outside the class (@spec status#mission-lifecycle-endpoint, #1182) > refuses every operation the deployment has not adopted invalid_request before looking up the Mission, leaving it unchanged",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > authorizes a retransmit before deduplication: after the client's grant is withdrawn, the same nonce and members under a fresh assertion get the not-found response, not the replayed success, and the success replays once the grant returns",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > retains nothing for a refusal decided before deduplication, so a committed success whose bytes were lost survives a refused retransmit and is recovered once the grant returns",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle authorization for the acting party, operation and Mission (@spec status#lifecycle-authorization, #1535) > answers a client holding the lifecycle grant for another tenant exactly as it answers an unknown Mission: revoke, complete on a revoked Mission and a stale expected_version alike, leaving the Mission unchanged; a client whose policy names the Mission's tenant acts on it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-responses.test.ts",
+     "name": "control-plane lifecycle response boundary > replays a successful request before any state-dependent check, after the state moved on",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191) > refuses a stale expected_version 409 stale_version before the transition rule, leaving the Mission unchanged, and applies a current one",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 finding 3 (D649). Proved by validating the operation and members before authentication, and by looking the Mission up before it (the authentication-order test fails), by looking the Mission up before the syntax checks (the extension-guard and revoke-only ordering tests fail), by letting a retained row skip authorization (both processing-order retransmit tests fail), and by retaining the not-found refusal decided before deduplication (the lost-bytes test fails). The deduplication and expected_version precedences keep the witnesses of status.discharge.nonce-replay and status.lifecycle.stale-version-precedence. The discharge operation is status.discharge.processing-order."
+  },
+  {
+   "id": "status.discharge.processing-order",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-processing",
+   "text": "The AS MUST process a lifecycle request in this order, refusing it at the first step that fails:",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for discharge, the request syntax, its own members included, precedes the authorization its companion defines, and that whole authorization (the distinct grant, then selector existence, condition membership and the discharge authority mapping) precedes deduplication: a malformed member is refused invalid_request to a caller without the grant or outside the target's mapping, alike for an unknown Mission; a caller without the grant, or outside the mapping, gets the not-found response, never a replayed discharge response or a divergent-retry invalid_request; and that refusal retains nothing",
+    "local": "parseDischargeMembers validates the members; kernel.authorizeDischarge decides the not-found collapse read-only (no expiry or schedule commit, no latch, no event record, no purge) against the target the shared dischargeRoute names (a recorded occurrence's target, a forwarded discharge's replacement, otherwise the named target), and kernel.discharge repeats it in its transaction. A refused discharge on an expired Mission therefore no longer commits the expiry it observes; the next expiry-materializing path does. The observed_at clock-bounds check depends on elapsed time, not on the request alone: parseDischargeMembers checks only its RFC 3339 syntax, and handleDischarge checks the bounds after deduplication, for a request processed fresh, so an authorized retransmit replays however far its observed_at has aged (#1544 re-review)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > validates the discharge's own members before its authorization: a wrong type, a bad grammar and an invalid target-form combination each get one byte-identical invalid_request for a caller without the grant, a caller outside the target's mapping, an authorized caller on an existing Mission and an unknown Mission, and the refusal reads no Mission (@spec discharge#discharge-anti-oracle, status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > checks the discharge grant before deduplication: once the grant is withdrawn, the same-nonce retransmit gets the not-found response, not the replayed discharge, and it replays once the grant returns (@spec status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > authorizes the discharge target before deduplication: a mission_discharge holder outside the target's authority mapping is answered not_found on its first request and again on the same nonce with a different event_id, never invalid_request, and no retained response is written or changed (@spec status#lifecycle-processing, discharge#discharge-anti-oracle, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > retains nothing for a discharge refused on its syntax: the same nonce with well-formed members is then processed fresh, a discharge for an authorized caller and the not-found response for one outside the target's mapping, never a divergent retry (@spec discharge#discharge-anti-oracle, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays an authorized retry whose observed_at has since aged past the admission window: the window is checked only for a request processed fresh (@spec status#lifecycle-processing, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 finding 3 (D649); #1544 review P2 moved the target authorization ahead of deduplication. Proved by dropping the pre-deduplication target authorization (the mapping test gets 400 invalid_request on the changed event_id), by retaining that refusal (the mapping test fails on the retained responses), by checking the grant before the discharge members (the syntax test gets 404), and by dropping the grant check (the grant test replays the discharge). No fixture pins a different mapping on a carryover replacement than on its old child, so the route's forwarded and recorded targets are not distinguished by a test; one route decides them for both checks. D175 narrowly superseded (#1544 review ruling): pre-deduplication refusals are read-only; post-authorization processing keeps D175's hoisted expiry. A refusal decided during syntax validation or target authorization commits no expiry, schedule, discharge event, latch or nonce response; the effective expiry still governs authorization and issuance at once, and its persistence and publication wait for the next expiry-materializing path. Proved post-authorization by removing the hoisted materialization (the fingerprint-conflict test fails: the conflict's rollback undoes the expiry). #1544 re-review P2: proved by checking the observed_at window before deduplication (the aged-retry test gets 400 instead of the replayed 200) and by removing the window check (that test fails on its fresh-nonce request, and so does the malformed-request test on its skewed observed_at)."
+  },
+  {
+   "id": "status.lifecycle.authorization-precedes-replay",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-processing",
+   "text": "Authorization therefore precedes every replayed or state-dependent response: a caller not authorized for the Mission receives the not-found response, never a replay, `stale_version` or `conflict`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a caller not authorized for the Mission receives the not-found response where an authorized caller would receive a replay (its grant withdrawn after a success), stale_version (a stale expected_version) or conflict (complete on a revoked Mission)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > authorizes a retransmit before deduplication: after the client's grant is withdrawn, the same nonce and members under a fresh assertion get the not-found response, not the replayed success, and the success replays once the grant returns",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle authorization for the acting party, operation and Mission (@spec status#lifecycle-authorization, #1535) > answers a client holding the lifecycle grant for another tenant exactly as it answers an unknown Mission: revoke, complete on a revoked Mission and a stale expected_version alike, leaving the Mission unchanged; a client whose policy names the Mission's tenant acts on it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 finding 3 (D649). Proved by letting a retained row skip authorization (the retransmit test fails) and by skipping the Mission scope for suspend only and for complete only (the tenant test fails with stale_version and with conflict)."
   },
   {
    "id": "status.discharge.same-nonce-verbatim-replay",
@@ -14987,7 +15364,7 @@
    "id": "status.lifecycle.scheduled-resume-authorization",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "lifecycle-authorization",
-   "text": "The AS MUST authorize it against both the caller's authorization for `suspend` and the authorization the deployment requires for a direct `resume` of that Mission, including when it sets or replaces the schedule of a Mission already `suspended`, whoever suspended it.",
+   "text": "The AS MUST authorize it against both the caller's authorization for `suspend` and the authorization the deployment requires for a direct operation of the scheduled kind (`resume` or `revoke`) on that Mission, including when it sets or replaces the schedule of a Mission already `suspended`, whoever suspended it.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -14999,7 +15376,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a suspend carrying on_expiry=resume is refused to a caller holding the authorization for suspend but not the deployment's direct-resume authorization for that Mission, both when it would arm a schedule on an active Mission and when it would set or replace the schedule of a Mission another party already suspended; a caller holding both succeeds",
-    "local": "The reference AS adopts schedules only where the deployment sets suspensionSchedules (off by default; elsewhere a schedule is refused invalid_request, #1191). The deployment's direct-resume authorization is mission_lifecycle and, where it sets distinctResumeGrant, the distinct mission_resume grant too; one predicate (mayResume, provider.ts) decides a direct resume and a resume schedule alike. The refusal cases run on a deployment that sets distinctResumeGrant; the plain case shows that where mission_lifecycle authorizes resume, it authorizes the schedule."
+    "local": "The reference AS adopts schedules only where the deployment sets suspensionSchedules (off by default; elsewhere a schedule is refused invalid_request, #1191). The deployment's direct-resume authorization is mission_lifecycle and, where it sets distinctResumeGrant, the distinct mission_resume grant too; one predicate (mayPerform, provider.ts) decides a direct resume and a resume schedule alike. The refusal cases run on a deployment that sets distinctResumeGrant; the plain case shows that where mission_lifecycle authorizes resume, it authorizes the schedule."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -15012,7 +15389,7 @@
     },
     {
      "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
-     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > commits a resume schedule for a caller holding the deployment's direct-resume authorization, also on another party's suspension, and a revoke schedule on the suspend authorization alone",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > commits a resume schedule for a caller holding the deployment's direct-resume authorization, also on another party's suspension, and a revoke schedule for a caller holding the direct-revoke authorization (#1535)",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     },
@@ -15023,7 +15400,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1002 (D285, D416). Proved by checking a resume schedule against suspend authority only (the refusal test fails) and by letting mission_lifecycle alone satisfy the direct-resume authorization (the refusal test and the deployment-choice test fail)."
+   "notes": "#1002 (D285, D416). Proved by checking a resume schedule against suspend authority only (the refusal test fails) and by letting mission_lifecycle alone satisfy the direct-resume authorization (the refusal test and the deployment-choice test fail). #1535 (D649): re-quoted to the sentence that names both scheduled kinds; its revoke half is status.lifecycle.scheduled-revoke-authorization."
   },
   {
    "id": "status.lifecycle.scheduled-resume-refusal-no-change",
@@ -15040,8 +15417,8 @@
    "surface": "lifecycle-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "the refused scheduled-resume request leaves the Mission's state, its recorded suspend_until and on_expiry, and that schedule's committing party unchanged, and is answered with the not-found response shape of an unauthorized lifecycle request",
-    "local": "The authorization check runs after the request members are parsed and before the expiry clock or any transaction, so the refusal reads nothing of the Mission."
+    "normative": "a refused scheduled-resume or scheduled-revoke request leaves the Mission's state, its recorded suspend_until and on_expiry, and that schedule's committing party unchanged, and is answered with the not-found response shape of an unauthorized lifecycle request",
+    "local": "The authorization check runs after the request members are parsed and before deduplication, the expiry clock or any transaction; it reads only the Mission's immutable identity (its Subject and requesting client)."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -15051,38 +15428,51 @@
      "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > refuses a suspend-only caller a resume schedule, armed on an active Mission or set or replaced on a Mission another party suspended, as an unknown Mission, leaving state, version, schedule and committing party unchanged",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > refuses a caller holding suspend but not revoke authorization a revoke schedule, armed on an active Mission or replacing another party's schedule, as an unknown Mission, leaving state, version, schedule and committing party unchanged, while it may still schedule a resume (#1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1002 (D285, D416). Proved by committing the requested transition before answering the refusal (the refusal test fails on the unchanged state, schedule and committing party) and by dropping the check for a resume schedule (the same test fails)."
+   "notes": "#1002 (D285, D416). Proved by committing the requested transition before answering the refusal (the refusal test fails on the unchanged state, schedule and committing party) and by dropping the check for a resume schedule (the same test fails). #1535 (D649): the revoke schedule's refusal too; proved by committing the requested schedule before answering the refusal (both refusal tests fail)."
   },
   {
    "id": "status.lifecycle.scheduled-revoke-authorization",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "lifecycle-authorization",
-   "text": "A `suspend` whose `on_expiry` is `revoke` needs only the authorization for `suspend`.",
+   "text": "The AS MUST authorize it against both the caller's authorization for `suspend` and the authorization the deployment requires for a direct operation of the scheduled kind (`resume` or `revoke`) on that Mission, including when it sets or replaces the schedule of a Mission already `suspended`, whoever suspended it.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "capability",
     "capability": "status.lifecycle"
    },
    "profiles": [],
    "surface": "lifecycle-endpoint",
-   "assertion": "output-bound",
+   "assertion": "refusal",
    "observation": {
-    "normative": "a caller holding the authorization for suspend but not the deployment's direct-resume authorization commits a suspend with on_expiry=revoke, and the schedule is recorded"
+    "normative": "a suspend carrying on_expiry=revoke is refused, as an unauthorized lifecycle request, to a caller holding the authorization for suspend but not the deployment's direct-revoke authorization for that Mission, both when it would arm a schedule on an active Mission and when it would replace the schedule of a Mission another party already suspended; a caller holding both commits it",
+    "local": "The deployment's direct-revoke authorization is mission_lifecycle, narrowed where the deployment binds a policy to the client (a lifecycleClientGrants entry naming its operations); one predicate (mayPerform, provider.ts) decides a direct operation and a schedule of that kind alike. The refused client holds mission_lifecycle and mission_resume under a policy naming suspend and resume only: it is refused a direct revoke as well, and may still schedule a resume."
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
-     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > commits a resume schedule for a caller holding the deployment's direct-resume authorization, also on another party's suspension, and a revoke schedule on the suspend authorization alone",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > refuses a caller holding suspend but not revoke authorization a revoke schedule, armed on an active Mission or replacing another party's schedule, as an unknown Mission, leaving state, version, schedule and committing party unchanged, while it may still schedule a resume (#1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > commits a resume schedule for a caller holding the deployment's direct-resume authorization, also on another party's suspension, and a revoke schedule for a caller holding the direct-revoke authorization (#1535)",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1002 (D285 item 7). Proved by demanding the direct-resume authorization for any schedule (the test fails)."
+   "notes": "#1535 finding 16 (D649), superseding D285 item 7 (a revoke schedule needed only the suspend authorization). Proved by checking the scheduled kind only for resume (the refusal test fails on arming) and only when arming on an active Mission (it fails on the replacement)."
   },
   {
    "id": "status.lifecycle.schedule-committing-party-recorded",
@@ -15113,7 +15503,7 @@
     },
     {
      "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
-     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > commits a resume schedule for a caller holding the deployment's direct-resume authorization, also on another party's suspension, and a revoke schedule on the suspend authorization alone",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > commits a resume schedule for a caller holding the deployment's direct-resume authorization, also on another party's suspension, and a revoke schedule for a caller holding the direct-revoke authorization (#1535)",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
     }
@@ -15157,6 +15547,76 @@
    "notes": "#1194. Proved by disabling the mission_lifecycle scope check on the lifecycle route (provider.ts): the approval service's revoke then returns 200."
   },
   {
+   "id": "status.lifecycle.per-mission-authorization",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "A lifecycle authorization is necessary but not sufficient. The AS MUST authorize each request for its acting party (below), its operation, and the specific Mission it names, under the deployment's policy for that Mission, including the deployment or tenant boundary the Mission belongs to: authorization for one Mission, or within one tenant, authorizes nothing on another.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a caller holding the lifecycle authorization is refused every request the deployment's policy does not authorize for that acting party, operation and Mission, with the not-found response of an unknown Mission and no change to the Mission: a Mission outside the tenant, Subjects or requesting clients its policy names, and an operation its policy omits; the refusal precedes stale_version and conflict, and a caller whose policy names the Mission acts on it",
+    "local": "The policy is the client's lifecycleClientGrants entry, or a lifecycleClients registration: operations among revoke, suspend, resume, complete and contain, and a Mission scope by Subject (iss, optionally sub) and requesting client_id; a bare grant list keeps deployment-wide authority, and an unknown operation fails the boot. The reference kernel holds one Subject issuer namespace (assertLocalPrincipal), so the tenant boundary it expresses is the Subject issuer: a client scoped to another issuer is refused on every Mission here, and a client scoped to this issuer acts. The dev-only path route's service-token principals carry no policy."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle authorization for the acting party, operation and Mission (@spec status#lifecycle-authorization, #1535) > answers a client holding the lifecycle grant for another tenant exactly as it answers an unknown Mission: revoke, complete on a revoked Mission and a stale expected_version alike, leaving the Mission unchanged; a client whose policy names the Mission's tenant acts on it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle authorization for the acting party, operation and Mission (@spec status#lifecycle-authorization, #1535) > scopes a client's lifecycle grant to the Subject and the requesting client its policy names, refusing every other Mission as an unknown one",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule authorization at commit (@spec status#lifecycle-authorization, #1002) > refuses a caller holding suspend but not revoke authorization a revoke schedule, armed on an active Mission or replacing another party's schedule, as an unknown Mission, leaving state, version, schedule and committing party unchanged, while it may still schedule a resume (#1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle authorization for the acting party, operation and Mission (@spec status#lifecycle-authorization, #1535) > refuses at boot a lifecycle policy naming an operation the lifecycle grant does not govern",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 finding 1 (D649). Proved by dropping the Mission scope (both scope tests fail), by skipping it for suspend only (the tenant test fails on the stale expected_version: 409 stale_version) and for complete only (it fails on complete: 409 conflict), by dropping the requesting-client match and the Subject sub match (the scope test fails), and by dropping the operations check (the revoke-schedule test fails on the direct revoke)."
+  },
+  {
+   "id": "status.lifecycle.act-not-a-grant",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-authorization",
+   "text": "The AS evaluates the acting party's validated identity and any validated delegation context; an `act` claim identifies the parties to a delegation and is never by itself a grant of lifecycle authority.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a lifecycle request authenticated by an access token whose act claim names a party the deployment would authorize, but which carries no lifecycle authorization for its acting party, operation and Mission, is refused with the not-found response and changes nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 1 (D649). Applies to the access-token authentication case only: the reference Lifecycle endpoint accepts private_key_jwt alone (LIFECYCLE_ENDPOINT_AUTH_METHODS), where the acting party is the authenticated client, no delegation context arises, and status.lifecycle.per-mission-authorization covers the evaluation. No manifest capability names the access-token mode, so the gate is this note. Todo until the endpoint accepts a sender-constrained access token."
+  },
+  {
    "id": "status.lifecycle.unauthorized-not-found",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "lifecycle-authorization",
@@ -15187,9 +15647,15 @@
      "name": "Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191) > answers an authenticated client without the lifecycle grant exactly as it answers an unknown Mission",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle authorization for the acting party, operation and Mission (@spec status#lifecycle-authorization, #1535) > answers a client holding the lifecycle grant for another tenant exactly as it answers an unknown Mission: revoke, complete on a revoked Mission and a stale expected_version alike, leaving the Mission unchanged; a client whose policy names the Mission's tenant acts on it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1194. Proved by answering the unauthorized caller 403 forbidden instead of the not-found response (provider.ts): step 7 fails."
+   "notes": "#1194. Proved by answering the unauthorized caller 403 forbidden instead of the not-found response (provider.ts): step 7 fails. #1535: a client refused by its deployment policy for the Mission gets the unknown Mission's status, body and headers, byte for byte."
   },
   {
    "id": "status.lifecycle.direct-client-grant",
@@ -15651,7 +16117,7 @@
    "id": "management.bulk.scheduled-resume-grant-dry-run",
    "spec": "draft-mcguinness-oauth-mission-management.md",
    "anchor": "dry-run",
-   "text": "Before evaluating the filter for a `suspend` whose `on_expiry` is `resume`, the AS MUST verify that the caller holds the `resume` grant of {{blast-radius}}, and MUST refuse a caller that lacks it with `forbidden` ({{management-errors}}), issuing no bulk token.",
+   "text": "Before evaluating the filter for a `suspend` that carries `on_expiry`, the AS MUST verify that the caller holds the authorization for the scheduled operation (the `resume` grant of {{blast-radius}}, or the authorization for a bulk `revoke` over that filter scope), and MUST refuse a caller that lacks it with `forbidden` ({{management-errors}}), issuing no bulk token.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -15661,18 +16127,18 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a dry run of a bulk suspend with on_expiry=resume from a Management Client lacking the distinct or elevated resume grant is refused forbidden with no bulk token issued and no membership evaluated, while the same dry run with on_expiry=revoke, or from a caller holding the grant, succeeds"
+    "normative": "a dry run of a bulk suspend with on_expiry=resume from a Management Client lacking the distinct or elevated resume grant is refused forbidden with no bulk token issued and no membership evaluated, while the same dry run from a caller holding the grant succeeds"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint, dry run of a bulk suspend with each on_expiry value from callers with and without the resume grant."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint, dry run of a bulk suspend with each on_expiry value from callers with and without the resume grant. #1535 (D649): re-quoted to the sentence that names both scheduled kinds; a revoke schedule no longer passes without authorization of its own (management.bulk.scheduled-revoke-authorization-dry-run)."
   },
   {
    "id": "management.bulk.scheduled-resume-grant-execute",
    "spec": "draft-mcguinness-oauth-mission-management.md",
    "anchor": "execution",
-   "text": "For a `suspend` whose `on_expiry` is `resume`, the AS MUST verify again that the caller holds the `resume` grant of {{blast-radius}}, and MUST refuse a caller that no longer holds it with `forbidden`, executing nothing; the bulk token never substitutes for this check.",
+   "text": "For a `suspend` that carries `on_expiry`, the AS MUST verify again that the caller holds the authorization for the scheduled operation, and MUST refuse a caller that no longer holds it with `forbidden`, executing nothing; the bulk token never substitutes for this check.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -15687,7 +16153,49 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run with the resume grant, withdraw the grant, execute with the valid bulk token, and assert the refusal and every pinned member unchanged."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run with the resume grant, withdraw the grant, execute with the valid bulk token, and assert the refusal and every pinned member unchanged. #1535 (D649): re-quoted to the sentence that names both scheduled kinds; the revoke half is management.bulk.scheduled-revoke-authorization-execute."
+  },
+  {
+   "id": "management.bulk.scheduled-revoke-authorization-dry-run",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "dry-run",
+   "text": "Before evaluating the filter for a `suspend` that carries `on_expiry`, the AS MUST verify that the caller holds the authorization for the scheduled operation (the `resume` grant of {{blast-radius}}, or the authorization for a bulk `revoke` over that filter scope), and MUST refuse a caller that lacks it with `forbidden` ({{management-errors}}), issuing no bulk token.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a dry run of a bulk suspend with on_expiry=revoke from a Management Client lacking the authorization for a bulk revoke over that filter scope is refused forbidden with no bulk token issued and no membership evaluated, while the same dry run from a caller holding it succeeds"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 16 (D649), superseding D285's on_expiry=revoke rule. No reference implementation of Mission Management exists (#997). Planned test surface: the Mission Management endpoint, dry run of a bulk suspend with on_expiry=revoke from callers with and without bulk revoke authorization."
+  },
+  {
+   "id": "management.bulk.scheduled-revoke-authorization-execute",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "For a `suspend` that carries `on_expiry`, the AS MUST verify again that the caller holds the authorization for the scheduled operation, and MUST refuse a caller that no longer holds it with `forbidden`, executing nothing; the bulk token never substitutes for this check.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an execute of a bulk suspend with on_expiry=revoke, presenting a bulk token from a dry run the caller passed while holding bulk revoke authorization, is refused forbidden when that authorization has since been withdrawn, and no member's state or schedule changes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 16 (D649). No reference implementation of Mission Management exists (#997). Planned test surface: the Mission Management endpoint: dry run with bulk revoke authorization, withdraw it, execute with the valid bulk token, and assert the refusal and every pinned member unchanged."
   },
   {
    "id": "management.bulk.schedule-values-bound",
