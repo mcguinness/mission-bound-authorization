@@ -787,6 +787,7 @@ Success outcomes (HTTP 200, signed Mission Status Response, described by
 | `active` | Mission is active and permits reliance. |
 | `suspended` | Mission is suspended (non-terminal). |
 | `terminated` | Mission has ended; `mission.termination` gives the reason. |
+{: title="Success outcomes by Mission state"}
 
 A `terminated` Mission's `mission.termination.reason` names how it
 ended, and the set of reasons is not closed: a deployment reports
@@ -812,6 +813,7 @@ Wire error codes (carried in the `error` member of a JSON body):
 | `stale_version` | 409 | `expected_version` differs from the current state version ({{idempotency}}). |
 | `rate_limited` | 429 | Consumer is rate-limited. |
 | `unavailable` | 503 | AS temporarily cannot serve status. |
+{: title="Error codes"}
 
 Note the distinction between the access failures: `unauthorized`
 (401) and `invalid_client` (400) mean the request carried no valid
@@ -1124,6 +1126,7 @@ Mission is a conflict, not idempotent success.
 | `suspend` | `active` | `suspended` | |
 | `resume` | `suspended` | `active` | |
 | `complete` | `active`, `suspended` | `terminated` | `completed` |
+{: title="Lifecycle operations and legal transitions"}
 
 `complete` is legal from `suspended` as well as `active`: completion is
 a monotonic narrowing to `terminated` and needs no derivation
@@ -1179,6 +1182,7 @@ other state is non-deriving.
 | `active` | successor activates | expansion profile | `terminated` | `superseded` |
 | `active` | parent terminates | child-delegation profile | `terminated` | `parent_terminated` |
 | `suspended` | parent terminates | child-delegation profile | `terminated` | `parent_terminated` |
+{: title="Consolidated Mission state machine"}
 
 `revoke` and the Mission's `expires_at` both apply in `suspended` as
 well as `active`, so a suspended Mission can still be terminated or
@@ -1996,6 +2000,7 @@ Specification Required policy:
 | Value | Terminal | Semantics | Change Controller | Reference |
 |---|---|---|---|---|
 | `suspended` | no | A paused Mission that derives no tokens until resumed. | IETF | this document, {{mission-lifecycle-endpoint}} |
+{: title="Mission Lifecycle States registration"}
 
 It also requests registration of one reason in the issuance profile's
 Mission Termination Reasons registry
@@ -2004,6 +2009,7 @@ Mission Termination Reasons registry
 | Value | Semantics | Members | Change Controller | Reference |
 |---|---|---|---|---|
 | `completed` | The Mission completed successfully. | none | IETF | this document, {{mission-lifecycle-endpoint}} |
+{: title="Mission Termination Reasons registration"}
 
 --- back
 
