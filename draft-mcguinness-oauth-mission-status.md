@@ -731,7 +731,9 @@ The members are:
   {{I-D.draft-mcguinness-oauth-mission-resource-access}}), carried at
   the top level as a sibling of `mission` (as on the token and in the
   introspection response). Entries addressed to other audiences MUST
-  NOT be disclosed. When the request omits `audience`
+  NOT be disclosed. When the request names an `audience`, the response
+  MUST carry `authorization_details`, as an empty array when no entry
+  is relevant to that audience. When the request omits `audience`
   ({{mission-status-request}}), there is no requesting audience: the
   response is state-only and MUST NOT carry `authorization_details`.
 
