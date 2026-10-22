@@ -542,9 +542,11 @@ export interface ApprovalBasisCeilingDrawdown {
   /**
    * @spec progressive#ceiling-drawdown-basis (#1438, D572): REQUIRED. The
    * drawdown policy evaluated, naming the same `id` and `version` as
-   * `activation`.
+   * `activation`. `governance_record` is present only where the issuer
+   * records a voluntary Approval Governance Record for this drawdown
+   * (approval-governance, #1470).
    */
-  adjudication: { kind: "policy"; policy: { id: string; version: string } };
+  adjudication: { kind: "policy"; policy: { id: string; version: string }; governance_record?: true };
   /** The `ceiling_hash`. */
   root_commitment: string;
   /**

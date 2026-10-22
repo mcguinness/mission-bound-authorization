@@ -4145,7 +4145,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "where a deployment declares a recency ceiling for a consequence class, a standing-consent activation older than the ceiling is refused rather than activated",
-    "local": "Witnessed for governed_policy, whose root declares the ceilings: an older approved_at, one beyond the skew, and the strictest per-class ceiling refuse at the creation instant. Template's review_cadence and the other bases are not cited here."
+    "local": "Witnessed for governed_policy, whose root declares the ceilings: an older approved_at, one beyond the skew, and the strictest per-class ceiling refuse at the creation instant. Template's review_cadence and the other bases are not cited here. Where ceiling drawdowns are recorded, a ceiling consent older than the recording rule's ceiling at the decision instant falls back to a fresh human approval instead of activating by policy (#1470 slice 2); template and policy_drawdown are not cited here."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -4161,9 +4161,21 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a high-risk class only under a committed, class-named exception, whose age then binds",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends an unclassified action, a stale consent, an ineligible deciding policy or consent to a fresh approval, nothing written",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 6: replays the eligibility gate and recency at the creation instant",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation."
+   "notes": "Ceilings are deployment-declared and optional (MAY declare; MUST refuse where declared), so this row is gated on its own capability (a deployment can run standing consent without declaring any ceiling; review of PR #625). Mirrors approval-governance's policy-approval recency on the AGR path. The four normative rules (atomic-creation evaluation instant, skew-bounded ordering, strictest-ceiling selection, versioned retained declaration) land with any implementation. #1470 slice 2 (D626): ceiling_drawdown records."
   },
   {
    "id": "core.approval-basis.adjudication-direct-human",
@@ -4507,7 +4519,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "where a governed Mission populates approval_basis.adjudication with governance_record true and the Approval Governance Record carries an accountable assertion, that assertion's kind equals adjudication.kind, which the approval basis fixes (human for direct, policy for governed_policy); governance_record never changes kind and kind never names the record itself",
-    "local": "Witnessed for governed_policy (adjudication.kind policy, accountable assertion kind policy, a mismatched kind refused) and for direct (a recorded direct approval carries adjudication {kind human, governance_record true}, its accountable assertion is kind human, and the direct commit gate refuses a mismatched kind). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy."
+    "local": "Witnessed for governed_policy (adjudication.kind policy, accountable assertion kind policy, a mismatched kind refused) and for direct (a recorded direct approval carries adjudication {kind human, governance_record true}, its accountable assertion is kind human, and the direct commit gate refuses a mismatched kind). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy. A recorded ceiling drawdown carries adjudication {kind policy, governance_record true}; its record carries no accountable assertion, so the kind-equality clause does not bind it (#1470 slice 2)."
    },
    "level": "unit",
    "coverage": "tested",
@@ -4541,9 +4553,15 @@
      "name": "a recorded direct approval carries the approval surface's authentication (@spec approval-governance#assertion-authority, #1470) > records the browser login's acr and auth_time as the Approver's human assertion, and the record re-checks",
      "level": "endpoint",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > commits one signed record whose one contributing policy assertion is the drawdown policy's, by the ceiling's consenting human",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable)."
+   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). #1470 slice 2 (D626): ceiling_drawdown records."
   },
   {
    "id": "approval-governance.triggers.required-under-adopting-profile",
@@ -4583,7 +4601,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a record kept although no profile or basis requires it meets every requirement on the record (authenticated, event-bound, policy-authorized assertions; the accountable-approver rule for its basis; atomic commitment; the envelope); one that does not, does not commit",
-    "local": "Witnessed on the reference's voluntary direct records (MissionKernel.approve under the default-off directApprovalRecording, which no profile requires): the committed record verifies (envelope) and is bound to its approval event and Mission; its human assertion carries the approval surface's verified authentication; it is policy-authorized by the direct approval rule (the approval-authentication floor, the Subjects, approve-for and write eligibility the approval surface enforces, and the authority-source activators the kernel enforces; its floor passes the approval-floor policy's strict validation), which the issuer evaluates again at the commit and which refuses the Mission when it denies; it satisfies the accountable-approver rule; and it commits atomically with the Mission (a signing or persistence fault leaves no Mission, record or inputs). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy."
+    "local": "Witnessed on the reference's voluntary direct records (MissionKernel.approve under the default-off directApprovalRecording, which no profile requires): the committed record verifies (envelope) and is bound to its approval event and Mission; its human assertion carries the approval surface's verified authentication; it is policy-authorized by the direct approval rule (the approval-authentication floor, the Subjects, approve-for and write eligibility the approval surface enforces, and the authority-source activators the kernel enforces; its floor passes the approval-floor policy's strict validation), which the issuer evaluates again at the commit and which refuses the Mission when it denies; it satisfies the accountable-approver rule; and it commits atomically with the Mission (a signing or persistence fault leaves no Mission, record or inputs). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy. Policy-adjudicated ceiling_drawdown successors are recorded too under the default-off ceilingDrawdownRecording (#1470 slice 2): the record verifies, is bound to its event and Mission, carries one contributing policy assertion authorized by the recording rule, commits with the Mission, and a drawdown the eligibility gate does not admit falls back to a fresh human approval with nothing written."
    },
    "level": "unit",
    "coverage": "tested",
@@ -4653,9 +4671,39 @@
      "name": "the direct approval rule (@spec approval-governance#approval-policy, approval-governance#assertion-validation) > denies at an evaluation instant that is not an RFC 3339 timestamp, rather than measuring no age",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > commits one signed record whose one contributing policy assertion is the drawdown policy's, by the ceiling's consenting human",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > retains the recording rule and the inputs the commit-time decision read",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends an unclassified action, a stale consent, an ineligible deciding policy or consent to a fresh approval, nothing written",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the ceiling-drawdown record commit gate (@spec approval-governance#accountable-assertion, approval-governance#assertion-authority) > admits the one contributing policy assertion, and refuses another principal, policy, instant, or contributing set",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "recorded ceiling drawdowns at the token endpoint (@spec approval-governance#recency-high-risk, approval-governance#atomic-commitment, #1470 slice 2) > a policy drawdown activates with a signed record of the drawdown policy's assertion, and the record re-checks",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 1 (D568). The reference implementation records an Approval Governance Record only where governed_policy requires one, never voluntarily, so this row has no witness surface yet. #1470 Q1 proposes a default-off voluntary record for direct approvals, which would witness this row. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). On owner review of #1484 at 41a1f750 (three P2s): the direct replay bound neither the consented ceiling nor the source root to the Mission; a malformed evaluated_at made the floor's age comparisons false; and the rule parser accepted an unknown action class, disabling a floor. Fixed: step 4 binds the inputs to the Mission's retained source binding and consented ceiling and refuses a malformed recorded authentication, step 5 refuses an evaluated_at that is not an RFC 3339 timestamp (as does the evaluator), and the rule's floor passes the approval-floor policy's strict validation. Each regression case fails on 41a1f750."
+   "notes": "#1436 ruling 1 (D568). The reference implementation records an Approval Governance Record only where governed_policy requires one, never voluntarily, so this row has no witness surface yet. #1470 Q1 proposes a default-off voluntary record for direct approvals, which would witness this row. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). On owner review of #1484 at 41a1f750 (three P2s): the direct replay bound neither the consented ceiling nor the source root to the Mission; a malformed evaluated_at made the floor's age comparisons false; and the rule parser accepted an unknown action class, disabling a floor. Fixed: step 4 binds the inputs to the Mission's retained source binding and consented ceiling and refuses a malformed recorded authentication, step 5 refuses an evaluated_at that is not an RFC 3339 timestamp (as does the evaluator), and the rule's floor passes the approval-floor policy's strict validation. Each regression case fails on 41a1f750. #1470 slice 2 (D626): ceiling_drawdown records."
   },
   {
    "id": "approval-governance.triggers.approver-differs-from-subject",
@@ -4821,7 +4869,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a policy assertion counts only when the policy it names may decide under the record's approval_policy and its principal was eligible to approve that policy version; otherwise it does not contribute",
-    "local": "Witnessed for the governed_policy accountable assertion: the deciding policy is the root or the evaluator the root commits, and an unauthorized approving human yields no consent and no activation. A human's eligibility under approval_policy is exercised on recorded direct approvals (the direct approval rule's authority-source activators, Subjects, approve-for and write eligibility, #1470 slice 1); service eligibility is not exercised."
+    "local": "Witnessed for the governed_policy accountable assertion: the deciding policy is the root or the evaluator the root commits, and an unauthorized approving human yields no consent and no activation. A human's eligibility under approval_policy is exercised on recorded direct approvals (the direct approval rule's authority-source activators, Subjects, approve-for and write eligibility, #1470 slice 1); service eligibility is not exercised. A contributing policy assertion is authorized on recorded ceiling drawdowns (#1470 slice 2): the drawdown policy must be one the recording rule admits and the one the ceiling consent committed, and the consenting human eligible under the rule's consent eligibility; otherwise the drawdown falls back to a fresh human approval and nothing contributes. That eligibility is a current check backed by the retained authenticated consent: the configuration current at the drawdown's commit, retained with it. It does not reproduce consent-time eligibility (the configuration at consent time is not retained) or consent-time authentication strength. The row stays partial for those specific gaps: service eligibility under approval_policy is not exercised, and a drawdown's consent eligibility is not checked as of consent time."
    },
    "level": "unit",
    "coverage": "partial",
@@ -4837,9 +4885,27 @@
      "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > decides by the root itself or by the evaluator the root commits, with that policy's typed digest",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends an unclassified action, a stale consent, an ineligible deciding policy or consent to a fresh approval, nothing written",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > verifies the consent's commitment to the exact drawdown policy version, and its principal's eligibility as the consenting approval enforced it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 6: replays the eligibility gate and recency at the creation instant",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 item 5 edge case (b), an assumed ruling: since #1442 a policy assertion's principal is the human who approved the policy version, so policy-authorization names both checks. Human and service eligibility: #1470 Q1 and Q2. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. Ruled D597 (#1470 Q2): no multi-decider rule for coverage alone; stays partial until a deployment needs it."
+   "notes": "#1436 item 5 edge case (b), an assumed ruling: since #1442 a policy assertion's principal is the human who approved the policy version, so policy-authorization names both checks. Human and service eligibility: #1470 Q1 and Q2. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. Ruled D597 (#1470 Q2): no multi-decider rule built solely for coverage; the ruling limits what is built, not the row's coverage. #1470 slice 2 (D626): ceiling_drawdown records. On owner review of #1522 at 58f9ede1: partial for its specific remaining gaps (service eligibility; consent-time eligibility and authentication), with the consent-eligibility limitation kept explicit."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -49582,7 +49648,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a record for a Mission under any named standing-consent basis other than governed_policy satisfies the accountable-approver rule with no matching assertion, its approval_basis standing in; contributing policy and service assertions are accepted and none is required",
-    "local": "Witnessed at the reference validator (assertAccountableApprover) for template, policy_drawdown and ceiling_drawdown. The reference commits no Approval Governance Record under these bases."
+    "local": "Witnessed at the reference validator (assertAccountableApprover) for template, policy_drawdown and ceiling_drawdown. The reference commits no Approval Governance Record under template or policy_drawdown. Committed records witness it for ceiling_drawdown (#1470 slice 2): no accountable assertion is matched, and one contributing policy assertion is accepted. template and policy_drawdown record nothing (D626 Q5), so the row stays partial."
    },
    "level": "unit",
    "coverage": "partial",
@@ -49592,9 +49658,21 @@
      "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > other standing-consent bases: the approval_basis stands in, so no assertion is required or matched",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > commits one signed record whose one contributing policy assertion is the drawdown policy's, by the ceiling's consenting human",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the ceiling-drawdown record commit gate (@spec approval-governance#accountable-assertion, approval-governance#assertion-authority) > admits the one contributing policy assertion, and refuses another principal, policy, instant, or contributing set",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness. Committed-record witness: #1470 Q1 (second slice). Ruled D597 (#1470 Q1): standing-consent bases follow direct recording, as a separate slice."
+   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness. Committed-record witness: #1470 Q1 (second slice). Ruled D597 (#1470 Q1): standing-consent bases follow direct recording, as a separate slice. #1470 slice 2 (D626): ceiling_drawdown records."
   },
   {
    "id": "approval-governance.record.service-authority-logic-version",
@@ -49684,7 +49762,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a policy assertion's principal is the human who approved the exact policy version its authority names (where a consented root commits a separate evaluator that decides, the human who approved that root; where several humans approved the version together, the one human the retained governance state names as accountable), never an identity for the policy itself",
-    "local": "Witnessed only for the governed_policy accountable assertion, the one policy assertion the reference produces: its principal is the consent principal who approved the root. The reference never produces a contributing policy assertion, the case this rule settles (#1436 item 5), and has no jointly approved policy version."
+    "local": "Witnessed only for the governed_policy accountable assertion, the one policy assertion the reference produces: its principal is the consent principal who approved the root. The reference has no jointly approved policy version. The contributing case is witnessed on recorded ceiling drawdowns (#1470 slice 2): the drawdown policy's assertion names the human who consented the ceiling, and with it that exact policy version, and the commit gate refuses another principal. A jointly approved policy version has no reference case, so the row stays partial."
    },
    "level": "unit",
    "coverage": "partial",
@@ -49694,9 +49772,21 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a bounded Mission and commits a signed Approval Governance Record with it",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > commits one signed record whose one contributing policy assertion is the drawdown policy's, by the ceiling's consenting human",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the ceiling-drawdown record commit gate (@spec approval-governance#accountable-assertion, approval-governance#assertion-authority) > admits the one contributing policy assertion, and refuses another principal, policy, instant, or contributing set",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 3 (D568) resolves the contributing-policy principal question (#1436 item 5) this way, matching the governed_policy accountable assertion; mutation: naming the policy as principal fails the witness. A contributing policy assertion needs a multi-decider rule: #1470 Q2. Ruled D597 (#1470 Q2): no multi-decider rule for coverage alone; stays partial until a deployment needs it."
+   "notes": "#1436 ruling 3 (D568) resolves the contributing-policy principal question (#1436 item 5) this way, matching the governed_policy accountable assertion; mutation: naming the policy as principal fails the witness. Ruled D597 (#1470 Q2): no multi-decider rule built solely for coverage. #1470 slice 2 (D626): ceiling_drawdown records."
   },
   {
    "id": "approval-governance.authority.human-members",
@@ -50037,7 +50127,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id, the Mission's intent_hash and the authority_hash of the set recorded as evaluated, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
-    "local": "Witnessed on committed governed_policy records, the one basis under which the reference commits a record and retains the deciding policy's inputs: recheckApprovalGovernanceRecord, a reference Relying Auditor reading the issuer's retained store, replays each step, counting what the deciding policy counts rather than what the record lists, and each step's refusal is witnessed alone, including missing root, evaluator and input evidence and a high-risk class's recency exception. Recorded direct approvals re-check too (#1470 slice 1): the retained rule snapshot reproduces approval_policy.digest; no separate evaluator decides; the retained inputs are bound to the event and Intent, name the Mission's Approver and Subject, the authority source its retained binding names and the ceiling it consented, and record a well-formed authentication; evaluated_at is an RFC 3339 timestamp; the rule replays at evaluated_at over them with the human assertion equal to the recorded authentication, the committed Authority Set and exactly the human assertion contributing; policy-approval recency does not apply to it. Standing-consent bases other than governed_policy commit no record, so are not re-checked."
+    "local": "Witnessed on committed governed_policy records, the one basis under which the reference commits a record and retains the deciding policy's inputs: recheckApprovalGovernanceRecord, a reference Relying Auditor reading the issuer's retained store, replays each step, counting what the deciding policy counts rather than what the record lists, and each step's refusal is witnessed alone, including missing root, evaluator and input evidence and a high-risk class's recency exception. Recorded direct approvals re-check too (#1470 slice 1): the retained rule snapshot reproduces approval_policy.digest; no separate evaluator decides; the retained inputs are bound to the event and Intent, name the Mission's Approver and Subject, the authority source its retained binding names and the ceiling it consented, and record a well-formed authentication; the rule replays at evaluated_at over them with the human assertion equal to the recorded authentication, the committed Authority Set and exactly the human assertion contributing; policy-approval recency does not apply to it. Standing-consent bases other than governed_policy commit no record, so are not re-checked. Recorded ceiling drawdowns re-check too (#1470 slice 2), from retained state alone: the recording rule's snapshot reproduces approval_policy.digest; the deciding drawdown policy's retained snapshot verifies and parses to the recorded rules; the inputs are bound to the event, Intent and Authority Set, to the predecessor as committed (its own ceiling, narrowed or not, separately from the consented one; an effective set within its Authority Set, which a contained predecessor's narrowed set satisfies; its chain's drawdown instants), and the consent provenance to the consenting ancestor's own record; the drawdown decision replays to a policy activation over the retained inputs (children, restrictions, rate history, classes, cross-domain, instant), the record passes the commit gate, and the eligibility gate and recency replay at evaluated_at. For every basis, step 1 binds evaluation.evaluated_at to the Mission's creation, the atomic-commitment instant, so a re-signed evaluation instant is refused and each replay and recency check runs at the actual decision time; the replays' own refusals are witnessed on faulty-issuer records whose Mission commits at the moved instant. The drawdown replay's other inputs (live children, restrictions, external-communication actions, cross-domain, the rate bound) have no committed counterpart and replay as retained; the gate replays the committed rule's classification, which covers the decision's class check."
    },
    "level": "unit",
    "coverage": "tested",
@@ -50080,7 +50170,7 @@
     },
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
-     "name": "re-checking an evaluation (@spec approval-governance#re-check) > step 6: re-applies recency at evaluated_at, including a high-risk class's committed exception",
+     "name": "re-checking an evaluation (@spec approval-governance#re-check) > step 6: re-applies recency at evaluated_at, the creation instant, including a high-risk class's committed exception",
      "level": "unit",
      "surface": "governance-record"
     },
@@ -50131,9 +50221,87 @@
      "name": "re-checking a direct record (@spec approval-governance#re-check) > step 4: refuses inputs that drop the Mission's consented ceiling, whose irreversible action the floor holds to mfa",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > re-checks the committed record from retained state",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 2: refuses a recording rule snapshot that is missing or does not reproduce approval_policy.digest",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 3: refuses a drawdown policy whose retained snapshot does not verify, or another deciding policy than the inputs name",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 4: refuses missing inputs, and inputs not bound to the event, Intent, Authority Set, predecessor, consent, Subject, source or instant",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 5: refuses a decision that replays to a fallback, and a record failing the commit gate",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 6: replays the eligibility gate and recency at the creation instant",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "recorded ceiling drawdowns at the token endpoint (@spec approval-governance#recency-high-risk, approval-governance#atomic-commitment, #1470 slice 2) > a policy drawdown activates with a signed record of the drawdown policy's assertion, and the record re-checks",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > finds the consent through a narrowed chain: the oldest Mission carrying it, whose ceiling reproduces the commitment",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 1: refuses a backdated decision: the signed assertion, the evaluation and both replay instants agreeing on another instant than the creation",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "re-checking a ceiling-drawdown record (@spec approval-governance#re-check) > step 4: binds the replay to the predecessor as committed: its own narrowed ceiling, an effective set within its Authority Set, its chain's drawdowns",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "re-checking a direct record (@spec approval-governance#re-check) > step 1: refuses an evaluation instant other than the Mission's creation, where the replay would run",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "re-checking an evaluation (@spec approval-governance#re-check) > step 1: refuses an evaluation instant other than the Mission's creation, where recency is measured",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a recorded ceiling drawdown (@spec approval-governance#accountable-assertion, approval-governance#atomic-commitment) > re-checks a drawdown from a contained predecessor, whose effective set containment narrowed within its Authority Set",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked. #1313 follow-up: tested by the reference re-check auditor. On owner review of #1471 at cebf665b (two P2s, D597): the counted set came from the record's own assertions, so removing assertions with their contributing entries re-checked (skipping recency when all were removed), and the event and Intent bindings held only per model output. The replay now counts the accountable policy assertion plus one service assertion per consulted model output, and the inputs as a whole carry the event and Intent; the regression cases fail on cebf665b. Mutations: each of 21 checks (record verification, root snapshot presence and digest, evaluator identity and snapshot, root-decided deciding digest, input presence, the set-level event and Intent bindings, each model output's event, Intent and evaluated-set bindings, service-assertion matching, approval, Authority Set, the governed record gate, one service assertion per model output, contributing, recency order, age and class exception) disabled alone fails a witness. #1470 slice 1: the direct replay; each of its checks disabled alone fails a witness. On owner review of #1484 at 41a1f750 (three P2s): the direct replay bound neither the consented ceiling nor the source root to the Mission; a malformed evaluated_at made the floor's age comparisons false; and the rule parser accepted an unknown action class, disabling a floor. Fixed: step 4 binds the inputs to the Mission's retained source binding and consented ceiling and refuses a malformed recorded authentication, step 5 refuses an evaluated_at that is not an RFC 3339 timestamp (as does the evaluator), and the rule's floor passes the approval-floor policy's strict validation. Each regression case fails on 41a1f750."
+   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked. #1313 follow-up: tested by the reference re-check auditor. On owner review of #1471 at cebf665b (two P2s, D597): the counted set came from the record's own assertions, so removing assertions with their contributing entries re-checked (skipping recency when all were removed), and the event and Intent bindings held only per model output. The replay now counts the accountable policy assertion plus one service assertion per consulted model output, and the inputs as a whole carry the event and Intent; the regression cases fail on cebf665b. Mutations: each of 21 checks at the time (record verification, root snapshot presence and digest, evaluator identity and snapshot, root-decided deciding digest, input presence, the set-level event and Intent bindings, each model output's event, Intent and evaluated-set bindings, service-assertion matching, approval, Authority Set, the governed record gate, one service assertion per model output, contributing, recency order, age and class exception) disabled alone fails a witness. #1470 slice 1: the direct replay; each of its checks disabled alone fails a witness. On owner review of #1484 at 41a1f750 (three P2s): the direct replay bound neither the consented ceiling nor the source root to the Mission; a malformed evaluated_at made the floor's age comparisons false; and the rule parser accepted an unknown action class, disabling a floor. Fixed: step 4 binds the inputs to the Mission's retained source binding and consented ceiling and refuses a malformed recorded authentication, step 5 refuses an evaluated_at that is not an RFC 3339 timestamp (as does the evaluator), and the rule's floor passes the approval-floor policy's strict validation. Each regression case fails on 41a1f750. #1470 slice 2 (D626): ceiling_drawdown records; the consent walk is witnessed through a narrowed chain. On owner review of #1522 at 58f9ede1 (two P2s): the drawdown replay took the predecessor's ceiling from the inputs alone, so a narrowed predecessor's replay ceiling replaced by the original consented one re-checked; and the signed assertion, the evaluation and both replay instants could agree on a backdated instant. Fixed: step 4 binds the replay to the predecessor as committed (its ceiling, an effective set within its Authority Set, and its chain's drawdown instants), and step 1 binds evaluated_at to the Mission's creation for every basis, which also closes the same backdating in the direct and governed re-checks and subsumes the RFC 3339 check on evaluated_at. Each regression case fails on 58f9ede1. Mutations: 58, one per check across the consent walk, the gate, the record gate, every re-check step (including the creation-instant and predecessor bindings), the commit and the adapter, all caught; rerun with the creation-instant binding, the governed re-check's 22 all caught, and the direct record's 52 all caught but the commit's own gate call, unreachable as in slice 1; the direct replay-instant mutant became equivalent and was dropped."
   },
   {
    "id": "approval-governance.conformance.auditor-obtains-retained-policy",
@@ -50874,6 +51042,42 @@
     }
    ],
    "notes": "#1436 item 7: the stricter value, which the reference already takes (the minimum of the default ceiling, the class ceiling and the exception). Mutation: ignoring the class ceiling when an exception applies."
+  },
+  {
+   "id": "approval-governance.recency.high-risk-standing-consent-no-record",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-high-risk",
+   "text": "absent it, the record MUST NOT be created and, by {{atomic-commitment}}, the Mission MUST NOT be created `active`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where an issuer records an Approval Governance Record for a Mission whose basis stands in for the accountable assertion, and the Mission's whole Authority Set or Intent carries a high-risk class with no committed class-named exception, no record is created and no Mission is activated on it",
+    "local": "Witnessed for ceiling_drawdown, the one standing-consent basis the reference records (#1470 Q5, D626): a successor that keeps an irreversible action its predecessor's human approval granted passes Progressive (which checks only newly widened actions) but carries a high-risk class with no exception in the recording rule, so it falls back to a fresh human approval before activation, with no record and no policy-activated successor (kernel and token endpoint). template and policy_drawdown record nothing; the reference's closed Intent admits no consumption bound."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends a successor that keeps approved high-risk authority to a fresh approval, though Progressive would activate it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "recorded ceiling drawdowns at the token endpoint (@spec approval-governance#recency-high-risk, approval-governance#atomic-commitment, #1470 slice 2) > a successor that keeps approved high-risk authority falls back to a fresh approval before activation, where the shipped deployment activates it by policy",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1470 slice 2 (D626 Q8): the eligibility gate checks the whole successor, its Intent included. Mutation: dropping the gate's high-risk clause activates the successor."
   },
   {
    "id": "approval-governance.governed-policy.check-event-binding",
