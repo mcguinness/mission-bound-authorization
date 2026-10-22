@@ -51,6 +51,8 @@ export {
 import type { DpopProofReplay } from "./adapters/dpop-replay.js";
 import {
   buildProvider,
+  type LifecycleClientGrants,
+  type LifecycleMissionScope,
   type ProtectedEventSource,
   type ServiceTokenPrincipal,
   type TxnArs,
@@ -200,6 +202,9 @@ export {
 } from "./adapters/capabilities.js";
 export {
   DEFAULT_SERVICE_TOKEN_PRINCIPALS,
+  type LifecycleClientGrants,
+  type LifecycleClientPolicy,
+  type LifecycleMissionScope,
   MISSION_DISCHARGE_SCOPE,
   MISSION_LIFECYCLE_SCOPE,
   MISSION_RESUME_SCOPE,
@@ -787,6 +792,10 @@ export interface LifecycleClientRegistration {
   jwks: { keys: Record<string, unknown>[] };
   /** The lifecycle grants bound to this client, `mission_lifecycle` for the state operations. */
   grants: readonly string[];
+  /** @spec status#lifecycle-authorization (#1535): the operations `mission_lifecycle` reaches for this client; absent, all. */
+  operations?: readonly string[];
+  /** @spec status#lifecycle-authorization (#1535): the Missions it reaches; absent, every Mission. */
+  missions?: LifecycleMissionScope;
 }
 
 export interface BuiltAs {
@@ -1172,9 +1181,11 @@ export async function buildAuthorizationServer(opts: {
   /**
    * @spec status#lifecycle-authorization: the grants bound to a client that
    * authenticates to the Mission Lifecycle endpoint by private-key JWT, keyed by
-   * `client_id`. Absent (the default), no client holds any.
+   * `client_id`, each a grant list or the grants with the deployment's policy
+   * for them (#1535): the operations and the Missions `mission_lifecycle`
+   * reaches for that client. Absent (the default), no client holds any.
    */
-  lifecycleClientGrants?: Record<string, readonly string[]>;
+  lifecycleClientGrants?: Record<string, LifecycleClientGrants>;
   /**
    * @spec status#lifecycle-authorization, status#mission-status-authentication:
    * dedicated Lifecycle clients a deployment registers, each with the PUBLIC
@@ -1364,9 +1375,20 @@ export async function buildAuthorizationServer(opts: {
       jwks: c.jwks,
     } as Record<string, unknown>;
   });
-  const lifecycleClientGrants: Record<string, readonly string[]> = {
+  const lifecycleClientGrants: Record<string, LifecycleClientGrants> = {
     ...(opts.lifecycleClientGrants ?? {}),
-    ...Object.fromEntries((opts.lifecycleClients ?? []).map((c) => [c.client_id, c.grants])),
+    ...Object.fromEntries(
+      (opts.lifecycleClients ?? []).map((c) => [
+        c.client_id,
+        c.operations === undefined && c.missions === undefined
+          ? c.grants
+          : {
+              grants: c.grants,
+              ...(c.operations !== undefined ? { operations: c.operations } : {}),
+              ...(c.missions !== undefined ? { missions: c.missions } : {}),
+            },
+      ]),
+    ),
   };
   // @spec containment#protected-events — the trusted protected-event source
   // registry: config seeds kid+alg per source (D25), the ES256 keypair is

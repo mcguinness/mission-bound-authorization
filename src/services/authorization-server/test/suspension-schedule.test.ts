@@ -13,9 +13,10 @@
  * Covered:
  *  - authorization at commit: a suspend-only caller cannot arm or replace a
  *    resume schedule, including on another party's suspended Mission, and the
- *    refusal changes nothing; a revoke schedule needs only suspend; the
- *    deployment's direct-resume authorization is the scheduling bar, under
- *    either deployment choice;
+ *    refusal changes nothing; a caller holding suspend but not revoke
+ *    authorization cannot arm or replace a revoke schedule (#1535); the
+ *    deployment's direct-resume and direct-revoke authorizations are the
+ *    scheduling bars, under either deployment choice;
  *  - the committing party, replacement, omission, the incomplete pair, and the
  *    members the Status response reports;
  *  - deadlines: applied without a further request, after the committing
@@ -131,6 +132,8 @@ let suspender: LifecycleTestClient;
 let operator: LifecycleTestClient;
 /** Holds both too, and is a different acting party; its grants can be withdrawn. */
 let deputy: LifecycleTestClient;
+/** Holds both, under a policy authorizing `suspend` and `resume` but not `revoke`. */
+let nonRevoker: LifecycleTestClient;
 const deputyGrants: string[] = [MISSION_LIFECYCLE_SCOPE, MISSION_RESUME_SCOPE];
 /** On the deployment where `mission_lifecycle` alone authorizes `resume`. */
 let plainOperator: LifecycleTestClient;
@@ -209,14 +212,19 @@ beforeAll(async () => {
   suspender = await newLifecycleClient("sched-suspender");
   operator = await newLifecycleClient("sched-operator");
   deputy = await newLifecycleClient("sched-deputy");
+  nonRevoker = await newLifecycleClient("sched-non-revoker");
   plainOperator = await newLifecycleClient("sched-plain-operator");
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    testClients: [suspender.metadata, operator.metadata, deputy.metadata],
+    testClients: [suspender.metadata, operator.metadata, deputy.metadata, nonRevoker.metadata],
     lifecycleClientGrants: {
       [suspender.clientId]: [MISSION_LIFECYCLE_SCOPE],
       [operator.clientId]: [MISSION_LIFECYCLE_SCOPE, MISSION_RESUME_SCOPE],
       [deputy.clientId]: deputyGrants,
+      [nonRevoker.clientId]: {
+        grants: [MISSION_LIFECYCLE_SCOPE, MISSION_RESUME_SCOPE],
+        operations: ["suspend", "resume"],
+      },
     },
     distinctResumeGrant: true,
     suspensionSchedules: { timers: clock },
@@ -285,7 +293,7 @@ describe("suspension schedule authorization at commit (@spec status#lifecycle-au
     }
   });
 
-  it("commits a resume schedule for a caller holding the deployment's direct-resume authorization, also on another party's suspension, and a revoke schedule on the suspend authorization alone", async () => {
+  it("commits a resume schedule for a caller holding the deployment's direct-resume authorization, also on another party's suspension, and a revoke schedule for a caller holding the direct-revoke authorization (#1535)", async () => {
     const m = approve();
     const res = await op(operator, { mission_id: m.id, operation: "suspend", suspend_until: at(60), on_expiry: "resume" });
     expect(res.status, res.text).toBe(200);
@@ -302,6 +310,8 @@ describe("suspension schedule authorization at commit (@spec status#lifecycle-au
     const onOther = await op(operator, { mission_id: other.id, operation: "suspend", suspend_until: at(60), on_expiry: "resume" });
     expect(onOther.status, onOther.text).toBe(200);
     expect(as.kernel.get(other.id)?.schedule).toMatchObject({ on_expiry: "resume", committing_party: operator.clientId });
+    // `mission_lifecycle` with no narrowing policy authorizes a direct
+    // `revoke`, so it authorizes the revoke schedule too.
     const revoke = approve();
     const revokeRes = await op(suspender, {
       mission_id: revoke.id,
@@ -311,6 +321,48 @@ describe("suspension schedule authorization at commit (@spec status#lifecycle-au
     });
     expect(revokeRes.status, revokeRes.text).toBe(200);
     expect(as.kernel.get(revoke.id)?.schedule).toMatchObject({ on_expiry: "revoke", committing_party: suspender.clientId });
+  });
+
+  it("refuses a caller holding suspend but not revoke authorization a revoke schedule, armed on an active Mission or replacing another party's schedule, as an unknown Mission, leaving state, version, schedule and committing party unchanged, while it may still schedule a resume (#1535)", async () => {
+    const revokeSchedule = { operation: "suspend", suspend_until: at(60), on_expiry: "revoke" };
+    // A direct revoke is outside its authorization.
+    const direct = approve();
+    const directRes = await op(nonRevoker, { mission_id: direct.id, operation: "revoke" });
+    expect(directRes.status, directRes.text).toBe(404);
+    expect(stored(as.kernel, direct.id).state).toBe("active");
+    // Arming on an active Mission.
+    const active = approve();
+    const activeBefore = as.kernel.get(active.id);
+    const armed = await op(nonRevoker, { mission_id: active.id, ...revokeSchedule });
+    expect(armed.status, armed.text).toBe(404);
+    expect(as.kernel.get(active.id)).toEqual(activeBefore);
+    // Replacing the operator's resume schedule.
+    const scheduled = approve();
+    expect(
+      (await op(operator, { mission_id: scheduled.id, operation: "suspend", suspend_until: at(600), on_expiry: "resume" }))
+        .status,
+    ).toBe(200);
+    const scheduledBefore = as.kernel.get(scheduled.id);
+    const eventsBefore = events(as.kernel, scheduled.id).length;
+    const replaced = await op(nonRevoker, { mission_id: scheduled.id, ...revokeSchedule });
+    expect(replaced.status, replaced.text).toBe(404);
+    expect(as.kernel.get(scheduled.id)).toEqual(scheduledBefore);
+    expect(as.kernel.get(scheduled.id)?.schedule).toMatchObject({ on_expiry: "resume", committing_party: operator.clientId });
+    expect(events(as.kernel, scheduled.id)).toHaveLength(eventsBefore);
+    const unknown = await op(nonRevoker, { mission_id: UNKNOWN, ...revokeSchedule });
+    const shape = (a: LifecycleAnswer) => ({ ...a.json, nonce: undefined });
+    for (const refused of [directRes, armed, replaced]) {
+      expect(refused.json?.error).toBe("not_found");
+      expect(shape(refused)).toEqual(shape(unknown));
+    }
+    // Its suspend and resume authorizations stand: it schedules a resume.
+    const resumes = await op(nonRevoker, { mission_id: active.id, operation: "suspend", suspend_until: at(60), on_expiry: "resume" });
+    expect(resumes.status, resumes.text).toBe(200);
+    expect(as.kernel.get(active.id)?.schedule).toMatchObject({ on_expiry: "resume", committing_party: nonRevoker.clientId });
+    // A caller holding both authorizations replaces the schedule with a revoke.
+    const both = await op(operator, { mission_id: scheduled.id, ...revokeSchedule });
+    expect(both.status, both.text).toBe(200);
+    expect(as.kernel.get(scheduled.id)?.schedule).toMatchObject({ on_expiry: "revoke", committing_party: operator.clientId });
   });
 
   it("holds scheduling to the deployment's direct-resume authorization: where resume needs mission_resume, a suspend-only caller can neither resume nor schedule a resume; where mission_lifecycle authorizes resume, it authorizes the schedule", async () => {

@@ -813,6 +813,12 @@ async function poll(
     kid: txn.tokenKid,
   });
 
+  // @spec mission#issuance-gating (#250): a Mission that ends during the mint,
+  // or later in this request, is refused at release by the release fence
+  // (provider.ts), which runs after the request-path drain. The slot stays
+  // taken: the Mission is terminal, so no later poll can serve this token or
+  // mint another.
+  //
   // At most one authorization result per (resource, txn): reserving the slot
   // and storing the token commit together, so a taken slot ALWAYS has its
   // token and a second token under a different jti is structurally impossible.

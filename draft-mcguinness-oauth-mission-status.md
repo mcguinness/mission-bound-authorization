@@ -751,15 +751,17 @@ A consumer MUST verify, before honoring a response:
    rejecting `none` and any algorithm not listed;
 3. the JWS signature against a current `jwks_uri` entry for the
    `issuer` AS;
-4. `iss` equals the expected AS issuer URL;
+4. `iss` equals the expected AS issuer URL, and `mission.issuer`
+   equals `iss`;
 5. `aud` equals the `audience` the request named or, for a
    state-only response, the requesting client's `client_id`
    ({{mission-status-request}});
 6. `sub` equals the requesting client's identifier;
 7. `nonce` equals the request's nonce;
-8. `mission.id` equals the requested `mission_id`; and
+8. `mission.id` equals the requested `mission_id`;
 9. `iat` is not in the future and `exp` is not in the past, with up to
-   30 seconds clock-skew tolerance.
+   30 seconds clock-skew tolerance; and
+10. `mission.fresh_until` is not later than `exp`.
 
 ## Caching {#mission-status-caching}
 
@@ -767,28 +769,57 @@ Caching follows these rules:
 
 - **Cache key.** Consumers SHOULD cache a response keyed on
   (`mission_id`, audience), or on (`mission_id`, `client_id`) for a
-  state-only response, until `mission.fresh_until`.
-- **Hard stop.** Consumers MUST NOT use a cached response after
-  `mission.fresh_until`, subject only to the skew tolerance below. In
-  particular, a consumer MUST NOT extend
-  reliance on a cached `suspended` (or any non-`active`) response
-  beyond `mission.fresh_until`.
-- **Freshness cap.** When the AS advertises
-  `mission_max_stale_seconds` ({{as-metadata}}), it MUST NOT set
-  `mission.fresh_until` later than the response `iat` plus that
-  value.
+  state-only response, until its reliance bound (below).
+- **Freshness cap.** The AS MUST NOT set `mission.fresh_until` later
+  than the response's `exp`, nor, when it advertises
+  `mission_max_stale_seconds` ({{as-metadata}}), later than the
+  response's `iat` plus that value.
+- **Reliance bound.** A response's reliance bound is the earliest of
+  `mission.fresh_until`, the response's `exp`, and, when the AS
+  advertises `mission_max_stale_seconds`, the response's `iat` plus
+  that value. Consumers MUST NOT use a response after its reliance
+  bound, subject only to the skew tolerance below, and MUST NOT rely
+  on a reported `active` state at or after `mission.expires_at`. In
+  particular, a consumer MUST NOT extend reliance on a cached
+  `suspended` (or any non-`active`) response beyond its reliance
+  bound.
 - **Skew tolerance.** When comparing the current time to
   `mission.fresh_until`, a consumer MAY allow up to 30 seconds of
   tolerance for the `active` state only, and no tolerance for any
-  other state. The tolerance MUST NOT exceed the AS's advertised
-  `mission_max_stale_seconds` ({{as-metadata}}).
+  other state. The tolerance MUST NOT extend reliance past the
+  response's `exp`, `mission.expires_at`, or the response's `iat` plus
+  the advertised `mission_max_stale_seconds`.
 
-The freshness cap keeps report freshness within the deployment's
-advertised revocation-propagation tolerance. The skew tolerance is a
-clock-skew allowance on the reliance path, bounding the disagreement
+The freshness cap keeps report freshness within the signed response's
+own validity and the deployment's advertised revocation-propagation
+tolerance. The skew tolerance is a clock-skew allowance on the
+`mission.fresh_until` comparison only, bounding the disagreement
 between the AS's and the consumer's clocks, not a property of state
-reversibility. The hard stop is absolute for non-`active` states
-because a suspended Mission may be resumed to `active`.
+reversibility: the response's `exp`, the Mission's expiry and the
+advertised ceiling are hard bounds that no allowance extends. The
+clock-skew tolerance of the response checks
+({{mission-status-response}}) decides only whether a response is
+accepted, never how long it is relied on. The reliance bound is
+absolute for non-`active` states because a suspended Mission may be
+resumed to `active`.
+
+## Failed Status Checks {#mission-status-failures}
+
+A decision that requires Mission Status proceeds only on a response
+that passed every check of {{mission-status-response}}, is within its
+reliance bound ({{mission-status-caching}}), and reports `active`.
+Without one, the decision MUST NOT proceed, whatever the cause: an
+error response such as `unavailable`, `rate_limited` or `not_found`, a
+failed check, a network failure, or a lapsed reliance bound. For
+example, a resource server refuses the request it is deciding, and a
+consuming Authorization Server issues no token.
+
+That outcome establishes only that the decision cannot proceed; it is
+not evidence that the Mission terminated. A transient failure, such as
+`unavailable`, `rate_limited` or a network failure, leaves a response
+the consumer already holds usable within that response's original
+reliance bound; a failed request never refreshes or extends that
+bound.
 
 ## Anti-Oracle Property {#mission-status-anti-oracle}
 
@@ -804,6 +835,26 @@ cases. The AS SHOULD NOT vary response timing in a way that
 distinguishes the two cases. It SHOULD mitigate timing side channels
 (for example by padding response time or by taking a uniform lookup
 path for both the unknown and the unauthorized case).
+
+## Processing Order {#mission-status-processing}
+
+The AS MUST process a Mission Status request in this order, refusing
+it at the first step that fails:
+
+1. Authenticate the caller ({{mission-status-authentication}}),
+   parsing the request body only as far as authentication needs. A
+   failure is answered as {{mission-status-auth-failures}} assigns.
+2. Validate the request syntax ({{mission-status-request}}). A
+   malformed request is refused `invalid_request`.
+3. Authorize the request: the caller's read authorization, the Mission
+   the `mission_id` names, and any requested `audience`
+   ({{mission-status-request}}). An unknown Mission and every failed
+   authorization are refused alike with the not-found response.
+4. Read the Mission's current state and return the signed response
+   ({{mission-status-response}}).
+
+No response that depends on the Mission's existence or state precedes
+step 3.
 
 ## Error Responses {#mission-status-errors}
 
@@ -1286,6 +1337,16 @@ scope or a deployment-defined equivalent grant that names who may
 perform the transition. The AS MUST refuse a caller that carries no
 such authorization.
 
+A lifecycle authorization is necessary but not sufficient. The AS MUST
+authorize each request for its acting party (below), its operation,
+and the specific Mission it names, under the deployment's policy for
+that Mission, including the deployment or tenant boundary the Mission
+belongs to: authorization for one Mission, or within one tenant,
+authorizes nothing on another. The AS evaluates the acting party's
+validated identity and any validated delegation context; an `act`
+claim identifies the parties to a delegation and is never by itself a
+grant of lifecycle authority.
+
 The acting party, and where the AS checks the lifecycle
 authorization, follow from the authentication case:
 
@@ -1312,7 +1373,8 @@ it in the signed response's audit surface: the response envelope's
 `sub`, distinct from any access token's `sub`, or a deployment-defined
 audit member of the Mission Status Response.
 
-Which parties may perform which operation is deployment-defined. Typical
+Which parties may perform which operation on which Missions is
+deployment-defined. Typical
 deployments authorize `revoke` to the Mission's Subject or Approver and
 to administrators; `suspend` and `resume` to administrators; and
 `complete` to the requesting client or an administrator.
@@ -1323,15 +1385,15 @@ distinct or elevated authorization for `resume`, mirroring the
 treatment of bulk `resume` in Mission Management
 ({{I-D.draft-mcguinness-oauth-mission-management}}).
 
-A `suspend` whose `on_expiry` is `resume` schedules a later `resume`.
-The AS MUST authorize it against both the caller's authorization for
-`suspend` and the authorization the deployment requires for a direct
-`resume` of that Mission, including when it sets or replaces the
+A `suspend` that carries `on_expiry` schedules a later `resume` or
+`revoke`. The AS MUST authorize it against both the caller's
+authorization for `suspend` and the authorization the deployment
+requires for a direct operation of the scheduled kind (`resume` or
+`revoke`) on that Mission, including when it sets or replaces the
 schedule of a Mission already `suspended`, whoever suspended it. The
 AS checks both before any change and refuses a caller lacking either
 as an unauthorized lifecycle request (below), leaving the Mission's
-state and schedule unchanged. A `suspend` whose `on_expiry` is
-`revoke` needs only the authorization for `suspend`.
+state and schedule unchanged.
 
 The AS MUST record with each committed schedule its committing party,
 the acting party of the request that committed it; an authorized
@@ -1475,10 +1537,11 @@ triple (client, `mission_id`, `nonce`) for a bounded window. On a
 retransmit carrying a `nonce` already seen for that client and
 `mission_id`, together with request members identical to the
 original's, the AS MUST replay the original response rather than
-re-execute the operation. The comparison covers the operation's
-request members (`operation`, `reason`, `suspend_until`, `on_expiry`,
-`expected_version`, and any member an extension operation defines),
-present or absent alike, and excludes client authentication
+re-execute the operation, once the retransmit has passed
+authorization ({{lifecycle-processing}}). The comparison covers the
+operation's request members (`operation`, `reason`, `suspend_until`,
+`on_expiry`, `expected_version`, and any member an extension operation
+defines), present or absent alike, and excludes client authentication
 parameters and HTTP headers, which a retry regenerates. The same
 `nonce` paired with request members that differ from the original's
 MUST be refused `invalid_request` ({{mission-status-errors}}); the AS
@@ -1546,6 +1609,35 @@ recorded schedule, if any, and its committing party unchanged:
 omission never clears a deadline. A `suspend` carrying only one of
 the two remains invalid ({{lifecycle-operations}})
 and changes nothing.
+
+## Processing Order {#lifecycle-processing}
+
+The AS MUST process a lifecycle request in this order, refusing it at
+the first step that fails:
+
+1. Authenticate the caller ({{mission-status-authentication}}),
+   parsing the request body only as far as authentication needs. A
+   failure is answered as {{mission-status-auth-failures}} assigns.
+2. Validate the request syntax and the operation
+   ({{lifecycle-operations}}). A malformed request, or an `operation`
+   the AS does not serve, is refused `invalid_request`.
+3. Authorize the request. For a base operation this is the lifecycle
+   authorization of {{lifecycle-authorization}} for the acting party,
+   the operation and the Mission, together with the authorization for
+   any transition the request schedules; for an extension operation it
+   is the authorization its companion defines. An unknown Mission and
+   every failed authorization are refused alike with the not-found
+   response.
+4. Apply deduplication ({{idempotency}}): replay the original response
+   to a retransmit, or refuse a reused `nonce` whose request members
+   differ.
+5. Check `expected_version`, when present ({{idempotency}}).
+6. Apply the transition rules ({{idempotency}}) and commit the
+   transition.
+
+Authorization therefore precedes every replayed or state-dependent
+response: a caller not authorized for the Mission receives the
+not-found response, never a replay, `stale_version` or `conflict`.
 
 ## Relationship to RFC 7009
 
@@ -1902,10 +1994,9 @@ A Mission Status Response is bound to (caller `sub`, audience,
 or beyond `mission.fresh_until`, is detectable by signature
 verification and by verifying the bindings; a consumer MUST verify all
 the checks of {{mission-status-response}} before honoring a response. A
-response cached and replayed by the same caller within
-`mission.fresh_until` is equivalent to a fresh response; a consumer MUST
-NOT use a cached response after `mission.fresh_until`, with the skew
-tolerance of {{mission-status-caching}}.
+response cached and replayed by the same caller within its reliance
+bound ({{mission-status-caching}}) is equivalent to a fresh response; a
+consumer MUST NOT use a cached response after that bound.
 
 ## Mission Status Denial of Service
 

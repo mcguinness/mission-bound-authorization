@@ -316,4 +316,24 @@ describe("the config loader refuses a ceiling entry whose delegation carries an 
       "[config:policy.json] policy.ceiling[0] carries delegation.future_policy, which is not a supported delegation member",
     );
   });
+
+  // @spec child-delegation#fanout (#1528, D660): "a configured entry carrying
+  // one is a configuration error", for a member inside the children grant.
+  it("parseCeilingEntry (policy.json) rejects an entry whose children grant carries a member Child Delegation does not define, naming it", async () => {
+    dir = mkdtempSync(join(tmpdir(), "mission-config-1528-"));
+    const configDir = join(dir, "config");
+    cpSync(REAL_CONFIG_DIR, configDir, { recursive: true });
+    const file = join(configDir, "policy.json");
+    const parsed = JSON.parse(readFileSync(file, "utf8")) as {
+      ceiling: { delegation: { children: Record<string, unknown> } }[];
+    };
+    (parsed.ceiling[0] as { delegation: { children: Record<string, unknown> } }).delegation.children[UNKNOWN_CHILD] = true;
+    writeFileSync(file, JSON.stringify(parsed, null, 2));
+    previous = process.env.MISSION_CONFIG_DIR;
+    process.env.MISSION_CONFIG_DIR = configDir;
+    vi.resetModules();
+    await expect(import("@mission/demo-data")).rejects.toThrow(
+      "[config:policy.json] policy.ceiling[0] carries delegation.children.future_child_control, which is not a supported delegation member",
+    );
+  });
 });
