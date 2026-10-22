@@ -1544,7 +1544,7 @@
     "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
    },
    "level": "unit",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/pdp/test/mission-status-resolver.test.ts",
@@ -1581,9 +1581,21 @@
      "name": "the separated PDP's own read for every decision (#818 slice 4b) > reads within the decision's class window, and decides on the signed iat and the read's reliance bound in place of what the PEP forwarded (@spec status#mission-status-caching, #1535)",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion's signed fresh_until caps the permit in fresh mode, though the observation does not repeat it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion whose signed fresh_until has already passed denies stale_state, in fresh mode too",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1535 (D649, finding 2). The `exp` term is unreachable once consumer check 10 holds (fresh_until is never later than exp), so it is witnessed only through status.response.consumer-fresh-until-within-exp; the resolver still checks it. Proven by moving the bounds later: a 30 s allowance on the fresh_until and exp comparisons fails six resolver tests, one on the ceiling fails the two ceiling tests, and the separated pilot feeding fresh_until in place of the bound into the permit cap fails the wiring test."
+   "notes": "#1535 (D649, finding 2). Partial (#1543 review): of the reference's two consumer paths, only the resolver enforces every term. The resolver (the PDP's own read) is tested on all three: fresh_until, the advertised ceiling (iat plus mission_max_stale_seconds) and, through check 10, exp; the separated pilot caps its permit at the resulting bound (the wiring test). The PEP-carried `assertion` path in evaluate.ts cannot enforce the advertised ceiling: it holds no issuer metadata, and only the action class's staleness window bounds the observation's age there. That path is tested on fresh_until (the two evaluate tests) and, through check 10, on exp. The `exp` term is unreachable once consumer check 10 holds (fresh_until is never later than exp), so on both paths it is witnessed only through status.response.consumer-fresh-until-within-exp. Proven by moving the bounds later: a 30 s allowance on the resolver's fresh_until and exp comparisons fails six resolver tests, one on the ceiling fails the two ceiling tests, the separated pilot feeding fresh_until in place of the bound into the permit cap fails the wiring test, and the PEP-carried path taking no signed bound fails both evaluate tests."
   },
   {
    "id": "status.caching.active-before-expires-at",
@@ -1599,7 +1611,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consumer stops relying on a response reporting `active` at the Mission's `expires_at`, though its `fresh_until` and `exp` run later: a cached answer is no longer served, one read at that instant is refused, and a permit relying on it ends no later; a non-`active` response is not bounded by `expires_at`",
+    "normative": "a consumer stops relying on a response reporting `active` at the Mission's `expires_at`, though its `fresh_until` and `exp` run later: a cached answer is no longer served, one read at that instant is refused, and a permit relying on it ends no later; a response carrying no `mission.expires_at` is not relied on at all; a non-`active` response is not bounded by `expires_at`",
     "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
    },
    "level": "unit",
@@ -1628,9 +1640,21 @@
      "name": "the separated PDP's own read for every decision (#818 slice 4b) > reads within the decision's class window, and decides on the signed iat and the read's reliance bound in place of what the PEP forwarded (@spec status#mission-status-caching, #1535)",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses an active response that carries no mission.expires_at: its Mission expiry could not be enforced (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > an assertion signed without mission.expires_at denies stale_state, where the same assertion with it permits (#1535)",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1535 (D649, finding 2). Proven by: removing the resolver's expires_at check (the resolver expires_at test fails); the verifier never bounding by expires_at (that test and the evaluate expires_at test fail); bounding every state by it (the suspended test fails); the verifier returning fresh_until in place of the bound (the evaluate test fails). The guard in evaluate.ts that denies an already-reached bound is backed by the permit-deadline ceiling and not separately witnessed. A malformed expires_at does not verify (a local choice, tested, no row)."
+   "notes": "#1535 (D649, finding 2). Proven by: removing the resolver's expires_at check (the resolver expires_at test fails); the verifier never bounding by expires_at (that test and the evaluate expires_at test fail); bounding every state by it (the suspended test fails); the verifier returning fresh_until in place of the bound (the evaluate test fails). #1543 review: `expires_at` is REQUIRED (status#mission-status-response), and the shared verifier refuses a response without a present, parseable one, so a missing Mission expiry never leaves this bound at infinity; restoring the infinity fallback for an absent member fails both omission tests, the resolver's and the PEP-carried path's. The guard in evaluate.ts that denies an already-reached bound is backed by the permit-deadline ceiling and not separately witnessed."
   },
   {
    "id": "status.caching.non-active-reliance-bound",
