@@ -508,6 +508,69 @@ describe("MissionStatusResolver: an answer that does not arrive establishes noth
     expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "fetched" });
   });
 
+  it("gives up at the deadline on a signer that stalls, before any request starts (#1492 review)", async () => {
+    const signing = privateKeyJwtClient({ clientId: CLIENT_ID, issuer: ISSUER, privateKey: clientKey, kid: CLIENT_KID });
+    const before = requests.length;
+    const stalled = resolver({ timeoutMs: 20, client: { clientId: CLIENT_ID, assertion: () => new Promise<string>(() => {}) } });
+    // A read still pending after a second is the defect: race it, so it fails as an assertion.
+    const refused = await Promise.race([
+      stalled.resolve(ref),
+      new Promise<string>((settle) => setTimeout(() => settle("still pending after 1000 ms"), 1000)),
+    ]);
+    expect(refused).toMatchObject({ ok: false, reason: "unavailable", detail: "timeout" });
+    expect(requests.length).toBe(before);
+    // The same resolver with a signer that answers reads normally: the refusal cached nothing.
+    handler = respond();
+    const working = resolver({ client: signing });
+    expect(await working.resolve(ref)).toMatchObject({ ok: true, source: "fetched" });
+  });
+
+  it("drops a signature that arrives after the deadline: it never starts a request (#1492 review)", async () => {
+    const signing = privateKeyJwtClient({ clientId: CLIENT_ID, issuer: ISSUER, privateKey: clientKey, kid: CLIENT_KID });
+    const before = requests.length;
+    let signedLate = false;
+    const late = resolver({
+      timeoutMs: 20,
+      client: {
+        clientId: CLIENT_ID,
+        assertion: () =>
+          new Promise<string>((resolve) =>
+            setTimeout(() => {
+              signedLate = true;
+              void signing.assertion().then(resolve);
+            }, 150),
+          ),
+      },
+    });
+    const started = Date.now();
+    expect(await late.resolve(ref)).toMatchObject({ ok: false, reason: "unavailable", detail: "timeout" });
+    // Refused at the deadline, not when the signature arrives (150 ms).
+    expect(Date.now() - started).toBeLessThan(120);
+    expect(signedLate).toBe(false);
+    await new Promise((settle) => setTimeout(settle, 400));
+    expect(signedLate).toBe(true);
+    expect(requests.length).toBe(before);
+  });
+
+  it("holds signing and the request to one deadline together, never a fresh one after signing (#1492 review)", async () => {
+    const signing = privateKeyJwtClient({ clientId: CLIENT_ID, issuer: ISSUER, privateKey: clientKey, kid: CLIENT_KID });
+    const answer = respond();
+    handler = (req, res, query) => {
+      setTimeout(() => {
+        if (!res.destroyed) void answer(req, res, query);
+      }, 200);
+    };
+    // Signing takes 200 ms of a 300 ms deadline and the answer 200 ms more: past the deadline in total.
+    const r = resolver({
+      timeoutMs: 300,
+      client: {
+        clientId: CLIENT_ID,
+        assertion: () => new Promise<string>((resolve) => setTimeout(() => void signing.assertion().then(resolve), 200)),
+      },
+    });
+    expect(await r.resolve(ref)).toMatchObject({ ok: false, reason: "unavailable", detail: "timeout" });
+  });
+
   it("reports a source that does not answer at all as unavailable", async () => {
     const r = resolver({ statusEndpoint: "http://127.0.0.1:1/mission/status" });
     expect(await r.resolve(ref)).toMatchObject({ ok: false, reason: "unavailable", detail: "transport" });

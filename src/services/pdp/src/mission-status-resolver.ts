@@ -284,6 +284,31 @@ async function readCapped(res: Response, max: number): Promise<string | undefine
   return new TextDecoder().decode(Buffer.concat(chunks));
 }
 
+/**
+ * `p`'s value, unless `signal` aborts first: then it rejects at once, and a
+ * value `p` yields later is dropped (#1492 review).
+ */
+function untilAborted<T>(p: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) {
+    p.catch(() => {});
+    return Promise.reject(signal.reason);
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    p.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (err: unknown) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(err);
+      },
+    );
+  });
+}
+
 type CachedMission = Omit<ResolvedMission, "source">;
 
 /**
@@ -396,7 +421,10 @@ export class MissionStatusResolver {
         audience: this.opts.audience,
         nonce,
         client_assertion_type: CLIENT_ASSERTION_TYPE,
-        client_assertion: await this.opts.client.assertion(),
+        // The one deadline covers signing too (#1492 review): a signer that
+        // stalls past it fails the read `timeout`, and a signature that
+        // arrives late is dropped, so it can never start a request.
+        client_assertion: await untilAborted(this.opts.client.assertion(), signal),
       });
       const res = await this.http(this.opts.statusEndpoint, {
         method: "POST",
