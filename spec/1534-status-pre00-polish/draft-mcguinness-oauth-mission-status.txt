@@ -1926,7 +1926,7 @@ Table of Contents
    *  Metadata Description: URL of the authorization server's Mission
       Status endpoint.
 
-   *  Change Controller: IETF
+   *  Change Controller: IESG
 
    *  Specification Document(s): this document, Section 8
 
@@ -1935,7 +1935,7 @@ Table of Contents
    *  Metadata Description: JSON array of the client authentication
       methods the Mission Status endpoint accepts.
 
-   *  Change Controller: IETF
+   *  Change Controller: IESG
 
    *  Specification Document(s): this document, Section 8
 
@@ -1945,7 +1945,7 @@ Table of Contents
    *  Metadata Description: JSON array of the JWS algorithms the Mission
       Status endpoint accepts for private-key-JWT client authentication.
 
-   *  Change Controller: IETF
+   *  Change Controller: IESG
 
    *  Specification Document(s): this document, Section 8
 
@@ -1954,7 +1954,7 @@ Table of Contents
    *  Metadata Description: JSON array of the JWS algorithms the
       authorization server uses to sign Mission Status Responses.
 
-   *  Change Controller: IETF
+   *  Change Controller: IESG
 
    *  Specification Document(s): this document, Section 8
 
@@ -1963,7 +1963,7 @@ Table of Contents
    *  Metadata Description: URL of the authorization server's Mission
       Lifecycle endpoint.
 
-   *  Change Controller: IETF
+   *  Change Controller: IESG
 
    *  Specification Document(s): this document, Section 8
 
@@ -1972,7 +1972,7 @@ Table of Contents
    *  Metadata Description: JSON array of the client authentication
       methods the Mission Lifecycle endpoint accepts.
 
-   *  Change Controller: IETF
+   *  Change Controller: IESG
 
    *  Specification Document(s): this document, Section 8
 
@@ -1983,7 +1983,7 @@ Table of Contents
       Lifecycle endpoint accepts for private-key-JWT client
       authentication.
 
-   *  Change Controller: IETF
+   *  Change Controller: IESG
 
    *  Specification Document(s): this document, Section 8
 
@@ -1992,7 +1992,7 @@ Table of Contents
    *  Metadata Description: Maximum interval, in seconds, the deployment
       tolerates for a Mission state change to take effect.
 
-   *  Change Controller: IETF
+   *  Change Controller: IESG
 
    *  Specification Document(s): this document, Section 8
 
@@ -2267,7 +2267,7 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission-resource-access]
               McGuinness, K., "Mission Resource Access Profile for OAuth
               2.0", Work in Progress, Internet-Draft, draft-mcguinness-
-              oauth-mission-resource-access-00, 21 October 2026,
+              oauth-mission-resource-access-00, 22 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission-resource-access-00>.
 
