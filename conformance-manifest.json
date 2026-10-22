@@ -45873,6 +45873,36 @@
    "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn."
   },
   {
+   "id": "resource-access.resource-contract.no-new-approval-non-current",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "No new approval references a version that is not current.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval never commits a resource_contract reference to a version the authorization server's configuration does not name as current, whatever supplied the reference; a scope mapping value naming a superseded version is refused invalid_authorization_details at the approval, creating no Mission",
+    "local": "assembleResourceContracts checks every carried reference with isCurrentFor before authority_hash; a proposed reference is also refused at intake (resource-access.resource-contract.unconfigured-reference-refused)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > a value whose mapping names a contract version that is not current is refused at the approval: invalid_authorization_details, and no Mission (@spec resource-access#resource-contract)",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1)."
+  },
+  {
    "id": "resource-access.resource-contract.assembled-from-configuration",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-contract",
@@ -47238,10 +47268,10 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a requested scope value of a scope-only target stands for one mission_resource_access entry with the mapping's resource and match, the actions the value stands for and no constraints, and that entry projects back to the same value"
+    "normative": "a requested scope value of a scope-only target stands for one mission_resource_access entry with the mapping's resource and match, the actions the value stands for, no constraints, and the reference of the contract the mapping names for the value, if any; that entry projects back to the same value"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
@@ -47254,9 +47284,15 @@
      "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > each requested value stands for its own entry, and without a requested scope the same Intent approves the target's whole ceiling (control)",
      "level": "endpoint",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > a value whose mapping names the current contract stands for an entry carrying that reference; the approval keeps it and the token projects (@spec resource-access#scope-projection)",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). Partial: the contract clause (a mapping value naming a resource_contract) has no witness; the shipped scope-only mapping names no contract. Proved by mutation: disabling the scope key in the derivation (deriveAuthoritySetWithProvenance's scopeKeyed) fails all three witnesses (the whole ceiling is approved for reports.read, one entry for two values, and a Mission is created where nothing should derive)."
+   "notes": "Scope adoption (#1537). The contract clause is witnessed: a mapping value naming the current contract yields an approved entry carrying exactly that reference, and its token projects to the value. Proved by mutation: dropping the contract from requestedScopeEntries fails the contract witness (the entry lacks the reference) and the not-current witness on resource-access.resource-contract.no-new-approval-non-current (a Mission is created); disabling the scope key fails the other two."
   },
   {
    "id": "resource-access.rs-enforcement.no-fragment-combination",
