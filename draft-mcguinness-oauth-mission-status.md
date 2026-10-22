@@ -259,7 +259,7 @@ referenced, not re-specified, here.
 
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}}, in particular Mission,
-Mission Issuer (the Mission `issuer`: in this document's OAuth binding
+Mission Issuer (the Mission `issuer`: in the OAuth binding
 the authorization server; a standalone Mission Issuer, the Mission
 Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
 serves these surfaces with the same semantics; the AAuth Person
@@ -431,9 +431,9 @@ A presented access token (mechanism 2) MUST be audience-restricted to
 this endpoint's protected-resource identifier: the `resource` value the
 AS publishes for this endpoint in its Protected Resource Metadata
 {{RFC9728}}. For these surfaces that identifier is the endpoint's own URL
-(the `mission_status_endpoint` or `mission_lifecycle_endpoint`), so the
-mechanism-2 access-token audience and the mechanism-3 private-key-JWT
-`aud` name the same value. The AS MUST reject a token whose audience does
+(the `mission_status_endpoint` or `mission_lifecycle_endpoint`), not
+the issuer identifier that a private-key-JWT assertion's `aud` names
+(mechanism 3). The AS MUST reject a token whose audience does
 not name that identifier. This token audience is distinct from the request body's
 `audience` parameter ({{mission-status-request}}): the token audience
 authorizes the call at this endpoint, whereas the request `audience`
@@ -510,13 +510,13 @@ mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 On success the AS returns a JWS Compact Serialization {{RFC7515}}
 signed with a key published in the AS's `jwks_uri`. The JWS header
 carries `typ` of `mission-status-response+jwt` and a `kid` identifying
-the signing key. Per {{RFC7515}} Section 4.1.9 the `typ` header omits
-the `application/` prefix; the full media type
+the signing key. Per {{Section 4.1.9 of RFC7515}}, the `typ` header
+omits the `application/` prefix; the full media type
 `application/mission-status-response+jwt` (registered in {{iana}}) is
 used as the HTTP `Content-Type`. Exact validation of the protected
 `typ` value, together with mutually exclusive validation rules for
 the artifact profiles, implements the substitution defense of
-{{RFC8725}}, Sections 3.11 and 3.12.
+{{Section 3.11 of RFC8725}} and {{Section 3.12 of RFC8725}}.
 
 {{RFC9701}} signed introspection responses are scoped to token
 introspection and do not apply to a lookup keyed by `mission_id`; the
@@ -953,8 +953,9 @@ This section is OPTIONAL. The issuance profile lets the Subject,
 Approver, or an administrator revoke a Mission by an authenticated,
 deployment-defined means and defers a standardized management API and
 the richer `suspend`, `resume`, and `complete` operations
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation"). This
-section standardizes that management surface.
+({{I-D.draft-mcguinness-oauth-mission}}, Sections "Revocation" and
+"Mission Lifecycle"). This section standardizes that management
+surface.
 
 The AS publishes its Mission Lifecycle endpoint URL in authorization
 server metadata ({{as-metadata}}) as `mission_lifecycle_endpoint`,
@@ -1010,7 +1011,7 @@ authenticated client presenting the Mission's grant.
 `suspended` reports a refusal that a `resume` can lift; `completed`
 reports a terminal one.
 
-## Operations
+## Operations {#lifecycle-operations}
 
 The endpoint accepts authenticated POST requests with a
 form-urlencoded body:
@@ -1181,8 +1182,8 @@ other state is non-deriving.
 `revoke` and the Mission's `expires_at` both apply in `suspended` as
 well as `active`, so a suspended Mission can still be terminated or
 expire. A `suspend_until` row fires only for a current schedule whose
-deadline falls before `expires_at` ({{mission-lifecycle-endpoint}},
-Operations; {{legal-transitions}}). The `superseded` and
+deadline falls before `expires_at` ({{lifecycle-operations}},
+{{legal-transitions}}). The `superseded` and
 `parent_terminated` rows are companion-defined and shown here for
 reference: a `superseded` termination is committed by the expansion
 profile and requires an `active` predecessor
@@ -1419,7 +1420,7 @@ When `suspend_until` passes without a `resume`, the AS applies
 
 ## Idempotency and Conflicts {#idempotency}
 
-The request `nonce` ({{mission-lifecycle-endpoint}}, Operations) is
+The request `nonce` ({{lifecycle-operations}}) is
 the idempotency key: an opaque string of 1 to 255 characters. The AS
 treats an absent, empty, longer, or non-string `nonce` as malformed
 (`invalid_request`, with no `nonce` echoed).
@@ -1499,7 +1500,7 @@ the updated values in the response; silent acceptance without effect
 is not conforming. A `suspend` that omits both members leaves the
 recorded schedule, if any, and its committing party unchanged:
 omission never clears a deadline. A `suspend` carrying only one of
-the two remains invalid ({{mission-lifecycle-endpoint}}, Operations)
+the two remains invalid ({{lifecycle-operations}})
 and changes nothing.
 
 ## Relationship to RFC 7009
@@ -1799,7 +1800,7 @@ An implementation claiming an extension MUST meet its requirements:
   `client_id` and whose
   `nonce` is the request's ({{mission-status-response}}); refuse any
   operation the implementation has not adopted
-  ({{mission-lifecycle-endpoint}}, Operations); and advertise
+  ({{lifecycle-operations}}); and advertise
   `mission_lifecycle_endpoint`,
   `mission_lifecycle_endpoint_auth_methods_supported`, and
   `mission_status_signing_alg_values_supported`. The class requires no
@@ -1838,9 +1839,9 @@ covers threats specific to the extensions defined here.
 
 Per the anti-oracle property ({{mission-status-anti-oracle}}), the AS
 MUST NOT let a caller readily distinguish an unknown `mission_id` from a
-known-but-unauthorized one at the Status or Lifecycle endpoint. The
-error shape of {{mission-status-errors}} requires identical body
-content, identical HTTP status, and identical headers between the two
+known-but-unauthorized one at the Status or Lifecycle endpoint.
+{{mission-status-anti-oracle}} requires identical body content,
+identical HTTP status, and identical headers between the two
 cases, and the AS SHOULD additionally suppress timing side channels
 (for example by padding response time or by taking a uniform lookup
 path). An implementation that leaks the distinction exposes the Mission
