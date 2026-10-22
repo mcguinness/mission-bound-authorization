@@ -49808,8 +49808,8 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "two decimal values that round to the same IEEE 754 double compare by their exact values: a candidate one unit above the granted cap past 2^53 is not a subset",
-    "local": "compareAmounts (mission-core) scales to integers; the PDP's comparison is witnessed on resource-access.common-constraints.max-amount-predicate"
+    "normative": "two decimal values that round to the same IEEE 754 double compare and intersect by their exact values: a candidate one unit above the granted cap past 2^53 is not a subset, and intersecting it with that cap derives the exactly smaller cap in either order",
+    "local": "compareAmounts (mission-core) scales to integers; derivation's minAmount intersects with it; the PDP's comparison is witnessed on resource-access.common-constraints.max-amount-predicate"
    },
    "level": "unit",
    "coverage": "tested",
@@ -49817,6 +49817,12 @@
     {
      "file": "src/services/authorization-server/test/derivation-delegation.test.ts",
      "name": "isSubsetEntry compares max_amount by exact decimal value, not IEEE-754 float > a candidate 1 unit above the granted cap is NOT a subset, even though both amounts round to the same double",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-delegation.test.ts",
+     "name": "derivation intersects max_amount by exact decimal value, not IEEE-754 float (@spec resource-access#decimal-values) > a proposal 1 unit above the ceiling's cap past 2^53 derives the ceiling's cap, and a narrower proposal keeps its own",
      "level": "unit",
      "surface": "derivation"
     },
@@ -49833,7 +49839,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "Decimal Values residue (owner's \"resolve\", 2026-10-22): the section's obligations had no rows besides the submission refusal (#1529). Proved by mutation: comparing the parsed floats in compareAmounts fails all three witnesses."
+   "notes": "Decimal Values residue (owner's \"resolve\", 2026-10-22): the section's obligations had no rows besides the submission refusal (#1529). Proved by mutation, one per clause: comparing the parsed floats in compareAmounts fails the three comparison witnesses; comparing the parsed floats in minAmount alone fails the intersection witness (it derives 9007199254740993.00) while every comparison witness passes (#1549 review, P2: the comparison witnesses alone did not cover intersection)."
   },
   {
    "id": "resource-access.decimal-values.jcs-numeric-range",
