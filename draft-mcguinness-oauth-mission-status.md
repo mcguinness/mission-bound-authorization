@@ -48,6 +48,15 @@ normative:
   RFC9728:
   RFC9700:
   I-D.draft-mcguinness-oauth-mission:
+    title: "Mission-Bound Authorization for OAuth 2.0"
+    target: https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-01
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-01
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026-10-21
 
 informative:
   RFC8725:
@@ -70,6 +79,15 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-resource-access-00
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-resource-access-00
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026-10-21
   I-D.draft-mcguinness-oauth-mission-status-list:
     title: "Mission Status List for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html
