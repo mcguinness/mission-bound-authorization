@@ -1957,9 +1957,10 @@ profile's privacy considerations.
 
 # IANA Considerations {#iana}
 
-This document requests IANA actions for OAuth AS metadata members, a
-media type, and one entry in each of two issuance-profile registries.
-It defines no new registry of its own: the endpoint
+This document requests IANA actions for OAuth AS metadata members,
+OAuth extensions error codes, a media type, and one entry in each of
+two issuance-profile registries. It defines no new registry of its
+own: the endpoint
 authentication-method value space is a closed set defined inline
 ({{as-metadata}}), and Mission Lifecycle `operation` values have no
 IANA registry; a companion profile registers an extension operation
@@ -2029,6 +2030,59 @@ Authorization Server Metadata" registry {{RFC8414}}:
   tolerates for a Mission state change to take effect.
 - Change Controller: IESG
 - Specification Document(s): this document, {{as-metadata}}
+
+## OAuth Extensions Error Registration {#iana-error-registration}
+
+IANA is requested to register the following in the "OAuth Extensions
+Error Registry" {{RFC6749}}. `not_found` is already registered for
+another usage location; its entry here adds the usage locations of
+this document.
+
+- Error Name: `unauthorized`
+- Error Usage Location: Mission Status endpoint error response;
+  Mission Lifecycle endpoint error response
+- Related Protocol Extension: Mission Status and Lifecycle for OAuth
+  2.0
+- Change Controller: IESG
+- Specification Document(s): this document, {{mission-status-errors}}
+
+- Error Name: `not_found`
+- Error Usage Location: Mission Status endpoint error response;
+  Mission Lifecycle endpoint error response
+- Related Protocol Extension: Mission Status and Lifecycle for OAuth
+  2.0
+- Change Controller: IESG
+- Specification Document(s): this document, {{mission-status-errors}}
+
+- Error Name: `conflict`
+- Error Usage Location: Mission Lifecycle endpoint error response
+- Related Protocol Extension: Mission Status and Lifecycle for OAuth
+  2.0
+- Change Controller: IESG
+- Specification Document(s): this document, {{mission-status-errors}}
+
+- Error Name: `stale_version`
+- Error Usage Location: Mission Lifecycle endpoint error response
+- Related Protocol Extension: Mission Status and Lifecycle for OAuth
+  2.0
+- Change Controller: IESG
+- Specification Document(s): this document, {{mission-status-errors}}
+
+- Error Name: `rate_limited`
+- Error Usage Location: Mission Status endpoint error response;
+  Mission Lifecycle endpoint error response
+- Related Protocol Extension: Mission Status and Lifecycle for OAuth
+  2.0
+- Change Controller: IESG
+- Specification Document(s): this document, {{mission-status-errors}}
+
+- Error Name: `unavailable`
+- Error Usage Location: Mission Status endpoint error response;
+  Mission Lifecycle endpoint error response
+- Related Protocol Extension: Mission Status and Lifecycle for OAuth
+  2.0
+- Change Controller: IESG
+- Specification Document(s): this document, {{mission-status-errors}}
 
 ## Media Type Registration {#media-type-registration}
 
