@@ -156,6 +156,12 @@ export interface MissionCeiling {
    * only; never carried forward.
    */
   resource_declaration_digest?: string;
+  /**
+   * @spec discovery#adjudication (#1469 stage 4): the encounter whose human
+   * resolution created this successor, correlating it with the encounter's
+   * facts. On that successor only.
+   */
+  encounter_id?: string;
 }
 
 /**
@@ -252,9 +258,14 @@ export function successorCeilingMembers(
   reconsent?: ReconsentedCeiling,
   /** @spec progressive#audit-linkage (#1469): the digest of the declaration this successor's adjudication evaluated. */
   resourceDeclarationDigest?: string,
+  /** @spec discovery#adjudication (#1469 stage 4): the encounter this successor resolves. */
+  encounterId?: string,
 ): Partial<MissionCeiling> {
   const drawdownCount = predecessor.drawdown_count ?? 0;
-  const digest = resourceDeclarationDigest ? { resource_declaration_digest: resourceDeclarationDigest } : {};
+  const digest = {
+    ...(resourceDeclarationDigest ? { resource_declaration_digest: resourceDeclarationDigest } : {}),
+    ...(encounterId ? { encounter_id: encounterId } : {}),
+  };
   if (reconsent) return { ...reconsent, drawdown_count: drawdownCount, ...digest };
   if (!predecessor.authority_ceiling || !predecessor.ceiling_hash || !predecessor.ceiling_consented_at) return {};
   return {
@@ -299,6 +310,7 @@ export function serializeCeiling(record: MissionRecord): string | null {
     ...(record.ceiling_consent_principal ? { ceiling_consent_principal: record.ceiling_consent_principal } : {}),
     drawdown_count: record.drawdown_count ?? 0,
     ...(record.resource_declaration_digest ? { resource_declaration_digest: record.resource_declaration_digest } : {}),
+    ...(record.encounter_id ? { encounter_id: record.encounter_id } : {}),
   };
   return JSON.stringify(stored);
 }
@@ -494,6 +506,26 @@ export interface EncounterFacts {
   taint_failure?: TaintFailure;
   /** The harness's report as given (its known members), when one was obtained. */
   taint_report?: Record<string, unknown>;
+  /**
+   * @spec discovery#discovery-evidence (#1469 stage 4): unique per
+   * adjudication at this Mission Issuer, refused encounters included; the
+   * human-approved successor carries it.
+   */
+  encounter_id: string;
+  /**
+   * @spec discovery#lying-resource (#1469 stage 4): the action classes of the
+   * authority sought, under the deployment's classification only; a
+   * declaration never classifies.
+   */
+  sought_classes: RuntimeActionClass[];
+  /**
+   * @spec discovery#lying-resource, discovery#injection-discovery,
+   * discovery#adjudication (#1469 stage 4): the floors that require a human
+   * for this encounter; empty when none does.
+   */
+  floors: EncounterFloor[];
+  /** @spec discovery#adjudication (#1469 stage 4): the operations the declaration lists: the resource's claim, never fact. */
+  declaration_claim?: { operations: string[] };
   /** The raw-octet digest of the declaration bytes the Mission Issuer retrieved; absent when it retrieved none. */
   declaration_digest?: string;
   /** Whether the declaration lists every action sought at the resource; absent without a usable declaration. */
@@ -645,6 +677,96 @@ export async function pinEncounteredResource(
 }
 
 /**
+ * @spec discovery#lying-resource, discovery#injection-discovery,
+ * discovery#adjudication (#1469 stage 4): a floor that sends an encounter to a
+ * human: an action the deployment cannot classify, each high-consequence class,
+ * the external-communication predicate, and a tainted session, under which
+ * every binding an encounter would create is egress-capable.
+ */
+export type EncounterFloor =
+  | "unclassified"
+  | "irreversible_action"
+  | "external_commitment"
+  | "privileged_administration"
+  | "external_communication"
+  | "tainted";
+
+/**
+ * @spec discovery#lying-resource, discovery#injection-discovery (#1469 stage
+ * 4): the classes of the actions sought, from the deployment's classification
+ * alone, and the floors they and the taint state trigger. The reference lets no
+ * declaration classify, so none can relax a class (and none makes one
+ * stricter: that option goes unused). Every floor routes to a human; none
+ * refuses.
+ */
+export function encounterFloors(
+  options: ProgressiveDrawdownOptions,
+  sought: readonly string[],
+  tainted: boolean,
+): { sought_classes: RuntimeActionClass[]; floors: EncounterFloor[] } {
+  const classes = new Set<RuntimeActionClass>();
+  const floors = new Set<EncounterFloor>();
+  const external = new Set(options.externalCommunicationActions ?? []);
+  for (const action of sought) {
+    const cls = Object.hasOwn(options.actionClasses, action) ? options.actionClasses[action] : undefined;
+    if (cls === undefined) floors.add("unclassified");
+    if (cls !== undefined) classes.add(cls);
+    if (cls === "irreversible_action") floors.add("irreversible_action");
+    if (cls === "external_commitment") floors.add("external_commitment");
+    if (cls === "privileged_administration") floors.add("privileged_administration");
+    if (external.has(action)) floors.add("external_communication");
+  }
+  if (tainted) floors.add("tainted");
+  return { sought_classes: [...classes].sort(), floors: [...floors].sort() };
+}
+
+/**
+ * @spec discovery#adjudication (#1469 stage 4): what a routed encounter's
+ * disclosure renders: the Encountered Resource object, the declaration as the
+ * resource's claim and not as fact, and the session's taint status, correlated
+ * by `encounter_id`. The taint statement says untrusted content was ingested
+ * only when the harness reported it, a stale tainted report included (taint
+ * persists for the session); when no trustworthy report says either way, the
+ * state is unknown, though the floor treats it as tainted.
+ */
+export interface EncounterDisclosure {
+  encounter_id: string;
+  resource?: EncounteredResource;
+  pinned: boolean;
+  declaration?: { claimed_by_resource: true; digest: string; operations?: string[] };
+  taint: "untrusted_content_ingested" | "no_untrusted_content_reported" | "taint_state_unknown";
+  floors: EncounterFloor[];
+}
+
+export function encounterDisclosure(facts: EncounterFacts): EncounterDisclosure {
+  const reportedTainted = facts.taint_report?.tainted === true;
+  const taint =
+    facts.taint_failure === undefined
+      ? facts.tainted
+        ? "untrusted_content_ingested"
+        : "no_untrusted_content_reported"
+      : facts.taint_failure === "stale" && reportedTainted
+        ? "untrusted_content_ingested"
+        : "taint_state_unknown";
+  return {
+    encounter_id: facts.encounter_id,
+    ...(facts.resource ? { resource: facts.resource } : {}),
+    pinned: facts.pinned,
+    ...(facts.declaration_digest
+      ? {
+          declaration: {
+            claimed_by_resource: true as const,
+            digest: facts.declaration_digest,
+            ...(facts.declaration_claim ? { operations: facts.declaration_claim.operations } : {}),
+          },
+        }
+      : {}),
+    taint,
+    floors: facts.floors,
+  };
+}
+
+/**
  * @spec discovery#adjudication (#1469 stage 3): the session taint state for an
  * adjudication. It comes only from the harness, through the deployment's port.
  * A missing report, one older than the deployment's bound, and one that is
@@ -732,7 +854,10 @@ export async function encounterFacts(
   const digest = bytes === undefined ? undefined : catalogDigest(bytes);
   const sought = requested.filter((e) => encountered.includes(e.resource)).flatMap((e) => e.actions);
   const declared = bytes === undefined ? undefined : declaresActions(bytes, sought);
+  const operations = bytes === undefined ? undefined : declaredOperations(bytes);
+  const floors = encounterFloors(options, sought, taint.tainted);
   return {
+    encounter_id: `${ENCOUNTER_ID_PREFIX}${randomBytes(18).toString("base64url")}`,
     origin,
     resources: [...encountered],
     ...(identity ? { resource: identity } : {}),
@@ -743,6 +868,9 @@ export async function encounterFacts(
     ...(taint.taint_report ? { taint_report: taint.taint_report } : {}),
     ...(digest ? { declaration_digest: digest } : {}),
     ...(declared === undefined ? {} : { declared }),
+    ...(operations ? { declaration_claim: { operations } } : {}),
+    sought_classes: floors.sought_classes,
+    floors: floors.floors,
     ...(hint
       ? {
           hint: {
@@ -765,6 +893,12 @@ export async function encounterFacts(
  * lists every sought action; undefined when the bytes are not that form.
  */
 export function declaresActions(bytes: Uint8Array | string, sought: readonly string[]): boolean | undefined {
+  const operations = declaredOperations(bytes);
+  return operations === undefined ? undefined : sought.every((a) => operations.includes(a));
+}
+
+/** The operations a declaration in the reference's form lists, or undefined when the bytes are not that form. */
+export function declaredOperations(bytes: Uint8Array | string): string[] | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(typeof bytes === "string" ? bytes : Buffer.from(bytes).toString("utf8"));
@@ -773,8 +907,11 @@ export function declaresActions(bytes: Uint8Array | string, sought: readonly str
   }
   const operations = (parsed as { operations?: unknown } | null)?.operations;
   if (!Array.isArray(operations) || !operations.every((o) => typeof o === "string")) return undefined;
-  return sought.every((a) => operations.includes(a));
+  return [...operations];
 }
+
+/** @spec discovery#discovery-evidence (#1469 stage 4): the prefix of an `encounter_id`, as the draft's examples use. */
+export const ENCOUNTER_ID_PREFIX = "enc_";
 
 const isPositiveInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
 

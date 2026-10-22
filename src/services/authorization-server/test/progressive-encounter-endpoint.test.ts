@@ -16,7 +16,9 @@
  * ports, and refuses an unpinnable encounter where the deployment says so.
  * Stage 3 takes the session taint state from the harness through a port the
  * agent does not mediate, counting a missing, stale or unverifiable report as
- * tainted.
+ * tainted. Stage 4 records the floors, from the deployment's classification and
+ * the taint state, and the disclosure content a human approval surface renders,
+ * correlated by an encounter_id the approved successor carries.
  */
 
 const hoisted = await vi.hoisted(async () => {
@@ -50,6 +52,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import {
+  type EncounterDisclosure,
   type EncounterFacts,
   encounterFacts,
   type ProgressiveDrawdownOptions,
@@ -784,5 +787,150 @@ describe("the session taint state, from the harness through a channel the agent 
         String(taintMaxAgeSeconds),
       ).rejects.toThrow(message);
     }
+  });
+});
+
+describe("the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4)", () => {
+  const FRESH_UNTAINTED = () => ({ tainted: false, granularity: "session", reported_at: secondsAgo(5) });
+  beforeEach(() => {
+    harness.report = FRESH_UNTAINTED();
+    harness.fail = false;
+    harness.calls.length = 0;
+    harness.during = undefined;
+    connections.clear();
+    authorizedIssuers.clear();
+    declarations.clear();
+  });
+
+  /** An encounter seeking `action` at ENCOUNTERED from a fresh Mission. */
+  async function encounter(action: string) {
+    const root = await issueMission();
+    const res = await tokenRequest(expansion(root.accessToken, [entry(ENCOUNTERED, [action])]));
+    const body = (await res.json()) as { error?: string; deferral_code?: string };
+    const disclosure = body.deferral_code ? as.expansionDeferrals.disclosure(body.deferral_code) : undefined;
+    return {
+      body,
+      code: body.deferral_code,
+      fallback: disclosure?.drawdown_fallback,
+      facts: disclosure?.encounter as EncounterFacts | undefined,
+      shown: disclosure?.encounter_disclosure as EncounterDisclosure | undefined,
+    };
+  }
+
+  /** Run with the deployment's classification of some actions changed (undefined: unclassified), restoring it after. */
+  async function withClasses<T>(changes: Record<string, string | undefined>, run: () => Promise<T>): Promise<T> {
+    const previous = PROGRESSIVE.actionClasses;
+    const next: Record<string, string> = { ...previous };
+    for (const [action, cls] of Object.entries(changes)) {
+      if (cls === undefined) delete next[action];
+      else next[action] = cls;
+    }
+    PROGRESSIVE.actionClasses = next as ProgressiveDrawdownOptions["actionClasses"];
+    try {
+      return await run();
+    } finally {
+      PROGRESSIVE.actionClasses = previous;
+    }
+  }
+
+  it("the classes sought come from the deployment's classification; an encounter no floor touches records none, and still routes to a human", async () => {
+    const { body, fallback, facts } = await encounter("payments:invoice.read");
+    expect(body.error, JSON.stringify(body)).toBe("authorization_pending");
+    expect(fallback).toBe("encounter");
+    expect(facts?.sought_classes).toEqual(["consequential_read"]);
+    expect(facts?.floors).toEqual([]);
+  });
+
+  it("each high-consequence class is a floor: irreversible, external-commitment and privileged-administration authority each require a human", async () => {
+    for (const cls of ["irreversible_action", "external_commitment", "privileged_administration"]) {
+      await withClasses({ "payments:invoice.list": cls }, async () => {
+        const { body, facts } = await encounter("payments:invoice.list");
+        expect(body.error, cls).toBe("authorization_pending");
+        expect(facts?.sought_classes, cls).toEqual([cls]);
+        expect(facts?.floors, cls).toEqual([cls]);
+      });
+    }
+  });
+
+  it("an action the deployment's classification cannot assign a class is a floor", async () => {
+    await withClasses({ "payments:invoice.list": undefined }, async () => {
+      const { body, facts } = await encounter("payments:invoice.list");
+      expect(body.error).toBe("authorization_pending");
+      expect(facts?.sought_classes).toEqual([]);
+      expect(facts?.floors).toEqual(["unclassified"]);
+    });
+  });
+
+  it("an action satisfying the external-communication predicate is a floor, whatever its class", async () => {
+    const { body, facts } = await encounter("payments:vendor.read");
+    expect(body.error).toBe("authorization_pending");
+    expect(facts?.sought_classes).toEqual(["consequential_read"]);
+    expect(facts?.floors).toEqual(["external_communication"]);
+  });
+
+  it("under taint every encounter meets the taint floor, whatever its class; the disclosure says untrusted content was ingested only when the harness reported it", async () => {
+    for (const [report, floors, statement] of [
+      [{ tainted: true, granularity: "session", reported_at: secondsAgo(5) }, ["tainted"], "untrusted_content_ingested"],
+      [{ tainted: true, granularity: "session", reported_at: secondsAgo(TAINT_MAX_AGE * 2) }, ["tainted"], "untrusted_content_ingested"],
+      [undefined, ["tainted"], "taint_state_unknown"],
+      [{ tainted: false, granularity: "session", reported_at: secondsAgo(TAINT_MAX_AGE * 2) }, ["tainted"], "taint_state_unknown"],
+      [{ tainted: false, granularity: "session", reported_at: secondsAgo(5) }, [], "no_untrusted_content_reported"],
+    ] as const) {
+      harness.report = report;
+      const { body, facts, shown } = await encounter("payments:invoice.read");
+      expect(body.error, JSON.stringify(report)).toBe("authorization_pending");
+      expect(facts?.floors, JSON.stringify(report)).toEqual(floors);
+      expect(shown?.taint, JSON.stringify(report)).toBe(statement);
+    }
+  });
+
+  it("a declaration never classifies: one that relaxes a class, or makes one stricter, changes neither the classes nor the floors", async () => {
+    await withClasses({ "payments:invoice.list": "irreversible_action" }, async () => {
+      declarations.set(
+        ORIGIN,
+        JSON.stringify({ operations: ["payments:invoice.list"], classes: { "payments:invoice.list": "non_consequential" } }),
+      );
+      const relaxed = (await encounter("payments:invoice.list")).facts;
+      expect(relaxed?.sought_classes).toEqual(["irreversible_action"]);
+      expect(relaxed?.floors).toEqual(["irreversible_action"]);
+    });
+    declarations.set(
+      ORIGIN,
+      JSON.stringify({ operations: ["payments:invoice.read"], classes: { "payments:invoice.read": "irreversible_action" } }),
+    );
+    const stricter = (await encounter("payments:invoice.read")).facts;
+    expect(stricter?.sought_classes).toEqual(["consequential_read"]);
+    expect(stricter?.floors).toEqual([]);
+  });
+
+  it("the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries", async () => {
+    connections.set(ORIGIN, { tls_authenticated: true, metadata: METADATA });
+    authorizedIssuers.add(`${ORIGIN} ${VENDOR_AS}`);
+    const declaration = declarationOf(["payments:invoice.read", "payments:invoice.list"]);
+    declarations.set(ORIGIN, declaration);
+    const { code, facts, shown } = await encounter("payments:invoice.read");
+    expect(facts?.encounter_id).toMatch(/^enc_[A-Za-z0-9_-]{24}$/);
+    expect(shown).toEqual({
+      encounter_id: facts?.encounter_id,
+      resource: { origin: ORIGIN, resource_metadata_digest: catalogDigest(METADATA), issuer: VENDOR_AS },
+      pinned: true,
+      declaration: {
+        claimed_by_resource: true,
+        digest: catalogDigest(declaration),
+        operations: ["payments:invoice.read", "payments:invoice.list"],
+      },
+      taint: "no_untrusted_content_reported",
+      floors: [],
+    });
+    const approved = await approveAndPoll(code as string);
+    expect((as.kernel.get(approved.mission_id) as MissionRecord).encounter_id).toBe(facts?.encounter_id);
+  });
+
+  it("each adjudication has its own encounter_id", async () => {
+    const first = (await encounter("payments:invoice.read")).facts?.encounter_id;
+    const second = (await encounter("payments:invoice.read")).facts?.encounter_id;
+    expect(first).toMatch(/^enc_/);
+    expect(second).toMatch(/^enc_/);
+    expect(second).not.toBe(first);
   });
 });

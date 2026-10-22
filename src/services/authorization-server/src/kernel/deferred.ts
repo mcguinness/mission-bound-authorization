@@ -41,8 +41,10 @@ import { conditionDigest, entryDigest, terminalWhenOf } from "./discharge.js";
 import { IntentError } from "./intent.js";
 import {
   type CeilingConsent,
+  type EncounterDisclosure,
   type EncounterFacts,
   ceilingAdjudicationLine,
+  encounterDisclosure,
   consentCeiling,
   consentedCeilingEntries,
   consentsOffer,
@@ -380,6 +382,8 @@ export interface ExpansionDisclosure {
   drawdown_fallback?: string;
   /** @spec discovery#adjudication (#1469 stage 1): the encounter this approval decides. */
   encounter?: EncounterFacts;
+  /** @spec discovery#adjudication (#1469 stage 4): what the approval surface renders for that encounter. */
+  encounter_disclosure?: EncounterDisclosure;
   /** The chain's outstanding restrictions, which no approval or re-consent clears. */
   restrictions: {
     /** Each contained capability (a selector, `prefix` named), with the event class that caused its containment. */
@@ -863,6 +867,8 @@ export class ExpansionDeferralStore {
       predecessor: row.predecessor_id,
       ...(row.drawdown_fallback_reason ? { drawdown_fallback: row.drawdown_fallback_reason } : {}),
       ...(row.encounter_json ? { encounter: JSON.parse(row.encounter_json) as EncounterFacts } : {}),
+      // @spec discovery#adjudication (#1469 stage 4): what the approval surface renders for the encounter.
+      ...(row.encounter_json ? { encounter_disclosure: encounterDisclosure(JSON.parse(row.encounter_json) as EncounterFacts) } : {}),
       restrictions: { contained, discharged },
     };
     const predecessor = chain[0];
@@ -1292,6 +1298,11 @@ export class ExpansionDeferralStore {
         // the encounter's adjudication evaluated, on this successor.
         ...(row.encounter_json && (JSON.parse(row.encounter_json as string) as EncounterFacts).declaration_digest
           ? { resourceDeclarationDigest: (JSON.parse(row.encounter_json as string) as EncounterFacts).declaration_digest as string }
+          : {}),
+        // @spec discovery#adjudication (#1469 stage 4): the human resolution
+        // carries the encounter's id, so the two correlate.
+        ...(row.encounter_json && (JSON.parse(row.encounter_json as string) as EncounterFacts).encounter_id
+          ? { encounterId: (JSON.parse(row.encounter_json as string) as EncounterFacts).encounter_id }
           : {}),
       });
       // @spec expansion#reconciliation check 3 (#1177), in the activation
