@@ -45887,8 +45887,8 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "an approval never commits a resource_contract reference to a version the authorization server's configuration does not name as current, whatever supplied the reference; a scope mapping value naming a superseded version is refused invalid_authorization_details at the approval, creating no Mission",
-    "local": "assembleResourceContracts checks every carried reference with isCurrentFor before authority_hash; a proposed reference is also refused at intake (resource-access.resource-contract.unconfigured-reference-refused)"
+    "normative": "an approval never commits a resource_contract reference to a version the authorization server's configuration does not name as current, whatever supplied the reference; a scope mapping value naming a superseded version is refused at the approval, creating no Mission",
+    "local": "implementation-specific: the reference refuses it with invalid_authorization_details, the code Resource Access names for a proposed entry, although this request carries no proposal; the witness's error-code assertion checks that choice, not the clause. assembleResourceContracts checks every carried reference with isCurrentFor before authority_hash; a proposed reference is also refused at intake (resource-access.resource-contract.unconfigured-reference-refused)"
    },
    "level": "endpoint",
    "coverage": "tested",

@@ -1133,9 +1133,13 @@ describe("configured-mapping mode keyed on a requested scope (@spec mission#deri
     await withPlain(withContract(plainContractRef("v1")), async () => {
       const { r, created } = await authorizeOne("reports.read");
       expect(r.par.status, JSON.stringify(r.par.body)).toBe(201);
+      // The clause: refused at the approval, and no Mission.
       expect(r.code).toBeUndefined();
-      expect(r.error, JSON.stringify(r)).toBe("invalid_authorization_details");
       expect(created).toHaveLength(0);
+      // Implementation-specific: the reference's error code. Resource Access
+      // names invalid_authorization_details for a proposed entry; this
+      // request carries no proposal, so the code is this AS's choice.
+      expect(r.error, JSON.stringify(r)).toBe("invalid_authorization_details");
     });
   });
 });
