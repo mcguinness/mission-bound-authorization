@@ -546,6 +546,12 @@ Exact validation of the protected
 the artifact profiles, implements the substitution defense of
 {{Section 3.11 of RFC8725}} and {{Section 3.12 of RFC8725}}.
 
+A Mission Status Response is evidence of Mission state for the
+consumer that requested it, not a bearer credential, an access token,
+or an authorization grant: presenting one authorizes nothing, and a
+resource server validating access tokens under {{Section 4 of RFC9068}}
+rejects it by its `typ`.
+
 {{RFC9701}} signed introspection responses are scoped to token
 introspection and do not apply to a lookup keyed by `mission_id`; the
 dedicated Mission Status operation therefore uses a new media type and a
