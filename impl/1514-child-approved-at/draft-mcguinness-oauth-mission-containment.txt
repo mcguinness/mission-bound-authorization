@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            21 October 2026
-Expires: 24 April 2027
+Intended status: Experimental                            22 October 2026
+Expires: 25 April 2027
 
 
                    Mission Containment for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 April 2027.
+   This Internet-Draft will expire on 25 April 2027.
 
 Copyright Notice
 
@@ -84,8 +84,9 @@ Table of Contents
    4.  Conventions and Terminology
    5.  Mission Substrate
    6.  The Containment Overlay
-     6.1.  Removal-Only Expressiveness
-     6.2.  Relationship to Entry Discharge
+     6.1.  Selector Matching
+     6.2.  Removal-Only Expressiveness
+     6.3.  Relationship to Entry Discharge
    7.  The Contain Transition
    8.  Protected Events
    9.  Derivation Gating
@@ -170,9 +171,12 @@ Table of Contents
    Mission, Mission Intent, Authority Set and entry shape, integrity
    anchors, mission claim, subset rule, and lifecycle gating, and the
    Status profile's state version
-   ([I-D.draft-mcguinness-oauth-mission-status]).  It uses the terms
-   Agent (Client), Subject, Approver, Mission Issuer, Authority Set,
-   Mission, and derived token as defined in the issuance profile.
+   ([I-D.draft-mcguinness-oauth-mission-status]).  It pairs contained
+   capability with Authority Set entries under the Resource Matching and
+   Subset Rule of the Mission Resource Access Profile
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).  It uses the
+   terms Agent (Client), Subject, Approver, Mission Issuer, Authority
+   Set, Mission, and derived token as defined in the issuance profile.
 
    Where this document refers to "the issuance profile" without a
    section, it means [I-D.draft-mcguinness-oauth-mission] as a whole.
@@ -212,7 +216,7 @@ Table of Contents
    This document does NOT define:
 
    *  constraint tightening within an entry (for example, lowering a
-      max_amount ceiling); the overlay is removal-only (Section 6.1);
+      max_amount ceiling); the overlay is removal-only (Section 6.2);
 
    *  any transition that reverts containment in place; restoration is a
       successor Mission (Section 15);
@@ -243,9 +247,11 @@ Table of Contents
    Containment overlay:  The issuer-held, versioned record of capability
       removed from a Mission's effective authority (Section 6).
 
-   Contained capability:  A {resource, actions} pair in the overlay's
-      contained set.  An entry with no actions member contains the whole
-      Authority Set entry for that resource.  It is this profile's own
+   Contained capability:  A selector in the overlay's contained set: a
+      resource, its resource_match, and optionally actions (Section 6).
+      It applies to every approved Authority Set entry whose resource
+      set overlaps it (Section 6.1), and with no actions member it
+      contains each such entry whole.  It is this profile's own
       contribution to the Effective Authority Set's reduction: every
       derivation gated after a contain transition excludes it; authority
       that left the Mission before the transition keeps its own bound,
@@ -299,84 +305,85 @@ Table of Contents
 
    It consumes these optional capabilities:
 
-   +==================+==================+============================+
-   | Capability       | Consumption      | Scope of consumption       |
-   +==================+==================+============================+
-   | Structured       | required         | The Effective Authority    |
-   | Authority        |                  | Set is what every          |
-   |                  |                  | derivation, delegation,    |
-   |                  |                  | projection, and            |
-   |                  |                  | attenuation root is gated  |
-   |                  |                  | on after a contain         |
-   |                  |                  | transition (Section 9); a  |
-   |                  |                  | contained capability names |
-   |                  |                  | an approved Authority Set  |
-   |                  |                  | entry or its actions       |
-   |                  |                  | (Section 6)                |
-   +------------------+------------------+----------------------------+
-   | Monotonic        | required         | Scoped to removal-only     |
-   | Derivation       |                  | narrowing: a contain       |
-   |                  |                  | transition only adds       |
-   |                  |                  | contained capability, so   |
-   |                  |                  | monotonicity is trivially  |
-   |                  |                  | decidable, set union over  |
-   |                  |                  | entries, with no per-      |
-   |                  |                  | constraint comparator      |
-   |                  |                  | (Section 6.1, Section 7)   |
-   +------------------+------------------+----------------------------+
-   | Lifecycle-Gated  | required         | The Baseline property is   |
-   | Authorization    |                  | what a lifecycle-gated     |
-   |                  |                  | substrate provides: no     |
-   |                  |                  | derivation, delegation,    |
-   |                  |                  | projection, or attenuation |
-   |                  |                  | root minted after the      |
-   |                  |                  | transition carries         |
-   |                  |                  | contained capability       |
-   |                  |                  | (Section 11)               |
-   +------------------+------------------+----------------------------+
-   | State-Observable | required when a  | Consumed only for the      |
-   |                  | consumer claims  | Runtime-Enforced property: |
-   |                  | the Runtime-     | a consumer that checks a   |
-   |                  | Enforced         | fresh, authenticated state |
-   |                  | property         | source at or near action   |
-   |                  |                  | time denies contained      |
-   |                  |                  | capability whether or not  |
-   |                  |                  | its credential predates    |
-   |                  |                  | the transition; a consumer |
-   |                  |                  | that never consults such a |
-   |                  |                  | source gets Baseline only  |
-   |                  |                  | (Section 11)               |
-   +------------------+------------------+----------------------------+
-   | Credential-Bound | required when    | Consumed where derivation  |
-   |                  | derivation       | issues Mission-bound       |
-   |                  | issues Mission-  | tokens; a token issued     |
-   |                  | bound tokens     | before the transition is   |
-   |                  |                  | the same residual that     |
-   |                  |                  | revocation carries,        |
-   |                  |                  | bounded by its own exp and |
-   |                  |                  | the deployment's freshness |
-   |                  |                  | rules (Section 9)          |
-   +------------------+------------------+----------------------------+
-   | Independently    | not consumed     | This document defines no   |
-   | Verifiable       |                  | offline verification       |
-   |                  |                  | artifact or trust-anchor   |
-   |                  |                  | discovery; its evidence    |
-   |                  |                  | objects are the Mission    |
-   |                  |                  | Issuer's own audit         |
-   |                  |                  | material (Section 17)      |
-   +------------------+------------------+----------------------------+
-   | Portable         | not consumed     | This document produces     |
-   | Evidence         |                  | audit material of its own, |
-   |                  |                  | the Containment Evidence   |
-   |                  |                  | object and the Protected   |
-   |                  |                  | Event Receipt, and         |
-   |                  |                  | registers their canonical  |
-   |                  |                  | bytes and type identifiers |
-   |                  |                  | itself (Section 17.2,      |
-   |                  |                  | Section 18)                |
-   +------------------+------------------+----------------------------+
+   +==================+==================+=============================+
+   | Capability       | Consumption      | Scope of consumption        |
+   +==================+==================+=============================+
+   | Structured       | required         | The Effective Authority     |
+   | Authority        |                  | Set is what every           |
+   |                  |                  | derivation, delegation,     |
+   |                  |                  | projection, and             |
+   |                  |                  | attenuation root is gated   |
+   |                  |                  | on after a contain          |
+   |                  |                  | transition (Section 9); a   |
+   |                  |                  | contained capability        |
+   |                  |                  | selects approved Authority  |
+   |                  |                  | Set entries, or their       |
+   |                  |                  | actions, by resource-set    |
+   |                  |                  | overlap (Section 6.1)       |
+   +------------------+------------------+-----------------------------+
+   | Monotonic        | required         | Scoped to removal-only      |
+   | Derivation       |                  | narrowing: a contain        |
+   |                  |                  | transition only adds        |
+   |                  |                  | contained capability, so    |
+   |                  |                  | monotonicity is trivially   |
+   |                  |                  | decidable, set union over   |
+   |                  |                  | entries, with no per-       |
+   |                  |                  | constraint comparator       |
+   |                  |                  | (Section 6.2, Section 7)    |
+   +------------------+------------------+-----------------------------+
+   | Lifecycle-Gated  | required         | The Baseline property is    |
+   | Authorization    |                  | what a lifecycle-gated      |
+   |                  |                  | substrate provides: no      |
+   |                  |                  | derivation, delegation,     |
+   |                  |                  | projection, or attenuation  |
+   |                  |                  | root minted after the       |
+   |                  |                  | transition carries          |
+   |                  |                  | contained capability        |
+   |                  |                  | (Section 11)                |
+   +------------------+------------------+-----------------------------+
+   | State-Observable | required when a  | Consumed only for the       |
+   |                  | consumer claims  | Runtime-Enforced property:  |
+   |                  | the Runtime-     | a consumer that checks a    |
+   |                  | Enforced         | fresh, authenticated state  |
+   |                  | property         | source at or near action    |
+   |                  |                  | time denies contained       |
+   |                  |                  | capability whether or not   |
+   |                  |                  | its credential predates     |
+   |                  |                  | the transition; a consumer  |
+   |                  |                  | that never consults such a  |
+   |                  |                  | source gets Baseline only   |
+   |                  |                  | (Section 11)                |
+   +------------------+------------------+-----------------------------+
+   | Credential-Bound | required when    | Consumed where derivation   |
+   |                  | derivation       | issues Mission-bound        |
+   |                  | issues Mission-  | tokens; a token issued      |
+   |                  | bound tokens     | before the transition is    |
+   |                  |                  | the same residual that      |
+   |                  |                  | revocation carries,         |
+   |                  |                  | bounded by its own exp and  |
+   |                  |                  | the deployment's freshness  |
+   |                  |                  | rules (Section 9)           |
+   +------------------+------------------+-----------------------------+
+   | Independently    | not consumed     | This document defines no    |
+   | Verifiable       |                  | offline verification        |
+   |                  |                  | artifact or trust-anchor    |
+   |                  |                  | discovery; its evidence     |
+   |                  |                  | objects are the Mission     |
+   |                  |                  | Issuer's own audit          |
+   |                  |                  | material (Section 17)       |
+   +------------------+------------------+-----------------------------+
+   | Portable         | not consumed     | This document produces      |
+   | Evidence         |                  | audit material of its own,  |
+   |                  |                  | the Containment Evidence    |
+   |                  |                  | object and the Protected    |
+   |                  |                  | Event Receipt, and          |
+   |                  |                  | registers their canonical   |
+   |                  |                  | bytes and type identifiers  |
+   |                  |                  | itself (Section 17.2,       |
+   |                  |                  | Section 18)                 |
+   +------------------+------------------+-----------------------------+
 
-           Table 1: Containment profile capability consumption
+            Table 1: Containment profile capability consumption
 
    The issuance profile [I-D.draft-mcguinness-oauth-mission] is this
    version's base profile (this document is an OAuth-lane companion of
@@ -404,10 +411,21 @@ Table of Contents
 
    contained:  REQUIRED when containment_version is greater than 0.  An
       array of contained-capability entries.  Each entry is a JSON
-      object [RFC8259] with resource (REQUIRED, the resource of an
-      approved Authority Set entry) and actions (OPTIONAL, an array of
-      that entry's action values).  An entry with no actions member
-      contains the whole Authority Set entry.
+      object [RFC8259] with these members:
+
+      *  resource: REQUIRED.  An absolute URI, compared with the
+         resource of approved Authority Set entries (Section 6.1).
+
+      *  resource_match: OPTIONAL. exact (the default, and the behavior
+         when the member is absent) or prefix, with the meaning and the
+         resource limits the Mission Resource Access Profile defines for
+         an entry
+         ([I-D.draft-mcguinness-oauth-mission-resource-access]).
+
+      *  actions: OPTIONAL.  A non-empty array of action values.
+
+      An entry with no actions member contains each approved entry it
+      applies to whole.
 
    The overlay is held by the Mission Issuer.  It is not part of the
    Mission Intent and not part of the Authority Set, and it never enters
@@ -418,7 +436,52 @@ Table of Contents
    folding an entry's fired completion status into it would
    ([I-D.draft-mcguinness-oauth-mission-discharge]).
 
-6.1.  Removal-Only Expressiveness
+6.1.  Selector Matching
+
+   A contained-capability entry is a selector over the approved
+   Authority Set. Its resource set is the one its resource and
+   resource_match denote under Resource Matching
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]): under exact,
+   the resource alone; under prefix, the resource and every resource
+   beneath it at a path-segment boundary.  An exact selector never
+   applies to the resources beneath its resource; a containment meant
+   for a service and everything beneath it declares prefix.
+
+   Two resource sets overlap when one is contained in the other under
+   the resource comparison of the Subset Rule
+   ([I-D.draft-mcguinness-oauth-mission-resource-access],
+   Section "Subset Rule").  The Mission Issuer MUST apply each
+   contained-capability entry to every approved Authority Set entry
+   whose resource set overlaps the entry's own, whether the selector is
+   broader or finer than that approved entry.  The Mission Issuer MUST
+   NOT admit to the overlay a contained-capability entry it cannot
+   compare, such as one with an unrecognized resource_match: such an
+   entry would apply to nothing.
+
+   The removal is per approved entry.  A selector with actions removes
+   those actions from each approved entry it applies to, and a selector
+   with no actions member removes each such entry whole.  When more than
+   one selector applies to an approved entry, the removals form a union:
+   the entry loses every action any of them selects, and is removed
+   whole when any of them has no actions member.  Selectors sharing a
+   resource value under different resource_match values select different
+   resource sets and apply independently.  An approved entry left with
+   no actions is removed.
+
+   An approved entry cannot express "this resource set except that
+   resource".  A selector finer than an approved entry, such as an exact
+   selector for one invoice under a prefix entry for the invoice
+   service, therefore removes the selected actions from the whole
+   approved entry, including resources the selector does not name.  This
+   over-containment is conservative: it removes more authority than the
+   selector names, never less, and what it removes returns only through
+   restoration (Section 15).
+
+   Propagation to an existing Child Mission (Section 9) applies the same
+   removal: a child entry justified by an approved entry a selector
+   applies to loses what that approved entry lost.
+
+6.2.  Removal-Only Expressiveness
 
    The overlay removes capability; it expresses nothing else.
    Constraint tightening within an entry (for example, lowering a
@@ -429,7 +492,7 @@ Table of Contents
    contains the affected actions and re-approves them, tightened,
    through a successor Mission (Section 15).
 
-6.2.  Relationship to Entry Discharge
+6.3.  Relationship to Entry Discharge
 
    Containment composes with the Entry Discharge companion's discharge
    mechanism ([I-D.draft-mcguinness-oauth-mission-discharge]) and
@@ -1181,6 +1244,13 @@ Table of Contents
 
    [[ To be removed from the final specification ]]
 
+   *  Selector Matching (Section 6.1): a contained-capability entry is a
+      selector with resource_match, exact by default and prefix by
+      declaration.  It applies to every approved entry whose resource
+      set overlaps it, removals from several selectors form a union, and
+      a selector finer than an approved entry removes its actions from
+      the whole entry, a conservative over-containment (#1463).
+
    *  The Contain Transition (Section 7): a contain transition is
       refused for a terminated Mission, whatever its termination reason
       (#705).
@@ -1220,6 +1290,12 @@ Normative References
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-expansion.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
    [I-D.draft-mcguinness-oauth-mission-status]
               McGuinness, K., "Mission Status and Lifecycle for OAuth

@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         21 October 2026
-Expires: 24 April 2027
+Intended status: Standards Track                         22 October 2026
+Expires: 25 April 2027
 
 
              Mission Cross-Domain Projection for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 April 2027.
+   This Internet-Draft will expire on 25 April 2027.
 
 Copyright Notice
 
@@ -541,11 +541,11 @@ Table of Contents
       replay it within its lifetime (Section 9, [RFC7523] Section 3);
 
    *  MUST carry the mission claim
-      ([I-D.draft-mcguinness-oauth-mission], Section "The Mission
-      Claim") with id and issuer unchanged from the Mission, and the
-      audience-scoped authorization_details (Section 4.1).  This profile
-      REQUIRES authority_hash on that claim too, reintroducing it beyond
-      the issuance profile's baseline as this profile's own lineage and
+      ([I-D.draft-mcguinness-oauth-mission], Section "Mission Claim")
+      with id and issuer unchanged from the Mission, and the audience-
+      scoped authorization_details (Section 4.1).  This profile REQUIRES
+      authority_hash on that claim too, reintroducing it beyond the
+      issuance profile's baseline as this profile's own lineage and
       audit anchor for the party receiving the grant across the trust-
       domain hop; and
 
