@@ -1265,6 +1265,16 @@ scope or a deployment-defined equivalent grant that names who may
 perform the transition. The AS MUST refuse a caller that carries no
 such authorization.
 
+A lifecycle authorization is necessary but not sufficient. The AS MUST
+authorize each request for its acting party (below), its operation,
+and the specific Mission it names, under the deployment's policy for
+that Mission, including the deployment or tenant boundary the Mission
+belongs to: authorization for one Mission, or within one tenant,
+authorizes nothing on another. The AS evaluates the acting party's
+validated identity and any validated delegation context; an `act`
+claim identifies the parties to a delegation and is never by itself a
+grant of lifecycle authority.
+
 The acting party, and where the AS checks the lifecycle
 authorization, follow from the authentication case:
 
@@ -1291,7 +1301,8 @@ it in the signed response's audit surface: the response envelope's
 `sub`, distinct from any access token's `sub`, or a deployment-defined
 audit member of the Mission Status Response.
 
-Which parties may perform which operation is deployment-defined. Typical
+Which parties may perform which operation on which Missions is
+deployment-defined. Typical
 deployments authorize `revoke` to the Mission's Subject or Approver and
 to administrators; `suspend` and `resume` to administrators; and
 `complete` to the requesting client or an administrator.
