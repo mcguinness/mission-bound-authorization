@@ -87,7 +87,7 @@ informative:
       -
         ins: K. McGuinness
         name: Karl McGuinness
-    date: 2026-10-21
+    date: 2026-10-22
   I-D.draft-mcguinness-oauth-mission-status-list:
     title: "Mission Status List for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html
@@ -1977,49 +1977,49 @@ Authorization Server Metadata" registry {{RFC8414}}:
 - Metadata Name: `mission_status_endpoint`
 - Metadata Description: URL of the authorization server's Mission Status
   endpoint.
-- Change Controller: IETF
+- Change Controller: IESG
 - Specification Document(s): this document, {{as-metadata}}
 
 - Metadata Name: `mission_status_endpoint_auth_methods_supported`
 - Metadata Description: JSON array of the client authentication methods
   the Mission Status endpoint accepts.
-- Change Controller: IETF
+- Change Controller: IESG
 - Specification Document(s): this document, {{as-metadata}}
 
 - Metadata Name: `mission_status_endpoint_auth_signing_alg_values_supported`
 - Metadata Description: JSON array of the JWS algorithms the Mission
   Status endpoint accepts for private-key-JWT client authentication.
-- Change Controller: IETF
+- Change Controller: IESG
 - Specification Document(s): this document, {{as-metadata}}
 
 - Metadata Name: `mission_status_signing_alg_values_supported`
 - Metadata Description: JSON array of the JWS algorithms the
   authorization server uses to sign Mission Status Responses.
-- Change Controller: IETF
+- Change Controller: IESG
 - Specification Document(s): this document, {{as-metadata}}
 
 - Metadata Name: `mission_lifecycle_endpoint`
 - Metadata Description: URL of the authorization server's Mission
   Lifecycle endpoint.
-- Change Controller: IETF
+- Change Controller: IESG
 - Specification Document(s): this document, {{as-metadata}}
 
 - Metadata Name: `mission_lifecycle_endpoint_auth_methods_supported`
 - Metadata Description: JSON array of the client authentication methods
   the Mission Lifecycle endpoint accepts.
-- Change Controller: IETF
+- Change Controller: IESG
 - Specification Document(s): this document, {{as-metadata}}
 
 - Metadata Name: `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
 - Metadata Description: JSON array of the JWS algorithms the Mission
   Lifecycle endpoint accepts for private-key-JWT client authentication.
-- Change Controller: IETF
+- Change Controller: IESG
 - Specification Document(s): this document, {{as-metadata}}
 
 - Metadata Name: `mission_max_stale_seconds`
 - Metadata Description: Maximum interval, in seconds, the deployment
   tolerates for a Mission state change to take effect.
-- Change Controller: IETF
+- Change Controller: IESG
 - Specification Document(s): this document, {{as-metadata}}
 
 ## Media Type Registration {#media-type-registration}
