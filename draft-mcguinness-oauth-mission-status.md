@@ -1953,17 +1953,55 @@ document at `/.well-known/oauth-authorization-server` {{RFC8414}}.
 ## OAuth Authorization Server Metadata Registration
 
 IANA is requested to register the following in the "OAuth
-Authorization Server Metadata" registry {{RFC8414}}. For each:
-Change Controller IETF; Reference this document, {{as-metadata}}.
+Authorization Server Metadata" registry {{RFC8414}}:
 
-- `mission_status_endpoint`
-- `mission_status_endpoint_auth_methods_supported`
-- `mission_status_endpoint_auth_signing_alg_values_supported`
-- `mission_status_signing_alg_values_supported`
-- `mission_lifecycle_endpoint`
-- `mission_lifecycle_endpoint_auth_methods_supported`
-- `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
-- `mission_max_stale_seconds`
+- Metadata Name: `mission_status_endpoint`
+- Metadata Description: URL of the authorization server's Mission Status
+  endpoint.
+- Change Controller: IETF
+- Specification Document(s): this document, {{as-metadata}}
+
+- Metadata Name: `mission_status_endpoint_auth_methods_supported`
+- Metadata Description: JSON array of the client authentication methods
+  the Mission Status endpoint accepts.
+- Change Controller: IETF
+- Specification Document(s): this document, {{as-metadata}}
+
+- Metadata Name: `mission_status_endpoint_auth_signing_alg_values_supported`
+- Metadata Description: JSON array of the JWS algorithms the Mission
+  Status endpoint accepts for private-key-JWT client authentication.
+- Change Controller: IETF
+- Specification Document(s): this document, {{as-metadata}}
+
+- Metadata Name: `mission_status_signing_alg_values_supported`
+- Metadata Description: JSON array of the JWS algorithms the
+  authorization server uses to sign Mission Status Responses.
+- Change Controller: IETF
+- Specification Document(s): this document, {{as-metadata}}
+
+- Metadata Name: `mission_lifecycle_endpoint`
+- Metadata Description: URL of the authorization server's Mission
+  Lifecycle endpoint.
+- Change Controller: IETF
+- Specification Document(s): this document, {{as-metadata}}
+
+- Metadata Name: `mission_lifecycle_endpoint_auth_methods_supported`
+- Metadata Description: JSON array of the client authentication methods
+  the Mission Lifecycle endpoint accepts.
+- Change Controller: IETF
+- Specification Document(s): this document, {{as-metadata}}
+
+- Metadata Name: `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
+- Metadata Description: JSON array of the JWS algorithms the Mission
+  Lifecycle endpoint accepts for private-key-JWT client authentication.
+- Change Controller: IETF
+- Specification Document(s): this document, {{as-metadata}}
+
+- Metadata Name: `mission_max_stale_seconds`
+- Metadata Description: Maximum interval, in seconds, the deployment
+  tolerates for a Mission state change to take effect.
+- Change Controller: IETF
+- Specification Document(s): this document, {{as-metadata}}
 
 ## Media Type Registration {#media-type-registration}
 
@@ -1980,6 +2018,7 @@ IANA is requested to register the following media type per
 - Published specification: this document
 - Applications that use this media type: OAuth Mission-Bound consumers
 - Fragment identifier considerations: not applicable
+- Deprecated alias names for this type: none
 - Restrictions on usage: none
 - Provisional registration: no
 - Magic number(s): none
@@ -1988,7 +2027,8 @@ IANA is requested to register the following media type per
 - Person & email address to contact: Karl McGuinness
   <public@karlmcguinness.com>
 - Intended usage: COMMON
-- Author/Change controller: IETF
+- Author: Karl McGuinness <public@karlmcguinness.com>
+- Change controller: IETF
 
 ## Mission Lifecycle Registrations {#iana-lifecycle-registrations}
 
