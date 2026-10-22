@@ -60300,7 +60300,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "For a resource that names an authorization server, the Mission Issuer fetches its protected-resource metadata itself during adjudication.",
-    "local": "The metadata comes from the deployment's connection port, retrieved for the origin as the resource identifier, and is used only when its resource is exactly the origin (RFC 9728 Section 3.3). The reference requires the metadata, stricter than the object's conditional members. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes."
+    "local": "The metadata comes from the deployment's connection port, retrieved for the origin as the resource identifier, and is used only when its resource is exactly the origin (RFC 9728 Section 3.3) and every authorization server it names is an issuer identifier (RFC 8414 Section 2), checked before any authorization. The reference requires the metadata, stricter than the object's conditional members. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -60314,6 +60314,12 @@
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata that is absent, not a JSON object, or whose resource is not exactly the origin (RFC 9728 Section 3.3) is not used: no digest, no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
      "level": "endpoint",
      "surface": "governance-record"
     }
@@ -60734,7 +60740,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "An encounter whose identity cannot be pinned (TLS failure, unretrievable metadata, unverifiable issuer) yields `routed_to_approval` or `refused`, never `bound`.",
-    "local": "An encounter whose identity cannot be pinned (origin not TLS-authenticated, metadata missing or unusable, no single named issuer, issuer unverified) routes to a human, or, where the deployment refuses unpinnable encounters, is refused before any deferral exists; an unverified issuer always routes."
+    "local": "An encounter whose identity cannot be pinned (origin not TLS-authenticated, metadata missing or unusable, a malformed issuer identifier among them, no single named issuer, issuer unverified) routes to a human, or, where the deployment refuses unpinnable encounters, is refused before any deferral exists; an unverified issuer always routes."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -60760,6 +60766,12 @@
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > where the deployment refuses unpinnable encounters, an encounter whose identity cannot be established is refused uniformly, with no deferral and no Mission; a pinned one still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -61090,7 +61102,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "An Encountered Resource object whose metadata names an authorization server carries `issuer` equal to that issuer identifier.",
-    "local": "Data-construction witness: the recorded object carries the one issuer the metadata names, and none when it names zero or several; no Discovery Evidence is emitted yet."
+    "local": "Data-construction witness: the recorded object carries the one issuer the metadata names, always an issuer identifier (https, no query or fragment), and none when it names zero, several, or a malformed one; no Discovery Evidence is emitted yet."
    },
    "level": "unit",
    "coverage": "partial",
@@ -61104,6 +61116,12 @@
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming no authorization server, or more than one, pins no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
      "level": "endpoint",
      "surface": "governance-record"
     }
