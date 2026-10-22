@@ -2823,7 +2823,14 @@ export async function handleExpansionExchange(
     if (outcome && typeof outcome === "object") {
       drawdownFallback = outcome.reason;
       if (outcome.encountered) {
-        const facts = await encounterFacts(opts.progressive, outcome.encountered, requested, hint);
+        // @spec discovery#adjudication (#1469 stage 3): the session the harness
+        // reports on is named by the subject token's Mission and the
+        // authenticated client, never by a request member.
+        const facts = await encounterFacts(opts.progressive, outcome.encountered, requested, hint, {
+          missionId: active.id,
+          clientId: (ctx.oidc.client as NonNullable<typeof ctx.oidc.client>).clientId,
+          now: opts.kernel.nowDate(),
+        });
         if (typeof facts === "string") {
           txError(ctx, 400, "invalid_request", facts);
           return;

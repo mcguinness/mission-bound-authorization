@@ -400,7 +400,36 @@ export interface ProgressiveDrawdownOptions {
    * named issuer is not verified as authorized always routes to a human.
    */
   unpinnedEncounter?: "fresh_approval" | "refuse";
+  /**
+   * @spec discovery#adjudication (#1469 stage 3): the harness's report of the
+   * session taint state, through a channel the agent does not mediate: a
+   * harness attestation the deployment verifies behind this port, as the
+   * connection port carries TLS. It answers for the session or sessions acting
+   * under the Mission for the client, tainted if any is, and returns nothing
+   * when it cannot resolve a session. Nothing the request carries reaches it.
+   */
+  harnessTaint?: (session: { missionId: string; clientId: string }) => Promise<TaintReport | undefined>;
+  /**
+   * @spec discovery#adjudication (#1469 stage 3): how old, in seconds, a taint
+   * report may be and still count. Required with {@link harnessTaint}.
+   */
+  taintMaxAgeSeconds?: number;
 }
+
+/**
+ * @spec harness#decision-api-composition, discovery#adjudication (#1469 stage
+ * 3): the harness's taint report: the harness profile's taint object, scoped to
+ * the session, with the RFC 3339 date-time the harness established it.
+ */
+export interface TaintReport {
+  tainted: boolean;
+  granularity: "session";
+  source_class?: string;
+  reported_at: string;
+}
+
+/** @spec discovery#adjudication (#1469 stage 3): why no trustworthy taint report was used. */
+export type TaintFailure = "missing" | "stale" | "unverifiable";
 
 /** @spec discovery#resource-identity (#1469 stage 2): what the deployment's connection to an origin established. */
 export interface ResourceConnection {
@@ -448,6 +477,17 @@ export interface EncounterFacts {
   pinned: boolean;
   /** Why it is not, when it is not. */
   pin_failure?: PinFailure;
+  /**
+   * @spec discovery#adjudication (#1469 stage 3): the taint state the
+   * adjudication uses: tainted unless a fresh, well-formed harness report says
+   * otherwise. Kept apart from the report itself, so a missing report is never
+   * read as the harness having seen untrusted content.
+   */
+  tainted: boolean;
+  /** Why no trustworthy report was used, when none was. */
+  taint_failure?: TaintFailure;
+  /** The harness's report as given (its known members), when one was obtained. */
+  taint_report?: Record<string, unknown>;
   /** The raw-octet digest of the declaration bytes the Mission Issuer retrieved; absent when it retrieved none. */
   declaration_digest?: string;
   /** Whether the declaration lists every action sought at the resource; absent without a usable declaration. */
@@ -599,6 +639,43 @@ export async function pinEncounteredResource(
 }
 
 /**
+ * @spec discovery#adjudication (#1469 stage 3): the session taint state for an
+ * adjudication. It comes only from the harness, through the deployment's port.
+ * A missing report, one older than the deployment's bound, and one that is
+ * malformed, future-dated or not session-scoped all count as tainted; a stale
+ * tainted report is tainted too, so the rule has no asymmetry. A report is
+ * fresh when 0 <= now - reported_at <= taintMaxAgeSeconds.
+ */
+export async function sessionTaint(
+  options: ProgressiveDrawdownOptions,
+  session: { missionId: string; clientId: string },
+  now: Date,
+): Promise<{ tainted: boolean; taint_failure?: TaintFailure; taint_report?: Record<string, unknown> }> {
+  let report: unknown;
+  try {
+    report = await options.harnessTaint?.(session);
+  } catch {
+    report = undefined;
+  }
+  if (report === undefined || report === null) return { tainted: true, taint_failure: "missing" };
+  if (typeof report !== "object" || Array.isArray(report)) return { tainted: true, taint_failure: "unverifiable" };
+  const given = report as Record<string, unknown>;
+  const taint_report = Object.fromEntries(
+    ["tainted", "granularity", "source_class", "reported_at"].filter((k) => k in given).map((k) => [k, given[k]]),
+  );
+  const unverifiable = { tainted: true, taint_failure: "unverifiable" as const, taint_report };
+  if (typeof given.tainted !== "boolean") return unverifiable;
+  if (given.granularity !== "session") return unverifiable;
+  if (given.source_class !== undefined && typeof given.source_class !== "string") return unverifiable;
+  const at = typeof given.reported_at === "string" ? Date.parse(given.reported_at) : Number.NaN;
+  if (Number.isNaN(at)) return unverifiable;
+  const ageSeconds = (now.getTime() - at) / 1000;
+  if (ageSeconds < 0) return unverifiable;
+  if (ageSeconds > (options.taintMaxAgeSeconds as number)) return { tainted: true, taint_failure: "stale", taint_report };
+  return { tainted: given.tainted, taint_report };
+}
+
+/**
  * @spec discovery#adjudication (#1469 stage 2): whether the deployment refuses
  * this encounter outright: its identity cannot be established and the
  * deployment does not escalate such encounters. An issuer that is named but
@@ -623,6 +700,8 @@ export async function encounterFacts(
   encountered: readonly string[],
   requested: readonly AuthorityEntry[],
   hint: EncounterHint | undefined,
+  /** @spec discovery#adjudication (#1469 stage 3): the session, from the subject token and client authentication; the clock. */
+  session: { missionId: string; clientId: string; now: Date },
 ): Promise<EncounterFacts | string> {
   const origins = [...new Set(encountered.map(originOf))];
   const origin = origins[0];
@@ -630,6 +709,7 @@ export async function encounterFacts(
   if (hint && hint.origin !== origin) return "encountered_resource names an origin other than the encounter's";
   const pin = await pinEncounteredResource(options, origin);
   const identity = pin.resource;
+  const taint = await sessionTaint(options, { missionId: session.missionId, clientId: session.clientId }, session.now);
   let bytes: Uint8Array | string | undefined;
   try {
     bytes = await options.resourceDeclarations?.(origin);
@@ -645,6 +725,9 @@ export async function encounterFacts(
     ...(identity ? { resource: identity } : {}),
     pinned: pin.pinned,
     ...(pin.pin_failure ? { pin_failure: pin.pin_failure } : {}),
+    tainted: taint.tainted,
+    ...(taint.taint_failure ? { taint_failure: taint.taint_failure } : {}),
+    ...(taint.taint_report ? { taint_report: taint.taint_report } : {}),
     ...(digest ? { declaration_digest: digest } : {}),
     ...(declared === undefined ? {} : { declared }),
     ...(hint
@@ -766,6 +849,17 @@ export function validateProgressiveDrawdownOptions(
   // every encounter.
   if (o.unpinnedEncounter === "refuse" && o.resourceMetadata === undefined) {
     throw new Error("progressive unpinnedEncounter refuse needs a resourceMetadata port");
+  }
+  if (o.harnessTaint !== undefined && typeof o.harnessTaint !== "function") {
+    throw new Error("progressive harnessTaint must be a function of the session");
+  }
+  if (o.taintMaxAgeSeconds !== undefined && !isPositiveInteger(o.taintMaxAgeSeconds)) {
+    throw new Error("progressive taintMaxAgeSeconds must be a positive integer");
+  }
+  // @spec discovery#adjudication (#1469 stage 3): without a bound no report is
+  // ever fresh, so the port would be consulted and never believed.
+  if (o.harnessTaint !== undefined && o.taintMaxAgeSeconds === undefined) {
+    throw new Error("progressive harnessTaint needs taintMaxAgeSeconds");
   }
   assertDrawdownClassesMeetApprovalFloor(o, approvalFloor);
   return o;
