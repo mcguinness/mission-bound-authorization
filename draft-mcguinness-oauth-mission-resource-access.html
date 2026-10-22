@@ -1060,7 +1060,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 24 April 2027</td>
+<td class="center">Expires 25 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1073,12 +1073,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-resource-access-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-21" class="published">21 October 2026</time>
+<time datetime="2026-10-22" class="published">22 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-24">24 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-25">25 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1134,7 +1134,7 @@ support this type, another <code>authorization_details</code> type, or both.<a h
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 24 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 25 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2807,15 +2807,12 @@ can change that meaning while the names and values stay the same. The
 <code>resource_contract</code> member fixes the version of that meaning the entry
 was approved under.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">A <strong>resource contract</strong> is a JSON document, identified by an <code>id</code> and a
-<code>version</code>, whose bytes never change for that pair. It fixes the
-contract material that Mission-Bound Runtime Enforcement lists
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Resource
-Contract"), including the operation contract (<a href="#resource-matching" class="auto internal xref">Section 4</a>) of
-each operation it covers and the members of each action family it
-defines. That section also defines the version states and how a
-reference resolves. This section depends on those rules normatively;
-the dependency binds only a deployment that supports
-<code>resource_contract</code>. The contract assembles those definitions and
+<code>version</code>, whose bytes never change for that pair. It fixes at least
+the operation contract (<a href="#resource-matching" class="auto internal xref">Section 4</a>) of each operation it
+covers and the members of each action family it defines. A runtime
+profile can add contract material, as Mission-Bound Runtime
+Enforcement does (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section
+"Resource Contract"). The contract assembles those definitions and
 overrides none of them: a Common Constraint keeps the semantics its
 definition gives it (<a href="#common-constraints" class="auto internal xref">Section 6</a>). A resource that changes
 any of that material publishes a new version with its own <code>digest</code>.
@@ -2858,12 +2855,11 @@ contract's reference in the entry, so that the Approver approves the
 entry with it.<a href="#section-8-6.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-7">A superseded or retired version is never current
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), so no new approval
-references one. An authorization server that does not implement this
-section <span class="bcp14">MUST</span> refuse a proposed or carried entry that carries
-<code>resource_contract</code>, with the <code>invalid_authorization_details</code> error
-code, and <span class="bcp14">MUST NOT</span> drop the member.<a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-7">No new approval references a version that is not current. An
+authorization server that does not implement this section <span class="bcp14">MUST</span> refuse
+a proposed or carried entry that carries <code>resource_contract</code>, with the
+<code>invalid_authorization_details</code> error code, and <span class="bcp14">MUST NOT</span> drop the
+member.<a href="#section-8-7" class="pilcrow">¶</a></p>
 <p id="section-8-8"><strong>Preservation.</strong> The reference is part of the entry, so
 <code>authority_hash</code> commits it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
 Every derivation, narrowing, and delegation preserves it exactly
@@ -2879,10 +2875,11 @@ applicable entry without one provides no authority for it. In both
 cases the entry is one the resource server cannot fully enforce
 (<a href="#rs-enforcement" class="auto internal xref">Section 7</a>). The reference fixes meaning, not state: it
 supplies no observation of the resource and exempts no operation from
-the resource's other authorization checks. Which versions a resource
-still performs, and for which entries, follows the version states of
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>: a reference that does not
-resolve there authorizes nothing.<a href="#section-8-9" class="pilcrow">¶</a></p>
+the resource's other authorization checks. The resource declares
+which versions it still performs, and for which entries;
+Mission-Bound Runtime Enforcement defines one such version lifecycle
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). A reference to a version
+the resource does not perform for the entry authorizes nothing.<a href="#section-8-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="delegate-eligibility">
@@ -2918,15 +2915,15 @@ decision deferred to policy, never a blanket grant of eligibility.<a href="#sect
 consistent with the subset rule (<a href="#subset" class="auto internal xref">Section 5</a>). Surviving entries keep
 their <code>delegation</code> member intact, so the next hop is evaluated the same
 way.<a href="#section-9-3" class="pilcrow">¶</a></p>
-<p id="section-9-4">A cross-domain grant separates two stages. Eligibility for the grant
-itself is decided as above, against the approved entry in the Mission
-Record. The copy the grant conveys keeps <code>delegation</code> only as
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span> allows; a copy
-without it delegates no further. Neither stage lets an entry without
-<code>delegation</code> in the Mission Record appear in a delegated token. The
-dependency on that profile, here and in the absent-member exception of
-<a href="#resource-access-type" class="auto internal xref">Section 3</a>, binds only an authorization server that
-issues cross-domain grants.<a href="#section-9-4" class="pilcrow">¶</a></p>
+<p id="section-9-4">A cross-domain grant, which an authorization server issues for use in
+another trust domain
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), separates two
+stages. Eligibility for the grant itself is decided as above, against
+the approved entry in the Mission Record. Whether the copy the grant
+conveys keeps <code>delegation</code> is for the profile that defines the grant,
+within the subset rule (<a href="#subset" class="auto internal xref">Section 5</a>); a copy without it delegates no
+further. Neither stage lets an entry without <code>delegation</code> in the
+Mission Record appear in a delegated token.<a href="#section-9-4" class="pilcrow">¶</a></p>
 <p id="section-9-5"><strong>Inherited eligibility.</strong> A derived entry's <code>allowed_delegates</code>
 restricts eligibility; it never replaces an obligation the derivation
 inherits. An entry derived from a reference entry that has no
@@ -3742,17 +3739,9 @@ Omission-Equivalent Value is <code>false</code>.<a href="#section-16.3-6" class=
 <a href="#section-17.1" class="section-number selfRef">17.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
-<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-mcguinness-oauth-mission-01</span>, <time datetime="2026-10-21" class="refDate">21 October 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-01">https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-01</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="ISO4217">[ISO4217]</dt>
         <dd>
@@ -3822,6 +3811,14 @@ Omission-Equivalent Value is <code>false</code>.<a href="#section-16.3-6" class=
 <dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-transaction-authorization">[I-D.draft-mcguinness-oauth-mission-transaction-authorization]</dt>
         <dd>

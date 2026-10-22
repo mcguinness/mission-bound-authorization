@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         21 October 2026
-Expires: 24 April 2027
+Intended status: Standards Track                         22 October 2026
+Expires: 25 April 2027
 
 
              Mission Resource Access Profile for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 April 2027.
+   This Internet-Draft will expire on 25 April 2027.
 
 Copyright Notice
 
@@ -1165,19 +1165,16 @@ Table of Contents
    was approved under.
 
    A *resource contract* is a JSON document, identified by an id and a
-   version, whose bytes never change for that pair.  It fixes the
-   contract material that Mission-Bound Runtime Enforcement lists
+   version, whose bytes never change for that pair.  It fixes at least
+   the operation contract (Section 4) of each operation it covers and
+   the members of each action family it defines.  A runtime profile can
+   add contract material, as Mission-Bound Runtime Enforcement does
    ([I-D.draft-mcguinness-mission-runtime], Section "Resource
-   Contract"), including the operation contract (Section 4) of each
-   operation it covers and the members of each action family it defines.
-   That section also defines the version states and how a reference
-   resolves.  This section depends on those rules normatively; the
-   dependency binds only a deployment that supports resource_contract.
-   The contract assembles those definitions and overrides none of them:
-   a Common Constraint keeps the semantics its definition gives it
-   (Section 6).  A resource that changes any of that material publishes
-   a new version with its own digest.  The resource publishes its
-   contracts and references in its operation contract or other
+   Contract").  The contract assembles those definitions and overrides
+   none of them: a Common Constraint keeps the semantics its definition
+   gives it (Section 6).  A resource that changes any of that material
+   publishes a new version with its own digest.  The resource publishes
+   its contracts and references in its operation contract or other
    deployment documentation; this document defines no metadata member or
    endpoint for them.
 
@@ -1212,12 +1209,11 @@ Table of Contents
       contract's reference in the entry, so that the Approver approves
       the entry with it.
 
-   A superseded or retired version is never current
-   ([I-D.draft-mcguinness-mission-runtime]), so no new approval
-   references one.  An authorization server that does not implement this
-   section MUST refuse a proposed or carried entry that carries
-   resource_contract, with the invalid_authorization_details error code,
-   and MUST NOT drop the member.
+   No new approval references a version that is not current.  An
+   authorization server that does not implement this section MUST refuse
+   a proposed or carried entry that carries resource_contract, with the
+   invalid_authorization_details error code, and MUST NOT drop the
+   member.
 
    *Preservation.* The reference is part of the entry, so authority_hash
    commits it ([I-D.draft-mcguinness-oauth-mission]).  Every derivation,
@@ -1235,10 +1231,11 @@ Table of Contents
    cases the entry is one the resource server cannot fully enforce
    (Section 7).  The reference fixes meaning, not state: it supplies no
    observation of the resource and exempts no operation from the
-   resource's other authorization checks.  Which versions a resource
-   still performs, and for which entries, follows the version states of
-   [I-D.draft-mcguinness-mission-runtime]: a reference that does not
-   resolve there authorizes nothing.
+   resource's other authorization checks.  The resource declares which
+   versions it still performs, and for which entries; Mission-Bound
+   Runtime Enforcement defines one such version lifecycle
+   ([I-D.draft-mcguinness-mission-runtime]).  A reference to a version
+   the resource does not perform for the entry authorizes nothing.
 
 9.  Delegate Eligibility
 
@@ -1268,15 +1265,15 @@ Table of Contents
    their delegation member intact, so the next hop is evaluated the same
    way.
 
-   A cross-domain grant separates two stages.  Eligibility for the grant
-   itself is decided as above, against the approved entry in the Mission
-   Record.  The copy the grant conveys keeps delegation only as
-   [I-D.draft-mcguinness-oauth-mission-cross-domain] allows; a copy
-   without it delegates no further.  Neither stage lets an entry without
-   delegation in the Mission Record appear in a delegated token.  The
-   dependency on that profile, here and in the absent-member exception
-   of Section 3, binds only an authorization server that issues cross-
-   domain grants.
+   A cross-domain grant, which an authorization server issues for use in
+   another trust domain
+   ([I-D.draft-mcguinness-oauth-mission-cross-domain]), separates two
+   stages.  Eligibility for the grant itself is decided as above,
+   against the approved entry in the Mission Record.  Whether the copy
+   the grant conveys keeps delegation is for the profile that defines
+   the grant, within the subset rule (Section 5); a copy without it
+   delegates no further.  Neither stage lets an entry without delegation
+   in the Mission Record appear in a delegated token.
 
    *Inherited eligibility.* A derived entry's allowed_delegates
    restricts eligibility; it never replaces an obligation the derivation
@@ -1883,21 +1880,12 @@ Table of Contents
 
 17.1.  Normative References
 
-   [I-D.draft-mcguinness-mission-runtime]
-              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-runtime.html>.
-
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
-              2.0", 2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-cross-domain]
-              McGuinness, K., "Mission Cross-Domain Projection for OAuth
-              2.0", 2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-cross-
-              domain.html>.
+              2.0", Work in Progress, Internet-Draft, draft-mcguinness-
+              oauth-mission-01, 21 October 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-mission-01>.
 
    [ISO4217]  International Organization for Standardization, "ISO
               4217:2015, Codes for the representation of currencies and
@@ -1973,6 +1961,17 @@ Table of Contents
               McGuinness, K., "Mission Consumption Metering", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-metering.html>.
+
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-cross-domain]
+              McGuinness, K., "Mission Cross-Domain Projection for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-cross-
+              domain.html>.
 
    [I-D.draft-mcguinness-oauth-mission-transaction-authorization]
               McGuinness, K., "Mission Transaction Authorization Profile
