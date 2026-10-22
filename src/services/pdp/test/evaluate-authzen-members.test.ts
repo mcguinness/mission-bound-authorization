@@ -268,6 +268,9 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
         ["a version other than the observation's", withAssertion(await signStatus({ privateKey, mission: { version: 2 } })), true],
         ["an issuance other than mission_status_issued_at", withAssertion(good, { mission_status_issued_at: new Date((issued - 1) * 1000).toISOString() }), true],
         ["an expiry later than its fresh_until", withAssertion(good, { mission_status_expires_at: new Date(NOW.getTime() + 61_000).toISOString() }), true],
+        // @spec status#mission-status-response consumer checks 4 and 10 (#1535).
+        ["a mission.issuer other than its iss", withAssertion(await signStatus({ privateKey, mission: { issuer: "https://other-as.test" } })), true],
+        ["a signed fresh_until later than its exp", withAssertion(await signStatus({ privateKey, exp: issued + 40 })), true],
       ];
       for (const [label, observation, keyed] of cases) {
         for (const actionClass of ["consequential_write", "irreversible_action"]) {
@@ -338,6 +341,31 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
         );
         expect(dec.decision, actionClass).toBe(false);
         expect(dec.context.denial_reason, actionClass).toBe("stale_state");
+      }
+    });
+
+    // @spec status#mission-status-caching (#1535): a consumer "MUST NOT rely
+    // on a reported `active` state at or after `mission.expires_at`", however
+    // far its `fresh_until` and `exp` run.
+    it("a verified assertion reporting active is relied on only before the Mission's expires_at: it caps the permit there, and once reached denies stale_state (#1535)", async () => {
+      const { privateKey, keys } = await statusKeys();
+      const expiresAt = new Date(NOW.getTime() + 5_000);
+      const capped = await signStatus({ privateKey, mission: { expires_at: expiresAt.toISOString() } });
+      const reached = await signStatus({ privateKey, mission: { expires_at: NOW.toISOString() } });
+      for (const actionClass of ["irreversible_action", "consequential_write"]) {
+        const dec = await evaluate(
+          observedRequest({ actionClass, observation: observed({ version: 3, assertion: capped }) }),
+          options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+        );
+        expect(dec.decision, `${actionClass}: ${JSON.stringify(dec.context)}`).toBe(true);
+        const validUntil = (dec.context.conditions as { valid_until: string }).valid_until;
+        expect(Date.parse(validUntil), `${actionClass}: ${validUntil}`).toBeLessThanOrEqual(expiresAt.getTime());
+        const denied = await evaluate(
+          observedRequest({ actionClass, observation: observed({ version: 3, assertion: reached }) }),
+          options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+        );
+        expect(denied.decision, actionClass).toBe(false);
+        expect(denied.context.denial_reason, actionClass).toBe("stale_state");
       }
     });
   });

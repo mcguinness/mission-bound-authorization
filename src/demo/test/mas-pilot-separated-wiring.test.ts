@@ -62,15 +62,24 @@ async function decideWith(result: MissionStatusResolution, req: EvaluationReques
 }
 
 describe("the separated PDP's own read for every decision (#818 slice 4b)", () => {
-  const ok: MissionStatusResolution = { ok: true, view: VIEW, observedAtMs: IAT_MS, freshUntilMs: IAT_MS + 60_000, source: "cached" };
+  // The Mission expires 45 seconds in, before the signed fresh_until: the
+  // read's reliance bound is the earlier of the two.
+  const ok: MissionStatusResolution = {
+    ok: true,
+    view: VIEW,
+    observedAtMs: IAT_MS,
+    freshUntilMs: IAT_MS + 60_000,
+    relianceBoundMs: IAT_MS + 45_000,
+    source: "cached",
+  };
 
-  it("reads within the decision's class window, and decides on the signed iat and fresh_until in place of what the PEP forwarded", async () => {
+  it("reads within the decision's class window, and decides on the signed iat and the read's reliance bound in place of what the PEP forwarded (@spec status#mission-status-caching, #1535)", async () => {
     const { calls, seen } = await decideWith(ok, request("consequential_read"));
     expect(calls).toEqual([{ ref: { id: VIEW.id, issuer: ISSUER }, opts: { fresh: false, maxAgeSeconds: 300 } }]);
     expect(seen.view).toBe(VIEW);
     expect(seen.stateSourcePlacement).toBe("pdp");
     expect(seen.stateObservedAt).toBe(new Date(IAT_MS).toISOString());
-    expect(seen.stateFreshUntil).toBe(new Date(IAT_MS + 60_000).toISOString());
+    expect(seen.stateFreshUntil).toBe(new Date(IAT_MS + 45_000).toISOString());
   });
 
   it("reads the MAS now for a commit-phase decision, within its own class window", async () => {
@@ -91,7 +100,11 @@ describe("the separated PDP's own read for every decision (#818 slice 4b)", () =
 describe("the separated PEP's one read per enforcement (#818 slice 4b)", () => {
   it("maps the MAS's not-found to unknown_mission and every other failure to state_unavailable", async () => {
     const ref = { id: VIEW.id, issuer: ISSUER };
-    expect(await statusViewSource(stub({ ok: true, view: VIEW, observedAtMs: IAT_MS, freshUntilMs: IAT_MS + 1, source: "fetched" }).resolver as never).prepare(ref)).toEqual({ ok: true });
+    expect(
+      await statusViewSource(
+        stub({ ok: true, view: VIEW, observedAtMs: IAT_MS, freshUntilMs: IAT_MS + 1, relianceBoundMs: IAT_MS + 1, source: "fetched" }).resolver as never,
+      ).prepare(ref),
+    ).toEqual({ ok: true });
     expect(await statusViewSource(stub({ ok: false, reason: "not_found", detail: "status 404" }).resolver as never).prepare(ref)).toEqual({
       ok: false,
       refusal: "unknown_mission",

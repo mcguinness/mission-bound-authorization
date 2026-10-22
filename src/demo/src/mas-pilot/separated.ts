@@ -16,8 +16,9 @@
  * - Each decision reads within its action class's staleness window
  *   (`maxAgeSeconds`); a commit-phase decision reads the source now
  *   (`fresh: true`). The observation point is the response's signed `iat`,
- *   never the time of the fetch or of a cache hit, and the signed
- *   `fresh_until` caps the permit (`stateFreshUntil`).
+ *   never the time of the fetch or of a cache hit, and the read's reliance
+ *   bound (its signed `fresh_until`, `exp`, the advertised ceiling and, for
+ *   `active`, the Mission's `expires_at`) caps the permit (`stateFreshUntil`).
  * - A read that establishes nothing leaves the PDP no state: it denies
  *   `stale_state` under `pdp` placement (authzen#pdp-request rule 1).
  * - The PEP awaits one read at the start of each enforcement
@@ -63,7 +64,7 @@ function loadedFrom(read: ResolvedMission): LoadedView {
       mode: "cached",
       freshness_at: iso(read.observedAtMs),
       mission_status_issued_at: iso(read.observedAtMs),
-      mission_status_expires_at: iso(read.freshUntilMs),
+      mission_status_expires_at: iso(read.relianceBoundMs),
     },
   };
 }
@@ -91,7 +92,7 @@ export function ownReadDecide(resolver: Pick<MissionStatusResolver, "resolve">):
       ...rest,
       stateSourcePlacement: "pdp",
       ...(read.ok
-        ? { view: read.view as MissionView, stateObservedAt: iso(read.observedAtMs), stateFreshUntil: iso(read.freshUntilMs) }
+        ? { view: read.view as MissionView, stateObservedAt: iso(read.observedAtMs), stateFreshUntil: iso(read.relianceBoundMs) }
         : {}),
     });
   };
