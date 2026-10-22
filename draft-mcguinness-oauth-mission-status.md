@@ -1578,9 +1578,9 @@ separate posture list:
 - the Mission Status operation ({{mission-status}}) for per-request
   state checks by high-assurance resource servers, discovered from
   `mission_status_endpoint`; and
-- event-driven propagation of state changes over a Shared Signals
-  stream ({{I-D.draft-mcguinness-oauth-mission-signals}}), discovered
-  from `mission_event_stream_endpoint`.
+- any further mechanism a companion profile defines, such as
+  event-driven propagation of state changes, discovered from that
+  profile's own metadata.
 
 A deployment advertises `mission_max_stale_seconds` ({{as-metadata}}),
 the maximum interval it tolerates for a Mission state change to take
@@ -1592,24 +1592,19 @@ and MUST NOT assume a tighter bound.
 Where the member is present, a status response's `mission.fresh_until`
 MUST NOT exceed the response's issuance time plus the advertised
 bound: the advertisement is the ceiling on every reliance window
-built from these surfaces, including a runtime permit's validity
-window, which is capped by the state view's freshness. As sizing
-guidance, the runtime enforcement profile's recommended defaults
-target an effective bound under 300 seconds for the high-consequence
-classes; the 60-second value in this document's examples is a tight
-deployment's choice, not a floor.
+built from these surfaces. The 60-second value in this document's
+examples is a tight deployment's choice, not a floor.
 
 Where Mission revocation must take effect but only the baseline
 derivation-time check is in use, Mission-bound access tokens SHOULD use
 TTLs no longer than the declared `mission_max_stale_seconds`.
 Deployments where revocation propagates out of band (token
-introspection, per-request status checks, or the event stream) MAY use
-longer TTLs.
+introspection, per-request status checks, or a companion profile's
+push mechanism) MAY use longer TTLs.
 
 Sizing to the bound is itself a propagation mechanism: expiry
-performs the state check, and the consumer integrates nothing (the
-runtime profile names this token-lifetime freshness for the classes
-below its high-consequence floor). Introspection and per-request
+performs the state check, and the consumer integrates nothing.
+Introspection and per-request
 status checks tighten specific paths; they are upgrades, not
 prerequisites.
 
@@ -1623,19 +1618,14 @@ The security ceiling governs the choice: an operational recovery objective
 never authorizes extending a published freshness horizon during an incident.
 An existing observation's remaining validity is not reset when an outage is
 detected. An issuer outage and a state-source outage are distinct where the
-topology provides an independently available authoritative source. Runtime's
-Operational Considerations gives the per-action-class dependency analysis
-({{I-D.draft-mcguinness-mission-runtime}}).
+topology provides an independently available authoritative source.
 
 The deployment describes its distribution posture per surface: Status
-responses are reused only to their authenticated `fresh_until` and other
-applicable bounds; Status Lists are fetched within their freshness window
-and checked locally; Signals accelerate learning of transitions over a
-correctly bounded state source, not replace that source after confidence
-is lost. The Status List freshness rules
-({{I-D.draft-mcguinness-oauth-mission-status-list}}) and Signals' Missed
-Events Are Not Fail-Open rule
-({{I-D.draft-mcguinness-oauth-mission-signals}}) remain authoritative.
+responses are reused only within their reliance bound
+({{mission-status-caching}}), and a companion mechanism follows its own
+freshness rules. A push mechanism accelerates learning of transitions
+over a correctly bounded state source; it does not replace that source
+after confidence is lost.
 
 Operators watch observation age and remaining validity, failed refreshes,
 stream gaps, fallback availability, clock health, and catch-up after recovery.
