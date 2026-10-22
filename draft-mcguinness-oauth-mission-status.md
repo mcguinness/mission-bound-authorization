@@ -358,9 +358,9 @@ The request is an HTTPS POST with an
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `audience`:
-: CONDITIONAL. A string. The audience identifier of the
-  requesting consumer, or of another audience the Mission Issuer
-  authorizes that consumer to request (below). An authorized consumer
+: CONDITIONAL. A string. The audience for which the consumer requests
+  authority, one the Mission Issuer's configuration authorizes that
+  consumer to request (below). An authorized consumer
   that is not a resource
   server (for example an auditor or a cross-domain Resource AS) that
   needs only Mission state,
@@ -377,16 +377,25 @@ The request is an HTTPS POST with an
   echoing it in the signed response anti-replay-binds that response to
   this specific request.
 
-A request's `audience` names the caller's own audience unless the
-Mission Issuer's configuration authorizes the caller for another. A
-consuming Authorization Server under the Mission Issuance Grant
-profile ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), for
-example, requests the projection for each resource it issues tokens
-for. The Mission Issuer MUST honor a request naming an audience other
-than the caller's own only where its configuration authorizes the
-authenticated caller for that audience, and MUST otherwise refuse it
-with the not-found response of {{mission-status-errors}}. The
-response's `aud` is the requested `audience`
+The request also carries the client authentication parameters of the
+mechanism it uses ({{mission-status-authentication}}): `client_id`,
+REQUIRED with mTLS client authentication ({{Section 2 of RFC8705}}),
+and `client_assertion_type` and `client_assertion`, REQUIRED with
+private-key-JWT client authentication {{RFC7523}}. A sender-constrained
+access token travels in the `Authorization` header instead.
+
+The Mission Issuer's configuration states which audiences each
+authenticated caller may request: a resource server is typically
+configured for its own audience identifiers, and a consuming
+Authorization Server under the Mission Issuance Grant profile
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) for each
+resource it issues tokens for. The Mission Issuer MUST honor a
+request's `audience` only where that configuration authorizes the
+authenticated caller for it, and MUST otherwise refuse the request
+with the not-found response of {{mission-status-errors}}. Entitlement
+to an audience comes only from that configuration, never from string
+equality between `audience` and the caller's `client_id` or
+certificate subject. The response's `aud` is the requested `audience`
 ({{mission-status-response}}).
 
 ## Authentication {#mission-status-authentication}
@@ -1072,6 +1081,10 @@ form-urlencoded body:
 
 `nonce`:
 : REQUIRED. A string. A client-generated nonce.
+
+The request also carries the client authentication parameters of the
+mechanism it uses, as at the Mission Status endpoint
+({{mission-status-request}}).
 
 A companion-registered extension operation, such as `discharge`,
 carries additional REQUIRED and OPTIONAL members of its own, defined
