@@ -11447,9 +11447,15 @@
      "name": "the discharge operation on the lifecycle endpoint > mission_lifecycle does not imply mission_discharge",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > checks the discharge grant before deduplication: once the grant is withdrawn, the same-nonce retransmit gets the not-found response, not the replayed discharge, and it replays once the grant returns (@spec status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "The lifecycle endpoint's service-token auth now resolves a { principal_id, scopes } principal (provider.ts DEFAULT_SERVICE_TOKEN_PRINCIPALS): `mission_discharge` gates `discharge` alone and is checked before any selector work, so a caller holding only `mission_lifecycle` is refused with the endpoint's indistinguishable not_found. The test registers a lifecycle-only token, watches it perform `suspend`, and watches the same token be refused `discharge`. This is the minimal stand-in for the profile's mechanism set (mTLS / sender-constrained token / private-key JWT): what is proven is the DISTINCTNESS of the two grants, not the authentication mechanism."
+   "notes": "The lifecycle endpoint's service-token auth now resolves a { principal_id, scopes } principal (provider.ts DEFAULT_SERVICE_TOKEN_PRINCIPALS): `mission_discharge` gates `discharge` alone and is checked before any selector work, so a caller holding only `mission_lifecycle` is refused with the endpoint's indistinguishable not_found. The test registers a lifecycle-only token, watches it perform `suspend`, and watches the same token be refused `discharge`. This is the minimal stand-in for the profile's mechanism set (mTLS / sender-constrained token / private-key JWT): what is proven is the DISTINCTNESS of the two grants, not the authentication mechanism. #1535: the existing test's lifecycle-only caller is also outside the authority mapping, so it does not distinguish the grant check; the grant test does (a caller the mapping admits, holding mission_lifecycle with mission_discharge withdrawn, is refused). Proved by dropping the grant check (that test replays the discharge)."
   },
   {
    "id": "status.discharge.lifecycle-grant-not-implied",
@@ -11478,9 +11484,15 @@
      "name": "the discharge operation on the lifecycle endpoint > mission_lifecycle does not imply mission_discharge",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > checks the discharge grant before deduplication: once the grant is withdrawn, the same-nonce retransmit gets the not-found response, not the replayed discharge, and it replays once the grant returns (@spec status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Same observable from the other direction. This deployment authenticates operational callers as service-token principals, so the administrator caller IS the principal holding `mission_lifecycle` (it can revoke, suspend, resume, complete): there is no separate Subject/Approver caller identity at this endpoint to test independently. The test's lifecycle-only token performs a state transition and is then refused `discharge`, which is exactly the non-implication the clause requires; a deployment that models Subject/Approver callers must re-prove it for those identities."
+   "notes": "Same observable from the other direction. This deployment authenticates operational callers as service-token principals, so the administrator caller IS the principal holding `mission_lifecycle` (it can revoke, suspend, resume, complete): there is no separate Subject/Approver caller identity at this endpoint to test independently. The test's lifecycle-only token performs a state transition and is then refused `discharge`, which is exactly the non-implication the clause requires; a deployment that models Subject/Approver callers must re-prove it for those identities. #1535: the existing test's lifecycle-only caller is also outside the authority mapping, so it does not distinguish the grant check; the grant test does (a caller the mapping admits, holding mission_lifecycle with mission_discharge withdrawn, is refused). Proved by dropping the grant check (that test replays the discharge)."
   },
   {
    "id": "status.discharge.anti-oracle-collapse",
@@ -12017,20 +12029,32 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "for discharge, the request syntax precedes the authorization its companion defines, and that authorization precedes deduplication: a caller not authorized for the discharge gets the not-found response rather than a replayed discharge response",
-    "local": "The DISTINCT mission_discharge grant is checked before deduplication. The discharge's own member validation and its target authorization (selector existence, membership, authority mapping) run after deduplication, in handleDischarge, so a caller without the grant is answered not_found before a malformed discharge member is refused."
+    "normative": "for discharge, the request syntax, its own members included, precedes the authorization its companion defines, and that whole authorization (the distinct grant, then selector existence, condition membership and the discharge authority mapping) precedes deduplication: a malformed member is refused invalid_request to a caller without the grant or outside the target's mapping, alike for an unknown Mission; a caller without the grant, or outside the mapping, gets the not-found response, never a replayed discharge response or a divergent-retry invalid_request; and that refusal retains nothing",
+    "local": "parseDischargeMembers validates the members; kernel.authorizeDischarge decides the not-found collapse read-only (no expiry or schedule commit, no latch, no event record, no purge) against the target the shared dischargeRoute names (a recorded occurrence's target, a forwarded discharge's replacement, otherwise the named target), and kernel.discharge repeats it in its transaction. A refused discharge on an expired Mission therefore no longer commits the expiry it observes; the next read does."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > validates the discharge's own members before its authorization: a malformed member is refused invalid_request to a caller without the discharge grant and to one outside the target's mapping, alike for an unknown Mission (@spec status#lifecycle-processing, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/discharge.test.ts",
      "name": "the discharge operation on the lifecycle endpoint > checks the discharge grant before deduplication: once the grant is withdrawn, the same-nonce retransmit gets the not-found response, not the replayed discharge, and it replays once the grant returns (@spec status#lifecycle-processing, #1535)",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > authorizes the discharge target before deduplication: a mission_discharge holder outside the target's authority mapping is answered not_found on its first request and again on the same nonce with a different event_id, never invalid_request, and no retained response is written or changed (@spec status#lifecycle-processing, discharge#discharge-anti-oracle, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 finding 3 (D649). Partial: only the grant check moved ahead of deduplication; moving the target authorization and the member validation needs handleDischarge split into a validate-and-authorize phase and a commit phase. Proved by dropping the grant check ahead of deduplication (the retransmit replays the discharge and the test fails); the existing non-implication test does not distinguish it, since its lifecycle-only caller is also outside the authority mapping."
+   "notes": "#1535 finding 3 (D649); #1544 review P2 moved the target authorization ahead of deduplication. Proved by dropping the pre-deduplication target authorization (the mapping test gets 400 invalid_request on the changed event_id), by retaining that refusal (the mapping test fails on the retained responses), by checking the grant before the discharge members (the syntax test gets 404), and by dropping the grant check (the grant test replays the discharge). No fixture pins a different mapping on a carryover replacement than on its old child, so the route's forwarded and recorded targets are not distinguished by a test; one route decides them for both checks."
   },
   {
    "id": "status.lifecycle.authorization-precedes-replay",
