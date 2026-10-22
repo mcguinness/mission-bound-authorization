@@ -55,8 +55,8 @@
     "content_sha256": "2734f08663aaa41f3d3f58b885c7036833c88a7286b889647bfa426dd2835872"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "d6c36ca320263498afb5cb9bf41a5f90030ef38a",
-    "content_sha256": "1ec9516c1753531da6e30711e64b62ff931c86e3132aa924312f86e8702879e5"
+    "revision": "10739f15a0ede0b21196d8259002ee92e6340cce",
+    "content_sha256": "f32247bc95248b1ab713dc9ffb6f6515f5ebdfded562533753074d9f45bdb8a7"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
@@ -1366,18 +1366,17 @@
    "id": "status.caching.freshness-cap",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-caching",
-   "text": "When the AS advertises `mission_max_stale_seconds` ({{as-metadata}}), it MUST NOT set `mission.fresh_until` later than the response `iat` plus that value.",
+   "text": "The AS MUST NOT set `mission.fresh_until` later than the response's `exp`, nor, when it advertises `mission_max_stale_seconds` ({{as-metadata}}), later than the response's `iat` plus that value.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "capability",
-    "capability": "status.revocation-propagation"
+    "kind": "unconditional"
    },
    "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "When the AS advertises `mission_max_stale_seconds`, it MUST NOT set `mission.fresh_until` later than the response `iat` plus that value.",
+    "normative": "The AS never sets `mission.fresh_until` later than the response's `exp`, nor, when it advertises `mission_max_stale_seconds`, later than the response `iat` plus that value.",
     "local": "The cap is applied inside `MissionKernel.signedStatus`, the one place that stamps `fresh_until` and `exp`, against the same `MISSION_MAX_STALE_SECONDS` the AS metadata document advertises. It holds for a direct call with no requested lifetime, honors a shorter requested lifetime, and caps a longer one; the HTTP Status and discharge surfaces pass no lifetime of their own."
    },
    "level": "unit",
@@ -1406,9 +1405,520 @@
      "name": "M1 tracer slice > the signed Status endpoint returns a verifiable mission-status-response+jwt",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > never publishes fresh_until later than the response's own exp, at any requested lifetime (#1535)",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it."
+   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits."
+  },
+  {
+   "id": "status.response.consumer-issuer-binding",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "`iss` equals the expected AS issuer URL, and `mission.issuer` equals `iss`",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer refuses a Mission Status Response whose `iss` is not the expected AS issuer, or whose `mission.issuer` differs from its `iss`, and relies on nothing it carries",
+    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses another issuer's response",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses a response whose mission.issuer is not its iss (consumer check 4, #1535)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > an assertion the PDP cannot verify, or one that does not match the observation, denies stale_state",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1535 (D649, finding 17's clarification taken with finding 10). Proven by disabling each half: dropping jose's issuer comparison fails \"refuses another issuer's response\" and the evaluate case \"another issuer\"; verifying `mission.id` alone fails the mission.issuer resolver test and the evaluate case \"a mission.issuer other than its iss\". Role verifier: the duty is every consumer's, whatever kind."
+  },
+  {
+   "id": "status.response.consumer-fresh-until-within-exp",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "`mission.fresh_until` is not later than `exp`.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer refuses a Mission Status Response whose `mission.fresh_until` is later than its `exp`, though both are still ahead",
+    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses a response whose signed fresh_until is later than its exp (consumer check 10, #1535)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > an assertion the PDP cannot verify, or one that does not match the observation, denies stale_state",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1535 (D649, finding 2), consumer check 10. Proven by removing the comparison from the shared verifier: the resolver test (fresh_until = exp + 20 s) and the evaluate case \"a signed fresh_until later than its exp\" (exp 40 s, fresh_until 60 s) each fail."
+  },
+  {
+   "id": "status.caching.cache-key",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-caching",
+   "text": "Consumers SHOULD cache a response keyed on (`mission_id`, audience), or on (`mission_id`, `client_id`) for a state-only response, until its reliance bound (below).",
+   "role": "verifier",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer that caches reuses a verified response for the same Mission and audience, and only until its reliance bound",
+    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > reuses an answer only before its signed fresh_until",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > never relies on a reported active state at or after the Mission's expires_at, though fresh_until and exp are later, with no skew allowance (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 (D649, finding 2) re-keyed the cache lifetime to the reliance bound. Partial: the until-its-reliance-bound half is tested; the (mission_id, audience) key holds by construction (one resolver per issuer and enforcement scope, its cache keyed on the Mission) rather than by a test, and the resolver requests no state-only response, so the (mission_id, client_id) key does not arise."
+  },
+  {
+   "id": "status.caching.reliance-bound",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-caching",
+   "text": "A response's reliance bound is the earliest of `mission.fresh_until`, the response's `exp`, and, when the AS advertises `mission_max_stale_seconds`, the response's `iat` plus that value. Consumers MUST NOT use a response after its reliance bound, subject only to the skew tolerance below",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer relies on a verified response, read now or cached, only until the earliest of its `mission.fresh_until`, its `exp` and its `iat` plus the advertised `mission_max_stale_seconds`: at that bound a cached answer is no longer served, a response read already past it is refused, and a permit relying on it ends no later",
+    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > reuses an answer only before its signed fresh_until",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > reuses an answer no longer than iat plus the issuer's mission_max_stale_seconds",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: an observation read now is held to the same reliance bounds as a cached one (@spec status#mission-status-caching) > refuses stale a response read now whose signed fresh_until has passed, and caches nothing",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: an observation read now is held to the same reliance bounds as a cached one (@spec status#mission-status-caching) > refuses stale a 20-second-old observation read now when the issuer's mission_max_stale_seconds is 10, with no caller window",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: an observation read now is held to the same reliance bounds as a cached one (@spec status#mission-status-caching) > accepts a response up to 30 seconds past its exp at receipt, and relies on it for nothing: no skew allowance extends exp (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-separated-wiring.test.ts",
+     "name": "the separated PDP's own read for every decision (#818 slice 4b) > reads within the decision's class window, and decides on the signed iat and the read's reliance bound in place of what the PEP forwarded (@spec status#mission-status-caching, #1535)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1535 (D649, finding 2). The `exp` term is unreachable once consumer check 10 holds (fresh_until is never later than exp), so it is witnessed only through status.response.consumer-fresh-until-within-exp; the resolver still checks it. Proven by moving the bounds later: a 30 s allowance on the fresh_until and exp comparisons fails six resolver tests, one on the ceiling fails the two ceiling tests, and the separated pilot feeding fresh_until in place of the bound into the permit cap fails the wiring test."
+  },
+  {
+   "id": "status.caching.active-before-expires-at",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-caching",
+   "text": "MUST NOT rely on a reported `active` state at or after `mission.expires_at`",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer stops relying on a response reporting `active` at the Mission's `expires_at`, though its `fresh_until` and `exp` run later: a cached answer is no longer served, one read at that instant is refused, and a permit relying on it ends no later; a non-`active` response is not bounded by `expires_at`",
+    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > never relies on a reported active state at or after the Mission's expires_at, though fresh_until and exp are later, with no skew allowance (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > relies on a suspended response past the Mission's expires_at only until its own reliance bound (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion reporting active is relied on only before the Mission's expires_at: it caps the permit there, and once reached denies stale_state (#1535)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-separated-wiring.test.ts",
+     "name": "the separated PDP's own read for every decision (#818 slice 4b) > reads within the decision's class window, and decides on the signed iat and the read's reliance bound in place of what the PEP forwarded (@spec status#mission-status-caching, #1535)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1535 (D649, finding 2). Proven by: removing the resolver's expires_at check (the resolver expires_at test fails); the verifier never bounding by expires_at (that test and the evaluate expires_at test fail); bounding every state by it (the suspended test fails); the verifier returning fresh_until in place of the bound (the evaluate test fails). The guard in evaluate.ts that denies an already-reached bound is backed by the permit-deadline ceiling and not separately witnessed. A malformed expires_at does not verify (a local choice, tested, no row)."
+  },
+  {
+   "id": "status.caching.non-active-reliance-bound",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-caching",
+   "text": "In particular, a consumer MUST NOT extend reliance on a cached `suspended` (or any non-`active`) response beyond its reliance bound.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a cached `suspended` response is relied on until its reliance bound and not after: at the bound the consumer reads the source again",
+    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > relies on a suspended response past the Mission's expires_at only until its own reliance bound (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 (D649, finding 2). Proven by exempting non-active states from the bound (the suspended test fails at its bound)."
+  },
+  {
+   "id": "status.caching.skew-cannot-extend-hard-bounds",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-caching",
+   "text": "The tolerance MUST NOT extend reliance past the response's `exp`, `mission.expires_at`, or the response's `iat` plus the advertised `mission_max_stale_seconds`.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "no clock-skew allowance carries reliance past a response's `exp`, the Mission's `expires_at` for `active`, or `iat` plus the advertised `mission_max_stale_seconds`: a response accepted at receipt up to 30 seconds past its `exp` is relied on for nothing",
+    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: an observation read now is held to the same reliance bounds as a cached one (@spec status#mission-status-caching) > accepts a response up to 30 seconds past its exp at receipt, and relies on it for nothing: no skew allowance extends exp (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > never relies on a reported active state at or after the Mission's expires_at, though fresh_until and exp are later, with no skew allowance (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > reuses an answer no longer than iat plus the issuer's mission_max_stale_seconds",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 (D649, finding 2). The resolver takes no allowance on any reliance bound. Proven by adding a 30 s allowance to the fresh_until and exp comparisons together (the exp test fails), to the expires_at comparison (the expires_at test fails) and to the ceiling (the ceiling test fails). Control: an allowance on fresh_until alone, the MAY, leaves the exp test passing, so the row does not forbid it."
+  },
+  {
+   "id": "status.security.replay-reliance-bound",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "security-considerations",
+   "text": "a consumer MUST NOT use a cached response after that bound.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a cached Mission Status Response is not used after its reliance bound",
+    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > reuses an answer only before its signed fresh_until",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > reuses an answer no longer than iat plus the issuer's mission_max_stale_seconds",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > never relies on a reported active state at or after the Mission's expires_at, though fresh_until and exp are later, with no skew allowance (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 (D649, finding 2). The Response Replay restatement of status.caching.reliance-bound, witnessed by the same tests."
+  },
+  {
+   "id": "status.failures.decision-does-not-proceed",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-failures",
+   "text": "Without one, the decision MUST NOT proceed, whatever the cause: an error response such as `unavailable`, `rate_limited` or `not_found`, a failed check, a network failure, or a lapsed reliance bound.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP whose decision requires Mission Status and holds no verified response within its reliance bound reporting `active` denies, whatever the cause (an error answer, 429 included, a refused check, a transport failure, a lapsed bound), and never decides on another party's observation instead",
+    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts). The separated pilot's ownReadDecide passes no state option when the read fails, and evaluate under pdp placement denies stale_state."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: an answer that does not arrive establishes nothing > classifies the issuer's refusals and errors, and caches none of them",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a failed read never refreshes or extends a held answer (@spec status#mission-status-failures, #1535) > leaves a held answer usable until its original reliance bound through a rate-limited, unavailable or unreachable source, never past it, and never reads the failure as termination",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-separated-wiring.test.ts",
+     "name": "the separated PDP's own read for every decision (#818 slice 4b) > with no read, decides with no state option at all, never the PEP's forwarded observation",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PDP placement the observation is absent and the PDP establishes state from its own read > with no read of its own, denies stale_state below the high-consequence floor too: a consequential write and a read",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PDP placement the observation is absent and the PDP establishes state from its own read > with no read of its own, denies stale_state for audit_only too; with a read, permits it",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1535 (D649, finding 10). Proven by: evaluate not refusing a pdp-placed decision with no read of its own (the two evaluate tests fail); the separated pilot keeping the PEP's forwarded observation when its own read fails (the wiring test fails); the resolver answering a 429, a 503 or a dropped connection from a held answer past its bound (the transient test fails, per cause). The end-to-end separated pilot (mas-pilot-separated.test.ts, \"with the MAS down\") needs OpenFGA and is not cited. Holder twins: status.failures.decision-does-not-proceed-rs and -as."
+  },
+  {
+   "id": "status.failures.decision-does-not-proceed-rs",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-failures",
+   "text": "Without one, the decision MUST NOT proceed, whatever the cause: an error response such as `unavailable`, `rate_limited` or `not_found`, a failed check, a network failure, or a lapsed reliance bound.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server whose decision requires Mission Status and holds no verified response within its reliance bound reporting `active` refuses the request it is deciding, whatever the cause"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 (D649, finding 10). Resource-server twin of status.failures.decision-does-not-proceed. No resource server in the reference consumes Mission Status: the reference's only Status consumer is the PDP."
+  },
+  {
+   "id": "status.failures.decision-does-not-proceed-as",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-failures",
+   "text": "Without one, the decision MUST NOT proceed, whatever the cause: an error response such as `unavailable`, `rate_limited` or `not_found`, a failed check, a network failure, or a lapsed reliance bound.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consuming Authorization Server whose issuance requires Mission Status and holds no verified response within its reliance bound reporting `active` issues no token, whatever the cause"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 (D649, finding 10). Consuming-AS twin of status.failures.decision-does-not-proceed. No Authorization Server in the reference issues tokens on another issuer's Mission Status: the reference's only Status consumer is the PDP."
+  },
+  {
+   "id": "status.failures.not-termination-evidence",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-failures",
+   "text": "That outcome establishes only that the decision cannot proceed; it is not evidence that the Mission terminated.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a failed Status check leaves the consumer without state, not with a terminated Mission: a held `active` answer stays `active`, and a decision left without state is refused as stale, never as an inactive Mission",
+    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a failed read never refreshes or extends a held answer (@spec status#mission-status-failures, #1535) > leaves a held answer usable until its original reliance bound through a rate-limited, unavailable or unreachable source, never past it, and never reads the failure as termination",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PDP placement the observation is absent and the PDP establishes state from its own read > with no read of its own, a stale one or a malformed one, the PDP denies stale_state",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PDP placement the observation is absent and the PDP establishes state from its own read > with no read of its own, denies stale_state below the high-consequence floor too: a consequential write and a read",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PDP placement the observation is absent and the PDP establishes state from its own read > with no read of its own, denies stale_state for audit_only too; with a read, permits it",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1535 (D649, finding 10). Proven by: the resolver writing a terminated state over the held answer on a failed read (the transient test fails); evaluate denying a pdp-placed decision with no read mission_inactive in place of stale_state (the three evaluate tests fail). The residual-effects explanation stays with #1369, informative."
+  },
+  {
+   "id": "status.failures.transient-keeps-held-response",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-failures",
+   "text": "A transient failure, such as `unavailable`, `rate_limited` or a network failure, leaves a response the consumer already holds usable within that response's original reliance bound; a failed request never refreshes or extends that bound.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a 429, a 503 or a dropped connection, a response the consumer already holds is still relied on, unchanged, until its original reliance bound and not after; the failure is never cached and puts nothing in the held response's place",
+    "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a failed read never refreshes or extends a held answer (@spec status#mission-status-failures, #1535) > leaves a held answer usable until its original reliance bound through a rate-limited, unavailable or unreachable source, never past it, and never reads the failure as termination",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: an answer that does not arrive establishes nothing > classifies the issuer's refusals and errors, and caches none of them",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 (D649, finding 10). Proven by a failed read that: falls back to the held answer (fails, and so does a fallback for 429 alone and for a dropped connection alone); re-stamps the held answer's bounds (fails); evicts it (fails). A read that must reach the source now (`fresh: true`, a commit-phase decision) takes no fallback to a held answer at all: stricter than the profile, and conforming."
   },
   {
    "id": "status.read.mission-status-scope",
