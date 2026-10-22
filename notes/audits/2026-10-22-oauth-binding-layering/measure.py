@@ -21,7 +21,7 @@ KW = re.compile(r"\b(MUST NOT|SHALL NOT|SHOULD NOT|MUST|SHALL|SHOULD|"
 FAM = re.compile(r"\{\{I-D\.draft-mcguinness-((?:oauth-)?mission[a-z0-9-]*)\}\}")
 HEAD = re.compile(r"^(#+) (.*?) \{#([a-z0-9-]+)\}\s*$")
 
-# Job buckets (PLAN.md Section 2). Every middle-matter anchor is in one.
+# Job buckets (PLAN.md Section 5.1). Every middle-matter anchor is in one.
 JOBS = {
     "1 issuance protocol (incl. approval)": """introduction protocol-flow
       conventions-and-terminology terminology principal-model mission-intent
@@ -61,9 +61,9 @@ JOBS = {
       transformation-capabilities policy-language-types remediation-grains
       grant-binding-related extensibility extension-points
       namespace-taxonomy record-principal-members commitment-mechanisms""",
-    "5 tutorial and examples (middle matter)": """overview first-mission
+    "4 tutorial and examples (middle matter)": """overview first-mission
       examples worked-example""",
-    "6 security, privacy, i18n, applicability": """security-considerations
+    "5 security, privacy, i18n, applicability": """security-considerations
       sec-commitment consent-binding downgrade-by-omission sec-agent
       prompt-injection information-propagation sec-enforcement
       runtime-boundary denial-disclosure sec-credentials token-theft
@@ -177,39 +177,31 @@ def main():
     print("\n== Ledger rows anchored in sections this plan moves or touches")
     m = json.load(open("conformance-manifest.json"))
     rows = [r for r in m["requirements"] if r["spec"] == CORE]
-    # P1 variant B: the exchange mechanics move; Delegation Constraints
-    # and Self-Exchange stay. One self-exchange-anchored row is about
-    # designations and moves with them.
-    mech = set("""delegation designation delegated-exchange
-        delegated-instance-context worked-example-delegated-token""".split())
-    # Rows outside the moving anchors that are about designations.
-    desig_rows = {"core.self-exchange.designation-not-self-exchange",
-                  "core.introspection.designation-inactive"}
+    # Revision 3 groups. Revision 2's designation-move groups (P1-B) are
+    # in this file's git history; that move was withdrawn after review
+    # round 2.
 
     def gates(r):
         ap = r.get("applicability", {})
         out = [ap.get("capability")] + list(ap.get("all_of", [])) + list(ap.get("any_of", []))
         return {g if isinstance(g, str) else g.get("capability") for g in out if g}
 
-    def moves(r):
-        return (r["spec"] == CORE and r["anchor"] in mech) or r["id"] in desig_rows
-
     groups = {
-        "P1-B moves": moves,
-        "P1-B stays, core.delegation gate changes owner": lambda r: not moves(r)
-        and "core.delegation" in gates(r),
-        "P1-B stays: constraints": lambda r: r["anchor"] == "delegation-constraints",
-        "P1-B stays: self-exchange": lambda r: r["anchor"] == "self-exchange"
-        and r["id"] not in desig_rows,
+        # P1: Instance Context in Delegated Tokens (moves only under option B1).
+        "P1 Instance Context": lambda r: r["anchor"] == "delegated-instance-context",
+        # Delegated Exchange rows: two MUSTs there (lines 3609, 3617) have none.
+        "Delegated Exchange rows": lambda r: r["anchor"] == "delegated-exchange",
+        # Every spec: rows gated on core.delegation (unchanged in revision 3).
+        "every spec, gated core.delegation": lambda r: "core.delegation" in gates(r),
+        # P2: standing consent (no row moves or changes).
         "P2 standing consent": lambda r: r["anchor"] in {
             "standing-consent-bases", "standing-consent-instances",
             "activation-policy-commitment", "standing-consent-recency"},
-        "P4 commitment mechanisms": lambda r: r["anchor"] == "commitment-mechanisms",
     }
     print(f"  core rows total: {len(rows)}")
-    every = m["requirements"]  # the gate-owner group spans every spec
+    every = m["requirements"]
     for g, pred in groups.items():
-        rs = [r for r in (every if "gate" in g else rows) if pred(r)]
+        rs = [r for r in (every if g.startswith("every") else rows) if pred(r)]
         cov = collections.Counter(r.get("coverage") for r in rs)
         print(f"  {g:24s} rows={len(rs):3d} {dict(cov)}")
         for r in rs:

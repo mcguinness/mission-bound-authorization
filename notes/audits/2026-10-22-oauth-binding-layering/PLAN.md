@@ -1,137 +1,182 @@
-# OAuth Binding Layering: Plan for Review (revision 2)
+# OAuth Binding Layering: Plan for Review (revision 3)
 
-Status: proposal for review, revision 2 (2026-10-22). It follows
-review round 1, which reviewed revision 1 at commit `330fb180` with
-the verdict "revise before approving execution". Section 1 records how
-each review point was handled. Nothing has been filed or edited in any
-draft, the ledger or `src/`. Every proposal becomes a GitHub issue
-only after the owner says go.
+Status: proposal for review, revision 3 (2026-10-22). Nothing has been
+filed or edited in any draft, the ledger or `src/`.
+
+Two review rounds came before it:
+- Round 1 reviewed revision 1: "revise before approving execution".
+- Round 2 was a fresh-eyes review of revision 2, recorded in
+  `REVIEW-ROUND-2.md`.
+
+Revision 3 is smaller than revision 2. The designation-protocol move is
+withdrawn, P1 is narrowed to Instance Context, P2 becomes a body-only
+edit, and P4 is withdrawn. Appendix C records how each review point was
+handled.
 
 ## 0. Instructions for the reviewing model
 
-You are reviewing a restructuring plan for one Internet-Draft in a
-family of about 50 drafts. Read Sections 1 to 4 for context and
-dispositions, then judge Sections 5 to 9, then answer Section 12.
-
 - **Base commit:** `origin/main` at `5344f4ed6`. The OAuth binding,
-  the substrate, Discharge, Consent Evidence and Resource Access are
-  byte-identical to `d7ab66ff9`, where the analysis began. The ledger
-  counts were re-measured on `5344f4ed6`.
+  the substrate, Resource Access, Discharge and Consent Evidence are
+  byte-identical to `d7ab66ff9`, where the analysis began.
 - **Line numbers** refer to `draft-mcguinness-oauth-mission.md` at the
   base commit unless another file is named.
 - **Reproduce the counts** from the repository root (standard library
   only):
-  - `python3 notes/audits/2026-10-22-oauth-binding-layering/measure.py`
-    (jobs, citations, normative I-Ds, ledger groups, identifiers);
+  - `python3 notes/audits/2026-10-22-oauth-binding-layering/measure.py`;
   - `python3 notes/audits/2026-10-22-oauth-binding-layering/companion_cites.py`
     (named-section citations only, so it cannot prove absence);
   - `python3 notes/audits/2026-10-22-oauth-binding-layering/commitment_imports.py`
-    (P4 vocabulary inventory, by paragraph).
+    (the record behind withdrawn P4).
 - **What we want from you:**
-  - a verdict per proposal: adopt, revise (say how), or reject (say
-    why);
-  - any factual error, with the line or quote that shows it;
-  - any missed blast radius: drafts, ledger rows, applicability,
-    implementation switches, `@spec` annotations;
-  - any conflict with Section 4;
-  - whether the Section 6 precedents are stated fairly.
-- **Do not** recommend merging existing drafts (Section 4, C2) or
-  moving a family companion into the binding's normative references
-  (C1). Those are settled.
+  - a verdict per decision in Section 8;
+  - any factual error, with evidence;
+  - any blast radius we missed;
+  - any conflict with Section 4.
+- **Do not** recommend merging existing drafts (C2) or moving a family
+  companion into the binding's normative references (C1).
 
-## 1. Review round 1: dispositions
+## 1. Answers to the owner's questions
 
-| # | Review point | Disposition | Where |
-|---|---|---|---|
-| R1 | P1's 14-row move omits `core.introspection.designation-inactive` (partial). | **Agree.** It is gated `all_of [core.delegation, core.introspection]`; revision 1's script read only single-capability gates. Now 15 rows move: 10 tested, 1 partial, 4 todo. | 7.1, Appendix A |
-| R2 | Applicability changes also reach `core.other-types.delegation-only-unchanged` and `resource-access.delegate-eligibility.as-authenticates-delegate`. | **Agree.** Both are gated on `core.delegation`. Appendix A lists every row by disposition, including applicability-only changes. | Appendix A |
-| R3 | `capabilities.ts` declares the provider switch `delegation`, not `core.delegation`; there is no Instance Context switch. | **Agree; revision 1 was wrong.** `capabilities.ts` line 26 declares `"delegation"`; `core.delegation` appears only in its comment (line 24). The ledger declares `core.delegation` and `core.instance-context` in `model.capabilities`. Revised: keep the switch and every id; move document ownership only. | 7.1, Appendix A |
-| R4 | Keep the Mission-unaware routing prohibition in the base. | **Agree** (revision 1 already kept it). Its row `core.rs-enforcement.delegated-routing-mission-aware` is unconditional and stays. | 7.1 |
-| R5 | Moving designation introspection is compatible with composite active, because the base says `active: true` only when its conditions hold. | **Agree.** This answers revision 1's question 3. | 7.1 |
-| R6 | Record whether the delegated-token sender-constraint sentence governs all delegated tokens or only the designation exchange. | **Agree; it is genuinely ambiguous.** The MUST (line 3617) sits in a list scoped to "The AS issues the delegated token subject to all of the following" (line 3581). But Token Claims (line 2515) restates it generically, and Cross-Domain (line 821) cites the list as "the issuance profile's delegate model". New ruling P1-R1. | 7.1 |
-| R7 | Give the appendix Actor Profile and Instance Context citations a disposition. | **Agree.** Line 6405: rewrite. Line 6450: stays, reference becomes informative. Line 7290 (Document History): stays as history. Neither reference disappears; both leave the `normative:` block. | 7.1 |
-| R8 | P2 changes the scope of obligations if the common rules move into registry criteria. `direct` conflicts with standing-consent criteria, and the `adjudication.kind` prohibition governs a separate discriminator. | **Agree.** Revised: the common semantic rules stay in the body; the Designated Expert checks conformance to them; the standing-consent checks are conditional on a basis class; no `adjudication.kind` registry. Registry fields, extension-name policy and existing values are specified. | 7.2 |
-| R9 | P4 missed Consent Evidence, and a normative substrate reference adds a dependency on a withheld draft. "As the bindings' substrate references already are" is wrong for the OAuth binding. | **Agree.** Consent Evidence line 701 imports the binding's commitment mechanisms normatively, including the raw-octet species. The vocabulary inventory finds more candidates. The AAuth, UMA, GNAP and MAS bindings cite the substrate normatively; the OAuth binding cites it informatively. P4 is deferred pending an inventory and its own ruling. | 7.4, Appendix B |
-| R10 | Rewrite Section 5 as precedents and trade-offs, not universal conventions. | **Agree.** RFC 6749 Section 8 places extension requirements in its body, and RFC 7521 is an abstract framework that RFC 7523 cites normatively. Both verified. | 6 |
-| R11 | Normative I-D dependencies delay RFC publication, not submission or adoption; dependent documents can publish together; the queue state is "Reference Not Received". | **Agree; verified** against RFC 7322 Section 4.8.6 and the RFC Editor queue's About page. | 5.3, 6 |
-| R12 | Verification must go beyond BCP 14 preservation: actor, trigger, scope, exceptions, refusal and applicability per obligation, including keyword-free requirements; preserve coverage only after re-checking the witness. | **Agree.** Section 9 makes the obligation map step 1. | 9 |
-| R13 | P3's one-sentence rule is too mechanical: keep base rules, exceptions and essential security residuals; the generic `aud` exception stays with the base audience rule. | **Agree.** P3 now uses semantic ownership. | 7.3 |
-| R14 | The job buckets measure placement, not dispensable complexity; `record-principal-members` mixes base vocabulary and extension hooks. | **Agree.** Stated in 5.1, and no claim relies on job 3's whole word count. | 5.1 |
-| R15 | P5: adopt, but justify it by the trigger and migration cost, not by OAuth convention. | **Agree.** | 7.5 |
-| R16 | Define success separately for dependency reduction and readability, and test readability with named reading tasks. | **Agree.** | 10 |
-| R17 | Sequence: maps first, then selected P3 moves, then decide and build P1; P2 separately; P4 deferred. | **Agree.** | 9 |
+**Q1. Does it make sense to split the binding out from a core spec
+that does issuance?**
 
-## 2. The question
+No document split.
+- The binding *is* the issuance protocol. The content that is purely
+  "binding" (mapping the protocol onto the substrate kernel) is two
+  informative appendices: the Mapping Assessment (1,157 words) and Role
+  Mapping (477 words). Informative appendices are the conventional
+  place for it.
+- The literal split, a binding-neutral Mission Model draft beneath the
+  binding (#207), stays parked. None of its triggers has fired, and the
+  relocation round is large. OAuth convention does not forbid it:
+  RFC 7521 is an abstract framework that RFC 7523 cites normatively.
+- The one job that could leave for a dependency reason is Instance
+  Context in Delegated Tokens (P1). It holds the binding's only
+  normative dependency that nothing else in the submission set needs.
 
-The owner asked about `draft-mcguinness-oauth-mission.md` (the "OAuth
-binding"):
+**Q2. Why does it reference so much of the family?**
 
-1. It is doing a lot of jobs. Does it make sense to split the
-   "binding" out from a core spec that does issuance?
-2. Why does it need to reference so much of the family?
-3. Why does it define parameters and implementation detail that it
-   does not use itself but later specifications do?
-4. What layering best fits OAuth best practices and conventions?
+140 citations of 30 family drafts, 111 of them in the middle matter.
+Four causes:
+1. **The binding is the only normative home left.** The substrate is
+   an informative reference of the binding, and no companion may be a
+   normative one (C1). So vocabulary several companions share at MUST
+   strength lands in the binding, which then names its users. #880 is
+   the explicit case.
+2. **Some prose explains how companions behave**, mainly Grant
+   Bindings and Related Mechanisms and Composition and the Effective
+   Ceiling. P3 moves that prose to its owners.
+3. **The examples use Resource Access's type.** The binding defines no
+   `authorization_details` type, and Resource Access is its partner in
+   the submission set.
+4. **Some citations exist by ruling.** The Cross-Domain capability bar
+   is stated in the binding with the companion informative (#169).
+
+P2 removes the four citations in the standing-consent list.
+
+**Q3. Why does it define things it does not use itself?**
+
+| Item | Why it is there | Disposition |
+|---|---|---|
+| `approval_basis` structure under `direct` | Every member is derivable for `direct`, but #880 kept one uniform record that every substrate and companion reads | Keep (C3) |
+| Standing-consent rules (lines 3881-4008) | One home for rules four companions share (#1483) | Keep. P2 removes only the companion list. |
+| Commitment species | Not unused: the base's `authority_source.policy.digest` admits any species (lines 4277-4283) | Keep. P4 withdrawn. |
+| `mission.expires_at` MUST for downstream profiles (line 2825) | A rule on the base claim's own member; the profiles that mint downstream credentials rely on it | Keep |
+| Termination transition reading for legacy state values (line 2175) | Lets consumers read reports from earlier revisions | Keep for now. Removing it is a normative change, and needs a check that no emitter remains. |
+| Delegation Constraints, with no issuance path in the base except Delegated Exchange | Shared invariants: Resource Access, Continuation and Cross-Domain rest on them | Keep (the reason revision 2's designation move was withdrawn) |
+
+**Q4. What layering fits OAuth practice?**
+
+Broadly the one the family has:
+- the binding, which owns its issuance protocol, the record, its
+  registries and a type-agnostic delegation discipline;
+- Resource Access as the base `authorization_details` type;
+- optional companions that define and register their own values;
+- informative Architecture and Substrate documents.
+
+The departures from common practice are smaller than the question
+suggests:
+- the binding names specific companions in normative text (P2, P3);
+- its RFC publication is coupled to two individual drafts:
+  - the Actor Profile coupling is deliberate (D625) and shared with
+    Resource Access, which needs `sub_profile`;
+  - client-instance-id is the one P1 addresses.
+
+Section 6 gives the precedents both ways.
+
+## 2. Terms
+
+- **The binding** (or "the base"): `draft-mcguinness-oauth-mission.md`.
+  #1089 retired calling it "core". In `DRAFTS.md`, "core" is the
+  substrate kernel.
+- **Submission set:** the binding plus Resource Access, the author's
+  proposed initial OAuth WG set (#704, D140).
+- **`act`-bearing token:** a Mission-bound access token whose `act`
+  claim names a delegate (RFC 8693 Section 4.1).
+- **Row, gate:** a ledger requirement in `conformance-manifest.json`,
+  and the capability id its applicability names.
+- **Move-on-touch:** the family's deferral policy, stated in the
+  substrate's Family Use appendix: "Ownership migrates by touch, not by
+  relocation".
+- **Issue Convention:** the repository's issue template (Problem,
+  Current state, Decisions of record, Analysis, Sketch, Acceptance).
 
 ## 3. Context
 
-- **The family.** About 50 drafts. `DRAFTS.md` gives each a role.
-  - **core:** the substrate kernel (`draft-mcguinness-mission-substrate`).
-  - **adapter-binding:** a binding of the Mission model to a wire
-    protocol. The OAuth binding is one, beside MAS, AAuth, UMA and
-    GNAP.
-  - **companion:** a profile or extension built on a binding or on
-    the kernel.
-  - **guide:** an informational explainer.
-
-  #1089 retired "core" as a name for the OAuth binding.
-- **Publication state.** The binding's `-01` is on the datatracker
-  (2026-10-21, D644). The file is the editor's draft: findings are
-  filed as issues first, and the draft changes only through a
-  reviewable PR on the owner's go. Resource Access `-00` is also
-  published (D645). By this repository's submission tags, no other
-  family draft has a datatracker revision.
-- **Dependency direction.** Companions depend on the binding
-  normatively. The binding depends on no companion normatively, and
-  its reference to the substrate is informative (D140, #708). The
-  AAuth, UMA, GNAP and MAS bindings cite the substrate normatively.
-- **Ledger.** `conformance-manifest.json` holds one row per
-  requirement, keyed by `spec` and `anchor`, with a coverage (`tested`,
-  `partial`, `todo`) and an applicability.
+- **Publication state.**
+  - The binding's `-01` is on the datatracker (D644, 2026-10-21).
+  - Resource Access `-00` is published (D646, 2026-10-22).
+  - No other family draft has a datatracker revision.
+  - The binding is an editor's draft: findings are filed as issues
+    first, and it changes only through a reviewable PR on the owner's
+    go.
+- **References.**
+  - The binding's references to the substrate and to every companion
+    are informative.
+  - The AAuth, UMA, GNAP and MAS bindings cite the substrate
+    normatively.
+  - Resource Access's only normative Internet-Draft is the binding.
+- **The submission set's normative Internet-Drafts**, through the
+  binding:
+  - `draft-mcguinness-oauth-client-instance-id` (individual);
+  - `draft-mcguinness-oauth-actor-profile` (individual);
+  - `draft-ietf-oauth-rar-metadata-remediation` (WG).
+- **Ledger.**
+  - Rows are keyed by `spec` and `anchor`.
   - Applicability is `unconditional`, gated on one capability, or a
-    `capabilities` set (`all_of` or `any_of`).
-  - Capability ids are declared in `model.capabilities`.
-  - The ledger checker (`scripts/check-conformance-manifest.mjs`)
-    enforces no row-id prefix.
-- **Implementation.** The reference AS turns optional surfaces on and
-  off with `ProviderCapability` switches in
+    `capabilities` set (`all_of` or `any_of`). Capability ids are
+    declared in `model.capabilities`.
+  - The checker (`scripts/check-conformance-manifest.mjs`) enforces no
+    row-id prefix.
+- **Implementation.** Optional AS surfaces are `ProviderCapability`
+  switches in
   `src/services/authorization-server/src/adapters/capabilities.ts`.
-  Code and tests carry `@spec <draft>#<anchor>` annotations.
+  Code, tests and some docs carry `@spec <draft>#<anchor>` annotations.
 
 ## 4. Constraints and prior rulings
 
 | Id | Ruling | Effect |
 |---|---|---|
-| C1 | The binding stands alone. It never takes a family companion as a normative reference, and it states a capability's property bar in its own terms with the companion informative (#169, Option 2). | A moved capability leaves an informative pointer behind, as Approved-Set Verification did (#882). |
-| C2 | No consolidation: existing drafts are never merged. A new draft is allowed if it passes the New Draft Admission test (`CONTRIBUTING.md`). | P1 answers that test and assesses existing homes first. |
-| C3 | #880 (2026-10-01) kept the generalized `approval_basis` in the binding: shared vocabulary, REQUIRED on every record, breaking change if the direct-case members became optional, and no hub draft. | P2 keeps the record shape and moves no member. |
-| C4 | #1483 / D610 (2026-10-21) consolidated standing consent into one section, keeping the unknown-type rule in the record's common definitions. | P2 edits in place. |
-| C5 | #882 moved the optional Approved-Set Verification capability to a companion. | Precedent for P1. |
-| C6 | #1412 / D559 (2026-10-20) kept Instance Context and its normative `client-instance-id` reference until a concrete publication plan exists. Before proposing a new draft, assess an existing home. | P1 revisits D559 because its premise changed (5.3). It is a `decide` item. |
-| C7 | #1503 finding 9 / D625 (2026-10-21) made the Actor Profile and rar-metadata-remediation normative. The owner rejected keeping them informative. | No proposal reclassifies a reference to escape a dependency. P1 moves the text that needs it. |
-| C8 | #207 (open, parked): the Mission Model split, with three triggers: an OAuth WG adoption conversation (ask the WG's document-architecture preference first); a second non-OAuth binding with real implementer commitment; or MAS control-plane evolution that forces binding revisions at a felt cadence. | P5 keeps it parked. |
-| C9 | #704 / D140: the initial OAuth WG submission set is the binding plus Resource Access. The substrate is withheld. | Resource Access's dependencies weigh more (P1). A normative reference to the substrate from a submission-set or companion draft adds a withheld-draft dependency (P4). |
-| C10 | D427 / PR #1231 left "Option A on family editor's-copy citations" unruled: submit Resource Access `-00`, and keep the other family drafts as informative editor's-copy references. | P3 pairs with it. |
-| C11 | Working style: prefer existing OAuth and JOSE surfaces; make minimal changes that preserve capability; an editorial change preserves every obligation (not just its keyword); every stated obligation needs a ledger row; ids and anchors stay stable across retitles. | Applies to every proposal. |
+| C1 | The binding stands alone. It takes no family companion as a normative reference, and it states a capability's property bar in its own terms (#169, Option 2). | Anything that moves leaves a self-contained bar or an extension point behind. |
+| C2 | Existing drafts are never merged. A new draft must pass New Draft Admission (`CONTRIBUTING.md` line 171), after an existing home is assessed. | P1 option B2 needs the test. |
+| C3 | #880 kept the generalized `approval_basis`: shared vocabulary, REQUIRED on every record, breaking change otherwise, no hub draft. | No record change. |
+| C4 | #1483 / D610 consolidated standing consent into one section. | P2 edits in place. |
+| C5 | #882 moved the optional Approved-Set Verification capability to a companion. | Precedent for moving an optional capability that leaves no residual base obligations. |
+| C6 | #1412 / D559 (2026-10-20) kept Instance Context and its normative client-instance-id reference "while its interoperability requirements remain". It names its trigger: a concrete publication plan for the binding. When triggered, assess an existing home first. | P1 follows D559. Executing it now needs the owner to waive the trigger. |
+| C7 | D620 (#1503 finding 9) made rar-metadata-remediation normative, and D625 (#1516) the Actor Profile. The owner rejected keeping them informative. | No proposal reclassifies a reference while the text that needs it stays. |
+| C8 | #207 (parked): the Mission Model split, with three triggers (an OAuth WG adoption conversation, asking the WG's document-architecture preference first; a second non-OAuth binding with real implementer commitment; MAS control-plane cadence). | P5 keeps it parked. |
+| C9 | #704 / D140: the submission set is the binding plus Resource Access, and the substrate is withheld. | Count dependency changes over the submission set. A new normative substrate reference adds a dependency on a withheld draft. |
+| C10 | D645 (2026-10-21) settled D427's open decisions on family editor's-copy citations and Resource Access's binding target. | Settled; this plan does not reopen it. |
+| C11 | Working style: prefer existing surfaces; make minimal changes that preserve capability; an editorial change preserves every obligation (actor, trigger, scope), not just its keyword; every stated obligation needs a ledger row; ids and anchors stay stable. | Applies to every proposal. |
+| C12 | No family draft declares `Updates:`, so a companion cannot relax or override a base MUST. | Exceptions to base MUSTs stay in the base. This is why revision 2's designation move was withdrawn (Appendix C, B1). |
 
 ## 5. Findings
 
-### 5.1 Where the text sits (placement, not dispensable complexity)
+### 5.1 Where the text sits
 
-These counts measure where text sits, not how much of it an
-implementer could do without. Middle matter: 34,747 words, 261 BCP 14
-keywords, 133 sections. Each section's count excludes its subsections.
-The bucketing is a judgment call, and `measure.py` lists every anchor.
+These counts measure placement, not how much text an implementer could
+do without. Middle matter: 34,747 words, 261 BCP 14 keywords, 133
+sections. Each section's count excludes its subsections.
 
 | Job | Words | BCP 14 | Sections |
 |---|---|---|---|
@@ -141,649 +186,414 @@ The bucketing is a judgment call, and `measure.py` lists every anchor.
 | 4. Tutorial and examples in the middle matter | 947 | 0 | 4 |
 | 5. Security, privacy, i18n, applicability | 4,184 | 0 | 28 |
 
-Job 3 is mixed. `record-principal-members` (979 words, line 4128)
-holds base vocabulary (`subject`, `client_id`, `authority_source`)
-next to the generalized `approval_basis`. Commitment Mechanisms holds
-rules the base's own anchors need. The job 3 total is therefore not a
-measure of removable text.
-
-Appendices total 7,321 words with no BCP 14 keywords. The Mapping
-Assessment (line 7006, 1,157 words) and Role Mapping (line 6546, 477
-words) are the substrate-binding content proper.
+Job 3 is mixed. For example, `record-principal-members` holds base
+vocabulary next to the generalized `approval_basis`, and Commitment
+Mechanisms holds rules the base's own commitments need. Appendices
+total 7,321 words with no BCP 14 keywords.
 
 ### 5.2 Family citations
 
-- 140 citations of 30 family drafts; 111 in the middle matter.
-- The most-cited drafts are Resource Access (25), Cross-Domain (20)
-  and Approval Governance (9).
+- 140 citations of 30 family drafts; 111 in the middle matter, which is
+  the baseline for Section 10.
+- The most-cited drafts: Resource Access 25, Cross-Domain 20, Approval
+  Governance 9.
 - The densest sections:
   - Grant Bindings and Related Mechanisms (line 2322): 6;
   - Composition and the Effective Ceiling (line 5428): 6;
   - Standing-Consent Bases (line 3881): 4;
   - Principals and Approval Basis (line 4128): 4.
-- 29 of the 30 cited drafts have no datatracker revision, so their
-  targets are github.io editor's copies (C10).
 
 ### 5.3 Normative Internet-Draft references and publication
 
 | Reference | Kind | Cited from |
 |---|---|---|
-| `draft-mcguinness-oauth-client-instance-id` | individual | Instance Context in Delegated Tokens (8); one Error and Challenge Mapping row; appendix line 6450; Document History line 7290 |
-| `draft-mcguinness-oauth-actor-profile` | individual | Delegation lead, Delegated Exchange, Instance Context; appendix line 6405 |
-| `draft-ietf-oauth-rar-metadata-remediation` | WG | Denial Responses, Remediation Grains, Authorization Server Metadata |
+| client-instance-id | individual | Instance Context in Delegated Tokens (8 citations); the error-table note (lines 3210-3214); appendix line 6450; Document History line 7290 |
+| Actor Profile | individual | Delegation lead (3496 onward), Delegated Exchange (3602-3608), Instance Context (3664-3667); appendix line 6405. Resource Access's `sub_profile` matcher reaches it through the binding (RA 1162-1176). |
+| rar-metadata-remediation | WG | Denial Responses, Remediation Grains, Authorization Server Metadata |
 
-- At `6a7c616e` (2026-10-20), the basis of D559, only
-  `client-instance-id` was normative. Commits `e6f6c911a` (D625, "the
-  OAuth Actor Profile is a normative reference, scoped to the optional
-  Delegation capability") and `2e7c08608` (#1503 finding 9) added the
-  other two on 2026-10-21.
-- **What the dependency costs.** RFC 7322 Section 4.8.6: "Normative
-  references to Internet-Drafts will cause publication of the RFC to
-  be suspended until the referenced draft is also ready for
-  publication", and the RFC Editor then publishes both together. The
-  queue state is "Reference Not Received" (RFC Editor queue, About
-  page).
-- **What it does not cost.** It does not block draft submission, WG
-  adoption or WG last call. Its cost is a coupled RFC publication
-  date: the binding's RFC would wait for, and then publish with, both
-  individual drafts.
+- **History.** At `6a7c616e` (dated 2026-10-19 -0700, the basis of
+  D559), only client-instance-id was normative. `2e7c08608` (D620) and
+  `e6f6c911a` (D625) added the other two on 2026-10-21.
+- **What a normative reference costs.** RFC 7322 Section 4.8.6:
+  "Normative references to Internet-Drafts will cause publication of
+  the RFC to be suspended until the referenced draft is also ready for
+  publication". The documents then publish together, and the RFC
+  Editor queue shows the state as "Reference Not Received" (queue
+  About page).
+- **What it does not cost.** It does not block submission, adoption or
+  last call. The cost is a coupled RFC publication date.
 - **Side finding.** `notes/oauth-wg-submission-set.md` lines 56-60
-  say `DEPENDENCIES.md` has no external-normative-ids entry for
-  `oauth-mission`. That predates `2e7c08608`; `DEPENDENCIES.md` line
-  20 now lists rar-metadata-remediation.
+  predate `2e7c08608`. They still say `DEPENDENCIES.md` has no
+  external-normative-ids entry for the binding; line 20 of
+  `DEPENDENCIES.md` now lists rar-metadata-remediation.
 
-### 5.4 Definitions the binding does not use itself
-
-1. **`approval_basis` under `direct`** (line 4128 onward). Every member
-   can be derived from members the record already has:
-   - `consent_principal` is the Approver;
-   - `activation.approval_event_id` mirrors the record's own
-     `approval_event_id`;
-   - `activation_actor` equals `consent_principal`;
-   - `root_commitment` is the record's `authority_hash`;
-   - where `adjudication` is present, its `kind` MUST be `human` (line
-     4223).
-
-   Uses in other drafts:
-
-   | Member | Drafts | Mentions |
-   |---|---|---|
-   | `consent_principal` | 12 | 69 |
-   | `approved_at` | 10 | 58 |
-   | `root_commitment` | 5 | 29 |
-   | `activation_actor` | 6 | 19 |
-
-   C3 explains why the structure stays.
-2. **Standing consent** (lines 3881-4005).
-   - About 850 words, 16 BCP 14 keywords and 7 ledger rows. None of it
-     applies to an AS whose only basis is `direct`.
-   - Line 3888 onward names four companion `type` values with their
-     documents:
-     - `template` (Template);
-     - `policy_drawdown` (Child Delegation);
-     - `ceiling_drawdown` (Progressive);
-     - `governed_policy` (Approval Governance).
-   - Lines 3913, 3935 and 3937 put MUSTs on companion specifications;
-     line 4193 constrains `adjudication.kind` values a companion may
-     define.
-3. **Commitment Mechanisms** (line 4593) defines three hash species.
-   - Every anchor the binding defines is an envelope anchor (line
-     4654).
-   - The substrate's Default Commitment Construction defines all
-     three (substrate line 534 onward). The binding's line 4616 says it
-     "instantiates" that construction, through an informative
-     reference.
-   - At least Discharge and Consent Evidence import the binding's
-     section for non-envelope species (Appendix B).
-4. **`mission.expires_at`** (line 2825). Its MUST binds only "a
-   profile that mints a further credential downstream of this one, or
-   that verifies a Mission's remaining lifetime from retained state":
-   in practice, Cross-Domain.
-5. **Termination transition reading** (line 2175). It covers legacy
-   state values, three of which are older companion values.
-6. **Contrast case.** The Intent members (line 906 onward) are lean,
-   and the base's own flow uses every one.
-
-### 5.5 Root causes
-
-1. **The binding is the only normative home left.** The substrate is
-   informative to it (D140), and no companion may become its normative
-   reference (C1). So shared vocabulary that must carry MUST strength
-   lands in the binding, which then names who uses it (C3).
-2. **Some relationship prose runs backwards.** Normative sections
-   explain how companions behave: Grant Bindings and Related Mechanisms
-   (lines 2322-2373) and Composition and the Effective Ceiling (line
-   5428). Other mentions are legitimate: a base rule, an exception, or
-   a security residual an implementer needs where it is stated (P3).
-3. **The examples borrow Resource Access's type.**
-   `mission_resource_access` appears in 16 binding sections, because
-   the binding defines no type. This is defensible, since the binding
-   and Resource Access form the submission set (C9).
-4. **Some citations exist by ruling** (C1, #169).
-
-### 5.6 Delegated-token obligations without ledger rows
+### 5.4 Delegated-token obligations without ledger rows
 
 Two MUSTs in Delegated Exchange have no row:
-- "Authority only narrows" (line 3609: a subset of the designation's
-  authority);
+- "Authority only narrows" (line 3609);
 - "Each delegate is bound to its own key" (line 3617).
 
-This holds whatever P1 decides. Under C11 they need rows.
+The only Delegated Exchange rows are
+`core.delegation.designation-only-subject-token` and
+`core.delegation.redemption-evaluated-afresh`. P1b adds the missing
+rows.
 
 ## 6. Precedents and trade-offs
 
-All of these were verified against the RFC text in this session.
+Each was verified against the RFC text.
 
-| Choice | Precedent for it | Precedent against it, or the trade-off |
+| Choice | For | Against, or the trade-off |
 |---|---|---|
-| Extensions register their own values | RFC 6749 Section 11 registries; RFC 7519 Section 10.1; RFC 9396 creates no `type` registry ("The AS controls the interpretation of the value of the `type` parameter", Section 2.1) | None found. Registries need IANA review time. |
-| Requirements on future extensions | RFC 6749 Section 8 states them in its body ("All other types MUST be registered"; "Extension error codes MUST be registered") | RFC 8126 expects a registry document to give the designated expert review guidance (Section 1.3, item 7). Body rules and DE guidance are complementary: the body governs meaning, and the DE checks registrations against it. |
-| Optional features in separate documents | RFC 7009, 7662, 8693 and 8414 sit outside RFC 6749; GNAP's RS connections (RFC 9767) are separate from GNAP core (RFC 9635) | More documents to navigate. A separate document is justified by independent dependencies or independent adoption, not by size. |
-| An abstract framework beneath concrete profiles | RFC 7521 ("only defines abstract message flows and processing rules ... companion specifications are necessary"), cited normatively by RFC 7523 Section 9.1 | Convention allows it. Whether to do it for the Mission Model is a question of triggers and migration cost (P5). |
-| Normative references to Internet-Drafts | Allowed; the RFC Editor publishes dependent documents together (RFC 7322 Section 4.8.6) | They couple the RFC publication date to the referenced drafts ("Reference Not Received"). |
+| A registry for an extensible value | RFC 6749 Section 11, RFC 7519 Section 10.1 | RFC 9396 creates no `type` registry: "The AS controls the interpretation of the value of the `type` parameter" (Section 2.1). A registry costs IANA review time. |
+| Requirements on future extensions | RFC 6749 Section 8 states them in its body ("All other types MUST be registered"). The binding's registries also instruct the Designated Expert in BCP 14 ("A Designated Expert MUST reject", lines 5780 and 5804). | RFC 8126 expects registry guidance for the expert (Section 1.3, item 7). Body rules and expert guidance complement each other. |
+| Optional features in their own documents | RFC 7009, 7662, 8693 and 8414 were written as documents separate from RFC 6749; GNAP's RS connections were published as RFC 9767, separately from core RFC 9635 | These were separate from the start, not extracted. A later extraction is justified by an independent dependency or independent adoption, not by size. |
+| An abstract framework under concrete profiles | RFC 7521, cited normatively by RFC 7523 Section 9.1 | Convention allows it; whether to do it is a trigger and cost question (P5). |
+| Normative references to Internet-Drafts | Allowed; dependent documents publish together (RFC 7322 Section 4.8.6) | They couple the RFC publication date. |
 
 ## 7. Proposals
 
-Every proposal is `-02` scope and issue-first. None changes a wire
-member, endpoint, parameter, claim or error code, except where a ruling
-below says otherwise.
+### 7.1 P1. Instance Context in Delegated Tokens (`decide`, under D559)
 
-### 7.1 P1. Move the designation protocol into a companion (`decide`; revisits D559)
+**What the section does** (lines 3652-3717; 418 words, 4 BCP 14
+keywords):
+- When a deployment conveys `client_instance` in delegated tokens, the
+  AS uses the presenting instance validated under client-instance-id
+  Section 5. It associates that instance with the separately
+  authenticated delegate and binds the output token to an
+  instance-unique key.
+- It MUST NOT substitute context copied from an input token.
+- Where policy requires attribution, it MUST refuse when the evidence
+  or the association cannot be established.
 
-**Proposal (variant B).**
-- *Moves* to a new companion, working title "Mission Delegation for
-  OAuth 2.0", docname `draft-mcguinness-oauth-mission-delegation`,
-  intended category `std`:
-  - Designation (lines 3533-3576);
-  - the exchange-specific rules of Delegated Exchange: "The exchange is
-    explicit" (lines 3584-3594) and "Each redemption is gated" (lines
-    3624-3632);
-  - Instance Context in Delegated Tokens (lines 3652-3717);
-  - Delegated Token Example (lines 3819-3880);
-  - the two-step figure and the Actor Profile framing in the lead
-    (lines 3496-3532);
-  - Error and Challenge Mapping rows 3193, 3194, 3196 and 3197;
-  - the designation introspection rule (lines 3318-3320);
-  - Token Theft's designation sentences (lines 5309-5312);
-  - the designation and exchange parts of Delegation and Chain
-    Compromise (lines 5316-5355);
-  - the Delegation entry of Optional Capabilities (lines 4971-4975),
-    which becomes the companion's conformance, with an informative
-    pointer left in the base.
-- *Stays* in the base:
-  - Delegation Constraints (lines 3739-3818);
-  - Self-Exchange Down-Scoping (lines 3718-3738);
-  - the Mission-unaware routing MUST (lines 2966-2969);
-  - Error rows 3192 (self-exchange) and 3195 (empty result);
-  - Enforcement Requirements item 4 (lines 2929-2933) and the RS
-    `act`-chain option (line 2955);
-  - Client Attribution and Delegation Lineage (lines 5356-5372) and the
-    appendix "Client Identification in Delegated Tokens" (line 6523);
-  - the generic Token Exchange rules: grant resolution (lines
-    2286-2294), the Token Exchange bullet of Grant Bindings (lines
-    2326-2333), and Issuance Gating's "every derivation, refresh and
-    Token Exchange";
-  - the Token Claims `aud` exception for "a token the AS issues only
-    for presentation back to itself at a Token Exchange", with
-    designation as an example, because it qualifies the base audience
-    MUST (lines 2496-2502);
-  - the Extensibility stable-interface line "the `act` delegation
-    chain" (line 4679).
-- *Depends on ruling P1-R1:* the delegate-model properties of Delegated
-  Exchange: stable `sub`, the meaning of `client_id`, the `act` chain,
-  narrowing, the unchanged `mission` claim and the delegate's own key
-  (lines 3595-3623), plus the chain-nesting and "attribution, not
-  authority" paragraphs (lines 3633-3651).
+Most of this is generic Token Exchange plus instance-context behavior.
+The Mission-specific part is one paragraph (lines 3693-3699): instance
+evidence satisfies none of the binding's authorization checks for the
+exchange.
 
-**Why this cut.** The shared invariants live in Delegation
-Constraints, and every act-bearing issuance path depends on them:
-- Resource Access's Delegate Eligibility rests on it for depth `d`:
-  "That document's Delegation Constraints section defines `d`" (RA
-  line 1101). Resource Access `-00` is published and in the submission
-  set.
-- Continuation discharges the depth-accounting duty for its own
-  transport (D202; Continuation line 393).
-- Cross-Domain cites the depth reset (lines 411, 814, 858), and
-  Derivation Limits cites the constraints (line 593).
+**Options.**
 
-The designation protocol is used almost only by the binding:
-"designation" appears 37 times in the binding and once elsewhere
-(Transaction Authorization). Child Delegation and Expansion each define
-their own RFC 8693 exchange "per RFC 8693" (Child Delegation lines
-452-461 and 790; Expansion lines 450-458 and 684). Neither relies on
-the binding's Delegated Exchange rules.
-
-**Ruling P1-R1: the scope of the delegate-model properties.**
-- *Today:* the list at lines 3595-3623 is scoped by its lead-in, "The
-  AS issues the delegated token subject to all of the following" (line
-  3581), so it governs tokens from the designation exchange. But Token
-  Claims restates the key rule generically, "A delegated token is
-  sender-constrained to the delegate's own key" (line 2515). And
-  Cross-Domain cites the list as "the issuance profile's delegate
-  model" (Cross-Domain line 821).
-- *Option (a), recommended:* the properties stay in the base and are
-  stated for every act-bearing Mission-bound token, whichever profile
-  issues it. This is a normative broadening, not an editorial move. It
-  needs its own obligation-map entries and ledger rows (see 5.6), and a
-  check of every other path that issues `act`-bearing tokens.
-
-  It also interacts with P1's main goal. The `act`-chain bullet (lines
-  3602-3608) cites the Actor Profile for "the members that profile
-  defines (for example, `sub`, `iss`, and the `sub_profile` actor-type
-  classification)". Under option (a), that bullet is rewritten to
-  depend on RFC 8693 Section 4.1 alone, with the Actor Profile members
-  moving to the companion. Otherwise the Actor Profile reference stays
-  normative in the base.
-- *Option (b):* the properties move with the exchange, keeping today's
-  scope. Cross-Domain line 821 then repoints to the companion, giving
-  Cross-Domain a companion dependency, and Token Claims line 2515
-  becomes a pointer.
-- *Not acceptable:* moving them without a ruling. That would narrow
-  their applicability (option b) or widen it (option a) silently.
-
-**Variants considered.**
-
-| Variant | What moves | Assessment |
+| Option | Change | Effect |
 |---|---|---|
-| A. Status quo (D559) | nothing | The base keeps two individual-draft normative references for an optional capability, and its RFC publication couples to both drafts. |
-| B. Designation protocol only (recommended) | as above | Both individual-draft references leave the `normative:` block (under P1-R1 option (a), only if line 3602-3608 is rewritten against RFC 8693 alone), and the shared invariants stay. |
-| C. All of the Section "Delegation Within a Mission" | B plus Delegation Constraints and Self-Exchange | Resource Access `-00`, Continuation, Cross-Domain and Derivation Limits would gain a dependency on an unsubmitted companion. |
-| D. Host it in Child Delegation | as B, into Child Delegation | Different contract: Child Delegation creates new Missions with lineage. It does not use designations. |
-| E. Fence it as a part of the binding | nothing | The references stay normative, so nothing changes for publication. |
+| A. Keep (D559, recommended now) | none | client-instance-id stays a normative dependency of the submission set until D559's trigger fires. |
+| B1. Upstream, when triggered (recommended destination) | The generic delegated-token rules move into client-instance-id itself, which the author controls. The binding keeps an extension point: a deployment conveying `client_instance` in delegated tokens follows client-instance-id, and instance evidence satisfies none of this document's authorization checks (the current 3693-3699, kept). | client-instance-id becomes informative in the binding. The submission set's normative I-Ds go from three to two (Actor Profile, rar-metadata-remediation). |
+| B2. New companion | The whole section moves to a small Mission companion. | Same dependency effect as B1, plus one more draft. Needs New Draft Admission. |
+| B3. An existing companion | Child Delegation cites client-instance-id for Child Missions' actors; runtime-oauth has Required Instance Attribution at the PEP | Neither has this contract (same-Mission delegated tokens issued by the AS). Not recommended. |
 
-**Reference dispositions.**
-- `draft-mcguinness-oauth-actor-profile`: leaves `normative:`. Line
-  6405 (Scope and Future Work, which states its normative scope) is
-  rewritten to point at the companion. It stays an informative
-  reference if any appendix mention remains.
-- `draft-mcguinness-oauth-client-instance-id`: leaves `normative:`.
-  Line 6450 (a future-work example, with client-attesters) and line
-  7290 (Document History) stay, so it becomes informative.
-- `draft-mcguinness-oauth-client-attesters` (already informative):
-  stays, for line 6450.
+**What moves under B1 or B2:**
+- the section;
+- Error and Challenge Mapping rows 3196 (`invalid_client_attestation`)
+  and 3197;
+- the note under the tables (lines 3210-3214), which names
+  client-instance-id Section 5.2 as the source of
+  `invalid_client_attestation`.
 
-**Blast radius.** The full map is in Appendix A.
-- **Ledger.**
-  - 15 rows change `spec` to the companion: 10 tested, 1 partial, 4
-    todo.
-  - 5 rows stay where they are but carry a `core.delegation` gate
-    whose owner changes: 3 Delegation Constraints rows,
-    `core.other-types.delegation-only-unchanged`, and Resource Access's
-    `resource-access.delegate-eligibility.as-authenticates-delegate`.
-  - Keep every row id and the capability ids `core.delegation` and
-    `core.instance-context`: no checker requires an id prefix, and
-    stable ids keep pins and history intact.
-  - `core.delegation` remains the gate for "the AS supports the
-    designation protocol"; Appendix A lists which rows keep it.
-- **Implementation.** Keep the `delegation` provider switch
-  (`capabilities.ts` line 26) unchanged. No Instance Context switch
-  exists, and none is added. No behavior changes.
-- **`@spec` annotations.** `mission#designation` appears 22 times in 11
-  files and `mission#delegated-instance-context` once. These repoint to
-  the companion's anchors. `mission#delegation` (20 in 10 files) is
-  split by meaning: the delegate model stays, and the exchange moves.
-  `mission#delegation-constraints` (27 in 15 files) and
-  `mission#self-exchange` (14 in 3 files) are unchanged.
-- **Companion citations.** The three citations of Section "Delegation
-  Within a Mission" (Cross-Domain 821, Derivation Limits 365,
-  Transaction Authorization 650) concern the delegate model, so they
-  depend on P1-R1. The five citations of Delegation Constraints stay
-  valid.
-- **Pending finding.** #1503 finding 11 (a delegated token's lifetime
-  and "that credential's grant") touches the moving text. Rule it
-  before the move, or move it with the text.
+**What stays:**
+- the Mission-specific paragraph (3693-3699) as the extension point;
+- the future-work example at line 6450 and Document History at line
+  7290. client-instance-id becomes an informative reference for these.
 
-**New Draft Admission answers (draft).**
-- *Contract:* the Token Exchange protocol by which an agent designates
-  a delegate and the delegate redeems the designation for a
-  Mission-bound token, plus instance context for that token.
-- *Why a separate document:* it is an optional capability whose two
-  normative individual-draft dependencies the base does not otherwise
-  need. Child Delegation has a different contract, and Continuation is
-  an identity-continuity transport.
-- *Parties:* the delegating client, the delegate client, and the AS.
-- *What crosses the boundary:* the designation, a Token Exchange
-  request and response, and the delegated token.
-- *Existing mechanism tried:* plain RFC 8693 with `actor_token` does
-  not bind redemption to a named delegate without the designation step
-  (the binding's current design, unchanged).
-- *Property:* authority. Delegated authority narrows and is bound to a
-  named delegate; lifecycle is inherited.
+**Blast radius (B1 or B2).** The full map is in Appendix A.
+- 3 ledger rows (all `todo`, gated `core.instance-context`), re-anchored
+  or retired depending on the destination. No provider switch exists.
+- One `@spec` annotation (`src/packages/mission-core/src/idempotency.ts`
+  line 106).
+- No companion cites the section; companions that use Instance Context
+  cite client-instance-id directly (AuthZEN, MAS, Architecture,
+  runtime-oauth).
+- The Actor Profile stays normative (C7): the delegate model and
+  Resource Access's `sub_profile` need it.
+- **Prerequisite:** D559's trigger (a concrete publication plan), or an
+  owner waiver. B1 also needs a client-instance-id revision, which is a
+  separate document outside this repository.
 
-### 7.2 P2. Add an Approval Basis Types registry; keep the common rules in the body
+### 7.2 P1b. Ledger rows for the two delegated-token MUSTs
 
-**Proposal.**
-- **Body.**
-  - Keep every semantic rule in the body.
-  - Rephrase lines 3913, 3935 and 3937 from "A companion profile
-    defining a standing-consent `type` MUST ..." to rules over "a
-    standing-consent basis" whatever document defines it. They keep
-    their keywords and conditions.
-  - Keep the `adjudication.kind` prohibition (line 4193) in the body,
-    where it governs any specification that extends `kind`.
-  - Replace the named list of four companion values (line 3888 onward)
-    with a pointer to the registry.
-- **Registry: "Mission Approval Basis Types", Specification Required.**
-  - Fields:
-    - **Value**, matching `^[a-z][a-z0-9_]*$`;
-    - **Basis class**: `direct` or `standing-consent`;
-    - **Semantics**: one sentence;
-    - **Activation shape**: the members of `activation` for this type;
-    - **Change Controller**;
-    - **Reference**.
-  - Designated Expert instructions:
-    - check that the registering specification meets the body's rules
-      for its basis class. For `standing-consent`, that means lines
-      3913-3939; for `direct`, the direct-approval rules (`kind`
-      `human`, a human approval event);
-    - reject a registration that redefines the unknown-type rule.
+Add rows for lines 3609 and 3617 (5.4), gated `core.delegation` and
+anchored at `delegated-exchange`.
+- Candidate witnesses: the "who presents which proof" and "authority
+  bounds every exchange" blocks of
+  `src/services/authorization-server/test/delegation-exchange.test.ts`
+  (lines 546 and 691).
+- Mark a row `tested` only after a mutation run shows the test fails
+  when the rule is disabled. Otherwise mark it `todo`.
 
-    These instructions restate checks against body rules; they create
-    no obligation.
-  - Extension-name policy, following the Namespace Taxonomy's postures:
-    a short name is registered before use; a collision-resistant name
-    (RFC 7519 Section 4.2 style) may be used unregistered, and the
-    unknown-type rule applies to it.
-  - Existing values: the registry is seeded with `direct` only. The
-    four companion values stay valid as specification-defined names
-    until their companions register them. Each of Template, Child
-    Delegation, Progressive and Approval Governance adds an IANA
-    request.
-  - No `adjudication.kind` registry.
-- **Namespace Taxonomy** (line 4768): its registry criterion is
-  "values determine fail-closed behavior and span multiple documents",
-  and an unknown basis type is not fail-closed. Amend it to cover a
-  namespace "whose registrants must meet obligations this document
-  states". Termination Reasons is already registry-backed with a
-  fail-safe unknown value.
+This is independent of every other proposal. It changes no draft text.
 
-**Unchanged.**
-- The record shape (C3).
-- The unknown-type rule (C4).
-- Every issuer obligation: `approved_at` verification (line 3928),
-  Activation Policy Commitment, and Recency.
-- The 7 ledger rows.
+### 7.3 P2. The standing-consent list becomes informative (body only)
 
-**What P2 buys.** The base stops naming four companions in a normative
-list, and each value gets one registered owner. It buys no size
-reduction. Ask whether that is worth four companion IANA requests.
+- **Proposal.** Replace the normative list of four companion `type`
+  values and their documents (lines 3887-3904) with one sentence:
+  companion profiles define standing-consent `type` values, and the
+  Architecture lists them under "Authorization bases" in its Mission
+  Invariants section (`draft-mcguinness-mission-architecture.md` line
+  1976, which names all four). The Architecture is already an
+  informative reference of the binding. (Its Mission Creation Paths
+  section names only two of the four, so it is not the pointer.)
+- **Unchanged:**
+  - every BCP 14 sentence, including the companion-directed rules at
+    lines 3913, 3935 and 3937, whose actor (the defining
+    specification) and conditions stay as written;
+  - the `adjudication.kind` rule (line 4193);
+  - the unknown-type rule;
+  - the record shape;
+  - the 7 ledger rows.
+- **Effect:**
+  - Four family citations leave the binding's normative text.
+  - Nothing changes for implementations.
+  - No IANA request.
+- **Not proposed:** an Approval Basis Types registry. Revision 2's
+  design reopened `direct`, contradicted its own name policy, and
+  needed a Namespace Taxonomy amendment that would also sweep in
+  integrity-anchor `typ` and `adjudication.kind` (Appendix C, M4).
+  RFC 9396 is the precedent for leaving such values unregistered.
 
-### 7.3 P3. Move companion behavior into the companions, by semantic ownership
+### 7.4 P3. Move explanations of companion behavior to their owners
 
-**Rule.**
-- *Stays in the base:* a base rule; an exception to a base rule (for
-  example, the Token Claims `aud` exception); a security residual an
-  implementer of the base needs at the point the rule is stated; and a
-  one-sentence pointer where the base defers a mechanism.
-- *Moves to the owning companion:* an explanation of how a companion
-  behaves or relates to the base.
+- **Rule.**
+  - *Stays:* a base rule; an exception to a base rule (C12); a security
+    residual an implementer of the base needs where the rule is stated;
+    and a one-sentence pointer where the base defers a mechanism.
+  - *Moves:* an explanation of how a companion behaves.
+- **Candidates** (line; family citations):
+  - Grant Bindings and Related Mechanisms (2322; 6). Keep the Token
+    Exchange bullet (2326-2336). Move the Cross-Domain, Child Missions
+    and successors, and Continuation bullets, and the MAS-join
+    paragraph, to those documents. Keep one sentence: a profile that
+    creates another grant lineage or Mission states its relation to
+    the grant binding.
+  - Composition and the Effective Ceiling (5428; 6) and Authority
+    Materialized Before Containment (5464; 2). Keep the base's own
+    residual; move the cross-companion composition analysis to the
+    Security Model guide.
+  - Principals and Approval Basis (4128; 4) and Consent Binding (5053;
+    3). Move the paragraphs on which profiles commit `approval_basis`
+    to those profiles.
+  - Remediation Grains (3090; 3). No move. The list is closed ("The
+    three remediation grains", line 3093), and moving the AuthZEN grain
+    would need an open list and a non-widening invariant.
+  - Keep as they are: the security pointers in runtime-boundary,
+    downgrade-by-omission, prompt-injection and
+    information-propagation.
+- **Each paragraph** gets a disposition in the issue: kept (with the
+  reason), moved to X, or cut as a duplicate of X. Each moved paragraph
+  lands in its companion in the same PR, so nothing is lost.
 
-**Candidates** (line; citations):
-- Grant Bindings and Related Mechanisms (2322; 6): keep the Token
-  Exchange bullet. Move the Cross-Domain, Child Missions and
-  successors, and Continuation bullets, and the MAS-join paragraph.
-  Keep one sentence: a profile that creates another grant lineage or
-  Mission states its relation to the grant binding.
-- Composition and the Effective Ceiling (5428; 6) and Authority
-  Materialized Before Containment (5464; 2): keep the base's own
-  residual statement, and move the cross-companion composition analysis
-  to the Security Model guide.
-- Remediation Grains (3090; 3): keep `mission_denial` and the
-  RAR-remediation grain. Move the AuthZEN requestable-denial grain to
-  the AuthZEN profile.
-- Principals and Approval Basis (4128; 4) and Consent Binding (5053; 3):
-  move the paragraphs on which profiles commit `approval_basis`.
-- Policy-Language Types (1648; 2): an informative example; keep it or
-  trim it.
-- Keep: the security pointers in runtime-boundary,
-  downgrade-by-omission, prompt-injection and information-propagation.
+### 7.5 P4. Commitment species: withdrawn
 
-Each paragraph gets a disposition in the issue: kept (with the reason),
-moved to X, or cut as a duplicate of X. Pair it with C10.
+The base uses the non-envelope species itself. `authority_source.policy.digest`
+is "a prefixed commitment ({{commitment-mechanisms}}) whose exact
+committed input and construction the policy's format specifies: its
+species" (lines 4277-4283).
 
-### 7.4 P4. Commitment species: deferred
+At least Discharge and Consent Evidence also import the binding's
+section for those species, and repointing them would add a normative
+dependency on the withheld substrate (C9). Appendix B keeps the
+inventory as a record.
 
-Do not schedule P4 until two things are settled:
-1. **The import inventory.** `commitment_imports.py` (Appendix B) finds
-   these paragraphs citing the binding while using a non-envelope
-   species:
-   - Discharge (lines 282, 679, 841);
-   - Consent Evidence (line 701, which "imports the issuance profile's
-     commitment mechanisms normatively, including the algorithm-agility
-     and unrecognized-prefix rules", and classifies
-     `rendering_template_digest` as raw-octet).
+### 7.6 P5. Keep #207 parked
 
-   Four paragraphs cite both binding and substrate and need reading by
-   hand: Approval Governance 217, AuthZEN 466, Harness 1414 and
-   Transaction Authorization 289. Paragraphs that cite neither inherit
-   their source from elsewhere in the draft. Named-section citation
-   search cannot prove absence.
-2. **The publication consequence.** Repointing an importer to the
-   substrate gives it a normative reference to a draft withheld from
-   the submission set (C9). Today that would affect Discharge and
-   Consent Evidence; more if the hand-read paragraphs qualify. That
-   needs its own ruling.
+No trigger has fired (C8), and the relocation is large. Move-on-touch
+already migrates ownership one change at a time. Convention neither
+requires nor forbids the split (Section 6).
 
-If both resolve in favor, P4 is the change revision 1 described: the
-base keeps the envelope anchor, the prefix and agility rules and the
-I-JSON rules, and points informatively to the substrate for the other
-two species.
+### 7.7 Withdrawn or not proposed
 
-### 7.5 P5. Keep #207 (the Mission Model split) parked
+- **Moving the designation protocol (revision 2's P1 and P1-R1).**
+  - It would move three exceptions that qualify base MUSTs (C12):
+    - the Self-Exchange carve-out (3724-3726);
+    - designation introspection (3318-3320);
+    - the `aud` exception (2500-2502).
+  - It would not remove the Actor Profile from the submission set,
+    because Resource Access needs it.
+  - It would take the Delegation capability bar out of the base,
+    against C1.
 
-#207 is the literal "split the binding from a core". Recommendation: no
-change, for two reasons.
-- No trigger has fired (C8). The first trigger is to ask the WG's
-  document-architecture preference.
-- The relocation round is large, and move-on-touch already migrates
-  ownership one change at a time.
+  A readability-motivated version remains possible later. The base
+  would define the class "a token the AS issues only for presentation
+  back to itself" and hold all three exceptions against it, and keep a
+  self-contained Delegation bar, as Cross-Domain has (4982-4999),
+  covering the delegate model, depth accounting, the delegate's own
+  key, and no resource-access token as the delegating `subject_token`.
+  The companion would supply the mechanism. Pursue it only if the
+  reading tasks in Section 10 show a gain.
+- **Reclassifying a normative reference** while its text stays (C7).
+- **Making `direct`-case members optional; a standing-consent hub
+  draft** (C3).
+- **Any merge** (C2).
+- **Renaming ledger ids, capability ids or provider switches.**
 
-OAuth convention does not forbid the split: RFC 7521 is the precedent
-for an abstract framework under concrete profiles (Section 6). The
-Mapping Assessment and Role Mapping already sit in informative
-appendices.
+## 8. Decisions for the owner
 
-### 7.6 Not proposed
-
-- Making rar-metadata-remediation, the Actor Profile or
-  client-instance-id informative while their text stays (C7).
-- Making the `direct`-case `approval_basis` members optional (C3).
-- Moving standing consent to a hub draft (C3).
-- Any merge of existing drafts (C2).
-- Renaming ledger ids, capability ids or the provider switch (7.1).
-
-## 8. What the owner decides
-
-| Decision | Recommendation |
-|---|---|
-| P1 go or no-go (revisits D559) | Go, variant B. |
-| P1-R1 delegate-model scope | (a): state the properties for every act-bearing Mission-bound token, as a normative clarification with ledger rows. |
-| P2 go or no-go | Optional. Go only if removing the companion list is worth four IANA requests. |
-| P3 dispositions | Go, paragraph by paragraph. |
-| P4 | Deferred until Appendix B is complete and the withheld-draft dependency is ruled on. |
-| P5 | Stays parked. |
-| The two unledgered delegate MUSTs (5.6) | Add rows, whatever P1 decides. |
+| Decision | Options | Recommendation | Cost | Effect | Prerequisite |
+|---|---|---|---|---|---|
+| D-1: Instance Context (P1) | A keep; B1 upstream to client-instance-id; B2 new companion | A now; B1 when D559's trigger fires | B1: a client-instance-id revision, 2 error rows and a note moved, 3 todo rows re-homed, 1 annotation | B1: the submission set's normative I-Ds go from 3 to 2 | D559's trigger, or a waiver |
+| D-2: Delegated-token rows (P1b) | add; defer | Add now | Two rows; a mutation run per witness | Two stated MUSTs gain rows (C11) | None |
+| D-3: Standing-consent list (P2) | informative pointer; keep | Pointer | One paragraph | Four companion citations leave normative text; no obligation changes | None |
+| D-4: Companion-behavior prose (P3) | move by semantic ownership; keep | Move, paragraph by paragraph | Edits in the binding and each receiving companion; re-pins | Family citations in normative text fall from 111, each traced to a disposition | The obligation map for each moved paragraph (Section 9) |
+| D-5: Mission Model split (P5) | keep parked; execute | Keep parked | None | None | A #207 trigger |
+| D-6: Side finding (5.3) | update `notes/oauth-wg-submission-set.md`; leave | Update | One table and one sentence | The submission-set record matches the front matter | None |
 
 ## 9. Sequence and verification
 
 **Sequence.**
-1. Produce the obligation map and the dependency map for every
-   obligation P1 and P3 would move.
-   - *Obligation map.* For each obligation, BCP 14 or present-tense
-     without a keyword ("is rejected with", "carries", "never"):
-     - actor;
-     - trigger;
-     - scope (which tokens, requests or records);
-     - exceptions;
-     - refusal (error code and endpoint);
-     - conformance applicability;
-     - its ledger row, or "none";
-     - the witness test.
-   - *Dependency map.* Appendix A, completed: rows, applicability,
-     switches, `@spec` annotations, anchors, and companion citations.
-2. Selected P3 moves.
-3. Rule P1 and P1-R1, then build P1.
-4. P2 on its own, if wanted.
-5. P4 only after 7.4 resolves.
+1. D-2 and D-6. They are independent and small.
+2. D-3. A single-paragraph PR.
+3. D-4: produce the obligation map for the candidate paragraphs, then
+   move them.
+4. D-1 when its trigger fires.
 
-Each step is one issue under the Issue Convention.
+Each step is one issue in the Issue Convention format, plus one PR.
+
+**Obligation map** (for D-4, and for D-1 when it runs). For each
+obligation in the moved text, BCP 14 or present-tense without a keyword
+("is rejected with", "carries", "never"), record:
+- actor;
+- trigger;
+- scope;
+- exceptions;
+- refusal (error and endpoint);
+- conformance applicability;
+- ledger row, or "none";
+- witness test.
 
 **Verification per PR.**
-- Compare the obligation map before and after. Every obligation keeps
-  its actor, trigger, scope, exceptions, refusal and applicability, or
-  the change is listed as normative and cites its ruling (P1-R1).
+- The obligation map is identical before and after, except for changes
+  the owner ruled on.
 - The BCP 14 sentence record is necessary but not sufficient.
-- Preserve a row's coverage only after re-checking that its witness
-  test still exercises the relocated text. Otherwise demote it to
-  `partial` and say why.
+- A row keeps its coverage only after its witness is re-checked against
+  the relocated text. Otherwise it is demoted, with the reason.
 - Run the ledger and family-manifest checks, build every touched draft,
   and re-pin the companions that cite the binding.
-- P1 only: repoint the `@spec` annotations listed in Appendix A, and
-  prove with a test run that behavior is unchanged.
 
 ## 10. Success criteria
 
-**Dependency reduction (measurable):**
-- the binding's `normative:` block holds one Internet-Draft
-  (rar-metadata-remediation) instead of three; under P1-R1 option (a),
-  this holds only once the `act`-chain bullet (lines 3602-3608) no
-  longer needs the Actor Profile;
-- no individual draft is a normative dependency of the binding;
-- the binding's RFC publication no longer couples to the Actor Profile
-  or client-instance-id;
-- family citations in the binding's middle matter fall, with each
-  removed citation traced to a P3 disposition.
+**Dependency (measurable):**
+- the submission set's normative Internet-Draft closure, now three
+  (client-instance-id, Actor Profile, rar-metadata-remediation), is two
+  after D-1 option B1;
+- no new normative reference to a withheld draft.
 
-**Readability (tested, not inferred from word counts).** Run each
-reading task by a cold reader before and after, and record the sections
-and documents read, the cross-document jumps, and the errors.
+**Obligation integrity:**
+- the obligation-map diff contains only ruled changes;
+- no `tested` row loses coverage without a recorded reason.
+
+**Citations:** family citations in the binding's middle matter, from
+111, with every removed citation traced to a D-3 or D-4 disposition.
+
+**Readability.** A cold reader runs each task before and after,
+recording sections read, documents opened, cross-document jumps and
+errors. Use a model reader with no repository context, as in the
+repository's reader checks.
 1. Implement a Mission Issuer with no optional capability: list every
-   obligation on the token endpoint.
-2. Implement Delegation end to end: designation, redemption, depth
-   accounting, introspection of a designation.
-3. Implement a Mission-aware RS that receives delegated tokens.
-4. Register a new standing-consent basis (P2): find every rule it must
-   meet.
+   token-endpoint obligation.
+2. Implement a Mission-aware RS that receives delegated tokens.
+3. Find every rule a new standing-consent basis must meet.
+4. Find where Cross-Domain's grant-binding relationship is specified.
 
-Readability improves only if tasks 1 and 3 get shorter without task 2
-getting materially longer. Moving about 1,500 words is not itself
-evidence.
+D-3 and D-4 succeed on readability if tasks 3 and 4 need no more
+cross-document jumps than before, and tasks 1 and 2 need fewer sections.
 
-## 11. Corrections log
+## 11. Questions for review round 3
 
-| Earlier claim | Corrected |
-|---|---|
-| Chat: Delegation moves 20 rows (16 tested) | 20 is variant C, which includes Self-Exchange. Variant B moves 15 (10 tested, 1 partial, 4 todo). |
-| Chat: 10 companion citations in 6 drafts repoint | 2 cite Self-Exchange, which stays. Of the other 8, the 5 Delegation Constraints citations stay valid, and the 3 "Delegation Within a Mission" citations depend on P1-R1. |
-| Revision 1: 14 rows move | 15. `core.introspection.designation-inactive` was missed (R1). |
-| Revision 1: `capabilities.ts` declares `core.delegation` and `core.instance-context`, to be renamed | It declares the provider switch `delegation`. The ledger declares those two ids. Nothing is renamed (R3). |
-| Revision 1: Actor Profile and client-instance-id "leave the binding" | They leave the `normative:` block; client-instance-id stays informative for lines 6450 and 7290 (R7). |
-| Revision 1: P2 moves companion MUSTs into DE criteria | The rules stay in the body; the DE checks them (R8). |
-| Revision 1: only Discharge imports the non-envelope species; "as the bindings' substrate references already are" | Consent Evidence too, and possibly four more. The OAuth binding's substrate reference is informative; the other bindings' are normative (R9). |
-| Revision 1: "rules on future extensions go in registry instructions" as a convention | RFC 6749 Section 8 puts them in the body (R10). |
-| Revision 1 and chat: RFC Editor state "MISSREF", publication "held" | The state is "Reference Not Received"; it delays RFC publication only, and dependent documents publish together (R11). |
+1. Is option B1 right? Is the Mission-specific remainder (lines
+   3693-3699) enough of an extension point that no base MUST depends on
+   the moved rules?
+2. Does any base MUST outside the Instance Context section depend on
+   `client_instance` or the two moved error rows?
+3. P2: does replacing the list change any obligation? In particular,
+   does any rule rely on the list's being the complete set of
+   standing-consent values?
+4. P3: which candidate paragraphs carry a rule rather than an
+   explanation?
+5. Are the readability tasks and their pass conditions the right ones?
 
-## 12. Questions for review round 2
+## Appendix A. P1 map (options B1 and B2)
 
-1. Is P1-R1 option (a) the right default? Is there any act-bearing
-   Mission-bound token path in the family (Cross-Domain destination,
-   Continuation, Template dispatch) whose tokens could not meet the
-   delegate-model properties today?
-2. Does Appendix A miss any row, applicability set, switch, annotation
-   or citation?
-3. P2: does the "Basis class" field adequately separate `direct` from
-   standing-consent checks? Is seeding only `direct`, with companion
-   values valid until registered, workable for the IANA review?
-4. P2: is the Namespace Taxonomy amendment phrased so that Mission
-   Record members and `mission` claim members do not also need
-   registries?
-5. P4: of the four "both" paragraphs in Appendix B, which actually
-   import a non-envelope species from the binding?
-6. Are the four reading tasks in Section 10 the right ones?
-7. Does any P3 candidate carry a rule a companion cannot restate
-   without an "Updates:" relationship to the base?
+| Item | Location | Disposition |
+|---|---|---|
+| Section text | lines 3652-3717 | moves, except 3693-3699 |
+| Mission-specific paragraph | lines 3693-3699 | stays as the extension point |
+| Error row: Client Attestation fails | line 3196 | moves |
+| Error row: instance association fails | line 3197 | moves |
+| Error-table note on `invalid_client_attestation` | lines 3210-3214 | moves |
+| Future-work example | line 6450 | stays; reference becomes informative |
+| Document History mention | line 7290 | stays |
+| `core.instance-context.current-presenter-binding` | ledger, todo | re-home or retire |
+| `core.instance-context.no-input-substitution` | ledger, todo | re-home or retire |
+| `core.instance-context.required-attribution-refusal` | ledger, todo | re-home or retire |
+| Capability id `core.instance-context` | `model.capabilities` | keep while rows reference it |
+| Provider switch | none | none |
+| `@spec` annotation | `src/packages/mission-core/src/idempotency.ts:106` | repoint |
+| Companion citations of the section | none | none |
+| Actor Profile citation inside the section | lines 3664-3667 | moves with the text; the reference stays normative elsewhere |
 
-## Appendix A. P1 dependency map (variant B)
+## Appendix B. Commitment-vocabulary inventory (record for withdrawn P4)
 
-**Ledger rows** (`P1` = this plan's disposition):
-
-| Row id | Spec | Anchor | Coverage | Applicability | P1 |
-|---|---|---|---|---|---|
-| `core.designation.holder-proves-possession` | binding | designation | tested | `core.delegation` | moves |
-| `core.designation.holder-is-current-actor` | binding | designation | todo | `core.delegation` | moves |
-| `core.designation.subset-and-mission` | binding | designation | tested | `core.delegation` | moves |
-| `core.designation.audience-names-client` | binding | designation | tested | `core.delegation` | moves |
-| `core.designation.no-cnf-no-act` | binding | designation | tested | `core.delegation` | moves |
-| `core.designation.expiry` | binding | designation | tested | `core.delegation` | moves |
-| `core.designation.audience-separation` | binding | designation | tested | `core.delegation` | moves |
-| `core.designation.audience-separation-refusal` | binding | designation | tested | `core.delegation` | moves |
-| `core.delegation.designation-only-subject-token` | binding | delegated-exchange | tested | `core.delegation` | moves |
-| `core.delegation.redemption-evaluated-afresh` | binding | delegated-exchange | tested | `core.delegation` | moves |
-| `core.instance-context.current-presenter-binding` | binding | delegated-instance-context | todo | `core.instance-context` | moves |
-| `core.instance-context.no-input-substitution` | binding | delegated-instance-context | todo | `core.instance-context` | moves |
-| `core.instance-context.required-attribution-refusal` | binding | delegated-instance-context | todo | `core.instance-context` | moves |
-| `core.self-exchange.designation-not-self-exchange` | binding | self-exchange | tested | `core.delegation` | moves (it is about designations) |
-| `core.introspection.designation-inactive` | binding | composite-active | partial | `all_of [core.delegation, core.introspection]` | moves |
-| `core.delegation-constraints.depth-from-accounting` | binding | delegation-constraints | tested | `core.delegation` | stays; gate owner changes |
-| `core.delegation-constraints.unestablished-depth-refused` | binding | delegation-constraints | tested | `core.delegation` | stays; gate owner changes |
-| `core.delegation-constraints.designation-adds-no-delegate` | binding | delegation-constraints | tested | `core.delegation` | stays; its text names designations, so re-check the witness |
-| `core.delegation-constraints.cross-domain-carriage` | binding | delegation-constraints | tested | `cross-domain.projection` | stays |
-| `core.other-types.delegation-only-unchanged` | binding | other-types | todo | `core.delegation` | stays; gate owner changes |
-| `core.self-exchange.approved-agent` | binding | self-exchange | tested | unconditional | stays |
-| `core.self-exchange.result-subset` | binding | self-exchange | tested | unconditional | stays |
-| `resource-access.delegate-eligibility.as-authenticates-delegate` | Resource Access | delegate-eligibility | tested | `core.delegation` | stays in RA; gate owner changes |
-| `core.rs-enforcement.delegated-routing-mission-aware` | binding | rs-enforcement | partial | unconditional | stays (R4) |
-| `core.error-mapping.token-exchange-token-refusal` | binding | error-mapping | partial | unconditional | stays; re-check which moved error rows it witnesses |
-| `core.authority-sources.actor-model-source-independent` | binding | authority-sources | partial | unconditional | stays (line 1989) |
-| `core.authority-proposal.governed-client-token-request-not-reached` | binding | authority-proposal | todo | unconditional | stays (lines 1215-1216) |
-| (none) | binding | delegated-exchange | none | none | "Authority only narrows" (line 3609): add a row (5.6) |
-| (none) | binding | delegated-exchange | none | none | "Each delegate is bound to its own key" (line 3617): add a row (5.6); its placement depends on P1-R1 |
-
-**Capability ids** (`model.capabilities`): `core.delegation` and
-`core.instance-context`. Both are kept. `core.delegation` becomes owned
-by the companion, and the base's rows that keep this gate read it as
-"a delegation profile is implemented".
-
-**Implementation switch:** `delegation` (`capabilities.ts` line 26),
-opt-in, unchanged. There is no Instance Context switch.
-
-**`@spec` annotations in `src/`:**
-
-| Anchor | Annotations | Files | P1 |
-|---|---|---|---|
-| `mission#designation` | 22 | 11 | repoint to the companion |
-| `mission#delegated-instance-context` | 1 | 1 | repoint to the companion |
-| `mission#delegated-exchange` | 0 | 0 | none |
-| `mission#delegation` | 20 | 10 | split by meaning (delegate model stays; exchange moves) |
-| `mission#delegation-constraints` | 27 | 15 | unchanged |
-| `mission#self-exchange` | 14 | 3 | unchanged |
-
-**Companion citations** (`companion_cites.py`):
-- Self-Exchange: Runtime Evidence 1949 and Shaping 607, unchanged.
-- Delegation Constraints: Continuation 393, Cross-Domain 411, 814 and
-  858, and Derivation Limits 593, unchanged.
-- Delegation Within a Mission: Cross-Domain 821, Derivation Limits 365
-  and Transaction Authorization 650, which depend on P1-R1.
-
-## Appendix B. P4 vocabulary inventory
-
-Output of `commitment_imports.py`, by paragraph. "Both" means the
-paragraph cites the binding and the substrate. Paragraphs citing
-neither are counted but not listed.
+From `commitment_imports.py`, by paragraph. "Both" means the paragraph
+cites both binding and substrate.
 
 | Draft | Line | Cites | Vocabulary |
 |---|---|---|---|
-| Discharge | 282 | binding | canonical-object |
-| Discharge | 679 | binding | raw-octet |
-| Discharge | 841 | binding | canonical-object, commitment mechanisms |
+| Discharge | 282, 679, 841 | binding | canonical-object; raw-octet; canonical-object and commitment mechanisms |
 | Consent Evidence | 701 | binding | commitment mechanisms, raw-octet, agility, unrecognized-prefix, envelope anchor |
-| Approval Governance | 217 | both | canonical-object, commitment mechanisms, Default Commitment Construction |
+| Approval Governance | 217 | both | canonical-object, commitment mechanisms, Default Commitment Construction, envelope anchor |
 | AuthZEN | 466 | both | canonical-object, Default Commitment Construction |
 | Harness | 1414 | both | raw-octet, Default Commitment Construction |
 | Transaction Authorization | 289 | both | canonical-object, raw-octet, envelope anchor, Default Commitment Construction |
-| Approval Governance | 1470, 1478 | binding | envelope anchor (unaffected by P4) |
-| Expansion | 1650 | binding | envelope anchor (unaffected) |
-| Work Products | 493, 512 | binding | envelope anchor, unrecognized-prefix (unaffected) |
-| Mandate | 285 | binding | algorithm agility (unaffected) |
-| Orchestration | 410 | both | envelope anchor (unaffected) |
-| Audit, Capability Binding, Discovery, Evidence Envelope, Runtime, Runtime Evidence, Shaping | various | substrate | already substrate-sourced |
+| Orchestration | 410 | both | envelope anchor, Default Commitment Construction |
+| Approval Governance | 1470, 1478 | binding | commitment mechanisms, envelope anchor |
+| Expansion | 1650 | binding | commitment mechanisms, envelope anchor |
+| Work Products | 493, 512 | binding | envelope anchor; unrecognized-prefix |
+| Mandate | 285 | binding | algorithm agility |
+| Audit, Capability Binding, Discovery, Evidence Envelope, Runtime, Runtime Evidence, Shaping | various | substrate | already sourced from the substrate |
+
+## Appendix C. Review dispositions
+
+**Round 1** (reviewing revision 1). All 17 points were agreed and
+verified. Revision 2 recorded them in full; in summary:
+- the missed introspection row;
+- applicability-only changes;
+- the provider switch name;
+- the delegated-token scope question;
+- appendix reference dispositions;
+- P2 keeping the body rules;
+- P4's missed importer;
+- Section 6 recast as precedents;
+- the RFC Editor queue state;
+- obligation-level verification;
+- semantic ownership for P3;
+- the placement caveat;
+- separate success criteria;
+- the sequence.
+
+Revision 3 supersedes the P1 and P2 dispositions. See `git log` for
+revision 2.
+
+**Round 2** (fresh eyes, reviewing revision 2; `REVIEW-ROUND-2.md`):
+
+| Finding | Disposition in revision 3 |
+|---|---|
+| B1: the designation move takes three base-MUST exceptions with it | Agreed and verified (C12). The designation move is withdrawn (7.7). |
+| B2: the Actor Profile cannot leave the submission set | Agreed and verified (RA 1162-1176). The dependency goal is restated over the submission set (Section 10). |
+| B3: the Delegation bar would leave the base, contrary to C1 | Agreed. The designation move is withdrawn; the bar design is recorded for a possible later readability move (7.7). |
+| M1: hidden decisions | Section 8 now lists every decision. |
+| M2: Section 8 not decidable | Rebuilt with options, cost, effect and prerequisite. |
+| M3: Appendix A incomplete | Rebuilt for the narrowed P1. It includes the error-table note and the annotation. |
+| M4: the registry design contradicts itself | The registry is withdrawn; P2 is body-only. |
+| M5: simpler path not weighed; questions unanswered | Section 1 answers the questions. The simpler path (Instance Context only) is now P1. |
+| P4 premise wrong | Withdrawn (7.5). |
+| Fact-checker corrections (C10 settled by D645; D646; D620 versus D625; D140 direction; variant C at 21 rows; five "both" paragraphs; `@spec` counts including Markdown; "designation" on 37 lines; Cross-Domain 814; Derivation Limits 365; the Implementation Map line 524; the envelope list at 4599-4602; range ends 4008 and 2336; the commit date; Appendix B vocabulary; script numbering) | Applied where the text survives into revision 3. Items about the withdrawn designation move are moot. `measure.py` buckets are renumbered 1 to 5. |
+| Section 6, Designated Expert style, closed grains list, Section 10 units, undefined terms | Applied (Sections 6, 2, 7.4, 10). |
+
+## Appendix D. Corrections log
+
+| Earlier claim | Corrected |
+|---|---|
+| Chat and revisions 1 and 2: the Actor Profile can leave the binding's dependencies | It cannot leave the submission set: Resource Access needs `sub_profile` through the binding. |
+| Chat: D427's editor's-copy question is unruled | D645 settled it. |
+| Revision 2: move the designation protocol (15 rows) | Withdrawn (C12, C1). |
+| Revisions 1 and 2: P4 targets species the base never uses | The base uses them through `authority_source.policy.digest`. |
+| Revisions 1 and 2: a registry for approval basis types | Withdrawn; P2 is body-only. |
+| Revision 2: "Resource Access -00 published (D645)" | D646. |
+| Revision 2: C7 credits both references to D625 | D620 for rar-metadata-remediation; D625 for the Actor Profile. |
+| Revision 2: `6a7c616e` dated 2026-10-20 | 2026-10-19 (-0700). |
