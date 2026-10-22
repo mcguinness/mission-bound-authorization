@@ -1160,8 +1160,14 @@ Where creation is adjudicated by policy with no human interaction
 
 Either way `root_commitment` MUST
 reference a committed value: the anti-laundering guarantee that a
-`policy_drawdown` basis always traces to something the human's
-approval actually committed.
+`policy_drawdown` basis always traces to something a human's
+approval actually committed. Where the Parent Mission was approved
+`direct`, its `authority_hash` commits what that approval committed.
+Where the Parent Mission was itself activated under a standing-consent
+basis, its `authority_hash` commits the Authority Set its activation
+derived, not a root a human approved verbatim. The trace then runs
+through the Parent's own `approval_basis` (`consent_principal`,
+`root_commitment`, `approved_at`) to the human-consented root.
 
 Where the entry carries a
 `child_creation_policy`, `activation` carries that policy's `id`,
@@ -1182,16 +1188,23 @@ Approver, never the policy and never the requesting agent.
 
 `approved_at` (the issuance profile's standing-consent requirement)
 is the human approval instant of the consented root that
-`root_commitment` commits, and it follows the root. Both forms above
-were consented at the Parent Mission's approval event, since an
+`root_commitment` traces to, and it follows the root. An
 entry-carried `child_creation_policy` reference rides the committed
-entry that approval covered, so `approved_at` is that approval
-event's instant, read from the retained Parent record, never from
-the child-creation request. Where a deployment separately versions
-and re-approves the referenced policy's content as a standing
-consent of its own, `approved_at` is that policy version's
-human-approval instant, verified from the deployment's retained
-governance record.
+entry the Parent's authority carries, so both forms above share the
+Parent's root:
+
+- Where the Parent Mission was approved `direct`, that root was
+  consented at the Parent's approval event, and `approved_at` is that
+  event's instant.
+- Where the Parent Mission was activated under a standing-consent
+  basis, its approval event was an activation, not a human decision,
+  and `approved_at` is the Parent's own `approval_basis.approved_at`.
+
+Either way it is read from the retained Parent record, never from the
+child-creation request. Where a deployment separately versions and
+re-approves the referenced policy's content as a standing consent of
+its own, `approved_at` is that policy version's human-approval
+instant, verified from the deployment's retained governance record.
 
 The child's `subject` follows its basis:
 
@@ -2434,6 +2447,12 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A `policy_drawdown` child of a Parent Mission activated under a
+  standing-consent basis takes the Parent's own
+  `approval_basis.approved_at` as its `approved_at`, not the Parent's
+  activation instant; the trace from the child's `root_commitment`
+  runs through the Parent to the human-consented root (#1514).
 
 - Request Processing drops `invalid_token` from the token-endpoint
   refusals: it is a resource server code that the token endpoint does

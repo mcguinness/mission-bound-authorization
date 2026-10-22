@@ -6,6 +6,7 @@
 
 import { createPublicKey, KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
+  type ActivationPolicyRef,
   type ApprovalContextManifestInput,
   authorityHash,
   canonicalize,
@@ -147,7 +148,7 @@ import {
   committedActivationPolicy,
   type EvaluatedActivationPolicy,
 } from "./activation-policy-snapshots.js";
-import { ApprovalGovernanceRecordStore, signApprovalGovernanceRecord } from "./approval-governance.js";
+import { type ApprovalGovernanceRecord, ApprovalGovernanceRecordStore, signApprovalGovernanceRecord } from "./approval-governance.js";
 import {
   assertDirectApprovalRecord,
   buildDirectApprovalRecord,
@@ -180,8 +181,26 @@ import {
   ceilingMembersOf,
   consentCeiling,
   consentedDrawdownPolicy,
+  decideDrawdown,
+  type DrawdownFallbackReason,
+  DrawdownRefusal,
+  type DrawdownGovernanceReason,
+  gatherDrawdownInputs,
+  type ProgressiveDrawdownOptions,
   serializeCeiling,
 } from "./progressive.js";
+import {
+  assertDrawdownRecord,
+  buildDrawdownRecord,
+  consentProvenanceOf,
+  DrawdownApprovalRecordStore,
+  drawdownGovernanceGate,
+  type DrawdownRecordingRule,
+  drawdownRecordingRuleRef,
+  type DrawdownRecordInputs,
+  parseDrawdownRecordingRule,
+  type RegisteredDrawdownRecordingRule,
+} from "./drawdown-approval-record.js";
 import {
   IntentError,
   type IntentSubmissionPresenter,
@@ -202,6 +221,7 @@ import {
 } from "./status-list.js";
 import {
   type ApprovalBasis,
+  type ApprovalBasisCeilingDrawdown,
   type ApprovalBasisDirect,
   type AuthorityEntry,
   type AuthoritySource,
@@ -420,6 +440,14 @@ export interface ApproveInput {
    * the record carries neither `proposed_authority` nor `proposal_hash`.
    */
   proposedAuthority?: AuthorityEntry[];
+  /**
+   * @spec mission#derivation-modes, mission#scope-projection: the entries the
+   * request's `scope` values stand for at a `scope`-only target
+   * (`requestedScopeEntries`). Used only when no proposal was submitted, as
+   * the configured-mapping key; not a proposal, so never recorded or hashed
+   * as one.
+   */
+  requestedScope?: AuthorityEntry[];
   subject: { iss: string; sub: string };
   approver: { iss: string; sub: string };
   /**
@@ -670,6 +698,17 @@ export interface KernelOptions {
    */
   directApprovalRecording?: { rule: RegisteredDirectApprovalRule };
   /**
+   * @spec approval-governance#accountable-assertion, approval-governance#recency-high-risk
+   * (#1470 slice 2, D626): voluntary Approval Governance Records for
+   * policy-adjudicated `ceiling_drawdown` successors. OPTIONAL and default
+   * off. Present, a drawdown passes the eligibility gate over the whole
+   * successor or falls back to a fresh human approval, and an activated one
+   * commits its signed record, the recording rule and the inputs its decision
+   * read in the creation transaction. Build the rule with
+   * `drawdownRecordingRuleFrom` from the configuration the deployment enforces.
+   */
+  ceilingDrawdownRecording?: { rule: RegisteredDrawdownRecordingRule };
+  /**
    * @spec resource-access#resource-contract (#249, D553): the trusted
    * configuration "which states whether an entry's `resource` requires a
    * reference and which contract version is current for it": the contract
@@ -861,6 +900,18 @@ export class MissionKernel {
    * is turned off.
    */
   readonly directApprovalRecords: DirectApprovalRecordStore;
+  /**
+   * @spec approval-governance#approval-policy (#1470 slice 2): the retained
+   * ceiling-drawdown recording rules and each recorded drawdown's inputs.
+   * Always present, so records stay re-checkable after recording is turned off.
+   */
+  readonly drawdownApprovalRecords: DrawdownApprovalRecordStore;
+  /** The configured ceiling-drawdown recording rule, parsed, with its `approval_policy` reference. */
+  private readonly drawdownRule?: {
+    registered: RegisteredDrawdownRecordingRule;
+    parsed: DrawdownRecordingRule;
+    ref: { id: string; version: string; digest: string };
+  };
   /** The configured direct approval rule, parsed, with its `approval_policy` reference. */
   private readonly directRule?: {
     registered: RegisteredDirectApprovalRule;
@@ -989,6 +1040,15 @@ export class MissionKernel {
     this.governanceRecords = new ApprovalGovernanceRecordStore(this.db);
     this.governedPolicyConsents = new GovernedPolicyConsentStore(this.db);
     this.directApprovalRecords = new DirectApprovalRecordStore(this.db);
+    this.drawdownApprovalRecords = new DrawdownApprovalRecordStore(this.db);
+    if (opts.ceilingDrawdownRecording) {
+      const registered = opts.ceilingDrawdownRecording.rule;
+      this.drawdownRule = {
+        registered,
+        parsed: parseDrawdownRecordingRule(registered.content),
+        ref: drawdownRecordingRuleRef(opts.issuer, registered),
+      };
+    }
     // A malformed rule refuses construction, never an approval.
     if (opts.directApprovalRecording) {
       const registered = opts.directApprovalRecording.rule;
@@ -1058,8 +1118,15 @@ export class MissionKernel {
    * and grants, with each entry's `resource_contract` assembled from
    * configuration ({@link assembleResourceContracts}, #249).
    */
-  derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {
-    return assembleResourceContracts(this.deriveWithProvenance(intent, proposal).entries, this.resourceContracts());
+  derive(
+    intent: MissionIntent,
+    proposal?: readonly AuthorityEntry[],
+    requestedScope?: readonly AuthorityEntry[],
+  ): AuthorityEntry[] {
+    return assembleResourceContracts(
+      this.deriveWithProvenance(intent, proposal, requestedScope).entries,
+      this.resourceContracts(),
+    );
   }
 
   /** @spec resource-access#resource-contract (#249): the configured contract declarations. */
@@ -1076,8 +1143,19 @@ export class MissionKernel {
    * separate child-actor origins as `child_actor_provenance` (@spec
    * child-delegation#fanout, #1304).
    */
-  deriveWithProvenance(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): DerivedAuthority {
-    const derived = deriveAuthoritySetWithProvenance(intent, this.opts.policy, proposal);
+  deriveWithProvenance(
+    intent: MissionIntent,
+    proposal?: readonly AuthorityEntry[],
+    requestedScope?: readonly AuthorityEntry[],
+  ): DerivedAuthority {
+    const derived = deriveAuthoritySetWithProvenance(
+      intent,
+      this.opts.policy,
+      proposal,
+      undefined,
+      undefined,
+      requestedScope,
+    );
     // @spec discharge#discharge-authority: resolve every `discharge_authority`
     // selector the derived entries carry, refusing the derivation when one maps
     // to nothing. Early and typed here (an IntentError the submission carriers
@@ -1430,7 +1508,7 @@ export class MissionKernel {
     // (IntentError) rather than being approved unbound.
     // @spec resource-access#delegate-eligibility: the derivation's origins
     // stay index-aligned through the two per-entry capability transforms.
-    const derived = this.deriveWithProvenance(input.intent, proposal);
+    const derived = this.deriveWithProvenance(input.intent, proposal, input.requestedScope);
     // @spec resource-access#resource-contract (#249): the reference is
     // assembled from configuration before `authorityHash` below, so
     // `authority_hash` commits it; the transform is one entry per entry, so
@@ -1675,6 +1753,81 @@ export class MissionKernel {
    * `human` assertion; pass the commit gate; sign. A denial refuses the
    * approval `access_denied`.
    */
+  /** Whether policy-adjudicated ceiling drawdowns are recorded. */
+  get recordsCeilingDrawdowns(): boolean {
+    return this.drawdownRule !== undefined;
+  }
+
+  /**
+   * @spec approval-governance#atomic-commitment, approval-governance#recency-high-risk,
+   * approval-governance#re-check (#1470 slice 2, D626): inside the drawdown's
+   * creation transaction, at its creation instant: gather the inputs and
+   * decide from them, run the eligibility gate over the whole successor, then
+   * build, gate and sign the record. A decision or gate that does not admit
+   * the drawdown refuses it before activation, nothing written, and the
+   * adapter falls back to a fresh human approval.
+   */
+  prepareDrawdownRecordInCallerTx(args: {
+    record: MissionRecord;
+    predecessor: MissionRecord;
+    deciding: ActivationPolicyRef;
+    options: ProgressiveDrawdownOptions;
+    isCrossDomain: (resource: string) => boolean;
+  }): { signed: ApprovalGovernanceRecord; inputs: DrawdownRecordInputs } {
+    const rule = this.drawdownRule as NonNullable<MissionKernel["drawdownRule"]>;
+    const { record, predecessor, deciding } = args;
+    const refuse = (reason: DrawdownGovernanceReason | DrawdownFallbackReason) => {
+      throw new DrawdownRefusal("governance_refused", `the recorded drawdown falls back to a fresh human approval: ${reason}`, reason);
+    };
+    const { inputs: adjudication } = gatherDrawdownInputs(this, args.options, {
+      predecessor,
+      requested: record.authority_set,
+      isCrossDomain: args.isCrossDomain,
+      now: new Date(record.created_at),
+    });
+    const decision = decideDrawdown(adjudication);
+    if (decision.outcome === "fresh_approval") refuse(decision.reason);
+    const committed = adjudication.drawdown_policy;
+    if (
+      decision.outcome !== "policy" ||
+      !committed ||
+      committed.id !== deciding.id ||
+      committed.version !== deciding.version ||
+      committed.digest !== deciding.digest
+    ) {
+      refuse("drawdown_policy_changed");
+    }
+    const consent = consentProvenanceOf(this, predecessor);
+    if (!consent) return refuse("governance_consent_unverified");
+    const gate = drawdownGovernanceGate(this.opts.issuer, rule.parsed, {
+      deciding,
+      consent,
+      authority: record.authority_set,
+      decided_at: record.created_at,
+    });
+    if (!gate.ok) refuse(gate.reason);
+    const unsigned = buildDrawdownRecord(record, rule.ref, deciding);
+    assertDrawdownRecord(unsigned, record.approval_basis as ApprovalBasisCeilingDrawdown, rule.ref, deciding);
+    return {
+      signed: signApprovalGovernanceRecord(unsigned, this.statusSigner()),
+      inputs: {
+        approval_event_id: record.approval_event_id,
+        intent_hash: record.intent_hash,
+        authority: record.authority_set,
+        adjudication,
+        consent,
+        decided_at: record.created_at,
+      },
+    };
+  }
+
+  /** Retain a prepared drawdown record, its rule and its inputs; only in the Mission's creation transaction. */
+  retainDrawdownRecordInCallerTx(missionId: string, prepared: { signed: ApprovalGovernanceRecord; inputs: DrawdownRecordInputs }): void {
+    const rule = this.drawdownRule as NonNullable<MissionKernel["drawdownRule"]>;
+    this.drawdownApprovalRecords.retainInCallerTx(missionId, this.opts.issuer, rule.ref, rule.registered, prepared.inputs);
+    this.governanceRecords.retainInCallerTx(missionId, prepared.signed);
+  }
+
   private prepareDirectRecord(record: MissionRecord, input: ApproveInput, sourceRoot: string, ceiling: AuthorityEntry[] | undefined) {
     const rule = this.directRule as NonNullable<MissionKernel["directRule"]>;
     if (!input.authentication) {

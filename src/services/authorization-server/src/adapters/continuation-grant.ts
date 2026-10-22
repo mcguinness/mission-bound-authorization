@@ -102,6 +102,7 @@ import {
   type EncounterFacts,
   encounterFacts,
   encounterHint,
+  refusesEncounter,
 } from "../kernel/progressive.js";
 import {
   type AuthorityEntry,
@@ -2822,9 +2823,25 @@ export async function handleExpansionExchange(
     if (outcome && typeof outcome === "object") {
       drawdownFallback = outcome.reason;
       if (outcome.encountered) {
-        const facts = await encounterFacts(opts.progressive, outcome.encountered, requested, hint);
+        // @spec discovery#adjudication (#1469 stage 3): the session the harness
+        // reports on is named by the subject token's Mission and the
+        // authenticated client, never by a request member.
+        const facts = await encounterFacts(opts.progressive, outcome.encountered, requested, hint, {
+          missionId: active.id,
+          clientId: (ctx.oidc.client as NonNullable<typeof ctx.oidc.client>).clientId,
+          now: () => opts.kernel.nowDate(),
+        });
         if (typeof facts === "string") {
           txError(ctx, 400, "invalid_request", facts);
+          return;
+        }
+        // @spec discovery#adjudication, discovery#resource-identity (#1469 stage
+        // 2): an encounter whose identity cannot be established, where the
+        // deployment does not escalate it, is refused before any deferral or
+        // reservation exists. The refusal is uniform: the draft defines no
+        // diagnostic for it, and the response names no pinning step.
+        if (refusesEncounter(opts.progressive, facts)) {
+          txError(ctx, 400, "invalid_request", "the encounter is refused");
           return;
         }
         encounter = facts;
@@ -3109,11 +3126,12 @@ async function completeCeilingDrawdown(
     return true;
   }
   const resourceToAs = opts.resourceToAs;
+  // Without a resource map no resource is known to be local: fail closed.
+  const isCrossDomain = (resource: string) => !resourceToAs || resourceToAs(resource) !== opts.issuer;
   const adjudication = adjudicateDrawdown(opts.kernel, progressive, {
     predecessor,
     requested: d.requested,
-    // Without a resource map no resource is known to be local: fail closed.
-    isCrossDomain: (resource) => !resourceToAs || resourceToAs(resource) !== opts.issuer,
+    isCrossDomain,
   });
   if (adjudication.outcome === "out_of_ceiling") {
     // @spec progressive#ceiling-test (#1413): never adjudicated by policy; by
@@ -3158,6 +3176,7 @@ async function completeCeilingDrawdown(
           containment: predecessor.containment?.containment_version ?? 0,
           discharge: predecessor.discharged?.length ?? 0,
         },
+        governance: { options: progressive, isCrossDomain },
       });
       return { missionId: created.id, value: created };
     });
@@ -3170,6 +3189,12 @@ async function completeCeilingDrawdown(
       }
     }
     if (e instanceof DrawdownRefusal) {
+      // @spec approval-governance#recency-high-risk, approval-governance#atomic-commitment
+      // (#1470 slice 2, D626): where drawdowns are recorded, a drawdown the
+      // commit-time decision or the eligibility gate over the whole successor
+      // does not admit rolled back with nothing written; it falls back to a
+      // fresh human approval, never to an unrecorded activation.
+      if (e.code === "governance_refused" && e.reason) return { reason: e.reason };
       // @spec progressive#in-ceiling-expansion (Derivation limits): refused as
       // Derivation Limits refuses a derivation; nothing was created.
       if (e.code === "derivations_exhausted") throw new MissionGrantError(e.message, "derivations_exhausted");
