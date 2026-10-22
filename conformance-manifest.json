@@ -55,8 +55,8 @@
     "content_sha256": "2734f08663aaa41f3d3f58b885c7036833c88a7286b889647bfa426dd2835872"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "546d1dded84f2196fc56c20d4bf4b4ec8e9288ea",
-    "content_sha256": "369e23cc1571a9920815e96f6e300f65312369bf0a37614f21384c5b3ebf041e"
+    "revision": "9b139bfb5720ac0e561cd85d9e4207ba769e8a70",
+    "content_sha256": "42bf3935b5bf964be88b731862505c02d753ae70652aaf395e92edee06775bce"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
@@ -15574,6 +15574,48 @@
     }
    ],
    "notes": "#1191 witnesses the refusal on an active Mission and the parse; #1002 adds a suspended Mission with a recorded schedule. Proved by reading an incomplete pair as no schedule (all three tests fail)."
+  },
+  {
+   "id": "status.signing-keys.compromise-published",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "security-considerations",
+   "text": "the AS publishes it as revoked, or marks it with a compromise time, rather than only rotating it out.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a key the AS signed Mission Status or Lifecycle responses under that is known or suspected compromised is published in its `jwks_uri` as revoked, or marked with a compromise time, rather than only rotated out or removed, so the archived responses it signed stay verifiable and classifiable"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice. D405: specified, not implemented."
+  },
+  {
+   "id": "status.signing-keys.compromised-not-relied-on",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "security-considerations",
+   "text": "A consumer MUST NOT accept, for a current reliance decision, a response signed under a key the AS has published as compromised.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as revoked or marked with a compromise time, although the key stays resolvable in the `jwks_uri` and the signature still verifies for audit"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice, and the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check compromise. D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty."
   },
   {
    "id": "management.bulk.scheduled-resume-grant-dry-run",
