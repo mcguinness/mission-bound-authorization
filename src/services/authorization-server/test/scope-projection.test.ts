@@ -12,12 +12,14 @@
  * so constraint cases add their constraint through the authority proposal.
  */
 import type { Server } from "node:http";
+import { ResourceContractDeclarations, type ResourceContractRef, resourceContractDigest } from "@mission/core";
 import { startPlainResourceServer } from "@mission/plain-rs";
 import {
   DERIVATION_POLICY,
   DEV_SERVICE_TOKEN,
   demoReconciliationTemplate,
   INTROSPECTION_PRINCIPALS,
+  RUNTIME_SCOPE_CONFIG,
   SCOPE_PROJECTION,
   TOPOLOGY,
 } from "@mission/demo-data";
@@ -58,6 +60,44 @@ type Json = Record<string, unknown>;
 /** The live mapping the AS reads at every issuance. */
 const MAPPING = structuredClone(SCOPE_PROJECTION);
 const SHIPPED_PLAIN = structuredClone(SCOPE_PROJECTION.audiences[PLAIN]);
+
+/**
+ * @spec resource-access#scope-projection (a requested scope value standing for
+ * an entry with a contract): a contract the plain RS declares, v1 superseded
+ * within retention and v2 current, required for no action, beside the shipped
+ * declarations, so a mapping value can name one and no other case changes.
+ */
+const PLAIN_CONTRACT = "https://plain.test/contracts/reports";
+const plainContractDoc = (version: string) => ({
+  id: PLAIN_CONTRACT,
+  version,
+  operation_profile: `reports-${version}`,
+  operations: { read: { action: READ }, write: { action: WRITE } },
+});
+const plainContractRef = (version: string): ResourceContractRef => ({
+  id: PLAIN_CONTRACT,
+  version,
+  digest: resourceContractDigest(plainContractDoc(version)),
+});
+const CONTRACTS = new ResourceContractDeclarations([
+  ...((RUNTIME_SCOPE_CONFIG as { extensions?: { resource_contracts?: unknown[] } }).extensions?.resource_contracts ?? []),
+  {
+    resource: PLAIN,
+    resource_match: "exact",
+    id: PLAIN_CONTRACT,
+    requires_reference: [],
+    versions: [
+      {
+        version: "v1",
+        state: "superseded",
+        retained_until: "2099-01-01T00:00:00Z",
+        digest: plainContractRef("v1").digest,
+        document: plainContractDoc("v1"),
+      },
+      { version: "v2", state: "current", digest: plainContractRef("v2").digest, document: plainContractDoc("v2") },
+    ],
+  },
+]);
 
 let as: BuiltAs;
 let asServer: Server;
@@ -299,6 +339,7 @@ beforeAll(async () => {
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     approvalSessions: SESSIONS,
     scopeProjection: MAPPING,
+    resourceContracts: CONTRACTS,
     testTokenSigningJwk: (await exportJWK(signing.privateKey)) as JWK,
   });
   asServer = as.provider.listen(PORT);
@@ -1060,6 +1101,46 @@ describe("configured-mapping mode keyed on a requested scope (@spec mission#deri
         expect(created).toHaveLength(0);
       },
     );
+  });
+
+  /** The plain RS mapping with reports.read naming `contract`. */
+  const withContract = (contract: ResourceContractRef) => ({
+    version: `scope-key-contract-${contract.version}`,
+    mission_aware: false,
+    mode: "scope_only",
+    scopes: {
+      "reports.read": { rights: rights([READ]), mandatory_controls: {}, resource_contract: contract },
+    },
+  });
+
+  it("a value whose mapping names the current contract stands for an entry carrying that reference; the approval keeps it and the token projects (@spec resource-access#scope-projection)", async () => {
+    await withPlain(withContract(plainContractRef("v2")), async () => {
+      const { r, created } = await authorizeOne("reports.read");
+      expect(r.code, JSON.stringify(r)).toBeTruthy();
+      expect(created).toHaveLength(1);
+      expect(created[0]?.authority_set).toEqual([
+        { type: "mission_resource_access", resource: PLAIN, actions: [READ], resource_contract: plainContractRef("v2") },
+      ]);
+      const keys = await newKeys();
+      const res = await redeem(r.code as string, keys);
+      expect(res.status, JSON.stringify(res.body)).toBe(200);
+      expect(res.body.scope).toBe("reports.read");
+      expect((await callRs(RS_PORT, "GET", res.body.access_token as string, keys)).status).toBe(200);
+    });
+  });
+
+  it("a value whose mapping names a contract version that is not current is refused at the approval: invalid_authorization_details, and no Mission (@spec resource-access#resource-contract)", async () => {
+    await withPlain(withContract(plainContractRef("v1")), async () => {
+      const { r, created } = await authorizeOne("reports.read");
+      expect(r.par.status, JSON.stringify(r.par.body)).toBe(201);
+      // The clause: refused at the approval, and no Mission.
+      expect(r.code).toBeUndefined();
+      expect(created).toHaveLength(0);
+      // Implementation-specific: the reference's error code. Resource Access
+      // names invalid_authorization_details for a proposed entry; this
+      // request carries no proposal, so the code is this AS's choice.
+      expect(r.error, JSON.stringify(r)).toBe("invalid_authorization_details");
+    });
   });
 });
 
