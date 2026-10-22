@@ -54421,7 +54421,7 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a submitted entry whose children grant carries a member other than max_children, max_child_depth, allowed_child_actors and child_creation_policy is refused with invalid_authorization_details and no request_uri, never admitted without the member; an entry whose children grant carries only defined members is admitted and the approved Mission's entry carries it",
+    "normative": "a submitted entry whose children grant carries a member other than max_children, max_child_depth, allowed_child_actors and child_creation_policy, whose processing no implemented companion specification defines, is refused with invalid_authorization_details and no request_uri, never admitted without the member; an otherwise valid and authorized entry whose children grant carries only supported members is not refused by this check, and the approved Mission's entry carries it",
     "local": "the reference implements no companion specification defining a further children member; unsupportedDelegationMember (mission-core) checks SUPPORTED_CHILDREN_MEMBERS at every intake, derivation and the config loaders"
    },
    "level": "endpoint",

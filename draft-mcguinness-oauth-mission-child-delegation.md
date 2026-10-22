@@ -1451,9 +1451,10 @@ member's processing, and MUST NOT drop the member. A submitted
 `authorization_details` entry carrying one is refused with the
 `invalid_authorization_details` error code ({{Section 5 of RFC9396}});
 a configured entry carrying one is a configuration error. This admission
-check is separate from enforcement: a defined member is admitted, and
-child creation is still refused when the Mission Issuer cannot enforce
-it (below).
+check is separate from enforcement: a supported member is not refused by
+this check; other validation and authorization requirements still apply,
+and child creation is still refused when the Mission Issuer cannot
+enforce the member (below).
 
 Example parent Authority Set entry whose `delegation` carries `children`,
 so the entry permits Child Missions to depth 2, at most 5 concurrently,
