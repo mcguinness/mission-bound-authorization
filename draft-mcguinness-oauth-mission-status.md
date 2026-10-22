@@ -1662,7 +1662,7 @@ through standard {{RFC8414}} discovery.
   when the AS supports it.
 
 `mission_status_endpoint_auth_methods_supported`:
-: OPTIONAL. A JSON array of strings naming the authentication methods
+: CONDITIONAL. A JSON array of strings naming the authentication methods
   the Mission Status endpoint ({{mission-status}}) accepts. Its value
   space is a closed set defined by this document, not the OAuth Token
   Endpoint Authentication Methods registry: `tls_client_auth`
@@ -1673,16 +1673,16 @@ through standard {{RFC8414}} discovery.
   Protected Resource Metadata {{RFC9728}}). The first two values are
   spelled identically to registered token-endpoint authentication
   methods by intent; this member describes this endpoint, not the token
-  endpoint. Present, and SHOULD be advertised, when the AS serves the
-  Mission Status endpoint.
+  endpoint. REQUIRED when the AS serves the Mission Status endpoint.
 
 `mission_status_endpoint_auth_signing_alg_values_supported`:
-: OPTIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
+: CONDITIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
   values the AS accepts for the `private_key_jwt` client-assertion JWT
   ({{mission-status-authentication}}) at the Mission Status endpoint.
   This is the client-assertion verification set, not the response-signing
   algorithms of `mission_status_signing_alg_values_supported` below.
-  `none` MUST NOT be used. Present when that endpoint lists
+  `none` MUST NOT be used. REQUIRED when
+  `mission_status_endpoint_auth_methods_supported` lists
   `private_key_jwt`.
 
 `mission_status_signing_alg_values_supported`:
@@ -1704,20 +1704,21 @@ through standard {{RFC8414}} discovery.
   when the AS supports it.
 
 `mission_lifecycle_endpoint_auth_methods_supported`:
-: OPTIONAL. A JSON array of strings naming the authentication methods
+: CONDITIONAL. A JSON array of strings naming the authentication methods
   the Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}})
   accepts, from the same closed value space as
   `mission_status_endpoint_auth_methods_supported` (with `access_token`
-  naming a `mission_lifecycle`-scoped access token). Present, and SHOULD
-  be advertised, when the AS serves the Mission Lifecycle endpoint.
+  naming a `mission_lifecycle`-scoped access token). REQUIRED when the
+  AS serves the Mission Lifecycle endpoint.
 
 `mission_lifecycle_endpoint_auth_signing_alg_values_supported`:
-: OPTIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
+: CONDITIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
   values the AS accepts for the `private_key_jwt` client-assertion JWT
   ({{mission-status-authentication}}) at the Mission Lifecycle endpoint.
   This is the client-assertion verification set, not the response-signing
   algorithms of `mission_status_signing_alg_values_supported`.
-  `none` MUST NOT be used. Present when that endpoint lists
+  `none` MUST NOT be used. REQUIRED when
+  `mission_lifecycle_endpoint_auth_methods_supported` lists
   `private_key_jwt`.
 
 `mission_max_stale_seconds`:
@@ -1725,11 +1726,11 @@ through standard {{RFC8414}} discovery.
   tolerated interval, in seconds, for revocation propagation
   ({{revocation-enforcement-classes}}). When absent, no bound is
   declared, and a consumer sizes reliance to token lifetime alone.
+{: newline="true"}
 
-When an endpoint's `*_auth_methods_supported` member is absent, the
-methods that endpoint accepts are known only by out-of-band
-configuration; `token_endpoint_auth_methods_supported` {{RFC8414}}
-describes the token endpoint alone and is never read in its place.
+`token_endpoint_auth_methods_supported` {{RFC8414}} describes the
+token endpoint alone and is never read in place of an endpoint's
+`*_auth_methods_supported` member.
 
 DPoP and mTLS support for issued credentials are read from the
 standard `dpop_signing_alg_values_supported` {{RFC9449}} and
@@ -1797,8 +1798,10 @@ An implementation claiming an extension MUST meet its requirements:
   anti-oracle property
   ({{mission-status-anti-oracle}}), and the error shape of
   {{mission-status-errors}}; and advertise `mission_status_endpoint`,
-  `mission_status_endpoint_auth_methods_supported`, and
-  `mission_status_signing_alg_values_supported`.
+  `mission_status_endpoint_auth_methods_supported`,
+  `mission_status_signing_alg_values_supported`, and, when it lists
+  `private_key_jwt`,
+  `mission_status_endpoint_auth_signing_alg_values_supported`.
 - **Introspection projection**: carry the Mission projection on the
   introspection response ({{introspection-projection}}), returning it
   as a {{RFC9701}}-signed response where end-to-end integrity is
@@ -1807,8 +1810,10 @@ An implementation claiming an extension MUST meet its requirements:
   ({{mission-lifecycle-endpoint}}), gate the `suspended` state and the
   `completed` termination it introduces exactly as the issuance profile
   gates on non-`active` state, and advertise `mission_lifecycle_endpoint`,
-  `mission_lifecycle_endpoint_auth_methods_supported`, and
-  `mission_status_signing_alg_values_supported`.
+  `mission_lifecycle_endpoint_auth_methods_supported`,
+  `mission_status_signing_alg_values_supported`, and, when it lists
+  `private_key_jwt`,
+  `mission_lifecycle_endpoint_auth_signing_alg_values_supported`.
 - **Mission Lifecycle, revoke only**: serve the Mission Lifecycle endpoint
   ({{mission-lifecycle-endpoint}}) with the `revoke` operation, under
   its authentication, its explicit lifecycle authorization
@@ -1821,9 +1826,12 @@ An implementation claiming an extension MUST meet its requirements:
   operation the implementation has not adopted
   ({{lifecycle-operations}}); and advertise
   `mission_lifecycle_endpoint`,
-  `mission_lifecycle_endpoint_auth_methods_supported`, and
-  `mission_status_signing_alg_values_supported`. The class requires no
-  other operation and not the Mission Status operation; an
+  `mission_lifecycle_endpoint_auth_methods_supported`,
+  `mission_status_signing_alg_values_supported`, and, when it lists
+  `private_key_jwt`,
+  `mission_lifecycle_endpoint_auth_signing_alg_values_supported`. The
+  class requires no other operation and not the Mission Status
+  operation; an
   implementation that adopts one meets its requirements as well, and
   the `suspended` state and `completed` termination arrive only with
   the operations that introduce them. An implementation claiming
