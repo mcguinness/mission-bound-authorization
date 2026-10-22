@@ -2032,7 +2032,8 @@ map does not replace ordinary Child Evidence or become authority.
 
 When Status or Signals is deployed, the issuer MUST carry the committed
 `carried_to` correlation in the `termination` of the old child's
-`parent_terminated` observation as defined by those profiles.
+`parent_terminated` observation, and MUST omit it when no replacement
+was committed; it is same-issuer correlation, not authority.
 
 A consumer MUST NOT infer absence of a replacement from receiving a cascade
 before the replacement's creation event.

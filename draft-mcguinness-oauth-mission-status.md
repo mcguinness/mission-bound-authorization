@@ -367,9 +367,8 @@ access token travels in the `Authorization` header instead.
 The Mission Issuer's configuration states which audiences each
 authenticated caller may request: a resource server is typically
 configured for its own audience identifiers, and a consuming
-Authorization Server under the Mission Issuance Grant profile
-({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}) for each
-resource it issues tokens for. The Mission Issuer MUST honor a
+authorization server for each resource it issues tokens for. The
+Mission Issuer MUST honor a
 request's `audience` only where that configuration authorizes the
 authenticated caller for it, and MUST otherwise refuse the request
 with the not-found response of {{mission-status-errors}}. Entitlement
@@ -647,24 +646,14 @@ The members are:
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
     Termination"), with its `reason` (`revoked` or `expired` from the
     issuance profile, this profile's `completed`, or a reason a
-    companion profile registers, such as `superseded` for an expanded
-    predecessor ({{I-D.draft-mcguinness-oauth-mission-expansion}}) or
-    `parent_terminated` for a cascade-terminated Child Mission
-    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})), its
-    `terminated_at`, the members its reason defines, and `version`:
-    the state version (below) of the transition that committed the
-    termination. `version` is REQUIRED in every termination the
-    Mission Issuer commits, and absent while an `expired` or
-    `parent_terminated` termination is observed but not yet committed;
-    it can be lower than the response's current `version` when a later
-    metadata-only change commits. It is the audit reference for
-    `revoked` and `completed`. A deployment implementing Child Mission
-    Carryover MUST include `termination.carried_to` when reporting a
-    `parent_terminated` termination for which a replacement was
-    committed, and MUST omit it when none was; it is same-issuer
-    correlation, not authority
-    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
-    "Carryover Evidence and Observation").
+    companion profile defines), its `terminated_at`, the members its
+    reason defines, and `version`: the state version (below) of the
+    transition that committed the termination. `version` is REQUIRED
+    in every termination the Mission Issuer commits, and absent while
+    a termination that takes effect without a request, such as
+    `expired`, is observed but not yet committed; it can be lower than
+    the response's current `version` when a later metadata-only change
+    commits. It is the audit reference for `revoked` and `completed`.
   - `expires_at`: REQUIRED. The point at which the Mission itself
     expires, the
     Mission record's `expires_at`
@@ -687,26 +676,10 @@ The members are:
     incremented on each committed lifecycle transition (the approval
     event is version 1) and each committed metadata-only change,
     current as of the reported `state`. It orders observations of one
-    Mission across every surface: an event consumer that
-    re-established state through this operation re-seats its gap
-    detection on it (the last-applied Signals version becomes this
-    value, {{I-D.draft-mcguinness-oauth-mission-signals}}), a
-    lifecycle mutation can guard on it ({{idempotency}}), and a
-    materialized policy view names the value it materialized
-    ({{I-D.draft-mcguinness-mission-runtime}}). Companion records carry
-    this same counter under their own member names:
-    `mission_state_version` in Decision Evidence
-    ({{I-D.draft-mcguinness-mission-runtime-evidence}}), `prior_version`
-    and `new_version` in Containment Evidence
-    ({{I-D.draft-mcguinness-oauth-mission-containment}}), `prior_version`
-    and `new_version` in a Discharge Result
-    ({{I-D.draft-mcguinness-oauth-mission-discharge}}), and
-    `expected_version` on a lifecycle request ({{idempotency}}).
+    Mission across every surface that reports it, and a lifecycle
+    request can guard on it with `expected_version` ({{idempotency}}).
   - Extension members: a companion profile MAY add further members to
-    this object. For example, the Status List companion adds a
-    `status_list` reference where the deployment publishes a Mission
-    Status List
-    ({{I-D.draft-mcguinness-oauth-mission-status-list}}).
+    this object.
 - `authorization_details`: the Effective Authority Set entries of every
   AS-supported `authorization_details` type
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization
@@ -858,12 +831,11 @@ Success outcomes (HTTP 200, signed Mission Status Response, described by
 A `terminated` Mission's `mission.termination.reason` names how it
 ended, and the set of reasons is not closed: a deployment reports
 whichever reason its profiles define, and a consumer's reliance
-decision never depends on recognizing it. The reasons defined across
-this suite are `revoked` and `expired`
-({{I-D.draft-mcguinness-oauth-mission}}), `completed` (this document),
-`superseded` ({{I-D.draft-mcguinness-oauth-mission-expansion}}), and
-`parent_terminated` ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
-The binding rule is the issuance profile's forward-compatibility rule:
+decision never depends on recognizing it. The issuance profile defines
+`revoked` and `expired` ({{I-D.draft-mcguinness-oauth-mission}}), this
+document defines `completed`, and a companion profile can define
+further reasons. The governing rule is the issuance profile's
+forward-compatibility rule:
 every state other than `active` is non-active, whether or not the
 consumer recognizes it.
 
@@ -911,29 +883,13 @@ unauthorized references. For `rate_limited`, the response SHOULD
 include a `Retry-After` header {{RFC9110}} and a `retry_after` body
 member in seconds.
 
-The OAuth-shaped surfaces of this family, this Status and Lifecycle
-endpoint, Mission Management
-{{I-D.draft-mcguinness-oauth-mission-management}}, and the Mission
-Authority Server's submission surface
-{{I-D.draft-mcguinness-mission-authority-server}}, share the
-`error`/`error_description` JSON body idiom for consistency with the
-OAuth-shaped APIs they compose with. Each surface's exact member
-requiredness is its own: here and in Mission Management,
-`error_description` is REQUIRED and `nonce` is REQUIRED whenever the
-request carried a well-formed one; the Mission Authority
-Server makes `error_description` OPTIONAL and adds the MAS-only
-`error_reason`.
-
 The body is `application/json` with `Cache-Control:
 no-store`. `error_description` is diagnostic and is never
 authorization input. `nonce` correlates the response to the request in
 support of the signed-response and retry model of {{idempotency}} and
 is not, by itself, replay protection, per the absent-or-malformed-`nonce`
-rule above. RFC 9457 {{RFC9457}} problem details
-is neither used on these surfaces nor disparaged: the AuthZEN profile
-{{I-D.draft-mcguinness-mission-authzen}} carries it where that
-ecosystem does, and a future non-OAuth-shaped HTTP API in this family
-MAY choose it.
+rule above. These endpoints use this OAuth error-response shape, not
+RFC 9457 {{RFC9457}} problem details.
 
 # Token Introspection Mission Projection {#introspection-projection}
 
@@ -973,9 +929,8 @@ This projection and the dedicated Mission Status Response
 of the same shape: the open `mission` claim object of
 {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission Claim")
 with status members (`state`, `termination`, `fresh_until`, any
-companion-defined extension member such as the Status List companion's `status_list`
-reference ({{I-D.draft-mcguinness-oauth-mission-status-list}}), and,
-on the dedicated response, `expires_at` and `version`) added. This
+companion-defined extension member, and, on the dedicated response,
+`expires_at` and `version`) added. This
 projection populates the subset a token-holding consumer needs; the
 dedicated response populates more. Either way a consumer reads the
 same fact from the same place.
@@ -1782,9 +1737,9 @@ through standard {{RFC8414}} discovery.
 `mission_status_signing_alg_values_supported`:
 : CONDITIONAL. A JSON array of strings. The JWS {{RFC7515}} algorithm
   values the AS uses to sign the Mission Status Response shape
-  ({{mission-status-response}}), on whichever surfaces of this
-  profile family serve it (the dedicated Mission Status operation,
-  the Lifecycle endpoint, and Mission Management), mirroring
+  ({{mission-status-response}}), on every surface that returns it
+  (the dedicated Mission Status operation, the Lifecycle endpoint, and
+  any companion surface that reuses that response), mirroring
   `introspection_signing_alg_values_supported`. These are the
   response-signing algorithms, not the algorithms the AS accepts on
   `private_key_jwt` client assertions (the endpoint auth-signing
