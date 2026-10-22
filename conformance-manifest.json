@@ -62625,7 +62625,7 @@
    "assertion": "ignore",
    "observation": {
     "normative": "No origin, digest, issuer, or taint value that the agent mediated is used for adjudication; each comes from the issuer's own retrieval or the harness's attested channel.",
-    "local": "Origin, metadata digest and issuer come from the deployment's connection and issuer-authorization ports, never the agent; trusted taint is a later stage (#1469 stage 3)."
+    "local": "Origin, metadata digest and issuer come from the deployment's connection and issuer-authorization ports, never the agent; the taint state comes from the deployment's taint port, and agent-sent taint values are ignored."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -62641,9 +62641,15 @@
      "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
      "level": "endpoint",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > the agent cannot supply the taint state: a tainted=false parameter and a tainted member in its hint change nothing, and the harness is asked about the subject token's Mission and the authenticated client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.non-agent-channel-contextual",
@@ -63130,12 +63136,26 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Each adjudication's record reflects the Mission reference, the verified Encountered Resource object, the declaration digest where one exists, the sought authority's action classes, the requesting actor, and the session's taint state."
+    "normative": "Each adjudication's record reflects the Mission reference, the verified Encountered Resource object, the declaration digest where one exists, the sought authority's action classes, the requesting actor, and the session's taint state.",
+    "local": "Data-construction witness: the expansion deferral records the predecessor Mission, the requested entries, the requesting client, the Encountered Resource object, the declaration digest where one exists, and the taint state; no Discovery Evidence is emitted yet, and action classes are a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a fresh, session-scoped report is believed, tainted or not, and recorded apart from the effective state; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.minimum-inputs-contextual",
@@ -63174,12 +63194,26 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "A taint value carried in the encounter request is ignored: the evidence `tainted` member and the floors follow the harness attestation."
+    "normative": "A taint value carried in the encounter request is ignored: the evidence `tainted` member and the floors follow the harness attestation.",
+    "local": "An agent-sent tainted=false parameter and a tainted member in its hint are ignored while the harness reports tainted; the port is asked about the subject token's Mission and the authenticated client only. The harness attestation is verified behind the deployment's taint port, as TLS is behind the connection port: an attestation the port cannot verify reaches the kernel as no report (missing) or a malformed one (unverifiable), and both count as tainted."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > the agent cannot supply the taint state: a tainted=false parameter and a tainted member in its hint change nothing, and the harness is asked about the subject token's Mission and the authenticated client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a fresh, session-scoped report is believed, tainted or not, and recorded apart from the effective state; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.taint-from-harness-contextual",
@@ -63218,12 +63252,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "With no harness taint report available, an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true."
+    "normative": "With no harness taint report available, an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true.",
+    "local": "No harness port, no answer, and a failing port each record the effective state tainted with taint_failure missing. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a missing report counts as tainted: no harness port, no answer, or a failing port",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.taint-missing-is-tainted-contextual",
@@ -63262,12 +63304,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "With a stale harness taint report (one past its attested validity), an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true."
+    "normative": "With a stale harness taint report (one past its attested validity), an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true.",
+    "local": "Staleness is the deployment's bound (taintMaxAgeSeconds), not an attested validity: a report older than it when it arrives, after every lookup, records tainted with taint_failure stale, an untainted one included; one the harness made during a slow lookup is not future-dated. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a report older than the deployment's bound counts as tainted, an untainted one included",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > freshness is judged when the report arrives, after the lookups: a report fresh when asked but past the bound by then is stale, and one the harness made during a slow lookup is not future-dated",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.taint-stale-is-tainted-contextual",
@@ -63306,12 +63362,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "With a harness taint report whose attestation fails verification, an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true."
+    "normative": "With a harness taint report whose attestation fails verification, an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true.",
+    "local": "A report that is malformed (non-boolean tainted, a reported_at that is not a strict RFC 3339 date-time, non-string source_class, not an object), future-dated, or not session-scoped records tainted with taint_failure unverifiable. The harness attestation is verified behind the deployment's taint port, as TLS is behind the connection port: an attestation the port cannot verify reaches the kernel as no report (missing) or a malformed one (unverifiable), and both count as tainted. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a report that is malformed, future-dated or not session-scoped is unverifiable and counts as tainted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.adjudication.taint-unverifiable-is-tainted-contextual",
@@ -64841,12 +64905,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "With `tainted` true, every encounter that would otherwise bind yields `routed_to_approval`."
+    "normative": "With `tainted` true, every encounter that would otherwise bind yields `routed_to_approval`.",
+    "local": "A tainted encounter routes to a human (a deferral). Every encounter does before stage 6, tainted or not, so the witness does not yet discriminate taint; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a fresh, session-scoped report is believed, tainted or not, and recorded apart from the effective state; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.injection-discovery.tainted-no-policy-bind-contextual",
@@ -66049,12 +66121,20 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "The taint state applied at adjudication comes from the harness attestation, never from the agent's request."
+    "normative": "The taint state applied at adjudication comes from the harness attestation, never from the agent's request.",
+    "local": "The taint state comes only from the deployment's taint port; agent-sent taint values are ignored. The harness attestation is verified behind the deployment's taint port, as TLS is behind the connection port: an attestation the port cannot verify reaches the kernel as no report (missing) or a malformed one (unverifiable), and both count as tainted."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > the agent cannot supply the taint state: a tainted=false parameter and a tainted member in its hint change nothing, and the harness is asked about the subject token's Mission and the authenticated client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.taint-non-agent-channel-contextual",
@@ -66093,12 +66173,32 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "A missing, stale, or unverifiable taint report leads to the tainted outcome: no bind by policy, `tainted` true in the evidence."
+    "normative": "A missing, stale, or unverifiable taint report leads to the tainted outcome: no bind by policy, `tainted` true in the evidence.",
+    "local": "Missing, stale and unverifiable reports each record tainted. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a missing report counts as tainted: no harness port, no answer, or a failing port",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a report older than the deployment's bound counts as tainted, an untainted one included",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a report that is malformed, future-dated or not session-scoped is unverifiable and counts as tainted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.untrustworthy-taint-tainted-contextual",
@@ -66138,7 +66238,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "An encounter with unpinnable identity, an unclassifiable operation, or no trustworthy taint state yields `routed_to_approval` or `refused`, never `bound`.",
-    "local": "Only the cannot-pin clause: an unpinnable encounter routes to a human or, where the deployment refuses, is refused with no deferral. Classification and trusted taint are later stages."
+    "local": "Only the cannot-pin clause: an unpinnable encounter routes to a human or, where the deployment refuses, is refused with no deferral. An encounter without a trustworthy taint state counts as tainted and routes to a human, never refused, since the adjudication section's rule (treat as tainted) controls. Classification is a later stage."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -66160,9 +66260,15 @@
      "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > a named issuer not verified as authorized for the domain is not pinned, and the encounter routes to a human even where the deployment refuses unpinnable encounters",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a missing report counts as tainted: no harness port, no answer, or a failing port",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 3 (D607), the encounter path's intake, identity pinning and trusted taint through deployment ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.route-or-refuse-unresolvable-contextual",
