@@ -770,9 +770,24 @@ Table of Contents
    Section "Error Responses").  A condition_selector that does not
    resolve, or that resolves to a target outside the request's
    mission_id, joins the same collapse, and its resolution is part of
-   selector existence below.  Authentication failure remains
-   unauthorized (401).  Detailed refusal reasons live only in issuer
-   audit records.
+   selector existence below.  Authentication failure keeps the outcome
+   the Status profile assigns its mechanism, unauthorized or
+   invalid_client ([I-D.draft-mcguinness-oauth-mission-status],
+   Section "Authentication Failures").  Detailed refusal reasons live
+   only in issuer audit records.
+
+   Validation that depends only on the request precedes that collapse.
+   After authentication and before any authorization, a discharge member
+   of the wrong type or grammar, or an invalid combination of target
+   forms, is refused invalid_request, identically whether or not the
+   Mission exists and whatever target authority the caller holds.  Such
+   a refusal reads no target state, and the AS retains no response for
+   its nonce ([I-D.draft-mcguinness-oauth-mission-status],
+   Section "Idempotency and Conflicts").  A well-formed request whose
+   selectors do not resolve, whose condition is not a member of the
+   named entry, whose event_type does not match the stored condition, or
+   whose target the caller is not authorized for joins the not-found
+   collapse above.
 
    The AS validates selector existence (mission_id, entry_digest, and
    condition_digest all resolve, the entry carries terminal_when, and
