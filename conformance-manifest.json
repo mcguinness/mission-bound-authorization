@@ -55,8 +55,8 @@
     "content_sha256": "2734f08663aaa41f3d3f58b885c7036833c88a7286b889647bfa426dd2835872"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "d6c36ca320263498afb5cb9bf41a5f90030ef38a",
-    "content_sha256": "1ec9516c1753531da6e30711e64b62ff931c86e3132aa924312f86e8702879e5"
+    "revision": "6e906cf660ca45d01c5768abd56d1d759f130535",
+    "content_sha256": "8311732607508b31e57afbda734a59e2b1a1a64364c680e7ab74b7bd62676c5d"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
@@ -13241,7 +13241,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke",
+     "status.revocation-propagation"
+    ]
    },
    "profiles": [
     "runtime-enforced"
@@ -13249,12 +13254,12 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every issuer-held narrowing mechanism a deployment runs (an adopted Entry Discharge companion's discharge mechanism and any companion profile's own overlay, such as Mission Containment) feeds one shared Effective Authority Set computation, and every derivation and every authority-reporting surface (Mission Status, the introspection projection, and any other surface reporting a Mission's authority) uses that same computation rather than an independently computed view"
+    "normative": "in a Mission Issuer claiming any extension of this document, whichever companion profiles it adopts, every issuer-held narrowing mechanism the deployment runs (an adopted Entry Discharge companion's discharge mechanism and any companion profile's own overlay, such as Mission Containment) feeds one shared Effective Authority Set computation, and every derivation and every authority-reporting surface (Mission Status, the introspection projection, and any other surface reporting a Mission's authority) uses that same computation rather than an independently computed view. An issuer duty: it binds no consumer, and no implementation claiming none of the extensions"
    },
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation."
+   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation. #1535 finding 6 (D649): scoped to a Mission Issuer claiming any extension of this document. The gate names the extensions the model has capabilities for; the Mission Status operation and the introspection projection have none, so a deployment claiming only those is not gated in until the model gains them."
   },
   {
    "id": "status.conformance.revoke-only-class",
@@ -14226,18 +14231,21 @@
    "id": "status.metadata.lifecycle-auth-methods",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "as-metadata",
-   "text": "Present, and SHOULD be advertised, when the AS serves the Mission Lifecycle endpoint.",
+   "text": "REQUIRED when the AS serves the Mission Lifecycle endpoint.",
    "role": "AS",
-   "strength": "SHOULD",
+   "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "status.lifecycle"
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment serving the Lifecycle endpoint advertises `mission_lifecycle_endpoint_auth_methods_supported` naming exactly the methods it accepts",
+    "normative": "a deployment serving the Lifecycle endpoint, in either Lifecycle conformance class, advertises `mission_lifecycle_endpoint_auth_methods_supported` naming exactly the methods it accepts",
     "local": "[\"private_key_jwt\"]"
    },
    "level": "endpoint",
@@ -14256,24 +14264,27 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 finding 5 (D649): REQUIRED for a served endpoint, no longer a SHOULD; gated on either Lifecycle class, since both conformance classes advertise it. Witness: dropping the member from the discovery builder fails both cited tests."
   },
   {
    "id": "status.metadata.lifecycle-assertion-algs",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "as-metadata",
-   "text": "values the AS accepts for the `private_key_jwt` client-assertion JWT ({{mission-status-authentication}}) at the Mission Lifecycle endpoint.",
+   "text": "REQUIRED when `mission_lifecycle_endpoint_auth_methods_supported` lists `private_key_jwt`.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "status.lifecycle"
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where the Lifecycle endpoint lists `private_key_jwt`, `mission_lifecycle_endpoint_auth_signing_alg_values_supported` names the algorithms it accepts, never `none`, and an assertion signed with any other is refused",
+    "normative": "a deployment whose Lifecycle endpoint lists `private_key_jwt` advertises `mission_lifecycle_endpoint_auth_signing_alg_values_supported`, naming the algorithms it accepts for that client assertion and never `none`, and an assertion signed with any other is refused",
     "local": "[\"ES256\"]"
    },
    "level": "endpoint",
@@ -14290,9 +14301,57 @@
      "name": "Mission Lifecycle endpoint client-assertion algorithms (@spec status#mission-status-authentication, status#as-metadata, #1191) > refuses an assertion signed with an algorithm the endpoint does not advertise, none included, from a client registered for it",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: the advertised endpoint (@spec status#conformance, status#as-metadata, status#mission-status-response, #1191) > advertises the endpoint, its private_key_jwt method and the response-signing algorithms with the Status operation and discharge both off",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 finding 5 (D649): REQUIRED whenever the endpoint lists private_key_jwt, which the reference always does; gated on either Lifecycle class. Witness: dropping the member from the discovery builder fails both discovery tests."
+  },
+  {
+   "id": "status.metadata.status-auth-methods",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "REQUIRED when the AS serves the Mission Status endpoint.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS serving the Mission Status endpoint advertises `mission_status_endpoint_auth_methods_supported` naming exactly the methods that endpoint accepts"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 5 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status, and it publishes neither `mission_status_endpoint` nor this member (absence of `mission_status_endpoint` is asserted in lifecycle-revoke-only.test.ts). D405: specified, not implemented. Unconditional like the other Mission Status operation rows: the model has no capability for that extension."
+  },
+  {
+   "id": "status.metadata.status-assertion-algs",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "REQUIRED when `mission_status_endpoint_auth_methods_supported` lists `private_key_jwt`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS whose Mission Status endpoint lists `private_key_jwt` advertises `mission_status_endpoint_auth_signing_alg_values_supported`, naming the algorithms it accepts for that client assertion and never `none`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 5 (D649). todo: the reference does not serve the POST Mission Status endpoint of this document; its served Status surface is GET /missions/:id/status, and it publishes neither `mission_status_endpoint` nor this member (absence of `mission_status_endpoint` is asserted in lifecycle-revoke-only.test.ts). D405: specified, not implemented. Unconditional like the other Mission Status operation rows: the model has no capability for that extension."
   },
   {
    "id": "status.lifecycle.auth-discovery",
