@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         21 October 2026
-Expires: 24 April 2027
+Intended status: Standards Track                         22 October 2026
+Expires: 25 April 2027
 
 
                 Mission Derivation Limits for OAuth 2.0
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 April 2027.
+   This Internet-Draft will expire on 25 April 2027.
 
 Copyright Notice
 
@@ -445,8 +445,8 @@ Table of Contents
 
    An AS MUST NOT include derivations_remaining in an introspection
    response unless it holds the Mission, that is, unless it is the
-   Mission issuer ([I-D.draft-mcguinness-oauth-mission], Section "Only
-   the Issuer Reports Mission State").
+   Mission issuer ([I-D.draft-mcguinness-oauth-mission], Section 
+   "Issuer-Only Members").
 
    The following is an example of an introspection response to a caller
    granted the derivations_remaining disclosure privilege:
