@@ -182,20 +182,34 @@ def main():
     # designations and moves with them.
     mech = set("""delegation designation delegated-exchange
         delegated-instance-context worked-example-delegated-token""".split())
-    desig_row = "core.self-exchange.designation-not-self-exchange"
+    # Rows outside the moving anchors that are about designations.
+    desig_rows = {"core.self-exchange.designation-not-self-exchange",
+                  "core.introspection.designation-inactive"}
+
+    def gates(r):
+        ap = r.get("applicability", {})
+        out = [ap.get("capability")] + list(ap.get("all_of", [])) + list(ap.get("any_of", []))
+        return {g if isinstance(g, str) else g.get("capability") for g in out if g}
+
+    def moves(r):
+        return (r["spec"] == CORE and r["anchor"] in mech) or r["id"] in desig_rows
+
     groups = {
-        "P1-B moves": lambda r: r["anchor"] in mech or r["id"] == desig_row,
+        "P1-B moves": moves,
+        "P1-B stays, core.delegation gate changes owner": lambda r: not moves(r)
+        and "core.delegation" in gates(r),
         "P1-B stays: constraints": lambda r: r["anchor"] == "delegation-constraints",
         "P1-B stays: self-exchange": lambda r: r["anchor"] == "self-exchange"
-        and r["id"] != desig_row,
+        and r["id"] not in desig_rows,
         "P2 standing consent": lambda r: r["anchor"] in {
             "standing-consent-bases", "standing-consent-instances",
             "activation-policy-commitment", "standing-consent-recency"},
         "P4 commitment mechanisms": lambda r: r["anchor"] == "commitment-mechanisms",
     }
     print(f"  core rows total: {len(rows)}")
+    every = m["requirements"]  # the gate-owner group spans every spec
     for g, pred in groups.items():
-        rs = [r for r in rows if pred(r)]
+        rs = [r for r in (every if "gate" in g else rows) if pred(r)]
         cov = collections.Counter(r.get("coverage") for r in rs)
         print(f"  {g:24s} rows={len(rs):3d} {dict(cov)}")
         for r in rs:
