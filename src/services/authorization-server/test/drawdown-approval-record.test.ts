@@ -180,11 +180,26 @@ const resign = (kernel: MissionKernel, missionId: string, edit: (r: UnsignedAppr
     .prepare("UPDATE approval_governance_records SET record_json = ?, record_digest = ? WHERE mission_id = ?")
     .run(JSON.stringify(signed), approvalGovernanceRecordDigest(signed), missionId);
 };
-const tamperInputs = (kernel: MissionKernel, path: string, json: string) =>
-  kernel.db.prepare(`UPDATE drawdown_record_inputs SET inputs_json = json_set(inputs_json, '${path}', json(?))`).run(json);
+const tamperInputs = (kernel: MissionKernel, path: string, json: string, missionId?: string) =>
+  kernel.db
+    .prepare(`UPDATE drawdown_record_inputs SET inputs_json = json_set(inputs_json, '${path}', json(?))${missionId ? " WHERE mission_id = ?" : ""}`)
+    .run(json, ...(missionId ? [missionId] : []));
+
+/**
+ * A faulty issuer: the Mission committed at `at` and its record re-signed to
+ * evaluate there, so the evaluation instant is still the creation instant.
+ */
+const committedAt = (kernel: MissionKernel, missionId: string, at: string, edit: (r: UnsignedApprovalGovernanceRecord) => void = () => {}) => {
+  kernel.db.prepare("UPDATE missions SET created_at = ? WHERE id = ?").run(at, missionId);
+  resign(kernel, missionId, (r) => {
+    r.evaluation.evaluated_at = at;
+    edit(r);
+  });
+};
 
 /** A recorded drawdown an hour after the consent. */
 const recorded = (rule: RegisteredDrawdownRecordingRule = RULE) => {
+  clockMs = T0;
   const kernel = makeKernel(rule);
   const pred = predecessorOn(kernel);
   clockMs = T0 + HOUR;
@@ -518,7 +533,42 @@ describe("re-checking a ceiling-drawdown record (@spec approval-governance#re-ch
     expect(recheck(kernel, successor.id)).toEqual({ rechecked: false, step: 4, reason: PROVENANCE });
   });
 
-  it("step 5: refuses a decision that replays to a fallback, a malformed evaluation instant, and a record failing the commit gate", () => {
+  it("step 4: binds the replay to the predecessor as committed: its own narrowed ceiling, an effective set within its Authority Set, its chain's drawdowns", () => {
+    // A second drawdown, from a predecessor whose ceiling the first one narrowed.
+    const narrowed = () => {
+      clockMs = T0;
+      const kernel = makeKernel();
+      const pred = predecessorOn(kernel, undefined, "drawdown-narrow");
+      clockMs = T0 + HOUR;
+      const first = drawdownOn(kernel, pred);
+      clockMs = T0 + 2 * HOUR;
+      return { kernel, first, second: drawdownOn(kernel, first) };
+    };
+    const clean = narrowed();
+    expect(clean.first.authority_ceiling).not.toEqual(CEILING);
+    expect(recheck(clean.kernel, clean.second.id)).toEqual({ rechecked: true });
+    const tampers: Array<[string, string]> = [
+      // The original, broader consented ceiling in place of the predecessor's own.
+      ["$.adjudication.ceiling", JSON.stringify(CEILING)],
+      // A rate history the chain does not have.
+      ["$.adjudication.chain_drawdowns", "[]"],
+    ];
+    for (const [path, value] of tampers) {
+      const r = narrowed();
+      tamperInputs(r.kernel, path, value, r.second.id);
+      expect(recheck(r.kernel, r.second.id), path).toEqual({ rechecked: false, step: 4, reason: "the recorded inputs do not read the predecessor as committed" });
+    }
+    // On a direct predecessor: an effective set already holding the successor's whole set, so nothing reads as widened.
+    const effective = recorded();
+    tamperInputs(effective.kernel, "$.adjudication.effective", JSON.stringify(effective.successor.authority_set));
+    expect(recheck(effective.kernel, effective.successor.id)).toEqual({ rechecked: false, step: 4, reason: "the recorded inputs do not read the predecessor as committed" });
+    // And drawdowns the chain never made.
+    const rate = recorded();
+    tamperInputs(rate.kernel, "$.adjudication.chain_drawdowns", JSON.stringify(Array.from({ length: 5 }, () => iso(T0 + HOUR - 1000))));
+    expect(recheck(rate.kernel, rate.successor.id)).toEqual({ rechecked: false, step: 4, reason: "the recorded inputs do not read the predecessor as committed" });
+  });
+
+  it("step 5: refuses a decision that replays to a fallback, and a record failing the commit gate", () => {
     const children = recorded();
     tamperInputs(children.kernel, "$.adjudication.live_children", '["mis_child"]');
     expect(recheck(children.kernel, children.successor.id)).toEqual({
@@ -529,20 +579,12 @@ describe("re-checking a ceiling-drawdown record (@spec approval-governance#re-ch
     const restricted = recorded();
     tamperInputs(restricted.kernel, "$.adjudication.restrictions", JSON.stringify([{ resource: RESOURCE, actions: ["payments:invoice.list"] }]));
     expect(recheck(restricted.kernel, restricted.successor.id)).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(/restricted_overlap$/) });
-    const rate = recorded();
-    tamperInputs(rate.kernel, "$.adjudication.chain_drawdowns", JSON.stringify(Array.from({ length: 5 }, () => iso(T0 + HOUR - 1000))));
-    expect(recheck(rate.kernel, rate.successor.id)).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(/chain_rate_bound$/) });
     const classes = recorded();
     tamperInputs(classes.kernel, "$.adjudication.action_classes", JSON.stringify({ ...CLASSES, "payments:invoice.list": "irreversible_action" }));
     expect(recheck(classes.kernel, classes.successor.id)).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(/fresh_approval_class$/) });
     const cross = recorded();
     tamperInputs(cross.kernel, "$.adjudication.cross_domain", JSON.stringify({ [RESOURCE]: true }));
     expect(recheck(cross.kernel, cross.successor.id)).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(/cross_domain$/) });
-    const malformed = recorded();
-    resign(malformed.kernel, malformed.successor.id, (r) => {
-      r.evaluation.evaluated_at = "not-a-date";
-    });
-    expect(recheck(malformed.kernel, malformed.successor.id)).toEqual({ rechecked: false, step: 5, reason: "evaluation.evaluated_at is not an RFC 3339 timestamp" });
     const gate = recorded();
     resign(gate.kernel, gate.successor.id, (r) => {
       (r.assertions[0] as AgrAssertion).principal = ALICE;
@@ -550,14 +592,25 @@ describe("re-checking a ceiling-drawdown record (@spec approval-governance#re-ch
     expect(recheck(gate.kernel, gate.successor.id)).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(/ceiling consent principal/) });
   });
 
-  it("step 6: replays the eligibility gate and recency at the evaluation instant", () => {
+  it("step 1: refuses a backdated decision: the signed assertion, the evaluation and both replay instants agreeing on another instant than the creation", () => {
+    const { kernel, successor } = recorded();
+    const earlier = iso(T0 + HOUR / 2);
+    resign(kernel, successor.id, (r) => {
+      r.evaluation.evaluated_at = earlier;
+      (r.assertions[0] as AgrAssertion).decided_at = earlier;
+    });
+    tamperInputs(kernel, "$.decided_at", JSON.stringify(earlier));
+    tamperInputs(kernel, "$.adjudication.now", JSON.stringify(earlier));
+    expect(recheck(kernel, successor.id)).toEqual({ rechecked: false, step: 1, reason: "evaluation.evaluated_at is not the Mission's creation instant" });
+  });
+
+  it("step 6: replays the eligibility gate and recency at the creation instant", () => {
     const rule = ruleFrom({ recency: { ceilings: { default: 2 * 3600 }, clock_skew_s: 60 } });
     const stale = recorded(rule);
     expect(recheck(stale.kernel, stale.successor.id)).toEqual({ rechecked: true });
-    // The same record re-evaluated later than the rule's ceiling admits.
+    // An issuer that committed the successor later than the rule's ceiling admits the consent.
     const later = iso(T0 + 3 * HOUR);
-    resign(stale.kernel, stale.successor.id, (r) => {
-      r.evaluation.evaluated_at = later;
+    committedAt(stale.kernel, stale.successor.id, later, (r) => {
       (r.assertions[0] as AgrAssertion).decided_at = later;
     });
     tamperInputs(stale.kernel, "$.decided_at", JSON.stringify(later));

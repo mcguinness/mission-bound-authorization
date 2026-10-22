@@ -1394,8 +1394,10 @@ export type ApprovalGovernanceRecheck = { rechecked: true } | { rechecked: false
  * retained capability resolution) and counts exactly `contributing`, which is
  * the accountable policy assertion plus one service assertion per consulted
  * model output; (6) re-apply recency at `evaluation.evaluated_at` to the
- * accountable policy approval. Any missing evidence or
- * mismatch leaves the evaluation not re-checked.
+ * accountable policy approval. Step 1 also binds `evaluated_at` to the
+ * Mission's creation, the atomic-commitment instant, for every basis, so
+ * each replay and recency check runs at the actual decision time. Any
+ * missing evidence or mismatch leaves the evaluation not re-checked.
  */
 export function recheckApprovalGovernanceRecord(
   kernel: MissionKernel,
@@ -1411,6 +1413,12 @@ export function recheckApprovalGovernanceRecord(
     verifyApprovalGovernanceRecord(record, { resolveKey: opts.resolveKey, mission });
   } catch (e) {
     return no(1, (e as Error).message);
+  }
+  // @spec approval-governance#recency-evaluation: the evaluation instant is
+  // the atomic-commitment instant, the Mission's creation, never a
+  // re-signable value of its own.
+  if (record.evaluation.evaluated_at !== mission.created_at) {
+    return no(1, "evaluation.evaluated_at is not the Mission's creation instant");
   }
   // A recorded direct approval replays the direct approval rule (#1470).
   if (mission.approval_basis.type === "direct") {

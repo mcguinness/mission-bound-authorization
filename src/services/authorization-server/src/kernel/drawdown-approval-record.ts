@@ -30,6 +30,7 @@ import {
   authorityHash,
   canonicalize,
   isRfc3339Instant,
+  isSubsetSetIgnoringCapabilitySources,
   type JsonValue,
 } from "@mission/core";
 import type { Database } from "@mission/store";
@@ -47,6 +48,8 @@ import {
   ceilingConsentHash,
   ceilingConsentPrincipal,
   ceilingHash,
+  chainDrawdownInstants,
+  chainOf,
   decideDrawdown,
   type DrawdownAdjudicationInputs,
   type DrawdownGovernanceReason,
@@ -470,12 +473,14 @@ const sameJson = (a: unknown, b: unknown): boolean => canonicalize((a ?? null) a
  * drawdown policy is the one the inputs name, the assertion and the basis
  * name, and its retained snapshot verifies under its own digest and parses to
  * the rules the inputs record. (4) The retained inputs are bound to this
- * event, Intent and Authority Set, to the predecessor, and to the basis's
- * consent principal, commitment and instant, and name the Mission's Subject
- * and authority source. (5) The drawdown decision replays to a policy
- * activation, and the record passes the commit gate with exactly its policy
- * assertion contributing. (6) The eligibility gate and recency replay at the
- * decision instant, which is `evaluation.evaluated_at`.
+ * event, Intent and Authority Set; to the predecessor as committed (its
+ * ceiling, an effective set within its Authority Set, and its chain's
+ * drawdown instants); to the basis's consent principal, commitment and
+ * instant; and name the Mission's Subject and authority source. (5) The
+ * drawdown decision replays to a policy activation, and the record passes
+ * the commit gate with exactly its policy assertion contributing. (6) The
+ * eligibility gate and recency replay at the decision instant, which is
+ * `evaluation.evaluated_at`, bound in step 1 to the Mission's creation.
  */
 export function recheckDrawdownApprovalRecord(
   kernel: MissionKernel,
@@ -530,6 +535,19 @@ export function recheckDrawdownApprovalRecord(
     return no(4, "the recorded inputs are not bound to this approval event, Intent and Authority Set");
   }
   if (inputs.adjudication.predecessor_id !== mission.predecessor) return no(4, "the recorded inputs name another predecessor");
+  // The replay reads the predecessor as committed, separately from the
+  // consent: its own ceiling (narrowed or not), an effective set within its
+  // Authority Set (containment and discharge only narrow it), and its
+  // chain's drawdown instants, which no later Mission changes.
+  const pred = kernel.get(mission.predecessor as string);
+  if (
+    !pred ||
+    !sameJson(inputs.adjudication.ceiling, pred.authority_ceiling ?? []) ||
+    !isSubsetSetIgnoringCapabilitySources(inputs.adjudication.effective, pred.authority_set) ||
+    !sameJson(inputs.adjudication.chain_drawdowns, chainDrawdownInstants(chainOf(kernel, pred.id)))
+  ) {
+    return no(4, "the recorded inputs do not read the predecessor as committed");
+  }
   const binding = kernel.sourceBindings.get(mission.id);
   const c = inputs.consent;
   if (
@@ -566,7 +584,6 @@ export function recheckDrawdownApprovalRecord(
   ) {
     return no(4, "the recorded consent provenance is not the consenting Mission's retained record");
   }
-  if (!isRfc3339Instant(record.evaluation.evaluated_at)) return no(5, "evaluation.evaluated_at is not an RFC 3339 timestamp");
   if (inputs.decided_at !== record.evaluation.evaluated_at || inputs.adjudication.now !== inputs.decided_at) {
     return no(4, "the recorded inputs were not read at the evaluation instant");
   }

@@ -775,7 +775,7 @@ function authorizesPoint(
 }
 
 /** The Missions of an expansion chain, from `missionId` back to its root. */
-function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
+export function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
   const chain: MissionRecord[] = [];
   const seen = new Set<string>();
   let next: string | undefined = missionId;
@@ -787,6 +787,11 @@ function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
     next = m.predecessor;
   }
   return chain;
+}
+
+/** The creation instants of a chain's ceiling drawdowns: the rate history a drawdown decision reads. */
+export function chainDrawdownInstants(chain: readonly MissionRecord[]): string[] {
+  return chain.filter((m) => m.approval_basis.type === "ceiling_drawdown").map((m) => m.created_at);
 }
 
 /**
@@ -897,7 +902,7 @@ export function gatherDrawdownInputs(
         .filter((c) => !TERMINAL_STATES.has(kernel.observe(c).state))
         .map((c) => c.id),
       restrictions: chainRestrictions(chain),
-      chain_drawdowns: chain.filter((m) => m.approval_basis.type === "ceiling_drawdown").map((m) => m.created_at),
+      chain_drawdowns: chainDrawdownInstants(chain),
       chain_rate_bound: { ...options.chainRateBound },
     },
     ...(snapshot ? { snapshot } : {}),
