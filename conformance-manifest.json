@@ -71,12 +71,12 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "55cf3223cf1dc695238776b86522c6be6b82f25d",
-    "content_sha256": "3e3d1d6b5a01f8914a4d2add04fd25d9a94d4582839796ba5a4fc81deb275c68"
+    "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
+    "content_sha256": "e758acf47c3dd2043c6db6ff53ede2cb108950287315b0d289f54e444b193780"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "e226e962ac68b8c26ef8f0388783ff9d8a289c91",
-    "content_sha256": "dd5500805fdc490e49580f195685f65afa4a29bce9a742b24af26de356ded11e"
+    "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
+    "content_sha256": "52dcce6f6f809438190f6b8685a9c24cf0d4f261f13f04f63f078d4ca8e44a54"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
@@ -111,8 +111,8 @@
     "content_sha256": "4c24262bd4ab09784922ab543c24d97cfb849c9a5845c70a664ef39d906803b3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
-    "content_sha256": "03313926575c29814dc3d56328f76dc778a00ba9697df39c1a377588bd08e934"
+    "revision": "84b52a8fc422c85abedf768882e887524a99081e",
+    "content_sha256": "48ea6d93bdc42e5f69e8aaca0fa0e103e481733b742d780d3049fbe8109ea62c"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
@@ -3647,6 +3647,43 @@
    "notes": "D559 (#1411): ruled qualified A + C. #1512 (D625): the Request Object path is cited too. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
   },
   {
+   "id": "core.derivation.configured-mapping-scope-key",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "derivation-modes",
+   "text": "or on the requested `scope` values for a `scope`-only target",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where no authority proposal was submitted, the configured mapping can key on the requested scope values of a scope-only target: the Authority Set is the entries those values stand for, narrowed to policy, not the mapping a target_resources key would select"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > an Intent-only request naming reports.read approves only the entry that value stands for, commits no proposal, and its token carries that value",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > each requested value stands for its own entry, and without a requested scope the same Intent approves the target's whole ceiling (control)",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). The control in the second witness shows the target_resources key still approving the target's whole ceiling when no scope is requested. Proved by mutation: disabling the scope key in the derivation (deriveAuthoritySetWithProvenance's scopeKeyed) fails all three witnesses (the whole ceiling is approved for reports.read, one entry for two values, and a Mission is created where nothing should derive)."
+  },
+  {
    "id": "core.derivation.candidate-complete-before-rendering",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "derivation-modes",
@@ -6404,9 +6441,21 @@
      "name": "an approval cannot consent to a child grant whose per-child figure it cannot disclose (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > refuses the approval while the entry's committed child creation policy is not held, creating no Mission; once held again, a fresh approval discloses the figure and children are created under it",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders each dispatched instance's derivation-limit rule, its maximum and its local scope beside max_active and the dispatch rate (@spec derivation-limits#approval-rendering)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses the consent while the Dispatch Policy the template was proposed under has changed: the page states why and offers no decision, and no template is created; restored, the same proposal is approved",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Not witnessed: the Template basis, since the reference has no human template-consent approval surface (the service-token stand-in returns the rule only in its creation response, which is not a rendering at approval); and the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails)."
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis on the human template consent page (GET /templates/proposals/{id}): each dispatched instance's rule and the maximum the Dispatch Policy the proposal pinned states, or that no finite maximum is guaranteed, with the consent refused while that policy has changed (template-consent-page.test.ts). Not witnessed: the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-scope",
@@ -6434,9 +6483,15 @@
      "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders each dispatched instance's derivation-limit rule, its maximum and its local scope beside max_active and the dispatch rate (@spec derivation-limits#approval-rendering)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis: the parent's approval page states, for each entry admitting policy_drawdown children, that the per-child maximum is local to each child Mission and is no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (child-derivation-limit-endpoint.test.ts). Not witnessed: the Template basis, since the reference has no human template-consent approval surface (the service-token stand-in returns the rule only in its creation response, which is not a rendering at approval); and the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. Proved by removing the scope line (the page witness fails)."
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis: the parent's approval page states, for each entry admitting policy_drawdown children, that the per-child maximum is local to each child Mission and is no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (child-derivation-limit-endpoint.test.ts). Witnessed for the Template basis: the template consent page states that each dispatched instance's maximum is local to it and no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (template-consent-page.test.ts). Not witnessed: the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. Proved by removing the scope line (the page witness fails)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-evidence",
@@ -9291,6 +9346,81 @@
     }
    ],
    "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption."
+  },
+  {
+   "id": "core.scope-projection.requested-scope-stands-for-entries",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "Each requested value stands for the entries that the type's specification derives from the mapping",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with no proposal, the requested scope values of a scope-only target yield as candidates exactly the entries the target's trusted mapping says they stand for; the Authority Set is those entries narrowed to policy (one that narrows to nothing is refused, creating no Mission), never the target's whole ceiling, and the token for that target carries their projection",
+    "local": "the reference derives the candidates with requestedScopeEntries over the pushed resource values, or the Intent's target_resources, and narrows each against every ceiling entry governing it, as a proposal is narrowed"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > an Intent-only request naming reports.read approves only the entry that value stands for, commits no proposal, and its token carries that value",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > each requested value stands for its own entry, and without a requested scope the same Intent approves the target's whole ceiling (control)",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > a requested value whose mapped rights the ceiling does not cover derives nothing: access_denied, and no Mission",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). Proved by mutation: disabling the scope key in the derivation (deriveAuthoritySetWithProvenance's scopeKeyed) fails all three witnesses (the whole ceiling is approved for reports.read, one entry for two values, and a Mission is created where nothing should derive)."
+  },
+  {
+   "id": "core.scope-projection.requested-scope-unnamed-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "A requested value the target's trusted mapping does not name cannot be granted, and is refused with `invalid_scope`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a pushed resource scope value that the scope-only target's trusted mapping does not name is refused invalid_scope at submission, before any Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "ungrantable requested scope (@spec mission#scope-projection, mission#error-mapping) > refuses invalid_scope at PAR a resource scope for an authorization_details target, and a value the scope-only target's mapping does not name",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). The reference already refused such a value at PAR (earlyScopeRefusal). Proved by mutation: disabling the unnamed-value check fails the witness ('expected 201 to be 400')."
   },
   {
    "id": "core.scope-projection.refresh-preserved-on-projection-refusal",
@@ -37114,6 +37244,47 @@
    "notes": "The reference implementation measures from the template's created_at, which every instance records as approval_basis.approved_at. Its refusal reason review_overdue is implementation-local on access_denied (D205); the draft registers none."
   },
   {
+   "id": "template.consent.minimum-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "template-consent",
+   "text": "The consent disclosure MUST render, at minimum:",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the template-creation approval's disclosure renders the Template Ceiling as the maximum authority any dispatched Mission may reach, that instances issue at machine speed, by policy, with no per-instance human approval, and that the high-consequence classes are never dispatched by policy and still require a fresh human decision"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders the minimum disclosure before any template exists: the Template Ceiling as the maximum authority, machine-speed dispatch with no per-instance approval, and the high-consequence classes policy never dispatches",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders the Template Ceiling with its trusted capability bindings, discarding caller-supplied ones, and the approval commits exactly the ceiling rendered (@spec capability-binding#conformance)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses the consent while a trusted capability definition of the ceiling has changed since the proposal: the page offers no decision and no template is created; restored, the same proposal is approved (@spec capability-binding#conformance)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). The human template consent page (GET /templates/proposals/{id}) renders the Template Ceiling and the three statements before any template exists. The ceiling rendered is the one the template commits: the proposal discards caller-supplied capability bindings and resolves the trusted ones, and a trusted definition changed since then refuses the page and the decision. Proved by removing each statement alone, by keeping caller-supplied bindings, and by ignoring a changed binding (each fails a witness). The service-token stand-in (POST /templates) renders nothing and is not a witness."
+  },
+  {
    "id": "template.consent.derivation-limit-rendering",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "template-consent",
@@ -37132,9 +37303,22 @@
     "local": "requires the deployment to also adopt Mission Derivation Limits"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327). Todo: the reference has no human template-consent approval surface. The service-token stand-in (POST /templates) returns the per-instance rule and maximum the committed Dispatch Policy states, beside max_active and the dispatch rate, in its creation response (template-dispatch-endpoint.test.ts); that is disclosure preparation returned after creation, not a rendering at a human approval, so it is not a witness here (owner ruling, #1453 review). The cap itself is witnessed under template.dispatch.derivation-limit-within-dispatch-policy."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders each dispatched instance's derivation-limit rule, its maximum and its local scope beside max_active and the dispatch rate (@spec derivation-limits#approval-rendering)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses the consent while the Dispatch Policy the template was proposed under has changed: the page states why and offers no decision, and no template is created; restored, the same proposal is approved",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). Witnessed on the human template consent page (GET /templates/proposals/{id}): the page lists max_active, the dispatch rate and, beside them in the same list, each dispatched instance's derivation-limit rule with the maximum the Dispatch Policy states, or that no finite maximum is guaranteed, its local scope and the async-family statement. The figure comes from the Dispatch Policy snapshot whose digest the proposal pinned, the snapshot the template then commits; while the held snapshot differs from that pin, the page renders no figure and offers no decision, and the decision is refused access_denied with no template created. Proved by removing the lines, by moving them out of the bounds list, and by disabling the decision's refusal (each fails a witness). The service-token stand-in (POST /templates) is not a witness (owner ruling, #1453 review). The cap itself is witnessed under template.dispatch.derivation-limit-within-dispatch-policy."
   },
   {
    "id": "template.consent.source-retained-per-version",
@@ -37154,9 +37338,22 @@
     "normative": "the authority source established at template consent, including an organizational source's policy id, version and digest, is retained with the authenticated consent record for that exact template_version, so every instance dispatched under that version carries it even after the source's configuration or governed policy changes"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1118 (D326) specification slice. The reference AS establishes the template's authority_source at template consent and keeps it outside template_hash (src/services/authorization-server/src/kernel/template.ts); no test is mapped or mutation-proved under this row."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > an approval by the authenticated Approver creates the template, with that Approver of record and the authority source it activates retained beside the consented template_version",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > retains an organizational authority source with its governed policy reference, with the consenting Approver and the consented template_version",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1118 (D326); #1119. Partial. A template consented through the human template consent page retains the authority source its consent established (a user_delegated source; an organizational source with its governed policy id, version and digest) with the authenticated Approver of record and the consented template_version, outside template_hash. Proved by dropping the retained source's policy reference (the organizational witness fails). Not witnessed: that an instance dispatched under that version still carries the source after the source's configuration or governed policy changes."
   },
   {
    "id": "template.dispatch.source-check",
@@ -47110,6 +47307,43 @@
    "notes": "#1258 item 11. #1276: the resource condition applies the subset rule's resource step to the mapping's declared rights, so a prefix entry projects to a value over that prefix or a narrower resource within it (pj-05's shape) and never to a sibling, a dot-segment escape or an ancestor (pj-06's shape). Unit level: the shipped configuration's ceilings are exact only, so no token-endpoint issuance carries a prefix entry. Mutation: restoring the byte-exact comparison fails the witness. Cases pj-05 and pj-06 stay skipped: the case reader has no projection executor."
   },
   {
+   "id": "resource-access.scope-projection.requested-scope-entry",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "the value stands for one entry: the mapping's `resource` and `resource_match`, the `actions` the value stands for, no `constraints`, and, where the mapping names a contract for the value, that contract's reference as `resource_contract`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a requested scope value of a scope-only target stands for one mission_resource_access entry with the mapping's resource and match, the actions the value stands for and no constraints, and that entry projects back to the same value"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > an Intent-only request naming reports.read approves only the entry that value stands for, commits no proposal, and its token carries that value",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > each requested value stands for its own entry, and without a requested scope the same Intent approves the target's whole ceiling (control)",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). Partial: the contract clause (a mapping value naming a resource_contract) has no witness; the shipped scope-only mapping names no contract. Proved by mutation: disabling the scope key in the derivation (deriveAuthoritySetWithProvenance's scopeKeyed) fails all three witnesses (the whole ceiling is approved for reports.read, one entry for two values, and a Mission is created where nothing should derive)."
+  },
+  {
    "id": "resource-access.rs-enforcement.no-fragment-combination",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "rs-enforcement",
@@ -52424,6 +52658,54 @@
     }
    ],
    "notes": "Both forms: without and with a child_creation_policy, the record's approval_event_id equals activation.activation_event_id and differs from the Parent Mission's approval_event_id. Proved by recording the parent's approval_event_id on the child (both tests fail). Scoped to child-delegation.policy-drawdown: a direct human-approved child records activation.approval_event_id, not an activation_event_id, so this requirement never applies to it."
+  },
+  {
+   "id": "child-delegation.record.policy-drawdown-approved-at",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "`approved_at` (the issuance profile's standing-consent requirement) is the human approval instant of the consented root that `root_commitment` traces to, and it follows the root",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.policy-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy_drawdown child's approved_at is its Parent's approval instant where the Parent was approved direct, and the Parent's own approval_basis.approved_at where the Parent was activated under a standing-consent basis, through every generation; never a Parent's activation instant, and never a value from the child-creation request",
+    "local": "Witnessed at the kernel for a direct Parent and for each standing-consent Parent type (template dispatch, governed_policy activation, ceiling_drawdown successor), each through the two generations the reference admits (its hard maximum child depth), with every consent and activation an hour apart so an activation instant cannot pass for the consent instant. A child of a child is the policy_drawdown Parent case. The separately re-approved child_creation_policy case is not implemented by the reference (no governance record exists for child policies)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a direct Parent: every generation carries the Parent's approval instant, its approval event",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a template instance: the child and its descendants carry the template's approval, not the dispatch",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a governed_policy activation: the child carries the root consent's approval, not the activation",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a ceiling_drawdown successor: the child carries the ceiling consent, not the drawdown",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1514 (D626): a child of a standing-consent Parent recorded the Parent's created_at, an activation instant. Mutations: the reviewed behavior (always created_at) fails all four witnesses; always the basis instant fails the direct-Parent witness."
   },
   {
    "id": "child-delegation.subject.policy-drawdown-parent-subject",
