@@ -205,10 +205,10 @@ Status operation (keyed by `mission_id`) with signed responses, the
 Mission projection for token introspection, the Mission Lifecycle
 endpoint with `revoke`, `suspend`, `resume`, and `complete`
 operations, the `suspended` state and the `completed` termination
-reason with the consolidated lifecycle state machine this profile
-owns, and revocation-propagation guidance. It defines an extension point through which a companion
-profile MAY add a fleet-scale Mission Status List or an entry-grain
-`discharge` operation without altering this profile's own surfaces.
+reason with the transitions between the lifecycle states, and
+revocation-propagation guidance. Companion profiles can extend the
+`mission` object and the Lifecycle endpoint's operations without
+altering these surfaces.
 Each capability is independently optional; an implementation can adopt
 any subset, and one that adopts none remains a conforming issuance
 profile.
@@ -244,11 +244,7 @@ that build on the issuance profile. The capabilities are:
   for explicit `revoke`, `suspend`, `resume`, and `complete`
   operations, distinct from {{RFC7009}} token revocation, with an
   extension point through which a companion profile MAY register a
-  further `operation` value, such as the Entry Discharge companion's
-  `discharge` ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
-- A fleet-scale **Mission Status List** extension point, profiled by
-  the Status List companion
-  ({{I-D.draft-mcguinness-oauth-mission-status-list}}).
+  further `operation` value ({{lifecycle-operations}}).
 - **Revocation propagation** guidance
   ({{revocation-enforcement-classes}}): a `mission_max_stale_seconds`
   bound and how to size token lifetimes to the propagation mechanisms
@@ -277,43 +273,25 @@ referenced, not re-specified, here.
 
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}}, in particular Mission,
-Mission Issuer (the Mission `issuer`: in the OAuth binding
-the authorization server; a standalone Mission Issuer, the Mission
-Authority Server {{I-D.draft-mcguinness-mission-authority-server}},
-serves these surfaces with the same semantics; the AAuth Person
-Server plays the same role for its native missions through its own
-AAuth-native management surface
-{{I-D.draft-mcguinness-mission-aauth}}), Authority Set, the
+Mission Issuer (the Mission `issuer`: in the OAuth binding the
+authorization server; another binding's Mission Issuer that serves
+these surfaces does so with the same semantics), Authority Set, the
 `mission` claim, and `mission_id`; and the `mission_resource_access`
 authorization details type defined in its Mission Resource Access
-Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
-Resource AS is used as defined in the
-cross-domain companion
-{{I-D.draft-mcguinness-oauth-mission-cross-domain}}. It additionally
-uses:
+Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). It
+additionally uses:
 
 Mission Status Response:
 : A signed payload returned by the dedicated Mission Status operation
   ({{mission-status}}), reporting a Mission's current state and the
   audience-scoped evidence a consumer needs.
 
-Discharge:
-: The state of a `mission_resource_access` entry whose `terminal_when`
-  completion condition has been met, as defined by the Entry
-  Discharge companion
-  ({{I-D.draft-mcguinness-oauth-mission-discharge}}). A discharged
-  entry's authority is spent: it is no longer derivable.
-
 Effective Authority Set:
 : The approved Authority Set after applying every issuer-held,
-  monotonic narrowing mechanism the deployment runs. Where the Entry
-  Discharge companion is adopted, it contributes discharged entries
-  ({{I-D.draft-mcguinness-oauth-mission-discharge}}). Each other
-  narrowing profile defines its own subtraction. No narrowing
-  mechanism adds or restores authority. Membership in this set is
-  necessary, never sufficient, for an action to proceed: the runtime
-  decision evaluates it alongside every other required decision input
-  ({{I-D.draft-mcguinness-mission-runtime}}).
+  monotonic narrowing mechanism the deployment runs, each narrowing
+  profile defining its own subtraction. No narrowing mechanism adds or
+  restores authority. Membership in this set is necessary, never
+  sufficient, for an action to proceed.
 
 All JSON shown in this document is non-normative and illustrative; the
 member definitions in the surrounding text are authoritative. HTTP
@@ -335,8 +313,9 @@ the issuance profile defers. Unlike token introspection
 ({{introspection-projection}}), which answers "is this
 token's authorization still good," the Mission Status operation answers
 "what is the state of this Mission" keyed by the `mission_id` alone. Any
-consumer holding a `mission_id` (including an auditor or a
-cross-domain Resource AS) resolves it without holding a token the
+consumer holding a `mission_id` (including an auditor or an
+authorization server in another trust domain) resolves it without
+holding a token the
 authorization server (AS)
 issued.
 
@@ -362,7 +341,8 @@ The request is an HTTPS POST with an
   authority, one the Mission Issuer's configuration authorizes that
   consumer to request (below). An authorized consumer
   that is not a resource
-  server (for example an auditor or a cross-domain Resource AS) that
+  server (for example an auditor or an authorization server in
+  another trust domain) that
   needs only Mission state,
   not audience-scoped authority, MAY omit `audience`; the response is
   then state-only and carries no `authorization_details`
@@ -1030,8 +1010,9 @@ Per {{RFC9701}}, the signed response is a JWT of `typ`
 `iss`, `aud`, and `iat` are top-level.
 
 A consumer holding only a `mission_id`, or one that needs signed
-evidence independent of a specific token (an auditor or a cross-domain
-Resource AS), uses the dedicated Mission Status operation
+evidence independent of a specific token (an auditor or an
+authorization server in another trust domain), uses the dedicated
+Mission Status operation
 ({{mission-status}}); the introspection projection is purely a
 same-call convenience for token-holding consumers and is never the
 sole Mission Status path.
