@@ -46,20 +46,21 @@ normative:
   RFC9449:
   RFC9701:
   RFC9728:
+  RFC9700:
   I-D.draft-mcguinness-oauth-mission:
-    title: "Mission-Bound Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
 
 informative:
   RFC8725:
   RFC9110:
   RFC9457:
-  RFC9700:
+  I-D.draft-mcguinness-mission-mandate:
+    title: "Mission Mandate"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -69,13 +70,6 @@ informative:
         name: Karl McGuinness
     date: 2026
   I-D.draft-mcguinness-oauth-mission-resource-access:
-    title: "Mission Resource Access Profile for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-status-list:
     title: "Mission Status List for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status-list.html
@@ -1897,8 +1891,8 @@ audit and dispute. This is the issuance profile's retired-key rule
 ({{I-D.draft-mcguinness-oauth-mission}}), with the audit horizon as the
 bound. A key known or suspected
 compromised is the exception: the AS removes it, and the Mandate
-profile's compromise-time rule governs how artifacts signed under it
-are then classified.
+profile's compromise-time rule ({{I-D.draft-mcguinness-mission-mandate}})
+governs how artifacts signed under it are then classified.
 
 ## General OAuth Security
 
