@@ -1256,6 +1256,31 @@ issuance to that target when it is `scope`-only (it consumes `scope` and
 not `authorization_details`) and no other carried entry supplies a safe
 projection.
 
+**Requested `scope`.** Where {{I-D.draft-mcguinness-oauth-mission}}
+derives authority from a requested `scope` value for a `scope`-only
+target, the value stands for one entry: the mapping's `resource` and
+`resource_match`, the `actions` the value stands for, no
+`constraints`, and, where the mapping names a contract for the value,
+that contract's reference as `resource_contract`. That entry meets
+conditions 1 to 4 for the value, so it projects back to the same
+value, and one mapping serves both directions.
+
+Where a target's `scope` values are themselves action identifiers,
+each value can stand for the action of the same name, and the mapping
+is the identity. The requested value `invoices:read` at a `scope`-only
+API then stands for this entry:
+
+~~~ json
+{ "type": "mission_resource_access",
+  "resource": "https://api.example.com",
+  "actions": ["invoices:read"] }
+~~~
+
+A value the action grammar does not admit, such as a URI-form `scope`,
+stands for an action identifier the mapping names instead. A value
+whose local interpretation implies further rights stands for every
+action it permits, as condition 2 requires.
+
 # Transformation Capabilities {#transformation-capabilities}
 
 {{I-D.draft-mcguinness-oauth-mission}} requires an authorization server
@@ -1634,6 +1659,13 @@ Omission-Equivalent Value is `false`.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+-01
+
+- Scope Projection states the entry a requested `scope` value stands
+  for, so one mapping serves both projection and the OAuth binding's
+  scope-keyed configured mapping, and gives the identity case for
+  `scope` values that are action identifiers.
 
 -00
 

@@ -440,6 +440,14 @@ export interface ApproveInput {
    * the record carries neither `proposed_authority` nor `proposal_hash`.
    */
   proposedAuthority?: AuthorityEntry[];
+  /**
+   * @spec mission#derivation-modes, mission#scope-projection: the entries the
+   * request's `scope` values stand for at a `scope`-only target
+   * (`requestedScopeEntries`). Used only when no proposal was submitted, as
+   * the configured-mapping key; not a proposal, so never recorded or hashed
+   * as one.
+   */
+  requestedScope?: AuthorityEntry[];
   subject: { iss: string; sub: string };
   approver: { iss: string; sub: string };
   /**
@@ -1110,8 +1118,15 @@ export class MissionKernel {
    * and grants, with each entry's `resource_contract` assembled from
    * configuration ({@link assembleResourceContracts}, #249).
    */
-  derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {
-    return assembleResourceContracts(this.deriveWithProvenance(intent, proposal).entries, this.resourceContracts());
+  derive(
+    intent: MissionIntent,
+    proposal?: readonly AuthorityEntry[],
+    requestedScope?: readonly AuthorityEntry[],
+  ): AuthorityEntry[] {
+    return assembleResourceContracts(
+      this.deriveWithProvenance(intent, proposal, requestedScope).entries,
+      this.resourceContracts(),
+    );
   }
 
   /** @spec resource-access#resource-contract (#249): the configured contract declarations. */
@@ -1128,8 +1143,19 @@ export class MissionKernel {
    * separate child-actor origins as `child_actor_provenance` (@spec
    * child-delegation#fanout, #1304).
    */
-  deriveWithProvenance(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): DerivedAuthority {
-    const derived = deriveAuthoritySetWithProvenance(intent, this.opts.policy, proposal);
+  deriveWithProvenance(
+    intent: MissionIntent,
+    proposal?: readonly AuthorityEntry[],
+    requestedScope?: readonly AuthorityEntry[],
+  ): DerivedAuthority {
+    const derived = deriveAuthoritySetWithProvenance(
+      intent,
+      this.opts.policy,
+      proposal,
+      undefined,
+      undefined,
+      requestedScope,
+    );
     // @spec discharge#discharge-authority: resolve every `discharge_authority`
     // selector the derived entries carry, refusing the derivation when one maps
     // to nothing. Early and typed here (an IntentError the submission carriers
@@ -1482,7 +1508,7 @@ export class MissionKernel {
     // (IntentError) rather than being approved unbound.
     // @spec resource-access#delegate-eligibility: the derivation's origins
     // stay index-aligned through the two per-entry capability transforms.
-    const derived = this.deriveWithProvenance(input.intent, proposal);
+    const derived = this.deriveWithProvenance(input.intent, proposal, input.requestedScope);
     // @spec resource-access#resource-contract (#249): the reference is
     // assembled from configuration before `authorityHash` below, so
     // `authority_hash` commits it; the transform is one entry per entry, so
