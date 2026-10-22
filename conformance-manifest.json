@@ -1744,7 +1744,7 @@
     "local": "The reference's Mission Status consumer is the PDP: MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts) for its own read of the issuer, and the PEP-carried `assertion` in evaluate.ts, both verified by the one verifyMissionStatusResponse (src/services/pdp/src/state-observation.ts)."
    },
    "level": "unit",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/pdp/test/mission-status-resolver.test.ts",
@@ -1763,9 +1763,21 @@
      "name": "MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching) > never relies on a reported active state at or after the Mission's expires_at, though fresh_until and exp are later, with no skew allowance (#1535)",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion's signed fresh_until caps the permit in fresh mode, though the observation does not repeat it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > a verified assertion whose signed fresh_until has already passed denies stale_state, in fresh mode too",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1535 (D649, finding 2). The Response Replay restatement of status.caching.reliance-bound, witnessed by the same tests."
+   "notes": "#1535 (D649, finding 2). The Response Replay restatement of status.caching.reliance-bound, witnessed by the same tests and partial for the same reason (#1543 re-review): of the reference's two consumer paths, only the resolver enforces every term of the bound. The PEP-carried `assertion` path in evaluate.ts holds no issuer metadata, so it cannot enforce the advertised ceiling (iat plus mission_max_stale_seconds); only the action class's staleness window bounds the observation's age there. That path is tested on fresh_until (the two evaluate tests) and, through check 10, on exp."
   },
   {
    "id": "status.failures.decision-does-not-proceed",
