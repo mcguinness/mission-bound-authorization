@@ -54408,6 +54408,70 @@
    "notes": "#1304 (D486). The restriction clause is witnessed at the endpoint. That a list never creates the grant is witnessed at derivation (the grant flip in the subset rule) and at the kernel (the on-switch refuses though the policy permits), so the row is partial at its endpoint level. Proven by disabling the code it covers (each mutation restored byte for byte): recording the origin as list admits the policy-denied actor; lifting the on-switch fails the kernel witness."
   },
   {
+   "id": "child-delegation.fanout.children-unsupported-member-refused",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "fanout",
+   "text": "An authorization server MUST refuse an entry whose `children` carries any other member, whatever its value, unless a companion specification it implements defines that member's processing, and MUST NOT drop the member",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submitted entry whose children grant carries a member other than max_children, max_child_depth, allowed_child_actors and child_creation_policy is refused with invalid_authorization_details and no request_uri, never admitted without the member; an entry whose children grant carries only defined members is admitted and the approved Mission's entry carries it",
+    "local": "the reference implements no companion specification defining a further children member; unsupportedDelegationMember (mission-core) checks SUPPORTED_CHILDREN_MEMBERS at every intake, derivation and the config loaders"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "PAR refuses a delegation member the authorization server does not support (@spec resource-access#resource-access-type, D634) > refuses an entry whose children grant carries a member Child Delegation does not define",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "PAR refuses a delegation member the authorization server does not support (@spec resource-access#resource-access-type, D634) > admits the children grant Child Delegation defines, and the approved Mission's entry carries it, narrowed by the ceiling",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1528 (D660): a normative clarification of the closed children grant. The intro's 'an authorization server that does not implement this profile refuses an entry carrying it' points at Resource Access's delegation-member refusal (resource-access.type.delegation-unsupported-member-refused); the reference implements this profile. Proved by mutation: disabling the nested children check in unsupportedDelegationMember fails the negative witness ('expected 201 to be 400'), while the positive witness still passes; the existing refusal of child creation for an unenforceable control is unchanged."
+  },
+  {
+   "id": "child-delegation.fanout.children-unsupported-member-config-error",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "fanout",
+   "text": "a configured entry carrying one is a configuration error",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a configured ceiling entry whose children grant carries an undefined member is rejected when the configuration loads, never served or rebuilt without the member",
+    "local": "the reference's loader (parseCeilingEntry, policy.json) refuses to load, naming the entry and the member"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "the config loader refuses a ceiling entry whose delegation carries an unsupported member, naming it (D634) > parseCeilingEntry (policy.json) rejects an entry whose children grant carries a member Child Delegation does not define, naming it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1528 (D660). Proved by mutation: disabling the nested children check in unsupportedDelegationMember fails the witness (the configuration loads)."
+  },
+  {
    "id": "child-delegation.child-actor-eligibility.policy-creates-no-grant",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "child-actor-eligibility",
