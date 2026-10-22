@@ -325,6 +325,13 @@ describe("MissionStatusResolver: a response that does not verify establishes not
     await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
   });
 
+  it("refuses an active response that carries no mission.expires_at: its Mission expiry could not be enforced (#1535)", async () => {
+    handler = respond((p) => {
+      delete mission(p).expires_at;
+    });
+    await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
+  });
+
   it("refuses a response whose mission.expires_at does not parse (#1535)", async () => {
     handler = respond((p) => {
       mission(p).expires_at = "next year";

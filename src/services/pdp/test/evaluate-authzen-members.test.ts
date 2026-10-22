@@ -213,7 +213,15 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
     const signStatus = (s: Signing) => {
       const jwt = new SignJWT({
         sub: "ap-agent",
-        mission: { id: "msn_1004", issuer: "https://as.test", state: "active", version: 3, fresh_until: freshUntil, ...s.mission },
+        mission: {
+          id: "msn_1004",
+          issuer: "https://as.test",
+          state: "active",
+          version: 3,
+          expires_at: "2027-06-01T00:00:00Z",
+          fresh_until: freshUntil,
+          ...s.mission,
+        },
       })
         .setProtectedHeader({ alg: "ES256", kid: s.kid ?? "status-1004", typ: s.typ ?? "mission-status-response+jwt" })
         .setIssuer(s.iss ?? "https://as.test")
@@ -366,6 +374,30 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
         );
         expect(denied.decision, actionClass).toBe(false);
         expect(denied.context.denial_reason, actionClass).toBe("stale_state");
+      }
+    });
+
+    // @spec status#mission-status-response: `expires_at` is REQUIRED. A
+    // response without it carries no Mission expiry to enforce, so it does
+    // not verify, rather than being relied on as though the Mission never
+    // expired.
+    it("an assertion signed without mission.expires_at denies stale_state, where the same assertion with it permits (#1535)", async () => {
+      const { privateKey, keys } = await statusKeys();
+      // An undefined member is dropped when the payload is serialized.
+      const missing = await signStatus({ privateKey, mission: { expires_at: undefined } });
+      const present = await signStatus({ privateKey });
+      for (const actionClass of ["irreversible_action", "consequential_write"]) {
+        const denied = await evaluate(
+          observedRequest({ actionClass, observation: observed({ version: 3, assertion: missing }) }),
+          options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+        );
+        expect(denied.decision, actionClass).toBe(false);
+        expect(denied.context.denial_reason, actionClass).toBe("stale_state");
+        const permitted = await evaluate(
+          observedRequest({ actionClass, observation: observed({ version: 3, assertion: present }) }),
+          options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+        );
+        expect(permitted.decision, `${actionClass}: ${JSON.stringify(permitted.context)}`).toBe(true);
       }
     });
   });

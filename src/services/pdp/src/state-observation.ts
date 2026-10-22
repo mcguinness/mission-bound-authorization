@@ -102,7 +102,7 @@ export interface VerifiedMissionStatus {
   freshUntilMs: number;
   /** The signed `exp`, epoch milliseconds. */
   expMs: number;
-  /** For a reported `active` state, the signed `mission.expires_at`, epoch milliseconds, where the response carries one. */
+  /** For a reported `active` state, the signed `mission.expires_at`, epoch milliseconds; absent for any other state. */
   activeUntilMs?: number;
   /**
    * The response's own reliance bound, epoch milliseconds: the earliest of
@@ -126,7 +126,7 @@ export interface VerifiedMissionStatus {
  * enforcement scope), carrying `iat` and `exp` and not expired, its `mission` object naming
  * `expected.missionId` under that same issuer (check 4: `mission.issuer`
  * equals `iss`), and carrying a signed `mission.fresh_until` no later than
- * `exp` (check 10), and an `expires_at`, where present, that parses.
+ * `exp` (check 10), and a signed `mission.expires_at` that parses.
  * `keys` are the declared state source's published status-response keys;
  * absent, nothing can be verified. Each caller adds the checks its own input
  * needs; this function adds none of theirs.
@@ -166,11 +166,12 @@ export async function verifyMissionStatusResponse(
     // response that carries it. `exp` is present and numeric: jose required it.
     const expMs = (payload.exp as number) * 1000;
     if (freshUntilMs > expMs) return undefined;
-    // @spec status#mission-status-caching: a consumer "MUST NOT rely on a
-    // reported `active` state at or after `mission.expires_at`". One that
+    // @spec status#mission-status-response `expires_at` (REQUIRED),
+    // status#mission-status-caching: a consumer "MUST NOT rely on a reported
+    // `active` state at or after `mission.expires_at`". One that is absent or
     // does not parse leaves that bound unknowable, so it does not verify.
-    const expiresAtMs = m.expires_at === undefined ? undefined : rfc3339Ms(m.expires_at);
-    if (m.expires_at !== undefined && expiresAtMs === undefined) return undefined;
+    const expiresAtMs = rfc3339Ms(m.expires_at);
+    if (expiresAtMs === undefined) return undefined;
     const activeUntilMs = m.state === "active" ? expiresAtMs : undefined;
     const relianceBoundMs = Math.min(freshUntilMs, expMs, activeUntilMs ?? Number.POSITIVE_INFINITY);
     return { payload, mission: m, freshUntilMs, expMs, ...(activeUntilMs !== undefined ? { activeUntilMs } : {}), relianceBoundMs };
