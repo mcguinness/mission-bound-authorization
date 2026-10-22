@@ -748,7 +748,9 @@ d("AAM Nightly Reconciliation, realized on Missions", () => {
     const body = (await res.json()) as { containment_version?: number; removed?: unknown };
     expect(res.status, JSON.stringify(body)).toBe(200);
     expect(body.containment_version).toBe(1);
-    expect(body.removed).toEqual([{ resource: RESOURCE, actions: ["payments:remittance.send"] }]);
+    // @spec containment#selector-matching (#1463, D606): the shipped rule is a
+    // service-wide selector, so it declares `prefix` and the overlay records it.
+    expect(body.removed).toEqual([{ resource: RESOURCE, resource_match: "prefix", actions: ["payments:remittance.send"] }]);
 
     // The PDP now denies the external-comms action authority_contained...
     const contained = await evalAction(humanMissionId, "payments:remittance.send");

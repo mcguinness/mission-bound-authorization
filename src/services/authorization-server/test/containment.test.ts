@@ -851,6 +851,8 @@ describe("containOnEvent(): issuer-held ContainmentPolicy drives a deterministic
     expect(rule?.rule_id).toBe("contain-external-comms-on-taint-v1");
     expect(rule?.event_type).toBe("content.tainted_read");
     expect(rule?.remove[0]?.resource).toBe(CANONICAL_RESOURCE);
+    // Service-wide, so declared prefix (#1463): it also reaches finer entries.
+    expect(rule?.remove[0]?.resource_match).toBe("prefix");
     expect(rule?.remove[0]?.actions).toContain("payments:remittance.send");
   });
 });

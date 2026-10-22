@@ -310,6 +310,28 @@ describe("Mission Template admin plane (@spec mission-template)", () => {
     }
   });
 
+  // @spec resource-access#resource-access-type (D634): a template ceiling entry
+  // whose `delegation` carries a member the authorization server does not
+  // implement is refused at consent, naming the entry and the member, rather
+  // than stored and carried unchanged when a dispatch derives from it.
+  it("refuses a template whose ceiling entry's delegation carries an unsupported member, naming it, and creates no template (D634)", async () => {
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [{ max_depth: 1, future_policy: { max_uses: 1 } }, "delegation.future_policy"],
+      [{ max_depth: 1, children: { max_children: 1, future_child_control: true } }, "delegation.children.future_child_control"],
+    ];
+    for (const [delegation, member] of cases) {
+      const body = readOnlyTemplateBody();
+      const ceiling = (body.ceiling as Record<string, unknown>[]).map((e, i) => (i === 0 ? { ...e, delegation } : e));
+      const res = await createTemplateAdmin({ ...body, ceiling });
+      const out = (await res.json()) as { error?: string; error_description?: string; template_id?: string };
+      expect(res.status, JSON.stringify(out)).toBe(400);
+      expect(out.error).toBe("invalid_request");
+      expect(out.error_description).toBe(`ceiling[0] carries ${member}, which is not a supported delegation member`);
+      expect(out.template_id).toBeUndefined();
+      expect(as.templateStore.getByApprovalEvent(body.approval_event_id as string)).toBeUndefined();
+    }
+  });
+
   // @spec resource-access#matching-allowed-delegates, child-delegation#fanout
   // (#1373): a template ceiling entry whose delegate matcher carries a member
   // other than `sub` and `sub_profile`, or neither, is refused at consent,

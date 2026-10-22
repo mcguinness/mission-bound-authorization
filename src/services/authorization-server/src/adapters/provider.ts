@@ -347,7 +347,12 @@ import {
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
 import { withTransaction } from "@mission/store";
-import { UnknownProtectedEventError } from "../kernel/containment.js";
+import {
+  assertContainmentSelectors,
+  ContainmentSelectorError,
+  type ContainmentSelector,
+  UnknownProtectedEventError,
+} from "../kernel/containment.js";
 import {
   DIGEST_PREFIX,
   DISCHARGE_EVENT_ID_RE,
@@ -460,7 +465,7 @@ import {
   takeDeviceIntake,
   type DeviceClientView,
 } from "./device-authorization.js";
-import { pushedRequestIntake, takeParIntake } from "./par-intake.js";
+import { pushedRequestIntake, requestObjectIntake, takeParIntake, takeRequestObjectIntake } from "./par-intake.js";
 import type { MissionApprovalDeferralStore } from "../kernel/mission-approval-deferral.js";
 import {
   cancelOnRevocation,
@@ -1688,6 +1693,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         ? false
         : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
+    // @spec mission#submission-via-par (#1503): the one Request Object
+    // signing algorithm (features.requestObjects below); every other
+    // algorithm list keeps the provider's default.
+    enabledJWA: { requestObjectSigningAlgValues: ["ES256"] },
     interactions: {
       url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
       // @spec mission#approval-event (#1247), device-authorization#approval
@@ -1710,6 +1719,31 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // We serve our own approval interaction (the mission-kernel adapter).
       devInteractions: { enabled: false },
       pushedAuthorizationRequests: { enabled: true, requirePushedAuthorizationRequests: true },
+      // @spec mission#submission-via-par (#1503): the second carriage of the
+      // Submission envelope, a `mission_intent` claim in a signed Request
+      // Object (RFC 9101) pushed through PAR. Signed only: `enabledJWA` above
+      // accepts the ES256 every registered client already signs its client
+      // assertion with, verified against the client's registered JWKS, so an
+      // unsigned (`alg` none) object fails the provider's algorithm check
+      // with invalid_request_object. requireSignedRequestObject stays off, so
+      // the form-encoded carriage stays available. The hook (par-intake.ts)
+      // keeps the device authorization endpoint refusing a Request Object.
+      // @spec mission#submission-processing (#1512): the hook runs before
+      // the provider's RAR check, so it validates a carried Submission
+      // envelope and its Intent (steps 1 and 2) before a proposal inside the
+      // object is checked (step 3); evidence entries wait for their step.
+      requestObjects: {
+        enabled: true,
+        requireSignedRequestObject: false,
+        assertJwtClaimsAndHeader: requestObjectIntake((submission) => {
+          try {
+            kernel.validateSubmission(submission, undefined, { deferEvidenceEntries: true });
+          } catch (e) {
+            if (e instanceof IntentError) throw intentErrorToOidc(e);
+            throw e;
+          }
+        }),
+      },
       richAuthorizationRequests: {
         enabled: true,
         ack: "experimental-01",
@@ -1856,7 +1890,20 @@ export function buildProvider(opts: AdapterOptions): Provider {
           (ctx as { oidc: { route?: string } }).oidc.route === "pushed_authorization_request"
             ? takeParIntake((ctx as { req: IncomingMessage }).req)
             : undefined;
-        if (value === undefined) {
+        // @spec mission#submission-via-par (#1503): inside a client-signed
+        // Request Object the claim's value is the Submission envelope itself,
+        // a JSON object, which the Request Object hook read from the strictly
+        // parsed payload (the provider keeps only `String(value)`) and
+        // refused unless it is one. The envelope's serialization replaces the
+        // parameter, at PAR and again where the authorization endpoint reads
+        // the pushed object, so the envelope is validated, and its
+        // intent_hash computed, exactly as a form value's, and the approval
+        // reads it from the interaction as it reads a form value. A form
+        // value is that serialization already.
+        const requestObject = takeRequestObjectIntake((ctx as { req: IncomingMessage }).req);
+        const submitted = requestObject !== undefined ? requestObject.submission : value;
+        if (requestObject !== undefined) params.mission_intent = submitted;
+        if (submitted === undefined) {
           if (lifted) {
             params.authorization_details = lifted.proposal;
             checkPushedRar(ctx, params, oidc.client as { authorizationDetailsTypes?: string[] } | undefined);
@@ -1864,7 +1911,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           return;
         }
         try {
-          const submission = kernel.validateSubmission(String(value), undefined, { deferEvidenceEntries: true });
+          const submission = kernel.validateSubmission(String(submitted), undefined, { deferEvidenceEntries: true });
           const { intent } = submission;
           if (lifted) {
             params.authorization_details = lifted.proposal;
@@ -3974,6 +4021,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             );
             return;
           }
+          // @spec containment#selector-matching (#1463): each removal is a
+          // selector the matcher can decide (`exact` by default, `prefix` by
+          // declaration); one it cannot would contain nothing, so the request
+          // is refused before anything commits.
+          try {
+            assertContainmentSelectors(remove);
+          } catch (e) {
+            if (!(e instanceof ContainmentSelectorError)) throw e;
+            sendInvalidRequest(`contain ${e.message}`);
+            return;
+          }
           // @spec control-plane#serialization — the containment commit, the
           // nonce claim and the committed outcome are ONE transaction, so a
           // committed narrowing always leaves a replayable record behind.
@@ -3996,7 +4054,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             // transaction, before the narrowing commits (kernel.contain).
             const { record, evidence } = kernel.contain(missionId, {
               event: containEvent,
-              remove: remove as Array<{ resource: string; actions?: string[] }>,
+              remove: remove as ContainmentSelector[],
               ...(expectedVersion !== undefined ? { expectedVersion } : {}),
             });
             const outcome = {

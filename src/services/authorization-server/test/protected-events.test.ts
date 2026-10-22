@@ -113,7 +113,8 @@ describe("protected-event ingestion: JWS source verification -> deterministic co
     const { status, body } = await post(m.id, jws);
     expect(status, JSON.stringify(body)).toBe(200);
     expect(body.containment_version).toBe(1);
-    expect(body.removed).toEqual([{ resource: RESOURCE, actions: ["payments:remittance.send"] }]);
+    // The shipped rule is service-wide, so it declares prefix (#1463).
+    expect(body.removed).toEqual([{ resource: RESOURCE, resource_match: "prefix", actions: ["payments:remittance.send"] }]);
 
     // The removed capability is gone from the EFFECTIVE set (PDP denial is proven
     // in the OpenFGA e2e); the approved set + hash are untouched.

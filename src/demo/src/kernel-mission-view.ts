@@ -39,12 +39,16 @@ export function kernelMissionView(kernel: MissionKernel, missionId: string): Mis
     client_id: fresh.client_id,
     // The containment DELTA (not a filtered set), so the PDP distinguishes
     // never-approved (out_of_authority) from approved-then-contained
-    // (authority_contained).
+    // (authority_contained). @spec containment#selector-matching (#1463): the
+    // PDP pairs a delta member with the approved entry it relies on by that
+    // entry's `resource`, so the delta is the overlay resolved onto the
+    // approved entries: a `prefix` selector, or a fine selector over a broad
+    // entry, reaches the PDP exactly as it reaches the effective set.
     ...(fresh.containment
       ? {
           containment: {
             version: fresh.containment.containment_version,
-            contained: fresh.containment.contained,
+            contained: kernel.containedEntryRemovals(fresh),
           },
         }
       : {}),

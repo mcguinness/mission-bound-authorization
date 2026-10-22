@@ -1767,6 +1767,7 @@
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-status"
    ],
    "adoption_requires": [
@@ -1799,6 +1800,7 @@
     "draft-mcguinness-oauth-mission-expansion",
     "draft-mcguinness-oauth-mission-management",
     "draft-mcguinness-oauth-mission-progressive",
+    "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-status-list"
@@ -2208,9 +2210,7 @@
    "summary": "Defines mission_resource_access, split from the OAuth binding: resource exact/prefix matching, the action namespace and wildcard families, Common Constraints, per-entry delegation policy, and the subset/intersection algebra, plus this type's scope-projection safety conditions and machine-readable transformation-capability declaration.",
    "pull_when": "The OAuth binding's supported authorization_details types include mission_resource_access, or you need its concrete subset/delegation/projection semantics.",
    "normative_references": [
-    "draft-mcguinness-mission-runtime",
-    "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-cross-domain"
+    "draft-mcguinness-oauth-mission"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"
@@ -2223,14 +2223,6 @@
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-transaction-authorization"
-   ],
-   "requires_when": [
-    {
-     "when": "the deployment supports the resource_contract member",
-     "requires": [
-      "draft-mcguinness-mission-runtime"
-     ]
-    }
    ]
   },
   {

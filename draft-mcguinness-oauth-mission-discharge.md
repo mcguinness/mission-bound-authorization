@@ -584,7 +584,7 @@ binding's caller-authorization and minimization rules apply
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Caller Authorization
 and Minimization"). An AS MUST NOT include `discharge_selectors` unless
 it is the Mission `issuer` ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Only the Issuer Reports Mission State"). This document
+Section "Issuer-Only Members"). This document
 defines introspection carriage only.
 
 The following is an example of an introspection response carrying a
