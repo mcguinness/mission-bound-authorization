@@ -62625,7 +62625,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "With a stale harness taint report (one past its attested validity), an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true.",
-    "local": "Staleness is the deployment's bound (taintMaxAgeSeconds), not an attested validity: a report older than it records tainted with taint_failure stale, an untainted one included. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
+    "local": "Staleness is the deployment's bound (taintMaxAgeSeconds), not an attested validity: a report older than it when it arrives, after every lookup, records tainted with taint_failure stale, an untainted one included; one the harness made during a slow lookup is not future-dated. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -62633,6 +62633,12 @@
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > a report older than the deployment's bound counts as tainted, an untainted one included",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the session taint state, from the harness through a channel the agent does not mediate (@spec discovery#adjudication, #1469 stage 3) > freshness is judged when the report arrives, after the lookups: a report fresh when asked but past the bound by then is stale, and one the harness made during a slow lookup is not future-dated",
      "level": "endpoint",
      "surface": "governance-record"
     }
@@ -62677,7 +62683,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "With a harness taint report whose attestation fails verification, an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true.",
-    "local": "A report that is malformed (non-boolean tainted, unparsable reported_at, non-string source_class, not an object), future-dated, or not session-scoped records tainted with taint_failure unverifiable. The harness attestation is verified behind the deployment's taint port, as TLS is behind the connection port: an attestation the port cannot verify reaches the kernel as no report (missing) or a malformed one (unverifiable), and both count as tainted. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
+    "local": "A report that is malformed (non-boolean tainted, a reported_at that is not a strict RFC 3339 date-time, non-string source_class, not an object), future-dated, or not session-scoped records tainted with taint_failure unverifiable. The harness attestation is verified behind the deployment's taint port, as TLS is behind the connection port: an attestation the port cannot verify reaches the kernel as no report (missing) or a malformed one (unverifiable), and both count as tainted. No encounter binds by policy before stage 6, so the outcome half (routed rather than bound) is not yet discriminated; Discovery Evidence is a later stage."
    },
    "level": "endpoint",
    "coverage": "partial",
