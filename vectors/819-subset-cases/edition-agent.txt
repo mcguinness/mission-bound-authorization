@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-23T18:08:58Z
-Source repository commit: ff2de2dc4a4385d49d0e35afdce23b22a95454e4
+Generated: 2026-10-23T18:25:20Z
+Source repository commit: 52b330e07fb8f6d7a85ba47057dda33bc90c84c2
 Member count: 9
 
 Reading order:
@@ -1931,6 +1931,11 @@ Table of Contents
       *  governed_policy: an agent's own proposal a policy adjudicates
          under a policy version a human approved
          ([I-D.draft-mcguinness-mission-approval-governance]).
+
+      The type values form a specification-defined namespace with no
+      registry ([I-D.draft-mcguinness-oauth-mission], Section "Namespace
+      Taxonomy"), and this list names the value each companion profile
+      defines.
 
       Every basis fixes the same accountable human as consent_principal;
       the bases differ only in what activated this instance and what
@@ -5604,6 +5609,10 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Authorization bases entry says the basis type values form a
+      specification-defined namespace and that its list names each
+      companion's value.  No requirement changed.
 
    *  The Authorization bases entry cites the companion profile that
       defines each standing-consent basis; the OAuth binding points here
@@ -9859,7 +9868,10 @@ Table of Contents
       authorization state, such as the continuation profile's
       delegation-family-creating exchange
       ([I-D.draft-mcguinness-oauth-mission-continuation]), creates a new
-      grant binding, rooted in that same Mission.
+      grant binding, rooted in that same Mission.  Three Token Exchanges
+      are covered by the two items below instead: cross-domain
+      projection and child creation, which return a JWT authorization
+      grant, and expansion, which creates a successor.
 
    *  *Cross-domain projection.* A cross-domain projection
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]) establishes no
@@ -11608,7 +11620,9 @@ Table of Contents
    the basis's approval_basis.type value (Section 14.3);
    [I-D.draft-mcguinness-mission-architecture] (Section "Mission
    Invariants") lists the standing-consent bases that companion profiles
-   define.
+   define.  The type values form a specification-defined namespace with
+   no registry (Section 16.2): each further basis is defined by the
+   companion profile that introduces it.
 
    For a standing-consent type, activation takes the shape that its
    companion profile defines, and activation_actor names a dispatching
@@ -12449,8 +12463,9 @@ Table of Contents
 
    *  *Specification-defined.* A namespace with a defined fail-safe for
       unknown values and no registry, such as the mission claim members
-      (Section 8.8) and the Mission Record members (Section 14), is
-      specification-defined: the defining documents are its value space.
+      (Section 8.8), the Mission Record members (Section 14) and the
+      approval_basis.type values (Section 14.3), is specification-
+      defined: the defining documents are its value space.
 
    *  *Collision-resistant.* Deployment-defined names are collision-
       resistant names (Section 4.2 of [RFC7519]) and are never
@@ -15443,6 +15458,11 @@ Appendix G.  Document History
       what the companions specify; the sentence on joining one
       credential to different Missions across requests moves to the
       Mission Authority Server's Mission Join.
+
+   *  Editorial, no requirement change: Grant Bindings and Related
+      Mechanisms names the Token Exchanges its later items cover, and
+      the Namespace Taxonomy lists the approval_basis.type values as
+      specification-defined, which Standing-Consent Bases cites.
 
    -01
 
