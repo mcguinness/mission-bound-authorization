@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
-    "content_sha256": "339c6e233e26e8920573096fe463dc51903cf5a136de15ee79c899c354529a9b"
+    "revision": "99925491107f5b76d8ec9d9a21279be5bcc6fbe7",
+    "content_sha256": "3eeaccfa37ed61bca362dabf7a90e988238cb18896a85f987e94d140596d3461"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -7390,7 +7390,7 @@
    "id": "core.revocation.revoke-by-mission-id",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "revocation",
-   "text": "A deployment MUST provide an authenticated means for the Subject, the Approver, or an administrator to revoke a Mission by `mission_id`, independent of possession of any token",
+   "text": "A deployment MUST provide an authenticated means, independent of possession of any token, by which a party its policy authorizes revokes a Mission by `mission_id`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -7403,20 +7403,164 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an authenticated party holding none of the Mission's tokens revokes it by its identifier, after which every derivation under the Mission refuses",
-    "local": "the administrator path is witnessed (a service principal holding none of the Mission's tokens); Subject and Approver access to the same surface is not exercised"
+    "normative": "a party the deployment's policy authorizes to revoke the Mission, authenticated and holding none of the Mission's tokens, revokes it by its identifier, after which every derivation under the Mission refuses",
+    "local": "the authorized parties are a lifecycle client at the advertised Mission Lifecycle endpoint and a service principal at the development route, each holding the deployment's `mission_lifecycle` grant"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
      "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 8 (revoke): the administrator's lifecycle grant revokes the Mission, after which refresh and the agent's exchange are refused",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1182 (D378)."
+   "notes": "#1182 (D378). #1503 finding 14 (D620): the obligation names a party the deployment's policy authorizes, not the Subject, the Approver or an administrator by role, so the former partial gap (Subject and Approver access to the surface not exercised) no longer describes an obligation; that no role alone authorizes revocation is core.revocation.no-role-entitlement."
+  },
+  {
+   "id": "core.revocation.authorized-revoker",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "revocation",
+   "text": "A Mission is revoked when the AS receives a revocation for it from a party the deployment's policy authorizes to revoke it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS revokes a Mission on a request only from a party the deployment's policy authorizes to revoke that Mission; a party without that authorization, including one whose authorization reaches only another Mission or tenant and the Mission's own requesting client, is refused and the Mission is left unchanged",
+    "local": "the deployment's policy is the `mission_lifecycle` grant, optionally scoped per client to operations and to Missions by Subject and requesting client (#1535); a refusal takes the not-found response"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle authorization for the acting party, operation and Mission (@spec status#lifecycle-authorization, #1535) > answers a client holding the lifecycle grant for another tenant exactly as it answers an unknown Mission: revoke, complete on a revoked Mission and a stale expected_version alike, leaving the Mission unchanged; a client whose policy names the Mission's tenant acts on it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle authorization for the acting party, operation and Mission (@spec status#lifecycle-authorization, #1535) > scopes a client's lifecycle grant to the Subject and the requesting client its policy names, refusing every other Mission as an unknown one",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 7 (lifecycle authorization): a caller without the lifecycle grant, the approval service included, is refused revoke with the not-found response and the Mission stays active",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/issuance-only-capabilities.test.ts",
+     "name": "the launcher's lifecycle console at the advertised endpoint (@spec status#mission-status-authentication, status#lifecycle-authorization, #1191) > no other client holds a lifecycle grant: the Mission's own client is answered as for an unknown Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 14 (D620). Mutation-proved: ignoring a client's per-client lifecycle policy fails both #1535 tests (200 for 404), and entitling the Mission's requesting client fails the issuance-only test (200 for 404)."
+  },
+  {
+   "id": "core.revocation.no-role-entitlement",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "revocation",
+   "text": "The Subject, the Approver, and an administrator are parties that policy can authorize; none is authorized by its role alone.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a caller whose only standing is being the Mission's Subject, its Approver, or an administrator, without the deployment's authorization to revoke that Mission, is refused revocation and the Mission stays active",
+    "local": "the witness Mission's Approver is the administrator who approved it, carried by the approval service; the Subject is the workload principal authenticated as itself. The reference has no administrator role apart from the grants a principal holds"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 7a (no role entitlement): the Mission's Subject, authenticated as itself, and its Approver, carried by the approval service, are each refused revoke without the deployment's lifecycle authorization, and the Mission stays active",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 7 (lifecycle authorization): a caller without the lifecycle grant, the approval service included, is refused revoke with the not-found response and the Mission stays active",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 14 (D620). Mutation-proved: entitling a caller whose identifier is the Mission's Subject fails step 7a for the Subject (200 for 404), and entitling a caller carrying the Mission's consent principal fails step 7a for the Approver (200 for 404)."
+  },
+  {
+   "id": "core.revocation.policy-terminated-revoked",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "revocation",
+   "text": "or when that policy itself terminates the Mission; either way, its termination reason is `revoked`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a termination the deployment's policy applies with no revocation request at that time records `termination.reason` `revoked`, as an authorized party's revocation does",
+    "local": "the reference's policy-applied terminations are a suspension schedule's `on_expiry` `revoke` applied at its deadline and the child and successor remediations"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > applies on_expiry when suspend_until passes, without a further request: resume returns the Mission to active and revoke terminates it revoked, each transition emitted once",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "child creation acting-agent authorization (@spec child-delegation#request-processing step 4, #1326) > the remediation revokes the children another client created before the check, refusing a retained grant and a refresh family opened from one; a child the parent's own client created keeps refreshing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "successor remediation (@spec expansion#verification-order step 4, #1349) > revokes a successor whose committed deferral another client opened, refusing its kernel gate, Token Exchange and refresh family while its issued access token still verifies offline until exp; the predecessor stays superseded and an own-client successor keeps refreshing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 8 (revoke): the administrator's lifecycle grant revokes the Mission, after which refresh and the agent's exchange are refused",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 14 (D620): termination triggered by policy itself stays a revocation. Mutation-proved: recording the scheduled deadline's termination as `completed` fails the deadline test; the child and successor remediations committing `complete` in place of `revoke` fail their remediation tests (`completed` for `revoked`); and a revoke transition recording `completed` fails step 8."
   },
   {
    "id": "core.issuance-gating.inactive-refused-by-grant",
