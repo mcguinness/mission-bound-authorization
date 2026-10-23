@@ -38390,7 +38390,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a token request whose requested narrowing exceeds the surviving authority (items 1 to 3) is refused invalid_authorization_details or invalid_scope; no token carrying a truncated subset of the request is issued",
-    "local": "the native reference AS refuses a refresh naming a capability containment removed, rather than issuing the remainder; it is a Mission Issuer, not a consuming AS, so the scope-request case and the consuming-AS redemption path stay unwitnessed"
+    "local": "the native reference AS refuses a Token Exchange (asyncDelegate) that opens a family naming a capability containment removed, with invalid_authorization_details rather than issuing the remainder; it is a Mission Issuer, not a consuming AS. Refresh, the scope-request case and the consuming-AS redemption path stay unwitnessed"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -38402,7 +38402,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Partial on the #963 precedent of citing native-AS projection tests for these rows (D685 Q5): the cited test is the error-mapping witness of the OAuth binding for an exceeding refresh request after containment. No consuming-AS redemption path exists in src."
+   "notes": "Partial on the #963 precedent of citing native-AS projection tests for these rows (D685 Q5): the cited test, also the error-mapping witness of the OAuth binding, opens a family by Token Exchange naming a contained capability; no refresh is exercised. No consuming-AS redemption path exists in src."
   },
   {
    "id": "issuance-grant.mission-state-source.not-found-no-mission-error",
