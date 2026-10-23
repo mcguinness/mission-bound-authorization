@@ -58636,7 +58636,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "no assertion is minted for a Mission that is not active",
-    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a revoked Mission gets join_failed and no assertion, on a fresh request and on one a cached assertion matches"
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a revoked Mission gets join_failed and no assertion, on a fresh request and on one a cached assertion matches; and a Mission revoked, suspended or expired while the acting token is established, after the token check, or while the assertion is signed, gets join_failed with nothing returned, cached or recorded (the Mission is read again after the token check and after signing)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -58652,9 +58652,27 @@
      "name": "Join Assertion cache (@spec authority-server#join-assertion-request, #1454) > rechecks before serving a cached assertion: a caller outside the visibility set, a revoked Mission and an inactive token are refused, and a changed mapping mints anew",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed, returning and recording nothing, a Mission revoked, suspended or expired while its acting token is being established",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed a Mission revoked, suspended or expired after the token check and before signing",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed a Mission revoked, suspended or expired while the assertion is signed, and caches nothing it refused",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the state check."
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the state check. The re-reads (#1454 review) are proved by defects that drop the re-read before signing, drop it after signing, drop its state check, read the stale record, read without materializing expiry, and cache or record before the re-read after signing."
   },
   {
    "id": "mas.join-assertion.malformed-request",
@@ -58937,7 +58955,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a request whose audience names no PDP enrolled for the Mission is refused join_failed, and no assertion is minted",
-    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a request whose audience is enrolled for another scope only, or for nothing, gets join_failed and no assertion. The Mission's enforcement scope is the set of enrolled scopes some entry of its Authority Set overlaps, under the matcher Mission Status scopes entries with (entryOverlapsResource)"
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a request whose audience is enrolled for another scope only, or for nothing, gets join_failed and no assertion. The Mission's enforcement scope is the set of enrolled scopes some entry of its Authority Set overlaps, under the matcher Mission Status scopes entries with (entryOverlapsResource); an audience withdrawn while the token is established or the assertion is signed gets join_failed"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -58947,9 +58965,15 @@
      "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses join_failed (HTTP 403), minting nothing: a revoked Mission, an audience not enrolled, an inactive or expired token, one with no cnf, a mismatched thumbprint, a token that does not join",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed when the Mission's authority_hash changes, or its audience is withdrawn, during the token check or the signing",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the audience check."
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the audience check. Also proved by a defect that drops the audience from the re-read (#1454 review)."
   },
   {
    "id": "mas.join-assertion.aud-claim",
@@ -59055,7 +59079,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a caller outside the visibility set, or a request failing a minting check, is refused even when a cached assertion matches",
-    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: with a matching cached assertion, a caller outside the visibility set gets not_found, an inactive token and a revoked Mission get join_failed, and a changed join (a new mapping version) mints anew rather than serving the cache"
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: with a matching cached assertion, a caller outside the visibility set gets not_found, an inactive token and a revoked Mission get join_failed, and a changed join (a new mapping version) mints anew rather than serving the cache; a cached assertion is not served for a Mission revoked while the next request's token is established"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -59065,9 +59089,15 @@
      "name": "Join Assertion cache (@spec authority-server#join-assertion-request, #1454) > rechecks before serving a cached assertion: a caller outside the visibility set, a revoked Mission and an inactive token are refused, and a changed mapping mints anew",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > does not serve a cached assertion for a Mission revoked while the next request's token is being established",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that serves the cache before the checks."
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that serves the cache before the checks. Also proved by the defect that drops the re-read before signing (#1454 review)."
   },
   {
    "id": "mas.submission.unsupported-media-type",
