@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `56c86f92`
+Every statement here is true of the reference implementation at `c98c17b8`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -305,9 +305,9 @@ mapping contract and its cache, the estate's Resource-policy grants, and the
 composition. The PEP and PDP changes are reference code
 (`joinMapping`, `missionBoundOnlyClasses`, `mappingContract`).
 
-Sender-bound Join Assertions (MAS §join-assertion) are not built; #1454
-owns building them and the Enterprise tier. What they would additionally
-need, by party:
+Sender-bound Join Assertions (MAS §join-assertion) are #1454's; the
+Enterprise tier is #1551's. The MAS side is built in the reference
+authorization server; the pilot does not use it yet. By party:
 
 - **The estate AS** (MAS §enterprise-prerequisites): sender-constrained
   access tokens carrying a `cnf` key, and introspection responses or
@@ -315,26 +315,34 @@ need, by party:
   provides all three as configured: DPoP-bound tokens with `cnf.jkt`, JWTs
   under its published keys, and RFC 7662 introspection reporting `cnf`
   (§5). Nothing changes there.
-- **The MAS**: the join-assertion endpoint (MAS §join-assertion-request),
-  advertised as `mission_join_assertion_endpoint`, with caller
-  authentication, the visibility set and its anti-oracle split, and
-  per-caller rate limiting; verifying the acting token centrally (by
-  introspection at the estate, or RFC 9068 validation) and refusing one
-  with no `cnf`; the subject and client joins under its own mapping
-  contract, and a delegate's depth from actor records; and minting the
-  artifact (MAS §join-assertion-artifact, `typ` `mission-join+jwt`): the
-  `mission`, the `token` binding (`sha256` and `jkt` or `x5t#S256`), the
-  `join` result, an `aud` naming an enrolled PDP, an `exp` within the
-  token's own, and `mapping_version`, the contract version the joins were
-  evaluated under. Each minting is a retained join evidence event. The
-  reference MAS (`mas-serve.ts`) has none of this.
+- **The MAS**: built (`services/authorization-server/src/adapters/join-assertion.ts`,
+  `buildAuthorizationServer`'s `joinAssertions`). The endpoint
+  (`POST /mission/join-assertion`, advertised as
+  `mission_join_assertion_endpoint`) authenticates its caller by
+  private-key JWT through Mission Status's authenticator, the client
+  assertion's `aud` naming the endpoint, with `client_assertion_type` and
+  `client_assertion` as JSON members. Its visibility set is the Mission's
+  client and the clients enrolled for the Mission's enforcement scope, with
+  one `not_found` outside it; it rate-limits per caller. It mints only for
+  an `active` Mission, an `audience` enrolled for that scope, and an active
+  acting token with one `cnf` confirmation whose joins hold, else
+  `join_failed`. The artifact is `typ` `mission-join+jwt` under the Status
+  key and `ES256`, carrying `mission` (`id`, `issuer`, `authority_hash`),
+  `token` (`sha256` and `jkt` or `x5t#S256`), `join`, `aud`,
+  `mapping_version` and an `exp` capped by the token's. It caches on
+  (`issuer`, `mission_id`), the token digest and the `audience`, rechecking
+  before it serves, and records each minting as a join evidence event, in
+  process memory. How the acting token is established (validation or
+  introspection at the estate) and how the joins are evaluated are the
+  deployment's hook: the pilot's MAS (`mas-serve.ts`) does not supply one
+  yet. Witnesses: `services/authorization-server/test/join-assertion-endpoint.test.ts`.
 - **The PDP** (MAS §join-assertion-pdp): verifying the assertion
   (signature under the MAS's keys, `typ`, `alg`, `iss` and `mission`,
   `exp`, `aud`) and the token binding against
   `context.mission_join.token_sha256` and the reported thumbprint, then
   taking the joining client, disposition and depth from `join` in place of
   its own mapping checks; and the PEP carrying the token digest and
-  thumbprint in `context.mission_join`. Neither is built.
+  thumbprint in `context.mission_join`. Neither is built yet (#1454).
 
 The mapping version in join evidence belongs to that artifact's
 `mapping_version` claim. Baseline Decision Evidence carries no mapping
@@ -537,11 +545,11 @@ Gaps:
 
 ## 12. Remaining slices
 
-1. Sender-bound Join Assertions and the Enterprise tier (Sketch step 5's
-   second half), with the mapping version carried as the assertion's
-   `mapping_version` claim: #1454 (§8 lists what they need). The
-   introspection adapter here is what a MAS would use to inspect the estate
-   token.
+1. Sender-bound Join Assertions (Sketch step 5's second half), with the
+   mapping version carried as the assertion's `mapping_version` claim:
+   #1454. The MAS side is built (§8); the PEP and PDP side and the pilot's
+   use of it remain. The introspection adapter here is what the pilot's MAS
+   will use to inspect the estate token. The Enterprise tier is #1551.
 2. Done in slice 5B: operator launchers for both topologies
    (`pnpm mas-pilot`, `pnpm mas-pilot:separated`), attaching to an
    administered Resource-policy store, and the walkthrough
@@ -553,10 +561,12 @@ Gaps:
    mounts a join route declares its mapping contract (this pilot's in §2;
    the shared demo stack's in `config/mas-join.json` `mapping_contract`,
    described in `config/README.md`), and a composition that would mount
-   one without it refuses to start. The
-   `mas.enterprise`, `mas.join-assertion` and `mas.hc.mission-bound-instance-check`
-   rows and `mas.mapping-contract.enterprise-publishes` stay `todo`, owned by
-   #1454. `mas.join-disclosure.members` and
+   one without it refuses to start. The `mas.join-assertion` rows at the
+   Controller role are `tested` on the MAS side (§8); those at the PEP and
+   PDP roles stay `todo`, owned by #1454. The `mas.enterprise` and
+   `mas.hc.mission-bound-instance-check` rows and
+   `mas.mapping-contract.enterprise-publishes` stay `todo`, owned by
+   #1551. `mas.join-disclosure.members` and
    `mas.join-disclosure.not-to-others` are `tested` (the latter since the
    envelope `sub` names each caller, #1407), both at the Controller role on
    §10's Join Disclosure tests. Join rule 2's
