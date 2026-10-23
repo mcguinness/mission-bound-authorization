@@ -1415,10 +1415,17 @@ Server Metadata" registry {{RFC8414}}:
   refused, not truncated. The refresh family and its ceiling are
   defined, and the ceiling is persisted at every issuance. A Status
   not-found refusal carries no `mission_error`, and reliance on a
-  cached Status response is bounded. PAR errors are named, the
-  causal-attribution rule for `authority_contained` moves to
-  Containment, the scope statement moves to Trust, and a deployment
-  statement is required.
+  cached Status response is bounded, a held response that still meets
+  those bounds survives a transient failure, and an entry relevant to
+  several audiences survives only where all of them admit it. The
+  grant endpoint publishes Protected Resource Metadata with its DPoP
+  algorithms, accepts `client_id` for mutual TLS, and verifies any
+  DPoP proof presented; DPoP error codes are the same at the grant
+  endpoint, the PAR endpoint, redemption, code exchange and refresh.
+  PAR errors are named, the consuming AS's issuance record is a
+  requirement, the causal-attribution rule for `authority_contained`
+  moves to Containment, the scope statement moves to Trust, and a
+  deployment statement is required.
 - Tightened throughout with no requirement change. Each rule has one
   home: the `cnf` possession check is in Grant Validation, the `jti`
   record in Single Use, the `typ` refusal in Grant Validation, the
