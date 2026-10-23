@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-23T00:05:42Z
-Source repository commit: 821cc5d0525975cd3d7046378d31e952c0c0cd76
+Generated: 2026-10-23T00:13:43Z
+Source repository commit: 933b099f08849bbdbad79a89a3b0922ad16d6c30
 Member count: 9
 
 Reading order:
@@ -3743,19 +3743,22 @@ Table of Contents
 
    1.  It stops new authorization at every enforcement point that
        consults Mission state, within the deployment's advertised
-       staleness bound, or within token lifetime when no bound is
-       advertised ([I-D.draft-mcguinness-oauth-mission-status],
+       staleness bound or, when none is advertised, within the bound of
+       the credential, session or cached observation that point relies
+       on, if any ([I-D.draft-mcguinness-oauth-mission-status],
        Section "Revocation Propagation";
        [I-D.draft-mcguinness-mission-runtime], Section "Mission State
        and Freshness").
 
-   2.  A non-active state from a trusted source prevails over a positive
-       one.  Conflicting observations are reconciled under the version
-       and freshness rules, never by choosing the more permissive
-       surface ([I-D.draft-mcguinness-mission-control-plane]); an
-       orchestrator uses the safer state until it reconciles
+   2.  Conflicting observations are reconciled under the version and
+       freshness rules, never by choosing the more permissive surface: a
+       legitimate higher-version resume is accepted, since state names
+       are not ordered by severity
+       ([I-D.draft-mcguinness-mission-control-plane]).  While a conflict
+       remains unresolved, the safer state governs: an orchestrator uses
+       it until it reconciles
        ([I-D.draft-mcguinness-mission-orchestration], Section "Trigger
-       Sources"); and PEP-supplied state is a floor for the PDP
+       Sources"), and PEP-supplied state is a floor for the PDP
        ([I-D.draft-mcguinness-mission-authzen], Section "PDP-side
        consistency checks").
 
@@ -3774,9 +3777,11 @@ Table of Contents
        Section "Honest Residual Bounds").
 
    4.  A route that does not consult Mission state is outside these
-       limits: its lag is its own credential lifetime
+       limits.  It runs to its binding's credential, session or
+       resource-local bound, if any: an ungated route can have no bound,
+       and reminting from an earlier observation sums the residuals
        ([I-D.draft-mcguinness-mission-runtime], Section "Mission State
-       and Freshness").
+       and Freshness"; Section 10.4; Section 11.6).
 
 11.8.  Prevention, Detection, and Residue
 
