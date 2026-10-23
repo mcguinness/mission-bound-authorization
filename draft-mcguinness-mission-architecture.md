@@ -3300,7 +3300,7 @@ Notes:
 5. Under the MAS as estate control plane, a consuming AS either has a
    Mission-state integration or has none
    ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section
-   "Effective Authority Set Projection"). One that has it projects
+   "Redemption"). One that has it projects
    every redemption and refresh through the Mission's current
    Effective Authority Set, so its issuance excludes contained
    authority within its published staleness bound. A lifecycle-state
