@@ -534,9 +534,8 @@ Cache-Control: no-store
 ## Grant Errors {#minting-errors}
 
 A failure returns the MAS error object
-({{I-D.draft-mcguinness-mission-authority-server}}): a JSON body with a
-REQUIRED `error` string and an OPTIONAL `error_description`. This
-endpoint uses:
+({{I-D.draft-mcguinness-mission-authority-server}}, Section "Error
+Responses"). This endpoint uses:
 
 | `error` | HTTP | Condition |
 |---|---|---|
@@ -548,15 +547,17 @@ endpoint uses:
 | `invalid_authorization_details` | 400 | The request is wider than the Effective Authority Set or the audience's scope |
 | `derivations_exhausted` | 409 | The Mission's `derivation_limit` is reached |
 
-`derivations_exhausted` is the condition the `mission_error` value of
-that name reports at a token endpoint
-({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
-`not_found` covers both an unknown Mission and a requester that is not
-the recorded client, so the split never becomes a membership oracle;
+`not_found` covers both an unknown Mission and a requester that is
+not the recorded client, so the response is not a membership oracle.
 `invalid_audience`, `mission_not_active`,
-`invalid_authorization_details`, and `derivations_exhausted` are
-returned only to the authenticated recorded client, to which Mission
-state is already visible.
+`invalid_authorization_details`, and `derivations_exhausted` reach
+only the authenticated recorded client, to which Mission state is
+already visible. `mission_not_active` is returned during a suspension
+and after termination alike; the Mission's state tells the two apart.
+`derivations_exhausted` reports the condition the `mission_error`
+value of that name reports at a token endpoint
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}), and no
+fresh grant under that Mission cures it.
 
 # Redemption {#redemption}
 
@@ -875,13 +876,8 @@ when it refuses because the Mission is not `active`, so the client can
 tell the last two cases apart: `suspended` for Wait, and for Stop
 `revoked`, `expired`, or `superseded`
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating")
-or `completed` ({{I-D.draft-mcguinness-oauth-mission-status}}). At the
-MAS, a grant request for a Mission that is not `active` is refused
-with `mission_not_active` ({{minting-errors}}) during a suspension as
-well as after termination; the Mission's state, which is visible to
-the recorded client, tells the two apart. A grant request refused
-with `derivations_exhausted` has reached the Mission's
-`derivation_limit`, and no fresh grant under that Mission cures it.
+or `completed` ({{I-D.draft-mcguinness-oauth-mission-status}}). The MAS's own
+refusals of a fresh grant request are in {{minting-errors}}.
 
 # Authorization Code Flow Carriage {#par-carriage}
 
