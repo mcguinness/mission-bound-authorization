@@ -60,7 +60,8 @@ external Internet-Drafts:
   finding 9, D620);
 - `draft-mcguinness-oauth-actor-profile`, by `e6f6c911a` (D625).
 
-All three reached `-01` (D644). `DEPENDENCIES.md` lists
+All three are normative references of the published binding `-01`
+(D644). `DEPENDENCIES.md` lists
 rar-metadata-remediation among the external normative references; it
 skips `draft-mcguinness-*` references by prefix. The closure property
 below, "None is a work-in-progress external Internet-Draft", holds at
