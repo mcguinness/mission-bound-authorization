@@ -335,6 +335,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-control-plane:
+    title: "Mission Control-Plane Consistency"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-control-plane.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -3329,6 +3337,45 @@ ungated standalone-MAS path, for instance, runs to the resource's own
 bound, if any (note 2), or to none, not to a token lifetime. What
 changes row to row is which gate, if any, reaches a class before its
 own bound, and how tight that bound is.
+
+## What a Non-Active State Establishes {#non-active-state}
+
+A Mission's state reports whether the Mission permits new
+authorization. A non-active state, `suspended` or `terminated` for any
+reason, carries four limits, each set by the documents that enforce
+it:
+
+1. It stops new authorization at every enforcement point that consults
+   Mission state, within the deployment's advertised staleness bound,
+   or within token lifetime when no bound is advertised
+   ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Revocation
+   Propagation"; {{I-D.draft-mcguinness-mission-runtime}}, Section
+   "Mission State and Freshness").
+2. A non-active state from a trusted source prevails over a positive
+   one. Conflicting observations are reconciled under the version and
+   freshness rules, never by choosing the more permissive surface
+   ({{I-D.draft-mcguinness-mission-control-plane}}); an orchestrator
+   uses the safer state until it reconciles
+   ({{I-D.draft-mcguinness-mission-orchestration}}, Section "Trigger
+   Sources"); and PEP-supplied state is a floor for the PDP
+   ({{I-D.draft-mcguinness-mission-authzen}}, Section "PDP-side
+   consistency checks").
+3. It does not establish that accepted or in-flight work has stopped,
+   or that completed effects are undone. Those are outcomes, which
+   evidence establishes: a step whose outcome is not known stays
+   `unknown` ({{I-D.draft-mcguinness-mission-orchestration}}, Section
+   "In-Flight Requests"), and runtime evidence reconciles each executed
+   effect with its action ({{I-D.draft-mcguinness-mission-runtime}},
+   Section "Runtime Enforcement Evidence"). The OAuth binding states
+   that revoking a Mission does not undo completed actions
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Missions, Plans,
+   and Execution"), and AAuth Management bounds the AAuth residual
+   window ({{I-D.draft-mcguinness-mission-aauth-management}}, Section
+   "Honest Residual Bounds").
+4. A route that does not consult Mission state is outside these limits:
+   its lag is its own credential lifetime
+   ({{I-D.draft-mcguinness-mission-runtime}}, Section "Mission State and
+   Freshness").
 
 ## Prevention, Detection, and Residue {#prevention-detection}
 
