@@ -30553,7 +30553,7 @@
    "id": "authzen.response-context.valid-until-required-and-bounded",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "response-context",
-   "text": "`valid_until` MUST NOT exceed:",
+   "text": "`valid_until` MUST NOT exceed the earliest of:",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -32042,7 +32042,7 @@
    "id": "authzen.security.access-request-service-must-be-trusted",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "security-considerations",
-   "text": "A compromised or misconfigured Access Request Service can auto-approve escalations, so it MUST be trusted, authenticated, and access-controlled like the PDP, and its auto-approval is bounded as above.",
+   "text": "A compromised or misconfigured Access Request Service can auto-approve escalations, so it MUST be trusted, authenticated, and access-controlled like the PDP, and its auto-approval is bounded as {{requestable-denials}} specifies.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -32107,7 +32107,7 @@
   {
    "id": "authzen.iana.pdp-must-advertise-full-urn",
    "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "iana",
+   "anchor": "capability-discovery",
    "text": "A PDP conforming to the Decision Base MUST advertise the full URN `urn:ietf:params:authzen:mission-runtime`, never the bare capability name.",
    "role": "PDP",
    "strength": "MUST",
@@ -32130,7 +32130,7 @@
   {
    "id": "authzen.iana.pdp-must-advertise-feature-profile-urn",
    "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "iana",
+   "anchor": "capability-discovery",
    "text": "A PDP that additionally conforms to a feature profile MUST advertise that profile's own capability URN as well; a PDP MUST NOT advertise a feature-profile URN it does not conform to.",
    "role": "PDP",
    "strength": "MUST",
@@ -32152,7 +32152,7 @@
   {
    "id": "authzen.iana.pep-no-reliance-on-unadvertised-profile",
    "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "iana",
+   "anchor": "capability-discovery",
    "text": "A PEP MUST NOT rely on a feature profile whose URN the PDP's advertised `capabilities` does not include: an unadvertised profile fails closed exactly as an absent one does elsewhere in this document ({{profiles-and-capabilities}}).",
    "role": "PEP",
    "strength": "MUST",
@@ -32174,7 +32174,7 @@
   {
    "id": "authzen.iana.no-requester-selected-profile",
    "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "iana",
+   "anchor": "capability-discovery",
    "text": "Capability advertisement is PDP-declared, never requester-selected: nothing in a PEP's request selects, enables, or negotiates a feature profile, and a requester cannot omit a required profile to downgrade enforcement ({{profiles-and-capabilities}}).",
    "role": "PDP",
    "strength": "MUST",
