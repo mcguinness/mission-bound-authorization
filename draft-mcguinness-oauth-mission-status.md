@@ -871,13 +871,13 @@ sole Mission Status path.
 
 # Mission Lifecycle Endpoint {#mission-lifecycle-endpoint}
 
-This section is OPTIONAL. The issuance profile lets the Subject,
-Approver, or an administrator revoke a Mission by an authenticated,
-deployment-defined means and defers a standardized management API and
-the richer `suspend`, `resume`, and `complete` operations
-({{I-D.draft-mcguinness-oauth-mission}}, Sections "Revocation" and
-"Mission Lifecycle"). This section standardizes that management
-surface.
+This section is OPTIONAL. The issuance profile requires an
+authenticated, deployment-defined means to revoke a Mission and defers
+a standardized management API and the richer `suspend`, `resume`, and
+`complete` operations ({{I-D.draft-mcguinness-oauth-mission}},
+Sections "Revocation" and "Mission Lifecycle"). This section
+standardizes that management surface; who may perform each operation
+is governed by {{lifecycle-authorization}}.
 
 The AS publishes its Mission Lifecycle endpoint URL in authorization
 server metadata ({{as-metadata}}) as `mission_lifecycle_endpoint`,
