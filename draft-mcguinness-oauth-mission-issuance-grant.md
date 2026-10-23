@@ -983,9 +983,10 @@ code flow carriage, PAR validation is the consuming step instead
 The consuming AS responds to a failed redemption or refresh with an
 error response as defined in {{Section 5.2 of RFC6749}}. A grant that
 fails any check of {{grant-validation}} is refused with the
-`invalid_grant` error code ({{Section 3.1 of RFC7523}}), and failed
-client authentication with `invalid_client`. At redemption, code
-exchange, and refresh alike, a DPoP proof that fails the checks of
+`invalid_grant` error code ({{Section 3.1 of RFC7523}}), except as the
+next sentence says of DPoP proofs, and failed client authentication
+with `invalid_client`. At the PAR endpoint, at redemption, at code
+exchange, and at refresh alike, a DPoP proof that fails the checks of
 {{Section 4.3 of RFC9449}} is refused with `invalid_dpop_proof`, or
 with `use_dpop_nonce` where the AS requires a nonce
 ({{Section 8 of RFC9449}}), and a request that proves no key, proves
