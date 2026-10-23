@@ -270,6 +270,18 @@ describe("pilot configuration: the estate's development Resource-policy grants (
     expect(() => parseMasPilotConfig(withSeparated({ extra: true }))).toThrow(/unknown member extra/);
   });
 
+  it("refuses an enrollee with no roles member, no role, an unknown role, or one role twice (#1591, D708)", () => {
+    const separated = raw().separated_mas as Record<string, unknown> & { enrollment: Array<Record<string, unknown>> };
+    const enrollee = separated.enrollment[0] as Record<string, unknown>;
+    const withEnrollee = (over: Record<string, unknown>) => ({ ...raw(), separated_mas: { ...separated, enrollment: [{ ...enrollee, ...over }] } });
+    const { roles: _roles, ...noRoles } = enrollee;
+    expect(() => parseMasPilotConfig({ ...raw(), separated_mas: { ...separated, enrollment: [noRoles] } })).toThrow(/missing roles/);
+    for (const roles of [[], ["admin"], ["pdp", "pdp"]]) {
+      expect(() => parseMasPilotConfig(withEnrollee({ roles })), JSON.stringify(roles)).toThrow(/roles must be "pep", "pdp", or both/);
+    }
+    expect(parseMasPilotConfig(withEnrollee({ roles: ["pep"] })).separated_mas.enrollment[0]?.roles).toEqual(["pep"]);
+  });
+
   it("refuses a member or an entitlement naming both a subject and a client", () => {
     const bothMember = withPolicy({ tenants: [{ tenant: "t", vendors: ["acme"], members: [{ sub: "u-1001", client: "x" }] }], entitlements: [] });
     const bothEntitlement = withPolicy({ tenants, entitlements: [{ sub: "u-1001", client: "x", relation: "authorized_reader", vendor: "acme" }] });
