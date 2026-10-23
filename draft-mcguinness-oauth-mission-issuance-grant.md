@@ -1184,9 +1184,12 @@ and {{no-state-integration}} when it has none, and records each
 issuance ({{records}}). The PAR carriage of {{par-carriage}} is
 OPTIONAL.
 
-A deployment claiming this profile states the following alongside its
-Enforcement Scope Statement ({{I-D.draft-mcguinness-mission-runtime}},
-Section "Enforcement Scope and Conformance"):
+A deployment claiming this profile MUST publish a deployment
+statement declaring the following. Where it publishes an Enforcement
+Scope Statement ({{I-D.draft-mcguinness-mission-runtime}}, Section
+"Enforcement Scope and Conformance"), the declarations are part of
+that statement, and a deployment that does not adopt Runtime publishes
+the statement on its own:
 
 - which authorization servers consume grants, and which of them have
   a Mission-state integration;

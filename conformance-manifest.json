@@ -38597,6 +38597,27 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q14); todo until that path exists."
   },
   {
+   "id": "issuance-grant.conformance.deployment-statement",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "conformance",
+   "text": "A deployment claiming this profile MUST publish a deployment statement declaring the following.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment claiming this profile publishes a statement naming the consuming authorization servers, which have a Mission-state integration, each one's staleness and re-query bounds, any containment- or discharge-aware claim, and its reconciliation posture"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q16); todo until that path exists."
+  },
+  {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "grant-validation",
