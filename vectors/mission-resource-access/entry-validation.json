@@ -1187,6 +1187,368 @@
         "#819",
         "D684"
       ]
+    },
+    {
+      "id": "ev-cur-01",
+      "description": "A max_amount currency in lower case",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "usd"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "not exactly three upper-case ASCII letters, so malformed and refused at submission; never case-folded",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-cur-02",
+      "description": "A max_amount currency in mixed case",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "Usd"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "not exactly three upper-case ASCII letters, so malformed and refused at submission; never case-folded",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-cur-03",
+      "description": "A max_amount currency of two letters",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "US"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "not exactly three upper-case ASCII letters, so malformed and refused at submission",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-cur-04",
+      "description": "A max_amount currency of four letters",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "USDX"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "not exactly three upper-case ASCII letters, so malformed and refused at submission",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-cur-05",
+      "description": "A max_amount currency given as the numeric code",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "840"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "not exactly three upper-case ASCII letters, so malformed and refused at submission; no numeric code",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-cur-06",
+      "description": "A max_amount currency ending in a line terminator",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "USD\n"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "not exactly three upper-case ASCII letters, so malformed and refused at submission; the length is four",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-cur-07",
+      "description": "A max_amount currency with a leading space",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": " USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "not exactly three upper-case ASCII letters, so malformed and refused at submission; never trimmed",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-cur-08",
+      "description": "A max_amount currency with a non-ASCII letter",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "ÜSD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "not exactly three upper-case ASCII letters, so malformed and refused at submission",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-cur-09",
+      "description": "An empty max_amount currency",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": ""
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "not exactly three upper-case ASCII letters, so malformed and refused at submission",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-cur-10",
+      "description": "A max_amount currency given as a JSON number",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": 840
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a currency is a string of three upper-case ASCII letters",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-cur-11",
+      "description": "A well-formed max_amount currency ISO 4217 does not assign",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "XYZ"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "a well-formed code is admitted for structural validation and comparison whether or not ISO 4217 assigns it"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
     }
   ]
 }

@@ -1229,6 +1229,190 @@
         "#1596",
         "D727"
       ]
+    },
+    {
+      "id": "sub-cur-01",
+      "description": "The candidate's currency is the reference's in lower case",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "usd"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the lower-case value is malformed, so the comparison is refused; case is never folded"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-cur-02",
+      "description": "The reference's currency ends in a line terminator",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "USD"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD\n"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the reference operand's malformed currency prevents the comparison"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-cur-03",
+      "description": "Both carry the same well-formed currency ISO 4217 does not assign",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "XYZ"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "XYZ"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "a well-formed unassigned code is compared exactly, like any other"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-cur-04",
+      "description": "The operands carry different well-formed currencies",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "XYZ"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "XYA"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "different currencies fail the relation; no conversion is defined"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
     }
   ]
 }
