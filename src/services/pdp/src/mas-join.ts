@@ -216,6 +216,32 @@ export function resolveBaselineJoin(input: BaselineJoinInput): BaselineJoinResul
     return { ok: false, reason: "mission_binding_failed" };
   }
 
+  return delegableSubset(input.view, input.clientId, depth, input.onEntryEvaluated);
+}
+
+/**
+ * @spec authority-server#join-assertion-pdp (#1454): the join a verified Join
+ * Assertion states, in place of rules 3 and 4. The joining client, the
+ * disposition and a delegate's depth come from the assertion's `join` claim,
+ * not from this PDP's mappings or delegate policy; rule 5 then narrows a
+ * delegate exactly as on the mapping path.
+ */
+export function resolveAssertedJoin(input: {
+  view: MissionView;
+  join: { clientId: string; disposition: "client" } | { clientId: string; disposition: "delegate"; depth: number };
+  onEntryEvaluated?: (entry: AuthorityEntry) => void;
+}): BaselineJoinResult {
+  if (input.join.disposition === "client") return { ok: true, disposition: "direct", authoritySet: input.view.authority_set };
+  return delegableSubset(input.view, input.join.clientId, input.join.depth, input.onEntryEvaluated);
+}
+
+/** Rule 5's narrowing of a delegate at `depth` to the Mission's delegable entries. */
+function delegableSubset(
+  view: MissionView,
+  clientId: string,
+  depth: number,
+  onEntryEvaluated: ((entry: AuthorityEntry) => void) | undefined,
+): BaselineJoinResult {
   // Rule 5: narrow to the delegable subset. Entries without a
   // `join_delegation` member are excluded entirely; `allowed_delegates`,
   // when present, MUST name this client. `join_delegation.max_depth` is this
@@ -224,10 +250,10 @@ export function resolveBaselineJoin(input: BaselineJoinInput): BaselineJoinResul
   // `max_depth: 0` must exclude a delegate whose recorded depth is nonzero
   // even where the deployment-wide policy would otherwise permit it (#557
   // review point 3 -- the entry-level bound was previously never checked).
-  const narrowed = input.view.authority_set.filter((e) => {
-    input.onEntryEvaluated?.(e);
+  const narrowed = view.authority_set.filter((e) => {
+    onEntryEvaluated?.(e);
     if (!e.join_delegation) return false;
-    if (e.join_delegation.allowed_delegates && !e.join_delegation.allowed_delegates.includes(input.clientId)) return false;
+    if (e.join_delegation.allowed_delegates && !e.join_delegation.allowed_delegates.includes(clientId)) return false;
     if (e.join_delegation.max_depth !== undefined && depth > e.join_delegation.max_depth) {
       return false;
     }

@@ -43,8 +43,8 @@
     "content_sha256": "c3ecaf45e6e17579e7374b0e733c7d4de7d58cbacdfecddfe37c3568eb74138a"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "b447449fc2c0ffaf525b10a8df1a79f113ad538a",
-    "content_sha256": "400730f815ea0afc7516cd0d0f8eca5ca03d30b8c527549e897169c6293f024e"
+    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
+    "content_sha256": "fa83d94eb5521d5662b31710abcd3d4c9c60cfa39c6b9391ea3072c17fbd2225"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "213893760b7c447ff475d568bc8a54be8a85176b",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "3c0faa8d6c03ef1a54c118f37813b46673d343ed",
-    "content_sha256": "968044588af00e1d08c5fe60cac5266269e1707767a1f7ce85181550e1758b0a"
+    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
+    "content_sha256": "339c6e233e26e8920573096fe463dc51903cf5a136de15ee79c899c354529a9b"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -83,8 +83,8 @@
     "content_sha256": "44d6ef289a0c6cbdff9af48520ae48056a55052f037bdfe5dd16938ec88460d6"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "661cf9c52706f6056e3f287cbe389049ca4fce64",
-    "content_sha256": "d97c7c81b9bf1b0f6991ac4868c0b4cff93750f67f5e4ebbd76a38ecb2091aac"
+    "revision": "20ed6acae1c19daf8058d52c00b5ecf6ac133a85",
+    "content_sha256": "d072899f6efa62600298b14b8f6de417b5be7c29641fbe4ed62882087cb527b0"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
@@ -99,20 +99,20 @@
     "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "5ea95ceb221030bbafed05e8dad903f5714c0fbf",
-    "content_sha256": "e166feff2924bad515404c7a84b2140787b26983048017f3d339c3dae5f5a196"
+    "revision": "ce5d2a7b61f4d740a36a1ba3ea4f93e8f930eac5",
+    "content_sha256": "b982072b6f0ec4d3df56b6ca64c3c49e8db7ef85ce24bd5007ddd22452ba25dd"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
     "content_sha256": "8d6e1fc8d592bc6bf512865fea875b50c02cbf58de81835ec55e40ab8766d31e"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
-    "content_sha256": "4c24262bd4ab09784922ab543c24d97cfb849c9a5845c70a664ef39d906803b3"
+    "revision": "7199d23e51d257369b3a89ea2eed4e8cd6f541a2",
+    "content_sha256": "74d6ce91fa5bf904e532dfae6ead1982c0a17325fd90b491e1ef51e19a891741"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "8f9b783163e04478c9cdd318d790c878e9c34f6e",
-    "content_sha256": "9ecc46c99dbe7e2cbc4283b7be29fd55bd31445ec793fecddac509eeed3b9f05"
+    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
+    "content_sha256": "607c3661d7e078651a9590775bd5f714a311a997bb3c01cf9822b56430fba262"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
@@ -37433,7 +37433,7 @@
    "id": "issuance-grant.effective-set-projection.fail-closed-source",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "A source that is unavailable, fails verification, or reports a state\n`version` older than one already observed for this Mission is a\ntransient failure, never authority exhaustion, and is refused in a\nmachine-readable shape: this profile defines a token-endpoint use of\nthe OAuth `temporarily_unavailable` error code",
+   "text": "A source that is unavailable or rate-limited (Mission Status's `unavailable` or `rate_limited`), fails verification, or reports a state `version` older than one already observed for this Mission is a transient failure, never authority exhaustion, and is refused in a machine-readable shape: this profile defines a token-endpoint use of the OAuth `temporarily_unavailable` error code",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37444,7 +37444,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an Effective Authority Set source that is unavailable, unverifiable, or reports a rolled-back state version is refused with the OAuth temporarily_unavailable error code and HTTP status 503 (machine-readable, not an error_description to parse), optionally carrying Retry-After, and is never treated as authority exhaustion nor reported as invalid_grant",
+    "normative": "an Effective Authority Set source that is unavailable or rate-limited (Mission Status unavailable or rate_limited), unverifiable, or reports a rolled-back state version is refused with the OAuth temporarily_unavailable error code and HTTP status 503 (machine-readable, not an error_description to parse), optionally carrying Retry-After under the deployment's state-recovery policy, and is never treated as authority exhaustion nor reported as invalid_grant",
     "local": "the authority source is an injectable seam (AdapterOptions.authoritySource over kernel/derive.ts's EffectiveAuthoritySource); a source raising SourceUnavailableError maps to temporarily_unavailable/503 with Retry-After (provider.ts sourceUnavailableError plus the header middleware, continuation-grant.ts txError for the custom grants). The tests drive an injected failing source, which is the only way to reach the class here: the local kernel is the authoritative record and can be neither unreachable nor unverifiable to itself, and the rolled-back-version trigger has no external replica to roll back, so the discrimination BETWEEN the three triggers is the source's own duty and stays unobserved"
    },
    "level": "endpoint",
@@ -44888,7 +44888,7 @@
    "id": "continuation.async-transport.handle-request",
    "spec": "draft-mcguinness-oauth-mission-continuation.md",
    "anchor": "transport-async",
-   "text": "An agent obtains its handle with a Token Exchange that presents its own Mission access token, proves possession of that token's key, and names its own `client_id` as `audience`.",
+   "text": "An agent obtains its delegation handle with a Token Exchange that presents its own Mission access token, proves possession of that token's key, and names its own `client_id` as `audience`.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -44948,7 +44948,7 @@
    "id": "continuation.async-transport.handle-key-and-authority",
    "spec": "draft-mcguinness-oauth-mission-continuation.md",
    "anchor": "transport-async",
-   "text": "The handle keeps that key and carries the presented token's authority narrowed by the Mission's current effective authority.",
+   "text": "The delegation handle keeps that key and carries the presented token's authority narrowed by the Mission's current effective authority.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -44989,7 +44989,7 @@
    "id": "continuation.async-transport.self-dispatch-handle",
    "spec": "draft-mcguinness-oauth-mission-continuation.md",
    "anchor": "transport-async",
-   "text": "unless it is also the Dispatcher (the same authenticated client), which obtains its handle through this exchange from the instance's access token.",
+   "text": "unless it is also the Dispatcher (the same authenticated client), which obtains its delegation handle through this exchange from the instance's access token.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -53120,6 +53120,601 @@
    "notes": "#1185 implementation: verifyApprovalGovernanceRecord, exercised on a record committed under governed_policy."
   },
   {
+   "id": "approval-governance.portable-binding.not-reported-as-verification",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "a Relying Auditor MUST NOT report its success as either",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a successful portable approval-binding check is never reported as verification of the record against the Mission Record or as a re-check of the evaluation",
+    "local": "the result is its own type, PortableApprovalBindingResult, labeled check portable-approval-binding, with only outcome, commitment_agreement and reason; it is distinct from verifyApprovalGovernanceRecord's verified record and from the re-check"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > reports its success as the portable approval-binding check, never as verification against the Mission Record or a re-check",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. Partial: the reference has no Relying Auditor reporting surface. The witness shows only that the check's own result names the portable check and carries no verification or re-check claim; how an auditor reports a success is not exercised."
+  },
+  {
+   "id": "approval-governance.portable-binding.steps",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "A verifier running the check MUST complete these steps",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a portable binding succeeds only when both artifacts authenticate with trust in the expected Mission Issuer's key material (the record by steps 1 to 4 of the envelope, the reference under its own rules) and the record's mission.issuer is that issuer, the reference discloses an approval_event_id, issuer, intent_hash and authority_hash each equal to the record's, each approval_context_commitment either carries is well-formed, and any both carry are equal; a step that fails or lacks its evidence leaves the check without success"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 3: succeeds without commitment agreement when neither artifact carries a commitment",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 4: fails when both artifacts carry a commitment with different values, or the same value under an unrecognized algorithm prefix",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 5: fails when the reference names another Mission Issuer",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 6: fails when the reference names another approval event, though every Mission anchor matches",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 7: fails when the reference's intent_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 8: fails when the reference's authority_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 9: is insufficient evidence when the reference does not disclose approval_event_id, though both anchors match, or any other required value",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 10: fails when the record's signature does not verify, its payload differs from the record, or its envelope format is unsupported",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 11: fails when the record verifies only under key material not trusted for the expected issuer, including that of the issuer it names",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 13: is insufficient evidence when no record, or no Mission reference, is supplied",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 15: fails when the record carries a malformed commitment and the reference carries none",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 16: fails when the reference carries a malformed commitment and the record carries none",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 18: fails when the record names another Mission Issuer, though it verifies under the expected issuer's key",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. #1578 review (owner findings 1 and 2, rulings a to d): each disclosed commitment is validated on its own, and a compared value must be in the canonical encoded form. Partial: The reference's half of step 1, authenticating the Mission reference under its own artifact rules with trust in the expected issuer, is the caller's: checkPortableApprovalBinding takes the values an already-authenticated reference discloses, and the reference implementation has no Mandate verifier, so no test authenticates or refuses a reference. Every other step is witnessed; the mutations are recorded on the rows for each step."
+  },
+  {
+   "id": "approval-governance.portable-binding.expected-issuer-trust",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "The verifier MUST establish trust in the key material of the expected Mission Issuer for both: an issuer the artifact asserts for itself, with a valid signature, is not thereby trusted",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the record and the Mission reference each authenticate under key material trusted for the expected Mission Issuer; an artifact that verifies only under the key material of an issuer it names for itself, or of any other issuer, fails the check",
+    "local": "the record's key resolves only from the expected issuer's trusted key material passed to the check; that the record names that issuer is its own row (record-issuer-expected)"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 10: fails when the record's signature does not verify, its payload differs from the record, or its envelope format is unsupported",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 11: fails when the record verifies only under key material not trusted for the expected issuer, including that of the issuer it names",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. Partial: The reference's half of step 1, authenticating the Mission reference under its own artifact rules with trust in the expected issuer, is the caller's: checkPortableApprovalBinding takes the values an already-authenticated reference discloses, and the reference implementation has no Mandate verifier, so no test authenticates or refuses a reference. The record's half is witnessed: a record signed by another issuer's key, which verifies under that key material, fails, and so does a record naming that issuer and signed by its own key, which succeeds only when that issuer is the expected one. Mutation: skipping the record's authentication (cases 10 and 11 fail)."
+  },
+  {
+   "id": "approval-governance.portable-binding.record-issuer-expected",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "The record's `mission.issuer` MUST be that expected Mission Issuer, since the issuer the record names is the one that signs it",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a record whose mission.issuer is not the expected Mission Issuer fails the check, even when it authenticates under the expected issuer's key material"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 18: fails when the record names another Mission Issuer, though it verifies under the expected issuer's key",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 11: fails when the record verifies only under key material not trusted for the expected issuer, including that of the issuer it names",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. #1578 review (owner findings 1 and 2, rulings a to d): each disclosed commitment is validated on its own, and a compared value must be in the canonical encoded form. Ruling (a). Case 18 verifies under the expected issuer's key against a Mission Record naming the other issuer, and still fails the portable check. Mutation: skipping the comparison of the record's mission.issuer with the expected issuer (case 18 fails)."
+  },
+  {
+   "id": "approval-governance.portable-binding.event-and-anchors",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "The authenticated reference MUST disclose `approval_event_id`, the Mission `issuer`, `intent_hash`, and `authority_hash`, and each MUST equal the record's `approval_event_id` or the member of the same name in the record's `mission` binding",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a reference that does not disclose approval_event_id, issuer, intent_hash or authority_hash leaves insufficient evidence, even when intent_hash and authority_hash both match, and one whose disclosed value differs from the record's approval_event_id or mission member of that name fails, even when every other value matches; the reference's own consistency rules still apply, so a Mandate whose iss differs from its mission.issuer fails",
+    "local": "a disclosed mismatch is a failure even when another required value is undisclosed (failure-precedence)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 5: fails when the reference names another Mission Issuer",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 6: fails when the reference names another approval event, though every Mission anchor matches",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 7: fails when the reference's intent_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 8: fails when the reference's authority_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 9: is insufficient evidence when the reference does not disclose approval_event_id, though both anchors match, or any other required value",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 12: fails when the reference is a Mandate whose iss differs from its mission.issuer",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 19: fails, not insufficient evidence, when a disclosed value mismatches or is malformed and approval_event_id is undisclosed",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. Case 12's Mandate rule is present-tense in the same step and witnessed here. Mutations, each alone: skipping the comparison of approval_event_id (case 6 fails), issuer (case 5), intent_hash (case 7) or authority_hash (cases 8 and 19); counting an undisclosed value as matching, or reporting it as success (case 9); skipping the Mandate iss rule (case 12)."
+  },
+  {
+   "id": "approval-governance.portable-binding.commitment-well-formed",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "Each `approval_context_commitment` an artifact carries MUST be well-formed, whether or not the other artifact carries one",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a malformed approval_context_commitment on the record or on the reference, including a disclosed null, fails the check whether or not the other artifact carries one, and whether or not the two are equal"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 15: fails when the record carries a malformed commitment and the reference carries none",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 16: fails when the reference carries a malformed commitment and the record carries none",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 4: fails when both artifacts carry a commitment with different values, or the same value under an unrecognized algorithm prefix",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > applies the canonical encoded form to every anchor and disclosed commitment: a wrong-length digest or noncanonical text fails even where both artifacts agree",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. #1578 review (owner findings 1 and 2, rulings a to d): each disclosed commitment is validated on its own, and a compared value must be in the canonical encoded form. Finding 1: a correctly signed record carrying a malformed commitment, with a reference carrying none, succeeded before the fix. Mutations: skipping the record's commitment validation (case 15 and the canonical test fail); skipping the reference's (case 16 and the canonical test); skipping both (cases 4, 15, 16 and the canonical test)."
+  },
+  {
+   "id": "approval-governance.portable-binding.commitment-equal",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "When both carry it, the two values MUST be equal",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the record and the reference both carry approval_context_commitment, the check succeeds, with commitment agreement established, only when the two strings are equal; differing values fail, and neither value is recomputed"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 1: succeeds with commitment agreement established when both artifacts carry an equal commitment",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 4: fails when both artifacts carry a commitment with different values, or the same value under an unrecognized algorithm prefix",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. #1578 review (owner findings 1 and 2, rulings a to d): each disclosed commitment is validated on its own, and a compared value must be in the canonical encoded form. Requoted for the review's step 3. Mutation: skipping the equality (case 4 fails); the commitments' form is the commitment-well-formed row's."
+  },
+  {
+   "id": "approval-governance.portable-binding.commitment-not-established",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "When one or neither carries it, the check can succeed, and its result MUST state that commitment agreement was not established",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when only the record, only the reference, or neither carries approval_context_commitment, the check can succeed, and a successful result states that commitment agreement was not established",
+    "local": "commitment_agreement is not_established on such a success, and the reason says so; a failure or insufficient-evidence result states no commitment agreement"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 2: succeeds without commitment agreement when only one artifact carries a commitment",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 3: succeeds without commitment agreement when neither artifact carries a commitment",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. Mutations: stating agreement established when either artifact carries a commitment (case 2 fails); stating it always (cases 2 and 3 fail)."
+  },
+  {
+   "id": "approval-governance.portable-binding.canonical-encoded-form",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "A value the check compares, each anchor and each disclosed commitment, is well-formed only in the encoded form {{conventions-and-definitions}} fixes: a recognized algorithm prefix, then the unpadded base64url encoding of a digest of that algorithm's length, whose text re-encodes to exactly the same characters. A value that decodes but does not re-encode to itself, for example one with nonzero padding bits, is malformed",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an intent_hash, authority_hash or approval_context_commitment is malformed, and fails the check even where both artifacts carry the same value, when its prefix is not the recognized sha-256: (whatever its digest length), when its digest is not 32 bytes, or when its text does not re-encode to itself, such as 42 A characters followed by B",
+    "local": "sha-256: is the one recognized prefix; the base64url text must use only the URL-safe alphabet before it is decoded"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 14: fails when a required value carries an unrecognized algorithm prefix or is otherwise malformed, on either artifact, even where both agree",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 17: fails when both intent_hash values are equal but noncanonical, decoding with nonzero padding bits",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > applies the canonical encoded form to every anchor and disclosed commitment: a wrong-length digest or noncanonical text fails even where both artifacts agree",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 4: fails when both artifacts carry a commitment with different values, or the same value under an unrecognized algorithm prefix",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. #1578 review (owner findings 1 and 2, rulings a to d): each disclosed commitment is validated on its own, and a compared value must be in the canonical encoded form. Finding 2: matching noncanonical intent_hash values (42 A characters followed by B) succeeded before the fix. Mutations: skipping the re-encoding equality (case 17 and the canonical test fail); skipping the digest length (the canonical test, on 16- and 33-byte digests); accepting any algorithm prefix (case 14, on a sha3-256 value of sha-256's length)."
+  },
+  {
+   "id": "approval-governance.portable-binding.failure-precedence",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "When the evidence both fails a step and is insufficient for another, the outcome is failure: a disclosed mismatch or malformed value is definitive, whatever else is undisclosed",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a disclosed value that mismatches or is malformed yields failure, not insufficient evidence, when another required value is undisclosed, and a malformed disclosed value yields failure when no record is supplied"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 19: fails, not insufficient evidence, when a disclosed value mismatches or is malformed and approval_event_id is undisclosed",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 14: fails when a required value carries an unrecognized algorithm prefix or is otherwise malformed, on either artifact, even where both agree",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. #1578 review (owner findings 1 and 2, rulings a to d): each disclosed commitment is validated on its own, and a compared value must be in the canonical encoded form. Ruling (b). Mutations: checking undisclosed values before mismatches in the comparison (case 19 fails); returning insufficient evidence before any failure check whenever an artifact is absent or a required value undisclosed (cases 14 and 19 fail)."
+  },
+  {
+   "id": "approval-governance.portable-binding.no-success-on-failure",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "A verifier MUST NOT report a successful portable binding on failure or on insufficient evidence",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on failure (an authentication failure, a malformed required value or disclosed commitment, such as an anchor with an unrecognized algorithm prefix or noncanonical text, or a mismatch in step 1, step 2 or step 3: the record's mission.issuer, the approval event, an anchor or a commitment both carry) or on insufficient evidence (an absent record or reference, or a required value the reference does not disclose), the check reports failure or insufficient evidence, never success",
+    "local": "a non-success result carries no commitment_agreement"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 4: fails when both artifacts carry a commitment with different values, or the same value under an unrecognized algorithm prefix",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 5: fails when the reference names another Mission Issuer",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 6: fails when the reference names another approval event, though every Mission anchor matches",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 7: fails when the reference's intent_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 8: fails when the reference's authority_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 9: is insufficient evidence when the reference does not disclose approval_event_id, though both anchors match, or any other required value",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 10: fails when the record's signature does not verify, its payload differs from the record, or its envelope format is unsupported",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 11: fails when the record verifies only under key material not trusted for the expected issuer, including that of the issuer it names",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 12: fails when the reference is a Mandate whose iss differs from its mission.issuer",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 13: is insufficient evidence when no record, or no Mission reference, is supplied",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 14: fails when a required value carries an unrecognized algorithm prefix or is otherwise malformed, on either artifact, even where both agree",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 15: fails when the record carries a malformed commitment and the reference carries none",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 16: fails when the reference carries a malformed commitment and the record carries none",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 17: fails when both intent_hash values are equal but noncanonical, decoding with nonzero padding bits",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 18: fails when the record names another Mission Issuer, though it verifies under the expected issuer's key",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 19: fails, not insufficient evidence, when a disclosed value mismatches or is malformed and approval_event_id is undisclosed",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > applies the canonical encoded form to every anchor and disclosed commitment: a wrong-length digest or noncanonical text fails even where both artifacts agree",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. #1578 review (owner findings 1 and 2, rulings a to d): each disclosed commitment is validated on its own, and a compared value must be in the canonical encoded form. The authentication failures witnessed are the record's; the reference's own authentication is the caller's (the expected-issuer-trust row is partial for it). Mutations, each alone, turn a failure or insufficient-evidence case into a reported success or the wrong outcome, and each is caught: skipping the record's authentication (cases 10, 11), the expected-issuer naming (case 18), the Mandate iss rule (case 12), the reference's or the record's malformed-value check (case 14 each), each anchor comparison (cases 5 to 8), the undisclosed-value rule (case 9), the commitment equality (case 4), the record's or the reference's commitment validation (cases 15, 16), the canonical re-encoding (case 17), the digest length or the algorithm prefix (canonical test, case 14); reporting an absent record or reference as failure (case 13); stating a commitment agreement on a non-success result (cases 4 to 8, 10 to 12, 14 to 19). Partial under the every-clause rule: the authentication-failure clause is witnessed for the record only; a reference that fails its own authentication is the caller's to refuse, since the reference implementation has no Mandate verifier."
+  },
+  {
    "id": "approval-governance.governed-policy.agr-every-activation",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "governed-policy",
@@ -58156,6 +58751,27 @@
    "notes": "#1304 (D486). Proven by disabling the code it covers (each mutation restored byte for byte): backfilling the replacement with list origins, and rendering the prospective replacement parent with list origins, each fail a witness here."
   },
   {
+   "id": "child-delegation.completion.child-grant-binding-at-redemption",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "completion",
+   "text": "Whatever the mode, any grant binding the Child Mission carries comes from the child actor's redemption of that grant, not from the parent's exchange, and is the child's own, never an extension of the parent's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the child-creation exchange binds no grant lineage to the Child Mission; any lineage the Child Mission carries comes from the child actor's redemption of the child-bound grant, and no step extends the parent's grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1557 cold readers' follow-up. The reference AS binds no grant at child creation, issues no refresh token at the child actor's JWT-bearer redemption, and never reuses the parent's grant for the child's tokens; it implements only synchronous creation. No test asserts that separation."
+  },
+  {
    "id": "child-delegation.carryover.expansion-disclosure",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "predecessor-children",
@@ -59462,12 +60078,32 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a decision request carrying an assertion also carries token_sha256"
+    "normative": "a decision request carrying an assertion also carries token_sha256",
+    "local": "the reference PEP (services/mcp-payments/src/pep.ts), which requests the assertion itself for the credential the gateway authenticated (join-assertion-client.ts), unit-tested with a recorded decision request and end to end in the separated MAS pilot: a decision request carrying an assertion carries token_sha256, the digest of the presented access token; one obtaining none carries neither"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join-assertion-pep.test.ts",
+     "name": "the PEP carries a Join Assertion with the credential's digest and one thumbprint (@spec authority-server#join-authzen, #1454) > asks for an assertion for the authenticated credential and carries it with token_sha256 and token_jkt alone",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join-assertion-pep.test.ts",
+     "name": "the PEP carries a Join Assertion with the credential's digest and one thumbprint (@spec authority-server#join-authzen, #1454) > carries none of the assertion members when the source obtains no assertion, or no credential was handed over",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that drop token_sha256, digest another value, and carry the members with no assertion."
   },
   {
    "id": "mas.join-assertion.one-thumbprint",
@@ -59484,12 +60120,26 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a decision request carrying an assertion carries exactly one of token_jkt and token_x5t, matching the credential"
+    "normative": "a decision request carrying an assertion carries exactly one of token_jkt and token_x5t, matching the credential",
+    "local": "the reference PEP (services/mcp-payments/src/pep.ts), which requests the assertion itself for the credential the gateway authenticated (join-assertion-client.ts), unit-tested with a recorded decision request and end to end in the separated MAS pilot: a decision request carrying an assertion carries token_jkt alone, the thumbprint of the key the request's DPoP proof verified against (the gateway admits only DPoP-bound credentials, so token_x5t is never reported)"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join-assertion-pep.test.ts",
+     "name": "the PEP carries a Join Assertion with the credential's digest and one thumbprint (@spec authority-server#join-authzen, #1454) > asks for an assertion for the authenticated credential and carries it with token_sha256 and token_jkt alone",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that add token_x5t and that report another value as token_jkt."
   },
   {
    "id": "mas.join-assertion.pdp-checks-reported-binding",
@@ -59506,12 +60156,38 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an assertion whose token binding differs from the PEP-reported digest or thumbprint is denied mission_binding_failed"
+    "normative": "an assertion whose token binding differs from the PEP-reported digest or thumbprint is denied mission_binding_failed",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion whose token.sha256 differs from the reported token_sha256 (or with no digest on either side), or whose same-method thumbprint differs from the reported one (or with no, two, or the other method's thumbprint reported), is denied mission_binding_failed; in the pilot, an assertion minted for another token and one re-signed with another key's thumbprint; the assertion's own token claim is checked first: exactly one confirmation member, a non-empty jkt or x5t#S256 and nothing else, so an assertion carrying both is denied, and the reported thumbprint is the one of the assertion's method"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies a token binding that differs from the PEP-reported digest or thumbprint",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies an assertion whose token claim does not carry exactly one confirmation member, a non-empty jkt or x5t#S256, whatever the PEP reports (#1454 review)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): a verified Join Assertion is the join (@spec authority-server#join-assertion-pdp, #1454) > joins a certificate-bound credential on token_x5t against the assertion's x5t#S256, and an assertion with no authority_hash",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that drop the digest comparison, the digest-present check, the exactly-one-thumbprint check, and the thumbprint comparison, and that compare token_x5t with jkt. The confirmation shape (#1454 review) is proved by defects that drop the exactly-one check, count only known members, accept more than one, accept an unknown method, accept an empty value, compare the reported thumbprint of another method, and skip the comparison."
   },
   {
    "id": "mas.join-assertion.join-claim",
@@ -59570,12 +60246,26 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "on the assertion path, rule 5 narrowing and the rule 9 commitment use the join claim"
+    "normative": "on the assertion path, rule 5 narrowing and the rule 9 commitment use the join claim",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: under a mapping contract that resolves nothing, a verified assertion joins; rule 5 narrows a delegate by join.client_id and join.depth, and the join_view_id commitment is computed over the join claim's client and disposition; in the pilot, a delegate joins at the MAS's recorded depth"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): a verified Join Assertion is the join (@spec authority-server#join-assertion-pdp, #1454) > joins on the assertion alone, under a mapping that resolves nothing: the joining client, disposition and depth come from the join claim, and so does the commitment",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a delegate at the depth the MAS's actor records give, and denies when the PEP's actor records report another depth",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that commit the authenticated client instead of join.client_id, narrow at depth 0 and as another client, and consult the mapping contract on the assertion path."
   },
   {
    "id": "mas.join-assertion.depth-disagreement-denies",
@@ -59592,12 +60282,26 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a PEP-reported delegate_depth that disagrees with join.depth is denied mission_binding_failed"
+    "normative": "a PEP-reported delegate_depth that disagrees with join.depth is denied mission_binding_failed",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: a reported delegate_depth that differs from join.depth is denied mission_binding_failed, as is a nonzero depth reported for a client join (the Mission's own client is depth 0 in the PEP's actor records); one that agrees permits; in the pilot, the PEP's actor records put the delegate at depth 2 where the MAS's say 1"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies a reported delegate_depth that differs from join.depth, and permits one that agrees",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a delegate at the depth the MAS's actor records give, and denies when the PEP's actor records report another depth",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that drop the comparison, skip it for a client join, and read a client join as no depth."
   },
   {
    "id": "mas.join-assertion.one-confirmation-member",
@@ -59656,12 +60360,44 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an assertion failing any PDP Consumption check is denied mission_binding_failed, never treated as absent"
+    "normative": "an assertion failing any PDP Consumption check is denied mission_binding_failed, never treated as absent",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion failing typ, signature, iss, mission id or issuer, authority_hash, exp (passed or absent), iat (absent), aud, the token binding, or the join claim's shape is denied mission_binding_failed with no join_view_id, though the mapping contract would join the same credential; and a token claim with both, no, an empty or an unknown confirmation member"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies each failed check, though the mapping contract would join the same credential",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies an assertion whose token claim does not carry exactly one confirmation member, a non-empty jkt or x5t#S256, whatever the PEP reports (#1454 review)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies an assertion whose aud names another PDP, or that carries no aud",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies a token binding that differs from the PEP-reported digest or thumbprint",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect per check (typ, issuer, audience, required exp and iat, clock, tolerance, mission id and issuer, authority_hash, client_id, disposition, depth integer and sign) and by one that denies a failed assertion with another reason. Also proved by the confirmation-shape defects (#1454 review)."
   },
   {
    "id": "mas.metadata.max-stale-required",
@@ -59918,12 +60654,44 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an assertion signed with none or an unlisted alg is rejected"
+    "normative": "an assertion signed with none or an unlisted alg is rejected",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion whose alg the PDP's list does not name (the pilot's list is the MAS's advertised mission_status_signing_alg_values_supported) is denied, and one with alg none is denied even with none listed; in the pilot, an unsecured assertion; the pilot PDP's accepted set is its declared allowlist (join_assertion.pdp_algorithms) intersected with the MAS's advertised mission_status_signing_alg_values_supported, never none, and an empty intersection refuses at composition"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): the assertion's alg is one this PDP accepts (@spec authority-server#discovery, #1454) > denies an assertion signed with an algorithm the PDP's list does not name, and one with alg none",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "the PDP's own Join Assertion algorithm allowlist (@spec authority-server#join-assertion-pdp, #1454 review) > denies an assertion correctly signed with an algorithm the MAS advertises but the PDP's allowlist excludes, under a key that suits it",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "the PDP's own Join Assertion algorithm allowlist (@spec authority-server#join-assertion-pdp, #1454 review) > never accepts none, whatever either side lists, and refuses an allowlist that meets nothing the MAS advertises",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot refuses a declared Join Assertion path it cannot run (#1454) > refuses to compose without the MAS's introspection client secret, and the MAS process refuses a secret its configuration does not declare",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect that drops the algorithm list. jose refuses alg none under a key whatever the list says, so no defect in this code admits it. #1454 review 2: the PDP's own allowlist is proved by defects that use the advertised list in place of the intersection (an advertised but excluded ES256, under a key that suits it, permits), admit none, skip the empty-intersection refusal, and wire the pilot with the advertised list (the composition refusal test fails)."
   },
   {
    "id": "mas.mapping-contract.floor-documented",
@@ -60090,12 +60858,26 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an assertion with no aud, or one naming another PDP, is denied"
+    "normative": "an assertion with no aud, or one naming another PDP, is denied",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion whose aud names another PDP, or that carries no aud, is denied mission_binding_failed; in the pilot, one the MAS minted for a second enrolled PDP"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies an assertion whose aud names another PDP, or that carries no aud",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect that drops the audience check."
   },
   {
    "id": "mas.join-assertion.cache-key",
@@ -60162,6 +60944,192 @@
     }
    ],
    "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that serves the cache before the checks. Also proved by the defect that drops the re-read before signing (#1454 review)."
+  },
+  {
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "level": "cross-component",
+   "id": "mas.join-assertion.introspect-where-offered",
+   "role": "Controller",
+   "strength": "stated",
+   "assertion": "output-bound",
+   "text": "Where the AS offers token introspection {{RFC7662}}, the MAS introspects the token under introspection credentials it holds there.",
+   "observation": {
+    "normative": "where the estate offers introspection, the MAS establishes the acting token from the introspection answer under its own introspection credentials, JWT or opaque, not from the token's own claims",
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only the estate's own contract, an HTTP 400 whose JSON error is exactly unsupported_token_type (which RFC 7662 does not define), permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, a redirect, a 401, 403, 429 or 5xx whatever its body says, a 400 with another error, a malformed answer) fails closed as unavailable with no local fallback"
+   },
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > introspects a JWT the estate can introspect, and takes the token from the answer, not from its own claims",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > establishes an opaque token by introspection only: active is used, unsupported_token_type and inactive refuse, an estate that cannot answer is unavailable",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 review (D681). Proved by establishing a JWT from its own claims instead of the introspection answer (the introspects-a-JWT test fails) and by skipping introspection for a token the estate can introspect (the live estate path and the opaque test fail)."
+  },
+  {
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "level": "unit",
+   "id": "mas.join-assertion.inactive-fails",
+   "role": "Controller",
+   "strength": "stated",
+   "assertion": "refusal",
+   "text": "A token the AS reports inactive fails the request.",
+   "observation": {
+    "normative": "an acting token the estate's introspection reports inactive yields no assertion, even a JWT that would validate locally",
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only the estate's own contract, an HTTP 400 whose JSON error is exactly unsupported_token_type (which RFC 7662 does not define), permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, a redirect, a 401, 403, 429 or 5xx whatever its body says, a 400 with another error, a malformed answer) fails closed as unavailable with no local fallback"
+   },
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > refuses a JWT the estate reports inactive, though it would validate locally",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > establishes an opaque token by introspection only: active is used, unsupported_token_type and inactive refuse, an estate that cannot answer is unavailable",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 review (D681): the case the owner could not demonstrate against the live estate, witnessed with a stub estate that introspects JWTs. Proved by falling back to local validation after active: false (the inactive test fails)."
+  },
+  {
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "level": "cross-component",
+   "id": "mas.join-assertion.local-jwt-validation",
+   "role": "Controller",
+   "strength": "MAY",
+   "assertion": "output-bound",
+   "text": "Where the AS offers no third-party introspection but issues JWT access tokens, the MAS MAY instead validate the token locally under the semantics of {{RFC9068}}, resolving the AS's signing keys from its published metadata and taking the subject and client from the validated claims.",
+   "observation": {
+    "normative": "where the estate offers no introspection for a JWT, the MAS validates it locally under the estate's published keys and takes the subject and client from the validated claims",
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only the estate's own contract, an HTTP 400 whose JSON error is exactly unsupported_token_type (which RFC 7662 does not define), permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, a redirect, a 401, 403, 429 or 5xx whatever its body says, a 400 with another error, a malformed answer) fails closed as unavailable with no local fallback; the live estate answers unsupported_token_type for its JWTs, so the separated pilot takes this branch"
+   },
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > validates a JWT locally under the estate's published keys only on unsupported_token_type, and refuses one that fails that validation",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-introspection.test.ts",
+     "name": "token introspection: the estate's unsupported-token-type answer (#1454 review) > names an unsupported token type only for an HTTP 400 whose error is exactly unsupported_token_type",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-introspection.test.ts",
+     "name": "token introspection: the estate's unsupported-token-type answer (#1454 review) > is unavailable, not an unsupported token type, for any other status carrying that error, another 400 error, or a redirect to that answer",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 review (D681): unsupported_token_type for that token type is read as the estate offering no introspection for it. Proved by refusing on unsupported_token_type (the local-validation and live pilot tests fail) and by validating locally on another error code (the unavailable test fails). #1454 review 2: the fallback is taken only on the estate's exact HTTP 400 answer; proved by defects that drop the 400 check (the 401 and 503 cases fail, in the adapter and the deployment tests), follow redirects, and accept any error on a 400."
+  },
+  {
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "level": "unit",
+   "id": "mas.join-assertion.local-validation-failure",
+   "role": "Controller",
+   "strength": "stated",
+   "assertion": "refusal",
+   "text": "A token that fails signature, `exp`, or `aud` validation fails the request.",
+   "observation": {
+    "normative": "a locally validated JWT that fails signature, exp or aud validation yields no assertion",
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only the estate's own contract, an HTTP 400 whose JSON error is exactly unsupported_token_type (which RFC 7662 does not define), permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, a redirect, a 401, 403, 429 or 5xx whatever its body says, a 400 with another error, a malformed answer) fails closed as unavailable with no local fallback"
+   },
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > validates a JWT locally under the estate's published keys only on unsupported_token_type, and refuses one that fails that validation",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 review (D681): the signature failure is witnessed (a forged JWT is refused); the exp and aud failures are not asserted on this path, so the row stays partial."
+  },
+  {
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "level": "unit",
+   "id": "mas.join-assertion.opaque-unresolvable-fails",
+   "role": "Controller",
+   "strength": "stated",
+   "assertion": "refusal",
+   "text": "An opaque token that no introspection surface will resolve cannot be verified, and the request fails.",
+   "observation": {
+    "normative": "an opaque acting token the estate's introspection will not resolve yields no assertion; it is never validated locally",
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only the estate's own contract, an HTTP 400 whose JSON error is exactly unsupported_token_type (which RFC 7662 does not define), permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, a redirect, a 401, 403, 429 or 5xx whatever its body says, a 400 with another error, a malformed answer) fails closed as unavailable with no local fallback"
+   },
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > establishes an opaque token by introspection only: active is used, unsupported_token_type and inactive refuse, an estate that cannot answer is unavailable",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 review (D681). Proved by validating an opaque token locally on unsupported_token_type (the opaque test fails)."
   },
   {
    "id": "mas.submission.unsupported-media-type",
@@ -62142,6 +63110,32 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1177. Accepted as todo by D591: a client-role row, and no reference client implements expansion."
+  },
+  {
+   "id": "expansion.completion.successor-grant-binding-own",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "Whatever the mode, any grant binding the successor carries is its own, never an extension of the predecessor's: in an interactive completion, the authorization code the client redeems and any refresh-token family that redemption emits; otherwise, a refresh-token family the completing response emits, if any. A deferred completion or synchronous drawdown that returns only an access token establishes no grant binding",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "expansion.adjudication",
+     "expansion.interactive-completion",
+     "progressive.ceiling-drawdown"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "any grant lineage a successor carries is its own: the authorization code an interactive completion redeems and any refresh-token family it emits, or a refresh-token family a deferred or drawdown response emits; a deferred completion or synchronous drawdown returning only an access token establishes no grant binding, while an interactive completion's authorization code is a binding whether or not its redemption emits a refresh token, and no completion extends the predecessor's grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1557 cold readers' follow-up. The reference AS issues no refresh token on any successor path and implements no interactive completion, so its successors carry derived tokens only; it never reuses the predecessor's grant for a successor's tokens. No test asserts that separation."
   },
   {
    "id": "expansion.successor-expiry.completion-codes",

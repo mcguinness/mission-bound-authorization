@@ -100,6 +100,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-mandate:
+    title: "Mission Mandate"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -1067,6 +1075,116 @@ A re-check does not re-authenticate an assertion: the record carries an
 assertion's authentication context ({{assertion-authority}}), not the
 authentication itself.
 
+# Portable Approval-Binding Check {#portable-binding}
+
+A Relying Auditor that holds a record and an authenticated Mission
+reference, but not the Mission Record or the evaluation's inputs, can
+run the portable approval-binding check. It establishes that the
+record and the reference agree on the approval event and the Mission
+anchors. It is a separate procedure from verifying the record against
+the Mission Record ({{envelope}}) and from re-checking the evaluation
+({{re-check}}), and replaces neither; a Relying Auditor MUST NOT report
+its success as either.
+
+A Mission reference is an artifact, authenticated under its own rules,
+that discloses the Mission's `approval_event_id`, `issuer`,
+`intent_hash`, and `authority_hash`. A Mandate that carries
+`approval_event_id` is one
+({{I-D.draft-mcguinness-mission-mandate}}).
+
+A verifier running the check MUST complete these steps:
+
+1. Authenticate both artifacts. For the record, complete steps 1 to 4
+   of {{envelope}}; for the reference, apply its own artifact rules.
+   The verifier MUST establish trust in the key material of the
+   expected Mission Issuer for both: an issuer the artifact asserts
+   for itself, with a valid signature, is not thereby trusted. The
+   record's `mission.issuer` MUST be that expected Mission Issuer,
+   since the issuer the record names is the one that signs it
+   ({{envelope}}).
+2. Require the event and the anchors. The authenticated reference MUST
+   disclose `approval_event_id`, the Mission `issuer`, `intent_hash`,
+   and `authority_hash`, and each MUST equal the record's
+   `approval_event_id` or the member of the same name in the record's
+   `mission` binding. The reference's own consistency rules still
+   apply; a Mandate's `iss` equals its `mission.issuer`. Matching
+   `intent_hash` and `authority_hash` never suffice without a matching
+   approval-event identifier, since two Missions can share both.
+3. Compare the Approval Context Commitment. Each
+   `approval_context_commitment` an artifact carries MUST be
+   well-formed, whether or not the other artifact carries one. When
+   both carry it, the two values MUST be equal. When one or neither
+   carries it, the check can succeed, and its result MUST state that
+   commitment agreement was not established. Equality
+   establishes agreement on the commitment value only; recomputing it
+   from the Mission's creation facts is a separate check
+   ({{approval-context-computation}}).
+
+A value the check compares, each anchor and each disclosed commitment,
+is well-formed only in the encoded form
+{{conventions-and-definitions}} fixes: a recognized algorithm prefix,
+then the unpadded base64url encoding of a digest of that algorithm's
+length, whose text re-encodes to exactly the same characters. A value
+that decodes but does not re-encode to itself, for example one with
+nonzero padding bits, is malformed.
+
+The check has three outcomes:
+
+- Success: every step completes.
+- Failure: an authentication failure, a malformed required value or
+  disclosed commitment, or a mismatch in step 1, step 2, or step 3.
+- Insufficient evidence: an absent artifact, or a value step 2
+  requires that the reference does not disclose.
+
+When the evidence both fails a step and is insufficient for another,
+the outcome is failure: a disclosed mismatch or malformed value is
+definitive, whatever else is undisclosed.
+
+A verifier MUST NOT report a successful portable binding on failure or
+on insufficient evidence.
+
+A success establishes only this: the trusted Mission Issuer
+authenticated this record, and its approval-event identifier and
+Mission anchors match those the supplied Mission reference
+authenticates. It does not establish:
+
+- that the evaluation was correct, or that its assertions are
+  independently true ({{re-check}});
+- that the retained Mission Record matches either artifact
+  ({{envelope}});
+- that an individual action under the Mission was approved, was within
+  its authority, or was executed;
+- that the Mission is still active;
+- that either artifact existed at a claimed earlier time, or that the
+  issuer showed every Relying Auditor a consistent view; or
+- that the presented record is the one another party retained
+  earlier: pinning exact record bytes in a portable artifact is a
+  separate mechanism.
+
+## Example {#portable-binding-example}
+
+A company approves a Mission to purchase office supplies within set
+limits. Approval event `E42` creates Mission `M17`. The Mission Issuer
+signs record `G42`, recording the governance assertions and the
+approval outcome, and later mints Mandate `D17`, which carries `M17`,
+`E42`, and the same `intent_hash` and `authority_hash`.
+
+The purchasing agent then submits purchase order `PO-9001`, and the
+company's ERP records its own business decision for that order as
+`BD-9001`, naming the order, the policy version it applied, the
+decision, and its time. `BD-9001` is an illustrative deployment
+record; this document defines no format for it.
+
+An auditor receives `G42` and `D17` through an authorized evidence
+export ({{privacy-considerations}}), without the Mission Record or the
+evaluation's inputs. The check connects `G42` to the approval event
+`D17` identifies. It does not show that `PO-9001` was individually
+approved, within authority, or executed: relating `BD-9001` to the
+order takes separate action evidence. A Mission scoped to approving
+one particular order could itself carry that business decision, but
+the auditor has to establish that scope, for example from the
+Authority Set; an approval-event match never implies it.
+
 # Governed Policy Approval {#governed-policy}
 
 This document defines the `governed_policy` standing-consent basis on
@@ -1585,7 +1703,10 @@ A Recording Issuer MUST:
 A Relying Auditor MUST verify the envelope by byte equality, MUST
 validate the mission binding, and MUST obtain the retained policy
 version before treating the evaluation as re-checked ({{envelope}},
-{{approval-policy}}, {{re-check}}).
+{{approval-policy}}, {{re-check}}). A Relying Auditor that holds no
+Mission Record can run the portable approval-binding check instead,
+under its own rules and with its narrower result
+({{portable-binding}}).
 
 # Security Considerations {#security-considerations}
 
@@ -1656,10 +1777,13 @@ a substitute for key custody.
 The privacy considerations of the issuance profile
 ({{I-D.draft-mcguinness-oauth-mission}}) apply. Assertion principals and
 decision times are personal data about reviewers. The record is
-control-plane state retained by the issuer, never disclosed on wire
-surfaces, and access to a retained record follows the issuer's audit-log
+control-plane state retained by the issuer, never disclosed on a
+protocol wire surface. Access to a retained record, including an
+authorized evidence export or an evidence bundle supplied to a
+Relying Auditor ({{portable-binding}}), follows the issuer's audit-log
 discipline for approval-event records
-({{I-D.draft-mcguinness-oauth-mission}}). The
+({{I-D.draft-mcguinness-oauth-mission}}); this document defines no
+endpoint and no default disclosure for it. The
 `approval_context_commitment` value is the same in every artifact that
 discloses it, so it correlates those artifacts
 ({{approval-context-carriage}}). A `service` assertion's `authority`
@@ -2048,9 +2172,64 @@ as if it were vector 2's `approval_context_commitment`, it recomputes
 vector 2's correct digest, finds a mismatch, and rejects under the
 same rule as vector 5.
 
+# Portable Approval-Binding Check Vectors {#portable-binding-vectors}
+
+These non-normative vectors exercise the comparisons and outcomes of
+{{portable-binding}}. Each case starts from a base pair: the record of
+{{record-example}}, which authenticates under a key trusted for the
+expected Mission Issuer `https://as.example.com`, and a Mission
+reference that authenticates under its own rules and discloses that
+record's `approval_event_id` (`ape_hON9D0svLKQAMyy-uug`), `issuer`,
+`intent_hash`, and `authority_hash`. Where a case says both artifacts
+carry a commitment, each carries `approval_context_commitment`; the
+check compares the two strings and never recomputes them. Each case
+changes one thing from the base, except case 19, which tests the
+precedence of failure over insufficient evidence.
+
+| Case | Change from the base pair | Outcome |
+|---|---|---|
+| 1 | Both carry an equal commitment | Success; commitment agreement established |
+| 2 | Only the record carries a commitment | Success; commitment agreement not established |
+| 3 | Neither carries a commitment | Success; commitment agreement not established |
+| 4 | Both carry a commitment, with different values | Failure |
+| 5 | The reference's `issuer` is `https://as2.example.com` | Failure |
+| 6 | The reference's `approval_event_id` differs | Failure |
+| 7 | The reference's `intent_hash` differs | Failure |
+| 8 | The reference's `authority_hash` differs | Failure |
+| 9 | The reference does not disclose `approval_event_id` | Insufficient evidence |
+| 10 | The record's signature does not verify | Failure |
+| 11 | The record verifies under a key not trusted for the expected issuer | Failure |
+| 12 | The reference is a Mandate whose `iss` differs from its `mission.issuer` | Failure |
+| 13 | No record is supplied | Insufficient evidence |
+| 14 | The reference's `intent_hash` carries an unrecognized algorithm prefix | Failure |
+| 15 | The record carries a malformed commitment; the reference carries none | Failure |
+| 16 | The reference carries a malformed commitment; the record carries none | Failure |
+| 17 | Both `intent_hash` values are equal but noncanonical: they decode, with nonzero padding bits, but do not re-encode to themselves | Failure |
+| 18 | The record names the Mission Issuer `https://as2.example.com` and verifies under the expected issuer's key | Failure |
+| 19 | The reference's `authority_hash` differs, and it does not disclose `approval_event_id` | Failure |
+{: title="Portable approval-binding check cases"}
+
+Cases 6 to 8 succeed on every other comparison, which is why the check
+compares each anchor rather than any one of them. Case 9 matches
+`intent_hash` and `authority_hash`, which two Missions can share, and
+still cannot succeed. Cases 15 and 16 fail although the other artifact
+carries no commitment: a disclosed value is validated on its own.
+Case 19 reports failure, not insufficient evidence, because a
+disclosed mismatch is definitive.
+
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A separately named portable approval-binding check lets a Relying
+  Auditor without the Mission Record establish that an authenticated
+  record and an authenticated Mission reference agree on the approval
+  event and the Mission anchors, with explicit commitment handling,
+  distinct failure and insufficient-evidence outcomes, stated limits,
+  a procurement example and vectors. Privacy Considerations relate the
+  record's retention to an authorized evidence export or evidence
+  bundle. The existing verification and re-check procedures are
+  unchanged (#1572).
 
 - Immutability Witness: a mismatch between a recomputed Approval
   Context Commitment and the value an artifact disclosed shows that
