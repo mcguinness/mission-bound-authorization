@@ -111,8 +111,8 @@
     "content_sha256": "74d6ce91fa5bf904e532dfae6ead1982c0a17325fd90b491e1ef51e19a891741"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
-    "content_sha256": "607c3661d7e078651a9590775bd5f714a311a997bb3c01cf9822b56430fba262"
+    "revision": "1b98137d3319ee242bd3e08a1edf73c9592d068e",
+    "content_sha256": "dcadf370e91f13f544258d5c366e7b48b2c1416129d3471c68356c7d0b10b3e6"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
