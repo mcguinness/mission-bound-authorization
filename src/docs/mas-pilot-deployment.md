@@ -14,11 +14,12 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `c98c17b8`
+Every statement here is true of the reference implementation at `dd38ffdf`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
-`demo/test/mas-pilot-introspection.test.ts`, `demo/test/mas-pilot-separated.test.ts`) need a live OpenFGA, because the Resource policy is stored entitlements, and
+`demo/test/mas-pilot-introspection.test.ts`, `demo/test/mas-pilot-separated.test.ts`,
+`demo/test/mas-pilot-join-assertion.test.ts`) need a live OpenFGA, because the Resource policy is stored entitlements, and
 are skipped without one; the mapping, estate-route, introspection and PDP
 unit files always run.
 
@@ -306,15 +307,19 @@ composition. The PEP and PDP changes are reference code
 (`joinMapping`, `missionBoundOnlyClasses`, `mappingContract`).
 
 Sender-bound Join Assertions (MAS §join-assertion) are #1454's; the
-Enterprise tier is #1551's. The MAS side is built in the reference
-authorization server; the pilot does not use it yet. By party:
+Enterprise tier is #1551's. The separated configuration (§11) runs them
+where `config/mas-pilot.json` declares `join_assertion`. The shipped
+configuration does not, so the shipped pilot joins under the mapping
+contract alone, unchanged. By party:
 
 - **The estate AS** (MAS §enterprise-prerequisites): sender-constrained
   access tokens carrying a `cnf` key, and introspection responses or
   validatable RFC 9068 claims that report it. The pilot's estate already
   provides all three as configured: DPoP-bound tokens with `cnf.jkt`, JWTs
   under its published keys, and RFC 7662 introspection reporting `cnf`
-  (§5). Nothing changes there.
+  (§5). The only addition is a second registered introspection client, the
+  MAS's (`join_assertion.introspection_client_id`), whose secret is
+  generated where the MAS is started.
 - **The MAS**: built (`services/authorization-server/src/adapters/join-assertion.ts`,
   `buildAuthorizationServer`'s `joinAssertions`). The endpoint
   (`POST /mission/join-assertion`, advertised as
@@ -332,21 +337,95 @@ authorization server; the pilot does not use it yet. By party:
   `mapping_version` and an `exp` capped by the token's. It caches on
   (`issuer`, `mission_id`), the token digest and the `audience`, rechecking
   before it serves, and records each minting as a join evidence event, in
-  process memory. How the acting token is established (validation or
-  introspection at the estate) and how the joins are evaluated are the
-  deployment's hook: the pilot's MAS (`mas-serve.ts`) does not supply one
-  yet. Witnesses: `services/authorization-server/test/join-assertion-endpoint.test.ts`.
-- **The PDP** (MAS §join-assertion-pdp): verifying the assertion
-  (signature under the MAS's keys, `typ`, `alg`, `iss` and `mission`,
-  `exp`, `aud`) and the token binding against
-  `context.mission_join.token_sha256` and the reported thumbprint, then
-  taking the joining client, disposition and depth from `join` in place of
-  its own mapping checks; and the PEP carrying the token digest and
-  thumbprint in `context.mission_join`. Neither is built yet (#1454).
+  process memory. How the acting token is established and how the joins
+  are evaluated are the deployment's hook. The pilot's is
+  `pilotJoinAssertions` (`demo/src/mas-pilot/mas-join-assertions.ts`), which
+  `mas-serve.ts` supplies where the configuration declares the path and
+  `MAS_PILOT_JOIN_INTROSPECTION_SECRET` carries the secret; it refuses
+  either without the other. A JWT is validated under RFC 9068 against the
+  keys at the estate's published `jwks_uri`, fetched when first needed so
+  the MAS may start before the estate. An opaque token is introspected at
+  the estate as the MAS's own client, through §5's adapter
+  (`TokenIntrospector`). Either must be audienced to an enrolled
+  enforcement scope. A digest-only request is refused: the estate resolves
+  no token by digest. The joins are evaluated under the mapping contract,
+  installed when the MAS starts under the same `mapping_cache` bound as
+  the gateway's, which supplies `mapping_version` (`mas-pilot-identity@1`).
+  A delegate joins under the contract's delegate policy, at its depth in
+  the MAS's own actor records. Witnesses:
+  `services/authorization-server/test/join-assertion-endpoint.test.ts` and
+  `demo/test/mas-pilot-join-assertion.test.ts`.
+- **The PEP** (MAS §join-authzen): it requests the assertion itself, the
+  draft's "The PEP, or the client acting for it", in the `access_token`
+  form, for the credential the gateway authenticated
+  (`RequestSignals.accessToken`, set on a MAS-governed route only;
+  `joinAssertionClient`, `services/mcp-payments/src/join-assertion-client.ts`).
+  The acting client needs no MAS registration, and the digest and
+  thumbprint it reports come from the credential it verified. The pilot's
+  PEP and PDP are one enforcement point, so the PEP authenticates as the
+  PDP's enrolled client (`separated_mas.pdp_client_id`), its client
+  assertion's `aud` the endpoint. An assertion it obtains rides
+  `context.mission_join` with `token_sha256` and `token_jkt`, the key the
+  request's DPoP proof verified against. With none obtained, none of the
+  members is carried.
+- **The PDP** (MAS §join-assertion-pdp): `EvaluateOptions.joinAssertion`
+  (`services/pdp/src/join-assertion.ts`, `evaluate.ts` step 4b), set by the
+  separated pilot's decision wrapper: the audience
+  `separated_mas.pdp_client_id`, the MAS's declared Status key, and the
+  algorithms the MAS advertises in
+  `mission_status_signing_alg_values_supported`. A carried assertion is
+  verified (signature, `typ`, `alg`, `iss` and `mission`, `authority_hash`
+  where carried, `exp`, `aud`, and the token binding) and is then the join,
+  in place of the mapping checks: the joining client, disposition and depth
+  come from `join`, rule 5 narrows a delegate with them, and `join_view_id`
+  commits the join claim's client and disposition. A failed check, or a
+  reported `delegate_depth` that differs from the asserted depth, denies
+  `mission_binding_failed` with no fallback. A client join counts as depth
+  0, the depth the PEP's actor records give the Mission's own client.
+  Whether a joined decision needs an assertion is declared:
+  `join_assertion.required` for every joined decision, `required_classes`
+  per action class. A joined decision carrying none where neither applies
+  joins under the mapping contract, the floor. A PDP without the option
+  ignores the members.
 
-The mapping version in join evidence belongs to that artifact's
-`mapping_version` claim. Baseline Decision Evidence carries no mapping
-version, and no draft requires one there.
+The mapping version in join evidence is the MAS's: its join evidence event
+records the `mapping_version` it minted under. Runtime Decision Evidence
+defines `join_view_id` and no mapping-version member, so the PDP records
+none (a reported gap).
+
+Witnesses: `demo/test/mas-pilot-join-assertion.test.ts`. Each refusal
+asserts that nothing was disclosed or committed, and the PDP's signed
+Decision Evidence:
+
+- `the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it`;
+- `… > joins a delegate at the depth the MAS's actor records give, and denies when the PEP's actor records report another depth`;
+- `… > denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none`
+  (one the MAS minted for a second enrolled PDP; one for another token
+  bound to the same key; the MAS's assertion re-signed with another key's
+  thumbprint, and expired; and one with `alg` `none`);
+- `… > denies a joined read that carries no assertion where the configuration requires one, though the mapping join alone would admit it`;
+- `… > the MAS mints nothing for a token it cannot establish or that does not join: a digest it cannot resolve, a token for another resource, an unmapped or other subject, a delegate it holds no record of or holds too deep`;
+- `the Join Assertion path is declared, and runs only where it can (#1454) > …`, `the separated MAS pilot refuses a declared Join Assertion path it cannot run (#1454) > …`, and the launcher's (walkthrough §7).
+
+Unit witnesses: `services/pdp/test/evaluate-join-assertion.test.ts`
+(every check, an algorithm the PDP's list does not name, and the
+requirement) and `services/mcp-payments/test/mas-join-assertion-pep.test.ts`
+(the carriage).
+
+Gaps:
+
+- The refusals for another key's thumbprint, an expired assertion and
+  `alg` `none` use assertions the test signs with the MAS's own Status key,
+  read from the key ring it creates: a working MAS mints none of them.
+- An unlisted algorithm is witnessed at the PDP alone: the MAS signs ES256
+  only, and the pilot's PDP accepts what the MAS advertises.
+- The MAS's and the PEP's actor records are separate stores; the tests
+  write each (the MAS's through its test-harness `actor` message). The
+  launcher writes neither, so no delegate joins on the assertion path
+  there.
+- The MAS installs the contract once, at its start: after
+  `mapping_cache.max_stale_seconds` (300) it mints nothing until it is
+  restarted, and a joined decision that requires an assertion denies.
 
 ## 9. Residuals and exclusions
 
@@ -379,7 +458,8 @@ version, and no draft requires one there.
   JWT path has no revocation check beyond the token's own lifetime, as for any
   RFC 9068 resource. Introspection answers are plain JSON (no RFC 9701 signed
   responses), over the estate's endpoint as configured.
-- **No instance-bound join and no Join Assertion.**
+- **No instance-bound join.** Join Assertions run in the separated
+  configuration only, and only where declared (§8).
 - **Tool listing:** an ordinary credential is listed no tools
   (`McpPaymentsServer.toolsList`, an existing remainder); calls are enforced.
 - **Co-resident decisions only.** `joinMapping` and
@@ -545,11 +625,10 @@ Gaps:
 
 ## 12. Remaining slices
 
-1. Sender-bound Join Assertions (Sketch step 5's second half), with the
-   mapping version carried as the assertion's `mapping_version` claim:
-   #1454. The MAS side is built (§8); the PEP and PDP side and the pilot's
-   use of it remain. The introspection adapter here is what the pilot's MAS
-   will use to inspect the estate token. The Enterprise tier is #1551.
+1. Done in #1454: sender-bound Join Assertions (Sketch step 5's second
+   half), with the mapping version carried as the assertion's
+   `mapping_version` claim, on the MAS, PEP and PDP and in the separated
+   configuration (§8). The Enterprise tier is #1551.
 2. Done in slice 5B: operator launchers for both topologies
    (`pnpm mas-pilot`, `pnpm mas-pilot:separated`), attaching to an
    administered Resource-policy store, and the walkthrough
@@ -562,8 +641,9 @@ Gaps:
    the shared demo stack's in `config/mas-join.json` `mapping_contract`,
    described in `config/README.md`), and a composition that would mount
    one without it refuses to start. The `mas.join-assertion` rows at the
-   Controller role are `tested` on the MAS side (§8); those at the PEP and
-   PDP roles stay `todo`, owned by #1454. The `mas.enterprise` and
+   Controller role are `tested` on the MAS side, and those at the PEP and
+   PDP roles on the unit tests and the separated witnesses (§8). The
+   `mas.enterprise` and
    `mas.hc.mission-bound-instance-check` rows and
    `mas.mapping-contract.enterprise-publishes` stay `todo`, owned by
    #1551. `mas.join-disclosure.members` and
@@ -605,7 +685,9 @@ pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.
   services/pdp/test/evaluate-authzen-members.test.ts \
   demo/test/mas-pilot-separated.test.ts demo/test/mas-pilot-separated-wiring.test.ts \
   services/pdp/test/evaluate-own-read.test.ts services/mcp-payments/test/view-source.test.ts \
-  demo/test/mas-pilot-launcher.test.ts demo/test/mas-pilot-launcher-shutdown.test.ts
+  demo/test/mas-pilot-launcher.test.ts demo/test/mas-pilot-launcher-shutdown.test.ts \
+  demo/test/mas-pilot-join-assertion.test.ts services/pdp/test/evaluate-join-assertion.test.ts \
+  services/mcp-payments/test/mas-join-assertion-pep.test.ts services/authorization-server/test/join-assertion-endpoint.test.ts
 ```
 
 §10's four files and §11's three unit files need no OpenFGA. The reference authorization server binds
@@ -627,3 +709,6 @@ and `14852`; the slow proxy and the Status double bind ephemeral ports.
 `mas-pilot-launcher-shutdown.test.ts` binds `127.0.0.1:14876` to `14889` and
 needs no OpenFGA: a stop at any point of startup stops the MAS process and
 frees its ports, and the MAS exits with its launcher.
+`mas-pilot-join-assertion.test.ts` runs its MAS process on `127.0.0.1:14905`
+and its estate on `14906`, and its launcher on `14907` and `14908`; its
+declaration and launcher refusals need no OpenFGA.
