@@ -11103,6 +11103,48 @@
    "notes": "#869 (D449): proven by disabling the code it covers. Every clause is witnessed at a redemption: the source grant or family's validity (an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses; requiring the row alone fails that witness), the Mission's state, the designation's own expiry, the delegation policy (a delegate whose AS-asserted profile is withdrawn after the designation is refused; skipping the redemption's eligibility gate fails it), the Mission's current authority (a containment after the designation narrows the result, or refuses when nothing is left; skipping the projection through current authority fails it), and a separate count per redemption, none for a refusal (#869 acceptance review). #1275: the delegation-authorization policy is also witnessed changing between a designation and its redemption (the redemption is refused; skipping the gate at redemption, or caching the policy decision, fails that witness)."
   },
   {
+   "id": "core.delegation.authority-narrows-from-designation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "The delegated token's `authorization_details` MUST be a subset ({{subset}}) of the designation's authority, hence of the delegating token's and of the Mission Authority Set",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegated token issued by redeeming a designation carries no authority beyond the designation's: when the designation was derived from a credential narrower than its Mission, the delegated token does not regain the authority the credential omitted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "core.delegation.delegate-own-key",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "The delegated token MUST be sender-constrained ({{token-claims}}) to the **delegate's own** key: its `cnf` is the delegate's DPoP or mTLS key, not the delegating party's, and the delegate proves possession of that key in the Token Exchange",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the delegated token's confirmation key is the key the delegate proved at the Token Exchange; a redemption proven under the delegating party's key is refused and issues no token"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "core.delegation-constraints.designation-adds-no-delegate",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "delegation-constraints",
