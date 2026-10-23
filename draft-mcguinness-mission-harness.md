@@ -480,7 +480,7 @@ task graph node to a Mission reference:
   precede that status's issuance (a Mission Status Response's `iat`,
   {{I-D.draft-mcguinness-oauth-mission-status}}), but by no more than
   the deployment's published maximum clock skew
-  ({{I-D.draft-mcguinness-mission-authzen}}, Section "Clock skew").
+  ({{I-D.draft-mcguinness-mission-authzen}}, Section "Clock Skew").
 
 `status_expires_at`:
 : REQUIRED when the harness relies on a status lease. An RFC 3339

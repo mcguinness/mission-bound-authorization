@@ -30203,7 +30203,7 @@
    "id": "authzen.extension-naming.collision-resistant-or-coordinated",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "runtime-denial-classification",
-   "text": "an extension value MUST be either a collision-resistant name (following the Collision-Resistant Name guidance of {{RFC7519}} Section 4.2) or a name coordinated within this document family, so values cannot collide.",
+   "text": "an extension value MUST be either a collision-resistant name (following the Collision-Resistant Name guidance of {{Section 4.2 of RFC7519}}) or a name coordinated within this document family, so values cannot collide.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -30226,7 +30226,7 @@
    "id": "authzen.runtime-denial-classification.unrecognized-value-treated-as-deny",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "runtime-denial-classification",
-   "text": "A consumer of a denial reason, wherever it is carried (the Decision Evidence `denial_reason`, {{I-D.draft-mcguinness-mission-runtime-evidence}}, or the response `context.reason`, {{response-context}}), MUST treat an unrecognized value as a deny and MUST NOT attach any other semantics to it, mirroring the issuance profile's open lifecycle state space",
+   "text": "A consumer of a denial reason, wherever it is carried (the Decision Evidence `denial_reason`, {{I-D.draft-mcguinness-mission-runtime-evidence}}, or the response `context.reason`, {{response-context}}), MUST treat an unrecognized value as a deny and MUST NOT attach any other semantics to it, mirroring the OAuth binding's open lifecycle state space",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {

@@ -370,8 +370,8 @@ Transaction Assurance:
 
 Runtime Evidence:
 : Prerequisites: the Decision Base. Roles: the PDP and PEP are
-  PRODUCERs of Decision Evidence, Execution Evidence, and Refusal
-  Records; an auditor or relying party is the VERIFIER, per the
+  producers of Decision Evidence, Execution Evidence, and Refusal
+  Records; an auditor or relying party is the verifier, per the
   runtime evidence companion
   ({{I-D.draft-mcguinness-mission-runtime-evidence}}). Required
   members: none beyond what the Decision Base already carries on the
@@ -538,7 +538,7 @@ Mission's recorded authority directly meets that profile's authority
 input (its Section "Authority") without a view, and its requests omit
 `policy_view_id`. The trusted compiler
 computes that envelope, and the `authority_hash` it binds, from its
-own held Mission record; the issuance profile's baseline `mission`
+own held Mission record; the OAuth binding's baseline `mission`
 claim does not carry `authority_hash` on the wire
 ({{I-D.draft-mcguinness-oauth-mission}}), so a consistency check
 between a decision request and the loaded view is an equality test on
@@ -587,7 +587,7 @@ PDP to authorize an action from unverified token claims, and the
 PEP-PDP channel MUST be integrity-protected and mutually authenticated
 as that profile requires.
 
-## AuthZEN envelope binding
+## AuthZEN Envelope Mapping {#envelope-mapping}
 
 | AuthZEN member | Mission-bound binding |
 |---|---|
@@ -714,7 +714,7 @@ so a change in state never mints a new `policy_view_id`
 `authority_hash`:
 : OPTIONAL. A string. The Authority Set integrity anchor, in the
   integrity-anchor encoded form ({{I-D.draft-mcguinness-oauth-mission}}).
-  Not carried on the issuance profile's baseline `mission` claim or
+  Not carried on the OAuth binding's baseline `mission` claim or
   default introspection projection; a PEP includes it only where it
   holds it under the Local Approved-Set Verification profile
   ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}},
@@ -814,8 +814,9 @@ deployment captures it.
 Where tokens carry Instance Context
 ({{I-D.draft-mcguinness-oauth-client-instance-id}}), the PEP can set
 `client_instance_id` from it once it has validated that context as a
-Context Consumer ({{I-D.draft-mcguinness-oauth-client-instance-id}},
-Section 7.5) and established its association with the current presenter.
+Context Consumer
+({{Section 7.5 of I-D.draft-mcguinness-oauth-client-instance-id}})
+and established its association with the current presenter.
 The PEP MUST NOT populate `context.actor.client_instance_id` from
 context that establishes only upstream instance participation. The
 correlator represents the pair (`iss`, `id`) without collisions across
@@ -824,7 +825,7 @@ consumers, including when separate PEPs each accept only one authority.
 Attributing the presentation requires the association with the presenter
 that Section 7.5 establishes: a sender-constraint key unique to the
 instance
-({{I-D.draft-mcguinness-oauth-client-instance-id}}, Section 7.3) where
+({{Section 7.3 of I-D.draft-mcguinness-oauth-client-instance-id}}) where
 the token issuer conveys context only from direct Client Attestation
 validation, and authenticated provenance where it may preserve context
 from an input token. Fleet deployments then get which-instance-acted
@@ -1240,7 +1241,7 @@ permit retransmission and reuse, and the deviation and binding
 language elsewhere in this profile each turn on a different relation
 over the normalized evaluation request; one fingerprint cannot serve
 all three without conflating them. This section defines three
-INTERNAL canonical projections instead. Each is `sha-256:` followed
+internal canonical projections instead. Each is `sha-256:` followed
 by the base64url, no padding, SHA-256 {{RFC6234}} digest of the JCS
 {{RFC8785}} serialization of its defined subset of the normalized
 request. None is a wire parameter: a decision-API binding computes
@@ -1273,7 +1274,7 @@ Cache key:
 : The authorization binding plus the explicit state generation the
   decision consulted (the PDP's tracked `mission_state_version`, or
   an equivalent status-issuance generation marker where the
-  deployment does not track one), EXCLUDING observation telemetry:
+  deployment does not track one), excluding observation telemetry:
   `freshness_at`, retrieval or issuance timestamps, and other
   volatile machinery.
 
@@ -1293,7 +1294,7 @@ Each projection includes the operation target, so two requests that
 differ only in their target differ in all three, including cacheable
 reads that carry no `parameter_digest`.
 
-## Worked PDP request
+## PDP Request Examples {#pdp-request-examples}
 
 In the ERP examples in this document, the operation contract identifies
 `https://erp.example.com` as the operation target
@@ -1445,7 +1446,7 @@ Authorization: ...
 }
 ~~~
 
-## PDP-side consistency checks
+## PDP-Side Consistency Checks {#pdp-consistency-checks}
 
 A PDP that also serves non-Mission AuthZEN traffic MUST NOT downgrade:
 for an action within a runtime enforcement scope it mediates, a request
@@ -1465,8 +1466,8 @@ self-consistent:
 
 1. When present, the Mission state conveyed in
    `context.mission_state_observation.state` is exactly `active`; every
-   other value, recognized or not, is non-active per the issuance
-   profile's forward-compatibility rule
+   other value, recognized or not, is non-active per the OAuth
+   binding's forward-compatibility rule
    ({{I-D.draft-mcguinness-oauth-mission}}) and the PDP returns
    `mission_inactive` ({{runtime-denial-classification}}). Where state
    establishment is placed with the PDP and the member is absent
@@ -1572,7 +1573,7 @@ self-consistent:
     `denial_reason` `operation_target_invalid`
     ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
-## Clock skew {#clock-skew}
+## Clock Skew {#clock-skew}
 
 The time comparisons this profile performs (the permit's
 `valid_until` at the PEP, {{response-context}}, the
@@ -1589,7 +1590,7 @@ permit, a stale freshness window, or an expired credential is refused,
 and the leeway never extends a permit lease or freshness lease beyond
 its bound plus the published skew.
 
-## Batch evaluations {#batch-evaluations}
+## Batch Evaluations {#batch-evaluations}
 
 The AuthZEN evaluations (boxcar) endpoint MAY be used to submit several
 Mission-bound decisions in one request. Batching is a transport
@@ -1805,7 +1806,7 @@ complete coverage of the runtime profile's failure conditions, and the
 rules that keep a permit bound to the PEP, channel, and inputs it was
 issued for.
 
-## Response decision context {#response-context}
+## Response Decision Context {#response-context}
 
 This profile defines the following AuthZEN response `context` members:
 
@@ -2072,7 +2073,7 @@ original permit continues.
 credential-derived inputs, so this shape is not fulfillment of an
 obligation attached to a permit before release. The flow denies the
 original request: the PDP returns `decision: false` with `reason`
-`resource_policy` WITH the step-up obligation carrying the challenge
+`resource_policy` with the step-up obligation carrying the challenge
 parameters, an obligation on a denial being this profile's normal
 deny-obligation processing ({{response-context}}). The PEP challenges
 the actor, obtains a new access token through RFC 9470 step-up
@@ -2091,11 +2092,11 @@ or stale token-associated authentication is the RFC 9470
 ({{I-D.draft-mcguinness-oauth-mission}}), not a Mission-defined denial
 reason, and composes with, but is not, either shape of this
 obligation. The requirement is Resource policy, never a Mission
-constraint: the issuance profile's approval-time `acr_values`/`max_age`
+constraint: the OAuth binding's approval-time `acr_values`/`max_age`
 carriage is a requirement on the Approver at the approval event, a
 distinct fact from this per-action, token-associated requirement; it
 is neither carried on derived tokens nor evaluated per action, and the
-issuance profile defines no per-action `amr` constraint
+OAuth binding defines no per-action `amr` constraint
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
 A deployment MAY define further obligation types for genuine attached
@@ -2114,7 +2115,7 @@ NOT be marked optional or downgraded to advice, and permit request
 binding, permit expiry, use limits, evidence emission, step-up, and
 mandatory notification are never advice.
 
-## Permit response shape
+## Permit Response {#permit-response}
 
 When the PDP permits an action, it returns AuthZEN `decision: true`
 and the context needed by the PEP to enforce the permit. The
@@ -2139,7 +2140,7 @@ obligation applies.
 }
 ~~~
 
-## Denial response shape {#denial-response}
+## Denial Response {#denial-response}
 
 A runtime denial is returned as `decision: false` with the context
 members above:
@@ -2325,16 +2326,16 @@ not require them to independently satisfy the collision-resistant or
 family-coordinated form below. Beyond that exception, a companion
 profile MAY extend the set by specification; an extension value MUST
 be either a collision-resistant name (following the Collision-Resistant
-Name guidance of {{RFC7519}} Section 4.2) or a name coordinated within
+Name guidance of {{Section 4.2 of RFC7519}}) or a name coordinated within
 this document family, so values cannot collide. A consumer of a denial
 reason, wherever it is carried (the Decision Evidence `denial_reason`,
 {{I-D.draft-mcguinness-mission-runtime-evidence}}, or the response
 `context.reason`, {{response-context}}), MUST treat an unrecognized value as
 a deny and MUST NOT attach any other semantics to it, mirroring the
-issuance profile's open lifecycle state space
+OAuth binding's open lifecycle state space
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
-## Requestable denials {#requestable-denials}
+## Requestable Denials {#requestable-denials}
 
 A deny is terminal for the attempted action: the agent does not proceed
 on a denial. A deny need not end the task, however. For an
@@ -2439,27 +2440,27 @@ Lane 3, partial evaluation:
 Not a lane, the RAR remediation grain:
 : `insufficient_authorization` and `authorization_remediation` of
   {{I-D.draft-ietf-oauth-rar-metadata-remediation}}, as adopted
-  into the family's remediation by the issuance profile
-  ({{I-D.draft-mcguinness-oauth-mission}}). It is PAYLOAD, not a lane:
-  it DESCRIBES authority that could be requested, MAY travel as
+  into the family's remediation by the OAuth binding
+  ({{I-D.draft-mcguinness-oauth-mission}}). It is payload, not a lane:
+  it describes authority that could be requested, MAY travel as
   payload within an ARAP request, and confers nothing by itself. The
   RAR-details grain and the AuthZEN grain are not competing carriers,
   and a deployment MAY expose both on the same denial: the
   RAR-details grain names what authority to request, carrying
   actionable `authorization_details` the client requests as the
-  issuance profile's remediation routing describes
+  OAuth binding's remediation routing describes
   ({{I-D.draft-mcguinness-oauth-mission}}); the AuthZEN grain names
   how the denial is escalated, routing it into a governed access
   request that an independent approver or policy adjudicates before
   the PEP re-evaluates.
 
 Not a lane, transient denial:
-: An OUTCOME carrying retry guidance (`next_action: retry`,
+: An outcome carrying retry guidance (`next_action: retry`,
   `retry_after`), not a remediation path: nothing is remediated, and
   the condition is expected to clear with time.
 
 Not a lane, decision conditions:
-: CONSTRAINTS of the decision itself (`conditions`,
+: Constraints of the decision itself (`conditions`,
   {{response-context}}): declarative bounds on relying on it,
   evaluated at every use. They are not work the PEP performs; a
   condition the PEP does not recognize makes the permit invalid,
@@ -2481,7 +2482,7 @@ Composition with a future AuthZEN partial-evaluation profile is
 reserved, and a PDP MUST NOT return residual policy under this
 profile.
 
-## Failure-condition coverage {#failure-condition-coverage}
+## Failure-Condition Coverage {#failure-condition-coverage}
 
 Every runtime failure condition, whether named in the runtime profile's
 failure-mode table or in its other normative requirements
@@ -2599,7 +2600,7 @@ the PDP's denial between them. A contract failure is never reported as
 a parameter deviation or as `target_drift`, even when the parameters
 and the target are unchanged.
 
-## Permit binding in split topologies {#permit-binding-split}
+## Permit Binding in Split Topologies {#permit-binding-split}
 
 The requesting component and the executing PEP MUST be the same
 enforcement identity, on the same mutually authenticated channel that
@@ -2652,7 +2653,7 @@ state for consequential writes is one evaluation per action, and a
 deployment sizes PDP capacity and placement to that rate, not to a
 cache hit ratio ({{I-D.draft-mcguinness-mission-runtime}}).
 
-## Evaluation identifier propagation {#decision-id-propagation}
+## Evaluation Identifier Propagation {#decision-id-propagation}
 
 The resource request a permit authorizes is commonly served by a
 resource server that did not see the PDP exchange. The PEP SHOULD
@@ -2668,8 +2669,8 @@ A resource server that logs the received `evaluation_id` with the
 access it serves closes the decision-to-access join: the Decision
 Evidence, the Execution Evidence, and the resource server's access log
 then share one identifier, so an access is joined to the decision that
-permitted it without timestamp correlation. This extends the issuance
-profile's recommendation that a resource server log the `mission`
+permitted it without timestamp correlation. This extends the OAuth
+binding's recommendation that a resource server log the `mission`
 claim's `id` and the token `jti` with each decision
 ({{I-D.draft-mcguinness-oauth-mission}}): the evaluation identifier is
 this profile's addition to that correlation set.
@@ -2954,7 +2955,7 @@ evidence records are the runtime evidence companion's
 specific to capability-source binding are the capability-binding
 companion's ({{I-D.draft-mcguinness-mission-capability-binding}}).
 
-## Unbound-evaluation downgrade
+## Unbound-Evaluation Downgrade
 
 A PDP that serves both Mission-bound and ordinary AuthZEN traffic has
 two policy surfaces, and the request selects between them by carrying
@@ -2967,7 +2968,7 @@ outright; deployments SHOULD additionally alert on in-scope requests
 arriving without Mission context, since each one is a PEP defect or a
 probe.
 
-## Access Request Service in the trusted base
+## Access Request Service in the Trusted Base
 
 A deployment that composes with ARAP adds the Access Request Service to
 its trusted base: it adjudicates requestable denials and issues the
@@ -2976,7 +2977,7 @@ Access Request Service can auto-approve escalations, so it MUST be
 trusted, authenticated, and access-controlled like the PDP, and its
 auto-approval is bounded as above.
 
-## Denial oracle
+## Denial Oracle
 
 The denial-reason identifiers and any `contributing_constraints` are a
 decision oracle: an agent can probe them to map authority it does not
@@ -2988,7 +2989,7 @@ rate-limit access requests per Mission and surface request provenance to
 Approvers, so a compromised agent driving repeated requestable denials
 is visible to the humans adjudicating them.
 
-## Materialized view fidelity
+## Materialized View Fidelity
 
 A PDP that evaluates against a materialized view enlarging the
 Authority Set's bounds violates the bounded property of
@@ -3044,7 +3045,7 @@ neither of which is an obligation. This profile's sole obligation
 type, `step-up` ({{obligations}}), is registered by {{AUTHZEN-OBL}}
 itself and is not re-registered here.
 
-## AuthZEN Policy Decision Point Capability Registration
+## AuthZEN Policy Decision Point Capabilities Registration
 
 This document requests registration of seven capabilities, using the
 registry's template, in the AuthZEN Policy Decision Point Capabilities
