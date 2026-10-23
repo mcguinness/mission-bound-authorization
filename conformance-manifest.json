@@ -61415,6 +61415,28 @@
    "notes": "Added for #1581 (D702: mutual-TLS carriage coverage stays separate from the private-key-JWT witnesses). Todo: the reference serves no MAS submission endpoint, and mTLS client authentication (tls_client_auth) is implemented nowhere in src."
   },
   {
+   "id": "mas.submission.unparseable-before-auth",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "the MAS refuses it with the endpoint's syntax error code before authenticating the request",
+   "facet": "submission-endpoint",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an intent submission whose application/json body cannot be parsed as a JSON object is refused invalid_mission_intent before client authentication, so an unauthenticated caller gets the syntax code, not invalid_client or unauthorized"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #1581's open question 1, on the issue's recommendation following D704's parsing exception at the Mission Status and Lifecycle endpoints. Todo: the reference serves no MAS submission endpoint."
+  },
+  {
    "id": "mas.join-assertion.assertion-audience",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-assertion",
@@ -61509,6 +61531,37 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Added for #1581 (D702: mutual-TLS carriage coverage stays separate). Todo: the reference implements no mTLS caller authentication at the join-assertion endpoint, and the private-key-JWT witnesses do not cover it."
+  },
+  {
+   "id": "mas.join-assertion.unparseable-before-auth",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "the MAS refuses it with the endpoint's syntax error code before authenticating the request",
+   "facet": "join-assertion-endpoint",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a join-assertion request whose body cannot be parsed as a JSON object is refused invalid_join_request before caller authentication, so an unauthenticated caller gets the syntax code, not invalid_client or unauthorized",
+    "local": "join-assertion.ts handle refuses a body JSON.parse rejects before it calls the authenticator. With an authentication attempt inserted before that refusal, the test's unauthenticated 'not JSON' case gets invalid_client instead of invalid_join_request"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses a body that is not a JSON object carrying mission_id, a string audience and exactly one token form invalid_join_request (HTTP 400)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Added for #1581's open question 1 (see mas.submission.unparseable-before-auth). Partial: the test sends an unauthenticated body that is not JSON; no unauthenticated case sends valid JSON that is not an object."
   },
   {
    "id": "mas.errors.invalid-client",

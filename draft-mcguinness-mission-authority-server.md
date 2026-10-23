@@ -498,6 +498,12 @@ member is validated as {{intent-submission}} and {{native-carriage}}
 define, and an undefined one is still refused with
 `invalid_mission_intent`.
 
+A body that cannot be parsed as a JSON object carries none of these
+members, so the MAS refuses it with the endpoint's syntax error code
+before authenticating the request: `invalid_mission_intent` here, and
+`invalid_join_request` at the join-assertion endpoint
+({{join-assertion}}).
+
 The endpoint serves two operations, dispatched by request media type:
 
 - **Intent submission**: an HTTPS POST whose `application/json` body
@@ -3487,6 +3493,9 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- A body that cannot be parsed as a JSON object gets the endpoint's
+  syntax error code before authentication, since it carries no
+  client authentication parameters (#1581, following D704).
 - A JSON request body carries the client authentication parameters
   of Mission Status's mechanisms as request-level members. The MAS
   removes them and authenticates with them before it validates the
