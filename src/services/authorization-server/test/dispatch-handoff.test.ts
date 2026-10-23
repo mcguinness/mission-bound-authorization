@@ -380,6 +380,8 @@ describe("Dispatch Handoff: the handoff to the selected Agent and its continuati
     expect(h.status, JSON.stringify(hb)).toBe(200);
     expect(hb.issued_token_type).toBe(JWT_TOKEN_TYPE);
     expect(hb.token_type).toBe("N_A");
+    // @spec mission-template#dispatch-handoff (#1589): the exchange returns the handoff grant and no refresh token.
+    expect((hb as { refresh_token?: string }).refresh_token).toBeUndefined();
     expect(h.headers.get("cache-control")).toContain("no-store");
 
     // The grant: its own typ, aud = this AS's token endpoint, client_id = the

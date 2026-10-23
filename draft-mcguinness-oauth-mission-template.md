@@ -1294,7 +1294,7 @@ proof under its own key. The Mission Issuer MUST:
    instance's current Effective Authority Set.
 
 The Mission Issuer resolves the instance from the authenticated
-`mission` claim of the grant step 1 verifies, and applies steps 2
+`mission` claim of the grant that step 1 verifies, and applies steps 2
 through 5 to that instance.
 
 The token issued at redemption is the Agent's delegation handle: its

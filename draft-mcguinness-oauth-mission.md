@@ -2307,11 +2307,11 @@ grant the client presents:
 
 It then applies the gating of {{issuance-gating}}.
 
-A Mission MAY carry zero or more grant bindings. Beyond the
+A Mission MAY carry zero or more grant bindings. Beyond any
 authorization-code lineage established at approval, a refresh-token
 family a continuation transport establishes later (above) is a
-further binding, rooted in the Mission its own `subject_token`
-resolved to.
+further binding, or the Mission's first where it has none, rooted in
+the Mission its own `subject_token` resolved to.
 
 The AS MUST resolve a bound grant lineage to the same Mission on
 every derivation performed against it: the mapping is fixed for the
@@ -2354,11 +2354,11 @@ The grant binding relates to other mechanisms as follows:
   profile's Dispatch Handoff
   ({{I-D.draft-mcguinness-oauth-mission-template}}) returns a handoff
   grant that establishes no grant lineage; its redemption issues a
-  derived token for the instance, creating or extending no grant
-  binding, and the later delegation-family exchange creates the
-  instance's first. In the continuation profile's Identity
-  Continuation Transport, the IdP's hop record is continuation state,
-  not a grant lineage, and a Resource Authorization Server holds a
+  derived token for the dispatched Mission, creating or extending no
+  grant binding, and the later delegation-family exchange creates
+  that Mission's first grant binding. In the continuation profile's
+  Identity Continuation Transport, the identity provider's hop record
+  is continuation state, not a grant lineage, and a Resource AS holds a
   destination-side grant binding only where it establishes a
   redeemable grant lineage mapped to the Mission, such as a
   refresh-token family

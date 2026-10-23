@@ -371,7 +371,8 @@ subset of that Mission's Authority Set, state-gated, and lifetime-clamped
 per {{authorization-continuity}}; and the ID-JAG MUST be bound
 ({{RFC9449}}) to the acting identity's key.
 
-The root ID-JAG ({{Section 5.1.1 of I-D.draft-mcguinness-oauth-id-continuation-assertion}})
+The root ID-JAG
+({{Section 5.1.1 of I-D.draft-mcguinness-oauth-id-continuation-assertion}})
 and each onward ID-JAG MUST identify the originating Mission by
 carrying its `mission` claim ({{I-D.draft-mcguinness-oauth-mission}},
 Section "Mission Claim") with that Mission's `id` and `issuer`. A
@@ -383,10 +384,12 @@ lineage ({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding the
 Mission to the Grant"). A Resource Authorization Server's association
 of a continuation handle with the authorization state it establishes is
 not by itself a Mission grant binding; a redeemable grant lineage that
-server establishes and maps to the Mission is one. The base ID-JAG
-profile recommends against a Resource Authorization Server issuing a
-refresh token ({{Section 6 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}); a
-refresh-token family one creates by exception is a destination-side
+server establishes and maps to the Mission is one. That draft records
+that the base ID-JAG profile recommends against a Resource
+Authorization Server issuing a refresh token
+({{Section 6 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}); a
+refresh-token family such a server creates by exception is a
+destination-side
 Mission grant binding, under the Mission's authority, state, expiry and
 termination rules ({{authorization-continuity}}).
 
