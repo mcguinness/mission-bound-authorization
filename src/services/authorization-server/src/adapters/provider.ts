@@ -3723,17 +3723,33 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec mission#submission-via-par — the pushed parameter is the
       // Submission envelope; the approval renders the SEMANTIC intent (the
       // object intent_hash commits), never the envelope.
-      const submission = kernel.validateSubmission(String(params.mission_intent));
-      const intent = submission.intent;
       // @spec mission#authority-proposal — the proposal rides the pushed
       // authorization_details parameter; the rendering distinguishes the
       // submitted proposal (untrusted) from the derived Authority Set (what
       // approval grants).
+      // @spec mission#error-mapping (#1610): both are re-read here, and what
+      // depends on time or configuration can stop holding after the push (the
+      // request's own `expires_at` passes, or a proposed contract is no longer
+      // current): a refusal, mapped like the derivation refusal below, never a
+      // 500.
       const proposalRaw = clientProposalParam(params);
-      const proposal =
-        proposalRaw !== undefined
-          ? kernel.validateProposal(proposalRaw, intent.target_resources)
-          : undefined;
+      let submission: ReturnType<typeof kernel.validateSubmission>;
+      let proposal: AuthorityEntry[] | undefined;
+      try {
+        submission = kernel.validateSubmission(String(params.mission_intent));
+        proposal =
+          proposalRaw !== undefined
+            ? kernel.validateProposal(proposalRaw, submission.intent.target_resources)
+            : undefined;
+      } catch (e) {
+        if (e instanceof IntentError) {
+          ctx.status = 400;
+          ctx.body = { error: e.code, error_description: e.message };
+          return;
+        }
+        throw e;
+      }
+      const intent = submission.intent;
       // @spec mission#error-mapping — a well-formed Intent this AS's policy
       // (or the client's own proposal) derives no Authority Set from is a
       // refusal at render time too, not only at decide(): surface it the same
@@ -6087,7 +6103,20 @@ async function decide(
   }
   // @spec mission#submission-via-par — re-parse the pushed Submission envelope;
   // approval and intent_hash cover exactly the semantic `intent`.
-  const submission = opts.kernel.validateSubmission(String(params.mission_intent));
+  // @spec mission#approval-event (step 4), mission#error-mapping (#1610): a
+  // requested ceiling that passed while the approval pends completes the
+  // request with its refusal, as the commit's own expiry check does when it
+  // passes during the commit, before anything is written and never a 500.
+  let submission: ReturnType<typeof opts.kernel.validateSubmission>;
+  try {
+    submission = opts.kernel.validateSubmission(String(params.mission_intent));
+  } catch (e) {
+    if (e instanceof IntentError) {
+      await finish({ error: e.code, error_description: e.message });
+      return;
+    }
+    throw e;
+  }
   const intent = submission.intent;
   // @spec mission#intent-submission-evidence — STAGE-2 verification re-runs at
   // the DECISION over the interaction's immutable pushed parameters (the same
@@ -6122,11 +6151,22 @@ async function decide(
   // exactly this context, so a change to any of task, proposal, or derived set
   // between rendering and decision is a NEW interaction context and recomputes
   // every anchor.
+  // A proposed contract no longer current since the push (#1610) refuses the
+  // same way, as a derivation refusal does.
   const proposalRaw = clientProposalParam(params);
-  const proposedAuthority =
-    proposalRaw !== undefined
-      ? opts.kernel.validateProposal(proposalRaw, intent.target_resources)
-      : undefined;
+  let proposedAuthority: AuthorityEntry[] | undefined;
+  try {
+    proposedAuthority =
+      proposalRaw !== undefined
+        ? opts.kernel.validateProposal(proposalRaw, intent.target_resources)
+        : undefined;
+  } catch (e) {
+    if (e instanceof IntentError) {
+      await finish({ error: e.code, error_description: e.message });
+      return;
+    }
+    throw e;
+  }
   // @spec mission#approval-event (step 2), mission#approval-authentication
   // (#826): the Subject is the one the authenticated approval surface
   // selected, or the Approver for a self-approval; never `login_hint`, which
