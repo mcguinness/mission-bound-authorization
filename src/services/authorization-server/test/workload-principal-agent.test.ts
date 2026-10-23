@@ -25,7 +25,7 @@ import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJW
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { ALL_PROVIDER_CAPABILITIES, buildAuthorizationServer, type BuiltAs, MISSION_LIFECYCLE_SCOPE } from "../src/index.js";
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14194;
@@ -140,11 +140,13 @@ async function submitAndApprove(
   keep(res);
   let location = res.headers.get("location") ?? "";
   const uid = location.split("/interaction/")[1] as string;
+  const decideHeaders = { ...trustedApprovalHeaders(approver, {}, subject), cookie: cookie(), "content-type": "application/json" };
+  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(approver, {}, subject), cookie: cookie(), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   const decideStatus = res.status;
   keep(res);

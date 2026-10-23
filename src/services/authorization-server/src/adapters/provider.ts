@@ -7,6 +7,19 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
+import {
+  approvalContext,
+  candidateHash,
+  changedParts,
+  currentRenderRevision,
+  decisionExpiry,
+  RENDER_REVISION_HEADER,
+  type RenderRevision,
+  retainRenderRevision,
+  retireRenderRevision,
+  serializeApprovalEvent,
+  serviceRenderKey,
+} from "./approval-render-revision.js";
 import { APPROVER_LOGIN_CALLBACK_PATH, ApproverLoginError, type ApproverLoginRelyingParty } from "./approver-login.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
@@ -3535,6 +3548,29 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     return { principal, interactive: browser !== undefined };
   };
 
+  /**
+   * @spec mission#approval-context-changes (#1446, D583): who an approval
+   * rendering is made to, so its revision can bind to them: this user agent's
+   * approval session for the interaction, or a trusted headless approval
+   * service with the Subject it names. Read-only, so no CSRF: it authorizes
+   * nothing, and the decision authenticates its principal itself and must
+   * present the same key. Undefined for an anonymous rendering, a preview no
+   * decision can rest on.
+   */
+  const renderPrincipal = (ctx: KoaCtx, uid: string): { key: string; subject: string } | undefined => {
+    const cookie = ctx.get("cookie");
+    const sessionKey = opts.approvalSessions?.sessionKey(cookie, uid);
+    const sessionSubject = opts.approvalSessions?.subjectFor(cookie, uid);
+    if (sessionKey && sessionSubject) return { key: sessionKey, subject: sessionSubject };
+    const token = ctx.get("x-service-token");
+    const service = token && Object.hasOwn(serviceTokenPrincipals, token) ? serviceTokenPrincipals[token] : undefined;
+    if (!opts.allowHeadlessAdjudication || !service?.scopes.includes(MISSION_APPROVAL_SCOPE) || !validApprovalPrincipal(service.approver)) {
+      return undefined;
+    }
+    const subject = ctx.get(APPROVAL_SUBJECT_HEADER) || service.approver.sub;
+    return { key: serviceRenderKey(token, service.approver.sub, subject), subject };
+  };
+
   /** @spec mission-template#template-consent: template proposals and their decisions. */
   const templateProposals = new TemplateConsentProposals(() => kernel.nowDate().getTime());
   /** A proposal's consent disclosure against this issuer's current Dispatch Policies and capability catalog. */
@@ -3687,17 +3723,33 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec mission#submission-via-par — the pushed parameter is the
       // Submission envelope; the approval renders the SEMANTIC intent (the
       // object intent_hash commits), never the envelope.
-      const submission = kernel.validateSubmission(String(params.mission_intent));
-      const intent = submission.intent;
       // @spec mission#authority-proposal — the proposal rides the pushed
       // authorization_details parameter; the rendering distinguishes the
       // submitted proposal (untrusted) from the derived Authority Set (what
       // approval grants).
+      // @spec mission#error-mapping (#1610): both are re-read here, and what
+      // depends on time or configuration can stop holding after the push (the
+      // request's own `expires_at` passes, or a proposed contract is no longer
+      // current): a refusal, mapped like the derivation refusal below, never a
+      // 500.
       const proposalRaw = clientProposalParam(params);
-      const proposal =
-        proposalRaw !== undefined
-          ? kernel.validateProposal(proposalRaw, intent.target_resources)
-          : undefined;
+      let submission: ReturnType<typeof kernel.validateSubmission>;
+      let proposal: AuthorityEntry[] | undefined;
+      try {
+        submission = kernel.validateSubmission(String(params.mission_intent));
+        proposal =
+          proposalRaw !== undefined
+            ? kernel.validateProposal(proposalRaw, submission.intent.target_resources)
+            : undefined;
+      } catch (e) {
+        if (e instanceof IntentError) {
+          ctx.status = 400;
+          ctx.body = { error: e.code, error_description: e.message };
+          return;
+        }
+        throw e;
+      }
+      const intent = submission.intent;
       // @spec mission#error-mapping — a well-formed Intent this AS's policy
       // (or the client's own proposal) derives no Authority Set from is a
       // refusal at render time too, not only at decide(): surface it the same
@@ -3748,7 +3800,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // selected (#827, #826; `login_hint` concerns the Approver), so the
       // rendering resolves for it; without a session it shows only a
       // provenance every source of this client shares.
-      const selectedSubject = opts.approvalSessions?.subjectFor(ctx.get("cookie"), interactionMatch[1] as string);
+      // @spec mission#approval-context-changes (#1446, D583): the principal
+      // this rendering is made to, whose revision a decision must name.
+      const rendering = renderPrincipal(ctx, interactionMatch[1] as string);
+      const selectedSubject = rendering?.subject;
       let authoritySource: AuthoritySource;
       try {
         authoritySource = kernel.renderAuthoritySource({
@@ -3803,6 +3858,46 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           : undefined;
       // The decision is bound to this rendering, never to an offer computed afresh.
       retainRenderedOffer(provider, interactionMatch[1] as string, ceilingOffer, details.exp);
+      // @spec mission#approval-context-changes (#1446, D583): the context this
+      // page shows, committed under a revision bound to the principal it is
+      // rendered to, superseding that principal's earlier rendering. An
+      // anonymous rendering mints no revision: no decision can rest on it.
+      // The page shows the effective `expires_at` an approval now commits,
+      // the one a decision on this revision commits.
+      const expiresAt = kernel.resolveEffectiveExpiry({ requested: intent.expires_at, createdAt: kernel.nowDate().toISOString() });
+      let revision: string | undefined;
+      if (rendering) {
+        let rendered: ReturnType<typeof approvalContext>;
+        try {
+          rendered = approvalContext({
+            kernel,
+            issuer: opts.issuer,
+            intent,
+            proposal,
+            authority,
+            clientId: String(params.client_id),
+            subject: rendering.subject,
+            scopeProjection: opts.scopeProjection,
+            expiresAt,
+          });
+        } catch (e) {
+          if (e instanceof IntentError) {
+            ctx.status = 400;
+            ctx.body = { error: e.code, error_description: e.message };
+            return;
+          }
+          throw e;
+        }
+        revision = retainRenderRevision(
+          provider,
+          interactionMatch[1] as string,
+          rendering.key,
+          { clientId: String(params.client_id), ...rendered },
+          details.exp,
+        );
+        ctx.set(RENDER_REVISION_HEADER, revision);
+        ctx.set("cache-control", "no-store");
+      }
       ctx.status = 200;
       ctx.set("content-type", "text/html; charset=utf-8");
       ctx.body = renderApprovalPage(
@@ -3822,6 +3917,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           : undefined,
         derivation,
         ceilingOffer,
+        { ...(revision ? { revision } : {}), changed: ctx.query.changed === "1", expiresAt },
       );
       return;
     }
@@ -3889,7 +3985,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.body = { error: "unauthorized" };
         return;
       }
-      await decide(provider, opts, ctx, body, resolved.principal, resolved.interactive);
+      // @spec mission#approval-context-changes (#1446, D583): the decision's
+      // principal, keyed as its rendering was.
+      const principalKey = resolved.interactive
+        ? opts.approvalSessions?.sessionKey(ctx.get("cookie"), uid)
+        : serviceRenderKey(ctx.get("x-service-token"), resolved.principal.sub, resolved.principal.subject ?? resolved.principal.sub);
+      await decide(provider, opts, ctx, body, resolved.principal, resolved.interactive, principalKey);
       return;
     }
 
@@ -5878,6 +5979,8 @@ async function decide(
   /** The Approver authenticated in this user agent (a trusted browser
    *  session), not through a headless approval service. */
   interactive: boolean,
+  /** @spec mission#approval-context-changes (#1446): the principal key its rendering was bound to. */
+  principalKey: string | undefined,
 ) {
   const details = await provider.interactionDetails(ctx.req, ctx.res);
   if (details.uid !== ctx.path.split("/")[2]) {
@@ -6000,7 +6103,20 @@ async function decide(
   }
   // @spec mission#submission-via-par — re-parse the pushed Submission envelope;
   // approval and intent_hash cover exactly the semantic `intent`.
-  const submission = opts.kernel.validateSubmission(String(params.mission_intent));
+  // @spec mission#approval-event (step 4), mission#error-mapping (#1610): a
+  // requested ceiling that passed while the approval pends completes the
+  // request with its refusal, as the commit's own expiry check does when it
+  // passes during the commit, before anything is written and never a 500.
+  let submission: ReturnType<typeof opts.kernel.validateSubmission>;
+  try {
+    submission = opts.kernel.validateSubmission(String(params.mission_intent));
+  } catch (e) {
+    if (e instanceof IntentError) {
+      await finish({ error: e.code, error_description: e.message });
+      return;
+    }
+    throw e;
+  }
   const intent = submission.intent;
   // @spec mission#intent-submission-evidence — STAGE-2 verification re-runs at
   // the DECISION over the interaction's immutable pushed parameters (the same
@@ -6035,11 +6151,22 @@ async function decide(
   // exactly this context, so a change to any of task, proposal, or derived set
   // between rendering and decision is a NEW interaction context and recomputes
   // every anchor.
+  // A proposed contract no longer current since the push (#1610) refuses the
+  // same way, as a derivation refusal does.
   const proposalRaw = clientProposalParam(params);
-  const proposedAuthority =
-    proposalRaw !== undefined
-      ? opts.kernel.validateProposal(proposalRaw, intent.target_resources)
-      : undefined;
+  let proposedAuthority: AuthorityEntry[] | undefined;
+  try {
+    proposedAuthority =
+      proposalRaw !== undefined
+        ? opts.kernel.validateProposal(proposalRaw, intent.target_resources)
+        : undefined;
+  } catch (e) {
+    if (e instanceof IntentError) {
+      await finish({ error: e.code, error_description: e.message });
+      return;
+    }
+    throw e;
+  }
   // @spec mission#approval-event (step 2), mission#approval-authentication
   // (#826): the Subject is the one the authenticated approval surface
   // selected, or the Approver for a self-approval; never `login_hint`, which
@@ -6126,18 +6253,28 @@ async function decide(
   // yields nothing, `access_denied` when configured-mapping mode (no
   // proposal) yields nothing.
   const scopeKey = requestedScopeKey(opts.scopeProjection, params, intent);
+  // @spec mission#approval-event (step 7), mission#approval-context-changes
+  // (#1446, D583): a retry of a decision already committed on this interaction
+  // recovers it (commitApproval below) over the committed set, never over one
+  // re-derived from inputs that may have changed since the commit.
+  const approvalEventId = `apev_${details.uid}`;
+  const committedEarlier = opts.kernel.findByApprovalEvent(approvalEventId);
   let authority: ReturnType<typeof opts.kernel.derive>;
-  try {
-    authority = opts.kernel.derive(intent, proposedAuthority, scopeKey);
-  } catch (e) {
-    if (e instanceof IntentError) {
-      await finish({
-        error: e.code,
-        error_description: e.message,
-      });
-      return;
+  if (committedEarlier) {
+    authority = opts.kernel.effectiveAuthoritySet(committedEarlier);
+  } else {
+    try {
+      authority = opts.kernel.derive(intent, proposedAuthority, scopeKey);
+    } catch (e) {
+      if (e instanceof IntentError) {
+        await finish({
+          error: e.code,
+          error_description: e.message,
+        });
+        return;
+      }
+      throw e;
     }
-    throw e;
   }
   // Governance (D37): write-bearing missions require subject != approver
   // with the approver role; read-only may self-approve.
@@ -6275,7 +6412,73 @@ async function decide(
   // or concurrent decision on this interaction names the same grant and the
   // same approval event, so it recovers the one binding instead of creating
   // another.
-  const approvalEventId = `apev_${details.uid}`;
+  // @spec mission#approval-context-changes (#1446, D583): an approval rests on
+  // the rendering its Approver was shown. The decision names that rendering's
+  // revision, the latest made to this principal for this client; the context
+  // is then re-established and compared with the one rendered. A change to the
+  // task, the proposal, the derived set, the authority source, the effective
+  // `expires_at`, or a policy input (even one that leaves every anchor equal)
+  // creates nothing and asks for a fresh decision on the page rendered again.
+  // The rendered expiry is the one committed while the current inputs admit
+  // it, so a lifetime measured from the decision never moves it later. A
+  // refusal above, for a context that no longer admits approval, takes
+  // precedence.
+  const formPost = (ctx.get("content-type") ?? "").includes("application/x-www-form-urlencoded");
+  const askToReview = (error: "rendering_required" | "approval_context_changed", description: string, changed?: string[]) => {
+    ctx.set("cache-control", "no-store");
+    if (formPost) {
+      ctx.status = 303;
+      ctx.set("location", `/interaction/${encodeURIComponent(details.uid)}${error === "approval_context_changed" ? "?changed=1" : ""}`);
+      ctx.body = "";
+      return;
+    }
+    ctx.status = 409;
+    ctx.body = { error, error_description: description, ...(changed ? { changed } : {}) };
+  };
+  const currentContext = (derived: readonly AuthorityEntry[], held: RenderRevision) =>
+    approvalContext({
+      kernel: opts.kernel,
+      issuer: opts.issuer,
+      intent: intent as MissionIntent,
+      proposal: proposedAuthority,
+      authority: derived,
+      clientId: String(params.client_id),
+      subject,
+      scopeProjection: opts.scopeProjection,
+      expiresAt: decisionExpiry(opts.kernel, (intent as MissionIntent).expires_at, held.context.expires_at),
+    });
+  let rendered: RenderRevision | undefined;
+  if (!committedEarlier) {
+    rendered = principalKey ? currentRenderRevision(provider, details.uid, principalKey) : undefined;
+    if (
+      !rendered ||
+      typeof body.render_revision !== "string" ||
+      body.render_revision !== rendered.revision ||
+      rendered.clientId !== String(params.client_id)
+    ) {
+      askToReview("rendering_required", "approve the latest rendering of this request made to you; it was not rendered, or was rendered again");
+      return;
+    }
+    let current: ReturnType<typeof approvalContext>;
+    try {
+      current = currentContext(authority, rendered);
+    } catch (e) {
+      if (e instanceof IntentError) {
+        await finish({ error: e.code, error_description: e.message });
+        return;
+      }
+      throw e;
+    }
+    if (current.commitment !== rendered.commitment) {
+      retireRenderRevision(provider, details.uid, principalKey as string, rendered.revision);
+      askToReview(
+        "approval_context_changed",
+        "the request changed since it was rendered; review it again",
+        changedParts(rendered.context, current.context),
+      );
+      return;
+    }
+  }
   const grantId = approvalGrantId(details.uid);
   const approveInput: ApproveInput = {
     intent: intent as MissionIntent,
@@ -6294,16 +6497,20 @@ async function decide(
     authentication: { acr: principal.acr, auth_time: principal.auth_time, interactive },
     clientId: String(params.client_id),
     approvalEventId,
+    ...(rendered ? { renderedExpiresAt: rendered.context.expires_at } : {}),
   };
 
   // The commit, shared by the browser and device paths: the retry check, the
   // prepared approval, the reservation, the provider grant, and the record
   // bound to it, in the order above. It returns undefined when it has already
   // answered the request (a refusal or an `approval_forbidden`), having
-  // written nothing a retry cannot overwrite.
-  const commitApproval = async (): Promise<
+  // written nothing a retry cannot overwrite. It runs alone on its approval
+  // event, cleanup included (serializeApprovalEvent), and reads the event
+  // afresh once its turn comes: a decision that waited recovers a commit made
+  // meanwhile, and never writes over or destroys that commit's grant.
+  const commitApproval = (): Promise<
     { record: MissionRecord; effective: ReturnType<typeof opts.kernel.effectiveAuthoritySet> } | undefined
-  > => {
+  > => serializeApprovalEvent(provider, approvalEventId, async () => {
     const existing = opts.kernel.findByApprovalEvent(approvalEventId);
     // A retry recovers the committed approval only when it is the same decision:
     // the same Approver, Subject and client as the committed record. Anything
@@ -6389,6 +6596,38 @@ async function decide(
       opts.kernel.bindGrant(existing.id, grantId);
       record = existing;
     } else {
+      // @spec mission#approval-context-changes (#1446, D583): the context and
+      // the prepared candidate are checked again here, after the last
+      // asynchronous step and with none between this check and the commit, so
+      // a change while the grant saved (or the device session loaded) cannot
+      // commit an unseen context: the policy, source and bound entries the
+      // commit reads are the ones checked. A changed context leaves no grant.
+      const held = rendered as RenderRevision;
+      let changed: string[] | undefined;
+      try {
+        const now = currentContext(opts.kernel.derive(intent, proposedAuthority, scopeKey), held);
+        const again = opts.kernel.prepareApproval(approveInput);
+        const parts = changedParts(held.context, now.context);
+        if (now.commitment !== held.commitment) changed = parts;
+        else if (
+          candidateHash(opts.issuer, again.authoritySet) !==
+          candidateHash(opts.issuer, (prepared as PreparedApproval).authoritySet)
+        ) {
+          changed = ["authority_hash"];
+        }
+      } catch (e) {
+        if (e instanceof IntentError) {
+          await finish({ error: e.code, error_description: e.message });
+          return undefined;
+        }
+        throw e;
+      }
+      if (changed) {
+        await grant.destroy();
+        retireRenderRevision(provider, details.uid, principalKey as string, held.revision);
+        askToReview("approval_context_changed", "the request changed while the decision was committed; review it again", changed);
+        return undefined;
+      }
       try {
         record = opts.kernel.approve({ ...approveInput, grantId }, prepared);
       } catch (e) {
@@ -6403,7 +6642,7 @@ async function decide(
       }
     }
     return { record, effective: opts.kernel.effectiveAuthoritySet(record) };
-  };
+  });
 
   // @spec device-authorization#approval, device-authorization#issuance
   // (#1202): the device commit. The pending re-check, the commit above and
@@ -6669,6 +6908,12 @@ function renderApprovalPage(
   derivation?: ApprovalDerivationRendering,
   /** @spec progressive#progressive-authorization: the ceiling the approval surface offers. */
   ceiling?: CeilingConsent,
+  /**
+   * @spec mission#approval-context-changes (#1446): this rendering's revision,
+   * whether the request changed since the last, and the effective `expires_at`
+   * an approval on it commits.
+   */
+  render: { revision?: string; changed?: boolean; expiresAt?: string } = {},
 ): string {
   // @spec mission#approval-event — the rendering distinguishes the submitted
   // proposal (untrusted client input) from the derived Authority Set (what
@@ -6763,8 +7008,8 @@ ${sourceSection}
 ${proposalSection}
 ${provenanceSection}
 <h2>Derived authority (what approval grants)</h2><pre>${escapeHtml(JSON.stringify(authority, null, 2))}</pre>
-${limitNotice}${derivationSection}${ceilingSection}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
-${deviceConfirmations}<button name="decision" value="approve">Approve</button>
+${render.expiresAt ? `<h2>Mission expiry (when the approved authority ends)</h2><p><time class="mission-expires-at" datetime="${escapeHtml(render.expiresAt)}">${escapeHtml(render.expiresAt)}</time></p>\n` : ""}${render.changed ? "<p><strong>The request changed since you last reviewed it. Review it again before deciding.</strong></p>\n" : ""}${limitNotice}${derivationSection}${ceilingSection}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
+${render.revision ? `<input type="hidden" name="render_revision" value="${escapeHtml(render.revision)}">\n` : ""}${deviceConfirmations}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`;
 }
 

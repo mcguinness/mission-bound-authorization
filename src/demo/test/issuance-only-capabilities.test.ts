@@ -33,6 +33,7 @@ import {
   PLAIN_RS_AUDIENCE,
   startIssuanceOnly,
 } from "../src/issuance-only.js";
+import { renderApproval } from "../src/approval-console.js";
 import { requestLifecycle } from "../src/lifecycle-client.js";
 
 type Json = Record<string, unknown>;
@@ -186,15 +187,15 @@ async function issueBase(): Promise<{ accessToken: string; missionId: string; ke
   );
   keep(res);
   const uid = (res.headers.get("location") ?? "").split("/interaction/")[1] ?? "";
+  // The approver console renders the page and approves that rendering (#1446).
+  const approver = { cookie: cookie(), "x-service-token": deployment.credentials.approverServiceToken };
+  const render_revision = await renderApproval(asUrl, uid, approver);
+  expect(render_revision).toBeTruthy();
   res = await fetch(`${asUrl}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: {
-      "content-type": "application/json",
-      cookie: cookie(),
-      "x-service-token": deployment.credentials.approverServiceToken,
-    },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: { "content-type": "application/json", ...approver },
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   keep(res);
   let location = res.headers.get("location") ?? "";
