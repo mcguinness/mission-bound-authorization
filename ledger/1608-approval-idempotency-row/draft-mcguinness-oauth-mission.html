@@ -2125,7 +2125,7 @@ as follows:<a href="#section-2.1-4" class="pilcrow">¶</a></p>
 server enforces the <code>authorization_details</code> statelessly and can check
 the <code>mission</code> claim (<a href="#rs-enforcement" class="auto internal xref">Section 9</a>), with no callback to the AS
 required.<a href="#section-2.1-5" class="pilcrow">¶</a></p>
-<p id="section-2.1-6">(5) An authorized revocation (<a href="#revocation" class="auto internal xref">Section 7.2</a>), or <code>expires_at</code>
+<p id="section-2.1-6">(5) A revocation (<a href="#revocation" class="auto internal xref">Section 7.2</a>), or <code>expires_at</code>
 passing, moves the Mission
 to <code>terminated</code>, with reason <code>revoked</code> or <code>expired</code>, after which the
 AS refuses further issuance and refresh. A deployment can also treat
@@ -3993,8 +3993,8 @@ action.<a href="#section-6.9-5" class="pilcrow">¶</a></p>
         <li class="normal" id="section-7-2.2">
           <p id="section-7-2.2.1"><code>terminated</code>: a terminal state; the Mission has ended. Its
 <code>termination</code> member (<a href="#termination" class="auto internal xref">Section 7.1</a>) gives the reason: <code>revoked</code>
-when the Subject, Approver, or policy terminated it, or <code>expired</code> when
-its <code>expires_at</code> passed.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+when it was revoked (<a href="#revocation" class="auto internal xref">Section 7.2</a>), or <code>expired</code> when its
+<code>expires_at</code> passed.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-3">The transitions are:<a href="#section-7-3" class="pilcrow">¶</a></p>
@@ -4135,11 +4135,15 @@ before reading it this way.<a href="#section-7.1-8" class="pilcrow">¶</a></p>
         <h3 id="name-revocation">
 <a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-revocation" class="section-name selfRef">Revocation</a>
         </h3>
-<p id="section-7.2-1">A Mission is revoked when the AS receives an authorized revocation
-for it. A deployment <span class="bcp14">MUST</span> provide an authenticated means for the
-Subject, the Approver, or an administrator to revoke a Mission by
-<code>mission_id</code>, independent of possession of any token (so a Mission
-can be stopped even when no refresh token is held).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-1">A Mission is revoked when the AS receives a revocation for it from a
+party the deployment's policy authorizes to revoke it, or when that
+policy itself terminates the Mission; either way, its termination
+reason is <code>revoked</code>. The Subject, the Approver, and an administrator
+are parties that policy can authorize; none is authorized by its role
+alone. A deployment <span class="bcp14">MUST</span> provide an authenticated means, independent
+of possession of any token, by which a party its policy authorizes
+revokes a Mission by <code>mission_id</code> (so a Mission can be stopped even
+when no refresh token is held).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 <p id="section-7.2-2">The wire shape of that operation is out of scope for this document. A
 deployment-defined authenticated surface satisfies this requirement;
 Mission Status (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>)
@@ -5019,27 +5023,47 @@ observe Mission state per request.<a href="#section-9.1-4.3.1" class="pilcrow">�
         <h3 id="name-mission-unaware-resource-se">
 <a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-mission-unaware-resource-se" class="section-name selfRef">Mission-Unaware Resource Servers</a>
         </h3>
-<p id="section-9.2-1">A deployment <span class="bcp14">MUST NOT</span> route a delegated Mission-bound token to a
-Mission-unaware resource server, or to logging or audit
-infrastructure, that authorizes or logs the caller on <code>client_id</code>
-without processing the <code>act</code> chain.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
-<p id="section-9.2-2">A Mission-unaware <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> resource server reads <code>client_id</code> as
+<p id="section-9.2-1">Two parties keep a delegated Mission-bound token, one carrying an
+<code>act</code> claim, from consumers that do not process the <code>act</code> chain:<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.2-2.1">
+            <p id="section-9.2-2.1.1"><strong>The AS, at issuance.</strong> The AS <span class="bcp14">MUST</span> refuse, with <code>invalid_target</code>
+(<a href="#error-mapping" class="auto internal xref">Section 10</a>), a request for a delegated Mission-bound token
+whose audience it has not established as a Mission-aware Resource
+Server (<a href="#rs-requirements" class="auto internal xref">Section 9.1</a>) that also processes the <code>act</code> chain,
+authorizing and logging the caller from the chain rather than from
+<code>client_id</code> alone. That the audience parses <code>act</code> does not
+establish this.<a href="#section-9.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.2-2.2">
+            <p id="section-9.2-2.2.1"><strong>The deployment, after issuance.</strong> A deployment <span class="bcp14">MUST NOT</span> route a
+delegated Mission-bound token to a Mission-unaware resource server,
+or to logging or audit infrastructure, that authorizes or logs the
+caller on <code>client_id</code> without processing the <code>act</code> chain. The AS
+cannot verify where a token travels beyond its audience or which
+pipelines log its use, so that routing and logging remain the
+deployment's.<a href="#section-9.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-9.2-3">A Mission-unaware <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> resource server reads <code>client_id</code> as
 the immediate client, which is accurate for that single token. It
 cannot see the delegation lineage in the <code>act</code> chain or look up the
 originally-approved agent in the Mission Record, so it cannot
 recognize the current actor as a delegate, record that lineage, or
 join a delegate's action to the Mission's approval in its audit
-records.<a href="#section-9.2-2" class="pilcrow">¶</a></p>
-<p id="section-9.2-3">A resource that requires Mission-bound tokens can advertise that
+records.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+<p id="section-9.2-4">A resource that requires Mission-bound tokens can advertise that
 through the <code>mission_bound_authorization_required</code> protected resource
 metadata member (<a href="#protected-resource-metadata" class="auto internal xref">Section 18</a>); a resource server
-that serves such a resource is, by that requirement, Mission-aware.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
-<p id="section-9.2-4">A Mission-unaware resource server that authorizes only from <code>scope</code>
+that serves such a resource is, by that requirement, Mission-aware.
+That requirement does not by itself establish that the resource
+server processes the <code>act</code> chain.<a href="#section-9.2-4" class="pilcrow">¶</a></p>
+<p id="section-9.2-5">A Mission-unaware resource server that authorizes only from <code>scope</code>
 operates within the Mission only to the extent the AS established a
 safe projection for it at issuance (<a href="#scope-projection" class="auto internal xref">Section 8.7</a>).
 Constrained authority that no safe projection carries is enforced
 only where a resource server, or a runtime layer, evaluates
-<code>authorization_details</code>.<a href="#section-9.2-4" class="pilcrow">¶</a></p>
+<code>authorization_details</code>.<a href="#section-9.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="rs-carried-authority">
@@ -5318,7 +5342,7 @@ exchange rows of the third table.<a href="#section-10-3" class="pilcrow">¶</a><
 </td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a <code>scope</code> value, or the target is <code>scope</code>-only and no safe projection exists for the applicable entries when the request names no <code>scope</code> value (<a href="#scope-projection" class="auto internal xref">Section 8.7</a>); or, where the AS applies <a href="#rs-enforcement" class="auto internal xref">Section 9</a>'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware</td>
+            <td class="text-left" rowspan="1" colspan="1">Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a <code>scope</code> value, or the target is <code>scope</code>-only and no safe projection exists for the applicable entries when the request names no <code>scope</code> value (<a href="#scope-projection" class="auto internal xref">Section 8.7</a>); or the AS has not established a delegated Mission-bound token's audience as a Mission-aware Resource Server that also processes the <code>act</code> chain (<a href="#rs-mission-unaware" class="auto internal xref">Section 9.2</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_target</code> (<span><a href="https://rfc-editor.org/rfc/rfc8707#section-2" class="relref">Section 2</a> of [<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>). Detail: safe <code>error_description</code>
 </td>
@@ -5999,35 +6023,41 @@ members that profile defines (for example, <code>sub</code>, <code>iss</code>, a
 <code>sub_profile</code> actor-type classification, such as <code>ai_agent</code>).<a href="#section-12.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-2.5">
-            <p id="section-12.2-2.5.1"><strong>Authority only narrows.</strong> The delegated token's
-<code>authorization_details</code> <span class="bcp14">MUST</span> be a subset (<a href="#subset" class="auto internal xref">Section 5.4</a>) of the
-designation's authority, hence of the delegating token's and of the
-Mission Authority Set.<a href="#section-12.2-2.5.1" class="pilcrow">¶</a></p>
+            <p id="section-12.2-2.5.1"><strong>The audience processes the chain.</strong> The AS issues the delegated
+token only for an audience it has established as a Mission-aware
+Resource Server that also processes the <code>act</code> chain, and refuses
+any other with <code>invalid_target</code> (<a href="#rs-mission-unaware" class="auto internal xref">Section 9.2</a>).<a href="#section-12.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-2.6">
-            <p id="section-12.2-2.6.1"><strong>The <code>mission</code> claim is unchanged.</strong> The delegated token carries
-the delegating token's <code>mission</code> claim (<a href="#mission-claim" class="auto internal xref">Section 8.8</a>)
-unchanged, so every actor in the chain operates under the one
-consented authority.<a href="#section-12.2-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-12.2-2.6.1"><strong>Authority only narrows.</strong> The delegated token's
+<code>authorization_details</code> <span class="bcp14">MUST</span> be a subset (<a href="#subset" class="auto internal xref">Section 5.4</a>) of the
+designation's authority, hence of the delegating token's and of the
+Mission Authority Set.<a href="#section-12.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-2.7">
-            <p id="section-12.2-2.7.1"><strong>Each delegate is bound to its own key.</strong> The delegated token <span class="bcp14">MUST</span>
+            <p id="section-12.2-2.7.1"><strong>The <code>mission</code> claim is unchanged.</strong> The delegated token carries
+the delegating token's <code>mission</code> claim (<a href="#mission-claim" class="auto internal xref">Section 8.8</a>)
+unchanged, so every actor in the chain operates under the one
+consented authority.<a href="#section-12.2-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-12.2-2.8">
+            <p id="section-12.2-2.8.1"><strong>Each delegate is bound to its own key.</strong> The delegated token <span class="bcp14">MUST</span>
 be sender-constrained (<a href="#token-claims" class="auto internal xref">Section 8.3</a>) to the <strong>delegate's
 own</strong> key: its <code>cnf</code> is the delegate's DPoP or mTLS key, not the
 delegating party's, and the delegate proves possession of that key
 in the Token Exchange. Compromise of a delegate's key therefore does
 not enable use of tokens bound to the agent's or another delegate's
-key.<a href="#section-12.2-2.7.1" class="pilcrow">¶</a></p>
+key.<a href="#section-12.2-2.8.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-12.2-2.8">
-            <p id="section-12.2-2.8.1"><strong>Each redemption is gated.</strong> Issuing a delegated token is a
+          <li class="normal" id="section-12.2-2.9">
+            <p id="section-12.2-2.9.1"><strong>Each redemption is gated.</strong> Issuing a delegated token is a
 derivation, refused unless the Mission is <code>active</code>
 (<a href="#issuance-gating" class="auto internal xref">Section 8.2</a>). The AS <span class="bcp14">MUST</span> evaluate every redemption of a
 designation afresh, as a derivation of its own: the credential the
 designation was derived from, and that credential's grant, are
 still valid; the Mission is <code>active</code>; and the delegation policy
 (<a href="#delegation-constraints" class="auto internal xref">Section 12.5</a>) and the Mission's current authority
-admit the result. An earlier redemption establishes none of these.<a href="#section-12.2-2.8.1" class="pilcrow">¶</a></p>
+admit the result. An earlier redemption establishes none of these.<a href="#section-12.2-2.9.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-12.2-3">The <code>act</code> chain nests (<code>act.act</code>) for as long as, and only while,
@@ -8882,7 +8912,7 @@ registration.<a href="#section-23.8-6.4.1" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>revoked</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">The Subject, Approver, or policy terminated the Mission.</td>
+              <td class="text-left" rowspan="1" colspan="1">An authorized party revoked the Mission, or the deployment's policy terminated it (<a href="#revocation" class="auto internal xref">Section 7.2</a>).</td>
               <td class="text-left" rowspan="1" colspan="1">none</td>
               <td class="text-left" rowspan="1" colspan="1">IETF</td>
               <td class="text-left" rowspan="1" colspan="1">this document, <a href="#termination" class="auto internal xref">Section 7.1</a>
