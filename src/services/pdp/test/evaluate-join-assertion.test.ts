@@ -261,7 +261,8 @@ describe("evaluate(): an assertion that fails a check denies mission_binding_fai
       ["no confirmation member", shaped({ sha256: SHA }), { token_jkt: JKT }],
       ["an empty jkt", shaped({ sha256: SHA, jkt: "" }), { token_jkt: "" }],
       ["an unknown member beside jkt", shaped({ sha256: SHA, jkt: JKT, jwk: "inline-key" }), { token_jkt: JKT }],
-      ["an unknown confirmation method alone", shaped({ sha256: SHA, jwk: JKT }), { token_jkt: JKT }],
+      ["an unknown confirmation method alone, jkt reported", shaped({ sha256: SHA, jwk: JKT }), { token_jkt: JKT }],
+      ["an unknown confirmation method alone, x5t reported", shaped({ sha256: SHA, jwk: JKT }), { token_x5t: JKT }],
     ];
     for (const [label, assertion, thumbprint] of cases) {
       await expectBindingFailed(joinedReq({ assertion: await assertion, token_sha256: SHA, ...thumbprint }), opts({ joinMapping: MAPPED }), label);

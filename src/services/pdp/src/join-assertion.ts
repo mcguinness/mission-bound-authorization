@@ -104,11 +104,11 @@ export async function verifyJoinAssertion(
     if ((method !== "jkt" && method !== "x5t#S256") || !isString(token[method])) return undefined;
 
     // Then the token binding the PEP reports: the digest, and exactly one
-    // thumbprint, of the same method and equal to the assertion's.
+    // thumbprint, the one of the assertion's method, equal to it.
     if (!isString(reported.token_sha256) || token.sha256 !== reported.token_sha256) return undefined;
     if ((reported.token_jkt === undefined) === (reported.token_x5t === undefined)) return undefined;
-    const reportedMethod = reported.token_jkt !== undefined ? "jkt" : "x5t#S256";
-    if (reportedMethod !== method || token[method] !== (reported.token_jkt ?? reported.token_x5t)) return undefined;
+    const sameMethod = method === "jkt" ? reported.token_jkt : reported.token_x5t;
+    if (sameMethod === undefined || token[method] !== sameMethod) return undefined;
 
     const join = payload.join;
     if (!isRecord(join) || !isString(join.client_id)) return undefined;
