@@ -58672,7 +58672,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the state check. The re-reads (#1454 review) are proved by defects that drop the re-read before signing, drop it after signing, drop its state check, read the stale record, read without materializing expiry, and cache or record before the re-read after signing."
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the state check. The re-reads (#1454 review) are proved by defects that drop the re-read after signing, drop its state check, read the stale record, read without materializing expiry, and cache or record before the re-read after signing; dropping the re-read before signing alone is caught on cache-rechecks, since the re-read after signing still refuses a fresh mint."
   },
   {
    "id": "mas.join-assertion.malformed-request",
