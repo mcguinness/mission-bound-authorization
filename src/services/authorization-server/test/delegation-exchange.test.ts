@@ -352,6 +352,8 @@ const DEFERRING_CEILING = DERIVATION_POLICY.ceiling.map((e) => {
 });
 /** The clients the deferring deployment's policy permits, set per test. */
 const policyPermits = new Set<string>();
+/** Actions whose entries the deferring deployment's policy denies to every delegate, set per test. */
+const policyDeniedActions = new Set<string>();
 /** Every question the deferring deployment's policy is asked, in order. */
 const policyAsked: DelegationPolicyRequest[] = [];
 
@@ -387,7 +389,7 @@ beforeAll(async () => {
     },
     delegationPolicy: (request: DelegationPolicyRequest) => {
       policyAsked.push(request);
-      return policyPermits.has(request.delegate.sub);
+      return policyPermits.has(request.delegate.sub) && !request.entry.actions.some((a) => policyDeniedActions.has(a));
     },
   });
   // Delegation on, the shipped ceiling, and the Effective Authority Set read
@@ -731,6 +733,41 @@ describe("authority bounds every exchange from the credential and the Mission as
     const delegated = await redeem(on, designation.body.access_token as string);
     expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
     expect(actionsOf(delegated.body.access_token as string)).toEqual(["payments:invoice.read"]);
+  });
+
+  it("a designation narrower than its credential: an entry ineligible at designation stays out of the delegated token though eligible at redemption", async () => {
+    // The deferring deployment's policy decides per entry: the sub-agent is
+    // eligible for the invoice read now, and for the vendor read only later.
+    policyPermits.clear();
+    policyPermits.add(SUBAGENT);
+    policyDeniedActions.add("payments:vendor.read");
+    try {
+      const listed = { max_depth: 2, allowed_delegates: [{ sub: SUBAGENT }] };
+      const { accessToken } = await baseMission(deferring, [
+        { ...delegable(), delegation: listed },
+        { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:vendor.read"], constraints: { vendors: ["acme"] }, delegation: listed },
+      ]);
+      expect(actionsOf(accessToken)).toEqual(["payments:invoice.read", "payments:vendor.read"]);
+      const designation = await designate(deferring, accessToken, SUBAGENT);
+      expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+      expect(actionsOf(designation.body.access_token as string)).toEqual(["payments:invoice.read"]);
+
+      // The vendor read becomes eligible; the earlier designation still bounds its redemption.
+      policyDeniedActions.clear();
+      const delegated = await redeem(deferring, designation.body.access_token as string);
+      expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+      expect(actionsOf(delegated.body.access_token as string)).toEqual(["payments:invoice.read"]);
+
+      // Control: a designation issued now carries the vendor read, and its redemption delivers it.
+      const later = await designate(deferring, accessToken, SUBAGENT);
+      expect(later.status, JSON.stringify(later.body)).toBe(200);
+      const full = await redeem(deferring, later.body.access_token as string);
+      expect(full.status, JSON.stringify(full.body)).toBe(200);
+      expect(actionsOf(full.body.access_token as string)).toEqual(["payments:invoice.read", "payments:vendor.read"]);
+    } finally {
+      policyPermits.clear();
+      policyDeniedActions.clear();
+    }
   });
 
   it("redemption re-reads the Mission's current authority: a containment after the designation narrows the delegated token, and one leaving nothing refuses invalid_target, counting nothing", async () => {
@@ -1078,6 +1115,7 @@ describe("delegate eligibility with retained provenance at designation and redem
   ];
   const reset = () => {
     policyPermits.clear();
+    policyDeniedActions.clear();
     policyAsked.length = 0;
   };
 
