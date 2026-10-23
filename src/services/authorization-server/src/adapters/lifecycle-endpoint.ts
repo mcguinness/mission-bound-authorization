@@ -63,10 +63,15 @@ export const REASON_MAX_CHARS = 1024;
 /** The request body this endpoint will read at all (bytes). */
 const MAX_BODY_BYTES = 64 * 1024;
 
+/**
+ * A parsed form: `params` holds every parameter sent exactly once; a name
+ * sent more than once is listed in `repeated` and has no value in `params`,
+ * so no occurrence of it is ever used.
+ */
 export type LifecycleFormResult =
-  | { ok: true; params: Record<string, string> }
-  /** `nonce`: the request's well-formed nonce, for the refusal to echo. */
-  | { ok: false; description: string; nonce?: string };
+  | { ok: true; params: Record<string, string>; repeated: readonly string[] }
+  /** A body that cannot be parsed: refused `invalid_request` whatever credential it carries. */
+  | { ok: false; description: string };
 
 /**
  * @spec status#idempotency: a well-formed `nonce`: a string of 1 to 255
@@ -77,11 +82,14 @@ export function wellFormedNonce(value: unknown): string | undefined {
 }
 
 /**
- * @spec status#mission-lifecycle-endpoint ("Operations"): read the body as
- * `application/x-www-form-urlencoded` and nothing else. Every member of this
- * endpoint is single-valued, so a repeated parameter is refused rather than
- * resolved: whichever occurrence the server read, another participant may
- * read the other.
+ * @spec status#mission-status-processing, status#lifecycle-processing step 1
+ * (#1535 Item C, D704, D708): read the body as
+ * `application/x-www-form-urlencoded` and nothing else. A body that cannot be
+ * parsed (another media type, one over the size cap, invalid UTF-8 or a
+ * malformed percent-escape) fails here, before authentication. A repeated
+ * parameter is NOT an unparseable body: the form parses, the name is
+ * reported in `repeated` with no value kept, and the caller decides it in
+ * order (an authentication parameter at authentication, any other after it).
  */
 export async function readLifecycleForm(req: IncomingMessage, contentType: string): Promise<LifecycleFormResult> {
   const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
@@ -99,17 +107,58 @@ export async function readLifecycleForm(req: IncomingMessage, contentType: strin
     return { ok: false, description: "content-type must be application/x-www-form-urlencoded" };
   }
   if (oversize) return { ok: false, description: "request body is too large" };
-  const form = new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
-  const params: Record<string, string> = Object.create(null) as Record<string, string>;
-  for (const [name, value] of form) {
-    if (Object.hasOwn(params, name)) {
-      const nonces = form.getAll("nonce");
-      const nonce = nonces.length === 1 ? wellFormedNonce(nonces[0]) : undefined;
-      return { ok: false, description: `${name} MUST NOT appear more than once`, ...(nonce ? { nonce } : {}) };
-    }
-    params[name] = value;
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks));
+  } catch {
+    return { ok: false, description: "request body is not UTF-8" };
   }
-  return { ok: true, params };
+  const decode = (part: string): string => decodeURIComponent(part.replace(/\+/g, " "));
+  const counts = new Map<string, number>();
+  const values = new Map<string, string>();
+  for (const pair of text.split("&")) {
+    if (pair === "") continue;
+    const at = pair.indexOf("=");
+    let name: string;
+    let value: string;
+    try {
+      name = decode(at === -1 ? pair : pair.slice(0, at));
+      value = at === -1 ? "" : decode(pair.slice(at + 1));
+    } catch {
+      return { ok: false, description: "request body is not a well-formed form" };
+    }
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+    values.set(name, value);
+  }
+  const params: Record<string, string> = Object.create(null) as Record<string, string>;
+  const repeated: string[] = [];
+  for (const [name, count] of counts) {
+    if (count > 1) repeated.push(name);
+    else params[name] = values.get(name) as string;
+  }
+  return { ok: true, params, repeated };
+}
+
+/**
+ * @spec status#mission-status-processing, status#lifecycle-processing step 1
+ * (#1535 Item C, D708): the client authentication parameters this endpoint's
+ * authenticator reads.
+ */
+export const CLIENT_AUTHENTICATION_PARAMETERS: readonly string[] = ["client_assertion", "client_assertion_type", "client_id", "client_secret"];
+
+/**
+ * Step 1 over a parsed form: a client authentication parameter included more
+ * than once fails authentication, and no occurrence of it is used; otherwise
+ * the authenticator decides.
+ */
+export async function authenticateLifecycleForm(
+  deps: LifecycleClientAuthenticationDeps,
+  form: { params: Record<string, string>; repeated: readonly string[] },
+  authorization: string,
+): Promise<LifecycleClientAuthentication> {
+  const repeated = form.repeated.find((name) => CLIENT_AUTHENTICATION_PARAMETERS.includes(name));
+  if (repeated !== undefined) return { ok: false, description: `${repeated} MUST NOT appear more than once` };
+  return authenticateLifecycleClient(deps, form.params, authorization);
 }
 
 export type LifecycleClientAuthentication =
