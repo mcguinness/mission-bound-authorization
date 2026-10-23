@@ -339,7 +339,9 @@ Claims:
   members {{mission-claim}} requires.
 
 `authorization_details`:
-: REQUIRED. The `mission_resource_access` entries {{RFC9396}} the
+: REQUIRED. Authorization details {{RFC9396}} of the
+  `mission_resource_access` type
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) that the
   consuming AS issues against: a subset of the Mission's Effective
   Authority Set, scoped to the resources this AS serves
   ({{minting-rules}}).
@@ -352,19 +354,10 @@ Claims:
   as {{minting-rules}} requires, and the consuming AS verifies it as
   {{grant-validation}} requires.
 
-In the examples in this document, the ERP's operation contract
-identifies the service's own identifier, `https://erp.example.com`,
-as the operation target
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}); actions and
-constraints determine the permitted operations within it. The entries
-carry no `resource_match`, so they are `exact` and cover only
-operations whose target is that identifier.
-
 The following is an example of a decoded grant payload for the
-Mission of the Mission Authority Server's examples
-({{I-D.draft-mcguinness-mission-authority-server}}), whose
-`authority_hash` it carries; its entry is a subset of that
-Mission's invoice-read entry:
+Mission of the examples in
+{{I-D.draft-mcguinness-mission-authority-server}}; its entry is a
+subset of that Mission's invoice-read entry:
 
 ~~~ json
 {
