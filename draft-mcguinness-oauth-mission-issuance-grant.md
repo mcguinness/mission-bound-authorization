@@ -854,9 +854,13 @@ version; an entry relevant to several audiences survives only where
 every one of their responses admits it. If it still cannot obtain
 responses at one version within
 the bound, the state source has failed ({{transient-failure}}). A
-not-found response for an
-audience the grant names means the Mission is not established
-`active`, and the AS refuses with `invalid_grant`.
+not-found response for an audience the grant's entries are relevant
+to means the Mission is not established `active`: the AS refuses
+with `invalid_grant` and carries no `mission_error` value, since a
+not-found response establishes only that the AS cannot proceed, not
+that the Mission terminated
+({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Failed
+Status Checks").
 
 Lifecycle state alone, such as an `active` state or a Status List
 VALID bit, is not enough from any source, and a source that reports
@@ -986,15 +990,17 @@ A client tells four cases apart:
   cured by a fresh one ({{minting}}). The other grant validation failures (an
   untrusted issuer, a wrong audience, an unmappable subject or
   authority) are configuration faults that a fresh grant does not
-  cure.
+  cure, and so is a refusal after a Status not-found response.
 - **Wait.** A `suspended` Mission refuses until a `resume` returns it
   to `active` ({{I-D.draft-mcguinness-oauth-mission-status}}); a fresh
   grant then cures the refusal.
-- **Stop.** A `terminated` Mission refuses for good: neither a retry
-  nor a fresh grant cures the refusal.
+- **Stop.** A `terminated` Mission, or one whose `expires_at` has
+  passed, refuses for good: neither a retry nor a fresh grant cures
+  the refusal.
 
 The AS SHOULD include the issuance profile's `mission_error` member
-when it refuses because the Mission is not `active`, so the client can
+when Mission state reports that the Mission is not `active`, so the
+client can
 tell Wait from Stop: `suspended` for Wait, and for Stop `revoked`,
 `expired`, or `superseded` ({{I-D.draft-mcguinness-oauth-mission}},
 Section "Issuance Gating") or `completed`

@@ -38405,6 +38405,28 @@
    "notes": "Partial on the #963 precedent of citing native-AS projection tests for these rows (D685 Q5): the cited test is the error-mapping witness of the OAuth binding for an exceeding refresh request after containment. No consuming-AS redemption path exists in src."
   },
   {
+   "id": "issuance-grant.mission-state-source.not-found-no-mission-error",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-state-source",
+   "text": "the AS refuses with `invalid_grant` and carries no `mission_error` value",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a redemption or refresh refused because Mission Status answered not-found for an audience the grant names gets invalid_grant with no mission_error member"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q8); todo until that path exists."
+  },
+  {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "grant-validation",
