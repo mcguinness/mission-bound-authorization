@@ -39,6 +39,10 @@ function failure(operand: string, parsed: ParseResult): string | undefined {
  * (vectors README, Checks, `subset`). Input this consumer cannot compare is
  * refused, never compared as absent or as narrowing:
  *
+ * - an operand that is not a mission_resource_access entry, whose type is
+ *   absent, not a string or another type, is malformed input, even when the
+ *   two operands are identical (vectors README, Checks, `subset`;
+ *   resource-access#resource-access-type);
  * - input outside the subset (a prefix entry, an action family, an entry
  *   member outside the subset, a constraints key outside the nine) is
  *   unsupported input: "an unsupported constraint is unsupported input, so
@@ -56,8 +60,8 @@ function failure(operand: string, parsed: ParseResult): string | undefined {
  * actions, or different currencies).
  */
 export function subsetCheck(candidate: unknown, reference: unknown): SubsetResult {
-  const a = parseEntry(candidate, false);
-  const b = parseEntry(reference, false);
+  const a = parseEntry(candidate);
+  const b = parseEntry(reference);
   const failures = [failure("candidate", a), failure("reference", b)].filter(
     (f): f is string => f !== undefined,
   );

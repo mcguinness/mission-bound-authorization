@@ -27,7 +27,6 @@ import {
   type OriginProjection,
   validateAuthorityProposal,
   validateMissionIntent,
-  validateMissionResourceAccessSchema,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 import { EXECUTABLE_CHECKS, IMPLEMENTED, knownCapability } from "./resource-access-capabilities.helper.js";
@@ -75,18 +74,34 @@ const files = readdirSync(DIR)
 
 const intent = { target_resources: ["https://api.example/orders", "https://erp.example.com"] } as unknown as MissionIntent;
 
+/**
+ * The authorization server's proposal intake of one operand, the validation the
+ * `entry-validation` check runs: the advertised-type check first, then the
+ * published schema and the type's entry rules. The violation, or undefined when
+ * intake admits the operand, which is what makes it an AuthorityEntry.
+ */
+function intakeViolation(operand: unknown): string | undefined {
+  try {
+    validateAuthorityProposal(JSON.stringify([operand]), [String((operand as { resource?: unknown } | null)?.resource)]);
+    return undefined;
+  } catch (e) {
+    if (e instanceof IntentError) return e.message;
+    throw e;
+  }
+}
+
 /** Runs one case against this implementation; called only when every required capability is implemented. */
 function run(c: Case): void {
   const input = c.input;
   switch (c.check) {
     case "subset": {
-      // #1596 (D727): a three-way result. Both operands are validated with the
-      // intake's supported-input checks before any comparison, each on its own,
-      // so an obvious mismatch never conceals unsupported or malformed input in
-      // the other: either failing is `refuse`. Only then does the boolean subset
+      // #1596 (D727): a three-way result. Both operands pass the authorization
+      // server's proposal intake before any comparison, each on its own, so an
+      // obvious mismatch never conceals unsupported or malformed input in the
+      // other: either failing is `refuse`. Only then does the boolean subset
       // relation, which stays fail-closed, decide `subset` or `not-subset`.
-      const candidateViolation = validateMissionResourceAccessSchema(input.candidate);
-      const referenceViolation = validateMissionResourceAccessSchema(input.reference);
+      const candidateViolation = intakeViolation(input.candidate);
+      const referenceViolation = intakeViolation(input.reference);
       const outcome =
         candidateViolation !== undefined || referenceViolation !== undefined
           ? "refuse"

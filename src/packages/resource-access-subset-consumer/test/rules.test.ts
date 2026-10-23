@@ -11,6 +11,7 @@ import {
   type ConsumerConfig,
   compareDecimal,
   compareInstant,
+  ENTRY_TYPE,
   entryValidationCheck,
   isCurrencyCode,
   isValidRecipientDomain,
@@ -392,6 +393,24 @@ describe("unsupported input is refused, never dropped", () => {
     expect(validate({ resource: RESOURCE, actions: ["a"] })).toBe("refuse");
     expect(validate({ ...base, type: "other_type" })).toBe("refuse");
   });
+
+  it("refuses an entry whose type is absent, not a string or another type at intake", () => {
+    // resource-access#resource-access-type type: "REQUIRED. A string.
+    // mission_resource_access."
+    const { type: _type, ...untyped } = base;
+    const entries: unknown[] = [
+      untyped,
+      ...[42, null, true, [ENTRY_TYPE], { name: ENTRY_TYPE }].map((type) => ({ ...base, type })),
+      ...["other_type", "Mission_Resource_Access", ""].map((type) => ({ ...base, type })),
+    ];
+    for (const entry of entries) {
+      const result = entryValidationCheck(entry, config);
+      expect(result.outcome, JSON.stringify(entry)).toBe("refuse");
+      expect(result.error, JSON.stringify(entry)).toBe("invalid_authorization_details");
+      expect(result.reason, JSON.stringify(entry)).toMatch(/^type /);
+    }
+    expect(validate({ ...base, type: ENTRY_TYPE })).toBe("valid");
+  });
 });
 
 describe("the subset check's three outcomes (vectors README, Checks, subset; D727)", () => {
@@ -416,8 +435,24 @@ describe("the subset check's three outcomes (vectors README, Checks, subset; D72
     "deployment-defined key": (e) => withConstraints(e, { vendors: ["v1"] }),
     "Discharge key": (e) => withConstraints(e, { terminal_when: "done" }),
   };
+  // An operand that is not a mission_resource_access entry: "one whose type
+  // is absent or names another type is malformed input" (vectors README,
+  // Checks, subset); type is "REQUIRED. A string. mission_resource_access."
+  // (resource-access#resource-access-type).
+  const badType: Record<string, (e: Entry) => Entry> = {
+    "absent type": ({ type: _type, ...rest }) => rest,
+    "numeric type": (e) => ({ ...e, type: 42 }),
+    "null type": (e) => ({ ...e, type: null }),
+    "boolean type": (e) => ({ ...e, type: true }),
+    "array type": (e) => ({ ...e, type: [ENTRY_TYPE] }),
+    "object type": (e) => ({ ...e, type: { name: ENTRY_TYPE } }),
+    "another type": (e) => ({ ...e, type: "other_type" }),
+    "case-variant type": (e) => ({ ...e, type: "Mission_Resource_Access" }),
+    "empty type": (e) => ({ ...e, type: "" }),
+  };
   // Input the draft makes invalid, which no comparison may parse.
   const invalid: Record<string, (e: Entry) => Entry> = {
+    ...badType,
     "malformed amount": (e) =>
       withConstraints(e, { max_amount: { amount: "1,000.00", currency: "USD" } }),
     "malformed currency": (e) =>
@@ -491,6 +526,46 @@ describe("the subset check's three outcomes (vectors README, Checks, subset; D72
   it("never lets an obvious mismatch conceal input it cannot compare in either operand", () => {
     for (const [mismatch, [a, b]] of Object.entries(mismatches)) {
       for (const [name, taint] of Object.entries(uncomparable)) {
+        expect(subsetCheck(taint(a), b).outcome, `${mismatch}, candidate: ${name}`).toBe("refuse");
+        expect(subsetCheck(a, taint(b)).outcome, `${mismatch}, reference: ${name}`).toBe("refuse");
+        expect(subsetCheck(taint(a), taint(b)).outcome, `${mismatch}, both: ${name}`).toBe(
+          "refuse",
+        );
+      }
+    }
+  });
+
+  it("refuses an operand whose type is absent, not a string or another type", () => {
+    const rich = withConstraints(
+      { ...plain, resource_contract: { ...reference } },
+      { ...usd("100"), tenant: "acme" },
+    );
+    expect(subsetCheck(rich, rich).outcome).toBe("subset");
+    for (const [name, taint] of Object.entries(badType)) {
+      for (const e of [plain, rich]) {
+        const candidate = subsetCheck(taint(e), e);
+        expect(candidate.outcome, `candidate: ${name}`).toBe("refuse");
+        expect(candidate.reason, `candidate: ${name}`).toMatch(
+          /^not comparable: candidate: invalid input: type /,
+        );
+        const ref = subsetCheck(e, taint(e));
+        expect(ref.outcome, `reference: ${name}`).toBe("refuse");
+        expect(ref.reason, `reference: ${name}`).toMatch(
+          /^not comparable: reference: invalid input: type /,
+        );
+
+        // Byte-identical operands are not certified as a subset.
+        const [a, b] = [taint(e), taint(e)];
+        expect(JSON.stringify(a), `both: ${name}`).toBe(JSON.stringify(b));
+        const both = subsetCheck(a, b);
+        expect(both.outcome, `both: ${name}`).toBe("refuse");
+        expect(both.reason, `both: ${name}`).toMatch(
+          /candidate: invalid input: type .*; reference: invalid input: type /,
+        );
+      }
+      // An obvious mismatch never conceals the operand's type.
+      for (const [mismatch, [a, b]] of Object.entries(mismatches)) {
+        expect(subsetCheck(a, b).outcome, mismatch).toBe("not-subset");
         expect(subsetCheck(taint(a), b).outcome, `${mismatch}, candidate: ${name}`).toBe("refuse");
         expect(subsetCheck(a, taint(b)).outcome, `${mismatch}, reference: ${name}`).toBe("refuse");
         expect(subsetCheck(taint(a), taint(b)).outcome, `${mismatch}, both: ${name}`).toBe(

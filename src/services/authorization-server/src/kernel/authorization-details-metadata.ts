@@ -389,6 +389,13 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
       ) {
         return "constraints.max_amount must be an object with string amount and currency";
       }
+      // @spec resource-access#initial-common-constraints, mission#submission-processing:
+      // the schema's `additionalProperties: false` for the amount object, so a
+      // member beside `amount` and `currency` is refused, never ignored.
+      const extra = Object.keys(c.max_amount).find((k) => k !== "amount" && k !== "currency");
+      if (extra !== undefined) {
+        return `constraints.max_amount carries ${JSON.stringify(extra)}, which is not a member of the amount object`;
+      }
       // @spec resource-access#decimal-values: "the authorization server MUST
       // refuse an authority proposal carrying one at submission", here rather
       // than at derivation, and whatever the ceiling carries.
