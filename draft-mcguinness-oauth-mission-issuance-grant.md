@@ -305,12 +305,8 @@ authentication, token issuance bounded by the grant, and refresh.
 A Mission Issuance Grant is a JWT {{RFC7519}} signed as a JWS
 {{RFC7515}} by the Mission Issuer. Its JOSE header MUST carry the
 `typ` header parameter with the value `mission-issuance-grant+jwt`
-({{iana}}), `alg`, and a `kid` that
-resolves in the Mission Issuer's published key material. A JWT with
-any other `typ`, a Mission Mandate
-({{I-D.draft-mcguinness-mission-mandate}}) in particular, is not a
-Mission Issuance Grant and is refused at redemption
-({{grant-validation}}).
+({{iana}}) and a `kid` that resolves in the Mission Issuer's
+published key material.
 
 Claims:
 
