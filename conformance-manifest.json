@@ -59248,6 +59248,180 @@
    "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that serves the cache before the checks. Also proved by the defect that drops the re-read before signing (#1454 review)."
   },
   {
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "level": "cross-component",
+   "id": "mas.join-assertion.introspect-where-offered",
+   "role": "Controller",
+   "strength": "stated",
+   "assertion": "output-bound",
+   "text": "Where the AS offers token introspection {{RFC7662}}, the MAS introspects the token under introspection credentials it holds there.",
+   "observation": {
+    "normative": "where the estate offers introspection, the MAS establishes the acting token from the introspection answer under its own introspection credentials, JWT or opaque, not from the token's own claims",
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only an error of exactly unsupported_token_type permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, 5xx, another error code, a malformed answer) fails closed as unavailable with no local fallback"
+   },
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > introspects a JWT the estate can introspect, and takes the token from the answer, not from its own claims",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > establishes an opaque token by introspection only: active is used, unsupported_token_type and inactive refuse, an estate that cannot answer is unavailable",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 review (D681). Proved by establishing a JWT from its own claims instead of the introspection answer (the introspects-a-JWT test fails) and by skipping introspection for a token the estate can introspect (the live estate path and the opaque test fail)."
+  },
+  {
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "level": "unit",
+   "id": "mas.join-assertion.inactive-fails",
+   "role": "Controller",
+   "strength": "stated",
+   "assertion": "refusal",
+   "text": "A token the AS reports inactive fails the request.",
+   "observation": {
+    "normative": "an acting token the estate's introspection reports inactive yields no assertion, even a JWT that would validate locally",
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only an error of exactly unsupported_token_type permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, 5xx, another error code, a malformed answer) fails closed as unavailable with no local fallback"
+   },
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > refuses a JWT the estate reports inactive, though it would validate locally",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > establishes an opaque token by introspection only: active is used, unsupported_token_type and inactive refuse, an estate that cannot answer is unavailable",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 review (D681): the case the owner could not demonstrate against the live estate, witnessed with a stub estate that introspects JWTs. Proved by falling back to local validation after active: false (the inactive test fails)."
+  },
+  {
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "level": "cross-component",
+   "id": "mas.join-assertion.local-jwt-validation",
+   "role": "Controller",
+   "strength": "MAY",
+   "assertion": "output-bound",
+   "text": "Where the AS offers no third-party introspection but issues JWT access tokens, the MAS MAY instead validate the token locally under the semantics of {{RFC9068}}, resolving the AS's signing keys from its published metadata and taking the subject and client from the validated claims.",
+   "observation": {
+    "normative": "where the estate offers no introspection for a JWT, the MAS validates it locally under the estate's published keys and takes the subject and client from the validated claims",
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only an error of exactly unsupported_token_type permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, 5xx, another error code, a malformed answer) fails closed as unavailable with no local fallback; the live estate answers unsupported_token_type for its JWTs, so the separated pilot takes this branch"
+   },
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > validates a JWT locally under the estate's published keys only on unsupported_token_type, and refuses one that fails that validation",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 review (D681): unsupported_token_type for that token type is read as the estate offering no introspection for it. Proved by refusing on unsupported_token_type (the local-validation and live pilot tests fail) and by validating locally on another error code (the unavailable test fails)."
+  },
+  {
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "level": "unit",
+   "id": "mas.join-assertion.local-validation-failure",
+   "role": "Controller",
+   "strength": "stated",
+   "assertion": "refusal",
+   "text": "A token that fails signature, `exp`, or `aud` validation fails the request.",
+   "observation": {
+    "normative": "a locally validated JWT that fails signature, exp or aud validation yields no assertion",
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only an error of exactly unsupported_token_type permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, 5xx, another error code, a malformed answer) fails closed as unavailable with no local fallback"
+   },
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > validates a JWT locally under the estate's published keys only on unsupported_token_type, and refuses one that fails that validation",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 review (D681): the signature failure is witnessed (a forged JWT is refused); the exp and aud failures are not asserted on this path, so the row stays partial."
+  },
+  {
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "level": "unit",
+   "id": "mas.join-assertion.opaque-unresolvable-fails",
+   "role": "Controller",
+   "strength": "stated",
+   "assertion": "refusal",
+   "text": "An opaque token that no introspection surface will resolve cannot be verified, and the request fails.",
+   "observation": {
+    "normative": "an opaque acting token the estate's introspection will not resolve yields no assertion; it is never validated locally",
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only an error of exactly unsupported_token_type permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, 5xx, another error code, a malformed answer) fails closed as unavailable with no local fallback"
+   },
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-deployment.test.ts",
+     "name": "the pilot MAS introspects every acting token first (@spec authority-server#join-assertion-request, #1454 review) > establishes an opaque token by introspection only: active is used, unsupported_token_type and inactive refuse, an estate that cannot answer is unavailable",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 review (D681). Proved by validating an opaque token locally on unsupported_token_type (the opaque test fails)."
+  },
+  {
    "id": "mas.submission.unsupported-media-type",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-submission",
