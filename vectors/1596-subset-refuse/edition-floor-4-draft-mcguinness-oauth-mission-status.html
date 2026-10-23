@@ -2049,11 +2049,17 @@ it at the first step that fails:<a href="#section-3.9-1" class="pilcrow">¶</a><
 <li id="section-3.9-2.1">
             <p id="section-3.9-2.1.1">Authenticate the caller (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>),
 parsing the request body only as far as authentication needs. A
-failure is answered as <a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a> assigns.<a href="#section-3.9-2.1.1" class="pilcrow">¶</a></p>
+body that cannot be parsed is refused <code>invalid_request</code>, whatever
+credential the request presents; a client authentication parameter
+included more than once fails authentication, and no occurrence of
+it is used. Every authentication failure is answered as
+<a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a> assigns.<a href="#section-3.9-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.9-2.2">
             <p id="section-3.9-2.2.1">Validate the request syntax (<a href="#mission-status-request" class="auto internal xref">Section 3.1</a>). A
-malformed request is refused <code>invalid_request</code>.<a href="#section-3.9-2.2.1" class="pilcrow">¶</a></p>
+malformed request is refused <code>invalid_request</code>; a request that
+includes a parameter more than once is malformed, as at the token
+endpoint (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-3.2" class="relref">Section 3.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>).<a href="#section-3.9-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.9-2.3">
             <p id="section-3.9-2.3.1">Authorize the request: the caller's read authorization, the Mission
@@ -2963,12 +2969,18 @@ the first step that fails:<a href="#section-5.7-1" class="pilcrow">¶</a></p>
 <li id="section-5.7-2.1">
             <p id="section-5.7-2.1.1">Authenticate the caller (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>),
 parsing the request body only as far as authentication needs. A
-failure is answered as <a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a> assigns.<a href="#section-5.7-2.1.1" class="pilcrow">¶</a></p>
+body that cannot be parsed is refused <code>invalid_request</code>, whatever
+credential the request presents; a client authentication parameter
+included more than once fails authentication, and no occurrence of
+it is used. Every authentication failure is answered as
+<a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a> assigns.<a href="#section-5.7-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-5.7-2.2">
             <p id="section-5.7-2.2.1">Validate the request syntax and the operation
 (<a href="#lifecycle-operations" class="auto internal xref">Section 5.1</a>). A malformed request, or an <code>operation</code>
-the AS does not serve, is refused <code>invalid_request</code>.<a href="#section-5.7-2.2.1" class="pilcrow">¶</a></p>
+the AS does not serve, is refused <code>invalid_request</code>; a request that
+includes a parameter more than once is malformed, as at the token
+endpoint (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-3.2" class="relref">Section 3.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>).<a href="#section-5.7-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-5.7-2.3">
             <p id="section-5.7-2.3.1">Authorize the request. For a base operation this is the lifecycle
