@@ -2210,6 +2210,33 @@ describe("the expansion deferral's approval page (@spec expansion#completion-mod
     expect(get(polled.body.mission_id as string).approval_basis.consent_principal).toEqual({ iss: ISSUER, sub: "bob" });
   });
 
+  it("the page's own form decides with its hidden revision and CSRF secret: a stale form goes back to the page, a forged secret is refused", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    const code = await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]);
+    const headers = login(code);
+    const first = await page(code, headers);
+    const second = await page(code, headers);
+    const field = (html: string, name: string) =>
+      (html.match(new RegExp(`<input type="hidden" name="${name}" value="([^"]+)">`)) as RegExpMatchArray)[1] as string;
+    const post = (fields: Record<string, string>) =>
+      fetch(`${ISSUER}/expansions/deferrals/${code}/decide`, {
+        method: "POST",
+        redirect: "manual",
+        headers: { cookie: headers.cookie as string, "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(fields).toString(),
+      });
+    const stale = await post({ decision: "approve", render_revision: field(first.html, "render_revision"), csrf_token: field(first.html, "csrf_token") });
+    expect(stale.status).toBe(303);
+    expect(stale.headers.get("location")).toBe(`/expansions/deferrals/${code}`);
+    const forged = await post({ decision: "approve", render_revision: field(second.html, "render_revision"), csrf_token: "forged" });
+    expect(forged.status).toBe(401);
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+    const approved = await post({ decision: "approve", render_revision: field(second.html, "render_revision"), csrf_token: field(second.html, "csrf_token") });
+    expect(approved.status).toBe(200);
+    expect(await approved.text()).toContain("Approved. The client completes the expansion on its next poll.");
+    expect((await poll(code)).status).toBe(200);
+  });
+
   it("shows the deployment's out_of_ceiling refusals since the latest ceiling consent", async () => {
     const pred = await issueMission(READ, ceilingOf("drawdown-std", READ_CEILING), { issuer: REFUSE_ISSUER, client: apRefuse });
     const refused = await tokenRequest(expansionParams(pred.accessToken, crypto.randomUUID(), BEYOND), apRefuse, REFUSE_ISSUER);

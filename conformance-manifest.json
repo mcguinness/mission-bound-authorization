@@ -44663,7 +44663,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "Not implemented: the reference has no ceiling review approval (#1017). D572: every re-consent is a review; the first review covers history since the initial ceiling consent. Proved by starting the record at the initial consent, by not recording refusals and by not recording fallback reasons. #1480 review: partial until an approval surface renders the disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
+   "notes": "A re-consent on the AS's expansion deferral page (#1558) is the review. D572: every re-consent is a review; the first review covers history since the initial ceiling consent. Proved by starting the record at the initial consent, by not recording refusals and by not recording fallback reasons. #1480 review: partial until an approval surface renders the disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.ceiling-review.review-is-reconsent",
@@ -63810,7 +63810,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). The explicit authorization of restored authority is not implemented. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "expansion.reconciliation.discharge-between-adjudication-and-activation",
