@@ -13,8 +13,8 @@
  *   assertion's `aud` the MAS issuer identifier as its sole value, as
  *   §join-assertion requires.
  *   The request body is JSON, so `client_assertion_type` and
- *   `client_assertion` travel as top-level JSON members; the draft names no
- *   carriage for a JSON body (a reported gap).
+ *   `client_assertion` travel as top-level JSON members, the request-level
+ *   members §mission-submission defines for a JSON body (#1581).
  * - Enrollment roles (#1591, D708). Each enrollee (`joinEnrollment`, keyed
  *   by the authenticated caller) holds the PEP role, the PDP role, or both,
  *   and its enforcement scopes. Visibility takes either role; the `audience`
