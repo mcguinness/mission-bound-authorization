@@ -100,6 +100,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-mandate:
+    title: "Mission Mandate"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
@@ -1066,6 +1074,99 @@ reaches a different outcome, the evaluation is not re-checked.
 A re-check does not re-authenticate an assertion: the record carries an
 assertion's authentication context ({{assertion-authority}}), not the
 authentication itself.
+
+# Portable Approval-Binding Check {#portable-binding}
+
+A Relying Auditor that holds a record and an authenticated Mission
+reference, but not the Mission Record or the evaluation's inputs, can
+run the portable approval-binding check. It establishes that the
+record and the reference agree on the approval event and the Mission
+anchors. It is a separate procedure from verifying the record against
+the Mission Record ({{envelope}}) and from re-checking the evaluation
+({{re-check}}), and replaces neither; a Relying Auditor MUST NOT report
+its success as either.
+
+A Mission reference is an artifact, authenticated under its own rules,
+that discloses the Mission's `approval_event_id`, `issuer`,
+`intent_hash`, and `authority_hash`. A Mandate that carries
+`approval_event_id` is one
+({{I-D.draft-mcguinness-mission-mandate}}).
+
+A verifier running the check MUST complete these steps:
+
+1. Authenticate both artifacts. For the record, complete steps 1 to 4
+   of {{envelope}}; for the reference, apply its own artifact rules.
+   The verifier MUST establish trust in the key material of the
+   expected Mission Issuer for both: an issuer the artifact asserts
+   for itself, with a valid signature, is not thereby trusted.
+2. Require the event and the anchors. The authenticated reference MUST
+   disclose `approval_event_id`, the Mission `issuer`, `intent_hash`,
+   and `authority_hash`, and each MUST equal the record's
+   `approval_event_id` or the member of the same name in the record's
+   `mission` binding. The reference's own consistency rules still
+   apply; a Mandate's `iss` equals its `mission.issuer`. Matching
+   `intent_hash` and `authority_hash` never suffice without a matching
+   approval-event identifier, since two Missions can share both.
+3. Compare the Approval Context Commitment. When both artifacts carry
+   `approval_context_commitment`, the two values MUST be equal. When
+   one or neither carries it, the check can succeed, and its result
+   MUST state that commitment agreement was not established. Equality
+   establishes agreement on the commitment value only; recomputing it
+   from the Mission's creation facts is a separate check
+   ({{approval-context-computation}}).
+
+The check has three outcomes:
+
+- Success: every step completes.
+- Failure: an authentication failure, a malformed required value, or a
+  mismatch in step 2 or step 3.
+- Insufficient evidence: an absent artifact, or a value step 2
+  requires that the reference does not disclose.
+
+A verifier MUST NOT report a successful portable binding on failure or
+on insufficient evidence.
+
+A success establishes only this: the trusted Mission Issuer
+authenticated this record, and its approval-event identifier and
+Mission anchors match those the supplied Mission reference
+authenticates. It does not establish:
+
+- that the evaluation was correct, or that its assertions are
+  independently true ({{re-check}});
+- that the retained Mission Record matches either artifact
+  ({{envelope}});
+- that an individual action under the Mission was approved, was within
+  its authority, or was executed;
+- that the Mission is still active;
+- that either artifact existed at a claimed earlier time, or that the
+  issuer showed every Relying Auditor a consistent view; or
+- that the presented record is the one another party retained
+  earlier: pinning exact record bytes in a portable artifact is a
+  separate mechanism.
+
+## Example {#portable-binding-example}
+
+A company approves a Mission to purchase office supplies within set
+limits. Approval event `E42` creates Mission `M17`. The Mission Issuer
+signs record `G42`, recording the governance assertions and the
+approval outcome, and later mints Mandate `D17`, which carries `M17`,
+`E42`, and the same `intent_hash` and `authority_hash`.
+
+The purchasing agent then submits purchase order `PO-9001`, and the
+company's ERP records its own business decision for that order as
+`BD-9001`, naming the order, the policy version it applied, the
+decision, and its time. `BD-9001` is an illustrative deployment
+record; this document defines no format for it.
+
+An auditor receives `G42` and `D17` through an authorized evidence
+export ({{privacy-considerations}}), without the Mission Record or the
+evaluation's inputs. The check connects `G42` to the approval event
+`D17` identifies. It does not show that `PO-9001` was individually
+approved, within authority, or executed: relating `BD-9001` to the
+order takes separate action evidence. A Mission scoped to approving
+one particular order could itself carry that business decision, but
+the auditor has to establish that scope, for example from the
+Authority Set; an approval-event match never implies it.
 
 # Governed Policy Approval {#governed-policy}
 
