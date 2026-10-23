@@ -71,6 +71,16 @@ export class ApprovalSessionStore {
    * changes nothing and authorizes nothing; the decision re-resolves the
    * session with its CSRF secret.
    */
+  /**
+   * The principal of the session this user agent holds for `uid`, for a
+   * read-only rendering that shows itself only to an eligible Approver
+   * (#1558). No CSRF, as for {@link subjectFor}: the decision re-resolves the
+   * session with its CSRF secret.
+   */
+  principalFor(cookie: string, uid: string): ApprovalPrincipal | undefined {
+    return this.sessionFor(cookie, uid)?.principal;
+  }
+
   subjectFor(cookie: string, uid: string): string | undefined {
     const session = this.sessionFor(cookie, uid);
     return session ? (session.principal.subject ?? session.principal.sub) : undefined;

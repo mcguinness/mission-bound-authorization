@@ -62,7 +62,7 @@ import {
 } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
-import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, renderedRevision } from "./approval-fixture.js";
+import { browserApprovalHeaders, FIXTURE_BROWSER_LOGIN, FIXTURE_LOGIN_TIME, floorApprovalHeaders, renderedRevision } from "./approval-fixture.js";
 
 const PORT = 14858;
 const ISSUER = `http://localhost:${PORT}`;
@@ -951,5 +951,121 @@ describe("the floors and the human-path disclosure (@spec discovery#lying-resour
     expect(first).toMatch(/^enc_/);
     expect(second).toMatch(/^enc_/);
     expect(second).not.toBe(first);
+  });
+});
+
+/**
+ * @spec discovery#adjudication, discovery#lying-resource,
+ * discovery#injection-discovery, expansion#completion-modes (#1558): the
+ * encounter's approval page. The authenticated Approver sees the Encountered
+ * Resource object with its pinning, the declaration as the resource's claim
+ * and not as fact, the session's taint status, the floors and the
+ * encounter_id; their decision approves that deferral, whose successor carries
+ * the encounter_id and the declaration digest.
+ */
+describe("the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558)", () => {
+  const BOB = { sub: "bob", acr: "mfa", auth_time: FIXTURE_LOGIN_TIME, subject: "alice" };
+  beforeEach(() => {
+    harness.report = { tainted: false, granularity: "session", reported_at: secondsAgo(5) };
+    harness.fail = false;
+    harness.calls.length = 0;
+    harness.during = undefined;
+    connections.clear();
+    authorizedIssuers.clear();
+    declarations.clear();
+  });
+  const unescape = (s: string) =>
+    s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  const one = (html: string, pattern: RegExp): string => unescape((html.match(pattern) as RegExpMatchArray)[1] as string);
+  /** An encounter seeking `action` at ENCOUNTERED from a fresh Mission, and its page as Bob sees it. */
+  async function encounterPage(action: string) {
+    const root = await issueMission();
+    const res = await tokenRequest(expansion(root.accessToken, [entry(ENCOUNTERED, [action])]));
+    const body = (await res.json()) as { error?: string; deferral_code?: string };
+    expect(body.error, JSON.stringify(body)).toBe("authorization_pending");
+    const code = body.deferral_code as string;
+    const headers = browserApprovalHeaders(approvalSessions, code, BOB, "");
+    const page = await fetch(`${ISSUER}/expansions/deferrals/${code}`, { headers: { cookie: headers.cookie as string } });
+    const html = await page.text();
+    expect(page.status, html).toBe(200);
+    const facts = as.expansionDeferrals.disclosure(code)?.encounter as EncounterFacts;
+    return { code, headers, html, revision: page.headers.get("x-approval-render-revision"), facts };
+  }
+
+  it("shows the Encountered Resource object pinned, the declaration as the resource's claim, the taint status, the floors and the encounter_id; the decision approves that deferral, whose successor carries them", async () => {
+    connections.set(ORIGIN, { tls_authenticated: true, metadata: METADATA });
+    authorizedIssuers.add(`${ORIGIN} ${VENDOR_AS}`);
+    const declaration = declarationOf(["payments:vendor.read", "payments:invoice.list"]);
+    declarations.set(ORIGIN, declaration);
+    // An external-communication action: the floor the page names.
+    const { code, headers, html, revision, facts } = await encounterPage("payments:vendor.read");
+    expect(html).toContain("(<code>encounter</code>)");
+    expect(html).toContain(`<section class="encounter" data-encounter-id="${facts.encounter_id}">`);
+    expect(JSON.parse(one(html, /<pre class="encountered-resource">([\s\S]*?)<\/pre>/))).toEqual({
+      origin: ORIGIN,
+      resource_metadata_digest: catalogDigest(METADATA),
+      issuer: VENDOR_AS,
+    });
+    expect(one(html, /<p class="encounter-pinning">([\s\S]*?)<\/p>/)).toBe("Its identity is pinned from the Mission Issuer's own connection.");
+    expect(html).toContain("<h3>Declaration (the resource's claim, not verified fact)</h3>");
+    expect(one(html, /<p class="declaration-claim">([\s\S]*?)<\/p>/)).toBe(
+      `Claimed by the resource and not verified: digest <code>${catalogDigest(declaration)}</code>; claimed operations: <code>payments:vendor.read</code>, <code>payments:invoice.list</code>`,
+    );
+    expect(html).toContain('<p class="taint-status" data-taint="no_untrusted_content_reported">The harness reported that the session had ingested no untrusted content.</p>');
+    expect(one(html, /<p class="encounter-floors">([\s\S]*?)<\/p>/)).toBe("Floors this encounter meets: <code>external_communication</code>");
+    expect(one(html, /<p class="encounter-id">([\s\S]*?)<\/p>/)).toBe(`Encounter <code>${facts.encounter_id}</code>`);
+    const decided = await fetch(`${ISSUER}/expansions/deferrals/${code}/decide`, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ decision: "approve", render_revision: revision }),
+    });
+    expect(decided.status, await decided.clone().text()).toBe(200);
+    const polled = await tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code });
+    const body = (await polled.json()) as { mission_id: string };
+    expect(polled.status, JSON.stringify(body)).toBe(200);
+    const successor = as.kernel.get(body.mission_id) as MissionRecord;
+    expect(successor.encounter_id).toBe(facts.encounter_id);
+    expect(successor.resource_declaration_digest).toBe(catalogDigest(declaration));
+    expect(successor.approval_event_id).toBe(`apev_${code}`);
+  });
+
+  it("under taint the page states that the session had ingested untrusted content; with no trustworthy report, that its taint state is unknown", async () => {
+    harness.report = { tainted: true, granularity: "session", reported_at: secondsAgo(5) };
+    const tainted = await encounterPage("payments:invoice.read");
+    expect(tainted.html).toContain('<p class="taint-status" data-taint="untrusted_content_ingested">The session had ingested untrusted content.</p>');
+    expect(one(tainted.html, /<p class="encounter-floors">([\s\S]*?)<\/p>/)).toContain("<code>tainted</code>");
+    harness.report = undefined;
+    const unknown = await encounterPage("payments:invoice.read");
+    expect(one(unknown.html, /<p class="taint-status" data-taint="taint_state_unknown">([\s\S]*?)<\/p>/)).toBe(
+      "The session's taint state is unknown, so it is treated as tainted.",
+    );
+  });
+
+  it("a high-consequence encounter's page presents the declaration as the resource's claim, not as fact", async () => {
+    connections.set(ORIGIN, { tls_authenticated: true, metadata: METADATA });
+    authorizedIssuers.add(`${ORIGIN} ${VENDOR_AS}`);
+    const declaration = declarationOf(["payments:invoice.list"]);
+    declarations.set(ORIGIN, declaration);
+    const previous = PROGRESSIVE.actionClasses;
+    PROGRESSIVE.actionClasses = { ...previous, "payments:invoice.list": "irreversible_action" } as ProgressiveDrawdownOptions["actionClasses"];
+    try {
+      const { html } = await encounterPage("payments:invoice.list");
+      expect(one(html, /<p class="encounter-floors">([\s\S]*?)<\/p>/)).toContain("<code>irreversible_action</code>");
+      expect(html).toContain("<h3>Declaration (the resource's claim, not verified fact)</h3>");
+      expect(one(html, /<p class="declaration-claim">([\s\S]*?)<\/p>/)).toBe(
+        `Claimed by the resource and not verified: digest <code>${catalogDigest(declaration)}</code>; claimed operations: <code>payments:invoice.list</code>`,
+      );
+    } finally {
+      PROGRESSIVE.actionClasses = previous;
+    }
+  });
+
+  it("an encounter whose identity could not be pinned, with no declaration, is shown as such", async () => {
+    const { html, facts } = await encounterPage("payments:invoice.read");
+    expect(facts.pinned).toBe(false);
+    expect(one(html, /<p class="encounter-pinning">([\s\S]*?)<\/p>/)).toBe(
+      `Its identity is not pinned (<code>${facts.pin_failure}</code>).`,
+    );
+    expect(html).toContain('<p class="declaration-claim">The resource published no declaration.</p>');
   });
 });

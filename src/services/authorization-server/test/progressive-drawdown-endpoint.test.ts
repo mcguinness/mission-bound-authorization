@@ -22,7 +22,15 @@
  * is a browser Approver's `mfa` login inside the floor's age bound (#1255).
  */
 
-import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, renderedRevision } from "./approval-fixture.js";
+import {
+  browserApprovalHeaders,
+  FIXTURE_BROWSER_LOGIN,
+  FIXTURE_LOGIN_TIME,
+  floorApprovalHeaders,
+  renderedRevision,
+  TEST_APPROVAL_PRINCIPALS,
+  trustedApprovalHeaders,
+} from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { APPROVAL_FLOOR, CANONICAL_RESOURCE, DERIVATION_POLICY, loadProgressiveProfile, PROGRESSIVE_PROFILE } from "@mission/demo-data";
@@ -426,6 +434,9 @@ beforeAll(async () => {
     onLifecycleCommit: (c) => commits.push(c),
     testClients,
     progressive: PROGRESSIVE,
+    // A trusted headless approval service may decide an expansion deferral (#1558).
+    allowHeadlessAdjudication: true,
+    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
   });
   asOff = await buildAuthorizationServer({
     issuer: OFF_ISSUER,
@@ -1981,5 +1992,483 @@ describe("the deferred expansion's consent disclosure (@spec progressive#fresh-a
     const review = asRefuse.expansionDeferrals.disclosure(body.deferral_code as string)?.ceiling?.review;
     expect(review?.out_of_ceiling_refusals).toHaveLength(1);
     expect(review?.escalations.map((e) => e.reason)).toEqual(["external_communication"]);
+  });
+});
+
+/**
+ * @spec expansion#completion-modes, progressive#fresh-approval,
+ * progressive#ceiling-reconsent, progressive#ceiling-review (#1558): the
+ * Approver's page for a deferred expansion. An authenticated Approver sees
+ * the stored consent disclosure, and their decision on that rendering
+ * approves exactly the deferral rendered, which the client's poll completes.
+ */
+describe("the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558)", () => {
+  const VENDOR = "payments:vendor.read";
+  const CANCEL = "payments:payment.schedule.cancel";
+  /** Bob, an Approver with approve-for authority over Alice, the Subject. */
+  const BOB = { sub: "bob", acr: "mfa", auth_time: FIXTURE_LOGIN_TIME, subject: "alice" };
+  const get = (id: string): MissionRecord => as.kernel.get(id) as MissionRecord;
+  const contain = (missionId: string, actions: string[]) =>
+    as.kernel.contain(missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: "2026-07-02T00:00:00Z",
+        event_id: `evt-${crypto.randomUUID()}`,
+      },
+      remove: [{ resource: RESOURCE, actions }],
+    });
+  /** An Approver's login for this deferral in their browser: the session cookie and its CSRF secret. */
+  const login = (code: string, approver: { sub: string; acr?: string; auth_time?: number; subject?: string } = BOB, issuer = ISSUER) =>
+    browserApprovalHeaders(approvalSessions.get(issuer) as ApprovalSessionStore, code, approver, "");
+  const page = async (code: string, headers: Record<string, string> = {}, issuer = ISSUER) => {
+    const res = await fetch(`${issuer}/expansions/deferrals/${code}`, { headers: headers.cookie ? { cookie: headers.cookie } : {} });
+    return { status: res.status, html: await res.text(), revision: res.headers.get("x-approval-render-revision") };
+  };
+  const decide = async (code: string, headers: Record<string, string>, body: Record<string, unknown>, issuer = ISSUER) => {
+    const res = await fetch(`${issuer}/expansions/deferrals/${code}/decide`, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return {
+      status: res.status,
+      json: (await res.json().catch(() => ({}))) as { error?: string; state?: string; changed?: string[]; approval_event_id?: string },
+    };
+  };
+  const poll = async (code: string) => {
+    const res = await tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code });
+    return { status: res.status, body: (await res.json()) as { error?: string; mission_id?: string; access_token?: string } };
+  };
+  const unescape = (s: string) =>
+    s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  /** The rendered list items of one class. */
+  const items = (html: string, cls: string) =>
+    [...html.matchAll(new RegExp(`<li class="${cls}"[^>]*>([\\s\\S]*?)</li>`, "g"))].map((m) => unescape(m[1] as string));
+  /** The JSON a `<pre class=...>` renders. */
+  const pre = (html: string, cls: string): unknown => {
+    const m = html.match(new RegExp(`<pre class="${cls}">([\\s\\S]*?)</pre>`));
+    return m ? JSON.parse(unescape(m[1] as string)) : undefined;
+  };
+  /** Render the page as Bob, approve what it shows, and complete it on the client's poll. */
+  const approveThroughPage = async (code: string, extra: Record<string, unknown> = {}) => {
+    const headers = login(code);
+    const shown = await page(code, headers);
+    expect(shown.status, shown.html).toBe(200);
+    const decided = await decide(code, headers, { decision: "approve", render_revision: shown.revision, ...extra });
+    expect(decided.status, JSON.stringify(decided.json)).toBe(200);
+    expect(decided.json.approval_event_id).toBe(`apev_${code}`);
+    const polled = await poll(code);
+    expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+    return { html: shown.html, successor: get(polled.body.mission_id as string) };
+  };
+
+  it("shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    contain(root.missionId, [CANCEL]);
+    // An unrelated drawdown intervenes; the successor's fallback still names the root's containment.
+    const next = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
+    const code = await openFreshApproval(next.mission_id, next.access_token, [...READ_LIST, CANCEL]);
+    const other = await openFreshApproval(next.mission_id, next.access_token, [...READ_LIST, VENDOR]);
+    const { html, successor } = await approveThroughPage(code);
+    expect(html).toContain("restricted_overlap");
+    expect(html).toContain('<li class="restriction-contained" data-event-class="tainted_read">');
+    const [contained] = items(html, "restriction-contained");
+    expect(contained).toContain("tainted_read");
+    expect(contained).toContain(root.missionId);
+    expect(contained).toContain(CANCEL);
+    // What approval grants, and the request it came from.
+    expect((pre(html, "successor-authority") as AuthorityEntry[]).flatMap((e) => e.actions)).toEqual(
+      expect.arrayContaining([...READ_LIST, CANCEL]),
+    );
+    expect(html).toContain(`<p class="deferral-predecessor"><code>${next.mission_id}</code></p>`);
+    expect(html).toContain(`<p class="deferral-subject"><code>alice</code></p>`);
+    // The decision approved this deferral: its successor, from its predecessor, under the expiry shown.
+    expect(successor.predecessor).toBe(next.mission_id);
+    expect(successor.approval_event_id).toBe(`apev_${code}`);
+    expect(successor.approval_basis.consent_principal).toEqual({ iss: ISSUER, sub: "bob" });
+    const shownExpiry = (html.match(/<time class="successor-expires-at" datetime="([^"]+)">/) as RegExpMatchArray)[1];
+    expect(successor.expires_at).toBe(shownExpiry);
+    // And no other: the second deferral on the same predecessor is still pending.
+    expect((await poll(other)).body.error).toBe("authorization_pending");
+  });
+
+  it("shows a discharged entry with the condition that discharged it, through an intervening successor", async () => {
+    const completing = {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:invoice.list"],
+      constraints: { vendors: ["acme"], terminal_when: [CLOSE] },
+    };
+    const root = await issueMission(READ_LIST, ceilingOf(), { proposal: [...authority(READ), completing] });
+    const entry = get(root.missionId).authority_set.find((e) => e.actions.includes("payments:invoice.list")) as AuthorityEntry;
+    as.kernel.discharge(root.missionId, {
+      authority: "svc:console",
+      entry_digest: entryDigest(ISSUER, entry),
+      condition_digest: conditionDigest(CLOSE),
+      event_type: CLOSE.event_type,
+      event_id: `close-${crypto.randomUUID()}`,
+    });
+    const next = await drawdown(root.accessToken, crypto.randomUUID(), [...READ, "payments:payment.schedule"]);
+    const code = await openFreshApproval(next.mission_id, next.access_token, [...READ_LIST, "payments:payment.schedule"]);
+    const { html } = await approveThroughPage(code);
+    const [discharged] = items(html, "restriction-discharged");
+    expect(discharged).toContain(root.missionId);
+    const entryShown = JSON.parse((discharged as string).match(/<pre class="discharged-entry">([\s\S]*?)<\/pre>/)?.[1] as string);
+    const conditionShown = JSON.parse((discharged as string).match(/<pre class="discharged-condition">([\s\S]*?)<\/pre>/)?.[1] as string);
+    expect(entryShown).toEqual(entry);
+    expect(conditionShown).toEqual(CLOSE);
+    expect(items(html, "review-discharged")[0]).toBe(
+      `Entries discharged: <code>${RESOURCE}</code> (<code>payments:invoice.list</code>)`,
+    );
+  });
+
+  it("a review record changed since rendering approves nothing: here an escalation landing in between", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    const d1 = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
+    const code = await openFreshApproval(d1.mission_id, d1.access_token, [...READ_LIST, VENDOR]);
+    const headers = login(code);
+    const first = await page(code, headers);
+    // Another widening of the chain escalates to a human: the record now lists two escalations.
+    await openFreshApproval(d1.mission_id, d1.access_token, [...READ_LIST, VENDOR, "payments:invoice.read"]);
+    const stale = await decide(code, headers, { decision: "approve", render_revision: first.revision });
+    expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+    expect(stale.json.changed).toEqual(["review"]);
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+  });
+
+  it("shows the re-consent offer as at the initial approval; a re-consent consents only that offer, never one the decision supplies", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    const code = await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]);
+    currentOffer = ceilingOf("drawdown-wide");
+    const headers = login(code);
+    const shown = await page(code, headers);
+    expect(pre(shown.html, "reconsent-ceiling")).toEqual(FULL_CEILING);
+    expect(shown.html).toContain(
+      '<p class="reconsent-policy">Drawdown policy <code>drawdown-wide</code> version <code>1</code></p>',
+    );
+    expect(shown.html).toContain(
+      "Within this ceiling, expansions of this Mission are adjudicated by drawdown policy drawdown-wide version 1, without a further approval from you.",
+    );
+    // A decision cannot name a ceiling of its own.
+    const supplied = await decide(code, headers, { decision: "approve", render_revision: shown.revision, reconsent: true, ...ceilingOf("drawdown-std") });
+    expect(supplied.status).toBe(400);
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+    const decided = await decide(code, headers, { decision: "approve", render_revision: shown.revision, reconsent: true });
+    expect(decided.status, JSON.stringify(decided.json)).toBe(200);
+    const polled = await poll(code);
+    expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+    expect(get(polled.body.mission_id as string).drawdown_policy?.id).toBe("drawdown-wide");
+  });
+
+  it("a re-consent is bound to the offer the page rendered: an offer changed since asks for a fresh decision on the page rendered again", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    const code = await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]);
+    currentOffer = ceilingOf("drawdown-std");
+    const headers = login(code);
+    const first = await page(code, headers);
+    currentOffer = ceilingOf("drawdown-wide");
+    const stale = await decide(code, headers, { decision: "approve", render_revision: first.revision, reconsent: true });
+    expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+    expect(stale.json.error).toBe("approval_context_changed");
+    expect(stale.json.changed).toEqual(["reconsent_offer"]);
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+    const again = await page(code, headers);
+    expect(again.html).toContain("<code>drawdown-wide</code>");
+    const decided = await decide(code, headers, { decision: "approve", render_revision: again.revision, reconsent: true });
+    expect(decided.status, JSON.stringify(decided.json)).toBe(200);
+    const polled = await poll(code);
+    expect(get(polled.body.mission_id as string).drawdown_policy?.id).toBe("drawdown-wide");
+  });
+
+  it("shows the chain's record since the latest ceiling consent: the consent instant, the drawdowns and the escalations", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    const since = get(root.missionId).ceiling_consented_at as string;
+    const d1 = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
+    const code = await openFreshApproval(d1.mission_id, d1.access_token, [...READ_LIST, VENDOR]);
+    // More than a second after the consent, so the record's hourly rate moves between rendering and
+    // decision: the record is committed, its rate is not.
+    await new Promise((r) => setTimeout(r, 1_100));
+    const { html, successor } = await approveThroughPage(code, { reconsent: true });
+    expect(html).toContain(`The chain's record since the latest ceiling consent (<time datetime="${since}">`);
+    expect(items(html, "review-drawdowns")[0]).toMatch(/^Policy-adjudicated drawdowns: 1 \([\d.]+ per hour\)$/);
+    expect(items(html, "review-escalations")[0]).toContain("external_communication");
+    expect(items(html, "review-refusals")[0]).toBe("Refused as out of ceiling: none");
+    expect(successor.ceiling_consented_at).not.toBe(since);
+  });
+
+  it("a trusted headless approval service renders the page and approves under its own principal", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    const code = await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]);
+    const service = trustedApprovalHeaders("bob", { approver_acr: "mfa" }, "alice");
+    const shown = await fetch(`${ISSUER}/expansions/deferrals/${code}`, { headers: service });
+    expect(shown.status, await shown.clone().text()).toBe(200);
+    const decided = await decide(code, service, { decision: "approve", render_revision: shown.headers.get("x-approval-render-revision") });
+    expect(decided.status, JSON.stringify(decided.json)).toBe(200);
+    const polled = await poll(code);
+    expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+    expect(get(polled.body.mission_id as string).approval_basis.consent_principal).toEqual({ iss: ISSUER, sub: "bob" });
+  });
+
+  it("the page's own form decides with its hidden revision and CSRF secret: a stale form goes back to the page, a forged secret is refused", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    const code = await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]);
+    const headers = login(code);
+    const first = await page(code, headers);
+    const second = await page(code, headers);
+    const field = (html: string, name: string) =>
+      (html.match(new RegExp(`<input type="hidden" name="${name}" value="([^"]+)">`)) as RegExpMatchArray)[1] as string;
+    const post = (fields: Record<string, string>) =>
+      fetch(`${ISSUER}/expansions/deferrals/${code}/decide`, {
+        method: "POST",
+        redirect: "manual",
+        headers: { cookie: headers.cookie as string, "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(fields).toString(),
+      });
+    const stale = await post({ decision: "approve", render_revision: field(first.html, "render_revision"), csrf_token: field(first.html, "csrf_token") });
+    expect(stale.status).toBe(303);
+    expect(stale.headers.get("location")).toBe(`/expansions/deferrals/${code}`);
+    const forged = await post({ decision: "approve", render_revision: field(second.html, "render_revision"), csrf_token: "forged" });
+    expect(forged.status).toBe(401);
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+    const approved = await post({ decision: "approve", render_revision: field(second.html, "render_revision"), csrf_token: field(second.html, "csrf_token") });
+    expect(approved.status).toBe(200);
+    expect(await approved.text()).toContain("Approved. The client completes the expansion on its next poll.");
+    expect((await poll(code)).status).toBe(200);
+  });
+
+  it("shows the deployment's out_of_ceiling refusals since the latest ceiling consent", async () => {
+    const pred = await issueMission(READ, ceilingOf("drawdown-std", READ_CEILING), { issuer: REFUSE_ISSUER, client: apRefuse });
+    const refused = await tokenRequest(expansionParams(pred.accessToken, crypto.randomUUID(), BEYOND), apRefuse, REFUSE_ISSUER);
+    expect(((await refused.json()) as { mission_denial_reason?: string }).mission_denial_reason).toBe("out_of_ceiling");
+    const res = await tokenRequest(expansionParams(pred.accessToken, crypto.randomUUID(), [...READ, VENDOR]), apRefuse, REFUSE_ISSUER);
+    const body = (await res.json()) as { error?: string; deferral_code?: string };
+    expect(body.error, JSON.stringify(body)).toBe("authorization_pending");
+    const code = body.deferral_code as string;
+    const shown = await page(code, login(code, BOB, REFUSE_ISSUER), REFUSE_ISSUER);
+    expect(shown.status, shown.html).toBe(200);
+    const [refusals] = items(shown.html, "review-refusals");
+    expect(refusals?.match(/<time /g)).toHaveLength(1);
+  });
+});
+
+describe("the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558)", () => {
+  const VENDOR = "payments:vendor.read";
+  const BOB = { sub: "bob", acr: "mfa", auth_time: FIXTURE_LOGIN_TIME, subject: "alice" };
+  const store = () => approvalSessions.get(ISSUER) as ApprovalSessionStore;
+  const page = async (code: string, cookie?: string) => {
+    const res = await fetch(`${ISSUER}/expansions/deferrals/${code}`, { headers: cookie ? { cookie } : {} });
+    return { status: res.status, html: await res.text(), revision: res.headers.get("x-approval-render-revision") };
+  };
+  const decide = async (code: string, headers: Record<string, string>, body: Record<string, unknown>) => {
+    const res = await fetch(`${ISSUER}/expansions/deferrals/${code}/decide`, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return { status: res.status, json: (await res.json().catch(() => ({}))) as { error?: string; state?: string; changed?: string[] } };
+  };
+  const poll = async (code: string) => {
+    const res = await tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code });
+    return { status: res.status, body: (await res.json()) as { error?: string; mission_id?: string } };
+  };
+  const pending = async (actions = [...READ, VENDOR], ceiling = ceilingOf()) => {
+    const root = await issueMission(READ, ceiling);
+    return { root, code: await openFreshApproval(root.missionId, root.accessToken, actions) };
+  };
+
+  it("an unauthenticated viewer sees no disclosure and cannot decide", async () => {
+    const { code } = await pending();
+    const shown = await page(code);
+    expect(shown.status).toBe(401);
+    expect(shown.html).not.toContain("successor-authority");
+    expect(shown.revision).toBeNull();
+    expect((await decide(code, {}, { decision: "approve" })).status).toBe(401);
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+  });
+
+  it("a principal who may not decide for the Subject sees no disclosure and cannot decide: another Approver's Subject, or a Subject other than the predecessor's", async () => {
+    const { code } = await pending();
+    const dana = browserApprovalHeaders(store(), code, { sub: "dana", acr: "mfa", auth_time: FIXTURE_LOGIN_TIME }, "");
+    const refused = await page(code, dana.cookie);
+    expect(refused.status).toBe(403);
+    expect(refused.html).not.toContain("successor-authority");
+    const decided = await decide(code, dana, { decision: "approve" });
+    expect(decided.status).toBe(403);
+    expect(decided.json.error).toBe("approval_forbidden");
+    const elsewhere = browserApprovalHeaders(store(), code, { ...BOB, subject: "acme-accounts-payable" }, "");
+    expect((await page(code, elsewhere.cookie)).status).toBe(403);
+    expect((await decide(code, elsewhere, { decision: "approve" })).status).toBe(403);
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+  });
+
+  it("write-bearing authority needs an Approver distinct from the Subject", async () => {
+    // Beyond a read-only ceiling, so the request falls back to a fresh approval.
+    const { code } = await pending(BEYOND, ceilingOf("drawdown-std", READ_CEILING));
+    const alice = browserApprovalHeaders(store(), code, { sub: "alice", acr: "mfa", auth_time: FIXTURE_LOGIN_TIME }, "");
+    expect((await page(code, alice.cookie)).status).toBe(403);
+    const decided = await decide(code, alice, { decision: "approve" });
+    expect(decided.status).toBe(403);
+    expect(decided.json.error).toBe("approval_forbidden");
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+  });
+
+  it("a decision names the latest rendering made to its Approver", async () => {
+    const { code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const unrendered = await decide(code, bob, { decision: "approve" });
+    expect(unrendered.status).toBe(409);
+    expect(unrendered.json.error).toBe("rendering_required");
+    const older = await page(code, bob.cookie);
+    const newer = await page(code, bob.cookie);
+    expect(newer.revision).not.toBe(older.revision);
+    expect((await decide(code, bob, { decision: "approve", render_revision: older.revision })).json.error).toBe("rendering_required");
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+    expect((await decide(code, bob, { decision: "approve", render_revision: newer.revision })).status).toBe(200);
+  });
+
+  it("a disclosure changed since rendering approves nothing: here a containment landing in between; the page rendered again shows it and approves", async () => {
+    const { root, code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const first = await page(code, bob.cookie);
+    as.kernel.contain(root.missionId, {
+      event: { type: "tainted_read", source: "https://siem.example/detections", observed_at: "2026-07-02T00:00:00Z", event_id: `evt-${crypto.randomUUID()}` },
+      remove: [{ resource: RESOURCE, actions: ["payments:payment.schedule.cancel"] }],
+    });
+    const stale = await decide(code, bob, { decision: "approve", render_revision: first.revision });
+    expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+    expect(stale.json.error).toBe("approval_context_changed");
+    expect(stale.json.changed).toEqual(["restrictions"]);
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+    const again = await page(code, bob.cookie);
+    expect(again.html).toContain('<li class="restriction-contained" data-event-class="tainted_read">');
+    expect((await decide(code, bob, { decision: "approve", render_revision: again.revision })).status).toBe(200);
+    expect((await poll(code)).status).toBe(200);
+  });
+
+  it("a denial creates no successor and leaves the Mission untouched; a deferral no longer pending is neither rendered nor decided", async () => {
+    const { root, code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const denied = await decide(code, bob, { decision: "deny" });
+    expect(denied.status).toBe(200);
+    expect(denied.json.state).toBe("access_denied");
+    expect((await poll(code)).body.error).toBe("access_denied");
+    expect(as.kernel.get(root.missionId)?.state).toBe("active");
+    expect((await page(code, bob.cookie)).status).toBe(404);
+    expect((await decide(code, bob, { decision: "approve" })).status).toBe(400);
+    // An approved deferral is not denied after the fact.
+    const second = await pending();
+    const bob2 = browserApprovalHeaders(store(), second.code, BOB, "");
+    const shown = await page(second.code, bob2.cookie);
+    expect((await decide(second.code, bob2, { decision: "approve", render_revision: shown.revision })).status).toBe(200);
+    expect((await decide(second.code, bob2, { decision: "deny" })).status).toBe(400);
+    // The store records nothing on an approved deferral either.
+    expect(as.expansionDeferrals.denyPending(second.code)).toBe(false);
+    expect(
+      as.expansionDeferrals.approve(second.code, {
+        approver: { iss: ISSUER, sub: "bob" },
+        approvalEventId: `apev-${crypto.randomUUID()}`,
+        approvedUntil: FAR_EXP,
+      }),
+    ).toBe(false);
+    expect((await poll(second.code)).status).toBe(200);
+  });
+
+  it("a lifetime bound shortened since rendering changes the expiry the approval commits: nothing is approved", async () => {
+    const { code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const first = await page(code, bob.cookie);
+    const before = DERIVATION_POLICY.max_mission_lifetime_s;
+    (DERIVATION_POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = 3600;
+    try {
+      const stale = await decide(code, bob, { decision: "approve", render_revision: first.revision });
+      expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+      expect(stale.json.changed).toEqual(["expires_at"]);
+      expect((await poll(code)).body.error).toBe("authorization_pending");
+    } finally {
+      (DERIVATION_POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = before;
+    }
+  });
+
+  it("the approval-authentication floor applies to the successor's authority: a login below it, or a headless service, is refused", async () => {
+    const { code } = await pending([...READ, "payments:payment.execute"]);
+    const weak = browserApprovalHeaders(store(), code, { ...BOB, acr: "password" }, "");
+    const shown = await page(code, weak.cookie);
+    expect(shown.status).toBe(200);
+    const refused = await decide(code, weak, { decision: "approve", render_revision: shown.revision });
+    expect(refused.status, JSON.stringify(refused.json)).toBe(403);
+    expect(refused.json.error).toBe("access_denied");
+    const service = trustedApprovalHeaders("bob", { approver_acr: "mfa" }, "alice");
+    const serviceShown = await fetch(`${ISSUER}/expansions/deferrals/${code}`, { headers: service });
+    const byService = await decide(code, service, { decision: "approve", render_revision: serviceShown.headers.get("x-approval-render-revision") });
+    expect(byService.status, JSON.stringify(byService.json)).toBe(403);
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+    const strong = browserApprovalHeaders(store(), code, BOB, "");
+    const again = await page(code, strong.cookie);
+    expect((await decide(code, strong, { decision: "approve", render_revision: again.revision })).status).toBe(200);
+  });
+
+  it("a derived successor set changed since rendering approves nothing", async () => {
+    const { code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const first = await page(code, bob.cookie);
+    const given = structuredClone(DERIVATION_POLICY.ceiling);
+    for (const e of DERIVATION_POLICY.ceiling) {
+      (e as { actions: string[] }).actions = (e as { actions: string[] }).actions.filter((a) => a !== VENDOR);
+    }
+    try {
+      const stale = await decide(code, bob, { decision: "approve", render_revision: first.revision });
+      expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+      expect(stale.json.changed).toEqual(["successor_hash"]);
+      expect((await poll(code)).body.error).toBe("authorization_pending");
+    } finally {
+      DERIVATION_POLICY.ceiling.forEach((e, i) => Object.assign(e, structuredClone(given[i])));
+    }
+  });
+
+  it("completion creates the successor only with the authority approved: authority added after the approval refuses it, as does authority removed", async () => {
+    const given = structuredClone(DERIVATION_POLICY.ceiling);
+    const narrow = () => {
+      for (const e of DERIVATION_POLICY.ceiling) {
+        (e as { actions: string[] }).actions = (e as { actions: string[] }).actions.filter((a) => a !== VENDOR);
+      }
+    };
+    const restoreCeiling = () => DERIVATION_POLICY.ceiling.forEach((e, i) => Object.assign(e, structuredClone(given[i])));
+    // Approved without the vendor read, which the policy restores before the client polls.
+    const wider = await pending();
+    const bob = browserApprovalHeaders(store(), wider.code, BOB, "");
+    narrow();
+    try {
+      const shown = await page(wider.code, bob.cookie);
+      expect(as.expansionDeferrals.pendingReview(wider.code)?.successor.flatMap((e) => e.actions)).not.toContain(VENDOR);
+      expect((await decide(wider.code, bob, { decision: "approve", render_revision: shown.revision })).status).toBe(200);
+    } finally {
+      restoreCeiling();
+    }
+    expect((await poll(wider.code)).body.error).toBe("access_denied");
+    expect(successorsOf(wider.root.missionId)).toEqual([]);
+    expect(as.kernel.get(wider.root.missionId)?.state).toBe("active");
+    // Approved with it, which the policy removes before the client polls.
+    const narrower = await pending();
+    const bob2 = browserApprovalHeaders(store(), narrower.code, BOB, "");
+    const shown = await page(narrower.code, bob2.cookie);
+    expect((await decide(narrower.code, bob2, { decision: "approve", render_revision: shown.revision })).status).toBe(200);
+    narrow();
+    try {
+      expect((await poll(narrower.code)).body.error).toBe("access_denied");
+    } finally {
+      restoreCeiling();
+    }
+    expect(successorsOf(narrower.root.missionId)).toEqual([]);
+  });
+
+  it("a deferral past its lifetime is neither rendered nor decided", async () => {
+    const { code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const shown = await page(code, bob.cookie);
+    expect(shown.status).toBe(200);
+    as.kernel.db.prepare("UPDATE expansion_deferrals SET created_at = ? WHERE deferral_code = ?").run(Date.now() - 601_000, code);
+    expect((await page(code, bob.cookie)).status).toBe(404);
+    expect((await decide(code, bob, { decision: "approve", render_revision: shown.revision })).status).toBe(400);
   });
 });
