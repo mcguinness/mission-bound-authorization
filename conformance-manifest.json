@@ -2019,8 +2019,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Mission Status request is refused at the first failing step of authentication, request syntax and authorization: an unauthenticated request is refused as its authentication failure assigns whatever its members or Mission; a malformed request is refused invalid_request alike for a known and an unknown Mission; an unknown Mission, a caller without read authorization and an audience it is not authorized for are refused alike with the not-found response; only then is the Mission's state read and signed",
-    "local": "the advertised Mission Status endpoint (#1407) authenticates first, then validates nonce, mission_id and audience, then authorizes the read grant and the Mission, then reads and signs. A body that is not an application/x-www-form-urlencoded form, or repeats a member, is refused invalid_request before authentication, as at the Lifecycle endpoint: authentication needs the parsed form"
+    "normative": "a Mission Status request is refused at the first failing step of authentication, request syntax and authorization: a body that cannot be parsed is refused invalid_request whatever credential it presents; a request whose body parses and fails authentication, a repeated client authentication parameter included, is refused as its authentication failure assigns whatever its members or Mission; a malformed request, one repeating any other parameter included, is refused invalid_request alike for a known and an unknown Mission; an unknown Mission, a caller without read authorization and an audience it is not authorized for are refused alike with the not-found response; only then is the Mission's state read and signed",
+    "local": "the advertised Mission Status endpoint (#1407) parses the form, authenticates, then validates repeated parameters, nonce, mission_id and audience, then authorizes the read grant and the Mission, then reads and signs. The reference treats a non-form media type, a body over 64 KiB and a malformed form encoding (invalid UTF-8 or percent-escapes) as a body that cannot be parsed (readLifecycleForm)"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -2038,7 +2038,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 3 (D649); #1407. Partial: step 3's audience authorization is not implemented (status.request.served-audience-authorization), so a request's audience is not checked against a per-caller configuration. The development GET /missions/:id/status route keeps its own order (service-token authentication answered 401, then mayReadStatus answered not_found)."
+   "notes": "#1535 finding 3 (D649); #1407. Partial: step 3's audience authorization is not implemented (status.request.served-audience-authorization), so a request's audience is not checked against a per-caller configuration. The development GET /missions/:id/status route keeps its own order (service-token authentication answered 401, then mayReadStatus answered not_found). #1535 Item C (D704, D708): the parse-before-authentication exception and the repeated-parameter order are normative in step 1 and step 2, rowed separately."
   },
   {
    "id": "status.read.no-state-before-authorization",
@@ -13091,8 +13091,8 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a lifecycle request for a base operation is refused at the first failing step of authentication, request syntax and served operation, authorization, deduplication, expected_version and the transition rules: an unauthenticated request is refused invalid_client whatever its operation, members or Mission; a malformed request or an unserved operation is refused invalid_request alike for a known and an unknown Mission; a caller not authorized for the Mission gets the not-found response, never a replay, stale_version or conflict; an authorized retransmit replays before expected_version and the transition rules apply; and a stale expected_version is refused before the transition rule",
-    "local": "Form-level parsing (media type, body size, a repeated member) precedes authentication, since the body carries the client assertion. Refusals decided before deduplication are delivered without retention, so they never finalize a committed claim made under the same request digest. The past-deadline check of a schedule runs after deduplication, so an identical retry arriving after its deadline replays."
+    "normative": "a lifecycle request for a base operation is refused at the first failing step of authentication, request syntax and served operation, authorization, deduplication, expected_version and the transition rules: a body that cannot be parsed is refused invalid_request whatever credential it presents; a request whose body parses and fails authentication, a repeated client authentication parameter included, is refused invalid_client whatever its operation, members or Mission; a malformed request, one repeating any other parameter included, or an unserved operation is refused invalid_request alike for a known and an unknown Mission; a caller not authorized for the Mission gets the not-found response, never a replay, stale_version or conflict; an authorized retransmit replays before expected_version and the transition rules apply; and a stale expected_version is refused before the transition rule",
+    "local": "The reference treats a non-form media type, a body over 64 KiB and a malformed form encoding as a body that cannot be parsed (readLifecycleForm). Refusals decided before deduplication are delivered without retention, so they never finalize a committed claim made under the same request digest. The past-deadline check of a schedule runs after deduplication, so an identical retry arriving after its deadline replays."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -13146,7 +13146,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 finding 3 (D649). Proved by validating the operation and members before authentication, and by looking the Mission up before it (the authentication-order test fails), by looking the Mission up before the syntax checks (the extension-guard and revoke-only ordering tests fail), by letting a retained row skip authorization (both processing-order retransmit tests fail), and by retaining the not-found refusal decided before deduplication (the lost-bytes test fails). The deduplication and expected_version precedences keep the witnesses of status.discharge.nonce-replay and status.lifecycle.stale-version-precedence. The discharge operation is status.discharge.processing-order."
+   "notes": "#1535 finding 3 (D649). Proved by validating the operation and members before authentication, and by looking the Mission up before it (the authentication-order test fails), by looking the Mission up before the syntax checks (the extension-guard and revoke-only ordering tests fail), by letting a retained row skip authorization (both processing-order retransmit tests fail), and by retaining the not-found refusal decided before deduplication (the lost-bytes test fails). The deduplication and expected_version precedences keep the witnesses of status.discharge.nonce-replay and status.lifecycle.stale-version-precedence. The discharge operation is status.discharge.processing-order. #1535 Item C (D704, D708): the parse-before-authentication exception and the repeated-parameter order are normative in step 1 and step 2, rowed separately."
   },
   {
    "id": "status.discharge.processing-order",
@@ -14812,7 +14812,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a POST whose body is not form-urlencoded, or repeats a member, is refused `invalid_request` and changes nothing; a form carrying `mission_id`, `operation` and `nonce` is served",
+    "normative": "a POST whose body is not form-urlencoded is refused `invalid_request` and changes nothing; a form carrying `mission_id`, `operation` and `nonce` is served",
     "local": "the dev-only path route also accepts a JSON body, takes the Mission from the path and runs the same engine; it is not advertised. The base operations answer with the signed Mission Status Response; this deployment's contain extension answers a plain JSON outcome, and discharge its companion's result shape"
    },
    "level": "endpoint",
@@ -14837,7 +14837,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 Item C (D708): a repeated parameter is no longer claimed here; its outcomes are status.lifecycle.repeated-auth-parameter and status.lifecycle.repeated-parameter-malformed."
   },
   {
    "id": "status.lifecycle.private-key-jwt-params",
@@ -15298,7 +15298,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Mission Status operation is served as a POST whose form body carries `mission_id`, `audience` and `nonce`; a body of another media type, or a repeated member, is refused invalid_request",
+    "normative": "the Mission Status operation is served as a POST whose form body carries `mission_id`, `audience` and `nonce`",
     "local": "POST /mission/status; TLS is the deployment's (as status.lifecycle.tls). The development GET /missions/{id}/status is not advertised; its callers in src are tests. The reference consumer (MissionStatusResolver) sends the form POST"
    },
    "level": "endpoint",
@@ -15323,7 +15323,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1407 (as #1191 did for the Lifecycle endpoint). Proved by defects that drop the form members the route reads."
+   "notes": "#1407 (as #1191 did for the Lifecycle endpoint). Proved by defects that drop the form members the route reads. #1535 Item C (D708): the repeated-parameter and unparseable-body outcomes are the processing-order rows status.read.unparseable-body-refused, status.read.repeated-auth-parameter and status.read.repeated-parameter-malformed, not this row."
   },
   {
    "id": "status.response.served-audience-aud",

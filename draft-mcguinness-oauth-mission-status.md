@@ -687,9 +687,15 @@ it at the first step that fails:
 
 1. Authenticate the caller ({{mission-status-authentication}}),
    parsing the request body only as far as authentication needs. A
-   failure is answered as {{mission-status-auth-failures}} assigns.
+   body that cannot be parsed is refused `invalid_request`, whatever
+   credential the request presents; a client authentication parameter
+   included more than once fails authentication, and no occurrence of
+   it is used. Every authentication failure is answered as
+   {{mission-status-auth-failures}} assigns.
 2. Validate the request syntax ({{mission-status-request}}). A
-   malformed request is refused `invalid_request`.
+   malformed request is refused `invalid_request`; a request that
+   includes a parameter more than once is malformed, as at the token
+   endpoint ({{Section 3.2 of RFC6749}}).
 3. Authorize the request: the caller's read authorization, the Mission
    the `mission_id` names, and any requested `audience`
    ({{mission-status-request}}). An unknown Mission and every failed
@@ -1403,10 +1409,16 @@ the first step that fails:
 
 1. Authenticate the caller ({{mission-status-authentication}}),
    parsing the request body only as far as authentication needs. A
-   failure is answered as {{mission-status-auth-failures}} assigns.
+   body that cannot be parsed is refused `invalid_request`, whatever
+   credential the request presents; a client authentication parameter
+   included more than once fails authentication, and no occurrence of
+   it is used. Every authentication failure is answered as
+   {{mission-status-auth-failures}} assigns.
 2. Validate the request syntax and the operation
    ({{lifecycle-operations}}). A malformed request, or an `operation`
-   the AS does not serve, is refused `invalid_request`.
+   the AS does not serve, is refused `invalid_request`; a request that
+   includes a parameter more than once is malformed, as at the token
+   endpoint ({{Section 3.2 of RFC6749}}).
 3. Authorize the request. For a base operation this is the lifecycle
    authorization of {{lifecycle-authorization}} for the acting party,
    the operation and the Mission, together with the authorization for
