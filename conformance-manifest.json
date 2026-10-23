@@ -43,8 +43,8 @@
     "content_sha256": "c3ecaf45e6e17579e7374b0e733c7d4de7d58cbacdfecddfe37c3568eb74138a"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "b447449fc2c0ffaf525b10a8df1a79f113ad538a",
-    "content_sha256": "400730f815ea0afc7516cd0d0f8eca5ca03d30b8c527549e897169c6293f024e"
+    "revision": "5ea48df97dd83fdafb88338af76bdcd744459a29",
+    "content_sha256": "73adcde217be74a6250e60d5faca9a8aa7e455c19b9ddabeed09006fe2827a7a"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "213893760b7c447ff475d568bc8a54be8a85176b",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "3c0faa8d6c03ef1a54c118f37813b46673d343ed",
-    "content_sha256": "968044588af00e1d08c5fe60cac5266269e1707767a1f7ce85181550e1758b0a"
+    "revision": "7394d3afa9dcaeaec4ac6e507324a07791069df1",
+    "content_sha256": "707a0e6e36f40961791c0edceea5452fc0a66c31ab6233ae981cce4dd6bdb493"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -107,12 +107,12 @@
     "content_sha256": "8d6e1fc8d592bc6bf512865fea875b50c02cbf58de81835ec55e40ab8766d31e"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
-    "content_sha256": "4c24262bd4ab09784922ab543c24d97cfb849c9a5845c70a664ef39d906803b3"
+    "revision": "ac1357ee2814af3e0b08400c860c96499073f6a1",
+    "content_sha256": "7332fc357d278ff9add73929ec3df417277f64874749cd720a55d28fa2fd4d12"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "8f9b783163e04478c9cdd318d790c878e9c34f6e",
-    "content_sha256": "9ecc46c99dbe7e2cbc4283b7be29fd55bd31445ec793fecddac509eeed3b9f05"
+    "revision": "ac1357ee2814af3e0b08400c860c96499073f6a1",
+    "content_sha256": "f3fed14c1866f511040918a7956e7f2783de06d63122638cf4317f80e6d6fb89"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
