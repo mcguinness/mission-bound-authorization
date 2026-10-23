@@ -43,9 +43,11 @@ function failure(operand: string, parsed: ParseResult): string | undefined {
  *   member outside the subset, a constraints key outside the nine) is
  *   unsupported input: "an unsupported constraint is unsupported input, so
  *   the entry is never omitted to repair it" (resource-access#common-constraints);
- * - an invalid value (a decimal outside the grammar, an inverted window, a
- *   malformed resource_contract) is rejected "rather than attempt to parse it"
- *   (resource-access#decimal-values, resource-access#entry-validation); and
+ * - an invalid value (a decimal outside the grammar, a currency that is not
+ *   exactly three upper-case ASCII letters, an inverted window, a malformed
+ *   resource_contract) is rejected "rather than attempt to parse it"
+ *   (resource-access#decimal-values, resource-access#initial-common-constraints,
+ *   resource-access#entry-validation); and
  * - an entry carrying locations is refused by name
  *   (resource-access#entry-validation).
  *

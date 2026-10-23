@@ -1,7 +1,7 @@
 // Targeted tests of the general rules behind each check, beyond the current
-// case list: decimal grammar and precision, instants, A-labels, URI syntax,
-// unsupported-input refusal, constraint omission and resource_contract form,
-// approval and preservation.
+// case list: decimal grammar and precision, currency grammar and exact
+// comparison, instants, A-labels, URI syntax, unsupported-input refusal,
+// constraint omission and resource_contract form, approval and preservation.
 
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -12,6 +12,7 @@ import {
   compareDecimal,
   compareInstant,
   entryValidationCheck,
+  isCurrencyCode,
   isValidRecipientDomain,
   isWithinDomain,
   parseAbsoluteUri,
@@ -134,6 +135,100 @@ describe("decimal values (resource-access#decimal-values)", () => {
         expect(text.includes(banned), `${file} uses ${banned}`).toBe(false);
       }
     }
+  });
+});
+
+describe("max_amount currency (resource-access#initial-common-constraints, Currency; D727)", () => {
+  const priced = (currency: unknown, a = "100.00") => ({
+    ...base,
+    constraints: { max_amount: { amount: a, currency } },
+  });
+
+  // Non-ASCII forms are built from code points so the source shows which.
+  const cp = (...points: number[]) => String.fromCodePoint(...points);
+  // MATHEMATICAL BOLD CAPITAL A and S: three UTF-16 code units, two characters.
+  const astralThreeUnits = `${cp(0x1d400)}S`;
+
+  // "exactly three characters, each an upper-case ASCII letter (A to Z)". "A
+  // value of any other length, one ending in a line terminator included, or
+  // carrying any other character is malformed."
+  const malformed: Record<string, unknown> = {
+    "lower case": "usd",
+    "mixed case": "Usd",
+    "two letters": "US",
+    "four letters": "USDX",
+    "the numeric code": "840",
+    "a trailing line feed": "USD\n",
+    "a trailing carriage return and line feed": "USD\r\n",
+    "a trailing line separator (U+2028)": `USD${cp(0x2028)}`,
+    "a leading space": " USD",
+    "a trailing space": "USD ",
+    "an inner space": "U D",
+    "a non-ASCII letter (U+00DC)": `${cp(0xdc)}SD`,
+    "a Cyrillic homoglyph of S (U+0405)": `U${cp(0x405)}D`,
+    "full-width letters (U+FF35 U+FF33 U+FF24)": cp(0xff35, 0xff33, 0xff24),
+    "a letter outside the Basic Multilingual Plane, three code units": astralThreeUnits,
+    "a letter outside the Basic Multilingual Plane, four code units": `${cp(0x1d400)}SD`,
+    "a NUL character": `US${cp(0)}`,
+    "a digit": "US1",
+    empty: "",
+    "a JSON number": 840,
+    null: null,
+    "an array of letters": ["U", "S", "D"],
+    "an object": { code: "USD" },
+  };
+
+  // "A well-formed value is admitted for comparison whether or not ISO 4217
+  // assigns it."
+  const wellFormed = ["USD", "EUR", "XYZ", "QQQ", "AAA", "ZZZ"];
+
+  it("refuses each malformed form at proposal intake with invalid_authorization_details", () => {
+    // The astral form has the right length in code units, so only the
+    // character test refuses it.
+    expect(astralThreeUnits.length).toBe(3);
+    for (const [name, v] of Object.entries(malformed)) {
+      expect(isCurrencyCode(v), name).toBe(false);
+      const result = entryValidationCheck(priced(v), config);
+      expect(result.outcome, name).toBe("refuse");
+      expect(result.error, name).toBe("invalid_authorization_details");
+    }
+  });
+
+  it("admits a well-formed code whether or not ISO 4217 assigns it", () => {
+    for (const v of wellFormed) {
+      expect(isCurrencyCode(v), v).toBe(true);
+      expect(validate(priced(v)), v).toBe("valid");
+      expect(subsetCheck(priced(v, "1"), priced(v, "2")).outcome, v).toBe("subset");
+    }
+  });
+
+  it("refuses a comparison with a malformed currency in the candidate, the reference or both", () => {
+    const valid = priced("USD", "500.00");
+    for (const [name, v] of Object.entries(malformed)) {
+      const candidate = subsetCheck(priced(v), valid);
+      expect(candidate.outcome, `candidate: ${name}`).toBe("refuse");
+      expect(candidate.reason, `candidate: ${name}`).toContain("candidate: invalid input");
+      const reference = subsetCheck(priced("USD"), priced(v, "500.00"));
+      expect(reference.outcome, `reference: ${name}`).toBe("refuse");
+      expect(reference.reason, `reference: ${name}`).toContain("reference: invalid input");
+      // Equal malformed values are not comparable either.
+      expect(subsetCheck(priced(v), priced(v, "500.00")).outcome, `both: ${name}`).toBe("refuse");
+    }
+  });
+
+  it("compares exactly, never trimming or folding a value into a match", () => {
+    // A malformed value never compares equal to the well-formed one it
+    // resembles, in either direction.
+    for (const v of ["usd", "Usd", " USD", "USD ", "USD\n", "840"]) {
+      expect(subsetCheck(priced(v), priced("USD", "500")).outcome, v).toBe("refuse");
+      expect(subsetCheck(priced("USD"), priced(v, "500")).outcome, v).toBe("refuse");
+    }
+    // Well-formed values that differ in one character fail the relation in
+    // both directions; no conversion is defined.
+    expect(subsetCheck(priced("XYZ", "1"), priced("XYA", "500")).outcome).toBe("not-subset");
+    expect(subsetCheck(priced("XYA", "1"), priced("XYZ", "500")).outcome).toBe("not-subset");
+    expect(subsetCheck(priced("XYZ", "1"), priced("XYZ", "500")).outcome).toBe("subset");
+    expect(subsetCheck(priced("XYZ", "500"), priced("XYZ", "1")).outcome).toBe("not-subset");
   });
 });
 
@@ -325,6 +420,10 @@ describe("the subset check's three outcomes (vectors README, Checks, subset; D72
   const invalid: Record<string, (e: Entry) => Entry> = {
     "malformed amount": (e) =>
       withConstraints(e, { max_amount: { amount: "1,000.00", currency: "USD" } }),
+    "malformed currency": (e) =>
+      withConstraints(e, { max_amount: { amount: "1.00", currency: "usd" } }),
+    "currency with a trailing line feed": (e) =>
+      withConstraints(e, { max_amount: { amount: "1.00", currency: "USD\n" } }),
     "inverted window": (e) =>
       withConstraints(e, {
         time_window: { not_before: "2026-06-01T00:00:00Z", not_after: "2026-01-01T00:00:00Z" },
