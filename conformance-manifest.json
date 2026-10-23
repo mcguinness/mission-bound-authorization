@@ -11117,19 +11117,25 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a delegated token issued by redeeming a designation carries no authority beyond the designation's: when the designation was derived from a credential narrower than its Mission, the delegated token does not regain the authority the credential omitted"
+    "normative": "a delegated token issued by redeeming a designation carries no authority beyond the designation's: when the designation was derived from a credential narrower than its Mission, the delegated token does not regain the authority the credential omitted; and when the designation omitted an entry of the delegating credential because the delegate was ineligible for it at designation, the delegated token does not carry that entry although the delegate is eligible for it at redemption"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
      "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > a credential narrower than its Mission: neither the designation nor the delegated token regains the omitted action",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > a designation narrower than its credential: an entry ineligible at designation stays out of the delegated token though eligible at redemption",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "D-2 of the OAuth binding layering plan. Exercised: the delegated token does not regain authority the delegating credential omitted, and narrowing the redemption from the Mission's full Authority Set instead (a mutation) fails the witness: the delegated token regains payments:invoice.list. Not exercised: authority the designation omitted although the delegating credential carried it. In the reference AS a designation carries the presented authority narrowed only by delegate eligibility, which the redemption re-applies, so the two differ only when eligibility widens between designation and redemption, and no test constructs that case."
+   "notes": "D-2 of the OAuth binding layering plan; #1567. Two witnesses, each proved by its own mutation. A credential narrower than its Mission: narrowing the redemption from the Mission's full Authority Set instead fails it (the delegated token regains payments:invoice.list). A designation narrower than its credential: the deferring deployment's policy, deciding per entry, denies payments:vendor.read at designation and permits it at redemption. Recording the delegating credential's authority at designation and narrowing the redemption from it instead of the designation's claims (a mutation) fails only that witness, the delegated token gaining payments:vendor.read; the file's other 51 tests pass. Its control designation, issued after the change, carries and delivers both entries. In the reference AS a designation carries the presented authority narrowed only by delegate eligibility, so the two authorities differ only when eligibility widens between designation and redemption, the case the second witness constructs."
   },
   {
    "id": "core.delegation.delegate-own-key",
