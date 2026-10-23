@@ -12,6 +12,7 @@
 
 import { createHash } from "node:crypto";
 import { type Server } from "node:http";
+import { authorityHash, intentHash, type JsonValue } from "@mission/core";
 import { DERIVATION_POLICY, SCOPE_PROJECTION } from "@mission/demo-data";
 import { type CryptoKey, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -159,6 +160,13 @@ const derivedNow = () =>
   as.kernel.derive(as.kernel.validateSubmission(JSON.stringify({ intent: INTENT })).intent, PROPOSAL as never);
 const withoutSources = (entries: unknown[]) => (entries as Record<string, unknown>[]).map(({ capability_sources: _, ...rest }) => rest);
 
+/** The anchors a Mission records are computed over the context approved: its Intent and its committed set. */
+function expectAnchorsOverApproved(record: { intent_hash?: string; authority_hash?: string; authority_set?: unknown[] } | undefined) {
+  const intent = as.kernel.validateSubmission(JSON.stringify({ intent: INTENT })).intent;
+  expect(record?.intent_hash).toBe(intentHash(ISSUER, intent as unknown as JsonValue));
+  expect(record?.authority_hash).toBe(authorityHash(ISSUER, record?.authority_set as JsonValue[]));
+}
+
 describe("Changes Before the Decision (@spec mission#approval-context-changes, #1446)", () => {
   it("an unchanged context approves on its rendering's revision, and the Mission commits the rendered set", async () => {
     const flow = await open();
@@ -171,6 +179,7 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     expect(decided.status, JSON.stringify(decided.json)).toBe(303);
     const record = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
     expect(withoutSources(record?.authority_set as unknown[])).toEqual(rendered);
+    expectAnchorsOverApproved(record);
   });
 
   it("a decision with no rendering, or after only an anonymous rendering, approves nothing", async () => {
@@ -209,6 +218,7 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     const record = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
     expect(withoutSources(record?.authority_set as unknown[])).toEqual(narrower);
     expect(narrower.flatMap((e) => e.actions)).not.toContain("payments:invoice.list");
+    expectAnchorsOverApproved(record);
   });
 
   it("a wider ceiling between rendering and decision creates nothing", async () => {
