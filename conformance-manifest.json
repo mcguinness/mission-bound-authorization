@@ -111,8 +111,8 @@
     "content_sha256": "74d6ce91fa5bf904e532dfae6ead1982c0a17325fd90b491e1ef51e19a891741"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "c8eae0680f33d532b24db43e4b4b782586fe23f3",
-    "content_sha256": "d6688982eb8b956a4af4c2c62f6a8fb49a517a2b585beec700a0dc662347263f"
+    "revision": "a6567f6935140f2b1b04e1f1d819ce14dbbc341f",
+    "content_sha256": "c9636bdc3bc0a3b7baffd573b69e56708887aacb5b9fecdd0d35516a4d1d69d5"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
@@ -59651,6 +59651,93 @@
     }
    ],
    "notes": "#1210 (D398)."
+  },
+  {
+   "id": "child-delegation.possession-at-rest.refresh-token-refused",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "possession-at-rest",
+   "text": "A refresh token MUST NOT be accepted as `subject_token`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child-creation token exchange presenting a refresh token as subject_token is refused, creating no Child Mission and issuing no child-bound grant",
+    "local": "continuation-grant.ts verifySubjectPossession refuses a refresh-token subject_token_type at step 1 (400 invalid_request, \"a refresh token MUST NOT be accepted as subject_token\"), before the token is verified. The test presents the parent's own refresh token with that type and asserts the 400 invalid_request and the description. Removing that branch fails the test only on its description: the request is still refused invalid_request by the general subject_token_type check, and a refresh token declared as an access token fails JWT verification"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > a refresh token as subject_token is rejected (#448: a reusable bearer refresh credential MUST NOT carry possession)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Added for #1619 (D729). Partial: the test asserts the refusal of a refresh token presented with the refresh-token type, but not that nothing is created, and it sends no refresh token declared as an access token. The refusal has several enforcers, so no single mutation produces an accepted refresh token."
+  },
+  {
+   "id": "child-delegation.possession-at-rest.no-clear-logging",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "possession-at-rest",
+   "text": "Where a deployment records the exchange for audit, it MUST NOT write `subject_token` or the DPoP proof to logs, traces, or audit records in the clear",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "where the AS records a child-creation exchange, neither the presented subject_token nor the DPoP proof appears in the clear in its logs, traces or audit records",
+    "local": "the test runs a real child-creation exchange, collects the parent access token presented as subject_token and every DPoP proof sent (the first and its nonce retry), and scans every row of every kernel SQLite table, the console output written during the exchange as Node renders it (util.formatWithOptions at unlimited depth, so a credential inside a logged object is found), and the stdout and stderr chunks read as text; the scan is shown to see the exchange's records (the new Child Mission's id), and neither credential appears, whole or by its signature segment. The reference keeps the exchange's records keyed by the resolved Mission and the presenter's cnf (creation idempotency, deferral, child evidence), never the raw credentials. Mutation-proved five ways: logging the subject_token as a string, logging it inside an object, logging the DPoP proof inside an object four levels deep (which util.format's default depth would print as [Object]), writing the subject_token to a kernel table, and writing the DPoP proof to a kernel table each fail the test"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > records a child-creation exchange without its subject_token or DPoP proof in the clear (@spec child-delegation#possession-at-rest, #1619)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Added for #1619 (D729). Partial: the scan covers the kernel's store and process output for an immediate creation. It does not reach oidc-provider's in-memory adapter, the deferred creation path or the idempotent recovery path, and the reference emits no traces."
+  },
+  {
+   "id": "child-delegation.possession-at-rest.redact-recorded",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "possession-at-rest",
+   "text": "MUST redact or hash them wherever the request is otherwise recorded",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "wherever the AS otherwise records a child-creation request, the subject_token and the DPoP proof are redacted or hashed, so no record carries either in the clear",
+    "local": "the test runs a real child-creation exchange, collects the parent access token presented as subject_token and every DPoP proof sent (the first and its nonce retry), and scans every row of every kernel SQLite table, the console output written during the exchange as Node renders it (util.formatWithOptions at unlimited depth, so a credential inside a logged object is found), and the stdout and stderr chunks read as text; the scan is shown to see the exchange's records (the new Child Mission's id), and neither credential appears, whole or by its signature segment. The reference keeps the exchange's records keyed by the resolved Mission and the presenter's cnf (creation idempotency, deferral, child evidence), never the raw credentials. Mutation-proved five ways: logging the subject_token as a string, logging it inside an object, logging the DPoP proof inside an object four levels deep (which util.format's default depth would print as [Object]), writing the subject_token to a kernel table, and writing the DPoP proof to a kernel table each fail the test"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > records a child-creation exchange without its subject_token or DPoP proof in the clear (@spec child-delegation#possession-at-rest, #1619)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Added for #1619 (D729). Partial: the scan covers the kernel's store and process output for an immediate creation. It does not reach oidc-provider's in-memory adapter, the deferred creation path or the idempotent recovery path, and the reference emits no traces."
   },
   {
    "id": "child-delegation.request-processing.possession-step",
