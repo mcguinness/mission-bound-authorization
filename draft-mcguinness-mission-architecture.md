@@ -1988,12 +1988,13 @@ Authorization bases:
   that companion profiles use to define others:
 
   - `template`: a dispatch drawing on a ceiling the human consented
-    to once.
+    to once ({{I-D.draft-mcguinness-oauth-mission-template}}).
   - `policy_drawdown`: a child instance a policy adjudicates within a
-    bound the parent's human already consented to.
+    bound the parent's human already consented to
+    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
   - `ceiling_drawdown`: a successor a policy adjudicates within an
     authority ceiling the Approver consented to at the initial
-    approval.
+    approval ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
   - `governed_policy`: an agent's own proposal a policy adjudicates
     under a policy version a human approved
     ({{I-D.draft-mcguinness-mission-approval-governance}}).
@@ -4379,6 +4380,10 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Authorization bases entry cites the companion profile that
+  defines each standing-consent basis; the OAuth binding points here
+  for the list. No requirement changed.
 
 - The integrity-anchor description says the anchors do not cover the
   approval basis, and names Mission Audit Transparency's
