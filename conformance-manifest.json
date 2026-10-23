@@ -5199,7 +5199,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1436 ruling 1 (D568). The family's adopting profile is the Enterprise Mission Authority Profile, which records under these triggers. The reference implementation decides no recording trigger (it commits records only under governed_policy), so no surface can witness this row yet; it stays todo. Witness owner: the MAS Enterprise tier (#1454); #1470 Q4. Ruled D597 (#1470 Q4): stays todo under mas.enterprise, #1454 owning implementation; voluntary recording does not witness trigger enforcement."
+   "notes": "#1436 ruling 1 (D568). The family's adopting profile is the Enterprise Mission Authority Profile, which records under these triggers. The reference implementation decides no recording trigger (it commits records only under governed_policy), so no surface can witness this row yet; it stays todo. Witness owner: the MAS Enterprise tier (#1551, split from #1454 by D672); #1470 Q4. Ruled D597 (#1470 Q4): stays todo under mas.enterprise, #1551 owning implementation; voluntary recording does not witness trigger enforcement."
   },
   {
    "id": "approval-governance.triggers.voluntary-record-conforms",
@@ -5342,7 +5342,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1313 item 2: #1295 (D482) added the sentence and no row quoted it. It restates for the first trigger the MAS obligation in mas.enterprise.approval-governance-record. Witness owner: the MAS Enterprise tier (#1454); #1470 Q4. Ruled D597 (#1470 Q4): stays todo under mas.enterprise, #1454 owning implementation; voluntary recording does not witness trigger enforcement."
+   "notes": "#1313 item 2: #1295 (D482) added the sentence and no row quoted it. It restates for the first trigger the MAS obligation in mas.enterprise.approval-governance-record. Witness owner: the MAS Enterprise tier (#1551, split from #1454 by D672); #1470 Q4. Ruled D597 (#1470 Q4): stays todo under mas.enterprise, #1551 owning implementation; voluntary recording does not witness trigger enforcement."
   },
   {
    "id": "approval-governance.assertion.direct-accountable-human",
@@ -18132,7 +18132,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
+   "notes": "Implementation owner: #1551 (the Enterprise tier, D672). #594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.issuance-required-high-consequence",
@@ -18220,7 +18220,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Not a gap a test can close: the Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered. No service or package carries an Enterprise-tier classification or key-binding requirement (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability), and the issuance path in services/authorization-server carries none. The row needs the capability built, not a test."
+   "notes": "Implementation owner: #1551 (the Enterprise tier, split from #1454 by D672). Not a gap a test can close: the Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered. No service or package carries an Enterprise-tier classification or key-binding requirement (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability), and the issuance path in services/authorization-server carries none. The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.claim-isolation",
@@ -18242,7 +18242,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
+   "notes": "Implementation owner: #1551 (the Enterprise tier, D672). #594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
   },
   {
    "id": "mas.enterprise.redeemed-token-key",
@@ -18264,7 +18264,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Not a gap a test can close: the Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered. No service or package carries an Enterprise-tier classification or key-binding requirement (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability), and the issuance path in services/authorization-server carries none. The row needs the capability built, not a test."
+   "notes": "Implementation owner: #1551 (the Enterprise tier, split from #1454 by D672). Not a gap a test can close: the Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered. No service or package carries an Enterprise-tier classification or key-binding requirement (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability), and the issuance path in services/authorization-server carries none. The row needs the capability built, not a test."
   },
   {
    "id": "mas.enterprise.runtime-freshness-not-replaced",
@@ -18286,7 +18286,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Not a gap a test can close: the Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and no service or package carries a tier classification or an Enterprise-profile path (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability). The row needs the capability built, not a test."
+   "notes": "Implementation owner: #1551 (the Enterprise tier, split from #1454 by D672). Not a gap a test can close: the Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and no service or package carries a tier classification or an Enterprise-profile path (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability). The row needs the capability built, not a test."
   },
   {
    "id": "mas.enterprise.approval-governance-record",
@@ -18309,7 +18309,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Found with #1313 item 2: no row quoted the MAS recording obligation. Witness owner: the MAS Enterprise tier (#1454); #1470 Q4. Ruled D597 (#1470 Q4): stays todo under mas.enterprise, #1454 owning implementation; voluntary recording does not witness trigger enforcement."
+   "notes": "Found with #1313 item 2: no row quoted the MAS recording obligation. Witness owner: the MAS Enterprise tier (#1551, split from #1454 by D672); #1470 Q4. Ruled D597 (#1470 Q4): stays todo under mas.enterprise, #1551 owning implementation; voluntary recording does not witness trigger enforcement."
   },
   {
    "id": "mas.join.credential-mission-equality",
@@ -59385,7 +59385,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
   },
   {
    "id": "mas.join-assertion.one-thumbprint",
@@ -59407,7 +59407,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
   },
   {
    "id": "mas.join-assertion.pdp-checks-reported-binding",
@@ -59429,7 +59429,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
   },
   {
    "id": "mas.join-assertion.join-claim",
@@ -59446,12 +59446,32 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every minted assertion carries join.client_id and join.disposition, and join.depth for a delegate"
+    "normative": "every minted assertion carries join.client_id and join.disposition, and join.depth for a delegate",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: every assertion carries join.client_id and join.disposition (client, or delegate with join.depth)"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting, the service alone (@spec authority-server#join-assertion-artifact, #1454) > mints, with no HTTP route in the way, a join claim for the client and for a delegate, exactly one confirmation member, and aud the request's audience",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion artifact (@spec authority-server#join-assertion-artifact, #1454) > mints a sender-bound assertion for an enrolled PDP: typ, a listed alg, iss, mission, token with its one confirmation, join, aud, mapping_version",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion artifact (@spec authority-server#join-assertion-artifact, #1454) > carries disposition delegate and the delegate's depth for a delegate's join",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by defects that drop the delegate's depth and that report a delegate as client."
   },
   {
    "id": "mas.join-assertion.pdp-uses-join-claim",
@@ -59473,7 +59493,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
   },
   {
    "id": "mas.join-assertion.depth-disagreement-denies",
@@ -59495,7 +59515,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
   },
   {
    "id": "mas.join-assertion.one-confirmation-member",
@@ -59512,12 +59532,32 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the token claim carries exactly one of jkt and x5t#S256, matching the token"
+    "normative": "the token claim carries exactly one of jkt and x5t#S256, matching the token",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: the token claim carries sha256 and exactly the acting token's one confirmation: jkt, or x5t#S256 from the access token or the digest pair"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting, the service alone (@spec authority-server#join-assertion-artifact, #1454) > mints, with no HTTP route in the way, a join claim for the client and for a delegate, exactly one confirmation member, and aud the request's audience",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion artifact (@spec authority-server#join-assertion-artifact, #1454) > mints a sender-bound assertion for an enrolled PDP: typ, a listed alg, iss, mission, token with its one confirmation, join, aud, mapping_version",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion artifact (@spec authority-server#join-assertion-artifact, #1454) > binds a certificate-bound token by x5t#S256 alone, from the access token or the digest pair",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that adds the other confirmation member."
   },
   {
    "id": "mas.join-assertion.failed-validation-denies",
@@ -59539,7 +59579,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
   },
   {
    "id": "mas.metadata.max-stale-required",
@@ -59577,12 +59617,44 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "no assertion is minted for a Mission that is not active"
+    "normative": "no assertion is minted for a Mission that is not active",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a revoked Mission gets join_failed and no assertion, on a fresh request and on one a cached assertion matches; and a Mission revoked, suspended or expired while the acting token is established, after the token check, or while the assertion is signed, gets join_failed with nothing returned, cached or recorded (the Mission is read again after the token check and after signing)"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses join_failed (HTTP 403), minting nothing: a revoked Mission, an audience not enrolled, an inactive or expired token, one with no cnf, a mismatched thumbprint, a token that does not join",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion cache (@spec authority-server#join-assertion-request, #1454) > rechecks before serving a cached assertion: a caller outside the visibility set, a revoked Mission and an inactive token are refused, and a changed mapping mints anew",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed, returning and recording nothing, a Mission revoked, suspended or expired while its acting token is being established",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed a Mission revoked, suspended or expired after the token check and before signing",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed a Mission revoked, suspended or expired while the assertion is signed, and caches nothing it refused",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the state check. The re-reads (#1454 review) are proved by defects that drop the re-read after signing, drop its state check, read the stale record, read without materializing expiry, and cache or record before the re-read after signing; dropping the re-read before signing alone is caught on cache-rechecks, since the re-read after signing still refuses a fresh mint."
   },
   {
    "id": "mas.join-assertion.malformed-request",
@@ -59599,12 +59671,20 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a body without mission_id and exactly one token form gets 400 invalid_join_request"
+    "normative": "a body without mission_id and exactly one token form gets 400 invalid_join_request",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a body that is not JSON or not an object, one with no mission_id or a non-string audience, and one carrying no token form, both forms, or the digest with no or two thumbprints, each get 400 invalid_join_request"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses a body that is not a JSON object carrying mission_id, a string audience and exactly one token form invalid_join_request (HTTP 400)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by defects that accept both token forms and that drop the exactly-one-thumbprint check."
   },
   {
    "id": "mas.join-assertion.join-failed-outcomes",
@@ -59621,12 +59701,26 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a visible non-active Mission, an inactive or unbound token, or a failed join gets 403 join_failed, while an unknown or invisible Mission keeps 404 not_found"
+    "normative": "a visible non-active Mission, an inactive or unbound token, or a failed join gets 403 join_failed, while an unknown or invisible Mission keeps 404 not_found",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a revoked Mission, an audience not enrolled, an inactive, expired or unbound token, a thumbprint that is not the token's, and a token that does not join each get 403 join_failed with nothing minted, while an unknown Mission and a caller outside the visibility set get one 404 not_found"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses join_failed (HTTP 403), minting nothing: a revoked Mission, an audience not enrolled, an inactive or expired token, one with no cnf, a mismatched thumbprint, a token that does not join",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > answers an unknown Mission and a caller outside the visibility set with one not_found; the Mission's own client is inside it",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect per gate."
   },
   {
    "id": "mas.submission.interval-in-force",
@@ -59706,12 +59800,26 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every assertion's alg is listed in the MAS's mission_status_signing_alg_values_supported"
+    "normative": "every assertion's alg is listed in the MAS's mission_status_signing_alg_values_supported",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: every assertion is signed ES256, the algorithm the AS lists in mission_status_signing_alg_values_supported"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion artifact (@spec authority-server#join-assertion-artifact, #1454) > mints a sender-bound assertion for an enrolled PDP: typ, a listed alg, iss, mission, token with its one confirmation, join, aud, mapping_version",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint discovery (@spec authority-server#discovery, #1454) > advertises mission_join_assertion_endpoint where the MAS mints assertions, and not where it does not",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that advertises a list without the algorithm the MAS signs with."
   },
   {
    "id": "mas.join-assertion.pdp-rejects-unlisted-alg",
@@ -59733,7 +59841,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
   },
   {
    "id": "mas.mapping-contract.floor-documented",
@@ -59789,7 +59897,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Deployment documentation; no runtime surface to test. The reference claims no Enterprise tier, so no MAS here is an enterprise MAS that must publish its contract."
+   "notes": "Implementation owner: #1551 (the Enterprise tier, split from #1454 by D672). Deployment documentation; no runtime surface to test. The reference claims no Enterprise tier, so no MAS here is an enterprise MAS that must publish its contract."
   },
   {
    "id": "mas.hc.mission-bound-instance-check",
@@ -59811,7 +59919,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). No Enterprise high-consequence path with Instance Context in the reference composition."
+   "notes": "Implementation owner: #1551 (the Enterprise tier, split from #1454 by D672). No Enterprise high-consequence path with Instance Context in the reference composition."
   },
   {
    "id": "mas.join-assertion.audience-enrolled",
@@ -59828,12 +59936,26 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request whose audience names no PDP enrolled for the Mission is refused join_failed, and no assertion is minted"
+    "normative": "a request whose audience names no PDP enrolled for the Mission is refused join_failed, and no assertion is minted",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a request whose audience is enrolled for another scope only, or for nothing, gets join_failed and no assertion. The Mission's enforcement scope is the set of enrolled scopes some entry of its Authority Set overlaps, under the matcher Mission Status scopes entries with (entryOverlapsResource); an audience withdrawn while the token is established or the assertion is signed gets join_failed"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses join_failed (HTTP 403), minting nothing: a revoked Mission, an audience not enrolled, an inactive or expired token, one with no cnf, a mismatched thumbprint, a token that does not join",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed when the Mission's authority_hash changes, or its audience is withdrawn, during the token check or the signing",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the audience check. Also proved by a defect that drops the audience from the re-read (#1454 review)."
   },
   {
    "id": "mas.join-assertion.aud-claim",
@@ -59850,12 +59972,26 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every minted assertion carries aud equal to the request's audience"
+    "normative": "every minted assertion carries aud equal to the request's audience",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: every assertion's aud is the request's audience"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting, the service alone (@spec authority-server#join-assertion-artifact, #1454) > mints, with no HTTP route in the way, a join claim for the client and for a delegate, exactly one confirmation member, and aud the request's audience",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion artifact (@spec authority-server#join-assertion-artifact, #1454) > mints a sender-bound assertion for an enrolled PDP: typ, a listed alg, iss, mission, token with its one confirmation, join, aud, mapping_version",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that sets aud to the caller."
   },
   {
    "id": "mas.join-assertion.pdp-checks-aud",
@@ -59877,7 +60013,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
   },
   {
    "id": "mas.join-assertion.cache-key",
@@ -59894,12 +60030,20 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a cached assertion is served only for a request matching its Mission, token digest and audience"
+    "normative": "a cached assertion is served only for a request matching its Mission, token digest and audience",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a repeated request is served the cached assertion with nothing minted; another Mission, another token or another audience mints anew"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion cache (@spec authority-server#join-assertion-request, #1454) > serves a repeated request its cached assertion, keyed on the Mission, the token digest and the audience: a change in any one mints anew",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by defects that drop the Mission, the token digest and the audience from the key, each alone."
   },
   {
    "id": "mas.join-assertion.cache-rechecks",
@@ -59916,12 +60060,26 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a caller outside the visibility set, or a request failing a minting check, is refused even when a cached assertion matches"
+    "normative": "a caller outside the visibility set, or a request failing a minting check, is refused even when a cached assertion matches",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: with a matching cached assertion, a caller outside the visibility set gets not_found, an inactive token and a revoked Mission get join_failed, and a changed join (a new mapping version) mints anew rather than serving the cache; a cached assertion is not served for a Mission revoked while the next request's token is established"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion cache (@spec authority-server#join-assertion-request, #1454) > rechecks before serving a cached assertion: a caller outside the visibility set, a revoked Mission and an inactive token are refused, and a changed mapping mints anew",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > does not serve a cached assertion for a Mission revoked while the next request's token is being established",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that serves the cache before the checks. Also proved by the defect that drops the re-read before signing (#1454 review)."
   },
   {
    "id": "mas.submission.unsupported-media-type",
@@ -60177,12 +60335,26 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a join-assertion request authenticated by a private-key-JWT client assertion is accepted only when the assertion's aud is the MAS issuer identifier as its sole value; an assertion audienced to the join-assertion endpoint URL, or carrying any other or additional audience, is refused invalid_client and no assertion is minted"
+    "normative": "a join-assertion request authenticated by a private-key-JWT client assertion is accepted only when the assertion's aud is the MAS issuer identifier as its sole value; an assertion audienced to the join-assertion endpoint URL, or carrying any other or additional audience, is refused invalid_client and no assertion is minted",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts) authenticates join-assertion callers through Mission Status's authenticator with the issuer identifier as the sole aud: an issuer-audienced assertion, as a string or a one-element array, is accepted and mints; one audienced to the endpoint URL, to the issuer beside another audience, or to another issuer gets 400 invalid_client and nothing is minted"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Added with the #1569 review of the D685 rulings (Q2 detail): the client assertion's aud is the MAS issuer identifier as its sole value, as Mission Status requires. The reference serves no mission submission endpoint; the join-assertion endpoint in open #1554 still checks the endpoint audience, so its witness lands once #1554 adopts the issuer audience. todo until then."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses a failed or absent client authentication invalid_client (HTTP 400), minting nothing: the assertion's aud must be the MAS issuer identifier as its sole value",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > accepts a client assertion whose aud is the MAS issuer identifier as its sole value, as a string or a one-element array, as at Mission Status",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Added with the #1569 review of the D685 rulings (Q2 detail); witnessed by #1554 once it adopted the issuer audience. Mutation-proved: restoring the endpoint audience fails both tests, and accepting the issuer inside a multi-valued aud fails the refusal test."
   },
   {
    "id": "mas.errors.invalid-client",
@@ -60198,12 +60370,20 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a failed direct client authentication at the submission or join-assertion endpoint gets 400 invalid_client"
+    "normative": "a failed direct client authentication at the submission or join-assertion endpoint gets 400 invalid_client",
+    "local": "witnessed at the join-assertion endpoint, the reference's one MAS endpoint of the two: no credential, an assertion audienced to the join-assertion endpoint URL, to the issuer beside another audience or to another issuer, and an unregistered client each get 400 invalid_client with no WWW-Authenticate challenge. The reference serves no MAS submission endpoint"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference stack has no MAS submission or join-assertion endpoint. Todo until a MAS service exists (#972 item 18, #1099 review)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses a failed or absent client authentication invalid_client (HTTP 400), minting nothing: the assertion's aud must be the MAS issuer identifier as its sole value",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#972 item 18, #1099 review; #1454: the MAS join-assertion endpoint."
   },
   {
    "id": "authzen.instance-context.no-upstream-actor",
