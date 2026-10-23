@@ -402,6 +402,17 @@ The protected header MUST carry:
   fields. It carries no authority and is never an enforcement input
   ({{verification}}).
 
+`approval_governance_digest`:
+: OPTIONAL. A string. The record digest of the Approval Governance
+  Record that backs the Mission's approval event, in the encoded form
+  that profile fixes
+  ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+  "Envelope and Verification"). It pins the exact record bytes a
+  verifier may later be shown; it carries no authority and is never
+  an enforcement input ({{verification}}). A Mandate that carries it
+  MUST also carry `approval_event_id`, and the issuer MUST NOT include
+  it unless such a record backs the approval event.
+
 `authority_set`:
 : OPTIONAL. An array. The full consented Authority Set, exactly as
   recorded on the Mission record, preserving array order (the order is
@@ -486,7 +497,10 @@ check.
 The Mission Issuer MAY mint a Mandate at any time within the Mission's
 audit horizon, including after the Mission terminates.
 Each claim MUST be populated from the Mission record's committed
-members. `state_at_issuance` MUST equal the Mission's lifecycle state
+members, except `approval_governance_digest`, which is the record
+digest of the committed Approval Governance Record that backs the
+Mission's approval event. `state_at_issuance` MUST equal the Mission's
+lifecycle state
 at `iat`. When that state is `terminated`, `termination_at_issuance`
 MUST equal the Mission's `termination` at `iat`. The issuer MUST NOT
 mint a Mandate whose facts diverge from the record.
@@ -1006,7 +1020,8 @@ A **Mandate Issuer** MUST:
 
 - be the Mission `issuer` and set `iss` to it;
 - mint only over an existing Mission record, populating every claim
-  from its committed members ({{minting}});
+  from its committed members, and `approval_governance_digest` from
+  the committed Approval Governance Record ({{minting}});
 - set `state_at_issuance` to the Mission's lifecycle state at `iat`
   and, when that state is `terminated`, `termination_at_issuance` to
   the Mission's `termination` at `iat`;
