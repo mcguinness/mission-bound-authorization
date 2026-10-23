@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
-    "content_sha256": "339c6e233e26e8920573096fe463dc51903cf5a136de15ee79c899c354529a9b"
+    "revision": "ec3bc9f3ab8bd948a8411187823845dd66dca7b4",
+    "content_sha256": "8fb98f8252f428122c8ef4313c06ed794c6e18f72c28e48189d795b2909608c1"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -10207,11 +10207,61 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a Mission-bound token that carries an emitted act chain, whatever path emitted it, never reaches a Mission-unaware resource server, or logging or audit infrastructure, that authorizes or logs the caller on client_id without processing the act chain",
-    "local": "the AS portion only: the AS issues an act-bearing Mission-bound token only for an audience its trusted scope-projection mapping classifies mission_aware, and refuses any other or unmapped audience with invalid_target (D166) before issuance"
+    "local": "the deployment's part beyond the AS issuance gate (core.rs-enforcement.delegated-issuance-gate): the reference deployment's trusted mapping classifies an audience mission_aware only when its Resource Server processes the act chain and the mission claim; routing a token past its audience and the logging and audit pipelines that record its use are not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "config/scope-projection.json loader (@spec mission#scope-projection) > classifies each shipped audience mission_aware from what its Resource Server processes (@spec mission#rs-enforcement)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Inventory per D415. #1503 finding 8 (D620): the AS issuance gate is its own row, core.rs-enforcement.delegated-issuance-gate, which carries the AS witnesses this row cited before; this row keeps the deployment's obligation for what the AS cannot verify. Partial: the shipped-config test witnesses the deployment's input to the gate, that each shipped audience is classified by what its Resource Server processes (only mcp-payments reads the act chain and the mission claim; mcp-saas requires the mission claim but never reads act, so it is not classified mission_aware). Not witnessed: routing a token beyond its audience, and logging or audit pipelines that key on client_id; model.roles has no deployment role."
+  },
+  {
+   "id": "core.rs-enforcement.delegated-issuance-gate",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-mission-unaware",
+   "text": "The AS MUST refuse, with `invalid_target` ({{error-mapping}}), a request for a delegated Mission-bound token whose audience it has not established as a Mission-aware Resource Server ({{rs-requirements}}) that also processes the `act` chain, authorizing and logging the caller from the chain rather than from `client_id` alone. That the audience parses `act` does not establish this.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS issues a Mission-bound token carrying an act chain only for an audience it has established as a Mission-aware Resource Server that also processes the act chain; a request for any other audience, including one that enforces the Mission's authorization_details but is not established as processing the act chain, is refused with invalid_target and issues no token",
+    "local": "establishment is the trusted scope-projection mapping's mission_aware classification, true only for a target that processes the act chain and the mission claim; an audience the mapping does not name fails closed; the refusal precedes counting the derivation on the delegated exchange and admitting a workflow on the transaction endpoint; error_description names the routing reason"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the exchange selector (@spec mission#delegation) > a delegated token reaches only a Mission-aware target: otherwise invalid_target, counting nothing (D166)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870) > refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
      "name": "delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection",
@@ -10225,31 +10275,31 @@
      "surface": "token-endpoint"
     },
     {
-     "file": "src/services/authorization-server/test/scope-projection.test.ts",
-     "name": "the JWT customizer backstop, invoked directly (@spec mission#scope-projection, mission#rs-enforcement) > refuses invalid_target an act-bearing Mission-bound payload to an audience not classified Mission-aware or not mapped, and passes it to a Mission-aware audience",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
-     "name": "the exchange selector (@spec mission#delegation) > a delegated token reaches only a Mission-aware target: otherwise invalid_target, counting nothing (D166)",
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is",
      "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
-     "name": "the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870) > refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check",
-     "level": "endpoint",
-     "surface": "token-endpoint"
+     "surface": "transaction-authorization-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
      "name": "delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, when the actor context comes only from the subject token, a same-Mission delegated token, for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the JWT customizer backstop, invoked directly (@spec mission#scope-projection, mission#rs-enforcement) > refuses invalid_target an act-bearing Mission-bound payload to an audience not classified Mission-aware or not mapped, and passes it to a Mission-aware audience",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "delegated routing (@spec mission#rs-enforcement) > a delegated token reaches only audiences classified mission_aware; an undelegated one keeps its projection",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role); it does not establish every deployment route, and the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. Witnessed at the token endpoint on the cross-org exchange and on same-Mission delegation (#869), whose exchange refuses a target not classified Mission-aware before counting; the JWT customizer backstop is witnessed directly (unit) and at the endpoint on a real delegated mint, where a target reclassified after the exchange's own check is refused at the save (disabling the customizer's act branch issues the token). Transaction tokens (#870 review): the transaction endpoint refuses before admitting a workflow whenever either upstream carrier supplies actor context, the condition under which the issued token carries act, for the challenge issuer that becomes its audience (txn-endpoint.test.ts, delegated routing of transaction tokens). Both carriers are witnessed as direct handler tests ending at admission: the challenge's act, and the subject token's, a real same-Mission delegated token presented by the delegate with its own key against a challenge carrying no act; restricting the gate to the challenge carrier fails the latter."
+   "notes": "#1503 finding 8 (D620): the AS issuance gate, split from the deployment routing row (core.rs-enforcement.delegated-routing-mission-aware), which keeps what the AS cannot verify. The condition is literal: any Mission-bound token carrying an emitted act chain, so the cross-org exchange and transaction tokens are witnessed alongside same-Mission delegation (#869). Refusal: the delegated exchange refuses a target that enforces the Mission's authorization_details (the shipped payments audience with its constraints keys) but is classified mission_aware false, with the gate's own reason, no token, and no derivation counted; that target's Resource Server does process act, so the refusal follows the AS's established classification, not the target's token handling. Issuance: the same target classified mission_aware true receives the delegated token. Mutation: disabling the exchange's own check alone leaves the save-time customizer backstop refusing invalid_target with the same reason, but after the derivation is counted, so the first witness fails on its count (expected 3 to be 2); refusing every audience at that check fails the issuance witnesses (18 tests, 400 instead of 200); making delegatedRoutingRefusal ignore the classification fails every refusal witness cited here (200 instead of 400). The customizer backstop's own branch is witnessed by the third and eighth tests."
   },
   {
    "id": "core.rs-enforcement.unenforceable-entry-no-authority",
