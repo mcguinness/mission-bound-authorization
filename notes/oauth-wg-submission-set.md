@@ -190,7 +190,9 @@ from each draft's own text at the revision its citer names.
 
 Method, so a future audit can re-run and diff:
 - Start from the three drafts at the revisions the published core `-01`
-  cites (its Section 24.1). The core's source cites them unversioned.
+  cites (its Section 24.1). The source at the bound commit cites them
+  unversioned, and each of those revisions is its draft's current one
+  (the table above), so the roots are the bound commit's.
 - For each node, read the Normative References section of
   `https://www.ietf.org/archive/id/<name>-<rev>.txt`.
 - Record every Internet-Draft entry with the revision it names. An entry
@@ -202,32 +204,34 @@ Method, so a future audit can re-run and diff:
   State comes from the states listed by
   `https://datatracker.ietf.org/api/v1/doc/document/<name>/`: the WG
   state, the RFC Editor state once in the RFC Editor queue, or active or
-  expired for an individual draft. State belongs to the draft, not the
-  revision.
+  expired for an individual draft. State and expiry are the draft's
+  current revision's, not the cited revision's; the State cell names the
+  current revision where it differs. A draft in the RFC Editor queue
+  shows no expiry.
 
 | Draft at cited revision | Depth | Reached through | Stream | State | Normative Internet-Draft references (as cited) | Source section |
 |---|---|---|---|---|---|---|
-| `draft-ietf-oauth-rar-metadata-remediation-00` | 0 | rar-metadata-remediation | IETF, oauth WG | WG Document | none | Section 10 |
-| `draft-mcguinness-oauth-actor-profile-01` | 0 | Actor Profile | individual | active | `draft-ietf-oauth-transaction-tokens-11`; `draft-ietf-wimse-workload-creds-02`; `draft-ietf-wimse-wpt-02`; `draft-mora-oauth-entity-profiles-01`; `draft-ietf-oauth-identity-assertion-authz-grant-04` | Section 16.1 |
-| `draft-mcguinness-oauth-client-instance-id-00` | 0 | client-instance-id | individual | active | `draft-ietf-oauth-attestation-based-client-auth-11` | Section 12.1 |
-| `draft-ietf-oauth-attestation-based-client-auth-11` | 1 | client-instance-id | IETF, oauth WG | WG Consensus: Waiting for Write-Up | none | Section 16.1 |
-| `draft-ietf-oauth-identity-assertion-authz-grant-04` | 1 | Actor Profile | IETF, oauth WG | WG Document | `draft-ietf-oauth-identity-chaining-12`; `draft-ietf-oauth-rfc7523bis-11`; `draft-parecki-oauth-jwt-dpop-grant-01` | Section 11.1 |
-| `draft-ietf-oauth-transaction-tokens-11` | 1 | Actor Profile | IETF, oauth WG | WG Consensus: Waiting for Write-Up | `draft-ietf-oauth-identity-chaining-17` | Section 17.1 |
-| `draft-ietf-wimse-workload-creds-02` | 1 | Actor Profile | IETF, wimse WG | WG Document | `draft-ietf-wimse-mutual-tls-01`; `draft-ietf-wimse-identifier-02` | Section 12.1 |
-| `draft-ietf-wimse-wpt-02` | 1 | Actor Profile | IETF, wimse WG | WG Document | `draft-ietf-wimse-arch-08`; `draft-ietf-wimse-workload-creds-02` | Section 5.1 |
-| `draft-mora-oauth-entity-profiles-01` | 1 | Actor Profile | individual | active | `draft-ietf-oauth-transaction-tokens` unversioned (resolved to `-08`) | Section 15.1 |
-| `draft-ietf-oauth-identity-chaining-12` | 2 | Actor Profile | IETF, oauth WG | RFC Editor queue (In Progress) | none | Section 7.1 |
+| `draft-ietf-oauth-rar-metadata-remediation-00` | 0 | rar-metadata-remediation | IETF, oauth WG | WG Document, expires 2027-02-24 | none | Section 10 |
+| `draft-mcguinness-oauth-actor-profile-01` | 0 | Actor Profile | individual | active, expires 2027-04-12 | `draft-ietf-oauth-transaction-tokens-11`; `draft-ietf-wimse-workload-creds-02`; `draft-ietf-wimse-wpt-02`; `draft-mora-oauth-entity-profiles-01`; `draft-ietf-oauth-identity-assertion-authz-grant-04` | Section 16.1 |
+| `draft-mcguinness-oauth-client-instance-id-00` | 0 | client-instance-id | individual | active, expires 2027-04-01 | `draft-ietf-oauth-attestation-based-client-auth-11` | Section 12.1 |
+| `draft-ietf-oauth-attestation-based-client-auth-11` | 1 | client-instance-id | IETF, oauth WG | WG Consensus: Waiting for Write-Up, current `-12`, expires 2027-04-16 | none | Section 16.1 |
+| `draft-ietf-oauth-identity-assertion-authz-grant-04` | 1 | Actor Profile | IETF, oauth WG | WG Document, expires 2026-11-22 | `draft-ietf-oauth-identity-chaining-12`; `draft-ietf-oauth-rfc7523bis-11`; `draft-parecki-oauth-jwt-dpop-grant-01` | Section 11.1 |
+| `draft-ietf-oauth-transaction-tokens-11` | 1 | Actor Profile | IETF, oauth WG | WG Consensus: Waiting for Write-Up, expires 2027-01-31 | `draft-ietf-oauth-identity-chaining-17` | Section 17.1 |
+| `draft-ietf-wimse-workload-creds-02` | 1 | Actor Profile | IETF, wimse WG | WG Document, expires 2027-01-03 | `draft-ietf-wimse-mutual-tls-01`; `draft-ietf-wimse-identifier-02` | Section 12.1 |
+| `draft-ietf-wimse-wpt-02` | 1 | Actor Profile | IETF, wimse WG | WG Document, expires 2027-02-28 | `draft-ietf-wimse-arch-08`; `draft-ietf-wimse-workload-creds-02` | Section 5.1 |
+| `draft-mora-oauth-entity-profiles-01` | 1 | Actor Profile | individual | active, current `-02`, expires 2027-04-19 | `draft-ietf-oauth-transaction-tokens` unversioned (resolved to `-08`) | Section 15.1 |
+| `draft-ietf-oauth-identity-chaining-12` | 2 | Actor Profile | IETF, oauth WG | RFC Editor queue (In Progress), current `-17` | none | Section 7.1 |
 | `draft-ietf-oauth-identity-chaining-17` | 2 | Actor Profile | IETF, oauth WG | RFC Editor queue (In Progress) | none | Section 7 |
 | `draft-ietf-oauth-rfc7523bis-11` | 2 | Actor Profile | IETF, oauth WG | RFC Editor queue (Blocked) | none | Section 9.1 |
-| `draft-ietf-oauth-transaction-tokens-08` | 2 | Actor Profile | IETF, oauth WG | WG Consensus: Waiting for Write-Up | none | Section 17.1 |
-| `draft-ietf-wimse-arch-08` | 2 | Actor Profile | IETF, wimse WG | WG Document | `draft-ietf-wimse-identifier-03` | Section 6.1 |
-| `draft-ietf-wimse-identifier-02` | 2 | Actor Profile | IETF, wimse WG | WG Document | `draft-ietf-wimse-workload-creds-00` | Section 9.1 |
-| `draft-ietf-wimse-mutual-tls-01` | 2 | Actor Profile | IETF, wimse WG | WG Document | `draft-ietf-wimse-workload-creds-00`; `draft-ietf-tls-rfc8446bis-14` | Section 6.1 |
-| `draft-parecki-oauth-jwt-dpop-grant-01` | 2 | Actor Profile | individual | expired | `draft-ietf-oauth-rfc7523bis-05` | Section 7 |
-| `draft-ietf-oauth-rfc7523bis-05` | 3 | Actor Profile | IETF, oauth WG | RFC Editor queue (Blocked) | none | Section 8.1 |
+| `draft-ietf-oauth-transaction-tokens-08` | 2 | Actor Profile | IETF, oauth WG | WG Consensus: Waiting for Write-Up, current `-11`, expires 2027-01-31 | none | Section 17.1 |
+| `draft-ietf-wimse-arch-08` | 2 | Actor Profile | IETF, wimse WG | WG Document, expires 2027-01-07 | `draft-ietf-wimse-identifier-03` | Section 6.1 |
+| `draft-ietf-wimse-identifier-02` | 2 | Actor Profile | IETF, wimse WG | WG Document, current `-03`, expires 2027-01-07 | `draft-ietf-wimse-workload-creds-00` | Section 9.1 |
+| `draft-ietf-wimse-mutual-tls-01` | 2 | Actor Profile | IETF, wimse WG | WG Document, current `-02`, expires 2027-01-07 | `draft-ietf-wimse-workload-creds-00`; `draft-ietf-tls-rfc8446bis-14` | Section 6.1 |
+| `draft-parecki-oauth-jwt-dpop-grant-01` | 2 | Actor Profile | individual | expired 2026-08-03 | `draft-ietf-oauth-rfc7523bis-05` | Section 7 |
+| `draft-ietf-oauth-rfc7523bis-05` | 3 | Actor Profile | IETF, oauth WG | RFC Editor queue (Blocked), current `-11` | none | Section 8.1 |
 | `draft-ietf-tls-rfc8446bis-14` | 3 | Actor Profile | IETF, tls WG | published as RFC 9846 | none | n/a (RFC) |
-| `draft-ietf-wimse-identifier-03` | 3 | Actor Profile | IETF, wimse WG | WG Document | `draft-ietf-wimse-workload-creds-02` | Section 9.1 |
-| `draft-ietf-wimse-workload-creds-00` | 3 | Actor Profile | IETF, wimse WG | WG Document | none | Section 8.1 |
+| `draft-ietf-wimse-identifier-03` | 3 | Actor Profile | IETF, wimse WG | WG Document, expires 2027-01-07 | `draft-ietf-wimse-workload-creds-02` | Section 9.1 |
+| `draft-ietf-wimse-workload-creds-00` | 3 | Actor Profile | IETF, wimse WG | WG Document, current `-02`, expires 2027-01-03 | none | Section 8.1 |
 
 Totals:
 - **16 distinct drafts,** at 21 cited revisions. Five drafts are cited at
@@ -254,7 +258,7 @@ Compared with the latest-revision planning inventory this replaces
 `worktree-notes+oauth-binding-layering-plan`):
 - The drafts and the edges between them are the same: 16 names, and
   each draft cites the same drafts by name.
-- Every edge is now read from the citer's text. The inventory took the
+- Every edge is read from the citer's text. The inventory took the
   edges of nine rows from the datatracker's heuristic References tab or
   from a model summary.
 - The revisions differ. The inventory read one revision per draft,
