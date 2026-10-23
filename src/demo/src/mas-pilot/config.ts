@@ -62,11 +62,14 @@ export interface MasPilotSeparatedConfig {
  * decision requires an assertion, and `required_classes` that the joined
  * decisions of the named action classes do. A joined decision that carries no
  * assertion and is not declared to require one joins under the mapping rules.
+ * `pdp_algorithms` is the PDP's own algorithm allowlist: it accepts those of
+ * the MAS's advertised algorithms the allowlist names, never `none`.
  */
 export interface MasPilotJoinAssertionConfig {
   introspection_client_id: string;
   required: boolean;
   required_classes: string[];
+  pdp_algorithms: string[];
 }
 
 export interface MasPilotInventoryEntry {
@@ -295,13 +298,21 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
   }
   let joinAssertion: MasPilotJoinAssertionConfig | undefined;
   if (optional.length > 0) {
-    const ja = obj(root.join_assertion, "join_assertion", ["introspection_client_id", "required", "required_classes"]);
+    const ja = obj(root.join_assertion, "join_assertion", ["introspection_client_id", "required", "required_classes", "pdp_algorithms"]);
     if (typeof ja.required !== "boolean") throw new MasPilotConfigError("join_assertion.required must be a boolean");
     const client = str(ja.introspection_client_id, "join_assertion.introspection_client_id");
     if (seen.has(client) || client === introspectionClient) {
       throw new MasPilotConfigError("join_assertion.introspection_client_id must be a client of its own at the estate");
     }
-    joinAssertion = { introspection_client_id: client, required: ja.required, required_classes: strs(ja.required_classes, "join_assertion.required_classes") };
+    const algorithms = strs(ja.pdp_algorithms, "join_assertion.pdp_algorithms");
+    if (algorithms.length === 0) throw new MasPilotConfigError("join_assertion.pdp_algorithms must name at least one algorithm");
+    if (new Set(algorithms).size !== algorithms.length) throw new MasPilotConfigError("join_assertion.pdp_algorithms names an algorithm twice");
+    joinAssertion = {
+      introspection_client_id: client,
+      required: ja.required,
+      required_classes: strs(ja.required_classes, "join_assertion.required_classes"),
+      pdp_algorithms: algorithms,
+    };
   }
   const cache = obj(root.mapping_cache, "mapping_cache", ["max_stale_seconds"]);
   const maxStale = cache.max_stale_seconds;

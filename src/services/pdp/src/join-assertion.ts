@@ -61,6 +61,25 @@ export type AssertedJoin = { clientId: string; disposition: "client" } | { clien
 const isRecord = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
 const isString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
 
+/**
+ * @spec authority-server#join-assertion-pdp (#1454 review): the algorithms a
+ * PDP accepts for Join Assertions. An `alg` must be "listed in the MAS's
+ * `mission_status_signing_alg_values_supported`" and "accepted by the PDP's
+ * own algorithm policy": the PDP's declared allowlist, intersected with the
+ * MAS's advertised list, and never `none` whatever either lists. A PDP that
+ * would accept nothing cannot verify any assertion, so this throws and the
+ * caller refuses to start.
+ */
+export function acceptedJoinAssertionAlgorithms(allowlist: readonly string[], advertised: readonly string[]): string[] {
+  const accepted = advertised.filter((alg) => alg !== "none" && allowlist.includes(alg));
+  if (accepted.length === 0) {
+    throw new Error(
+      `no Join Assertion algorithm is both on this PDP's allowlist [${allowlist.join(", ")}] and advertised by the MAS [${advertised.join(", ")}]`,
+    );
+  }
+  return accepted;
+}
+
 /** Whether this deployment declares that a joined decision of `actionClass` requires an assertion. */
 export function joinAssertionRequired(policy: JoinAssertionPolicy, actionClass: string | undefined): boolean {
   return policy.required === true || (actionClass !== undefined && policy.requiredActionClasses?.has(actionClass) === true);

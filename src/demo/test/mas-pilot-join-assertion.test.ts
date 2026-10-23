@@ -66,7 +66,7 @@ function joinConfig(): MasPilotConfig {
       port: MAS_PORT,
       enrolled_pdps: [...moved.separated_mas.enrolled_pdps, { client_id: OTHER_PDP, enforcement_scopes: [CANONICAL_RESOURCE] }],
     },
-    join_assertion: { introspection_client_id: "mas-join-introspector", required: false, required_classes: ["consequential_read"] },
+    join_assertion: { introspection_client_id: "mas-join-introspector", required: false, required_classes: ["consequential_read"], pdp_algorithms: ["ES256"] },
   };
 }
 
@@ -369,13 +369,19 @@ describe("the Join Assertion path is declared, and runs only where it can (#1454
   it("parses a declared join_assertion and refuses a malformed one; absent, the configuration declares no path", () => {
     const shipped = JSON.parse(readFileSync(new URL("../../config/mas-pilot.json", import.meta.url), "utf8")) as Record<string, unknown>;
     expect(parseMasPilotConfig(shipped).join_assertion).toBeUndefined();
-    const declared = { introspection_client_id: "mas-join-introspector", required: true, required_classes: ["consequential_read"] };
+    const declared = { introspection_client_id: "mas-join-introspector", required: true, required_classes: ["consequential_read"], pdp_algorithms: ["ES256"] };
     expect(parseMasPilotConfig({ ...shipped, join_assertion: declared }).join_assertion).toEqual(declared);
     expect(() => parseMasPilotConfig({ ...shipped, join_assertion: { ...declared, required: "yes" } })).toThrow(/required must be a boolean/);
     expect(() => parseMasPilotConfig({ ...shipped, join_assertion: { ...declared, introspection_client_id: "mas-gateway-introspector" } })).toThrow(
       /client of its own/,
     );
     expect(() => parseMasPilotConfig({ ...shipped, join_assertion: { ...declared, extra: 1 } })).toThrow(/unknown member extra/);
+    // The PDP's own allowlist is declared: present, a non-empty list, no repeats.
+    const { pdp_algorithms: _allowlist, ...noAllowlist } = declared;
+    expect(() => parseMasPilotConfig({ ...shipped, join_assertion: noAllowlist })).toThrow(/missing pdp_algorithms/);
+    expect(() => parseMasPilotConfig({ ...shipped, join_assertion: { ...declared, pdp_algorithms: [] } })).toThrow(/at least one algorithm/);
+    expect(() => parseMasPilotConfig({ ...shipped, join_assertion: { ...declared, pdp_algorithms: ["ES256", "ES256"] } })).toThrow(/twice/);
+    expect(() => parseMasPilotConfig({ ...shipped, join_assertion: { ...declared, pdp_algorithms: "ES256" } })).toThrow(/must be an array/);
   });
 
   it("the in-process composition refuses a configuration that declares the path, before it builds anything", async () => {
@@ -390,6 +396,18 @@ d("the separated MAS pilot refuses a declared Join Assertion path it cannot run 
     await expect(
       composeSeparatedMasPilot({ openfga: OPENFGA, resourcePolicyStore: { bootstrap: "development" }, config, mas: { url: MAS_URL, pdpKey } }),
     ).rejects.toThrow(/no secret for the MAS's introspection client/);
+    // A PDP allowlist sharing no algorithm with what the MAS advertises (ES256)
+    // refuses at composition, before the estate or any listener starts.
+    const declared = config.join_assertion as NonNullable<MasPilotConfig["join_assertion"]>;
+    await expect(
+      composeSeparatedMasPilot({
+        openfga: OPENFGA,
+        resourcePolicyStore: { bootstrap: "development" },
+        config: { ...config, join_assertion: { ...declared, pdp_algorithms: ["ES384", "none"] } },
+        mas: { url: MAS_URL, pdpKey },
+        joinIntrospectionSecret: joinSecret,
+      }),
+    ).rejects.toThrow(/no Join Assertion algorithm is both on this PDP's allowlist \[ES384, none\] and advertised by the MAS \[ES256\]/);
     const dir = mkdtempSync(join(tmpdir(), "mas-pilot-join-undeclared-"));
     dirs.push(dir);
     const { join_assertion: _declared, ...undeclared } = config;

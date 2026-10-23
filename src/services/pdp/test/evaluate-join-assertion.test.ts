@@ -19,6 +19,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { evaluate as evaluateRequest, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
 import {
+  acceptedJoinAssertionAlgorithms,
   createDecisionEvidenceEmitter,
   type DecisionEvidenceObject,
   type JoinAssertionPolicy,
@@ -304,6 +305,30 @@ describe("evaluate(): the assertion's alg is one this PDP accepts (@spec authori
     const b64 = (v: unknown) => Buffer.from(JSON.stringify(v)).toString("base64url");
     const unsecured = `${b64({ alg: "none", typ: "mission-join+jwt" })}.${b64(CLAIMS())}.`;
     await expectBindingFailed(joinedReq(carrying(unsecured)), opts({ joinAssertion: { ...policy, algorithms: ["ES256", "none"] }, joinMapping: MAPPED }), "none");
+  });
+});
+
+describe("the PDP's own Join Assertion algorithm allowlist (@spec authority-server#join-assertion-pdp, #1454 review)", () => {
+  it("denies an assertion correctly signed with an algorithm the MAS advertises but the PDP's allowlist excludes, under a key that suits it", async () => {
+    // The MAS advertises ES256 and ES384; this PDP allows ES384 only.
+    const algorithms = acceptedJoinAssertionAlgorithms(["ES384"], ["ES256", "ES384"]);
+    expect(algorithms).toEqual(["ES384"]);
+    // Signed ES256 with the P-256 key: a key that suits ES256, so only the
+    // PDP's policy refuses it.
+    await expectBindingFailed(
+      joinedReq(carrying(await mint())),
+      opts({ joinAssertion: { ...policy, algorithms }, joinMapping: MAPPED }),
+      "ES256 advertised, not on the allowlist",
+    );
+    const es384 = await mint(() => {}, { key: es384Signer, header: { alg: "ES384", kid: "mas-status-384" } });
+    const allowed = await decide(joinedReq(carrying(es384)), opts({ joinAssertion: { ...policy, algorithms } }));
+    expect(allowed.decision.decision, JSON.stringify(allowed.decision)).toBe(true);
+  });
+
+  it("never accepts none, whatever either side lists, and refuses an allowlist that meets nothing the MAS advertises", () => {
+    expect(acceptedJoinAssertionAlgorithms(["ES256", "none"], ["none", "ES256"])).toEqual(["ES256"]);
+    expect(() => acceptedJoinAssertionAlgorithms(["none"], ["none"])).toThrow(/no Join Assertion algorithm/);
+    expect(() => acceptedJoinAssertionAlgorithms(["ES384"], ["ES256"])).toThrow(/no Join Assertion algorithm/);
   });
 });
 

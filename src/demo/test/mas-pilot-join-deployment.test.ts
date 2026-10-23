@@ -5,7 +5,8 @@
  * a stub estate whose introspection answer each test sets, so every branch is
  * driven exactly: the MAS introspects every acting token first; the estate's
  * `unsupported_token_type` error alone sends a JWT to local validation under
- * the estate's published keys; an inactive answer is refused with no local
+ * the estate's published keys (the estate's own contract, an HTTP 400 with
+ * that error, which RFC 7662 does not define); an inactive answer is refused with no local
  * check; an estate that cannot be asked is `unavailable`, with no local
  * fallback; and an opaque token is introspection only. Defined for the
  * owner's confirmation. No OpenFGA.
@@ -67,7 +68,7 @@ function deploymentAtStub() {
   const config: MasPilotConfig = {
     ...moved,
     introspection: { ...moved.introspection, timeout_ms: 300, cache_max_seconds: 0 },
-    join_assertion: { introspection_client_id: "mas-join-introspector", required: false, required_classes: [] },
+    join_assertion: { introspection_client_id: "mas-join-introspector", required: false, required_classes: [], pdp_algorithms: ["ES256"] },
   };
   return pilotJoinAssertions(config, { introspectionSecret: "stub-secret", actorRecords: new ActorRecords() });
 }
@@ -129,6 +130,10 @@ describe("the pilot MAS introspects every acting token first (@spec authority-se
   it("is unavailable, with no local fallback, when introspection of a locally valid JWT cannot be answered: a server error, another error code, a malformed answer, a timeout", async () => {
     const cases: Array<[string, Answer]> = [
       ["a server error", { status: 503, body: { error: "temporarily_unavailable" } }],
+      ["a 401 carrying unsupported_token_type", { status: 401, body: { error: "unsupported_token_type" } }],
+      ["a 403 carrying unsupported_token_type", { status: 403, body: { error: "unsupported_token_type" } }],
+      ["a 500 carrying unsupported_token_type", { status: 500, body: { error: "unsupported_token_type" } }],
+      ["a 503 carrying unsupported_token_type", { status: 503, body: { error: "unsupported_token_type" } }],
       ["another error code", { status: 400, body: { error: "invalid_request" } }],
       ["an error member that is not exactly unsupported_token_type", { status: 400, body: { error: "Unsupported_Token_Type" } }],
       ["a malformed answer", { status: 200, body: "[]" }],

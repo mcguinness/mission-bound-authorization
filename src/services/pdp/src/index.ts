@@ -238,6 +238,7 @@ export {
   lineageScopeDigests,
 } from "./enforcement-boundary.js";
 export {
+  acceptedJoinAssertionAlgorithms,
   type AssertedJoin,
   JOIN_ASSERTION_TYP,
   type JoinAssertionPolicy,

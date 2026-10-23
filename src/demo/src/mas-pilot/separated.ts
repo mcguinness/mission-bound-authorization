@@ -37,6 +37,7 @@
 import { TOPOLOGY } from "@mission/demo-data";
 import { CANONICAL_RESOURCE, joinAssertionClient, type JoinAssertionSource, type LoadedView, type MissionReference, type MissionViewSource } from "@mission/mcp-payments";
 import {
+  acceptedJoinAssertionAlgorithms,
   declaredStatusKeys,
   type JoinAssertionPolicy,
   type MissionView,
@@ -186,6 +187,9 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     if (typeof endpoint !== "string") throw new Error(`the MAS at ${base} advertises no mission_join_assertion_endpoint`);
     const listed = metadata.mission_status_signing_alg_values_supported;
     const advertised = Array.isArray(listed) ? listed.filter((a): a is string => typeof a === "string") : [];
+    // The PDP's own policy: its declared allowlist intersected with what the
+    // MAS advertises, never `none`. Nothing in common refuses to start.
+    const algorithms = acceptedJoinAssertionAlgorithms(declared.pdp_algorithms, advertised);
     // The PEP's client assertion names the MAS's issuer identifier as its
     // sole `aud`, as at Mission Status (D685, D690); the client builds it.
     const caller = {
@@ -199,8 +203,7 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
       policy: {
         audience: config.separated_mas.pdp_client_id,
         keys: statusKeys,
-        // The MAS's listed algorithms; jose refuses `none` and an algorithm the key does not suit.
-        algorithms: advertised,
+        algorithms,
         required: declared.required,
         requiredActionClasses: new Set(declared.required_classes),
       },
