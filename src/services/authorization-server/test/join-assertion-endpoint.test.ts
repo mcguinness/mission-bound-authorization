@@ -22,6 +22,7 @@ import { createHash } from "node:crypto";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
   createLocalJWKSet,
+  decodeJwt,
   decodeProtectedHeader,
   importJWK,
   type JWK,
@@ -117,7 +118,7 @@ function actingToken(over: Partial<ActingToken> & { cnf?: ActingToken["cnf"] | n
   return token;
 }
 
-type Answer = { status: number; json: Record<string, unknown>; retryAfter: string | null };
+type Answer = { status: number; json: Record<string, unknown>; retryAfter: string | null; wwwAuthenticate: string | null };
 
 async function post(body: unknown, opts: { contentType?: string; raw?: string; url?: string } = {}): Promise<Answer> {
   const res = await fetch(opts.url ?? ENDPOINT, {
@@ -125,7 +126,12 @@ async function post(body: unknown, opts: { contentType?: string; raw?: string; u
     headers: { "content-type": opts.contentType ?? "application/json" },
     body: opts.raw ?? JSON.stringify(body),
   });
-  return { status: res.status, json: (await res.json()) as Record<string, unknown>, retryAfter: res.headers.get("retry-after") };
+  return {
+    status: res.status,
+    json: (await res.json()) as Record<string, unknown>,
+    retryAfter: res.headers.get("retry-after"),
+    wwwAuthenticate: res.headers.get("www-authenticate"),
+  };
 }
 
 /** A request from `client`, authenticated by a client assertion audienced to this endpoint. */
@@ -249,6 +255,37 @@ describe("Join Assertion artifact (@spec authority-server#join-assertion-artifac
   });
 });
 
+describe("Join Assertion minting, the service alone (@spec authority-server#join-assertion-artifact, #1454)", () => {
+  it("mints, with no HTTP route in the way, a join claim for the client and for a delegate, exactly one confirmation member, and aud the request's audience", async () => {
+    const service = as.joinAssertions;
+    if (!service) throw new Error("no join-assertion service");
+    const record = approve();
+    const mint = async (token: string, audience: string) => {
+      const answer = await service.handle(
+        JSON.stringify({
+          mission_id: record.id,
+          audience,
+          access_token: token,
+          client_assertion_type: CLIENT_ASSERTION_TYPE,
+          client_assertion: await lifecycleClientAssertion(ISSUER, pep, { aud: ENDPOINT }),
+        }),
+        "application/json",
+        "",
+      );
+      expect(answer.status, JSON.stringify(answer.body)).toBe(200);
+      return decodeJwt(answer.body.assertion as string);
+    };
+    const direct = await mint(actingToken(), pdp.clientId);
+    expect(direct.join).toEqual({ client_id: "ap-agent", disposition: "client" });
+    expect(Object.keys(direct.token as object).sort()).toEqual(["jkt", "sha256"]);
+    expect(direct.aud).toBe(pdp.clientId);
+    const delegate = await mint(actingToken({ clientId: "estate-helper", cnf: { "x5t#S256": "x5t-delegate" } }), pep.clientId);
+    expect(delegate.join).toEqual({ client_id: "helper-agent", disposition: "delegate", depth: 1 });
+    expect(Object.keys(delegate.token as object).sort()).toEqual(["sha256", "x5t#S256"]);
+    expect(delegate.aud).toBe(pep.clientId);
+  });
+});
+
 describe("Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454)", () => {
   it("refuses a body that is not a JSON object carrying mission_id, a string audience and exactly one token form invalid_join_request (HTTP 400)", async () => {
     const record = approve();
@@ -282,6 +319,8 @@ describe("Join Assertion endpoint outcomes (@spec authority-server#join-assertio
     for (const [label, answer] of cases) {
       expect(answer.status, label).toBe(400);
       expect(answer.json.error, label).toBe("invalid_client");
+      // Not a token challenge.
+      expect(answer.wwwAuthenticate, label).toBeNull();
     }
   });
 
