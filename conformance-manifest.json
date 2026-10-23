@@ -38205,6 +38205,48 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q2); todo until that path exists."
   },
   {
+   "id": "issuance-grant.minting-errors.client-auth-failure",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-errors",
+   "text": "| `invalid_client` | 400 | Direct client authentication (mutual TLS or private-key JWT) failed",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request whose mutual-TLS or private-key-JWT client authentication fails, or that presents no credential where no access-token scheme is accepted, gets HTTP 400 invalid_client with no WWW-Authenticate challenge, and no grant is minted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q1); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-errors.access-token-challenge",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-errors",
+   "text": "A 401 response carries the `WWW-Authenticate` challenges that section defines for the MAS's endpoints",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request whose access-token authentication fails gets HTTP 401 unauthorized carrying the challenges MAS defines, naming this endpoint's Protected Resource Metadata"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q1); todo until that path exists."
+  },
+  {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "grant-validation",

@@ -636,17 +636,24 @@ Cache-Control: no-store
 
 A failure returns the MAS error object
 ({{I-D.draft-mcguinness-mission-authority-server}}, Section "Error
-Responses"). This endpoint uses:
+Responses") with one of the following `error` codes, which this
+document defines for this endpoint. A 401 response carries the
+`WWW-Authenticate` challenges that section defines for the MAS's
+endpoints, naming this endpoint's Protected Resource Metadata.
 
 | `error` | HTTP | Condition |
 |---|---|---|
-| `invalid_request` | 400 | Missing or malformed `mission_id` or `audience`, or an unparseable body |
-| `unauthorized` | 401 | Request not authenticated |
+| `invalid_request` | 400 | A missing or malformed member, or an unparseable body |
+| `invalid_client` | 400 | Direct client authentication (mutual TLS or private-key JWT) failed, only one of `client_assertion_type` and `client_assertion` is present, or no credential was presented where no access-token scheme is accepted |
+| `invalid_dpop_proof`, `use_dpop_nonce` | 400 | A DPoP proof presented for key binding ({{minting-request}}), with no DPoP-bound access token authenticating the request, fails the checks of {{Section 4.3 of RFC9449}}, or lacks a nonce the MAS requires ({{Section 8 of RFC9449}}); a proof that constrains an authenticating access token fails as `unauthorized` |
+| `unauthorized` | 401 | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted |
 | `not_found` | 404 | Unknown `mission_id`, or the requester is not the Mission's recorded client |
 | `invalid_audience` | 400 | `audience` names no AS this MAS issues grants for |
 | `mission_not_active` | 409 | The Mission is not `active` |
 | `invalid_authorization_details` | 400 | The request is wider than the Effective Authority Set or the audience's scope, or asks for a narrowing the MAS cannot perform ({{entry-types}}) |
 | `derivations_exhausted` | 409 | The Mission's `derivation_limit` is reached |
+| `rate_limited` | 429 | The requester is rate-limited |
+| `unavailable` | 503 | The MAS temporarily cannot serve the request |
 
 `not_found` covers both an unknown Mission and a requester that is
 not the recorded client, so the response is not a membership oracle.

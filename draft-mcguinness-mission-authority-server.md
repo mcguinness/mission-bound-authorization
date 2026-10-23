@@ -740,11 +740,12 @@ nothing, and no MAS surface derives authority from possession of it.
 
 ## Error Responses {#submission-errors}
 
-On a hard failure, the MAS returns the matching HTTP status with a
-JSON object body:
+On a hard failure, an endpoint this document defines returns the
+matching HTTP status with a JSON object body:
 
 `error`:
-: REQUIRED. A string. A code from the table below.
+: REQUIRED. A string. A code from the table below, or, at an endpoint
+  a companion profile defines, a code that profile defines.
 
 `error_description`:
 : OPTIONAL. A string. Human-readable detail.
@@ -786,9 +787,13 @@ visible still receives `not_found`.
 | `unavailable` | 503 | submission, join assertion | MAS temporarily cannot serve the request. |
 {: title="MAS error codes"}
 
-A companion profile's machine-readable codes are carried in the
-members {{native-carriage}} names (`mission_expansion_status` and
-`mission_denial_reason`), not as additional `error` values.
+At the endpoints this document defines, a companion profile's
+machine-readable codes are carried in the members {{native-carriage}}
+names (`mission_expansion_status` and `mission_denial_reason`), not as
+additional `error` values. An endpoint a companion profile defines,
+such as the Mission Issuance Grant endpoint
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), returns this
+object with the codes that profile defines.
 
 These responses follow the OAuth-shaped surfaces' shared error idiom
 {{I-D.draft-mcguinness-oauth-mission-status}}: a JSON object body with
