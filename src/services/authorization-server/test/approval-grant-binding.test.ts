@@ -459,3 +459,34 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     expect(as.kernel.findByGrant(grantIdFor(flow.uid))).toBeUndefined();
   });
 });
+
+describe("the approval event as the idempotency key (@spec mission#mission-record, #1608)", () => {
+  /** The Missions recorded for an approval event, read from the store itself. */
+  const missionsFor = (approvalEventId: string) =>
+    (
+      as.kernel.db.prepare("SELECT id FROM missions WHERE approval_event_id = ?").all(approvalEventId) as Array<{
+        id: string;
+      }>
+    ).map((r) => r.id);
+
+  it("a repeated delivery of the same approval decision creates no second Mission: it completes with the committed Mission, the only one for its approval_event_id, at an unchanged version", async () => {
+    const flow = await open();
+    const first = await flow.decide();
+    expect(first.status).toBe(303);
+    const committed = as.kernel.findByApprovalEvent(flow.approvalEventId);
+    expect(committed?.state).toBe("active");
+    expect(missionsFor(flow.approvalEventId)).toEqual([committed?.id]);
+
+    // The same decision delivered again on the interaction (a double-submitted
+    // consent form): the same Approver, Subject, client and rendering, so the
+    // same approval_event_id.
+    const repeated = await flow.decide();
+    expect(missionsFor(flow.approvalEventId), "a second Mission was created for the approval event").toEqual([
+      committed?.id,
+    ]);
+    expect(as.kernel.get(committed?.id as string)?.version).toBe(committed?.version);
+    expect(repeated.status).toBe(303);
+    const { missionId } = await flow.redeem(await flow.finish(repeated));
+    expect(missionId).toBe(committed?.id);
+  });
+});
