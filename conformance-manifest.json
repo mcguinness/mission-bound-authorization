@@ -306,6 +306,7 @@
    "expansion.interactive-completion",
    "expansion.related-to-correlation",
    "continuation.async-transport",
+   "continuation.cross-domain-transport",
    "aauth.supervision-server",
    "aauth.supervision-proof",
    "aauth.reference-projection",
@@ -45415,7 +45416,8 @@
     "kind": "capabilities",
     "any_of": [
      "continuation.ica-transport",
-     "continuation.async-transport"
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
     ]
    },
    "profiles": [],
@@ -45427,7 +45429,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1588 (D709). Gated on the two Continuation transport capabilities; the cross-domain transport has no Continuation-specific capability, and `cross-domain.projection` would also claim deployments that project without adopting Continuation. No witness yet."
+   "notes": "#1588 (D709). Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names. No witness yet."
   },
   {
    "id": "continuation.transports.reference-possession-not-evidence",
@@ -45440,7 +45442,8 @@
     "kind": "capabilities",
     "any_of": [
      "continuation.ica-transport",
-     "continuation.async-transport"
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
     ]
    },
    "profiles": [],
@@ -45477,7 +45480,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1588 (D709). Existing gate witnesses, also cited by continuation.ica-transport.refusal-codes and status.conformance.revoke-only-class. Witnessed: a still-valid Identity Continuation Assertion presented for a suspended or revoked Mission, or for one whose authority is fully contained, is refused and nothing is issued; a delegated family refresh token that worked before the Mission's revocation is refused invalid_grant, issuing and saving nothing. Not witnessed: a failed re-derivation on the async transport, and the cross-domain transport, which has no Continuation-specific capability."
+   "notes": "#1588 (D709). Existing gate witnesses, also cited by continuation.ica-transport.refusal-codes and status.conformance.revoke-only-class. Witnessed: a still-valid Identity Continuation Assertion presented for a suspended or revoked Mission, or for one whose authority is fully contained, is refused and nothing is issued; a delegated family refresh token that worked before the Mission's revocation is refused invalid_grant, issuing and saving nothing. Not witnessed: a failed re-derivation on the async transport, and the cross-domain transport. Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names."
   },
   {
    "id": "continuation.invariant.possession-not-evidence",
@@ -45490,7 +45493,8 @@
     "kind": "capabilities",
     "any_of": [
      "continuation.ica-transport",
-     "continuation.async-transport"
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
     ]
    },
    "profiles": [],
@@ -45527,7 +45531,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1588 (D709). Existing gate witnesses, also cited by continuation.ica-transport.refusal-codes and status.conformance.revoke-only-class. Witnessed: a still-valid Identity Continuation Assertion presented for a suspended or revoked Mission, or for one whose authority is fully contained, is refused and nothing is issued; a delegated family refresh token that worked before the Mission's revocation is refused invalid_grant, issuing and saving nothing. Not witnessed: a failed re-derivation on the async transport, and the cross-domain transport, which has no Continuation-specific capability. Issuer facet of the invariant; the relying-party facet is continuation.invariant.relying-party-no-artifact-decision."
+   "notes": "#1588 (D709). Existing gate witnesses, also cited by continuation.ica-transport.refusal-codes and status.conformance.revoke-only-class. Witnessed: a still-valid Identity Continuation Assertion presented for a suspended or revoked Mission, or for one whose authority is fully contained, is refused and nothing is issued; a delegated family refresh token that worked before the Mission's revocation is refused invalid_grant, issuing and saving nothing. Not witnessed: a failed re-derivation on the async transport, and the cross-domain transport. Issuer facet of the invariant; the relying-party facet is continuation.invariant.relying-party-no-artifact-decision. Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names."
   },
   {
    "id": "continuation.invariant.derivation-at-issuance",
@@ -45540,7 +45544,8 @@
     "kind": "capabilities",
     "any_of": [
      "continuation.ica-transport",
-     "continuation.async-transport"
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
     ]
    },
    "profiles": [],
@@ -45552,7 +45557,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1588 (D709). Gated on the two Continuation transport capabilities; the cross-domain transport has no Continuation-specific capability, and `cross-domain.projection` would also claim deployments that project without adopting Continuation. No witness yet."
+   "notes": "#1588 (D709). Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names. No witness yet."
   },
   {
    "id": "continuation.invariant.relying-party-no-artifact-decision",
@@ -45565,7 +45570,8 @@
     "kind": "capabilities",
     "any_of": [
      "continuation.ica-transport",
-     "continuation.async-transport"
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
     ]
    },
    "profiles": [],
@@ -45577,7 +45583,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1588 (D709). Gated on the two Continuation transport capabilities; the cross-domain transport has no Continuation-specific capability, and `cross-domain.projection` would also claim deployments that project without adopting Continuation. No witness yet. Relying-party facet of the invariant; the issuer facet is continuation.invariant.possession-not-evidence."
+   "notes": "#1588 (D709). Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names. No witness yet. Relying-party facet of the invariant; the issuer facet is continuation.invariant.possession-not-evidence."
   },
   {
    "id": "resource-access.type.prefix-query-fragment-refused",
