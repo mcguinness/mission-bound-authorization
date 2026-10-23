@@ -239,7 +239,7 @@ MAS, and a consuming AS:
     |<-- (B) grant -----------|                              |
     |                         |                              |
     |-- (C) token request with the grant ------------------->|
-    |                         |<-- (D) Status, per resource -|
+    |                         |<-- (D) Status, per audience -|
     |                         |--- state and Effective ----->|
     |                         |    Authority Set             |
     |<-- (E) access token (and refresh token) ---------------|
@@ -260,8 +260,8 @@ MAS, and a consuming AS:
 
 (D) A consuming AS with a Mission-state integration resolves the
     Mission's current state and Effective Authority Set, with one
-    Mission Status request per resource the grant names
-    ({{effective-set-projection}}).
+    Mission Status request per audience the grant's entries are
+    relevant to ({{effective-set-projection}}).
 
 (E) The consuming AS issues Mission-bound tokens within the grant's
     authority and that set ({{token-issuance}}).
@@ -281,7 +281,7 @@ audiences. The deployment's mapping policy governs how the Subject
 and client in the Mission record correspond to the consuming AS's
 accounts; where the Enterprise Mission Authority Profile is claimed,
 the Enterprise Mapping Contract governs
-({{I-D.draft-mcguinness-mission-authority-server}}). The resources
+({{I-D.draft-mcguinness-mission-authority-server}}). The audiences
 the MAS scopes a consuming AS's grants to ({{minting-rules}}) are the
 audiences it authorizes that AS to request from Mission Status
 ({{mission-state-source}}).
@@ -329,12 +329,10 @@ Claims:
   members {{mission-claim}} requires.
 
 `authorization_details`:
-: REQUIRED. Authorization details {{RFC9396}} of the
-  `mission_resource_access` type
-  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) that the
-  consuming AS issues against: a subset of the Mission's Effective
-  Authority Set, scoped to the resources this AS serves
-  ({{minting-rules}}).
+: REQUIRED. Authorization details {{RFC9396}} that the consuming AS
+  issues against, of the types {{entry-types}} admits: a subset of the
+  Mission's Effective Authority Set, limited to the entries this AS
+  serves ({{minting-rules}}).
 
 `cnf`:
 : OPTIONAL. A confirmation claim {{RFC7800}} binding redemption to a
@@ -395,6 +393,43 @@ Claim"), with two members that object does not otherwise require:
   for a consuming AS that, without a Mission-state integration, has
   no other channel back to the Mission Issuer. The consuming AS
   records it with each issuance ({{records}}) and does not verify it.
+
+## Entry Types {#entry-types}
+
+A grant's `authorization_details` can carry entries of any type that
+both the MAS and the consuming AS support
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization
+Details Types"); this profile requires no particular type. Each
+entry's audience relevance, subset relation, and transformations
+follow its type's specification and the transformation capabilities
+each party declares for that type, through the carriers that section
+lists, deployment documentation among them. A consuming AS
+serves an entry that, under its type, is relevant to an audience for
+which that AS issues tokens. For example, a `mission_resource_access`
+entry ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) is
+relevant to the audience its `resource` member names.
+
+Omitting a whole entry always yields a subset. Narrowing within an
+entry, or projecting it to `scope`, needs the corresponding declared
+capability, and neither party performs a transformation it has not
+declared for the entry's type. An operation this document calls for
+that a party cannot perform fails closed:
+
+- The MAS MUST refuse, with `invalid_authorization_details`
+  ({{minting-errors}}), a grant request whose requested narrowing it
+  cannot perform.
+- The consuming AS MUST refuse, with `invalid_grant`, a grant that
+  carries an entry of a type it does not support
+  ({{grant-validation}}).
+- The consuming AS MUST NOT issue an entry it cannot narrow except
+  unchanged, where the current Effective Authority Set and its own
+  policy each contain an entry equal to it under the subset rule;
+  otherwise it omits the entry ({{issued-authority}}).
+- The consuming AS MUST refuse a requested narrowing it cannot
+  perform with `invalid_authorization_details`. It refuses a `scope`
+  projection it cannot perform as the issuance profile maps that
+  failure (`invalid_target`, {{I-D.draft-mcguinness-oauth-mission}},
+  Section "Error and Challenge Mapping").
 
 # Obtaining a Grant {#minting}
 
@@ -530,7 +565,7 @@ Responses"). This endpoint uses:
 | `not_found` | 404 | Unknown `mission_id`, or the requester is not the Mission's recorded client |
 | `invalid_audience` | 400 | `audience` names no AS this MAS issues grants for |
 | `mission_not_active` | 409 | The Mission is not `active` |
-| `invalid_authorization_details` | 400 | The request is wider than the Effective Authority Set or the audience's scope |
+| `invalid_authorization_details` | 400 | The request is wider than the Effective Authority Set or the audience's scope, or asks for a narrowing the MAS cannot perform ({{entry-types}}) |
 | `derivations_exhausted` | 409 | The Mission's `derivation_limit` is reached |
 
 `not_found` covers both an unknown Mission and a requester that is
@@ -600,8 +635,9 @@ any check fails:
    thumbprint or a client certificate on the TLS connection whose
    SHA-256 thumbprint matches the `x5t#S256` value;
 5. `sub` maps to a local account under the deployment's mapping
-   policy ({{trust}}), and the grant's `authorization_details`
-   map to resources this AS serves.
+   policy ({{trust}}), and every entry of the grant's
+   `authorization_details` is of a type this AS supports and is one it
+   serves ({{entry-types}}).
 
 ## Token Issuance {#token-issuance}
 
@@ -680,17 +716,18 @@ Effective Authority Set through the Mission Status operation
 ({{I-D.draft-mcguinness-oauth-mission-status}}) or an equivalent
 state source, and refuse when the Mission is not established
 `active`. The consuming AS MUST NOT rely on an equivalent source
-unless it is authenticated, is audience-scoped to the resources this
-AS serves, carries the Mission's current `authorization_details` and
+unless it is authenticated, is audience-scoped to the entries this AS
+serves, carries the Mission's current `authorization_details` and
 a monotonic state `version`, and answers within a staleness bound
 the deployment publishes ({{conformance}}).
 
 Through the Mission Status operation, the consuming AS resolves
-authority per resource, not for an audience of its own. For each
-distinct `resource` value among the grant's `mission_resource_access`
-entries (on refresh, among the family ceiling's entries), it sends one
-request whose `audience` is that `resource` value, unchanged; the
-Mission Issuer authorizes each audience separately
+authority per entry audience, not for an audience of its own. For
+each distinct audience the grant's entries are relevant to
+({{entry-types}}; on refresh, the family ceiling's entries), it sends
+one request whose `audience` is that value, unchanged (for a
+`mission_resource_access` entry, its `resource` value); the Mission
+Issuer authorizes each audience separately
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Request").
 The consuming AS validates each response against the audience it
 requested, and MUST combine only responses whose `mission.issuer`,
@@ -701,7 +738,9 @@ one resolution differ in version, the AS re-queries each audience
 whose response is below the highest version collected, without using
 a cached response, up to a bound the deployment configures. Once all
 responses report one version, the AS combines them and retains that
-version. If it still cannot obtain responses at one version within
+version; an entry relevant to several audiences survives only where
+every one of their responses admits it. If it still cannot obtain
+responses at one version within
 the bound, the state source has failed ({{transient-failure}}). A
 not-found response for an
 audience the grant names means the Mission is not established
@@ -754,7 +793,7 @@ machine-readable shape: this profile defines a token-endpoint use of
 the OAuth `temporarily_unavailable` error code {{RFC6749}}
 ({{oauth-error-registration}}), carried with HTTP status 503. The
 response MAY carry `Retry-After` per the deployment's declared
-state-recovery policy. For a per-resource resolution, the version
+state-recovery policy. For a per-audience resolution, the version
 already observed is the one the AS retained before the resolution
 began ({{mission-state-source}}). The consuming AS leaves the family
 ceiling unchanged. On the refresh path a transient source failure

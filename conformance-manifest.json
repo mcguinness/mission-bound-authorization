@@ -37670,7 +37670,7 @@
    "id": "issuance-grant.effective-set-projection.equivalent-source-properties",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "The consuming AS MUST NOT rely on an equivalent source unless it is authenticated, is audience-scoped to the resources this AS serves, carries the Mission's current `authorization_details` and a monotonic state `version`, and answers within a staleness bound the deployment publishes",
+   "text": "The consuming AS MUST NOT rely on an equivalent source unless it is authenticated, is audience-scoped to the entries this AS serves, carries the Mission's current `authorization_details` and a monotonic state `version`, and answers within a staleness bound the deployment publishes",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -37930,6 +37930,90 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q10); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.entry-types.mas-unsupported-narrowing",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "entry-types",
+   "text": "The MAS MUST refuse, with `invalid_authorization_details` ({{minting-errors}}), a grant request whose requested narrowing it cannot perform.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request asking the MAS to narrow an entry of a type for which the MAS declares no narrowing capability is refused invalid_authorization_details, and no grant is minted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q6); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.entry-types.unsupported-type",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "entry-types",
+   "text": "The consuming AS MUST refuse, with `invalid_grant`, a grant that carries an entry of a type it does not support",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant carrying an entry of an authorization_details type the consuming AS does not support is refused invalid_grant, and nothing is issued"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q6); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.entry-types.no-undeclared-narrowing",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "entry-types",
+   "text": "The consuming AS MUST NOT issue an entry it cannot narrow except unchanged, where the current Effective Authority Set and its own policy each contain an entry equal to it under the subset rule; otherwise it omits the entry",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry of a type the consuming AS cannot narrow is issued only unchanged and only where the current Effective Authority Set and the AS policy each admit it whole; otherwise it is absent from the issued authority"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q6); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.entry-types.unsupported-request",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "entry-types",
+   "text": "The consuming AS MUST refuse a requested narrowing it cannot perform with `invalid_authorization_details`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request asking to narrow an entry of a type for which the consuming AS declares no narrowing capability is refused invalid_authorization_details; an impossible scope projection is refused invalid_target under the OAuth binding mapping"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q6); todo until that path exists."
   },
   {
    "id": "issuance-grant.grant.cnf-possession",
