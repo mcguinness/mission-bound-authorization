@@ -3892,7 +3892,9 @@ profile defines the basis's `approval_basis.type` value
 ({{record-principal-members}});
 {{I-D.draft-mcguinness-mission-architecture}} (Section "Mission
 Invariants") lists the standing-consent bases that companion profiles
-define.
+define. The `type` values form a specification-defined namespace with
+no registry ({{namespace-taxonomy}}): each further basis is defined by
+the companion profile that introduces it.
 
 For a standing-consent `type`, `activation` takes the shape that its
 companion profile defines, and `activation_actor` names a dispatching
@@ -4760,9 +4762,9 @@ This document's extensible namespaces follow one of three postures:
   a publication dependency under the registry's policy.
 - **Specification-defined.** A namespace with a defined fail-safe for
   unknown values and no registry, such as the `mission` claim members
-  ({{mission-claim}}) and the Mission Record members
-  ({{mission-record}}), is specification-defined: the defining
-  documents are its value space.
+  ({{mission-claim}}), the Mission Record members ({{mission-record}})
+  and the `approval_basis.type` values ({{record-principal-members}}),
+  is specification-defined: the defining documents are its value space.
 - **Collision-resistant.** Deployment-defined names are
   collision-resistant names ({{Section 4.2 of RFC7519}}) and are never
   registered.
