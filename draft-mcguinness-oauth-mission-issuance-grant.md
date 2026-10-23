@@ -944,32 +944,15 @@ the Mission Join; the two joins coexist per resource and per AS.
 
 # Conformance {#conformance}
 
-**Mission Authority Server** implements {{minting}} in full:
+A **Mission Authority Server** implements {{minting}} in full, issues
+grants exactly as {{grant}} requires, and records each minting
+({{records}}).
 
-- the authenticated endpoint, answering any caller other than the
-  recorded client with `not_found`;
-- the `active`-only gate;
-- subset and audience scoping;
-- derivation counting where a `derivation_limit` is set;
-- `cnf` only from a verified sender constraint;
-- minting evidence; and
-- grants shaped exactly as {{grant}} requires.
-
-**Consuming Authorization Server** implements {{redemption}} in
-full:
-
-- grant validation and single use ({{grant-validation}},
-  {{single-use}});
-- token issuance ({{token-issuance}}): `mission` claim carriage with
-  `authority_hash` recorded, subset-bounded authority, the
-  `expires_at` cap, and no re-approval;
-- with a Mission-state integration, Effective Authority Set
-  projection at redemption and at every refresh
-  ({{effective-set-projection}}); without one, no refresh tokens
-  ({{no-state-integration}}); and
-- the redemption error mapping of {{redemption-errors}}.
-
-The PAR carriage of {{par-carriage}} is OPTIONAL.
+A **consuming AS** implements {{redemption}} in full, including
+{{effective-set-projection}} when it has a Mission-state integration
+and {{no-state-integration}} when it has none, and records each
+issuance ({{records}}). The PAR carriage of {{par-carriage}} is
+OPTIONAL.
 
 A deployment claiming this profile states the following alongside its
 Enforcement Scope Statement ({{I-D.draft-mcguinness-mission-runtime}},
