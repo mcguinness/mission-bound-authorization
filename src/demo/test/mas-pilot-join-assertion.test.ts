@@ -26,7 +26,8 @@ import { accessTokenHash, CANONICAL_RESOURCE, type DecisionEvidence, type JoinAs
 import { type EvaluationRequest, privateKeyJwtClient } from "@mission/pdp";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, type JWTPayload, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
+import { composeMasPilot } from "../src/mas-pilot/compose.js";
+import { loadMasPilotConfig, type MasPilotConfig, parseMasPilotConfig } from "../src/mas-pilot/config.js";
 import { obtainEstateToken } from "../src/mas-pilot/estate-client.js";
 import { newStatusClientKey } from "../src/mas-pilot/mas-as.js";
 import { type MasProcess, startMasProcess } from "../src/mas-pilot/mas-process.js";
@@ -329,5 +330,42 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
     await refused("a delegate deeper than the contract's max_depth", extractor);
     await mas.recordActor({ mission, clientId: DELEGATE, delegatedBy: "ap-agent" });
     expect((await mintAt({ mission_id: missionId, audience: pdpAudience, access_token: extractor })).status).toBe(200);
+  });
+});
+
+describe("the Join Assertion path is declared, and runs only where it can (#1454)", () => {
+  it("parses a declared join_assertion and refuses a malformed one; absent, the configuration declares no path", () => {
+    const shipped = JSON.parse(readFileSync(new URL("../../config/mas-pilot.json", import.meta.url), "utf8")) as Record<string, unknown>;
+    expect(parseMasPilotConfig(shipped).join_assertion).toBeUndefined();
+    const declared = { introspection_client_id: "mas-join-introspector", required: true, required_classes: ["consequential_read"] };
+    expect(parseMasPilotConfig({ ...shipped, join_assertion: declared }).join_assertion).toEqual(declared);
+    expect(() => parseMasPilotConfig({ ...shipped, join_assertion: { ...declared, required: "yes" } })).toThrow(/required must be a boolean/);
+    expect(() => parseMasPilotConfig({ ...shipped, join_assertion: { ...declared, introspection_client_id: "mas-gateway-introspector" } })).toThrow(
+      /client of its own/,
+    );
+    expect(() => parseMasPilotConfig({ ...shipped, join_assertion: { ...declared, extra: 1 } })).toThrow(/unknown member extra/);
+  });
+
+  it("the in-process composition refuses a configuration that declares the path, before it builds anything", async () => {
+    await expect(
+      composeMasPilot({ openfga: OPENFGA, resourcePolicyStore: { bootstrap: "development" }, config: joinConfig() }),
+    ).rejects.toThrow(/separated topology only/);
+  });
+});
+
+d("the separated MAS pilot refuses a declared Join Assertion path it cannot run (#1454)", () => {
+  it("refuses to compose without the MAS's introspection client secret, and the MAS process refuses a secret its configuration does not declare", async () => {
+    await expect(
+      composeSeparatedMasPilot({ openfga: OPENFGA, resourcePolicyStore: { bootstrap: "development" }, config, mas: { url: MAS_URL, pdpKey } }),
+    ).rejects.toThrow(/no secret for the MAS's introspection client/);
+    const dir = mkdtempSync(join(tmpdir(), "mas-pilot-join-undeclared-"));
+    dirs.push(dir);
+    const { join_assertion: _declared, ...undeclared } = config;
+    const configPath = join(dir, "mas-pilot.json");
+    writeFileSync(configPath, JSON.stringify({ ...undeclared, separated_mas: { ...undeclared.separated_mas, port: MAS_PORT + 2 } }));
+    const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id);
+    await expect(startMasProcess({ configPath, statusClients: [pdp.registration], joinIntrospectionSecret: "unused" })).rejects.toThrow(
+      /MAS_PILOT_JOIN_INTROSPECTION_SECRET is set exactly where the configuration declares join_assertion/,
+    );
   });
 });
