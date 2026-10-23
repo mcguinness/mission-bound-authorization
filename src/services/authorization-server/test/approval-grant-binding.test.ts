@@ -21,7 +21,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
 import { IntentError } from "../src/kernel/intent.js";
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const PORT = 14794;
 const ISSUER = `http://localhost:${PORT}`;
@@ -132,13 +132,26 @@ async function open(intentOver: Json = {}) {
   );
   keep(res);
   const uid = (res.headers.get("location") ?? "").split("/interaction/")[1] as string;
-  /** A decision on this interaction: Bob for Alice unless another approval is given. */
-  const decide = async (approval: Record<string, string> = trustedApprovalHeaders()) => {
+  /**
+   * The page rendered to Bob deciding for Alice, rendered once (#1446): every
+   * repeated, concurrent or retried decision of his submits that one form.
+   */
+  let bobsRendering: Promise<string> | undefined;
+  /**
+   * A decision on this interaction: Bob for Alice unless another approval is
+   * given. Another approval renders its own page first; where the surface
+   * renders none for it, its decision is posted without one.
+   */
+  const decide = async (approval?: Record<string, string>) => {
+    const headers = approval ?? trustedApprovalHeaders();
+    const render_revision = approval
+      ? await renderedRevision(ISSUER, uid, { ...headers, cookie: cookie() }).catch(() => undefined)
+      : await (bobsRendering ??= renderedRevision(ISSUER, uid, { ...headers, cookie: cookie() }));
     const r = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...approval, "content-type": "application/json", cookie: cookie() },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: { ...headers, "content-type": "application/json", cookie: cookie() },
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     keep(r);
     return r;

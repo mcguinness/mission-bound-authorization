@@ -17,7 +17,7 @@
  * Each test drives the full assembly over HTTP: PAR, approval, code exchange,
  * then the request under test.
  */
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
@@ -136,11 +136,13 @@ async function approvedCode(): Promise<string> {
   );
   keep(res);
   const uid = (res.headers.get("location") ?? "").split("/interaction/")[1] as string;
+  const decideHeaders = { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() };
+  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   keep(res);
   let location = res.headers.get("location") ?? "";

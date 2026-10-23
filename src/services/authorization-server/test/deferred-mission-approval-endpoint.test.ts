@@ -44,7 +44,7 @@ import {
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const PORT = 14185;
 const ISSUER = `http://localhost:${PORT}`;
@@ -550,11 +550,13 @@ describe("deferred Mission approval wire path (@spec deferred-approval#deferred-
     // A synchronous approval of the same submission is audienced the same way.
     const direct = await frontChannel({ ...both, completionMode: null, extra: { resource: LEDGER } });
     const uid = direct.interaction.split("/interaction/")[1] as string;
+    const decideHeaders = { ...trustedApprovalHeaders("dana", {}, WORKLOAD), cookie: direct.cookie, "content-type": "application/json" };
+    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
     let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders("dana", {}, WORKLOAD), cookie: direct.cookie, "content-type": "application/json" },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: decideHeaders,
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     let location = res.headers.get("location") ?? "";
     while (location.startsWith(ISSUER)) {
@@ -1269,11 +1271,13 @@ describe("governed policy completion over the wire (@spec deferred-approval#poli
     const fc = await frontChannel({ completionMode: null, extra: { resource: RESOURCE } });
     expect(fc.code).toBeUndefined();
     const uid = fc.interaction.split("/interaction/")[1] as string;
+    const decideHeaders = { ...trustedApprovalHeaders("dana", {}, WORKLOAD), cookie: fc.cookie, "content-type": "application/json" };
+    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
     let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders("dana", {}, WORKLOAD), cookie: fc.cookie, "content-type": "application/json" },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: decideHeaders,
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     let location = res.headers.get("location") ?? "";
     while (location.startsWith(ISSUER)) {
@@ -1295,6 +1299,9 @@ describe("governed policy completion over the wire (@spec deferred-approval#poli
     const before = missionCount();
     const pending = await frontChannel({ stopAtInteraction: true });
     const deferredUid = pending.interaction.split("/interaction/")[1] as string;
+    // Rendering this interaction would complete it into the deferred state,
+    // so the approval is posted with no rendering (#1446): it is refused
+    // before any rendering is consulted.
     const decide = await fetch(`${ISSUER}/interaction/${deferredUid}/decide`, {
       method: "POST",
       redirect: "manual",

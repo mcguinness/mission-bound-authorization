@@ -27,7 +27,7 @@ import {
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
-import { browserApprovalHeaders } from "./approval-fixture.js";
+import { browserApprovalHeaders, renderedRevision } from "./approval-fixture.js";
 
 const PORT = 14763;
 const ISSUER = `http://localhost:${PORT}`;
@@ -246,12 +246,20 @@ async function approvalPage(uid: string, headers: Record<string, string>, query 
   return { status: res.status, html: await res.text() };
 }
 
+/**
+ * A decision in the verification user agent. An approval names the page last
+ * rendered to the same headers (#1446), rendered here as the Approver reviews
+ * it; where the surface renders nothing (no Approver session, a session no
+ * longer pending), the decision is posted without one.
+ */
 async function decide(uid: string, headers: Record<string, string>, body: Record<string, unknown>): Promise<{ status: number; text: string }> {
+  const render_revision =
+    body.decision === "approve" ? await renderedRevision(ISSUER, uid, headers).catch(() => undefined) : undefined;
   const res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
     headers: { ...headers, "content-type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, ...(render_revision ? { render_revision } : {}) }),
   });
   return { status: res.status, text: await res.text() };
 }
@@ -367,11 +375,13 @@ async function browserCodeApproval(client: string, key: CryptoKey, jar: Jar, app
   });
   keep(jar, res);
   const uid = (res.headers.get("location") ?? "").split("/interaction/")[1] as string;
+  const decideHeaders = { ...browserApprovalHeaders(SESSIONS, uid, approver, cookieOf(jar)), "content-type": "application/json" };
+  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...browserApprovalHeaders(SESSIONS, uid, approver, cookieOf(jar)), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   keep(jar, res);
   let location = res.headers.get("location") ?? "";
