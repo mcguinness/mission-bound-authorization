@@ -58477,7 +58477,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an assertion whose token binding differs from the PEP-reported digest or thumbprint is denied mission_binding_failed",
-    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion whose token.sha256 differs from the reported token_sha256 (or with no digest on either side), or whose same-method thumbprint differs from the reported one (or with no, two, or the other method's thumbprint reported), is denied mission_binding_failed; in the pilot, an assertion minted for another token and one re-signed with another key's thumbprint"
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion whose token.sha256 differs from the reported token_sha256 (or with no digest on either side), or whose same-method thumbprint differs from the reported one (or with no, two, or the other method's thumbprint reported), is denied mission_binding_failed; in the pilot, an assertion minted for another token and one re-signed with another key's thumbprint; the assertion's own token claim is checked first: exactly one confirmation member, a non-empty jkt or x5t#S256 and nothing else, so an assertion carrying both is denied, and the reported thumbprint is the one of the assertion's method"
    },
    "level": "unit",
    "coverage": "tested",
@@ -58485,6 +58485,12 @@
     {
      "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
      "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies a token binding that differs from the PEP-reported digest or thumbprint",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies an assertion whose token claim does not carry exactly one confirmation member, a non-empty jkt or x5t#S256, whatever the PEP reports (#1454 review)",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -58501,7 +58507,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that drop the digest comparison, the digest-present check, the exactly-one-thumbprint check, and the thumbprint comparison, and that compare token_x5t with jkt."
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that drop the digest comparison, the digest-present check, the exactly-one-thumbprint check, and the thumbprint comparison, and that compare token_x5t with jkt. The confirmation shape (#1454 review) is proved by defects that drop the exactly-one check, count only known members, accept more than one, accept an unknown method, accept an empty value, compare the reported thumbprint of another method, and skip the comparison."
   },
   {
    "id": "mas.join-assertion.join-claim",
@@ -58675,7 +58681,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an assertion failing any PDP Consumption check is denied mission_binding_failed, never treated as absent",
-    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion failing typ, signature, iss, mission id or issuer, authority_hash, exp (passed or absent), iat (absent), aud, the token binding, or the join claim's shape is denied mission_binding_failed with no join_view_id, though the mapping contract would join the same credential"
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion failing typ, signature, iss, mission id or issuer, authority_hash, exp (passed or absent), iat (absent), aud, the token binding, or the join claim's shape is denied mission_binding_failed with no join_view_id, though the mapping contract would join the same credential; and a token claim with both, no, an empty or an unknown confirmation member"
    },
    "level": "unit",
    "coverage": "tested",
@@ -58683,6 +58689,12 @@
     {
      "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
      "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies each failed check, though the mapping contract would join the same credential",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies an assertion whose token claim does not carry exactly one confirmation member, a non-empty jkt or x5t#S256, whatever the PEP reports (#1454 review)",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -58705,7 +58717,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect per check (typ, issuer, audience, required exp and iat, clock, tolerance, mission id and issuer, authority_hash, client_id, disposition, depth integer and sign) and by one that denies a failed assertion with another reason."
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect per check (typ, issuer, audience, required exp and iat, clock, tolerance, mission id and issuer, authority_hash, client_id, disposition, depth integer and sign) and by one that denies a failed assertion with another reason. Also proved by the confirmation-shape defects (#1454 review)."
   },
   {
    "id": "mas.metadata.max-stale-required",
