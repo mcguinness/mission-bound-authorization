@@ -2155,9 +2155,55 @@ as if it were vector 2's `approval_context_commitment`, it recomputes
 vector 2's correct digest, finds a mismatch, and rejects under the
 same rule as vector 5.
 
+# Portable Approval-Binding Check Vectors {#portable-binding-vectors}
+
+These non-normative vectors exercise the comparisons and outcomes of
+{{portable-binding}}. Each case starts from a base pair: the record of
+{{record-example}}, which authenticates under a key trusted for the
+expected Mission Issuer `https://as.example.com`, and a Mission
+reference that authenticates under its own rules and discloses that
+record's `approval_event_id` (`ape_hON9D0svLKQAMyy-uug`), `issuer`,
+`intent_hash`, and `authority_hash`. Where a case says both artifacts
+carry a commitment, each carries `approval_context_commitment`; the
+check compares the two strings and never recomputes them. Each case
+changes one thing from the base.
+
+| Case | Change from the base pair | Outcome |
+|---|---|---|
+| 1 | Both carry an equal commitment | Success; commitment agreement established |
+| 2 | Only the record carries a commitment | Success; commitment agreement not established |
+| 3 | Neither carries a commitment | Success; commitment agreement not established |
+| 4 | Both carry a commitment, with different values | Failure |
+| 5 | The reference's `issuer` is `https://as2.example.com` | Failure |
+| 6 | The reference's `approval_event_id` differs | Failure |
+| 7 | The reference's `intent_hash` differs | Failure |
+| 8 | The reference's `authority_hash` differs | Failure |
+| 9 | The reference does not disclose `approval_event_id` | Insufficient evidence |
+| 10 | The record's signature does not verify | Failure |
+| 11 | The record verifies under a key not trusted for the expected issuer | Failure |
+| 12 | The reference is a Mandate whose `iss` differs from its `mission.issuer` | Failure |
+| 13 | No record is supplied | Insufficient evidence |
+| 14 | The reference's `intent_hash` carries an unrecognized algorithm prefix | Failure |
+{: title="Portable approval-binding check cases"}
+
+Cases 6 to 8 succeed on every other comparison, which is why the check
+compares each anchor rather than any one of them. Case 9 matches
+`intent_hash` and `authority_hash`, which two Missions can share, and
+still cannot succeed.
+
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A separately named portable approval-binding check lets a Relying
+  Auditor without the Mission Record establish that an authenticated
+  record and an authenticated Mission reference agree on the approval
+  event and the Mission anchors, with explicit commitment handling,
+  distinct failure and insufficient-evidence outcomes, stated limits,
+  a procurement example and vectors. Privacy Considerations relate the
+  record's retention to an authorized evidence export or evidence
+  bundle. The existing verification and re-check procedures are
+  unchanged (#1572).
 
 - Immutability Witness: a mismatch between a recomputed Approval
   Context Commitment and the value an artifact disclosed shows that
