@@ -238,6 +238,16 @@ export {
   lineageScopeDigests,
 } from "./enforcement-boundary.js";
 export {
+  acceptedJoinAssertionAlgorithms,
+  type AssertedJoin,
+  JOIN_ASSERTION_TYP,
+  type JoinAssertionPolicy,
+  joinAssertionRequired,
+  type ReportedTokenBinding,
+  verifyJoinAssertion,
+} from "./join-assertion.js";
+export {
+  resolveAssertedJoin,
   resolveBaselineJoin,
   deriveJoinDelegation,
   UNRESOLVED_JOIN_MAPPING,

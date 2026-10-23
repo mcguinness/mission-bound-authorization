@@ -38,6 +38,16 @@ import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
+export {
+  type ActingToken,
+  type ActingTokenResult,
+  JOIN_ASSERTION_ENDPOINT_PATH,
+  type JoinAssertionDeployment,
+  type JoinAssertionEvent,
+  JoinAssertionService,
+  type JoinEvaluation,
+  type TokenConfirmation,
+} from "./adapters/join-assertion.js";
 import { ApproverLoginRelyingParty, type ApproverLoginOptions } from "./adapters/approver-login.js";
 export {
   APPROVER_LOGIN_CALLBACK_PATH,
@@ -48,7 +58,9 @@ export {
   type ApproverIdentityMapping,
   type ApproverLoginOptions,
 } from "./adapters/approver-login.js";
-import type { DpopProofReplay } from "./adapters/dpop-replay.js";
+import { type DpopProofReplay, newDpopProofReplay } from "./adapters/dpop-replay.js";
+import { type JoinAssertionDeployment, JoinAssertionService } from "./adapters/join-assertion.js";
+import { authenticateLifecycleClient } from "./adapters/lifecycle-endpoint.js";
 import {
   buildProvider,
   type LifecycleClientGrants,
@@ -328,6 +340,8 @@ export {
   presentedChildActorPermitted,
 } from "./kernel/child-actor-eligibility.js";
 export {
+  ACTION_IDENTIFIER,
+  ACTION_VALUE,
   authorizationDetailsTypesMetadata,
   AUTHORIZATION_DETAILS_TYPES_METADATA,
   MISSION_RESOURCE_ACCESS_SCHEMA,
@@ -559,9 +573,12 @@ export {
   assertAssertionAuthority,
   assertContributing,
   assertGovernedPolicyRecord,
+  checkPortableApprovalBinding,
   type HumanAuthority,
   jwsMediaTypeMatches,
   type PolicyAuthority,
+  type PortableApprovalBindingResult,
+  type PortableMissionReference,
   type ServiceAuthority,
   assertMissionBinding,
   signApprovalGovernanceRecord,
@@ -813,6 +830,8 @@ export interface BuiltAs {
   expansionDeferrals: ExpansionDeferralStore;
   /** @spec expansion#policy-probing (#1177): the expansion rate limiter this assembly applies. */
   expansionRateLimiter: ExpansionRateLimiter;
+  /** @spec authority-server#join-assertion (#1454): the Join Assertion endpoint, where the deployment serves one. */
+  joinAssertions?: JoinAssertionService;
   /**
    * @spec deferred-approval#deferred-approval: the Deferred Mission Approval
    * store, present exactly where the `deferred-approval` capability is on.
@@ -1183,6 +1202,13 @@ export async function buildAuthorizationServer(opts: {
    * discloses the Mission's `subject` or `client_id`.
    */
   enrolledJoinPdps?: Readonly<Record<string, readonly string[]>>;
+  /**
+   * @spec authority-server#join-assertion (#1454): serve the MAS's Join
+   * Assertion endpoint, advertised as `mission_join_assertion_endpoint`, with
+   * the deployment's acting-token establishment and join evaluation. Absent
+   * (the default), the endpoint is neither served nor advertised.
+   */
+  joinAssertions?: JoinAssertionDeployment;
   /**
    * @spec status#lifecycle-authorization: the grants bound to a client that
    * authenticates to the Mission Lifecycle endpoint by private-key JWT, keyed by
@@ -1723,6 +1749,26 @@ export async function buildAuthorizationServer(opts: {
   if (opts.approverLogin && !opts.approvalSessions) {
     throw new Error("the approver login records its logins in approvalSessions, which is not configured");
   }
+  // One single-use `jti` cache for every client-assertion surface.
+  const dpopProofReplay = opts.dpopProofReplay ?? newDpopProofReplay();
+  // @spec authority-server#join-assertion (#1454): the MAS's Join Assertion
+  // endpoint, its callers authenticated as at Mission Status, with the
+  // assertion's `aud` the MAS issuer identifier as its sole value (D685, D690).
+  const joinAssertionService = opts.joinAssertions
+    ? new JoinAssertionService({
+        issuer: opts.issuer,
+        kernel,
+        deployment: opts.joinAssertions,
+        enrolledScopes: (clientId) =>
+          opts.enrolledJoinPdps && Object.hasOwn(opts.enrolledJoinPdps, clientId) ? (opts.enrolledJoinPdps[clientId] ?? []) : [],
+        authenticate: (params, authorization) =>
+          authenticateLifecycleClient(
+            { issuer: opts.issuer, clients: clientRegistrations, replay: dpopProofReplay, now: () => kernel.nowDate() },
+            params,
+            authorization,
+          ),
+      })
+    : undefined;
   const provider = buildProvider({
     issuer: opts.issuer,
     kernel,
@@ -1826,7 +1872,8 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.stateRecoveryRetryAfter !== undefined
       ? { stateRecoveryRetryAfter: opts.stateRecoveryRetryAfter }
       : {}),
-    ...(opts.dpopProofReplay ? { dpopProofReplay: opts.dpopProofReplay } : {}),
+    dpopProofReplay,
+    ...(joinAssertionService ? { joinAssertionService } : {}),
     // @spec mission#scope-projection — the trusted out-of-band mapping.
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
     processBootId,
@@ -1891,6 +1938,7 @@ export async function buildAuthorizationServer(opts: {
     devOrdinaryIssuance: opts.devOrdinaryIssuance === true,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
     ...(suspensionScheduler ? { suspensionScheduler } : {}),
+    ...(joinAssertionService ? { joinAssertions: joinAssertionService } : {}),
     startupRemediation: {
       revokedChildren,
       successors: successorRemediation,

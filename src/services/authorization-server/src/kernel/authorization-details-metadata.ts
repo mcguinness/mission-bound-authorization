@@ -12,6 +12,7 @@
  */
 
 import {
+  actionFamilyRefusal,
   delegateMatcherListViolation,
   entryDelegateMatcherViolation,
   isAbsoluteUri,
@@ -23,6 +24,7 @@ import {
   resourceMatchViolation,
   SUPPORTED_CONSTRAINT_KEYS,
   type JsonValue,
+  unsupportedActionFamily,
   unsupportedDelegationMember,
   unsupportedEntryMember,
   validCommonConstraint,
@@ -39,6 +41,15 @@ export const MISSION_RESOURCE_ACCESS_TYPE = "mission_resource_access" as const;
  * anywhere in the value, a trailing newline included, fails it.
  */
 export const ACTION_VALUE = /^[A-Za-z0-9_.:-]+(?:\.\*)?$/;
+
+/**
+ * @spec resource-access#subset (#1377, D538, D684): the `actions` values this
+ * authorization server supports: action identifiers only. An action family is
+ * grammatical ({@link ACTION_VALUE}) but unsupported, refused as unsupported
+ * input ({@link refusedMemberViolation}), so the published schema admits
+ * identifiers alone rather than advertising what intake refuses.
+ */
+export const ACTION_IDENTIFIER = /^[A-Za-z0-9_.:-]+$/;
 
 /**
  * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
@@ -111,9 +122,11 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
     // the RFC 9396 common `locations` field; its presence, whatever its value,
     // fails the schema.
     locations: false,
-    // @spec resource-access#entry-validation (#1376): non-empty, each value an
-    // action identifier or an action family ({@link ACTION_VALUE}).
-    actions: { type: "array", items: { type: "string", pattern: ACTION_VALUE.source }, minItems: 1 },
+    // @spec resource-access#entry-validation (#1376), resource-access#subset
+    // (#1377): non-empty, each value an action identifier
+    // ({@link ACTION_IDENTIFIER}); the grammar's action family is refused as
+    // unsupported input, so the schema does not admit it.
+    actions: { type: "array", items: { type: "string", pattern: ACTION_IDENTIFIER.source }, minItems: 1 },
     constraints: {
       type: "object",
       description: "Common Constraints (@spec mission#common-constraints)",
@@ -473,7 +486,8 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
  * ({@link unsupportedEntryMember}), or, @spec
  * resource-access#resource-access-type (D634), a `delegation` member this
  * authorization server does not implement ({@link unsupportedDelegationMember}),
- * or undefined. Shared by the schema check above and by the token-exchange and
+ * or, @spec resource-access#subset (#1377, D538), an action family
+ * ({@link unsupportedActionFamily}), or undefined. Shared by the schema check above and by the token-exchange and
  * deferred intakes that read requested entries without it, each refusing
  * `invalid_authorization_details`.
  */
@@ -492,9 +506,13 @@ export function refusedMemberViolation(entry: unknown): string | undefined {
   // error code, unless a companion profile it implements defines that member's
   // processing." Child Delegation's `children` is the one such member here.
   const delegationMember = unsupportedDelegationMember(entry);
-  return delegationMember === undefined
-    ? undefined
-    : `${delegationMember} is not a supported delegation member; refusing rather than carrying it unchanged`;
+  if (delegationMember !== undefined) {
+    return `${delegationMember} is not a supported delegation member; refusing rather than carrying it unchanged`;
+  }
+  // @spec resource-access#subset (#1377, D538, D684): an action family is
+  // unsupported input here, refused before approval or transformation.
+  const family = unsupportedActionFamily(entry);
+  return family === undefined ? undefined : actionFamilyRefusal(family);
 }
 
 /**

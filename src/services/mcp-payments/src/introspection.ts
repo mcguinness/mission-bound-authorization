@@ -67,6 +67,23 @@ export class IntrospectionUnavailableError extends Error {
   }
 }
 
+/**
+ * @spec authority-server#join-assertion-request (#1454 review): the estate's
+ * own contract for a token type it does not introspect, an HTTP 400 whose
+ * JSON `error` member is exactly `unsupported_token_type` (the reference
+ * estate answers so for its JWTs). RFC 7662 defines no such answer or
+ * fallback; this is the estate's specific behavior. Any other status
+ * (a 3xx, 401, 403, 429 or 5xx), whatever its body says, is unavailable.
+ * A subclass of the unavailable error, so a caller that does not tell them
+ * apart (the gateway) still answers 503.
+ */
+export class IntrospectionTokenTypeUnsupportedError extends IntrospectionUnavailableError {
+  constructor() {
+    super("unsupported_token_type");
+    this.name = "IntrospectionTokenTypeUnsupportedError";
+  }
+}
+
 /** The estate answered and the token is not usable here: the route refuses with 401. */
 export class TokenInactiveError extends Error {
   constructor(why: string) {
@@ -135,10 +152,22 @@ export class TokenIntrospector {
         },
         body: new URLSearchParams({ token: accessToken, token_type_hint: "access_token" }).toString(),
         signal: AbortSignal.timeout(this.settings.timeoutMs),
+        // A credentialed call is never redirected: a 3xx is no answer.
+        redirect: "manual",
       });
-      if (res.status !== 200) throw new Error(`status ${res.status}`);
+      if (res.status !== 200) {
+        // Only the estate's exact 400 answer names an unsupported token type;
+        // every other status is unavailable, whatever its body says.
+        if (res.status === 400) {
+          const answer: unknown = await res.json().catch(() => undefined);
+          const error = answer !== null && typeof answer === "object" ? (answer as { error?: unknown }).error : undefined;
+          if (error === "unsupported_token_type") throw new IntrospectionTokenTypeUnsupportedError();
+        }
+        throw new Error(`status ${res.status}`);
+      }
       body = await res.json();
     } catch (e) {
+      if (e instanceof IntrospectionTokenTypeUnsupportedError) throw e;
       throw new IntrospectionUnavailableError(e instanceof Error ? e.message : String(e));
     }
     if (body === null || typeof body !== "object" || Array.isArray(body)) {

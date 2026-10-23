@@ -789,6 +789,15 @@ completes synchronously in the token-exchange response, which returns
 the successor's access token. One that falls back to a fresh human
 approval completes in one of the two modes above.
 
+Whatever the mode, any grant binding the successor carries is its own,
+never an extension of the predecessor's: in an interactive completion,
+the authorization code the client redeems and any refresh-token family
+that redemption emits; otherwise, a refresh-token family the completing
+response emits, if any. A deferred completion or synchronous drawdown
+that returns only an access token establishes no grant binding
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Grant Bindings and
+Related Mechanisms").
+
 In either mode, obtaining the fresh approval follows the issuance
 profile's approval event. The Mission Issuer:
 
@@ -2455,6 +2464,11 @@ approved, not the predecessor's authority plus a delta.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Completion Modes says where any grant binding a successor carries
+  comes from in each mode, and that a deferred completion or
+  synchronous drawdown returning only an access token establishes none.
+  No requirement changed.
 
 - A failed check 3 where the token-exchange response completes an
   expansion answers `invalid_request`, as Section 2.2.2 of RFC 8693

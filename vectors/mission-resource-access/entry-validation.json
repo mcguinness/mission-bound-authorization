@@ -256,7 +256,9 @@
       "id": "ev-depth-03",
       "description": "A delegation.max_depth of 0 beside a children grant",
       "role": "authorization-server",
-      "requires": [],
+      "requires": [
+        "member.delegation"
+      ],
       "check": "entry-validation",
       "input": {
         "entry": {
@@ -285,7 +287,9 @@
       "id": "ev-dlg-01",
       "description": "An empty allowed_delegates list",
       "role": "authorization-server",
-      "requires": [],
+      "requires": [
+        "member.delegation"
+      ],
       "check": "entry-validation",
       "input": {
         "entry": {
@@ -700,7 +704,9 @@
       "id": "ev-depth-05",
       "description": "max_depth 0 with a children grant, in the ceiling and the proposal",
       "role": "authorization-server",
-      "requires": [],
+      "requires": [
+        "member.delegation"
+      ],
       "check": "derive",
       "input": {
         "ceiling": [
@@ -789,6 +795,397 @@
       },
       "refs": [
         "#1376"
+      ]
+    },
+    {
+      "id": "ev-amt-01",
+      "description": "A max_amount amount given as a JSON number",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": 100,
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a decimal value outside the grammar is malformed and refused at submission, never parsed",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "ev-amt-02",
+      "description": "A max_amount amount in scientific notation",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "1e3",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a decimal value outside the grammar is malformed and refused at submission, never parsed",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "ev-amt-03",
+      "description": "A max_amount amount with a sign",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "-1.00",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a decimal value outside the grammar is malformed and refused at submission, never parsed",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "ev-amt-04",
+      "description": "A max_amount amount with a thousands separator",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "1,000.00",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a decimal value outside the grammar is malformed and refused at submission, never parsed",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "ev-amt-05",
+      "description": "A max_amount amount that is a non-numeric token",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "NaN",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a decimal value outside the grammar is malformed and refused at submission, never parsed",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "ev-amt-06",
+      "description": "A max_amount amount with 19 fractional digits",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "0.1234567890123456789",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a decimal value outside the grammar is malformed and refused at submission, never parsed",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "ev-amt-07",
+      "description": "A max_amount amount ending in a decimal point",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "1.",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a decimal value outside the grammar is malformed and refused at submission, never parsed",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "ev-amt-08",
+      "description": "A max_amount amount with no integer digit",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": ".50",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a decimal value outside the grammar is malformed and refused at submission, never parsed",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "ev-amt-09",
+      "description": "A max_amount amount with 18 fractional digits",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "0.000000000000000001",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "the grammar admits one to 18 fractional digits"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "ev-amt-10",
+      "description": "A max_amount amount of zero",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "0",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "one or more decimal digits with no fraction is in the grammar"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "ev-mem-01",
+      "description": "A top-level member no specification defines for this type",
+      "role": "authorization-server",
+      "requires": [
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "member.x_member"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "x_member": [
+            "v"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a member the comparison cannot decide is unsupported input, refused rather than dropped",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "ev-fam-01",
+      "description": "An action family on a consumer that does not implement action families",
+      "role": "authorization-server",
+      "requires": [
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "action-families"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.*"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an action family is unsupported input where the family clauses are not implemented (D684)",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
       ]
     }
   ]
