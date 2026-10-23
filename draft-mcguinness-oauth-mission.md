@@ -2344,10 +2344,10 @@ The grant binding relates to other mechanisms as follows:
   authorization state, such as the continuation profile's
   delegation-family-creating exchange
   ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a
-  new grant binding, rooted in that same Mission. A Token Exchange
-  that returns a JWT authorization grant rather than an access token,
-  as cross-domain projection and child creation do, is covered by the
-  two items below.
+  new grant binding, rooted in that same Mission. Three Token
+  Exchanges are covered by the two items below instead: cross-domain
+  projection and child creation, which return a JWT authorization
+  grant, and expansion, which creates a successor.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
   no destination-side grant binding. A Resource AS consumes the
