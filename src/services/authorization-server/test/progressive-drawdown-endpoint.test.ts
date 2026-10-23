@@ -2319,6 +2319,22 @@ describe("the expansion deferral page's refusals (@spec expansion#completion-mod
     expect((await poll(second.code)).status).toBe(200);
   });
 
+  it("a lifetime bound shortened since rendering changes the expiry the approval commits: nothing is approved", async () => {
+    const { code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const first = await page(code, bob.cookie);
+    const before = DERIVATION_POLICY.max_mission_lifetime_s;
+    (DERIVATION_POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = 3600;
+    try {
+      const stale = await decide(code, bob, { decision: "approve", render_revision: first.revision });
+      expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+      expect(stale.json.changed).toEqual(["expires_at"]);
+      expect((await poll(code)).body.error).toBe("authorization_pending");
+    } finally {
+      (DERIVATION_POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = before;
+    }
+  });
+
   it("a deferral past its lifetime is neither rendered nor decided", async () => {
     const { code } = await pending();
     const bob = browserApprovalHeaders(store(), code, BOB, "");
