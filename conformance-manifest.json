@@ -7199,7 +7199,7 @@
    "anchor": "mission-record",
    "text": "A unique identifier of the approval event, used as the approval idempotency key: a retried or duplicate delivery of the same approval decision (a replayed callback, a double-submitted consent form, a retried standing-consent activation) MUST NOT create a second Mission, and the AS deduplicates on this identifier.",
    "role": "AS",
-   "strength": "MUST",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -7222,7 +7222,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here."
+   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here. Strength is MUST NOT, the clause's keyword. The retried standing-consent activation is witnessed where each standing-consent type defines its event identity, by the companions' tested rows template.dispatch.approval-event-id-per-dispatch, progressive.in-ceiling.approval-event-id-per-drawdown and child-delegation.record.policy-drawdown-approval-event-id; this row's own witness covers the direct approval decision."
   },
   {
    "id": "core.discovery.held-credential-no-substitution",
