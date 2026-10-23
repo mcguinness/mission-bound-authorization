@@ -1071,3 +1071,28 @@ describe("a device approval rests on its rendering (@spec mission#approval-conte
     }
   });
 });
+
+describe("a device decision on a request that no longer validates (@spec mission#approval-event, mission#error-mapping, #1610)", () => {
+  it("a decision after the request's expires_at passed denies the session, never a 500", async () => {
+    const t0 = Math.floor(Date.now() / 1000) * 1000;
+    const expiresAt = new Date(t0 + 100_000).toISOString().replace(/\.\d{3}Z$/, "Z");
+    const s = await pendingSession(PUBLIC, ALICE_BY_BOB, { mission_intent: JSON.stringify({ intent: { ...INTENT, expires_at: expiresAt } }) });
+    const render_revision = await renderedRevision(ISSUER, s.uid, s.headers);
+    const clock = vi.spyOn(as.kernel as unknown as { now: () => Date }, "now").mockImplementation(() => new Date(t0 + 101_000));
+    let decided: Response;
+    try {
+      decided = await fetch(`${ISSUER}/interaction/${s.uid}/decide`, {
+        method: "POST",
+        redirect: "manual",
+        headers: { ...s.headers, "content-type": "application/json" },
+        body: JSON.stringify({ ...CONFIRMED, render_revision }),
+      });
+    } finally {
+      clock.mockRestore();
+    }
+    const page = await decided.text();
+    expect(decided.status, page).toBe(200);
+    expect(missionOf(s.uid)).toBeUndefined();
+    expect((await poll(PUBLIC, s.deviceCode)).body.error).toBe("access_denied");
+  });
+});
