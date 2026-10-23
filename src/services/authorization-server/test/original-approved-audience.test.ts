@@ -20,7 +20,7 @@
 import type { Server } from "node:http";
 import { APPROVAL_FLOOR, AUTHORITY_SOURCES, SCOPE_PROJECTION } from "@mission/demo-data";
 import { type CryptoKey, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 
@@ -246,6 +246,33 @@ describe("an entry's original approved audience is the one the trusted mapping a
       expectUnapproved(await refresh(rt, keys, ADDED));
       expectIssuedFor(await refresh(rt, keys, PAYMENTS), PAYMENTS);
     });
+  });
+
+  it("a refresh refused for an audience the mapping gained after approval spends no rotating refresh token: it still refreshes for the original approved audience (#1604 review)", async () => {
+    const keys = await newKeys();
+    const issued = await redeem(await approve(), keys, PAYMENTS);
+    expectIssuedFor(issued, PAYMENTS);
+    const rt = issued.body.refresh_token as string;
+    const stored = await as.provider.RefreshToken.find(rt);
+    const iat = stored?.iat as number;
+    const exp = stored?.exp as number;
+    expect(exp).toBeGreaterThan(iat);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      // Past 70% of its lifetime, oidc-provider rotates the token on its next use.
+      vi.setSystemTime((iat + Math.ceil((exp - iat) * 0.75)) * 1000);
+      expect((await as.provider.RefreshToken.find(rt))?.ttlPercentagePassed()).toBeGreaterThanOrEqual(70);
+      await withAddedAudience(async () => {
+        expectUnapproved(await refresh(rt, keys, ADDED));
+        const retried = await refresh(rt, keys, PAYMENTS);
+        expectIssuedFor(retried, PAYMENTS);
+        // The retry itself rotated the token: the refusal before it did not.
+        expect(retried.body.refresh_token).toBeTruthy();
+        expect(retried.body.refresh_token).not.toBe(rt);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("before the mapping names the added audience, a token for it fails closed on the mapping, not on the retained association (boundary)", async () => {

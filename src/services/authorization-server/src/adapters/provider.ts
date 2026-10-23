@@ -1661,7 +1661,15 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const resource =
       typeof c.oidc.params.resource === "string" ? c.oidc.params.resource : rt.resource;
     if (typeof resource !== "string") return;
-    decideMissionScope(ctx, [resource], Array.isArray(rar) ? rar : []);
+    const carried = Array.isArray(rar) ? rar : [];
+    decideMissionScope(ctx, [resource], carried);
+    // @spec mission#transformation-capabilities, mission#error-mapping
+    // (#1503 finding 7, #1604 review): the original-approved-audience refusal
+    // is decided here too, over the Mission the access token's save reads,
+    // so a refusal never spends a rotating refresh token.
+    const target = missionGateTarget(rt.grantId);
+    const unapproved = target ? unapprovedAudienceRefusal(target.record, [resource], carried) : undefined;
+    if (unapproved) throw new errors.InvalidTarget(unapproved);
   }
 
   /**
