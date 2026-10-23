@@ -2390,14 +2390,16 @@ request to the surviving authority.<a href="#section-6.3.2-4" class="pilcrow">¶
           <h4 id="name-transient-source-failure">
 <a href="#section-6.3.3" class="section-number selfRef">6.3.3. </a><a href="#name-transient-source-failure" class="section-name selfRef">Transient Source Failure</a>
           </h4>
-<p id="section-6.3.3-1">A source that is unavailable, fails verification, or reports a state
-<code>version</code> older than one already observed for this Mission is a
+<p id="section-6.3.3-1">A source that is unavailable or rate-limited (Mission Status's
+<code>unavailable</code> or <code>rate_limited</code>), fails verification, or reports a
+state <code>version</code> older than one already observed for this Mission is a
 transient failure, never authority exhaustion, and is refused in a
 machine-readable shape: this profile defines a token-endpoint use of
 the OAuth <code>temporarily_unavailable</code> error code <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>
 (<a href="#oauth-error-registration" class="auto internal xref">Section 14.4</a>), carried with HTTP status 503. The
 response <span class="bcp14">MAY</span> carry <code>Retry-After</code> per the deployment's declared
-state-recovery policy. A held response that meets the conditions of
+state-recovery policy, which also governs any value forwarded from a
+Mission Status <code>Retry-After</code>. A held response that meets the conditions of
 <a href="#mission-state-source" class="auto internal xref">Section 6.3.1</a> still satisfies the check, and the failure
 then refuses nothing. For a per-audience resolution, the version
 already observed is the one the AS retained before the resolution
@@ -2540,22 +2542,34 @@ cure, and so is a refusal after a Status not-found response.<a href="#section-6.
           <li class="normal" id="section-6.6-4.3">
             <p id="section-6.6-4.3.1"><strong>Wait.</strong> A <code>suspended</code> Mission refuses until a <code>resume</code> returns it
 to <code>active</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>); a fresh
-grant then cures the refusal.<a href="#section-6.6-4.3.1" class="pilcrow">¶</a></p>
+grant then cures the refusal. A refused refresh leaves its refresh
+token unchanged (<a href="#refresh" class="auto internal xref">Section 6.3.4</a>), so once the Mission is <code>active</code> again
+the client may instead present that token while it remains valid,
+with the client authentication of <span><a href="https://rfc-editor.org/rfc/rfc6749#section-6" class="relref">Section 6</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> and,
+where the grant carried <code>cnf</code>, a new proof of possession of its key.
+The consuming AS does not treat that earlier refusal as grounds to
+refuse the retry. Permission to retry is not a promise of issuance:
+the consuming AS applies every refresh check to the retry, including
+its current policy, the family ceiling, and the token's validity,
+rotation and reuse checks, and a resume restores no authority that
+an earlier issuance removed.<a href="#section-6.6-4.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.6-4.4">
             <p id="section-6.6-4.4.1"><strong>Stop.</strong> A <code>terminated</code> Mission, or one whose <code>expires_at</code> has
 passed, refuses for good: neither a retry nor a fresh grant cures
-the refusal.<a href="#section-6.6-4.4.1" class="pilcrow">¶</a></p>
+the refusal. The consuming AS refuses every later refresh in a
+refresh family bound to that Mission. This profile adds no
+revocation duty and removes none that another specification or the
+deployment imposes.<a href="#section-6.6-4.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-6.6-5">The AS <span class="bcp14">SHOULD</span> include the issuance profile's <code>mission_error</code> member
 when Mission state reports that the Mission is not <code>active</code>, so the
-client can
-tell Wait from Stop: <code>suspended</code> for Wait, and for Stop <code>revoked</code>,
-<code>expired</code>, or <code>superseded</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
-Section "Issuance Gating") or <code>completed</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). The MAS's own
-refusals of a fresh grant request are in <a href="#minting-errors" class="auto internal xref">Section 5.4</a>.<a href="#section-6.6-5" class="pilcrow">¶</a></p>
+client can tell Wait from Stop: <code>suspended</code> for Wait, and for Stop
+<code>revoked</code>, <code>expired</code>, or <code>superseded</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Issuance Gating")
+or <code>completed</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). The
+MAS's own refusals of a fresh grant request are in <a href="#minting-errors" class="auto internal xref">Section 5.4</a>.<a href="#section-6.6-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3231,7 +3245,20 @@ Mission Issuance Grant parameter in Pushed Authorization Requests<a href="#secti
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Normative follow-ups to the tightening pass (D685). The grant
+          <p id="appendix-A-2.1.1">Redemption Errors says how a client recovers a refresh refused
+during a suspension: after a resume it may present the same
+still-valid refresh token, which the consuming AS checks as any
+refresh, and a resume restores no removed authority. After
+termination every later refresh in the family is refused, with no
+added revocation duty (#1583, D702).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Transient Source Failure names Mission Status's <code>rate_limited</code> as
+transient, beside <code>unavailable</code>; a forwarded <code>Retry-After</code> stays
+under the deployment's state-recovery policy (#1582, D702).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Normative follow-ups to the tightening pass (D685). The grant
 admits any supported authorization-details type under that type's
 semantics and fails closed on an unsupported transformation. Its
 <code>sub</code> is an injective MAS-local mapping of the recorded Subject, and
@@ -3257,10 +3284,10 @@ endpoint, the PAR endpoint, redemption, code exchange and refresh.
 PAR errors are named, the consuming AS's issuance record is a
 requirement, the causal-attribution rule for <code>authority_contained</code>
 moves to Containment, the scope statement moves to Trust, and a
-deployment statement is required.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+deployment statement is required.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Tightened throughout with no requirement change. Each rule has one
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Tightened throughout with no requirement change. Each rule has one
 home: the <code>cnf</code> possession check is in Grant Validation, the <code>jti</code>
 record in Single Use, the <code>typ</code> refusal in Grant Validation, the
 per-resource version rule in Mission State Source, and the MAS's
@@ -3276,15 +3303,15 @@ error object, and Derivation Limits' counting rule are pointers.
 The equivalent-source properties bind the consuming AS. The Mission
 Authority Server Metadata registration uses that registry's
 template fields. The Substrate, Architecture, and Consent Evidence
-references are removed.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+references are removed.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Redemption Errors separates a <code>suspended</code> Mission, which a <code>resume</code>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Redemption Errors separates a <code>suspended</code> Mission, which a <code>resume</code>
 restores and a fresh grant then cures, from a <code>terminated</code> one,
 which neither a retry nor a fresh grant cures. The <code>mission_error</code>
 values follow the lifecycle migration and include <code>suspended</code> and
 <code>completed</code>, and <code>mission_not_active</code> at the MAS is no longer called
-an unconditional signal to stop. No requirement changes.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+an unconditional signal to stop. No requirement changes.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

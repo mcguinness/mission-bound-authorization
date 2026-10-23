@@ -959,17 +959,19 @@ Table of Contents
 
 6.3.3.  Transient Source Failure
 
-   A source that is unavailable, fails verification, or reports a state
+   A source that is unavailable or rate-limited (Mission Status's
+   unavailable or rate_limited), fails verification, or reports a state
    version older than one already observed for this Mission is a
    transient failure, never authority exhaustion, and is refused in a
    machine-readable shape: this profile defines a token-endpoint use of
    the OAuth temporarily_unavailable error code [RFC6749]
    (Section 14.4), carried with HTTP status 503.  The response MAY carry
-   Retry-After per the deployment's declared state-recovery policy.  A
-   held response that meets the conditions of Section 6.3.1 still
-   satisfies the check, and the failure then refuses nothing.  For a
-   per-audience resolution, the version already observed is the one the
-   AS retained before the resolution began (Section 6.3.1).  The
+   Retry-After per the deployment's declared state-recovery policy,
+   which also governs any value forwarded from a Mission Status Retry-
+   After.  A held response that meets the conditions of Section 6.3.1
+   still satisfies the check, and the failure then refuses nothing.  For
+   a per-audience resolution, the version already observed is the one
+   the AS retained before the resolution began (Section 6.3.1).  The
    consuming AS leaves the family ceiling unchanged.  On the refresh
    path a transient source failure MUST NOT consume or rotate the
    presented refresh token, so the client retries with the credential it
@@ -1068,11 +1070,25 @@ Table of Contents
 
    *  *Wait.* A suspended Mission refuses until a resume returns it to
       active ([I-D.draft-mcguinness-oauth-mission-status]); a fresh
-      grant then cures the refusal.
+      grant then cures the refusal.  A refused refresh leaves its
+      refresh token unchanged (Section 6.3.4), so once the Mission is
+      active again the client may instead present that token while it
+      remains valid, with the client authentication of Section 6 of
+      [RFC6749] and, where the grant carried cnf, a new proof of
+      possession of its key.  The consuming AS does not treat that
+      earlier refusal as grounds to refuse the retry.  Permission to
+      retry is not a promise of issuance: the consuming AS applies every
+      refresh check to the retry, including its current policy, the
+      family ceiling, and the token's validity, rotation and reuse
+      checks, and a resume restores no authority that an earlier
+      issuance removed.
 
    *  *Stop.* A terminated Mission, or one whose expires_at has passed,
       refuses for good: neither a retry nor a fresh grant cures the
-      refusal.
+      refusal.  The consuming AS refuses every later refresh in a
+      refresh family bound to that Mission.  This profile adds no
+      revocation duty and removes none that another specification or the
+      deployment imposes.
 
    The AS SHOULD include the issuance profile's mission_error member
    when Mission state reports that the Mission is not active, so the
@@ -1631,6 +1647,17 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Redemption Errors says how a client recovers a refresh refused
+      during a suspension: after a resume it may present the same still-
+      valid refresh token, which the consuming AS checks as any refresh,
+      and a resume restores no removed authority.  After termination
+      every later refresh in the family is refused, with no added
+      revocation duty (#1583, D702).
+
+   *  Transient Source Failure names Mission Status's rate_limited as
+      transient, beside unavailable; a forwarded Retry-After stays under
+      the deployment's state-recovery policy (#1582, D702).
 
    *  Normative follow-ups to the tightening pass (D685).  The grant
       admits any supported authorization-details type under that type's
