@@ -37648,7 +37648,7 @@
    "id": "issuance-grant.effective-set-projection.request-fault-errors",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "Where that authorization survives and only the narrowing the client requested fails to intersect it, the request is at fault: the refusal is `invalid_scope` where the request carried `scope`, or `invalid_authorization_details`",
+   "text": "Where that authorization survives but a narrowing the client requested exceeds it, the request is at fault: the refusal is `invalid_scope` where the request carried `scope`, or `invalid_authorization_details`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -38372,6 +38372,36 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.issued-authority.no-truncation",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "issued-authority",
+   "text": "The AS MUST NOT truncate such a request to the surviving authority.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request whose requested narrowing exceeds the surviving authority (items 1 to 3) is refused invalid_authorization_details or invalid_scope; no token carrying a truncated subset of the request is issued",
+    "local": "the native reference AS refuses a refresh naming a capability containment removed, rather than issuing the remainder; it is a Mission Issuer, not a consuming AS, so the scope-request case and the consuming-AS redemption path stay unwitnessed"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > contain, then open a family naming the contained capability: refused invalid_authorization_details as exceeding the Mission authority, though the presented token carries it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Partial on the #963 precedent of citing native-AS projection tests for these rows (D685 Q5): the cited test is the error-mapping witness of the OAuth binding for an exceeding refresh request after containment. No consuming-AS redemption path exists in src."
   },
   {
    "id": "issuance-grant.grant.cnf-possession",

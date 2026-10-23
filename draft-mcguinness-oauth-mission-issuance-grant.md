@@ -877,10 +877,11 @@ intersection of:
    ({{token-issuance}}); and
 4. any narrower authority the client requests at the token endpoint.
 
-A partial intersection issues only the remainder. This
-projection precedes scope projection above: an AS that models
-authority as `scope` maps the narrowed remainder, never the grant's
-original set.
+Items 1 to 3 give the surviving authority. Without a narrowing
+requested at the token endpoint (item 4), the AS issues the surviving
+authority, which can be less than the grant's. This projection
+precedes scope projection above: an AS that models authority as
+`scope` maps the narrowed remainder, never the grant's original set.
 
 An empty intersection is refused by its cause. If items 1 to 3
 already intersect to nothing, the authorization itself is exhausted
@@ -891,10 +892,11 @@ authority, and a collapse from any other cause MUST NOT be reported
 as containment merely because Containment is composed
 ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The
 authority_contained Denial Reason"). Where that authorization
-survives and only the narrowing the client requested fails to
-intersect it, the request is at fault: the refusal is `invalid_scope`
-where the request carried `scope`, or `invalid_authorization_details`
-{{RFC9396}} where it carried `authorization_details`.
+survives but a narrowing the client requested exceeds it, the
+request is at fault: the refusal is `invalid_scope` where the request
+carried `scope`, or `invalid_authorization_details` {{RFC9396}} where
+it carried `authorization_details`. The AS MUST NOT truncate such a
+request to the surviving authority.
 
 ### Transient Source Failure {#transient-failure}
 
@@ -972,8 +974,8 @@ refusals are:
 |---|---|
 | The Mission is not `active` | `invalid_grant` |
 | The authorization is exhausted ({{issued-authority}}) | `invalid_grant` |
-| The requested `scope` does not intersect the surviving authority | `invalid_scope` |
-| The requested `authorization_details` does not intersect the surviving authority | `invalid_authorization_details` |
+| The requested `scope` exceeds the surviving authority | `invalid_scope` |
+| The requested `authorization_details` exceeds the surviving authority | `invalid_authorization_details` |
 | The state source fails ({{transient-failure}}) | `temporarily_unavailable`, HTTP 503 |
 
 A client tells four cases apart:
