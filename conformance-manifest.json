@@ -55,8 +55,8 @@
     "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "db4c66466351328539b862373675b7bcd7b687cf",
-    "content_sha256": "ed37748db9d2e800e88bc64dc590a675970166a68e512c77ef65040360c11c37"
+    "revision": "f5dd6f5320b032d4aa8be9053a829fc401a946bb",
+    "content_sha256": "ee8182ab9da0c0ca967dacbd8350d2432d0f420be51e2adb575911e72fca8539"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -231,6 +231,10 @@
    "status.lifecycle",
    "status.lifecycle-revoke",
    "status.discharge",
+   "status.mission-status",
+   "status.introspection-projection",
+   "status.mtls-client-auth",
+   "status.access-token-auth",
    "signals.events",
    "cross-org.delegation",
    "txn-authz.action",
@@ -1370,7 +1374,12 @@
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -1965,7 +1974,7 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "status.revocation-propagation"
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -1990,7 +1999,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "GET /missions/:id/status requires mayReadStatus (the status capability enabled and MISSION_STATUS_SCOPE on the authenticated service principal), the same predicate that decides a forwarded discharge's response shape (status.discharge.receipt-aud-nonce). The test shows a principal holding the lifecycle and discharge grants but not mission_status gets exactly the not-found body an unknown Mission gets (nonce echoed), while a principal holding only mission_status, and the shipped dev principal, get the signed Status response. Capability and surface follow the neighbouring Mission Status operation row status.caching.freshness-cap: the model has no dedicated Status-operation capability or surface. #1407: the advertised endpoint answers a client without the grant with the unknown Mission's not-found body."
+   "notes": "GET /missions/:id/status requires mayReadStatus (the status capability enabled and MISSION_STATUS_SCOPE on the authenticated service principal), the same predicate that decides a forwarded discharge's response shape (status.discharge.receipt-aud-nonce). The test shows a principal holding the lifecycle and discharge grants but not mission_status gets exactly the not-found body an unknown Mission gets (nonce echoed), while a principal holding only mission_status, and the shipped dev principal, get the signed Status response. Capability and surface follow the neighbouring Mission Status operation row status.caching.freshness-cap: the model has no dedicated Status-operation capability or surface. #1407: the advertised endpoint answers a client without the grant with the unknown Mission's not-found body. Gated on status.mission-status (was status.revocation-propagation): the read authorization belongs to the Mission Status operation."
   },
   {
    "id": "status.read.processing-order",
@@ -2000,7 +2009,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -2035,7 +2045,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -12503,6 +12514,50 @@
    "notes": "#1535 (#1544 review ruling). Proved by reading the Mission before the members (the matrix's read spy fails) and by retaining the syntax refusal (the same-nonce well-formed request is refused 400 as a divergent retry). D175 narrowly superseded (#1544 review ruling): pre-deduplication refusals are read-only; post-authorization processing keeps D175's hoisted expiry. A refusal decided during syntax validation or target authorization commits no expiry, schedule, discharge event, latch or nonce response; the effective expiry still governs authorization and issuance at once, and its persistence and publication wait for the next expiry-materializing path. Proved post-authorization by removing the hoisted materialization (the fingerprint-conflict test fails: the conflict's rollback undoes the expiry)."
   },
   {
+   "id": "status.discharge.observed-at-syntax-and-clock-bounds",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-operation",
+   "text": "The AS validates it for syntax and reasonable clock bounds only, never as trusted ordering or freshness",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an `observed_at` that is not an RFC 3339 date-time is refused `invalid_request`; one outside the AS's clock allowance is refused for a request processed fresh, while an authorized retry whose `observed_at` has since aged past it replays the original response",
+    "local": "syntax in parseDischargeMembers, before authorization; the 24-hour window (OBSERVED_AT_SKEW_MS) in handleDischarge, after deduplication (#1544 re-review)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses malformed wire shapes as invalid_request, never a 500",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses a malformed discharge request without touching the latch",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays an authorized retry whose observed_at has since aged past the admission window: the window is checked only for a request processed fresh (@spec status#lifecycle-processing, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "A present-tense obligation that had no row; Proved: disabling only the RFC 3339 check in parseDischargeMembers (keeping the type and window checks) fails \"refuses malformed wire shapes as invalid_request, never a 500\" on a non-RFC 3339 `observed_at` inside the clock window; disabling the window check in handleDischarge fails the skewed `observed_at` case of \"refuses a malformed discharge request without touching the latch\" and the aged-retry test's fresh-nonce companion."
+  },
+  {
    "id": "status.discharge.well-formed-resolution-not-found",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-anti-oracle",
@@ -12794,6 +12849,44 @@
     }
    ],
    "notes": "Status interface audit (#705); #1191 (D416)."
+  },
+  {
+   "id": "status.idempotency.pre-dedup-refusal-no-nonce",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "A request refused before deduplication ({{lifecycle-processing}}) claims no `nonce`: the AS retains no response for it, so a later request carrying the same `nonce` is processed as a new request.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a request refused at syntax or authorization, before deduplication, leaves no retained response for its nonce: a later request with that nonce, with the same or different members, is processed as a new request, never replayed or refused as a divergent retry"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > retains nothing for a refusal decided before deduplication, so a committed success whose bytes were lost survives a refused retransmit and is recovered once the grant returns",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > retains nothing for a discharge refused on its syntax: the same nonce with well-formed members is then processed fresh, a discharge for an authorized caller and the not-found response for one outside the target's mapping, never a divergent retry (@spec discharge#discharge-anti-oracle, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535, D658: the sentence states what the processing order already implied. Both witnesses were proved during #1544: retaining a pre-deduplication 404 fails the first, retaining a discharge syntax refusal fails the second."
   },
   {
    "id": "status.idempotency.nonce-malformed",
@@ -14490,6 +14583,8 @@
    "applicability": {
     "kind": "capabilities",
     "any_of": [
+     "status.mission-status",
+     "status.introspection-projection",
      "status.lifecycle",
      "status.lifecycle-revoke",
      "status.revocation-propagation"
@@ -14766,11 +14861,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "capabilities",
-    "any_of": [
-     "status.lifecycle",
-     "status.lifecycle-revoke"
-    ]
+    "kind": "capability",
+    "capability": "status.mtls-client-auth"
    },
    "profiles": [],
    "surface": "verification",
@@ -14991,7 +15083,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "lifecycle-endpoint",
@@ -15071,7 +15168,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15092,7 +15190,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15113,7 +15212,11 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "all_of": [
+     "status.mission-status",
+     "status.mtls-client-auth"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15134,7 +15237,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15169,7 +15273,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15210,7 +15315,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15231,7 +15337,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15273,7 +15384,12 @@
    "role": "client",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15308,7 +15424,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15343,7 +15464,12 @@
    "role": "client",
    "strength": "SHOULD",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15372,7 +15498,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15413,7 +15544,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15448,7 +15584,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15477,7 +15618,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15505,7 +15647,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15540,7 +15683,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15587,7 +15735,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15634,7 +15787,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15681,7 +15839,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15728,7 +15891,12 @@
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15763,7 +15931,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15798,7 +15971,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15911,7 +16085,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15940,7 +16115,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -16010,7 +16186,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "lifecycle-endpoint",
@@ -16099,7 +16280,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.access-token-auth"
    },
    "profiles": [],
    "surface": "verification",
@@ -16120,7 +16302,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.access-token-auth"
    },
    "profiles": [],
    "surface": "verification",
@@ -16141,7 +16324,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.access-token-auth"
    },
    "profiles": [],
    "surface": "verification",
@@ -16162,7 +16346,12 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -16474,7 +16663,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "status.lifecycle"
+    "capability": "status.access-token-auth"
    },
    "profiles": [],
    "surface": "lifecycle-endpoint",
@@ -16950,7 +17139,12 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
