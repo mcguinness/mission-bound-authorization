@@ -38324,7 +38324,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "at redemption, code exchange and refresh, a DPoP proof failing RFC 9449 Section 4.3 gets invalid_dpop_proof (use_dpop_nonce where a nonce is required), and a request proving no key or another key gets invalid_grant"
+    "normative": "at the PAR endpoint, redemption, code exchange and refresh, a DPoP proof failing RFC 9449 Section 4.3 gets invalid_dpop_proof (use_dpop_nonce where a nonce is required); when the grant carries cnf, a request proving no key, another key, or presenting a DPoP proof for another key gets invalid_grant, and a grant without cnf needs no proof of possession"
    },
    "level": "endpoint",
    "coverage": "todo",

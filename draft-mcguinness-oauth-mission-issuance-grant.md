@@ -1000,9 +1000,10 @@ with `invalid_client`. At the PAR endpoint, at redemption, at code
 exchange, and at refresh alike, a DPoP proof that fails the checks of
 {{Section 4.3 of RFC9449}} is refused with `invalid_dpop_proof`, or
 with `use_dpop_nonce` where the AS requires a nonce
-({{Section 8 of RFC9449}}), and a request that proves no key, proves
-a key other than the grant's `cnf` key, or presents a DPoP proof for
-another key, with `invalid_grant`. The other refusals are:
+({{Section 8 of RFC9449}}). When the grant carries `cnf`, a request
+that proves no key, proves a key other than the `cnf` key, or
+presents a DPoP proof for another key is refused with
+`invalid_grant`. The other refusals are:
 
 | Condition | Response |
 |---|---|
