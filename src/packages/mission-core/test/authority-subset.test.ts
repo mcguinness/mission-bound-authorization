@@ -385,3 +385,35 @@ describe("an action family is unsupported input (@spec resource-access#subset, #
     expect(narrowToCeiling([{ ...entry, actions: ["read"] }], [family])).toEqual([]);
   });
 });
+
+// @spec resource-access#initial-common-constraints (#1595, D727): a malformed
+// currency is refused, never folded, and a well-formed code compares exactly
+// whether or not ISO 4217 assigns it.
+describe("a max_amount currency is exactly three upper-case ASCII letters (#1595, D727)", () => {
+  const capped = (currency: unknown, amount = "100.00") =>
+    ({ ...entry, constraints: { max_amount: { amount, currency } } }) as AuthorityEntry;
+  const malformed = ["usd", "Usd", "US", "USDX", "USD\n", " USD", "840", "ÜSD", "", 840];
+
+  it("isAuthorityEntry refuses a malformed currency and admits an unassigned well-formed code", () => {
+    for (const currency of malformed) {
+      expect(isAuthorityEntry(capped(currency)), JSON.stringify(currency)).toBe(false);
+    }
+    expect(isAuthorityEntry(capped("USD"))).toBe(true);
+    expect(isAuthorityEntry(capped("XYZ"))).toBe(true);
+  });
+
+  it("isSubsetEntry compares nothing with a malformed currency on either side, even a byte-identical pair", () => {
+    for (const currency of malformed) {
+      const label = JSON.stringify(currency);
+      expect(isSubsetEntry(capped(currency), capped(currency, "500.00")), label).toBe(false);
+      expect(isSubsetEntry(capped(currency), capped("USD", "500.00")), label).toBe(false);
+      expect(isSubsetEntry(capped("USD"), capped(currency, "500.00")), label).toBe(false);
+    }
+  });
+
+  it("isSubsetEntry compares well-formed codes exactly, with no case folding or conversion", () => {
+    expect(isSubsetEntry(capped("XYZ"), capped("XYZ", "500.00"))).toBe(true);
+    expect(isSubsetEntry(capped("XYZ"), capped("XYA", "500.00"))).toBe(false);
+    expect(isSubsetEntry(capped("USD"), capped("EUR", "500.00"))).toBe(false);
+  });
+});

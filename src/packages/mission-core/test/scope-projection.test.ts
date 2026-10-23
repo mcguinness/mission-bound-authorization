@@ -97,6 +97,24 @@ describe("scope-projection mapping validation", () => {
     ).toThrow(/scope-token/);
     expect(bad(["audiences", RS, "scopes"], {})).toThrow(/at least one scope value/);
   });
+
+  // @spec resource-access#initial-common-constraints (#1595, D727).
+  it("refuses a configured max_amount currency that is not exactly three upper-case ASCII letters", () => {
+    const withCurrency = (currency: unknown) => {
+      const d = structuredClone(valid) as {
+        audiences: Record<string, { scopes: Record<string, { mandatory_controls: unknown }> }>;
+      };
+      const read = d.audiences[RS]?.scopes["r.read"];
+      if (read) read.mandatory_controls = { max_amount: { amount: "100.00", currency } };
+      return () => parseScopeProjectionMapping(d);
+    };
+    for (const currency of ["usd", "US", "USDX", "USD\n", " USD", "840", "ÜSD"]) {
+      expect(withCurrency(currency), JSON.stringify(currency)).toThrow(
+        /max_amount\.currency.*exactly three upper-case ASCII letters/,
+      );
+    }
+    expect(withCurrency("XYZ")).not.toThrow();
+  });
 });
 
 describe("the mapping's per-audience enforced constraints keys (@spec resource-access#resource-access-type)", () => {

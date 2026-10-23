@@ -277,6 +277,27 @@ describe("decimal values at PAR (@spec resource-access#decimal-values)", () => {
   });
 });
 
+// @spec resource-access#initial-common-constraints (#1595, D727): "the
+// authorization server MUST refuse an authority proposal carrying one with
+// the `invalid_authorization_details` error code". No case folding, trimming
+// or numeric code; a well-formed code ISO 4217 does not assign is admitted.
+describe("currency codes at PAR (@spec resource-access#initial-common-constraints, #1595)", () => {
+  it("refuses a max_amount currency that is not exactly three upper-case ASCII letters, creating no Mission", async () => {
+    for (const currency of ["usd", "Usd", "US", "USDX", "840", "USD\n", " USD", "ÜSD", ""]) {
+      await expectRefused(
+        entry({ constraints: { max_amount: { amount: "100.00", currency } } }),
+        /constraints\.max_amount\.currency .* is not three upper-case ASCII letters/,
+      );
+    }
+  });
+
+  it("accepts a well-formed currency code whether or not ISO 4217 assigns it (positive control)", async () => {
+    for (const currency of ["USD", "XYZ"]) {
+      await expectAccepted(entry({ constraints: { max_amount: { amount: "100.00", currency } } }));
+    }
+  });
+});
+
 describe("max_depth 0 and an empty allowed_delegates (@spec resource-access#entry-validation, #1376)", () => {
   const ISS = "https://as.entry-validation.test";
   const ERP = "https://erp.example.com";
