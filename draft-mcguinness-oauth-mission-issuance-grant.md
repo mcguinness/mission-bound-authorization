@@ -414,7 +414,8 @@ Claim"), with two members that object does not otherwise require:
 A grant's `authorization_details` can carry entries of any type that
 both the MAS and the consuming AS support
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization
-Details Types"); this profile requires no particular type. Each
+Details Types"; the MAS's supported types are those its deployment
+documentation names); this profile requires no particular type. Each
 entry's audience relevance, subset relation, and transformations
 follow its type's specification and the transformation capabilities
 each party declares for that type, through the carriers that section
@@ -647,7 +648,7 @@ endpoints, naming this endpoint's Protected Resource Metadata.
 |---|---|---|
 | `invalid_request` | 400 | A missing or malformed member, or an unparseable body |
 | `invalid_client` | 400 | Direct client authentication (mutual TLS or private-key JWT) failed, only one of `client_assertion_type` and `client_assertion` is present, or no credential was presented where no access-token scheme is accepted |
-| `invalid_dpop_proof`, `use_dpop_nonce` | 400 | A DPoP proof presented for key binding ({{minting-request}}), with no DPoP-bound access token authenticating the request, fails the checks of {{Section 4.3 of RFC9449}}, or lacks a nonce the MAS requires ({{Section 8 of RFC9449}}); a proof that constrains an authenticating access token fails as `unauthorized` |
+| `invalid_dpop_proof`, `use_dpop_nonce` | 400 | A DPoP proof presented for key binding ({{minting-request}}), with no DPoP-bound access token authenticating the request, fails the checks of {{Section 4.3 of RFC9449}}, carries `ath`, or lacks a nonce the MAS requires ({{Section 8 of RFC9449}}); a proof that constrains an authenticating access token fails as `unauthorized` |
 | `unauthorized` | 401 | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted |
 | `not_found` | 404 | Unknown `mission_id`, or the requester is not the Mission's recorded client |
 | `invalid_audience` | 400 | `audience` names no AS this MAS issues grants for |
