@@ -26,6 +26,14 @@
  * Its own table over its own store handle (the {@link TokenIssuanceStore}
  * idiom), so a `DELETE FROM missions` cannot take it with it. In-memory, built
  * per boot (D25/D27).
+ *
+ * @spec mission#grant-binding-related, mission#delegated-exchange (#1503
+ * finding 11, D620): a grant minted for a token that an exchange establishing
+ * no new grant lineage issues (the self-exchange's delegation handle) records
+ * the grant its presented token was issued under as its backing grant. The
+ * handle keeps that grant provenance: `isGrantLive` follows the link, so
+ * revoking the backing grant refuses a later redemption of a designation
+ * derived from the handle although the handle's own grant still exists.
  */
 
 import { type Database, openStore } from "@mission/store";
@@ -35,7 +43,8 @@ CREATE TABLE mission_bound_grants (
   grant_id TEXT PRIMARY KEY,
   mission_id TEXT NOT NULL,
   kind TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  backing_grant_id TEXT
 ) STRICT;
 `;
 
@@ -45,11 +54,14 @@ export type MissionBoundGrantKind = "approval" | "delegation-family" | "dispatch
 export interface MissionBoundGrant {
   missionId: string;
   kind: MissionBoundGrantKind;
+  /** The grant this one's token was derived under with no new grant lineage, whose state it keeps. */
+  backingGrantId?: string;
 }
 
 interface GrantRow {
   mission_id: string;
   kind: string;
+  backing_grant_id: string | null;
 }
 
 export class MissionBoundGrantStore {
@@ -64,14 +76,14 @@ export class MissionBoundGrantStore {
    * is bound to one Mission for its whole life and a conflicting rebind would
    * be a bug, not a legitimate move.
    */
-  record(input: { grantId: string; missionId: string; kind: MissionBoundGrantKind }): void {
+  record(input: { grantId: string; missionId: string; kind: MissionBoundGrantKind; backingGrantId?: string | undefined }): void {
     this.db
       .prepare(
-        `INSERT INTO mission_bound_grants (grant_id, mission_id, kind, created_at)
-         VALUES (?, ?, ?, ?)
+        `INSERT INTO mission_bound_grants (grant_id, mission_id, kind, created_at, backing_grant_id)
+         VALUES (?, ?, ?, ?, ?)
          ON CONFLICT (grant_id) DO NOTHING`,
       )
-      .run(input.grantId, input.missionId, input.kind, this.now().toISOString());
+      .run(input.grantId, input.missionId, input.kind, this.now().toISOString(), input.backingGrantId ?? null);
   }
 
   /**
@@ -81,9 +93,13 @@ export class MissionBoundGrantStore {
    */
   resolve(grantId: string): MissionBoundGrant | undefined {
     const row = this.db
-      .prepare("SELECT mission_id, kind FROM mission_bound_grants WHERE grant_id = ?")
+      .prepare("SELECT mission_id, kind, backing_grant_id FROM mission_bound_grants WHERE grant_id = ?")
       .get(grantId) as GrantRow | undefined;
     if (!row) return undefined;
-    return { missionId: row.mission_id, kind: row.kind as MissionBoundGrantKind };
+    return {
+      missionId: row.mission_id,
+      kind: row.kind as MissionBoundGrantKind,
+      ...(row.backing_grant_id === null ? {} : { backingGrantId: row.backing_grant_id }),
+    };
   }
 }

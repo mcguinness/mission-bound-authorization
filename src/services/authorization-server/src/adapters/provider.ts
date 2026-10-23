@@ -3350,14 +3350,29 @@ async function handleChildJwtBearerGrant(
  * refresh token destroys that Grant but leaves the row, so the row alone
  * would keep the family's tokens, and the delegations derived from them,
  * active after revocation.
+ *
+ * @spec mission#grant-binding-related, mission#delegated-exchange (#1503
+ * finding 11, D620): a grant with a recorded backing grant (a delegation
+ * handle's, minted by an exchange that establishes no new grant lineage) is
+ * live only while its backing grant is live too. The chain is bounded, and
+ * one longer than the bound fails closed.
  */
 export async function isGrantLive(opts: AdapterOptions, provider: Provider, grantId: string): Promise<boolean> {
-  const grantExists = !!(await provider.Grant.find(grantId).catch(() => undefined));
-  if (opts.familyStore?.wasEverFamily(grantId)) {
-    return opts.familyStore.resolve(grantId) !== undefined && grantExists;
+  let current: string | undefined = grantId;
+  for (let hop = 0; current !== undefined; hop++) {
+    if (hop > MAX_BACKING_GRANT_HOPS) return false;
+    const grantExists = !!(await provider.Grant.find(current).catch(() => undefined));
+    const live = opts.familyStore?.wasEverFamily(current)
+      ? opts.familyStore.resolve(current) !== undefined && grantExists
+      : grantExists;
+    if (!live) return false;
+    current = opts.kernel.missionBoundGrants.resolve(current)?.backingGrantId;
   }
-  return grantExists;
+  return true;
 }
+
+/** The longest chain of backing grants {@link isGrantLive} follows before failing closed. */
+const MAX_BACKING_GRANT_HOPS = 8;
 
 /**
  * @spec mission#caller-authorization-and-minimization (cleanup, issue #541) —
