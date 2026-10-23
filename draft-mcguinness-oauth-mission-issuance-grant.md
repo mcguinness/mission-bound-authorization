@@ -1394,12 +1394,24 @@ Server Metadata" registry {{RFC8414}}:
 
 \[\[ To be removed from the final specification ]]
 
-- Redemption Errors separates a `suspended` Mission, which a `resume`
-  restores and a fresh grant then cures, from a `terminated` one,
-  which neither a retry nor a fresh grant cures. The `mission_error`
-  values follow the lifecycle migration and include `suspended` and
-  `completed`, and `mission_not_active` at the MAS is no longer called
-  an unconditional signal to stop. No requirement changes.
+- Normative follow-ups to the tightening pass (D685). The grant
+  admits any supported authorization-details type under that type's
+  semantics and fails closed on an unsupported transformation. Its
+  `sub` is an injective MAS-local mapping of the recorded Subject, and
+  its `aud` is the consuming AS's issuer identifier only. Grant
+  Validation checks the required `mission` members. The grant
+  endpoint carries client assertions in JSON, advertises its
+  authentication methods, defines its own error codes, and always
+  binds a verified sender constraint into `cnf`; a `cnf` grant yields
+  key-bound access tokens through code exchange and refresh. A
+  requested narrowing that exceeds the surviving authority is
+  refused, not truncated. The refresh family and its ceiling are
+  defined, and the ceiling is persisted at every issuance. A Status
+  not-found refusal carries no `mission_error`, and reliance on a
+  cached Status response is bounded. PAR errors are named, the
+  causal-attribution rule for `authority_contained` moves to
+  Containment, the scope statement moves to Trust, and a deployment
+  statement is required.
 - Tightened throughout with no requirement change. Each rule has one
   home: the `cnf` possession check is in Grant Validation, the `jti`
   record in Single Use, the `typ` refusal in Grant Validation, the
@@ -1417,6 +1429,12 @@ Server Metadata" registry {{RFC8414}}:
   Authority Server Metadata registration uses that registry's
   template fields. The Substrate, Architecture, and Consent Evidence
   references are removed.
+- Redemption Errors separates a `suspended` Mission, which a `resume`
+  restores and a fresh grant then cures, from a `terminated` one,
+  which neither a retry nor a fresh grant cures. The `mission_error`
+  values follow the lifecycle migration and include `suspended` and
+  `completed`, and `mission_not_active` at the MAS is no longer called
+  an unconditional signal to stop. No requirement changes.
 
 # Acknowledgments
 {:numbered="false"}

@@ -3460,6 +3460,13 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- A client assertion's `aud` at the mission submission and
+  join-assertion endpoints is the MAS's issuer identifier as its sole
+  value, the client-authentication audience Mission Status requires.
+  Error Responses' code table and its restriction on companion codes
+  apply to the endpoints this document defines; an endpoint a
+  companion defines, such as the Mission Issuance Grant endpoint,
+  uses the same error object with its own codes (D685).
 - Editorial: Mission Join states that, because the Mission is named
   per request, one credential can be joined to different Missions
   across requests; the sentence moved here from the OAuth binding's
