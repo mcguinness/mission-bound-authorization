@@ -1705,11 +1705,12 @@ authenticates as the Mission's <code>client_id</code>. Every other top-level
 member is validated as <a href="#intent-submission" class="auto internal xref">Section 3.1</a> and <a href="#native-carriage" class="auto internal xref">Section 9.1</a>
 define, and an undefined one is still refused with
 <code>invalid_mission_intent</code>.<a href="#section-3-3" class="pilcrow">¶</a></p>
-<p id="section-3-4">A body that cannot be parsed as a JSON object carries none of these
-members, so the MAS refuses it with the endpoint's syntax error code
-before authenticating the request: <code>invalid_mission_intent</code> here, and
-<code>invalid_join_request</code> at the join-assertion endpoint
-(<a href="#join-assertion" class="auto internal xref">Section 8</a>).<a href="#section-3-4" class="pilcrow">¶</a></p>
+<p id="section-3-4">After request media-type dispatch, an intent-submission or
+join-assertion request whose JSON body cannot be parsed as an object
+is refused before authentication: <code>invalid_mission_intent</code> for intent
+submission, or <code>invalid_join_request</code> for a join assertion
+(<a href="#join-assertion-request" class="auto internal xref">Section 8.1</a>). Once an object is parsed,
+authentication precedes validation of its remaining members.<a href="#section-3-4" class="pilcrow">¶</a></p>
 <p id="section-3-5">The endpoint serves two operations, dispatched by request media type:<a href="#section-3-5" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-3-6.1">
@@ -5941,9 +5942,11 @@ shows the denial:<a href="#appendix-B.5-1" class="pilcrow">¶</a></p>
 <p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-C-2.1">
-          <p id="appendix-C-2.1.1">A body that cannot be parsed as a JSON object gets the endpoint's
-syntax error code before authentication, since it carries no
-client authentication parameters (#1581, following D704).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.1.1">After request media-type dispatch, an intent-submission or
+join-assertion request whose JSON body cannot be parsed as an
+object gets that operation's syntax error code before
+authentication; once an object is parsed, authentication precedes
+validation of its remaining members (#1581, following D704).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.2">
           <p id="appendix-C-2.2.1">A JSON request body carries the client authentication parameters

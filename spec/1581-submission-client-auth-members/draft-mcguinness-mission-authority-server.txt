@@ -379,10 +379,12 @@ Table of Contents
    Section 9.1 define, and an undefined one is still refused with
    invalid_mission_intent.
 
-   A body that cannot be parsed as a JSON object carries none of these
-   members, so the MAS refuses it with the endpoint's syntax error code
-   before authenticating the request: invalid_mission_intent here, and
-   invalid_join_request at the join-assertion endpoint (Section 8).
+   After request media-type dispatch, an intent-submission or join-
+   assertion request whose JSON body cannot be parsed as an object is
+   refused before authentication: invalid_mission_intent for intent
+   submission, or invalid_join_request for a join assertion
+   (Section 8.1).  Once an object is parsed, authentication precedes
+   validation of its remaining members.
 
    The endpoint serves two operations, dispatched by request media type:
 
@@ -3948,9 +3950,11 @@ Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
 
-   *  A body that cannot be parsed as a JSON object gets the endpoint's
-      syntax error code before authentication, since it carries no
-      client authentication parameters (#1581, following D704).
+   *  After request media-type dispatch, an intent-submission or join-
+      assertion request whose JSON body cannot be parsed as an object
+      gets that operation's syntax error code before authentication;
+      once an object is parsed, authentication precedes validation of
+      its remaining members (#1581, following D704).
 
    *  A JSON request body carries the client authentication parameters
       of Mission Status's mechanisms as request-level members.  The MAS
