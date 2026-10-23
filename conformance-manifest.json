@@ -60175,12 +60175,26 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a join-assertion request authenticated by a private-key-JWT client assertion is accepted only when the assertion's aud is the MAS issuer identifier as its sole value; an assertion audienced to the join-assertion endpoint URL, or carrying any other or additional audience, is refused invalid_client and no assertion is minted"
+    "normative": "a join-assertion request authenticated by a private-key-JWT client assertion is accepted only when the assertion's aud is the MAS issuer identifier as its sole value; an assertion audienced to the join-assertion endpoint URL, or carrying any other or additional audience, is refused invalid_client and no assertion is minted",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts) authenticates join-assertion callers through Mission Status's authenticator with the issuer identifier as the sole aud: an issuer-audienced assertion, as a string or a one-element array, is accepted and mints; one audienced to the endpoint URL, to the issuer beside another audience, or to another issuer gets 400 invalid_client and nothing is minted"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Added with the #1569 review of the D685 rulings (Q2 detail): the client assertion's aud is the MAS issuer identifier as its sole value, as Mission Status requires. The reference serves no mission submission endpoint; the join-assertion endpoint in open #1554 still checks the endpoint audience, so its witness lands once #1554 adopts the issuer audience. todo until then."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses a failed or absent client authentication invalid_client (HTTP 400), minting nothing: the assertion's aud must be the MAS issuer identifier as its sole value",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > accepts a client assertion whose aud is the MAS issuer identifier as its sole value, as a string or a one-element array, as at Mission Status",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Added with the #1569 review of the D685 rulings (Q2 detail); witnessed by #1554 once it adopted the issuer audience. Mutation-proved: restoring the endpoint audience fails both tests, and accepting the issuer inside a multi-valued aud fails the refusal test."
   },
   {
    "id": "mas.errors.invalid-client",
@@ -60197,14 +60211,14 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a failed direct client authentication at the submission or join-assertion endpoint gets 400 invalid_client",
-    "local": "witnessed at the join-assertion endpoint, the reference's one MAS endpoint of the two: no credential, an assertion audienced to the issuer (the Mission Status audience) and an unregistered client each get 400 invalid_client with no WWW-Authenticate challenge. The reference serves no MAS submission endpoint"
+    "local": "witnessed at the join-assertion endpoint, the reference's one MAS endpoint of the two: no credential, an assertion audienced to the join-assertion endpoint URL, to the issuer beside another audience or to another issuer, and an unregistered client each get 400 invalid_client with no WWW-Authenticate challenge. The reference serves no MAS submission endpoint"
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
-     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses a failed or absent client authentication invalid_client (HTTP 400), the assertion's aud this endpoint and nothing else",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses a failed or absent client authentication invalid_client (HTTP 400), minting nothing: the assertion's aud must be the MAS issuer identifier as its sole value",
      "level": "endpoint",
      "surface": "verification"
     }

@@ -136,10 +136,10 @@ async function post(body: unknown, opts: { contentType?: string; raw?: string; u
   };
 }
 
-/** A request from `client`, authenticated by a client assertion audienced to this endpoint. */
+/** A request from `client`, authenticated by a client assertion whose `aud` is the MAS issuer identifier as its sole value. */
 async function request(client: LifecycleTestClient, members: Record<string, unknown>, url = ENDPOINT): Promise<Answer> {
   return post(
-    { ...members, client_assertion_type: CLIENT_ASSERTION_TYPE, client_assertion: await lifecycleClientAssertion(ISSUER, client, { aud: url }) },
+    { ...members, client_assertion_type: CLIENT_ASSERTION_TYPE, client_assertion: await lifecycleClientAssertion(ISSUER, client) },
     { url },
   );
 }
@@ -274,7 +274,7 @@ describe("Join Assertion minting, the service alone (@spec authority-server#join
           audience,
           access_token: token,
           client_assertion_type: CLIENT_ASSERTION_TYPE,
-          client_assertion: await lifecycleClientAssertion(ISSUER, pep, { aud: ENDPOINT }),
+          client_assertion: await lifecycleClientAssertion(ISSUER, pep),
         }),
         "application/json",
         "",
@@ -297,7 +297,7 @@ describe("Join Assertion endpoint outcomes (@spec authority-server#join-assertio
   it("refuses a body that is not a JSON object carrying mission_id, a string audience and exactly one token form invalid_join_request (HTTP 400)", async () => {
     const record = approve();
     const token = actingToken();
-    const auth = async () => ({ client_assertion_type: CLIENT_ASSERTION_TYPE, client_assertion: await lifecycleClientAssertion(ISSUER, pep, { aud: ENDPOINT }) });
+    const auth = async () => ({ client_assertion_type: CLIENT_ASSERTION_TYPE, client_assertion: await lifecycleClientAssertion(ISSUER, pep) });
     const cases: Array<[string, Answer]> = [
       ["not JSON", await post(undefined, { raw: "mission_id=x" })],
       ["a form body", await post(undefined, { raw: "mission_id=x", contentType: "application/x-www-form-urlencoded" })],
@@ -315,12 +315,17 @@ describe("Join Assertion endpoint outcomes (@spec authority-server#join-assertio
     }
   });
 
-  it("refuses a failed or absent client authentication invalid_client (HTTP 400), the assertion's aud this endpoint and nothing else", async () => {
+  it("refuses a failed or absent client authentication invalid_client (HTTP 400), minting nothing: the assertion's aud must be the MAS issuer identifier as its sole value", async () => {
     const record = approve();
     const members = { mission_id: record.id, audience: pdp.clientId, access_token: actingToken() };
+    const withAud = async (aud: string | string[]) =>
+      post({ ...members, client_assertion_type: CLIENT_ASSERTION_TYPE, client_assertion: await lifecycleClientAssertion(ISSUER, pep, { aud }) });
+    const before = events();
     const cases: Array<[string, Answer]> = [
       ["no credential", await post(members)],
-      ["aud the issuer, as at Mission Status", await post({ ...members, client_assertion_type: CLIENT_ASSERTION_TYPE, client_assertion: await lifecycleClientAssertion(ISSUER, pep) })],
+      ["aud the join-assertion endpoint", await withAud(ENDPOINT)],
+      ["aud the issuer beside another audience", await withAud([ISSUER, ENDPOINT])],
+      ["aud another issuer", await withAud("https://other.example.com")],
       ["an unregistered client", await request(await newLifecycleClient("join-assertion-unknown"), members)],
     ];
     for (const [label, answer] of cases) {
@@ -328,6 +333,17 @@ describe("Join Assertion endpoint outcomes (@spec authority-server#join-assertio
       expect(answer.json.error, label).toBe("invalid_client");
       // Not a token challenge.
       expect(answer.wwwAuthenticate, label).toBeNull();
+    }
+    expect(events()).toBe(before);
+  });
+
+  it("accepts a client assertion whose aud is the MAS issuer identifier as its sole value, as a string or a one-element array, as at Mission Status", async () => {
+    const record = approve();
+    const members = { mission_id: record.id, audience: pdp.clientId, access_token: actingToken() };
+    for (const [label, aud] of [["a string", ISSUER], ["a one-element array", [ISSUER]]] as Array<[string, string | string[]]>) {
+      const answer = await post({ ...members, client_assertion_type: CLIENT_ASSERTION_TYPE, client_assertion: await lifecycleClientAssertion(ISSUER, pep, { aud }) });
+      expect(answer.status, label).toBe(200);
+      expect(typeof answer.json.assertion, label).toBe("string");
     }
   });
 
@@ -353,7 +369,7 @@ describe("Join Assertion endpoint outcomes (@spec authority-server#join-assertio
         .setProtectedHeader({ alg: "ES256", kid: (as.agentClientJwk as { kid?: string }).kid as string })
         .setIssuer("ap-agent")
         .setSubject("ap-agent")
-        .setAudience(ENDPOINT)
+        .setAudience(ISSUER)
         .setIssuedAt(iat)
         .setExpirationTime(iat + 60)
         .sign(agentKey),
@@ -412,7 +428,7 @@ describe("Join Assertion endpoint outcomes (@spec authority-server#join-assertio
       for (let i = 0; i < 3; i += 1) {
         answers.push(
           await post(
-            { ...members, client_assertion_type: CLIENT_ASSERTION_TYPE, client_assertion: await lifecycleClientAssertion("http://localhost:14895", pep, { aud: url }) },
+            { ...members, client_assertion_type: CLIENT_ASSERTION_TYPE, client_assertion: await lifecycleClientAssertion("http://localhost:14895", pep) },
             { url },
           ),
         );
