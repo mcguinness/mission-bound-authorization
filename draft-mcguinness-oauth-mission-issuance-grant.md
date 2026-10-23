@@ -85,14 +85,7 @@ informative:
     date: 2026
   RFC8628:
   RFC8725:
-  I-D.draft-mcguinness-oauth-mission-consent-evidence:
-    title: "Mission Consent Evidence for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
+
   I-D.draft-mcguinness-oauth-mission-containment:
     title: "Mission Containment for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-containment.html
@@ -979,14 +972,14 @@ The security considerations of {{RFC7523}}, {{RFC7519}}, and
 {{RFC8725}} apply. This section adds those specific to the issuance
 join.
 
-**Grant theft.** The grant authorizes issuance, so it is defended in
-depth: 300-second lifetime, single-use `jti`, audience binding to
-one AS, redemption bound to the Mission's `client_id`, and optional
-`cnf` key binding. A stolen grant is useless to any party that cannot
-also authenticate as the recorded client, or prove possession of the
-`cnf` key, at the named AS within the window. Deployments whose
-client credentials are weak SHOULD require `cnf` (DPoP {{RFC9449}} or
-mTLS {{RFC8705}} bindings serve).
+**Grant theft.** A grant authorizes issuance, so its defenses are
+layered: a 300-second lifetime, a single-use `jti`, one audience,
+redemption bound to the Mission's `client_id`, and optional `cnf` key
+binding. A stolen grant is useless to any party that cannot also
+authenticate as the recorded client, or prove possession of the `cnf`
+key, at the named AS within that window. Deployments whose client
+credentials are weak SHOULD require `cnf` (DPoP {{RFC9449}} or mutual
+TLS {{RFC8705}}).
 
 **Mission Issuer compromise reaches issuance.** In a MAS-only
 deployment, MAS compromise corrupts records and state. Under this
@@ -997,12 +990,12 @@ are the independent record that bounds and exposes such minting; at
 estate scale, reconciling them against the MAS's minting records is
 the only check on this compromise class.
 
-**Externally derived authority.** The consuming AS accepts authority
-derived elsewhere. Its exposure is bounded by the profile's own
-rules: it mints only within the grant's `authorization_details`, only
-for the grant's client, never longer than the Mission's `expires_at`,
-and its local policy MAY narrow further. The AS remains free to
-refuse any grant its policy distrusts; nothing obliges issuance.
+**Externally derived authority.** The consuming AS issues authority
+derived elsewhere. The grant bounds its exposure: it issues only
+within the grant's `authorization_details`, only to the grant's
+client, and never past the Mission's `expires_at`
+({{token-issuance}}). Its own policy can narrow further or refuse a
+grant outright; nothing obliges issuance.
 
 **Type confusion.** Three issuer-signed JWT artifacts describe
 Missions: the Mission Mandate
@@ -1013,31 +1006,30 @@ exclusive validation rules ({{Section 3.11 of RFC8725}} and
 {{Section 3.12 of RFC8725}}) is the defense: every consumer checks
 `typ` first, and none accepts another's type.
 
-**Revocation latency.** New grants stop at the MAS `active` gate at
-the moment of state commit. A grant already issued can still be
+**Revocation latency.** New grants stop at the MAS `active` gate when
+the state change commits. A grant already minted can still be
 redeemed within its 300 seconds at a consuming AS without a
-Mission-state integration, and the token it yields runs to its own
-expiry. The residual there is the sum: the grant's remaining lifetime
-and clock-skew leeway, plus the issued token's lifetime, plus that of
-each further exchange that checks no Mission state, capped by
-`expires_at`. Issued access tokens run to their own
-expiry, and an outstanding refresh token is refused at its next
-state-gated use; where the runtime layer is deployed, the Policy
-Decision Point's
-re-check bounds outstanding-token use independently. A refresh
-re-projects through
-the Effective Authority Set ({{effective-set-projection}}), so a
-Mission contained or discharged between issuance and refresh does
-not renew its original, now-narrowed authority. A deployment states
-the refresh staleness bound it publishes ({{conformance}}).
+Mission-state integration. The residual there is the grant's
+remaining lifetime and clock-skew leeway ({{grant-validation}}), plus
+the issued token's lifetime, plus that of each further exchange that
+checks no Mission state, capped by `expires_at`; under the PAR
+carriage, the authorization code's lifetime adds to that sum. Hence
+the short-lifetime recommendation ({{token-issuance}}). In either mode,
+issued access tokens run to their own expiry. With a Mission-state
+integration, an outstanding refresh token is refused at its next
+use, and a refresh re-projects through the Effective Authority Set
+({{effective-set-projection}}), so a Mission contained or discharged
+between issuance and refresh does not renew its original, narrowed
+authority, within the staleness bound the deployment publishes
+({{conformance}}). Where the runtime layer is deployed, the Policy
+Decision Point's re-check bounds outstanding-token use independently.
 
 **Consent integrity.** The approval the grant rests on was rendered
 and committed at the Mission Issuer under the issuance profile's
-rules and, where deployed, Consent Evidence
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). The
-consuming AS relies on that event and does not substitute a consent
-of its own: its non-prompting duty ({{token-issuance}}) prevents
-consent-surface confusion where the Subject holds accounts at both.
+rules. The consuming AS relies on that approval and does not
+substitute one of its own: its non-prompting duty
+({{token-issuance}}, {{par-carriage}}) prevents consent-surface
+confusion where the Subject holds accounts at both.
 
 # Privacy Considerations {#privacy-considerations}
 
