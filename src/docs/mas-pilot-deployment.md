@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `65e0fd95`
+Every statement here is true of the reference implementation at `c8429f7e`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -325,8 +325,10 @@ contract alone, unchanged. By party:
   (`POST /mission/join-assertion`, advertised as
   `mission_join_assertion_endpoint`) authenticates its caller by
   private-key JWT through Mission Status's authenticator, the client
-  assertion's `aud` naming the endpoint, with `client_assertion_type` and
-  `client_assertion` as JSON members. Its visibility set is the Mission's
+  assertion's `aud` the MAS's issuer identifier as its sole value, as at
+  Mission Status (D685, D690); an `aud` naming the endpoint is refused
+  `invalid_client`. `client_assertion_type` and `client_assertion` travel
+  as JSON members. Its visibility set is the Mission's
   client and the clients enrolled for the Mission's enforcement scope, with
   one `not_found` outside it; it rate-limits per caller. It mints only for
   an `active` Mission, an `audience` enrolled for that scope, and an active
@@ -376,8 +378,9 @@ contract alone, unchanged. By party:
   The acting client needs no MAS registration, and the digest and
   thumbprint it reports come from the credential it verified. The pilot's
   PEP and PDP are one enforcement point, so the PEP authenticates as the
-  PDP's enrolled client (`separated_mas.pdp_client_id`), its client
-  assertion's `aud` the endpoint. An assertion it obtains rides
+  PDP's enrolled client (`separated_mas.pdp_client_id`). The client builds
+  its own client assertion, with the MAS's issuer identifier as its sole
+  `aud`. An assertion it obtains rides
   `context.mission_join` with `token_sha256` and `token_jkt`, the key the
   request's DPoP proof verified against. With none obtained, none of the
   members is carried.
@@ -426,6 +429,8 @@ Unit witnesses: `services/pdp/test/evaluate-join-assertion.test.ts`
 (every check, the `token` claim's one confirmation member, an algorithm the
 PDP's list does not name, and the requirement),
 `services/mcp-payments/test/mas-join-assertion-pep.test.ts` (the carriage),
+`services/mcp-payments/test/join-assertion-client.test.ts` (the client
+assertion's sole `aud` the MAS's issuer, against a stub endpoint),
 and `demo/test/mas-pilot-join-deployment.test.ts` (the MAS's
 introspection-first establishment against a stub estate: a JWT the estate
 introspects, `unsupported_token_type` and local validation, an inactive
@@ -709,7 +714,8 @@ pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.
   services/pdp/test/evaluate-own-read.test.ts services/mcp-payments/test/view-source.test.ts \
   demo/test/mas-pilot-launcher.test.ts demo/test/mas-pilot-launcher-shutdown.test.ts \
   demo/test/mas-pilot-join-assertion.test.ts demo/test/mas-pilot-join-deployment.test.ts services/pdp/test/evaluate-join-assertion.test.ts \
-  services/mcp-payments/test/mas-join-assertion-pep.test.ts services/authorization-server/test/join-assertion-endpoint.test.ts
+  services/mcp-payments/test/mas-join-assertion-pep.test.ts services/mcp-payments/test/join-assertion-client.test.ts \
+  services/authorization-server/test/join-assertion-endpoint.test.ts
 ```
 
 §10's four files and §11's three unit files need no OpenFGA. The reference authorization server binds
