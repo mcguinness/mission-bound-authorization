@@ -821,6 +821,15 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "version"]);
   });
 
+  it("an active response carries the mission member to every caller authorized for the token, a resource server with no disclosure privilege included (@spec mission#introspection, #1503)", async () => {
+    for (const principal of [RS_PAYMENTS, RS_PAYMENTS_BASIC]) {
+      const res = await introspect(flow1.at, { principal });
+      expect(res.body.active, principal[0]).toBe(true);
+      expect(res.body, principal[0]).toHaveProperty("mission");
+      expect(res.body.mission, principal[0]).toMatchObject({ id: flow1.missionId, issuer: ISSUER, state: "active" });
+    }
+  });
+
   it("issuer-only members are disclosure-gated: a privilege-less principal never sees them", async () => {
     // flow3's record carries a proposal_hash and participates in the Status
     // List, but rs-saas holds neither the provenance nor the status_list
