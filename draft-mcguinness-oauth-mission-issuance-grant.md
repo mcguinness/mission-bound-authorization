@@ -632,36 +632,26 @@ On success the consuming AS mints tokens under these rules:
   MUST NOT widen, remap, or supplement them. Representing them as
   `scope` (below) is not a remapping.
 - **Token response.** The token response carries the issued
-  `authorization_details` as the issuance profile requires for
-  Mission-bound issuance ({{I-D.draft-mcguinness-oauth-mission}},
-  Section "Mission-Bound Access Tokens", and {{Section 7 of RFC9396}}),
+  `authorization_details` as the issuance profile requires
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section
+  "Audience and Token Response", and {{Section 7 of RFC9396}}),
   any projected `scope` beside them ({{Section 5.1 of RFC6749}}), and
   the `mission_id` and `mission_expires_at` parameters as the issuance
   profile recommends ({{I-D.draft-mcguinness-oauth-mission}}, Section
   "Binding the Mission to the Grant").
 - **Scope projection.** Where a target's enforcement path consumes
   `scope`, the consuming AS also projects the issued
-  `authorization_details` to `scope` under the issuance profile's
-  scope-projection rule ({{I-D.draft-mcguinness-oauth-mission}},
-  Section "Scope Projection"): every issued scope value corresponds
-  to authority the grant conveys, and none conveys authority, or
-  relaxes a constraint, that the grant does not. The consuming AS
-  therefore supports {{RFC9396}} even where its targets consume only
-  `scope`.
+  `authorization_details` to `scope` as the issuance profile's Scope
+  Projection rule requires ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Scope Projection"), so it supports {{RFC9396}} even where
+  its targets consume only `scope`.
 - **Lifetime.** The consuming AS MUST NOT issue an access or refresh
   token under the grant with an expiry later than the `mission`
-  object's `expires_at`. That ceiling is the Mission horizon, not a
+  object's `expires_at`. That ceiling is the Mission's expiry, not a
   liveness bound, so access tokens issued under a grant SHOULD be
-  short-lived: absent a redemption-time state check, a revoked
-  Mission's token can keep working at the token layer for the grant's
-  remaining redemption time and clock-skew leeway
-  ({{grant-validation}}) plus the issued token's own lifetime, never
-  past `expires_at`.
+  short-lived ({{security-considerations}}).
 - **Effective Authority Set projection.** A consuming AS with a
-  Mission-state integration gates redemption and every refresh on
-  current Mission state and projects the issued authority through the
-  Mission's current Effective Authority Set
-  ({{effective-set-projection}}).
+  Mission-state integration also applies {{effective-set-projection}}.
 - **No re-approval.** The approval event already occurred at the
   Mission Issuer. The consuming AS MUST NOT prompt the Subject or
   any user for consent at redemption.
@@ -692,11 +682,6 @@ Cache-Control: no-store
   "mission_expires_at": "2026-12-31T23:59:59Z"
 }
 ~~~
-
-A grant redeems exactly once ({{single-use}}). Later token needs are
-met by the issued refresh token (state-gated) or a fresh grant
-(state-gated at minting), so every path to new authority re-enters a
-Mission-state gate.
 
 ## Effective Authority Set Projection {#effective-set-projection}
 
