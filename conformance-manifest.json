@@ -37798,8 +37798,8 @@
   {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "grant",
-   "text": "When it is present, the consuming AS MUST require proof of possession of that key at redemption",
+   "anchor": "grant-validation",
+   "text": "whenever `cnf` is present, the request proves possession of that key, with a DPoP proof",
    "role": "AS",
    "strength": "MUST",
    "applicability": {

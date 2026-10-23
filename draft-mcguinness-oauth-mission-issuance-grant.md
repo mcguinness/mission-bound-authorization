@@ -348,13 +348,9 @@ Claims:
 : OPTIONAL. A confirmation claim {{RFC7800}} binding redemption to a
   key: the `jkt` member for OAuth 2.0 Demonstrating Proof of
   Possession (DPoP, {{Section 6.1 of RFC9449}}), or the `x5t#S256`
-  member for mutual TLS ({{Section 3.1 of RFC8705}}), set by the MAS
-  only from a sender constraint it verified on the grant request
-  ({{minting-rules}}). When it is
-  present, the consuming AS MUST require proof of possession of that
-  key at redemption: a DPoP proof in the token request whose public
-  key has the `jkt` thumbprint, or a client certificate on the TLS
-  connection whose SHA-256 thumbprint matches the `x5t#S256` value.
+  member for mutual TLS ({{Section 3.1 of RFC8705}}). The MAS sets it
+  as {{minting-rules}} requires, and the consuming AS verifies it as
+  {{grant-validation}} requires.
 
 In the examples in this document, the ERP's operation contract
 identifies the service's own identifier, `https://erp.example.com`,
@@ -639,7 +635,10 @@ any check fails:
 4. the client is the grant's `client_id` ({{redemption}}): the
    authenticated client equals it, or, for a public client, the grant
    carries `cnf`; and whenever `cnf` is present, the request proves
-   possession of that key ({{grant}});
+   possession of that key, with a DPoP proof
+   ({{Section 4.3 of RFC9449}}) whose public key has the `jkt`
+   thumbprint or a client certificate on the TLS connection whose
+   SHA-256 thumbprint matches the `x5t#S256` value;
 5. `sub` maps to a local account under the deployment's mapping
    policy ({{trust}}), and the grant's `authorization_details`
    map to resources this AS serves.
