@@ -38016,6 +38016,48 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q6); todo until that path exists."
   },
   {
+   "id": "issuance-grant.minting-rules.subject-injective",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "The MAS MUST derive the grant's `sub` from the Mission's recorded (`subject.iss`, `subject.sub`) pair by an injective mapping established before it mints",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "grants for Missions whose recorded Subjects differ in subject.iss or subject.sub never carry the same sub, every grant for one Subject carries the same sub, and a verbatim subject.sub appears only where no other principal's sub at the MAS equals it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q13); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.subject-pair",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "the (`iss`, `sub`) pair maps to a local account under the deployment's mapping policy",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the consuming AS maps the grant's (iss, sub) pair, never sub alone, to a local account; a pair with no mapping is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q13); todo until that path exists."
+  },
+  {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "grant-validation",

@@ -277,8 +277,8 @@ grants only from Mission Issuers its local policy names, resolving
 their signing keys from the MAS's `jwks_uri`
 ({{I-D.draft-mcguinness-mission-authority-server}}); a MAS mints
 grants only for authorization servers its configuration names as
-audiences. The deployment's mapping policy governs how the Subject
-and client in the Mission record correspond to the consuming AS's
+audiences. The deployment's mapping policy governs how a grant's
+(`iss`, `sub`) pair and `client_id` correspond to the consuming AS's
 accounts; where the Enterprise Mission Authority Profile is claimed,
 the Enterprise Mapping Contract governs
 ({{I-D.draft-mcguinness-mission-authority-server}}). The audiences
@@ -304,9 +304,11 @@ Claims:
 : REQUIRED. The Mission's `issuer`: the MAS issuer URL.
 
 `sub`:
-: REQUIRED. The Mission's recorded Subject identifier
-  (`subject.sub`), interpreted at the consuming AS under the
-  deployment's mapping policy ({{trust}}).
+: REQUIRED. The Mission's Subject as a MAS-local identifier, which the
+  MAS maps from the recorded (`subject.iss`, `subject.sub`) pair
+  before minting ({{minting-rules}}). The consuming AS interprets the
+  (`iss`, `sub`) pair under the deployment's mapping policy
+  ({{trust}}).
 
 `aud`:
 : REQUIRED. The consuming AS's issuer identifier
@@ -344,8 +346,10 @@ Claims:
 
 The following is an example of a decoded grant payload for the
 Mission of the examples in
-{{I-D.draft-mcguinness-mission-authority-server}}; its entry is a
-subset of that Mission's invoice-read entry:
+{{I-D.draft-mcguinness-mission-authority-server}}. Its entry is a
+subset of that Mission's invoice-read entry, and its `sub` is the
+recorded `subject.sub` copied verbatim, which {{minting-rules}}
+permits where it collides with no other principal's `sub`:
 
 ~~~ json
 {
@@ -524,6 +528,20 @@ The MAS MUST apply the following rules:
    request, even where its key is the one the assertion used. A
    request with no verified sender constraint yields a grant without
    `cnf`, which a public client cannot redeem ({{redemption}}).
+6. **Subject.** The MAS MUST derive the grant's `sub` from the
+   Mission's recorded (`subject.iss`, `subject.sub`) pair by an
+   injective mapping established before it mints, as the issuance
+   profile requires of an AS for an external Subject
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Subject
+   Establishment"). Two home issuers can both name a principal
+   `alice`, and the mapping keeps them apart. The mapping is stable:
+   every grant for one Subject carries the same `sub`. Copying
+   `subject.sub` verbatim is valid only where it collides with no
+   other principal's `sub` at this MAS. Every Mission has a Subject, a
+   service-owned or
+   organizational Mission included
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority
+   Sources").
 
 ## Grant Response {#minting-response}
 
@@ -634,8 +652,8 @@ any check fails:
    ({{Section 4.3 of RFC9449}}) whose public key has the `jkt`
    thumbprint or a client certificate on the TLS connection whose
    SHA-256 thumbprint matches the `x5t#S256` value;
-5. `sub` maps to a local account under the deployment's mapping
-   policy ({{trust}}), and every entry of the grant's
+5. the (`iss`, `sub`) pair maps to a local account under the
+   deployment's mapping policy ({{trust}}), and every entry of the grant's
    `authorization_details` is of a type this AS supports and is one it
    serves ({{entry-types}}).
 
@@ -1098,7 +1116,7 @@ confusion where the Subject holds accounts at both.
 
 # Privacy Considerations {#privacy-considerations}
 
-The grant carries the Mission reference, the recorded `sub` and
+The grant carries the Mission reference, the Subject's `sub`, the
 `client_id`, and an authority subset to the consuming AS, which may
 be operated by a different organizational unit than the MAS.
 Minimization is structural: the MAS scopes `authorization_details`
