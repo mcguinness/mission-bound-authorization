@@ -305,23 +305,6 @@ auditor attributes what was approved to the MAS record and what was
 issued to the consuming AS's log, joined by the Mission reference
 the grant carries.
 
-## Issued Tokens {#issued-tokens}
-
-Tokens issued under this profile are Mission-bound: they carry the
-`mission` claim, their authority is a subset of the consented
-Authority Set, and their issuance is gated on Mission state, at grant
-issuance always and at redemption and every refresh where the
-consuming AS has a Mission-state integration.
-
-Runtime enforcement reads the Mission from these tokens
-(credential-carried composition,
-{{I-D.draft-mcguinness-mission-runtime}}), so the Mission Join's
-limit does not apply to them: the join proves a credential belongs to
-the Mission's parties, never that it was issued for the Mission
-({{I-D.draft-mcguinness-mission-authority-server}}, Section "Mission
-Join"). Tokens the estate issues outside this profile are unchanged
-and continue to compose through the Mission Join.
-
 # The Mission Issuance Grant {#grant}
 
 A Mission Issuance Grant is a JWT {{RFC7519}} signed as a JWS
@@ -1036,10 +1019,15 @@ mints without grants for its own resources. It consumes the record,
 anchors, and lifecycle the MAS already operates, so nothing is
 re-approved in migration.
 
-**The Mission Join remains for other tokens.** Tokens issued under
-this profile carry the Mission; the estate's other tokens compose
-through the Mission Join, and the two joins coexist per resource and
-per AS ({{issued-tokens}}).
+**The Mission Join remains for other tokens.** Runtime enforcement
+reads the Mission from tokens issued under this profile
+(credential-carried composition,
+{{I-D.draft-mcguinness-mission-runtime}}), so the Mission Join's
+limit does not apply to them: the join proves a credential belongs to
+the Mission's parties, never that it was issued for the Mission
+({{I-D.draft-mcguinness-mission-authority-server}}, Section "Mission
+Join"). The estate's other tokens are unchanged and compose through
+the Mission Join; the two joins coexist per resource and per AS.
 
 ## Composite Provision {#composite}
 
