@@ -22,7 +22,7 @@
  * is a browser Approver's `mfa` login inside the floor's age bound (#1255).
  */
 
-import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, renderedRevision } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { APPROVAL_FLOOR, CANONICAL_RESOURCE, DERIVATION_POLICY, loadProgressiveProfile, PROGRESSIVE_PROFILE } from "@mission/demo-data";
@@ -293,17 +293,15 @@ async function issueMission(
   storeCookies(res, jar);
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
-  // The Approver sees the approval page, which retains the ceiling it offers (#1017).
-  const page = await fetch(`${issuer}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
-  expect(page.status).toBe(200);
+  // The Approver sees the approval page in their session, which retains the
+  // ceiling it offers (#1017); the decision names that rendering (#1446).
+  const decideHeaders = floorApprovalHeaders(approvalSessions.get(issuer) as ApprovalSessionStore, uid, cookieHeader(jar));
+  const render_revision = await renderedRevision(issuer, uid, decideHeaders);
   res = await fetch(`${issuer}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: {
-      ...floorApprovalHeaders(approvalSessions.get(issuer) as ApprovalSessionStore, uid, cookieHeader(jar)),
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ decision: "approve", ...(ceiling ?? {}) }),
+    headers: { ...decideHeaders, "content-type": "application/json" },
+    body: JSON.stringify({ decision: "approve", render_revision, ...(ceiling ?? {}) }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;
@@ -1785,17 +1783,16 @@ describe("the ceiling consent disclosure (@spec progressive#progressive-authoriz
     });
     storeCookies(res, jar);
     const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
-    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
-    expect(page.status).toBe(200);
+    // The page is rendered to the Approver's session under `shown`; the
+    // decision names that rendering (#1446), whatever the offer becomes after.
+    const decideHeaders = floorApprovalHeaders(approvalSessions.get(ISSUER) as ApprovalSessionStore, uid, cookieHeader(jar));
+    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
     if (offerAtDecision) currentOffer = offerAtDecision;
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: {
-        ...floorApprovalHeaders(approvalSessions.get(ISSUER) as ApprovalSessionStore, uid, cookieHeader(jar)),
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ decision: "approve", ...decided }),
+      headers: { ...decideHeaders, "content-type": "application/json" },
+      body: JSON.stringify({ decision: "approve", render_revision, ...decided }),
     });
     storeCookies(res, jar);
     let location = res.headers.get("location") as string;

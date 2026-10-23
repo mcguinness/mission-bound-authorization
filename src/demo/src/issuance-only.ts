@@ -27,6 +27,7 @@ import {
 } from "@mission/authorization-server";
 import { DEV_SERVICE_TOKEN, INTROSPECTION_PRINCIPALS, TOPOLOGY } from "@mission/demo-data";
 import { startPlainResourceServer } from "@mission/plain-rs";
+import { renderApproval } from "./approval-console.js";
 import { type LifecycleConsoleCredentials, newLifecycleConsole, requestLifecycle } from "./lifecycle-client.js";
 import {
   type CryptoKey,
@@ -310,16 +311,15 @@ export async function runWalkthrough(
   // 2. Approval by the approver console (the demo's trusted approval input):
   // Bob approves, and the console selects Alice as the Subject (#826); the
   // agent's PAR never names her.
+  // The console renders the approval page first, as its Approver reviews it,
+  // and the approval names that rendering's revision (#1446).
+  const approverHeaders = { cookie: cookie(), "x-service-token": creds.approverServiceToken, [APPROVAL_SUBJECT_HEADER]: "alice" };
+  const render_revision = await renderApproval(asUrl, uid, approverHeaders);
   res = await fetch(`${asUrl}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: {
-      "content-type": "application/json",
-      cookie: cookie(),
-      "x-service-token": creds.approverServiceToken,
-      [APPROVAL_SUBJECT_HEADER]: "alice",
-    },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: { "content-type": "application/json", ...approverHeaders },
+    body: JSON.stringify({ decision: "approve", ...(render_revision ? { render_revision } : {}) }),
   });
   keep(res);
   let location = res.headers.get("location") ?? "";
@@ -332,7 +332,7 @@ export async function runWalkthrough(
   const code = callback.get("code");
   record({
     step: "2. Approval",
-    request: `POST ${asUrl}/interaction/${uid}/decide {"decision":"approve"} as svc:approver-console`,
+    request: `GET ${asUrl}/interaction/${uid}, then POST ${asUrl}/interaction/${uid}/decide {"decision":"approve","render_revision":"(that rendering's)"} as svc:approver-console`,
     status: code ? 200 : 400,
     result: code ? { code: "(redacted)" } : Object.fromEntries(callback),
   });

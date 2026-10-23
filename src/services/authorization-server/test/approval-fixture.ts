@@ -1,4 +1,5 @@
 import { APPROVAL_SUBJECT_HEADER, type ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ServiceTokenPrincipal } from "../src/index.js";
+import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
 
 /**
  * A trusted browser approval (#826): the Approver authenticated in THIS user
@@ -53,6 +54,23 @@ export function floorApprovalHeaders(
     { sub: approver.sub ?? "bob", acr: "mfa", auth_time: FIXTURE_LOGIN_TIME, ...(subject !== null ? { subject } : {}) },
     interactionCookies,
   );
+}
+
+/**
+ * @spec mission#approval-context-changes (#1446, D583): render the approval
+ * page to the principal `headers` authenticate (an approval session's cookie,
+ * or the trusted headless service with its Subject), as an Approver reviews it
+ * before deciding, and return the rendering's revision. An approval names it
+ * (`render_revision`); without the latest one, no decision approves.
+ */
+export async function renderedRevision(issuer: string, uid: string, headers: Record<string, string>): Promise<string> {
+  const { "content-type": _type, ...rendering } = headers;
+  const res = await fetch(`${issuer}/interaction/${uid}`, { headers: rendering });
+  const revision = res.headers.get(RENDER_REVISION_HEADER);
+  if (res.status !== 200 || !revision) {
+    throw new Error(`no approval rendering for ${uid}: ${res.status} ${(await res.text()).slice(0, 200)}`);
+  }
+  return revision;
 }
 
 /** Trusted test driver credential; never part of the client fixture. */

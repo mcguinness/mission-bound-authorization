@@ -7,7 +7,7 @@
  * inside each credential's configured lifetime and read the minted `exp`
  * back, plus a far Mission as the control.
  */
-import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
@@ -134,14 +134,13 @@ async function authorizationRedirect(
   let location = res.headers.get("location") ?? "";
   if (location.includes("/interaction/")) {
     const uid = location.split("/interaction/")[1] as string;
+    const decideHeaders = browser ? browserApprovalHeaders(SESSIONS, uid, browser, cookie()) : { ...trustedApprovalHeaders(), cookie: cookie() };
+    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: {
-        ...(browser ? browserApprovalHeaders(SESSIONS, uid, browser, cookie()) : { ...trustedApprovalHeaders(), cookie: cookie() }),
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: { ...decideHeaders, "content-type": "application/json" },
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     keep(res);
     location = res.headers.get("location") ?? "";

@@ -23,6 +23,7 @@ import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JW
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, loginCookieName } from "../src/index.js";
 import type { AuthorityEntry } from "../src/kernel/types.js";
+import { renderedRevision } from "./approval-fixture.js";
 
 const PORT = 14921;
 const ISSUER = `http://localhost:${PORT}`;
@@ -279,15 +280,19 @@ async function complete(callback: string, approver: Jar): Promise<{ status: numb
 
 /** The Approver's decision on the interaction, then the redirect's code or error. */
 async function decide(uid: string, jar: Jar, approver: Jar, csrf: string | undefined) {
+  const headers = {
+    cookie: [cookieOf(jar), cookieOf(approver)].filter(Boolean).join("; "),
+    ...(csrf ? { "x-csrf-token": csrf } : {}),
+  };
+  // The Approver reviews the page in the session the login established, and
+  // the decision names that rendering (#1446). A refused login established no
+  // session, so the page renders no revision and the decision names none.
+  const render_revision = await renderedRevision(ISSUER, uid, headers).catch(() => undefined);
   let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: {
-      "content-type": "application/json",
-      cookie: [cookieOf(jar), cookieOf(approver)].filter(Boolean).join("; "),
-      ...(csrf ? { "x-csrf-token": csrf } : {}),
-    },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: { "content-type": "application/json", ...headers },
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   if (res.status !== 303) return { status: res.status };
   keep(jar, res);
