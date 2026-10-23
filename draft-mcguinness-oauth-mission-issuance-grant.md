@@ -1144,6 +1144,5 @@ Server Metadata" registry {{RFC8414}}:
 # Acknowledgments
 {:numbered="false"}
 
-This document profiles the JWT authorization grant of RFC 7523 and
-composes the Mission Authority Server with the issuance profile it
-already mirrors; it defines no cryptography of its own.
+The author thanks the implementers and reviewers of the Mission-Bound
+Authorization work for feedback that shaped this profile.
