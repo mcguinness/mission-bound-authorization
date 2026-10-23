@@ -92,13 +92,23 @@ export async function verifyJoinAssertion(
     if (!isRecord(m) || m.id !== mission.id || m.issuer !== mission.issuer) return undefined;
     if (m.authority_hash !== undefined && m.authority_hash !== mission.authorityHash) return undefined;
 
-    // The token binding: the digest, and exactly one reported thumbprint
-    // equal to the assertion's confirmation member of the same method.
+    // @spec authority-server#join-assertion-artifact (#1454 review): the
+    // artifact's own shape first. `token` carries `sha256` and "exactly one
+    // confirmation member", `jkt` or `x5t#S256`, a non-empty string, and no
+    // other member: an assertion naming two keys binds to neither.
     const token = payload.token;
-    if (!isRecord(token) || !isString(reported.token_sha256) || token.sha256 !== reported.token_sha256) return undefined;
+    if (!isRecord(token)) return undefined;
+    const confirmation = Object.keys(token).filter((k) => k !== "sha256");
+    if (confirmation.length !== 1) return undefined;
+    const method = confirmation[0] as string;
+    if ((method !== "jkt" && method !== "x5t#S256") || !isString(token[method])) return undefined;
+
+    // Then the token binding the PEP reports: the digest, and exactly one
+    // thumbprint, of the same method and equal to the assertion's.
+    if (!isString(reported.token_sha256) || token.sha256 !== reported.token_sha256) return undefined;
     if ((reported.token_jkt === undefined) === (reported.token_x5t === undefined)) return undefined;
-    const bound = reported.token_jkt !== undefined ? token.jkt === reported.token_jkt : token["x5t#S256"] === reported.token_x5t;
-    if (!bound) return undefined;
+    const reportedMethod = reported.token_jkt !== undefined ? "jkt" : "x5t#S256";
+    if (reportedMethod !== method || token[method] !== (reported.token_jkt ?? reported.token_x5t)) return undefined;
 
     const join = payload.join;
     if (!isRecord(join) || !isString(join.client_id)) return undefined;

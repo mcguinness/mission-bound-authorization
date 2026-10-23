@@ -250,6 +250,34 @@ describe("evaluate(): an assertion that fails a check denies mission_binding_fai
     }
   });
 
+  it("denies an assertion whose token claim does not carry exactly one confirmation member, a non-empty jkt or x5t#S256, whatever the PEP reports (#1454 review)", async () => {
+    const shaped = (token: Record<string, unknown>) =>
+      mint((c) => {
+        c.token = token;
+      });
+    const cases: Array<[string, Promise<string>, Record<string, unknown>]> = [
+      ["both confirmation members", shaped({ sha256: SHA, jkt: JKT, "x5t#S256": "cert-thumb" }), { token_jkt: JKT }],
+      ["both members, the certificate reported", shaped({ sha256: SHA, jkt: JKT, "x5t#S256": "cert-thumb" }), { token_x5t: "cert-thumb" }],
+      ["no confirmation member", shaped({ sha256: SHA }), { token_jkt: JKT }],
+      ["an empty jkt", shaped({ sha256: SHA, jkt: "" }), { token_jkt: "" }],
+      ["an unknown member beside jkt", shaped({ sha256: SHA, jkt: JKT, jwk: "inline-key" }), { token_jkt: JKT }],
+      ["an unknown confirmation method alone", shaped({ sha256: SHA, jwk: JKT }), { token_jkt: JKT }],
+    ];
+    for (const [label, assertion, thumbprint] of cases) {
+      await expectBindingFailed(joinedReq({ assertion: await assertion, token_sha256: SHA, ...thumbprint }), opts({ joinMapping: MAPPED }), label);
+    }
+    // Exactly one member, reported by the same method, permits: jkt for a
+    // DPoP-bound credential, x5t#S256 for a certificate-bound one.
+    const dpop = await decide(joinedReq(carrying(await mint())), opts());
+    expect(dpop.decision.decision, JSON.stringify(dpop.decision)).toBe(true);
+    const cert = await shaped({ sha256: SHA, "x5t#S256": "cert-thumb" });
+    const mtls = await decide(joinedReq({ assertion: cert, token_sha256: SHA, token_x5t: "cert-thumb" }), opts());
+    expect(mtls.decision.decision, JSON.stringify(mtls.decision)).toBe(true);
+    // A method mismatch denies either way round.
+    await expectBindingFailed(joinedReq({ assertion: cert, token_sha256: SHA, token_jkt: "cert-thumb" }), opts(), "x5t#S256 asserted, jkt reported");
+    await expectBindingFailed(joinedReq({ assertion: await mint(), token_sha256: SHA, token_x5t: JKT }), opts(), "jkt asserted, x5t reported");
+  });
+
   it("denies a reported delegate_depth that differs from join.depth, and permits one that agrees", async () => {
     const delegate = await mint((c) => {
       c.join = { client_id: "helper-agent", disposition: "delegate", depth: 1 };
