@@ -42,6 +42,7 @@ normative:
   RFC9396:
   RFC9449:
   RFC8693:
+  RFC9728:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -354,7 +355,9 @@ Mission of the examples in
 {{I-D.draft-mcguinness-mission-authority-server}}. Its entry is a
 subset of that Mission's invoice-read entry, and its `sub` is the
 recorded `subject.sub` copied verbatim, which {{minting-rules}}
-permits where it collides with no other principal's `sub`:
+permits where it collides with no other principal's `sub`. The request
+example of {{minting-request}} presents a DPoP proof, so the grant's
+`cnf` carries that key:
 
 ~~~ json
 {
@@ -365,6 +368,7 @@ permits where it collides with no other principal's `sub`:
   "exp": 1793606580,
   "jti": "mig_7Kq2Rv9Lp4xW1nT8",
   "client_id": "s6BhdRkqt3",
+  "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://mas.example.com",
@@ -448,8 +452,16 @@ metadata ({{metadata}}).
 
 ## Grant Request {#minting-request}
 
-The requester POSTs an `application/json` object to the endpoint over
-TLS, authenticated as {{minting-rules}} requires:
+The requester sends an HTTP POST request with an `application/json`
+body to the endpoint, which has the TLS and client-authentication
+requirements of the MAS's Mission submission endpoint
+({{I-D.draft-mcguinness-mission-authority-server}}, Section "Mission
+Submission") with this endpoint in its place: an access token's
+audience names this endpoint, and the MAS publishes Protected
+Resource Metadata {{RFC9728}} for it, naming its resource, required
+scope, accepted sender constraints, and DPoP algorithms
+(`dpop_signing_alg_values_supported`). The MAS ignores body members
+it does not recognize. The body carries:
 
 `mission_id`:
 : REQUIRED. A string. The Mission the grant is minted for; its
@@ -468,13 +480,48 @@ TLS, authenticated as {{minting-rules}} requires:
   serves ({{minting-rules}}); if it is present, it MUST NOT widen
   beyond that scope.
 
-The following is an example of a grant request:
+`client_id`:
+: CONDITIONAL. A string, REQUIRED with mutual-TLS client
+  authentication, as Mission Status requires for that mechanism
+  ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+  "Authentication").
+
+`client_assertion_type`:
+: CONDITIONAL. A string, present exactly when the requester
+  authenticates with a private-key JWT: the value
+  `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`
+  ({{Section 2.2 of RFC7523}}).
+
+`client_assertion`:
+: CONDITIONAL. A string, present exactly when `client_assertion_type`
+  is: the client-authentication JWT. These two members carry as JSON
+  strings the values {{Section 2.2 of RFC7523}} defines as form
+  parameters, and the MAS processes them as Mission Status's
+  private-key-JWT mechanism requires
+  ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+  "Authentication"), with the MAS's issuer identifier as the
+  assertion's sole `aud`.
+
+A requester obtains a key-bound grant by presenting a sender
+constraint on the request: a DPoP proof ({{Section 4 of RFC9449}}) in
+the `DPoP` header field, with `htm` `POST`, `htu` the endpoint URL,
+and `ath` only where a DPoP-bound access token authenticates the
+request, which the MAS checks as {{Section 4.3 of RFC9449}} requires;
+or the client certificate of a mutual-TLS connection {{RFC8705}}.
+Neither is client authentication by itself. The MAS MUST verify any
+DPoP proof presented with the request and refuses a request whose
+proof fails ({{minting-errors}}). A client that does not want its
+connection certificate bound presents a DPoP proof, which takes
+precedence ({{minting-rules}}).
+
+The following is an example of a grant request that authenticates
+with a private-key JWT in the body and presents a DPoP proof for key
+binding:
 
 ~~~ http-message
 POST /mas/mission/issuance-grant HTTP/1.1
 Host: mas.example.com
 Content-Type: application/json
-Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 {
@@ -490,7 +537,10 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
         "resource_issued_before": "2026-09-30T23:59:59Z"
       }
     }
-  ]
+  ],
+  "client_assertion_type":
+    "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+  "client_assertion": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjE2In0..."
 }
 ~~~
 
@@ -501,7 +551,9 @@ The MAS MUST apply the following rules:
 1. **Requester.** The MAS authenticates the requester as its Mission
    submission endpoint does
    ({{I-D.draft-mcguinness-mission-authority-server}}, Section
-   "Mission Submission"). The requester MUST be the Mission's
+   "Mission Submission"), with the client assertion carried in the
+   JSON body where it uses private-key JWT ({{minting-request}}). The
+   requester MUST be the Mission's
    recorded client. Any other caller, including a delegate or
    enforcement point that the Mission Join Assertion endpoint admits,
    receives `not_found` ({{minting-errors}}).
@@ -523,12 +575,15 @@ The MAS MUST apply the following rules:
    {{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
    "Mission Issuance Grant Minting", defines; redemption and refresh
    at a consuming AS are not counted.
-5. **Key binding.** When the MAS includes `cnf`, it MUST take the key
-   from a sender constraint it verified on the grant request: the
-   public key of the request's DPoP proof, as `jkt`, or the
-   certificate of the mutual-TLS connection, as `x5t#S256`, whether
-   or not that certificate also authenticated the client. The MAS
-   MUST NOT derive `cnf` solely from client-assertion authentication:
+5. **Key binding.** When the MAS verified a sender constraint on the
+   grant request ({{minting-request}}), it MUST include `cnf` with that
+   key: the public key of the request's DPoP proof, as `jkt`, or,
+   where the request carries no DPoP proof, the certificate of the
+   mutual-TLS connection, as `x5t#S256`, whether or not that
+   certificate also authenticated the client. When the MAS includes
+   `cnf`, it MUST take the key from a sender constraint it verified on
+   the grant request. The MAS MUST NOT derive `cnf` solely from
+   client-assertion authentication:
    a client assertion authenticates the client, and DPoP is not client
    authentication ({{Section 3 of RFC9449}}), so the binding comes
    only from a sender constraint verified independently on the
@@ -983,13 +1038,29 @@ within the window its statement declares.
 
 # Metadata {#metadata}
 
-A MAS that issues grants publishes the following member in its
+A MAS that issues grants publishes the following members in its
 metadata ({{I-D.draft-mcguinness-mission-authority-server}}, Section
 "Mission Authority Server Metadata"):
 
 `mission_issuance_grant_endpoint`:
 : REQUIRED. A string containing the URL of the MAS's Mission Issuance
   Grant endpoint ({{minting}}).
+
+`mission_issuance_grant_endpoint_auth_methods_supported`:
+: REQUIRED. A JSON array of strings naming the client-authentication
+  methods the Mission Issuance Grant endpoint accepts, with the value
+  space and meaning of
+  `mission_submission_endpoint_auth_methods_supported`
+  ({{I-D.draft-mcguinness-mission-authority-server}}).
+
+`mission_issuance_grant_endpoint_auth_signing_alg_values_supported`:
+: REQUIRED when
+  `mission_issuance_grant_endpoint_auth_methods_supported` lists
+  `private_key_jwt`. A JSON array of strings: the client-assertion
+  algorithms this endpoint accepts, with the meaning of
+  `mission_submission_endpoint_auth_signing_alg_values_supported`
+  ({{I-D.draft-mcguinness-mission-authority-server}}).
+{: newline="true"}
 
 A consuming AS publishes the following members in its Authorization
 Server Metadata {{RFC8414}}:
@@ -1069,8 +1140,9 @@ join.
 
 **Grant theft.** A grant authorizes issuance, so its defenses are
 layered: a 300-second lifetime, a single-use `jti`, one audience,
-redemption bound to the Mission's `client_id`, and optional `cnf` key
-binding. A stolen grant is useless to any party that cannot also
+redemption bound to the Mission's `client_id`, and `cnf` key binding
+whenever the grant request is sender-constrained. A stolen grant is
+useless to any party that cannot also
 authenticate as the recorded client, or prove possession of the `cnf`
 key, at the named AS within that window. Deployments whose client
 credentials are weak SHOULD require `cnf` (DPoP {{RFC9449}} or mutual
@@ -1184,6 +1256,19 @@ Authority Server Metadata" registry established by
 - Metadata Name: `mission_issuance_grant_endpoint`
 - Metadata Description: URL of the MAS's Mission Issuance Grant
   endpoint
+- Change Controller: IETF
+- Specification Document(s): {{metadata}} of this document
+
+- Metadata Name: `mission_issuance_grant_endpoint_auth_methods_supported`
+- Metadata Description: Client-authentication methods the Mission
+  Issuance Grant endpoint accepts
+- Change Controller: IETF
+- Specification Document(s): {{metadata}} of this document
+
+- Metadata Name:
+  `mission_issuance_grant_endpoint_auth_signing_alg_values_supported`
+- Metadata Description: Client-assertion signing algorithms the
+  Mission Issuance Grant endpoint accepts
 - Change Controller: IETF
 - Specification Document(s): {{metadata}} of this document
 

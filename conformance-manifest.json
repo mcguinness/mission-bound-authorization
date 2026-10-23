@@ -38100,6 +38100,111 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q4); todo until that path exists."
   },
   {
+   "id": "issuance-grant.minting-request.dpop-verified",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-request",
+   "text": "The MAS MUST verify any DPoP proof presented with the request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request carrying a DPoP proof that fails the checks of Section 4.3 of RFC 9449 is refused, and no grant is minted, with or without cnf"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q2); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-request.protected-resource-metadata",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-request",
+   "text": "the MAS publishes Protected Resource Metadata {{RFC9728}} for it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a MAS serving the grant endpoint with access-token authentication publishes RFC 9728 metadata for that endpoint naming its resource, required scope, accepted sender constraints and dpop_signing_alg_values_supported"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q2); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-rules.cnf-required",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "When the MAS verified a sender constraint on the grant request ({{minting-request}}), it MUST include `cnf` with that key",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a grant minted for a request carrying a verified DPoP proof carries cnf.jkt with that proof key's thumbprint; one for a request on a mutual-TLS connection with no DPoP proof carries cnf.x5t#S256 with that certificate's thumbprint; a request authenticated only by a client assertion yields no cnf"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q2); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-request.json-client-assertion",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-request",
+   "text": "the MAS processes them as Mission Status's private-key-JWT mechanism requires",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request whose JSON client_assertion fails Mission Status's private-key-JWT checks, including an aud other than the MAS issuer identifier as its sole value, is refused invalid_client and no grant is minted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q2); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.metadata.auth-methods",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "metadata",
+   "text": "`mission_issuance_grant_endpoint_auth_methods_supported`: : REQUIRED. A JSON array of strings naming the client-authentication methods",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a MAS publishing mission_issuance_grant_endpoint also publishes mission_issuance_grant_endpoint_auth_methods_supported, and mission_issuance_grant_endpoint_auth_signing_alg_values_supported whenever that list names private_key_jwt"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q2); todo until that path exists."
+  },
+  {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "grant-validation",
