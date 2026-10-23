@@ -37449,8 +37449,8 @@
   {
    "id": "issuance-grant.effective-set-projection.claim-gate",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "effective-set-projection",
-   "text": "A consuming AS that cannot perform this projection MUST NOT claim containment- or discharge-aware issuance.",
+   "anchor": "no-state-integration",
+   "text": "A consuming AS that cannot perform the projection of {{effective-set-projection}} MUST NOT claim containment- or discharge-aware issuance.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -37471,8 +37471,8 @@
   {
    "id": "issuance-grant.effective-set-projection.atomic-consumption",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "effective-set-projection",
-   "text": "the record itself is written atomically with successful issuance, after the state gate and this projection",
+   "anchor": "single-use",
+   "text": "the record itself is written atomically with successful issuance, after the Mission-state check and the projection of {{effective-set-projection}} where they apply",
    "role": "AS",
    "strength": "MUST",
    "applicability": {

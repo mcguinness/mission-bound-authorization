@@ -657,9 +657,7 @@ Cache-Control: no-store
 ## Effective Authority Set Projection {#effective-set-projection}
 
 A consuming AS with a Mission-state integration applies this section
-at redemption and at every refresh. {{single-use}} applies to every
-consuming AS, and {{no-state-integration}} states what applies to one
-without an integration.
+at redemption and at every refresh.
 
 ### Mission State Source {#mission-state-source}
 
@@ -747,22 +745,10 @@ response MAY carry `Retry-After` per the deployment's declared
 state-recovery policy. For a per-resource resolution, the version
 already observed is the one the AS retained before the resolution
 began ({{mission-state-source}}). The consuming AS leaves its stored
-ceiling unchanged. `invalid_grant` stays for the permanent failures
-({{redemption-errors}}).
-
-### Single Use {#single-use}
-
-Consumption is atomic with issuance. The single-use `jti` check of
-{{grant-validation}} refuses a grant already recorded; the record itself is
-written atomically with successful issuance, after the state gate and
-this projection. A redemption that fails before issuance, a transient
-source failure in particular, therefore leaves the grant unconsumed
-and retryable, and concurrent redemptions of one grant are resolved by
-that atomic record: the loser is a replay, refused `invalid_grant`. On
-the refresh path a transient source failure MUST NOT consume or rotate
-the presented refresh token, so the client retries with the credential
-it already holds. Under the authorization code flow carriage, PAR
-validation is the consuming step instead ({{par-carriage}}).
+ceiling unchanged. On the refresh path a transient source failure
+MUST NOT consume or rotate the presented refresh token, so the
+client retries with the credential it already holds. `invalid_grant`
+stays for the permanent failures ({{redemption-errors}}).
 
 ### Refresh {#refresh}
 
@@ -772,13 +758,28 @@ stored ceiling on every refresh, or retains the highest Mission state
 `version` it has observed and rejects a source reporting a lower one
 as a rollback.
 
-### Without a Mission-State Integration {#no-state-integration}
+## Without a Mission-State Integration {#no-state-integration}
 
 A consuming AS without a Mission-state integration MUST NOT issue
 refresh tokens under a grant, and relies instead on the grant's
 `active`-at-minting gate and the short access-token lifetime
-({{token-issuance}}). A consuming AS that cannot perform this
-projection MUST NOT claim containment- or discharge-aware issuance.
+({{token-issuance}}). A consuming AS that cannot perform the
+projection of {{effective-set-projection}} MUST NOT claim
+containment- or discharge-aware issuance.
+
+## Single Use {#single-use}
+
+Consumption is atomic with issuance. The single-use `jti` check of
+{{grant-validation}} refuses a grant already recorded; the record
+itself is written atomically with successful issuance, after the
+Mission-state check and the projection of {{effective-set-projection}}
+where they apply. A redemption that fails before issuance, a transient
+source failure ({{transient-failure}}) in particular, therefore
+leaves the grant unconsumed and retryable, and concurrent
+redemptions of one grant are resolved by that atomic record: the
+loser is a replay, refused `invalid_grant`. Under the authorization
+code flow carriage, PAR validation is the consuming step instead
+({{par-carriage}}).
 
 ## Redemption Errors {#redemption-errors}
 
