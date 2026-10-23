@@ -3584,7 +3584,8 @@ reference to the retained batch map). Its existing <code>parent</code>, <code>ch
 map does not replace ordinary Child Evidence or become authority.<a href="#section-10.7-3" class="pilcrow">¶</a></p>
 <p id="section-10.7-4">When Status or Signals is deployed, the issuer <span class="bcp14">MUST</span> carry the committed
 <code>carried_to</code> correlation in the <code>termination</code> of the old child's
-<code>parent_terminated</code> observation as defined by those profiles.<a href="#section-10.7-4" class="pilcrow">¶</a></p>
+<code>parent_terminated</code> observation, and <span class="bcp14">MUST</span> omit it when no replacement
+was committed; it is same-issuer correlation, not authority.<a href="#section-10.7-4" class="pilcrow">¶</a></p>
 <p id="section-10.7-5">A consumer <span class="bcp14">MUST NOT</span> infer absence of a replacement from receiving a cascade
 before the replacement's creation event.<a href="#section-10.7-5" class="pilcrow">¶</a></p>
 <p id="section-10.7-6">Signals may duplicate or reorder deliveries. Consumers pair by the
