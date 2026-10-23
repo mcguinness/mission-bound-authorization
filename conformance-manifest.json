@@ -9154,7 +9154,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1590 (D709). Witnessed for the deferred expansion poll, the in-ceiling drawdown and synchronous policy-drawdown child creation. Not witnessed: interactive expansion and direct-approval or carryover children; the reference implements no interactive expansion and creates only policy-drawdown children. The witnesses assert isolation of the AS's internal grant records, which support issuance and lookup and are not a protocol grant lineage (D709). Mutation: binding the origin's grant to the new Mission at its first mint, with grant lookup returning the newest Mission so the reuse is silent, fails each witness at its grant-differs assertion; the other 170 tests in the three files pass. The protocol facet is core.grant-binding.new-missions-own-binding."
+   "notes": "#1590 (D709). Witnessed for the deferred expansion poll, the in-ceiling drawdown and synchronous policy-drawdown child creation. Not witnessed: interactive expansion, which the reference does not implement, and direct-basis children, which the reference creates only as carryover replacements, redeemed through the same first-bind path but not covered by these witnesses. The gate omits mas.expansion-child-creation: a Mission Authority Server issues no token on that surface. The witnesses assert isolation of the AS's internal grant records, which support issuance and lookup and are not a protocol grant lineage (D709). Mutation: binding the origin's grant to the new Mission at its first mint, with grant lookup returning the newest Mission so the reuse is silent, fails each witness at its grant-differs assertion; the other 170 tests in the three files pass. The protocol facet is core.grant-binding.new-missions-own-binding."
   },
   {
    "spec": "draft-mcguinness-oauth-mission.md",
@@ -45155,9 +45155,34 @@
     "normative": "a presented reference whose Mission is no longer active, or whose re-derivation fails, yields no continued grant, however valid the reference itself"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1588 (D709). Gated on the two Continuation transport capabilities; the cross-domain transport has no Continuation-specific capability, and `cross-domain.projection` would also claim deployments that project without adopting Continuation. No witness yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b2) a Mission whose authority is fully contained -> invalid_target (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b4) a revoked Mission whose hop the store has not yet ended -> invalid_continuation at the gate, not unauthorized_client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1588 (D709). Existing gate witnesses, also cited by continuation.ica-transport.refusal-codes and status.conformance.revoke-only-class. Witnessed: a still-valid Identity Continuation Assertion presented for a suspended or revoked Mission, or for one whose authority is fully contained, is refused and nothing is issued; a delegated family refresh token that worked before the Mission's revocation is refused invalid_grant, issuing and saving nothing. Not witnessed: a failed re-derivation on the async transport, and the cross-domain transport, which has no Continuation-specific capability."
   },
   {
    "id": "continuation.invariant.possession-not-evidence",
@@ -45180,9 +45205,34 @@
     "normative": "a transport artifact presented for a Mission that is no longer active or no longer authorizes the requested authority yields no grant"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1588 (D709). Gated on the two Continuation transport capabilities; the cross-domain transport has no Continuation-specific capability, and `cross-domain.projection` would also claim deployments that project without adopting Continuation. No witness yet. Issuer facet of the invariant; the relying-party facet is continuation.invariant.relying-party-no-artifact-decision."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b2) a Mission whose authority is fully contained -> invalid_target (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b4) a revoked Mission whose hop the store has not yet ended -> invalid_continuation at the gate, not unauthorized_client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1588 (D709). Existing gate witnesses, also cited by continuation.ica-transport.refusal-codes and status.conformance.revoke-only-class. Witnessed: a still-valid Identity Continuation Assertion presented for a suspended or revoked Mission, or for one whose authority is fully contained, is refused and nothing is issued; a delegated family refresh token that worked before the Mission's revocation is refused invalid_grant, issuing and saving nothing. Not witnessed: a failed re-derivation on the async transport, and the cross-domain transport, which has no Continuation-specific capability. Issuer facet of the invariant; the relying-party facet is continuation.invariant.relying-party-no-artifact-decision."
   },
   {
    "id": "continuation.invariant.derivation-at-issuance",
