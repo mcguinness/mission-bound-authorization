@@ -2622,7 +2622,10 @@ that discloses the Mission's <code>approval_event_id</code>, <code>issuer</code>
 of <a href="#envelope" class="auto internal xref">Section 9</a>; for the reference, apply its own artifact rules.
 The verifier <span class="bcp14">MUST</span> establish trust in the key material of the
 expected Mission Issuer for both: an issuer the artifact asserts
-for itself, with a valid signature, is not thereby trusted.<a href="#section-11-4.1.1" class="pilcrow">¶</a></p>
+for itself, with a valid signature, is not thereby trusted. The
+record's <code>mission.issuer</code> <span class="bcp14">MUST</span> be that expected Mission Issuer,
+since the issuer the record names is the one that signs it
+(<a href="#envelope" class="auto internal xref">Section 9</a>).<a href="#section-11-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-11-4.2">
           <p id="section-11-4.2.1">Require the event and the anchors. The authenticated reference <span class="bcp14">MUST</span>
@@ -2635,59 +2638,71 @@ apply; a Mandate's <code>iss</code> equals its <code>mission.issuer</code>. Matc
 approval-event identifier, since two Missions can share both.<a href="#section-11-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-11-4.3">
-          <p id="section-11-4.3.1">Compare the Approval Context Commitment. When both artifacts carry
-<code>approval_context_commitment</code>, the two values <span class="bcp14">MUST</span> be equal. When
-one or neither carries it, the check can succeed, and its result
-<span class="bcp14">MUST</span> state that commitment agreement was not established. Equality
+          <p id="section-11-4.3.1">Compare the Approval Context Commitment. Each
+<code>approval_context_commitment</code> an artifact carries <span class="bcp14">MUST</span> be
+well-formed, whether or not the other artifact carries one. When
+both carry it, the two values <span class="bcp14">MUST</span> be equal. When one or neither
+carries it, the check can succeed, and its result <span class="bcp14">MUST</span> state that
+commitment agreement was not established. Equality
 establishes agreement on the commitment value only; recomputing it
 from the Mission's creation facts is a separate check
 (<a href="#approval-context-computation" class="auto internal xref">Section 15.3</a>).<a href="#section-11-4.3.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-11-5">The check has three outcomes:<a href="#section-11-5" class="pilcrow">¶</a></p>
+<p id="section-11-5">A value the check compares, each anchor and each disclosed commitment,
+is well-formed only in the encoded form
+<a href="#conventions-and-definitions" class="auto internal xref">Section 2</a> fixes: a recognized algorithm prefix,
+then the unpadded base64url encoding of a digest of that algorithm's
+length, whose text re-encodes to exactly the same characters. A value
+that decodes but does not re-encode to itself, for example one with
+nonzero padding bits, is malformed.<a href="#section-11-5" class="pilcrow">¶</a></p>
+<p id="section-11-6">The check has three outcomes:<a href="#section-11-6" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11-6.1">
-          <p id="section-11-6.1.1">Success: every step completes.<a href="#section-11-6.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-11-7.1">
+          <p id="section-11-7.1.1">Success: every step completes.<a href="#section-11-7.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-6.2">
-          <p id="section-11-6.2.1">Failure: an authentication failure, a malformed required value, or a
-mismatch in step 2 or step 3.<a href="#section-11-6.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-7.2">
+          <p id="section-11-7.2.1">Failure: an authentication failure, a malformed required value or
+disclosed commitment, or a mismatch in step 1, step 2, or step 3.<a href="#section-11-7.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-6.3">
-          <p id="section-11-6.3.1">Insufficient evidence: an absent artifact, or a value step 2
-requires that the reference does not disclose.<a href="#section-11-6.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-7.3">
+          <p id="section-11-7.3.1">Insufficient evidence: an absent artifact, or a value step 2
+requires that the reference does not disclose.<a href="#section-11-7.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-11-7">A verifier <span class="bcp14">MUST NOT</span> report a successful portable binding on failure or
-on insufficient evidence.<a href="#section-11-7" class="pilcrow">¶</a></p>
-<p id="section-11-8">A success establishes only this: the trusted Mission Issuer
+<p id="section-11-8">When the evidence both fails a step and is insufficient for another,
+the outcome is failure: a disclosed mismatch or malformed value is
+definitive, whatever else is undisclosed.<a href="#section-11-8" class="pilcrow">¶</a></p>
+<p id="section-11-9">A verifier <span class="bcp14">MUST NOT</span> report a successful portable binding on failure or
+on insufficient evidence.<a href="#section-11-9" class="pilcrow">¶</a></p>
+<p id="section-11-10">A success establishes only this: the trusted Mission Issuer
 authenticated this record, and its approval-event identifier and
 Mission anchors match those the supplied Mission reference
-authenticates. It does not establish:<a href="#section-11-8" class="pilcrow">¶</a></p>
+authenticates. It does not establish:<a href="#section-11-10" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-11-9.1">
-          <p id="section-11-9.1.1">that the evaluation was correct, or that its assertions are
-independently true (<a href="#re-check" class="auto internal xref">Section 10</a>);<a href="#section-11-9.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-11-11.1">
+          <p id="section-11-11.1.1">that the evaluation was correct, or that its assertions are
+independently true (<a href="#re-check" class="auto internal xref">Section 10</a>);<a href="#section-11-11.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-9.2">
-          <p id="section-11-9.2.1">that the retained Mission Record matches either artifact
-(<a href="#envelope" class="auto internal xref">Section 9</a>);<a href="#section-11-9.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-11.2">
+          <p id="section-11-11.2.1">that the retained Mission Record matches either artifact
+(<a href="#envelope" class="auto internal xref">Section 9</a>);<a href="#section-11-11.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-9.3">
-          <p id="section-11-9.3.1">that an individual action under the Mission was approved, was within
-its authority, or was executed;<a href="#section-11-9.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-11.3">
+          <p id="section-11-11.3.1">that an individual action under the Mission was approved, was within
+its authority, or was executed;<a href="#section-11-11.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-9.4">
-          <p id="section-11-9.4.1">that the Mission is still active;<a href="#section-11-9.4.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-11.4">
+          <p id="section-11-11.4.1">that the Mission is still active;<a href="#section-11-11.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-9.5">
-          <p id="section-11-9.5.1">that either artifact existed at a claimed earlier time, or that the
-issuer showed every Relying Auditor a consistent view; or<a href="#section-11-9.5.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-11-11.5">
+          <p id="section-11-11.5.1">that either artifact existed at a claimed earlier time, or that the
+issuer showed every Relying Auditor a consistent view; or<a href="#section-11-11.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-11-9.6">
-          <p id="section-11-9.6.1">that the presented record is the one another party retained
+        <li class="normal" id="section-11-11.6">
+          <p id="section-11-11.6.1">that the presented record is the one another party retained
 earlier: pinning exact record bytes in a portable artifact is a
-separate mechanism.<a href="#section-11-9.6.1" class="pilcrow">¶</a></p>
+separate mechanism.<a href="#section-11-11.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <div id="portable-binding-example">
@@ -4222,7 +4237,8 @@ record's <code>approval_event_id</code> (<code>ape_hON9D0svLKQAMyy-uug</code>), 
 <code>intent_hash</code>, and <code>authority_hash</code>. Where a case says both artifacts
 carry a commitment, each carries <code>approval_context_commitment</code>; the
 check compares the two strings and never recomputes them. Each case
-changes one thing from the base.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+changes one thing from the base, except case 19, which tests the
+precedence of failure over insufficient evidence.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <span id="name-portable-approval-binding-che"></span><table class="center" id="table-3">
         <caption>
 <a href="#table-3" class="selfRef">Table 3</a>:
@@ -4309,12 +4325,41 @@ changes one thing from the base.<a href="#appendix-B-1" class="pilcrow">¶</a></
             <td class="text-left" rowspan="1" colspan="1">The reference's <code>intent_hash</code> carries an unrecognized algorithm prefix</td>
             <td class="text-left" rowspan="1" colspan="1">Failure</td>
           </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">15</td>
+            <td class="text-left" rowspan="1" colspan="1">The record carries a malformed commitment; the reference carries none</td>
+            <td class="text-left" rowspan="1" colspan="1">Failure</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">16</td>
+            <td class="text-left" rowspan="1" colspan="1">The reference carries a malformed commitment; the record carries none</td>
+            <td class="text-left" rowspan="1" colspan="1">Failure</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">17</td>
+            <td class="text-left" rowspan="1" colspan="1">Both <code>intent_hash</code> values are equal but noncanonical: they decode, with nonzero padding bits, but do not re-encode to themselves</td>
+            <td class="text-left" rowspan="1" colspan="1">Failure</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">18</td>
+            <td class="text-left" rowspan="1" colspan="1">The record names the Mission Issuer <code>https://as2.example.com</code> and verifies under the expected issuer's key</td>
+            <td class="text-left" rowspan="1" colspan="1">Failure</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">19</td>
+            <td class="text-left" rowspan="1" colspan="1">The reference's <code>authority_hash</code> differs, and it does not disclose <code>approval_event_id</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">Failure</td>
+          </tr>
         </tbody>
       </table>
 <p id="appendix-B-3">Cases 6 to 8 succeed on every other comparison, which is why the check
 compares each anchor rather than any one of them. Case 9 matches
 <code>intent_hash</code> and <code>authority_hash</code>, which two Missions can share, and
-still cannot succeed.<a href="#appendix-B-3" class="pilcrow">¶</a></p>
+still cannot succeed. Cases 15 and 16 fail although the other artifact
+carries no commitment: a disclosed value is validated on its own.
+Case 19 reports failure, not insufficient evidence, because a
+disclosed mismatch is definitive.<a href="#appendix-B-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="document-history">
