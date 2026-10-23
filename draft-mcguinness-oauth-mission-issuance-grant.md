@@ -388,8 +388,7 @@ Claim"), with two members that object does not otherwise require:
   omits. It names the approved Authority Set the grant derives from,
   for a consuming AS that, without a Mission-state integration, has
   no other channel back to the Mission Issuer. The consuming AS
-  records it with each issuance ({{token-issuance}}) and does not
-  verify it.
+  records it with each issuance ({{records}}) and does not verify it.
 
 # Obtaining a Grant {#minting}
 
@@ -484,9 +483,6 @@ The MAS MUST apply the following rules:
    request, even where its key is the one the assertion used. A
    request with no verified sender constraint yields a grant without
    `cnf`, which a public client cannot redeem ({{redemption}}).
-6. **Evidence.** Each minting is recorded with the Mission record:
-   the `jti`, audience, requested and granted entries, any `cnf`, and
-   time.
 
 ## Grant Response {#minting-response}
 
@@ -608,9 +604,7 @@ On success the consuming AS mints tokens under these rules:
 - **`mission` claim.** Issued tokens carry the grant's `mission`
   object as the issuance profile's `mission` claim, unchanged except
   that they need not carry `authority_hash`; `id`, `issuer`, and
-  `expires_at` always carry over ({{mission-claim}}). The consuming AS
-  records `authority_hash` with each issuance, beside the Mission
-  reference that joins its issuance log to the MAS record ({{trust}}).
+  `expires_at` always carry over ({{mission-claim}}).
 - **Subset.** Issued `authorization_details` MUST be a subset of the
   grant's. The consuming AS's own policy can only narrow them: it
   MUST NOT widen, remap, or supplement them. Representing them as
@@ -881,6 +875,24 @@ Mission has no delegating user to authenticate; it is redeemed
 directly ({{redemption}}), not carried through the authorization code
 flow.
 
+# Issuance Records {#records}
+
+The MAS MUST record each minting with the Mission record: the `jti`,
+audience, requested and granted entries, any `cnf`, and time. The
+consuming AS records `authority_hash` with each issuance under a
+grant, beside the Mission reference the grant carries. Together the
+records attribute what was approved to the MAS and what was issued to
+each consuming AS.
+
+A deployment SHOULD reconcile MAS minting records against
+consuming-AS redemption records. A deployment SHOULD treat a
+redemption with no matching minting record as a security event. A
+deployment states its reconciliation posture in the statement
+{{conformance}} describes. A deployment operating under the
+Enterprise Mission Authority Profile
+({{I-D.draft-mcguinness-mission-authority-server}}) MUST reconcile
+within the window its statement declares.
+
 # Metadata {#metadata}
 
 A MAS that issues grants publishes the following member in its
@@ -969,9 +981,9 @@ Section "Enforcement Scope and Conformance"):
   its Mission Status re-queries ({{mission-state-source}});
 - whether each claims containment- or discharge-aware issuance
   ({{no-state-integration}}); and
-- its reconciliation posture ({{security-considerations}}): the
-  window within which minting and redemption logs are reconciled, or
-  that they are not.
+- its reconciliation posture ({{records}}): the window within which
+  minting and redemption records are reconciled, or that they are
+  not.
 
 A consuming AS that supports this profile publishes
 `mission_issuance_grant_supported`, and one that supports the PAR
@@ -993,24 +1005,14 @@ also authenticate as the recorded client, or prove possession of the
 client credentials are weak SHOULD require `cnf` (DPoP {{RFC9449}} or
 mTLS {{RFC8705}} bindings serve).
 
-**Mission Issuer compromise reaches issuance.** In MAS-only
+**Mission Issuer compromise reaches issuance.** In a MAS-only
 deployment, MAS compromise corrupts records and state. Under this
-profile it additionally mints grants every consuming AS honors:
-compromise reaches token issuance across the estate. The consuming
-ASs' audit logs of redeemed grants (each with `jti`, Mission
-reference, and `authority_hash`) are the independent record that
-bounds and exposes such
-minting.
-
-A deployment SHOULD reconcile MAS minting evidence against
-consuming-AS redemption logs. A deployment SHOULD treat a redemption
-with no matching minting record as a security event. A deployment
-states its reconciliation posture in its conformance statement
-({{conformance}}). A deployment operating under the Enterprise
-Mission Authority Profile
-({{I-D.draft-mcguinness-mission-authority-server}}) MUST reconcile
-within the window its statement declares; at estate scale,
-reconciliation is the only check on this compromise class.
+profile a compromised MAS also mints grants every consuming AS
+honors, so compromise reaches token issuance across the estate. The
+consuming authorization servers' redemption records ({{records}})
+are the independent record that bounds and exposes such minting; at
+estate scale, reconciling them against the MAS's minting records is
+the only check on this compromise class.
 
 **Externally derived authority.** The consuming AS accepts authority
 derived elsewhere. Its exposure is bounded by the profile's own
