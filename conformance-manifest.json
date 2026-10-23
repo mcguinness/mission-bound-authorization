@@ -57153,9 +57153,15 @@
      "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses an oversized plan at intake, before any approval event names it",
      "level": "cross-component",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > the expansion approval page shows the Carryover Manifest it commits, and the decision on it carries exactly the child shown (@spec child-delegation#carryover-manifest, expansion#completion-modes, #1558)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Preparation renders the manifest and reserves the proposed successor and replacement identifiers; the approval event fills the deterministic per-child approval identifiers and commits `manifest_hash` over the JCS canonical manifest, `exclusion_policy` included. The retained manifest recomputes to its commitment, a tampered commitment refuses the whole completion, an idempotent retry re-mints no identifier, a cancelled plan's identifiers stay held, and an oversized plan is refused at intake before any approval names it."
+   "notes": "Preparation renders the manifest and reserves the proposed successor and replacement identifiers; the approval event fills the deterministic per-child approval identifiers and commits `manifest_hash` over the JCS canonical manifest, `exclusion_policy` included. The retained manifest recomputes to its commitment, a tampered commitment refuses the whole completion, an idempotent retry re-mints no identifier, a cancelled plan's identifiers stay held, and an oversized plan is refused at intake before any approval names it. #1558: the AS's expansion deferral page renders the manifest to the Approver (the exclusion policy, and each child carried with the replacement's facts or terminated with the reason), and the approval on it carries exactly the child shown."
   },
   {
    "id": "child-delegation.carryover.completion-cas",
@@ -60191,9 +60197,15 @@
      "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses a batch when a rendered child was terminated after approval rather than treating it as an acceptable exclusion",
      "level": "cross-component",
      "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > the expansion approval page shows the Carryover Manifest it commits, and the decision on it carries exactly the child shown (@spec child-delegation#carryover-manifest, expansion#completion-modes, #1558)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Both committed exclusion policies are implemented and exercised. Under all-or-nothing any relevant change, the termination or disappearance of a rendered row included, requires a fresh render and approval: an already-terminal rendered row is never an automatically acceptable exclusion. Under disclosed exclusions only a committed change class excludes, dependent descendants are excluded with their parent, and an unrendered descendant cascades and appears in the authenticated result."
+   "notes": "Both committed exclusion policies are implemented and exercised. Under all-or-nothing any relevant change, the termination or disappearance of a rendered row included, requires a fresh render and approval: an already-terminal rendered row is never an automatically acceptable exclusion. Under disclosed exclusions only a committed change class excludes, dependent descendants are excluded with their parent, and an unrendered descendant cascades and appears in the authenticated result. #1558: the AS's expansion deferral page renders the manifest to the Approver (the exclusion policy, and each child carried with the replacement's facts or terminated with the reason), and the approval on it carries exactly the child shown."
   },
   {
    "id": "child-delegation.carryover.expansion-expiry",
@@ -64969,8 +64981,8 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a fresh approval consents to the successor's derived Authority Set as the Approver was shown it, and a derived set changed since then is not approved",
-    "local": "The page shows the successor's derived Authority Set and commits it in the rendering; the decision approves only that set, and a derived set changed since rendering asks for a fresh decision."
+    "normative": "a fresh approval consents to the successor's derived Authority Set as the Approver was shown it: a derived set changed since then is not approved, and the successor is created with no other authority",
+    "local": "The page shows the successor's derived Authority Set and commits it in the rendering; the decision approves only that set, and a derived set changed since rendering asks for a fresh decision. The approval records the commitment to the set it approved, and completion, deriving it again inside its transaction, refuses a successor whose authority differs, wider or narrower, before any write."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -64986,6 +64998,12 @@
      "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > a derived successor set changed since rendering approves nothing",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > completion creates the successor only with the authority approved: authority added after the approval refuses it, as does authority removed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
    "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code})."
