@@ -1760,10 +1760,13 @@ a substitute for key custody.
 The privacy considerations of the issuance profile
 ({{I-D.draft-mcguinness-oauth-mission}}) apply. Assertion principals and
 decision times are personal data about reviewers. The record is
-control-plane state retained by the issuer, never disclosed on wire
-surfaces, and access to a retained record follows the issuer's audit-log
+control-plane state retained by the issuer, never disclosed on a
+protocol wire surface. Access to a retained record, including an
+authorized evidence export or an evidence bundle supplied to a
+Relying Auditor ({{portable-binding}}), follows the issuer's audit-log
 discipline for approval-event records
-({{I-D.draft-mcguinness-oauth-mission}}). The
+({{I-D.draft-mcguinness-oauth-mission}}); this document defines no
+endpoint and no default disclosure for it. The
 `approval_context_commitment` value is the same in every artifact that
 discloses it, so it correlates those artifacts
 ({{approval-context-carriage}}). A `service` assertion's `authority`
