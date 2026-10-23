@@ -98,37 +98,40 @@ Table of Contents
    8.  Evaluation and Atomic Commitment
    9.  Envelope and Verification
    10. Re-checking an Evaluation
-   11. Governed Policy Approval
-     11.1.  Consented Root
-     11.2.  Instance Record
-     11.3.  Activation
-     11.4.  Example
-   12. Consent Evidence Relationship
-   13. Mission Evidence
-   14. Approval Context Commitment
-     14.1.  Manifest
-     14.2.  Construction
-     14.3.  Computation and Versioning
-     14.4.  Limits
-     14.5.  Carriage
-   15. Conformance
-   16. Security Considerations
-     16.1.  Forged or Padded Assertions
-     16.2.  Policy Substitution
-     16.3.  Manufactured Accountability
-     16.4.  Stale Policy Approval
-     16.5.  Immutability Witness
-     16.6.  Issuer Key Compromise
-   17. Privacy Considerations
-   18. IANA Considerations
-     18.1.  Media Type Registration
-       18.1.1.  application/mission-approval-governance+jws
-       18.1.2.  application/mission-approval-governance+json
-   19. References
-     19.1.  Normative References
-     19.2.  Informative References
+   11. Portable Approval-Binding Check
+     11.1.  Example
+   12. Governed Policy Approval
+     12.1.  Consented Root
+     12.2.  Instance Record
+     12.3.  Activation
+     12.4.  Example
+   13. Consent Evidence Relationship
+   14. Mission Evidence
+   15. Approval Context Commitment
+     15.1.  Manifest
+     15.2.  Construction
+     15.3.  Computation and Versioning
+     15.4.  Limits
+     15.5.  Carriage
+   16. Conformance
+   17. Security Considerations
+     17.1.  Forged or Padded Assertions
+     17.2.  Policy Substitution
+     17.3.  Manufactured Accountability
+     17.4.  Stale Policy Approval
+     17.5.  Immutability Witness
+     17.6.  Issuer Key Compromise
+   18. Privacy Considerations
+   19. IANA Considerations
+     19.1.  Media Type Registration
+       19.1.1.  application/mission-approval-governance+jws
+       19.1.2.  application/mission-approval-governance+json
+   20. References
+     20.1.  Normative References
+     20.2.  Informative References
    Appendix A.  Approval Context Commitment Test Vectors
-   Appendix B.  Document History
+   Appendix B.  Portable Approval-Binding Check Vectors
+   Appendix C.  Document History
    Acknowledgments
    Author's Address
 
@@ -155,12 +158,12 @@ Table of Contents
    *  the Approval Governance Record (AGR), the record of the policy,
       assertions, and evaluation behind one approval event (Section 5);
 
-   *  the governed_policy approval basis (Section 11), under which an
+   *  the governed_policy approval basis (Section 12), under which an
       accountable human approves a bounded policy version once, and that
       policy then decides eligible Mission proposals, each activation
       committing a record; and
 
-   *  the Approval Context Commitment (Section 14), an optional digest
+   *  the Approval Context Commitment (Section 15), an optional digest
       over a Mission's immutable creation facts that other authenticated
       artifacts can disclose.
 
@@ -245,10 +248,10 @@ Table of Contents
       record for an approval event (Section 4).
 
    Recording Issuer:  A Mission Issuer that records Approval Governance
-      Records (Section 15).
+      Records (Section 16).
 
    Relying Auditor:  A party that verifies a retained record and can re-
-      check its evaluation (Section 15).
+      check its evaluation (Section 16).
 
 3.  Relationship to the Issuance Profile
 
@@ -282,7 +285,7 @@ Table of Contents
 
    *  adjudication.kind names the mechanism the approval basis fixes:
       human for direct, and policy for a standing-consent basis,
-      including governed_policy (Section 11).  It is never a value that
+      including governed_policy (Section 12).  It is never a value that
       names this record itself, and never a flattening of its assertion
       set into a single principal; and
 
@@ -313,7 +316,7 @@ Table of Contents
    A deployment that adopts no profile requiring the record has no
    obligation to record one merely because a trigger holds.
    Independently of any profile, every activation under governed_policy
-   records an Approval Governance Record (Section 11).  Every Approval
+   records an Approval Governance Record (Section 12).  Every Approval
    Governance Record a deployment records, whether required or not, MUST
    satisfy the requirements of this document.
 
@@ -405,8 +408,8 @@ Table of Contents
 
    approval_context_commitment:  OPTIONAL.  A string.  The Approval
       Context Commitment over the governed Mission's immutable creation
-      facts (Section 14), in the encoded form Section 2 fixes.  It is a
-      member of this record, never of the Mission Record (Section 14.3).
+      facts (Section 15), in the encoded form Section 2 fixes.  It is a
+      member of this record, never of the Mission Record (Section 15.3).
       An issuer that records it computes it in the same commit that
       creates the Mission and persists this record, before the record is
       signed (Section 8), so the signed payload commits to it.  A
@@ -721,7 +724,7 @@ Table of Contents
    *  For governed_policy, the record MUST carry exactly one policy
       assertion whose principal is consent_principal, whose decision is
       approve, and whose authority names the deciding policy
-      (Section 11.2).  The policy is the decision mechanism, and the
+      (Section 12.2).  The policy is the decision mechanism, and the
       principal stays the human who approved it.
 
    *  For any other named standing-consent approval_basis
@@ -878,7 +881,7 @@ Table of Contents
 
    Under governed_policy the two instants coincide:
    approval_basis.approved_at equals the accountable policy assertion's
-   authority.approved_at (Section 11.2).  This document's ceiling
+   authority.approved_at (Section 12.2).  This document's ceiling
    therefore bounds that basis, alongside any standing-consent recency
    ceiling the deployment declares
    ([I-D.draft-mcguinness-oauth-mission], Section "Standing-Consent
@@ -915,7 +918,7 @@ Table of Contents
 
    The only order the commit fixes is evaluate, then sign, then persist,
    with approval_context_commitment computed before signing; the other
-   checks this document requires, including those of Section 11.3,
+   checks this document requires, including those of Section 12.3,
    complete before signing, in whatever order their inputs allow.  A
    value of approval_context_commitment computed after the commit is not
    covered by the record's signature and MUST NOT be added to a
@@ -964,7 +967,7 @@ Table of Contents
 
    These values are the registered media types application/mission-
    approval-governance+jws and application/mission-approval-
-   governance+json (Section 18) with the application/ prefix omitted, as
+   governance+json (Section 19) with the application/ prefix omitted, as
    Sections 4.1.9 and 4.1.10 of [RFC7515] recommend.
 
    A verifier compares each value as a media type under those sections:
@@ -1012,17 +1015,17 @@ Table of Contents
    Where the record carries approval_context_commitment, the mission
    member carries no Mission id, so a verifier recomputes the commitment
    from the Mission Record this record is retained with, which step 5
-   resolves, and rejects the reference on a mismatch (Section 14.3).
+   resolves, and rejects the reference on a mismatch (Section 15.3).
 
    The *record digest* is the digest, in the encoded form Section 2
    fixes, over the JCS [RFC8785] canonical bytes of the complete record,
    envelope included.  It is the one byte sequence every external
    reference names:
 
-   *  audit registration hashes exactly these bytes (Section 13); and
+   *  audit registration hashes exactly these bytes (Section 14); and
 
    *  consent evidence's approval_governance_digest equals exactly this
-      value (Section 12).
+      value (Section 13).
 
 10.  Re-checking an Evaluation
 
@@ -1030,7 +1033,7 @@ Table of Contents
    retained evidence: the policy and any evaluator that decided, the
    inputs they evaluated, and the recorded assertions.  Conformance
    requires it to obtain the retained policy version before treating the
-   evaluation as re-checked (Section 15).  The re-check has these steps:
+   evaluation as re-checked (Section 16).  The re-check has these steps:
 
    1.  Verify the record (Section 9).
 
@@ -1039,7 +1042,7 @@ Table of Contents
        (Section 5.4).
 
    3.  Where that snapshot commits a separate evaluator that decides, as
-       a governed_policy root can (Section 11.1), obtain the retained
+       a governed_policy root can (Section 12.1), obtain the retained
        snapshot of that evaluator and recompute its activation policy
        reference digest ([I-D.draft-mcguinness-oauth-mission],
        Section "Activation Policy Commitment").
@@ -1071,7 +1074,124 @@ Table of Contents
    an assertion's authentication context (Section 5.3), not the
    authentication itself.
 
-11.  Governed Policy Approval
+11.  Portable Approval-Binding Check
+
+   A Relying Auditor that holds a record and an authenticated Mission
+   reference, but not the Mission Record or the evaluation's inputs, can
+   run the portable approval-binding check.  It establishes that the
+   record and the reference agree on the approval event and the Mission
+   anchors.  It is a separate procedure from verifying the record
+   against the Mission Record (Section 9) and from re-checking the
+   evaluation (Section 10), and replaces neither; a Relying Auditor MUST
+   NOT report its success as either.
+
+   A Mission reference is an artifact, authenticated under its own
+   rules, that discloses the Mission's approval_event_id, issuer,
+   intent_hash, and authority_hash.  A Mandate that carries
+   approval_event_id is one ([I-D.draft-mcguinness-mission-mandate]).
+
+   A verifier running the check MUST complete these steps:
+
+   1.  Authenticate both artifacts.  For the record, complete steps 1 to
+       4 of Section 9; for the reference, apply its own artifact rules.
+       The verifier MUST establish trust in the key material of the
+       expected Mission Issuer for both: an issuer the artifact asserts
+       for itself, with a valid signature, is not thereby trusted.  The
+       record's mission.issuer MUST be that expected Mission Issuer,
+       since the issuer the record names is the one that signs it
+       (Section 9).
+
+   2.  Require the event and the anchors.  The authenticated reference
+       MUST disclose approval_event_id, the Mission issuer, intent_hash,
+       and authority_hash, and each MUST equal the record's
+       approval_event_id or the member of the same name in the record's
+       mission binding.  The reference's own consistency rules still
+       apply; a Mandate's iss equals its mission.issuer.  Matching
+       intent_hash and authority_hash never suffice without a matching
+       approval-event identifier, since two Missions can share both.
+
+   3.  Compare the Approval Context Commitment.  Each
+       approval_context_commitment an artifact carries MUST be well-
+       formed, whether or not the other artifact carries one.  When both
+       carry it, the two values MUST be equal.  When one or neither
+       carries it, the check can succeed, and its result MUST state that
+       commitment agreement was not established.  Equality establishes
+       agreement on the commitment value only; recomputing it from the
+       Mission's creation facts is a separate check (Section 15.3).
+
+   A value the check compares, each anchor and each disclosed
+   commitment, is well-formed only in the encoded form Section 2 fixes:
+   a recognized algorithm prefix, then the unpadded base64url encoding
+   of a digest of that algorithm's length, whose text re-encodes to
+   exactly the same characters.  A value that decodes but does not re-
+   encode to itself, for example one with nonzero padding bits, is
+   malformed.
+
+   The check has three outcomes:
+
+   *  Success: every step completes.
+
+   *  Failure: an authentication failure, a malformed required value or
+      disclosed commitment, or a mismatch in step 1, step 2, or step 3.
+
+   *  Insufficient evidence: an absent artifact, or a value step 2
+      requires that the reference does not disclose.
+
+   When the evidence both fails a step and is insufficient for another,
+   the outcome is failure: a disclosed mismatch or malformed value is
+   definitive, whatever else is undisclosed.
+
+   A verifier MUST NOT report a successful portable binding on failure
+   or on insufficient evidence.
+
+   A success establishes only this: the trusted Mission Issuer
+   authenticated this record, and its approval-event identifier and
+   Mission anchors match those the supplied Mission reference
+   authenticates.  It does not establish:
+
+   *  that the evaluation was correct, or that its assertions are
+      independently true (Section 10);
+
+   *  that the retained Mission Record matches either artifact
+      (Section 9);
+
+   *  that an individual action under the Mission was approved, was
+      within its authority, or was executed;
+
+   *  that the Mission is still active;
+
+   *  that either artifact existed at a claimed earlier time, or that
+      the issuer showed every Relying Auditor a consistent view; or
+
+   *  that the presented record is the one another party retained
+      earlier: pinning exact record bytes in a portable artifact is a
+      separate mechanism.
+
+11.1.  Example
+
+   A company approves a Mission to purchase office supplies within set
+   limits.  Approval event E42 creates Mission M17.  The Mission Issuer
+   signs record G42, recording the governance assertions and the
+   approval outcome, and later mints Mandate D17, which carries M17,
+   E42, and the same intent_hash and authority_hash.
+
+   The purchasing agent then submits purchase order PO-9001, and the
+   company's ERP records its own business decision for that order as BD-
+   9001, naming the order, the policy version it applied, the decision,
+   and its time.  BD-9001 is an illustrative deployment record; this
+   document defines no format for it.
+
+   An auditor receives G42 and D17 through an authorized evidence export
+   (Section 18), without the Mission Record or the evaluation's inputs.
+   The check connects G42 to the approval event D17 identifies.  It does
+   not show that PO-9001 was individually approved, within authority, or
+   executed: relating BD-9001 to the order takes separate action
+   evidence.  A Mission scoped to approving one particular order could
+   itself carry that business decision, but the auditor has to establish
+   that scope, for example from the Authority Set; an approval-event
+   match never implies it.
+
+12.  Governed Policy Approval
 
    This document defines the governed_policy standing-consent basis on
    the issuance profile's extension point for named standing-consent
@@ -1082,7 +1202,7 @@ Table of Contents
    this basis MUST record an Approval Governance Record, committed with
    the Mission (Section 8).
 
-11.1.  Consented Root
+12.1.  Consented Root
 
    The consented root is the retained approval_policy snapshot that a
    human approved (Section 5.4).  It commits:
@@ -1119,7 +1239,7 @@ Table of Contents
    evaluator under typ mission-activation-policy.  The issuer MUST NOT
    accept either digest in place of the other.
 
-11.2.  Instance Record
+12.2.  Instance Record
 
    A Mission activated under this basis records these approval_basis
    members ([I-D.draft-mcguinness-oauth-mission]), each REQUIRED:
@@ -1164,7 +1284,7 @@ Table of Contents
    policy's decision under that human's standing authorization, not a
    fresh human action.
 
-11.3.  Activation
+12.3.  Activation
 
    At the atomic creation commit (Section 8), the issuer MUST, before it
    creates the Mission active:
@@ -1218,7 +1338,7 @@ Table of Contents
    it (step 1).  A Mission already activated keeps its ordinary
    lifecycle: withdrawal does not revoke it.
 
-11.4.  Example
+12.4.  Example
 
    The following example shows an excerpt, other members omitted, of the
    Mission Record of msn_UDgovqrOTIZyJgTEp0DjopwF2gRseSfT, activated
@@ -1301,14 +1421,14 @@ Table of Contents
 
    *  The root decides activations itself, with no separate evaluator,
       so root_commitment, activation.policy.digest, and
-      approval_policy.digest carry one value (Section 11.2).
+      approval_policy.digest carry one value (Section 12.2).
 
    *  The client s6BhdRkqt3 requested the activation.  It is the
       activation_actor, distinct from the consent_principal, Alice.
 
    *  ast_1 is the accountable assertion: a policy assertion whose
       principal is Alice and whose approved_at equals
-      approval_basis.approved_at (Section 11.2).  Because a non-human
+      approval_basis.approved_at (Section 12.2).  Because a non-human
       assertion contributes, the third recording trigger also holds
       (Section 4).
 
@@ -1326,7 +1446,7 @@ Table of Contents
       kind: human, and the policy could not activate this Mission
       (Section 7.3).
 
-12.  Consent Evidence Relationship
+13.  Consent Evidence Relationship
 
    Where both are recorded, the AGR is authoritative for approval-
    governance facts, and consent evidence presents a deliberately
@@ -1391,7 +1511,7 @@ Table of Contents
    *  where an AGR is recorded for the final approval, it owns the final
       approval-governance facts.
 
-13.  Mission Evidence
+14.  Mission Evidence
 
    The AGR is registrable Mission evidence under the audit transparency
    profile's evidence-type pattern
@@ -1409,7 +1529,7 @@ Table of Contents
    Registration is optional transparency hardening; retention and
    immutability do not depend on it.
 
-14.  Approval Context Commitment
+15.  Approval Context Commitment
 
    This section defines an OPTIONAL profile: one commitment over a
    Mission's immutable creation facts, so an artifact that authenticates
@@ -1419,7 +1539,7 @@ Table of Contents
    a deployment records an Approval Governance Record for a given
    Mission.
 
-14.1.  Manifest
+15.1.  Manifest
 
    The *Approval Context Manifest* is a closed, enumerated v1 object
    built from Mission Record members
@@ -1430,7 +1550,7 @@ Table of Contents
       approval_basis.consent_principal; and
 
    *  submission_evidence_commitment is computed from the Mission
-      Record's submission_evidence (Section 14.2).
+      Record's submission_evidence (Section 15.2).
 
    A conditional member is present if and only if its condition holds:
 
@@ -1498,13 +1618,13 @@ Table of Contents
    is not a separate exclusion rule; it follows from building the
    manifest from Mission Record members only.
 
-14.2.  Construction
+15.2.  Construction
 
    The manifest is an envelope anchor under the issuance profile's
    commitment mechanisms, which this document imports normatively
    ([I-D.draft-mcguinness-oauth-mission]): typ is mission-approval-
    context-v1, iss is the Mission issuer, and value is the manifest
-   object of Section 14.1.  The result, approval_context_commitment, is
+   object of Section 15.1.  The result, approval_context_commitment, is
    one sha-256:-prefixed string.
 
    submission_evidence_commitment is a second envelope anchor under the
@@ -1514,7 +1634,7 @@ Table of Contents
    array exactly as retained, preserving its canonical element order
    ([I-D.draft-mcguinness-oauth-mission]).
 
-14.3.  Computation and Versioning
+15.3.  Computation and Versioning
 
    An issuer computes approval_context_commitment on demand from the
    Mission's immutable creation facts, fixed at the approval event
@@ -1534,12 +1654,12 @@ Table of Contents
    a different typ recomputes to a different digest under this rule and
    is rejected the same way (Appendix A, vector 6).
 
-   The member list of Section 14.1 is closed for mission-approval-
+   The member list of Section 15.1 is closed for mission-approval-
    context-v1.  Adding, removing, or redefining a member, or changing
    how submission_evidence_commitment is constructed, MUST use a new
    typ, never a silent reinterpretation of this one.
 
-14.4.  Limits
+15.4.  Limits
 
    Reusing the issuance profile's commitment mechanisms supplies
    canonicalization and algorithm identification and agility.  It
@@ -1561,7 +1681,7 @@ Table of Contents
       complete manifest object; proving anything about one member
       requires disclosing the whole object.
 
-14.5.  Carriage
+15.5.  Carriage
 
    approval_context_commitment MAY appear as a signed member of an
    artifact that already authenticates a reference to the Mission, for
@@ -1581,7 +1701,7 @@ Table of Contents
    its own minimal member set, and this commitment is correlation and
    evidence metadata, never authority.
 
-15.  Conformance
+16.  Conformance
 
    A Recording Issuer MUST:
 
@@ -1609,8 +1729,8 @@ Table of Contents
       require such an exception for a basis without an accountable
       assertion (Section 7.3);
 
-   *  under governed_policy, record the members of Section 11.2 and
-      complete the activation checks of Section 11.3;
+   *  under governed_policy, record the members of Section 12.2 and
+      complete the activation checks of Section 12.3;
 
    *  commit the record atomically with Mission creation and let failure
       prevent activation (Section 8);
@@ -1624,15 +1744,17 @@ Table of Contents
    A Relying Auditor MUST verify the envelope by byte equality, MUST
    validate the mission binding, and MUST obtain the retained policy
    version before treating the evaluation as re-checked (Section 9,
-   Section 5.4, Section 10).
+   Section 5.4, Section 10).  A Relying Auditor that holds no Mission
+   Record can run the portable approval-binding check instead, under its
+   own rules and with its narrower result (Section 11).
 
-16.  Security Considerations
+17.  Security Considerations
 
    The security considerations of the issuance profile
    ([I-D.draft-mcguinness-oauth-mission]) apply.  The following
    considerations are specific to the Approval Governance Record.
 
-16.1.  Forged or Padded Assertions
+17.1.  Forged or Padded Assertions
 
    A forged or padded assertion is an authorization attack before
    commitment, not an audit defect: the assertion requirements of
@@ -1640,13 +1762,13 @@ Table of Contents
    without authenticating them has built an approval bypass rather than
    an evidence trail.
 
-16.2.  Policy Substitution
+17.2.  Policy Substitution
 
    Without approval_policy.digest and its retention, a later reading
    cannot prove which policy governed the evaluation.  The digest and
    the audit-horizon retention of Section 5.4 are the control.
 
-16.3.  Manufactured Accountability
+17.3.  Manufactured Accountability
 
    The accountable-approver rule of Section 6.2 prevents a set of
    service and policy assertions from claiming a Mission whose named
@@ -1655,7 +1777,7 @@ Table of Contents
    approver: no human-approved policy stands behind its decision, so it
    contributes only as a governance input.
 
-16.4.  Stale Policy Approval
+17.4.  Stale Policy Approval
 
    Without Section 7, a policy assertion could rely on a human approval
    far in the past, or stand in for the accountable approver on a high-
@@ -1663,26 +1785,26 @@ Table of Contents
    ceiling, its ordering checks, and the human-by-default consequence-
    class rule are the control.
 
-16.5.  Immutability Witness
+17.5.  Immutability Witness
 
    The issuer-signed envelope of Section 9 makes post-commit tampering
-   detectable.  Audit registration (Section 13) additionally bounds
+   detectable.  Audit registration (Section 14) additionally bounds
    issuer-side substitution, since a registered record's later
    alteration diverges from its receipt.
 
    The Approval Context Commitment extends this to the Mission Record's
    creation facts, approval basis included.  A verifier that recomputes
    it and gets a value different from the one an artifact discloses
-   rejects that artifact's reference (Section 14.3).  A mismatch shows
+   rejects that artifact's reference (Section 15.3).  A mismatch shows
    only that the artifact and the current record disagree.  The
    artifact's signature authenticates the value it discloses, not when
    it was made, since the issuer can backdate a signed artifact.  Where
-   an audit receipt (Section 13) independently shows that the artifact
+   an audit receipt (Section 14) independently shows that the artifact
    existed before the record changed, and the disclosed value matches a
    recomputation from the approval event as registered, the mismatch is
    evidence that the record was altered afterwards.
 
-16.6.  Issuer Key Compromise
+17.6.  Issuer Key Compromise
 
    This document inherits the issuance profile's key-material
    considerations.  A compromised Mission Issuer signing key can mint a
@@ -1690,23 +1812,26 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-audit]) is the existence bound, not a
    substitute for key custody.
 
-17.  Privacy Considerations
+18.  Privacy Considerations
 
    The privacy considerations of the issuance profile
    ([I-D.draft-mcguinness-oauth-mission]) apply.  Assertion principals
    and decision times are personal data about reviewers.  The record is
-   control-plane state retained by the issuer, never disclosed on wire
-   surfaces, and access to a retained record follows the issuer's audit-
-   log discipline for approval-event records
-   ([I-D.draft-mcguinness-oauth-mission]).  The
+   control-plane state retained by the issuer, never disclosed on a
+   protocol wire surface.  Access to a retained record, including an
+   authorized evidence export or an evidence bundle supplied to a
+   Relying Auditor (Section 11), follows the issuer's audit-log
+   discipline for approval-event records
+   ([I-D.draft-mcguinness-oauth-mission]); this document defines no
+   endpoint and no default disclosure for it.  The
    approval_context_commitment value is the same in every artifact that
-   discloses it, so it correlates those artifacts (Section 14.5).  A
+   discloses it, so it correlates those artifacts (Section 15.5).  A
    service assertion's authority discloses the identifiers and versions
    of the logic and model that took part in a decision (Section 5.3).
 
-18.  IANA Considerations
+19.  IANA Considerations
 
-18.1.  Media Type Registration
+19.1.  Media Type Registration
 
    IANA is requested to register two media types per [RFC6838]:
 
@@ -1717,7 +1842,7 @@ Table of Contents
    *  application/mission-approval-governance+json, the Approval
       Governance Record object.
 
-18.1.1.  application/mission-approval-governance+jws
+19.1.1.  application/mission-approval-governance+jws
 
    *  Type name: application
 
@@ -1732,7 +1857,7 @@ Table of Contents
       secured payload's media type travels in the JWS protected cty
       (Section 9).
 
-   *  Security considerations: see Section 16
+   *  Security considerations: see Section 17
 
    *  Interoperability considerations: see this document (Section 9)
 
@@ -1765,7 +1890,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-18.1.2.  application/mission-approval-governance+json
+19.1.2.  application/mission-approval-governance+json
 
    *  Type name: application
 
@@ -1777,7 +1902,7 @@ Table of Contents
 
    *  Encoding considerations: binary; JSON encoded in UTF-8
 
-   *  Security considerations: see Section 16
+   *  Security considerations: see Section 17
 
    *  Interoperability considerations: see this document
 
@@ -1810,9 +1935,9 @@ Table of Contents
 
    *  Change controller: IETF
 
-19.  References
+20.  References
 
-19.1.  Normative References
+20.1.  Normative References
 
    [I-D.draft-mcguinness-mission-substrate]
               McGuinness, K., "Mission Substrate Requirements", 2026,
@@ -1856,7 +1981,7 @@ Table of Contents
               DOI 10.17487/RFC8785, June 2020,
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
-19.2.  Informative References
+20.2.  Informative References
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", 2026,
@@ -1867,6 +1992,11 @@ Table of Contents
               McGuinness, K., "Mission Authority Server", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-authority-server.html>.
+
+   [I-D.draft-mcguinness-mission-mandate]
+              McGuinness, K., "Mission Mandate", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-mandate.html>.
 
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", 2026,
@@ -2165,7 +2295,7 @@ Appendix A.  Approval Context Commitment Test Vectors
 
    *Vector 5: mutated-member rejection.* Vector 2's manifest with one
    member changed, approval_event_id from ape_8K2nP4qV9rL3tY6sB1z to
-   ape_9K2nP4qV9rL3tY6sB1z, illustrating what Section 14.3 requires a
+   ape_9K2nP4qV9rL3tY6sB1z, illustrating what Section 15.3 requires a
    verifier to do when a recomputed digest disagrees with a disclosed
    one:
 
@@ -2190,9 +2320,117 @@ Appendix A.  Approval Context Commitment Test Vectors
    correct digest, finds a mismatch, and rejects under the same rule as
    vector 5.
 
-Appendix B.  Document History
+Appendix B.  Portable Approval-Binding Check Vectors
+
+   These non-normative vectors exercise the comparisons and outcomes of
+   Section 11.  Each case starts from a base pair: the record of
+   Section 5.5, which authenticates under a key trusted for the expected
+   Mission Issuer https://as.example.com, and a Mission reference that
+   authenticates under its own rules and discloses that record's
+   approval_event_id (ape_hON9D0svLKQAMyy-uug), issuer, intent_hash, and
+   authority_hash.  Where a case says both artifacts carry a commitment,
+   each carries approval_context_commitment; the check compares the two
+   strings and never recomputes them.  Each case changes one thing from
+   the base, except case 19, which tests the precedence of failure over
+   insufficient evidence.
+
+    +======+===================================+=====================+
+    | Case | Change from the base pair         | Outcome             |
+    +======+===================================+=====================+
+    | 1    | Both carry an equal commitment    | Success; commitment |
+    |      |                                   | agreement           |
+    |      |                                   | established         |
+    +------+-----------------------------------+---------------------+
+    | 2    | Only the record carries a         | Success; commitment |
+    |      | commitment                        | agreement not       |
+    |      |                                   | established         |
+    +------+-----------------------------------+---------------------+
+    | 3    | Neither carries a commitment      | Success; commitment |
+    |      |                                   | agreement not       |
+    |      |                                   | established         |
+    +------+-----------------------------------+---------------------+
+    | 4    | Both carry a commitment, with     | Failure             |
+    |      | different values                  |                     |
+    +------+-----------------------------------+---------------------+
+    | 5    | The reference's issuer is         | Failure             |
+    |      | https://as2.example.com           |                     |
+    +------+-----------------------------------+---------------------+
+    | 6    | The reference's approval_event_id | Failure             |
+    |      | differs                           |                     |
+    +------+-----------------------------------+---------------------+
+    | 7    | The reference's intent_hash       | Failure             |
+    |      | differs                           |                     |
+    +------+-----------------------------------+---------------------+
+    | 8    | The reference's authority_hash    | Failure             |
+    |      | differs                           |                     |
+    +------+-----------------------------------+---------------------+
+    | 9    | The reference does not disclose   | Insufficient        |
+    |      | approval_event_id                 | evidence            |
+    +------+-----------------------------------+---------------------+
+    | 10   | The record's signature does not   | Failure             |
+    |      | verify                            |                     |
+    +------+-----------------------------------+---------------------+
+    | 11   | The record verifies under a key   | Failure             |
+    |      | not trusted for the expected      |                     |
+    |      | issuer                            |                     |
+    +------+-----------------------------------+---------------------+
+    | 12   | The reference is a Mandate whose  | Failure             |
+    |      | iss differs from its              |                     |
+    |      | mission.issuer                    |                     |
+    +------+-----------------------------------+---------------------+
+    | 13   | No record is supplied             | Insufficient        |
+    |      |                                   | evidence            |
+    +------+-----------------------------------+---------------------+
+    | 14   | The reference's intent_hash       | Failure             |
+    |      | carries an unrecognized algorithm |                     |
+    |      | prefix                            |                     |
+    +------+-----------------------------------+---------------------+
+    | 15   | The record carries a malformed    | Failure             |
+    |      | commitment; the reference carries |                     |
+    |      | none                              |                     |
+    +------+-----------------------------------+---------------------+
+    | 16   | The reference carries a malformed | Failure             |
+    |      | commitment; the record carries    |                     |
+    |      | none                              |                     |
+    +------+-----------------------------------+---------------------+
+    | 17   | Both intent_hash values are equal | Failure             |
+    |      | but noncanonical: they decode,    |                     |
+    |      | with nonzero padding bits, but do |                     |
+    |      | not re-encode to themselves       |                     |
+    +------+-----------------------------------+---------------------+
+    | 18   | The record names the Mission      | Failure             |
+    |      | Issuer https://as2.example.com    |                     |
+    |      | and verifies under the expected   |                     |
+    |      | issuer's key                      |                     |
+    +------+-----------------------------------+---------------------+
+    | 19   | The reference's authority_hash    | Failure             |
+    |      | differs, and it does not disclose |                     |
+    |      | approval_event_id                 |                     |
+    +------+-----------------------------------+---------------------+
+
+              Table 3: Portable approval-binding check cases
+
+   Cases 6 to 8 succeed on every other comparison, which is why the
+   check compares each anchor rather than any one of them.  Case 9
+   matches intent_hash and authority_hash, which two Missions can share,
+   and still cannot succeed.  Cases 15 and 16 fail although the other
+   artifact carries no commitment: a disclosed value is validated on its
+   own.  Case 19 reports failure, not insufficient evidence, because a
+   disclosed mismatch is definitive.
+
+Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  A separately named portable approval-binding check lets a Relying
+      Auditor without the Mission Record establish that an authenticated
+      record and an authenticated Mission reference agree on the
+      approval event and the Mission anchors, with explicit commitment
+      handling, distinct failure and insufficient-evidence outcomes,
+      stated limits, a procurement example and vectors.  Privacy
+      Considerations relate the record's retention to an authorized
+      evidence export or evidence bundle.  The existing verification and
+      re-check procedures are unchanged (#1572).
 
    *  Immutability Witness: a mismatch between a recomputed Approval
       Context Commitment and the value an artifact disclosed shows that

@@ -710,9 +710,12 @@ Table of Contents
    mission_denial_reason member the expansion profile registers
    ([I-D.draft-mcguinness-oauth-mission-expansion]); this document
    requests that value's registration in the Mission Denial Reasons
-   registry that member carries (Section 22).  A runtime enforcement
-   deployment separately carries it as a denial-reason identifier
-   alongside the classification set of
+   registry that member carries (Section 22).  A token endpoint's
+   refusal carries authority_contained only where Containment causally
+   removed the requested authority; a refusal from any other cause MUST
+   NOT carry it merely because Containment is composed.  A runtime
+   enforcement deployment separately carries it as a denial-reason
+   identifier alongside the classification set of
    [I-D.draft-mcguinness-mission-authzen], a distinct specification-
    defined value space the registry does not cover: the shared spelling
    is a coincidence, not a shared registration.  A consumer MUST treat
@@ -1243,6 +1246,13 @@ Table of Contents
 23.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The authority_contained Denial Reason (Section 12) now holds the
+      causal-attribution rule that the Mission Issuance Grant profile
+      stated: a token endpoint's refusal carries authority_contained
+      only where Containment causally removed the requested authority,
+      and a refusal from any other cause must not carry it merely
+      because Containment is composed.
 
    *  Selector Matching (Section 6.1): a contained-capability entry is a
       selector with resource_match, exact by default and prefix by

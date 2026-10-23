@@ -1371,8 +1371,10 @@ Table of Contents
    retransmit whose original response was rate_limited, or was
    unavailable or another 5xx response, is processed as a new request,
    not replayed.  A request refused before deduplication (Section 5.7)
-   claims no nonce: the AS retains no response for it, so a later
-   request carrying the same nonce is processed as a new request.
+   claims no nonce: the AS retains nothing for the refusal and leaves
+   any response already retained under that nonce unchanged, so the
+   rules above apply to a later request carrying it as though the
+   refused request had never arrived.
 
    The window MUST be at least the validity span of the signed response
    the AS would replay (its iat to exp, Section 3.5), so any retransmit
