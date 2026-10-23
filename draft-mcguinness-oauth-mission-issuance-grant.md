@@ -287,7 +287,9 @@ the Enterprise Mapping Contract governs
 ({{I-D.draft-mcguinness-mission-authority-server}}). The audiences
 the MAS scopes a consuming AS's grants to ({{minting-rules}}) are the
 audiences it authorizes that AS to request from Mission Status
-({{mission-state-source}}).
+({{mission-state-source}}). The issuance join is the same-estate case:
+a deployment does not use it across domains, where cross-domain
+projection applies instead ({{relationships}}).
 
 The MAS holds the approval event, the record and its anchors, the
 lifecycle, and grant minting. The consuming AS holds client
@@ -1150,9 +1152,9 @@ Server Metadata {{RFC8414}}:
 Cross-domain projection
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) carries a
 Mission to a Resource AS in another domain, under federation trust
-and identity chaining. The issuance join is the same-estate case,
-with bilateral, pre-configured trust ({{trust}}), and requires no
-identity chaining; a deployment does not use it across domains.
+and identity chaining. The issuance join is the same-estate case
+({{trust}}), with bilateral, pre-configured trust and no identity
+chaining.
 
 **Native Mission-aware issuance replaces this grant.** An AS that
 becomes natively Mission-aware implements the issuance profile and
