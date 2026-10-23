@@ -3352,13 +3352,15 @@ it:
    ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Revocation
    Propagation"; {{I-D.draft-mcguinness-mission-runtime}}, Section
    "Mission State and Freshness").
-2. A non-active state from a trusted source prevails over a positive
-   one. Conflicting observations are reconciled under the version and
-   freshness rules, never by choosing the more permissive surface
-   ({{I-D.draft-mcguinness-mission-control-plane}}); an orchestrator
-   uses the safer state until it reconciles
+2. Conflicting observations are reconciled under the version and
+   freshness rules, never by choosing the more permissive surface: a
+   legitimate higher-version `resume` is accepted, since state names
+   are not ordered by severity
+   ({{I-D.draft-mcguinness-mission-control-plane}}). While a conflict
+   remains unresolved, the safer state governs: an orchestrator uses
+   it until it reconciles
    ({{I-D.draft-mcguinness-mission-orchestration}}, Section "Trigger
-   Sources"); and PEP-supplied state is a floor for the PDP
+   Sources"), and PEP-supplied state is a floor for the PDP
    ({{I-D.draft-mcguinness-mission-authzen}}, Section "PDP-side
    consistency checks").
 3. It does not establish that accepted or in-flight work has stopped,
