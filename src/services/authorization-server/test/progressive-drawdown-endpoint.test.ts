@@ -668,6 +668,20 @@ describe("policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion)",
     expect(successor.ceiling_hash).toBe(predecessor.ceiling_hash);
     expect(successor.drawdown_count).toBe(1);
     expect(activatingCommits(successor.id)).toHaveLength(1);
+
+    // @spec mission#grant-binding-related (#1590): the successor's internal grant is its own,
+    // distinct from the predecessor's, and each still resolves to its own Mission. These witness
+    // isolation of the AS's records, not a protocol lineage: the response carries only an access token.
+    expect((body as { refresh_token?: string }).refresh_token).toBeUndefined();
+    const predGrant = predecessor.grant_id as string;
+    const successorGrant = successor.grant_id as string;
+    expect(predGrant).toBeTruthy();
+    expect(successorGrant).toBeTruthy();
+    expect(successorGrant).not.toBe(predGrant);
+    expect(as.kernel.get(pred.missionId)?.grant_id).toBe(predGrant);
+    expect(as.kernel.findByGrant(predGrant)?.id).toBe(pred.missionId);
+    expect(as.kernel.findByGrant(successorGrant)?.id).toBe(successor.id);
+    expect(as.kernel.missionBoundGrants.resolve(successorGrant)?.missionId).toBe(successor.id);
   });
 
   it("keeps the predecessor's subject and authority_source on the successor", async () => {
