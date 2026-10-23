@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
-    "content_sha256": "339c6e233e26e8920573096fe463dc51903cf5a136de15ee79c899c354529a9b"
+    "revision": "b36f739faefcbe520f961248974ac6fd35d0be6b",
+    "content_sha256": "6c3d2351814f1e4c8e5ff62d5c5101c63726fe301443ea990476010ad4ec59b0"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -10901,12 +10901,134 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an entry of a type without a declared narrowing capability is issued only to its original approved audience and only exactly as approved, or as scope under a declared projection; audience projection to a Resource AS counts as narrowing"
+    "normative": "an entry of a type without a declared narrowing capability is issued only to its original approved audience and only exactly as approved, or as scope under a declared projection; audience projection to a Resource AS counts as narrowing",
+    "local": "witnessed for its audience clause where a token's audience serves the entry: an audience the trusted mapping assigns the entry only after approval is refused. Three gaps keep it partial. (1) An entry the token's audience does not serve still rides in the token: the reference carries the effective set, not only the entries approved for the token's audience, so such an entry reaches an audience outside its original approved audience. (2) \"only exactly as approved\": the reference narrows, delegates and projects mission_resource_access entries with no declared capability (#1377, D538; row core.other-types.transformation-boundary-declared). (3) Audience projection to a Resource AS: the cross-domain projection proceeds without a declared narrowing capability and is not refused."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No test exercises a type without a declared narrowing capability."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a code exchange for an audience the mapping gained after approval is refused invalid_target, issuing no token, while a Mission approved after the change is issued for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7 (D620). The reference declares no transformation capability for any type (src/docs/resource-access-transformation-capabilities.md), so the rule applies to every entry. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time."
+  },
+  {
+   "id": "core.other-types.entry-audience-trusted-mapping",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "The AS relates each entry to the audiences that consume it through a trusted entry-to-audience mapping",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the audiences an entry is assigned come from the AS's trusted entry-to-audience mapping alone: not from the entry's resource value, and not from any request input",
+    "local": "witnessed at unit level that the assignment is the mapping's audiences overlapping the entry, with none under no mapping, and never the entry's resource itself. Not from request input: the mapping is deployment configuration handed to the kernel (the scope-projection mapping), which no request reaches; no test exercises that clause"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approved-audience.test.ts",
+     "name": "the original approved audience (@spec mission#transformation-capabilities, #1503 finding 7) > assigns an entry every mapped audience whose resource tree overlaps it, never the entry's resource itself",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7 (D620). The draft's next sentence, that an entry's resource value is not by itself an audience, is folded into this row's observation."
+  },
+  {
+   "id": "core.other-types.original-audience-retained",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "The AS MUST retain that association with the Mission; a later change to the mapping does not redefine it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after the AS's entry-to-audience mapping changes, an approved entry's audiences stay those the mapping assigned it when the Mission was approved: a token request for an audience the mapping assigns the entry only later is refused, and the original approved audience is still issued",
+    "local": "the reference's trusted mapping is the scope-projection mapping's audiences, related to an entry by resource-tree overlap; the record-creation funnel retains each entry's audiences with the Mission (MissionRecord.approved_audiences, authorization-server state outside every anchor and never on the wire), so a Mission created by template dispatch, child creation or expansion takes the mapping as it stands at its own creation; a row that predates the column retains none and approves no audience"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a code exchange for an audience the mapping gained after approval is refused invalid_target, issuing no token, while a Mission approved after the change is issued for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7 (D620). Proved by deciding from the mapping current at issuance instead of the retained association, by retaining nothing at creation, and by not reading the retained association back from the store: the witnesses failed each time. The template dispatch witness in scope-projection.test.ts also recovers an instance created while the target was unmapped and finds it still refused once the mapping names the target."
+  },
+  {
+   "id": "core.other-types.original-audience-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "Without `narrowing`, a token request that would issue an entry to another audience is refused with `invalid_target`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a code exchange or refresh whose token would carry an entry to an audience outside its original approved audience, for a type with no declared narrowing capability, is refused invalid_target and issues no access token",
+    "local": "witnessed where the token's audience serves the entry: an audience the mapping assigns the entry only after approval is refused. Gap: an entry the token's audience does not serve still rides in a token issued for that audience: the reference carries the effective set, not only the entries approved for the token's audience, and such a token is issued, not refused (the scope-projection and emission-overlap boundary tests assert it). The check runs at the shared mint every Mission-bound access token oidc-provider issues passes through, after the scope projection; designations and delegation handles, presented back to this AS, are exempt. On a refresh it is decided when the access token is saved, after oidc-provider has rotated a rotating refresh token; the binding states preservation only for a scope-projection refusal"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a code exchange for an audience the mapping gained after approval is refused invalid_target, issuing no token, while a Mission approved after the change is issued for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7 (D620). Proved by skipping the issuance check: both witnesses issued a token."
   },
   {
    "id": "core.delegation-constraints.depth-from-accounting",
@@ -59342,6 +59464,44 @@
     }
    ],
    "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness."
+  },
+  {
+   "id": "core.error-mapping.original-audience-invalid-target",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "error-mapping",
+   "text": "an entry would be issued to an audience other than its original approved audience, and the AS has not declared `narrowing` for its type ({{transformation-capabilities}}) | `invalid_target` ({{Section 2 of RFC8707}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request whose issuance would carry an entry to an audience outside its original approved audience, for a type with no declared narrowing capability, is refused invalid_target and issues no access token",
+    "local": "witnessed where the token's audience serves the entry. Gap: an entry the token's audience does not serve still rides in a token issued for that audience: the reference carries the effective set, not only the entries approved for the token's audience, and such a token is issued, not refused (the scope-projection and emission-overlap boundary tests assert it)"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a code exchange for an audience the mapping gained after approval is refused invalid_target, issuing no token, while a Mission approved after the change is issued for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7 (D620). Proved by skipping the issuance check: both witnesses issued a token."
   },
   {
    "id": "core.remediation-grains.refresh-within-grant-and-authority",
