@@ -4731,6 +4731,34 @@ export class MissionKernel {
       .sign(this.opts.statusKey);
   }
 
+  /**
+   * @spec authority-server#join-assertion-artifact (#1454): sign a Mission
+   * Join Assertion with the Status signing key, `typ` `mission-join+jwt`, and
+   * {@link STATUS_SIGNING_ALG}, the algorithm the AS lists in
+   * `mission_status_signing_alg_values_supported` ("The MAS MUST sign the
+   * assertion with an algorithm listed in its
+   * `mission_status_signing_alg_values_supported` metadata member").
+   */
+  async signJoinAssertion(claims: Record<string, unknown>, at: { audience: string; iat: number; exp: number }): Promise<string> {
+    return new SignJWT(claims)
+      .setProtectedHeader({ alg: STATUS_SIGNING_ALG, kid: this.opts.statusKid, typ: "mission-join+jwt" })
+      .setIssuer(this.opts.issuer)
+      .setAudience(at.audience)
+      .setIssuedAt(at.iat)
+      .setExpirationTime(at.exp)
+      .sign(this.opts.statusKey);
+  }
+
+  /**
+   * @spec authority-server#join-assertion-request (#1454): the Mission as it
+   * stands now, its expiry materialized, for the join-assertion endpoint's
+   * checks; `undefined` for an unknown Mission.
+   */
+  currentRecord(id: string): MissionRecord | undefined {
+    const record = this.get(id);
+    return record ? this.applyExpiry(record) : undefined;
+  }
+
   private setState(
     record: MissionRecord,
     to: MissionState,
