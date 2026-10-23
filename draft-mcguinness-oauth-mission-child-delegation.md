@@ -28,7 +28,6 @@ author:
 
 normative:
   RFC3339:
-  RFC6755:
   RFC6838:
   RFC7523:
   RFC8259:
@@ -97,7 +96,6 @@ normative:
     date: 2026
 
 informative:
-  RFC8126:
   I-D.draft-ietf-oauth-deferred-token-response:
   I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-mcguinness-mission-authority-server:
@@ -2472,6 +2470,9 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- RFC 6755 and RFC 8126 are removed from the references: neither is
+  cited, and this document creates no registry. No requirement
+  changed.
 - Completion says any grant binding a Child Mission carries comes from
   the child actor's redemption of its grant, never from the parent's
   exchange. No requirement changed.
