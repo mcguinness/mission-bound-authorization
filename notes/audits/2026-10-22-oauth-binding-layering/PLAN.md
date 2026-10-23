@@ -1,7 +1,18 @@
 # OAuth Binding Layering: Plan for Review (revision 5)
 
-Status: proposal for review, revision 5 (2026-10-22). Nothing has been
-filed or edited in any draft, the ledger or `src/`.
+Status: proposal for review, revision 5 (2026-10-22).
+
+**Outcomes (2026-10-23):**
+- **D-2, D-3, D-4 and D-6:** executed in #1557 (merged `d5a22add`,
+  D679).
+- **D-1:** keep; D559 stands. #1412's body records the corrected
+  inventory and the B1 conditions.
+- **D-5:** #207 stays parked (comment on #207). Its two open questions
+  await owner rulings.
+- **D-7:** analysis in `D7-ACTOR-PROFILE-REFERENCES.md`. All five
+  normative Internet-Drafts stay; promote identity-chaining. No material
+  closure reduction.
+- **Submission-set record:** re-bound in #1562.
 
 Four review rounds came before it (Appendix C records how each finding
 was handled):
