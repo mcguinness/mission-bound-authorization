@@ -930,14 +930,16 @@ request to the surviving authority.
 
 ### Transient Source Failure {#transient-failure}
 
-A source that is unavailable, fails verification, or reports a state
-`version` older than one already observed for this Mission is a
+A source that is unavailable or rate-limited (Mission Status's
+`unavailable` or `rate_limited`), fails verification, or reports a
+state `version` older than one already observed for this Mission is a
 transient failure, never authority exhaustion, and is refused in a
 machine-readable shape: this profile defines a token-endpoint use of
 the OAuth `temporarily_unavailable` error code {{RFC6749}}
 ({{oauth-error-registration}}), carried with HTTP status 503. The
 response MAY carry `Retry-After` per the deployment's declared
-state-recovery policy. A held response that meets the conditions of
+state-recovery policy, which also governs any value forwarded from a
+Mission Status `Retry-After`. A held response that meets the conditions of
 {{mission-state-source}} still satisfies the check, and the failure
 then refuses nothing. For a per-audience resolution, the version
 already observed is the one the AS retained before the resolution
@@ -1410,6 +1412,9 @@ Server Metadata" registry {{RFC8414}}:
 
 \[\[ To be removed from the final specification ]]
 
+- Transient Source Failure names Mission Status's `rate_limited` as
+  transient, beside `unavailable`; a forwarded `Retry-After` stays
+  under the deployment's state-recovery policy (#1582, D702).
 - Normative follow-ups to the tightening pass (D685). The grant
   admits any supported authorization-details type under that type's
   semantics and fails closed on an unsupported transformation. Its

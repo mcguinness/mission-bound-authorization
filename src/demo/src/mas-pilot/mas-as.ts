@@ -26,6 +26,7 @@
 import {
   type BuiltAs,
   buildAuthorizationServer,
+  type JoinAssertionDeployment,
   type LifecycleClientRegistration,
   MISSION_APPROVAL_SCOPE,
   MISSION_STATUS_SCOPE,
@@ -111,6 +112,8 @@ export interface PilotMasOptions {
   statusClients?: readonly StatusClientRegistration[];
   signingKeys?: SigningKeySource;
   kernelStore?: { file: string };
+  /** @spec authority-server#join-assertion (#1454): serve the Join Assertion endpoint with this deployment. */
+  joinAssertions?: JoinAssertionDeployment;
   now?: () => Date;
 }
 
@@ -146,6 +149,7 @@ export async function buildPilotMas(config: MasPilotConfig, opts: PilotMasOption
     // @spec authority-server#join-disclosure: keyed by the authenticated
     // Status client, the identity the response's `sub` names (#1407).
     enrolledJoinPdps: Object.fromEntries(separated.enrolled_pdps.map((e) => [e.client_id, e.enforcement_scopes])),
+    ...(opts.joinAssertions ? { joinAssertions: opts.joinAssertions } : {}),
     ...(opts.now ? { now: opts.now } : {}),
   });
   return { issuer, built, operator: { agentClientJwk: built.agentClientJwk, approvalToken, lifecycle: lifecycle.credentials } };
