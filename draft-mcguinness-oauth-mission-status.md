@@ -687,9 +687,15 @@ it at the first step that fails:
 
 1. Authenticate the caller ({{mission-status-authentication}}),
    parsing the request body only as far as authentication needs. A
-   failure is answered as {{mission-status-auth-failures}} assigns.
+   failure is answered as {{mission-status-auth-failures}} assigns. A
+   repeated client authentication parameter (`client_id`,
+   `client_assertion` or `client_assertion_type`) fails authentication,
+   and the AS never selects one of its occurrences. The one refusal
+   before authentication is a body that cannot be parsed as
+   `application/x-www-form-urlencoded`, refused `invalid_request`.
 2. Validate the request syntax ({{mission-status-request}}). A
-   malformed request is refused `invalid_request`.
+   malformed request, including one that repeats a request parameter,
+   is refused `invalid_request`.
 3. Authorize the request: the caller's read authorization, the Mission
    the `mission_id` names, and any requested `audience`
    ({{mission-status-request}}). An unknown Mission and every failed
@@ -1403,10 +1409,16 @@ the first step that fails:
 
 1. Authenticate the caller ({{mission-status-authentication}}),
    parsing the request body only as far as authentication needs. A
-   failure is answered as {{mission-status-auth-failures}} assigns.
+   failure is answered as {{mission-status-auth-failures}} assigns. A
+   repeated client authentication parameter (`client_id`,
+   `client_assertion` or `client_assertion_type`) fails authentication,
+   and the AS never selects one of its occurrences. The one refusal
+   before authentication is a body that cannot be parsed as
+   `application/x-www-form-urlencoded`, refused `invalid_request`.
 2. Validate the request syntax and the operation
-   ({{lifecycle-operations}}). A malformed request, or an `operation`
-   the AS does not serve, is refused `invalid_request`.
+   ({{lifecycle-operations}}). A malformed request, including one that
+   repeats a request parameter, or an `operation` the AS does not
+   serve, is refused `invalid_request`.
 3. Authorize the request. For a base operation this is the lifecycle
    authorization of {{lifecycle-authorization}} for the acting party,
    the operation and the Mission, together with the authorization for
