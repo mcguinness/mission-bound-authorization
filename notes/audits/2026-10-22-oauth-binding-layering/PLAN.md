@@ -1,17 +1,24 @@
-# OAuth Binding Layering: Plan for Review (revision 4)
+# OAuth Binding Layering: Plan for Review (revision 5)
 
-Status: proposal for review, revision 4 (2026-10-22). Nothing has been
+Status: proposal for review, revision 5 (2026-10-22). Nothing has been
 filed or edited in any draft, the ledger or `src/`.
 
-Three review rounds came before it (Appendix C records how each
-finding was handled):
+Four review rounds came before it (Appendix C records how each finding
+was handled):
 - Round 1 reviewed revision 1.
 - Round 2 was a fresh-eyes review of revision 2 (`REVIEW-ROUND-2.md`).
 - Round 3 reviewed revision 3 at `66df29ee`.
+- Round 4 reviewed revision 4 at `50e765c2f`, against main
+  `635c1a1b6`.
 
-Round 3 found revision 3 "ready for the small immediate steps" (D-2,
-D-3, D-4, D-6) and asked for corrections to the deferred Instance
-Context option, the dependency metric and the reading test.
+Rounds 3 and 4 both found D-2, D-3, D-4 and D-6 ready to proceed.
+Round 4 asked for three things:
+- a complete obligation map for option B1;
+- B1's retained text with its original qualifications;
+- a reading task for every D-4 move.
+
+It also corrected one Appendix E edge and asked for its two dependency
+measurements to be distinguished.
 
 ## 0. Instructions for the reviewing model
 
@@ -24,8 +31,11 @@ Context option, the dependency metric and the reading test.
   - `python3 notes/audits/2026-10-22-oauth-binding-layering/measure.py`;
   - `python3 notes/audits/2026-10-22-oauth-binding-layering/companion_cites.py`;
   - `python3 notes/audits/2026-10-22-oauth-binding-layering/commitment_imports.py`.
-- **The external dependency closure** (Appendix E) was read from the
-  datatracker on 2026-10-22. It is not reproducible offline.
+- **Newer main.** At `635c1a1b6` the binding is unchanged, and none of
+  its 182 ledger rows that this plan names changed.
+- **The external dependency inventory** (Appendix E) was read from the
+  datatracker on 2026-10-22, at latest revisions. It is not
+  reproducible offline, and it is not yet a verified closure.
 - **What we want from you:**
   - a verdict per decision in Section 8;
   - any factual error, with evidence;
@@ -93,12 +103,13 @@ Broadly the one the family has:
 The real departures from common practice:
 - **The binding names specific companions in normative text.** P2 and
   P3 address this.
-- **Its RFC publication is coupled to a large dependency closure.** The
-  submission set has 3 direct external normative Internet-Draft
-  references, and 16 distinct Internet-Drafts in its transitive
-  normative closure. Of those 16, 13 are the Actor Profile (D625) and
-  the 12 drafts it pulls in; 2 are client-instance-id and the one draft
-  it pulls in (Section 5.3, Appendix E).
+- **Its RFC publication is coupled to a large set of dependencies.**
+  The submission set has 3 direct external normative Internet-Draft
+  references. The latest-revision inventory (Appendix E, not yet a
+  verified closure) finds 16 distinct Internet-Drafts:
+  - 13 are the Actor Profile (D625) and the 12 drafts it pulls in;
+  - 2 are client-instance-id and the one draft it pulls in;
+  - 1 is rar-metadata-remediation, which pulls in none.
 
   The publication coupling is a question about the Actor Profile's
   normative references, which live in that draft (D-7), more than about
@@ -112,8 +123,12 @@ The real departures from common practice:
   proposed initial OAuth WG set (#704, D140).
 - **Direct external normative I-D reference:** an Internet-Draft in a
   submission-set document's `normative:` block, outside the family.
-- **Transitive normative closure:** those references plus every
-  Internet-Draft they cite normatively, recursively.
+- **Cited-revision closure:** those references plus every
+  Internet-Draft they cite normatively, recursively, each at the
+  revision its citer names, with a source section for every edge. Not
+  yet computed.
+- **Latest-revision inventory:** the same traversal over each draft's
+  latest revision, for planning (Appendix E).
 - **`act`-bearing token:** a Mission-bound access token whose `act`
   claim names a delegate (RFC 8693 Section 4.1).
 - **Row, gate:** a ledger requirement in `conformance-manifest.json`,
@@ -208,8 +223,8 @@ sections.
 | Actor Profile | individual | Delegation lead (3496 onward), Delegated Exchange (3602-3608), Instance Context (3664-3667); appendix line 6405. Resource Access's `sub_profile` matcher reaches it through the binding (RA 1162-1176). |
 | rar-metadata-remediation | WG | Denial Responses, Remediation Grains, Authorization Server Metadata |
 
-**Transitive normative closure** (Appendix E; latest revisions on
-2026-10-22): 16 distinct Internet-Drafts.
+**Latest-revision inventory** (Appendix E; read 2026-10-22; for
+planning, not yet a verified closure): 16 distinct Internet-Drafts.
 
 | Reached through | Distinct I-Ds, including the root | Notes |
 |---|---|---|
@@ -224,11 +239,12 @@ sections.
   publication". The RFC Editor queue shows the state as "Reference Not
   Received", and dependent documents publish together.
 - **What it does not cost.** It does not block submission, adoption or
-  last call. The cost is a coupled RFC publication date, and the
-  closure, not the direct list, determines it.
-- **Consequence for P1.** Option B1 would take the direct references
-  from 3 to 2 and the closure from 16 to 14. The Actor Profile's
-  subtree, 13 of the 16, would be unchanged.
+  last call. The cost is a coupled RFC publication date. The
+  cited-revision closure, not the direct list, determines it.
+- **Consequence for P1.** If all its conditions held (7.1), option B1
+  would take the direct references from 3 to 2 and the latest-revision
+  inventory from 16 to 14. The Actor Profile's subtree, 13 of the 16,
+  would be unchanged.
 - **Side finding.** `notes/oauth-wg-submission-set.md` lines 56-60 say
   `DEPENDENCIES.md` has no external-normative-ids entry for the
   binding. That predates `2e7c08608`; `DEPENDENCIES.md` line 20 now
@@ -267,59 +283,104 @@ fired, and the dependency effect of moving the section is small (5.3).
 It is a candidate, not an established dependency reduction. It holds
 only under the conditions below.
 
-**What the section requires today** (lines 3652-3717):
+**What the section requires today: every paragraph** (lines
+3652-3717). All of it applies only where a deployment conveys
+`client_instance` in delegated tokens (the MAY at 3670) under the
+optional Delegation capability.
 
-| Obligation | Lines | Row |
-|---|---|---|
-| Use the presenting instance validated under client-instance-id Section 5; associate it with the delegate; bind the output token to an instance-unique key | 3679-3686 | `core.instance-context.current-presenter-binding` (todo) |
-| MUST NOT substitute context copied or remapped from an input token | 3687-3691 | `core.instance-context.no-input-substitution` (todo) |
-| Instance evidence satisfies none of the exchange's authorization checks (keyword-free) | 3693-3696 | none |
-| Where policy requires attribution, MUST refuse when the evidence or association cannot be established | 3696-3698 | `core.instance-context.required-attribution-refusal` (todo) |
-| Error codes for these refusals | 3699, table rows 3196-3197, note 3210-3214 | (under the rows above) |
+| # | Lines | Content | Kind | Actor | Row | Depends on client-instance-id text? |
+|---|---|---|---|---|---|---|
+| a | 3654-3662 | Instance evidence does not establish the delegate's actor; the AS establishes the actor identity and its association with the instance separately | keyword-free | AS | none | Cites Section 5 for the premise; the rule stands without it |
+| b | 3664-3668 | The delegated token's `cnf` is a key the instance possesses (a consequence of the delegate-key rule and the Actor Profile) | descriptive | none | none | No |
+| c | 3670-3677 | A deployment MAY convey `client_instance`; client-instance-id owns attestation validation, instance-to-key association, mapping and Context Consumer validation; deployments configure use and whether attribution is required | MAY, scope | deployment | none | Yes (it delegates to the spec) |
+| d | 3679-3691 | MUST use the presenting instance validated under Section 5, associate it with the delegate, and bind to an instance-unique key; map context under Section 7.1; MUST NOT substitute copied or remapped input context | MUST | AS | `current-presenter-binding`, `no-input-substitution` (both todo) | Yes |
+| e | 3693-3699 | The checks of Delegated Exchange and Delegation Constraints still authorize the exchange; instance evidence satisfies none of them by itself. Where policy requires attribution, MUST refuse when evidence or association cannot be established. Points at the error mappings. | keyword-free and MUST | AS | `required-attribution-refusal` (todo) for the MUST; none for the first sentence | The MUST, yes (it uses "required instance evidence" and "association"); the first sentence, no |
+| f | 3701-3704 | If the exchange issues a refresh token, the grant-continuity rules of Section 5.1 apply alongside the grant binding; instance continuity alone does not authorize replacing the recorded instance or rebinding the key | keyword-free | AS | none | Yes for the first clause; the second clause is the binding's own |
+| g | 3706-3709 | Consumers establish presenter attribution under Sections 7.3 and 7.5; a consumer requiring attribution rejects unestablished associations under Section 7.6 | keyword-free | consumer (RS) | none | Yes (it restates client-instance-id's consumer rules) |
+| h | 3711-3716 | This composition adds no provenance to `client_instance`; direct-attestation trust is usable only when the issuer meets that configuration's restriction on upstream context; an issuer conveying upstream context needs a separately specified, authenticated provenance mechanism before its context supports attribution | keyword-free | consumer, issuer | none | Yes for the configuration restriction; the "needs a provenance mechanism" rule is the binding's own |
 
-**Option B1, exact before and after.**
-- *Before:* the section at lines 3652-3717, error rows 3196 and 3197,
-  and the note at 3210-3214.
-- *After:* the binding keeps only this text (a new paragraph at the
-  same anchor):
+Error mappings: table rows 3196 (`invalid_client_attestation`) and
+3197 (association failure, `invalid_request`), and the note at
+3210-3214. Six of the eight paragraphs carry obligations; only two of
+them have rows (C11).
 
-  > A deployment that authenticates client instances can convey instance
-  > context in delegated tokens; {{I-D.draft-mcguinness-oauth-client-instance-id}}
-  > defines how an issuer selects that context at a Token Exchange and
-  > binds the output token to it. Instance evidence satisfies none of the
-  > actor authentication, delegation eligibility, subset, and lifecycle
-  > checks of {{delegated-exchange}} and {{delegation-constraints}}, which
-  > alone authorize the exchange.
+**Option B1, exact before and after** (a candidate).
+- *Before:* lines 3652-3717, rows 3196 and 3197, and the note
+  3210-3214.
+- *After:* the binding keeps the binding's own rules, with their
+  original wording and qualifications:
 
-**Conditions for B1 to make the reference informative.**
-1. **No retained text may require behavior defined by client-instance-id.**
-   The retained paragraph only describes it. Its one rule ("satisfies
-   none of ... which alone authorize the exchange") is the binding's
-   own and needs no client-instance-id text to apply.
-2. **All three MUSTs and both error mappings must first exist in a
-   published client-instance-id revision:**
-   - presenter selection and key binding;
-   - no input-context substitution;
-   - the attribution refusal, with `invalid_client_attestation`
-     (already client-instance-id Section 5.2) and the
-     association-failure code.
+  > Where a deployment authenticates client instances, the delegate
+  > named by the outermost `act` can be an actor that an authenticated
+  > instance represents. Instance evidence does not establish that
+  > actor, so the AS establishes the delegate's actor identity, and
+  > that actor's trusted association with the instance, separately.
+  > {{I-D.draft-mcguinness-oauth-client-instance-id}} defines how an
+  > issuer conveys instance context in a token it issues.
+  >
+  > The actor authentication, delegation eligibility, subset, and
+  > lifecycle checks of {{delegated-exchange}} and
+  > {{delegation-constraints}} still authorize the exchange; instance
+  > evidence satisfies none of them by itself. Instance continuity alone
+  > does not authorize replacement of the recorded instance or key
+  > rebinding.
 
-   Until then, removing them from the binding would drop obligations.
-   The current `-00` defines Context Consumer rejection (Section 7.6),
-   but not the issuer-side Token Exchange selection or refusal.
-3. **The keyword-free rule kept in the binding gets a row:**
-   `core.instance-context.evidence-not-authorization`, gated
-   `core.instance-context`, `todo` until witnessed.
-4. **The three existing rows** are not retired because text moves.
-   Their obligations leave the family's documents. The ledger tracks
-   only family specifications, so record each row as relocated to the
-   named client-instance-id revision, with that revision and section,
-   and get the owner's ruling on how the ledger represents a
-   requirement that moved outside the family. They are `todo` today,
-   so no coverage is lost.
+  The first paragraph is paragraph a verbatim, except for two changes:
+  its two parenthetical citations (client-instance-id with
+  client-attesters, and "Section 5 of" client-instance-id) are dropped,
+  and one descriptive sentence naming client-instance-id is added. The
+  second paragraph is e's first sentence and f's second clause, both
+  verbatim. Nothing else is reworded.
 
-If any condition fails, B1 leaves client-instance-id normative and
-achieves nothing for dependencies.
+**Conditions for B1 to make the reference informative.** All must hold.
+1. **No retained text requires behavior that client-instance-id
+   defines.** The retained text above describes client-instance-id
+   once and states only the binding's own rules. A reviewer must
+   confirm this sentence by sentence before the edit.
+2. **Every moved obligation exists first in a published
+   client-instance-id revision:**
+   - d: presenter selection, key binding, context mapping, and no
+     input substitution;
+   - e: the MUST, the attribution refusal, with
+     `invalid_client_attestation` (already client-instance-id Section
+     5.2) and the association-failure code;
+   - f: the first clause, grant continuity on refresh, which Section
+     5.1 already states in part;
+   - h: the configuration restriction, which client-instance-id
+     already defines, and the "needs a provenance mechanism" rule.
+
+   The current `-00` defines Context Consumer rules (Sections 7.3, 7.5
+   and 7.6, covering g) but not the issuer-side Token Exchange
+   selection or refusal (d and e).
+3. **The same deployments stay bound.**
+   - Today, a and c-h bind every deployment that conveys
+     `client_instance` in a delegated token.
+   - After B1, the upstream text must apply to every issuer that
+     conveys `client_instance` in a token issued by Token Exchange
+     with an actor, as a requirement of conveying it, not as an
+     optional profile within client-instance-id.
+   - Otherwise B1 narrows scope, which needs an explicit ruling, not a
+     relocation note.
+4. **Ledger mechanism.** The ledger's coverage states are `tested`,
+   `partial`, `todo` and `blocked` (`scripts/check-conformance-manifest.mjs`
+   line 280); there is no "relocated" state.
+   - Before any row moves, the owner rules on an explicit mechanism: a
+     relocation record, or an external-source row that names an
+     outside specification.
+   - That mechanism must preserve each row's id, destination revision
+     and section, applicability, and outstanding coverage.
+   - It also decides how the five unledgered obligations (a, e's first
+     sentence, f, g, h) get rows.
+   - RFC publication of client-instance-id need not be the threshold.
+5. **Rows for the retained rules.** Add rows for a, for e's first
+   sentence (defined by its preserved meaning: instance evidence is
+   insufficient by itself, not irrelevant), and for f's second clause.
+   They are gated `core.instance-context` and start `todo`.
+
+If any condition fails, B1 leaves client-instance-id normative.
+Condition 3 is the hardest: whether client-instance-id should
+require, for every conveying issuer, what this section requires is a
+decision about that draft.
 
 **Not recommended: B2 (a new companion), B3 (Child Delegation or
 runtime-oauth).** B2 adds a draft for a 65-line section with the same
@@ -379,14 +440,15 @@ conditions. B3 hosts a different contract.
   commit, with its receiving companion edited in the same PR.
 - **Candidates** (line; family citations):
   - **Grant Bindings and Related Mechanisms** (2322; 6). Keep the Token
-    Exchange bullet (2326-2336). Move the Cross-Domain, Child Missions
-    and successors, and Continuation bullets, and the MAS-join
-    paragraph. Keep one sentence: a profile that creates another grant
-    lineage or Mission states its relation to the grant binding.
-  - **Composition and the Effective Ceiling** (5428; 6) and **Authority
-    Materialized Before Containment** (5464; 2). Keep the base's own
-    residual; move the cross-companion analysis to the Security Model
-    guide.
+    Exchange bullet (2326-2336). Move the Cross-Domain bullet (M1), the
+    Child Missions and successors bullet (M2), the Continuation bullet
+    (M3) and the MAS-join paragraph (M4). Keep one sentence: a profile
+    that creates another grant lineage or Mission states its relation
+    to the grant binding.
+  - **Composition and the Effective Ceiling** (5428; 6; M5) and
+    **Authority Materialized Before Containment** (5464; 2; M6). Keep
+    the base's own residual; move the cross-companion analysis to the
+    Security Model guide.
   - **Principals and Approval Basis** (4239-4255).
     - *Keep* the base rules: "`approval_basis` is provenance: none of
       the record's integrity anchors ... covers it", "a profile that
@@ -395,9 +457,9 @@ conditions. B3 hosts a different contract.
       on the baseline `mission` claim", and "MUST NOT be relied on to
       grant or widen authority wherever it does appear".
     - *Move* only the two sentences describing Audit Transparency's and
-      Approval Governance's commitments (4244-4250). Keep the pointer
-      to Consent Binding.
-  - **Consent Binding** (5053; 3). The same split: keep the base's
+      Approval Governance's commitments (4244-4250; M7). Keep the
+      pointer to Consent Binding.
+  - **Consent Binding** (5053; 3; M8). The same split: keep the base's
     consent-binding rules; move the descriptions of the companions'
     commitment mechanisms (around 5114-5120).
   - **Remediation Grains** (3090). No move: the list is closed ("The
@@ -457,13 +519,13 @@ bar like Cross-Domain's (4982-4999).
 
 | Decision | Options | Recommendation | Cost | Effect | Prerequisite |
 |---|---|---|---|---|---|
-| D-1: Instance Context (P1) | A keep; B1 upstream (candidate) | A. Revisit B1 when D559's trigger fires. | B1: a client-instance-id revision first; then the binding edit, 2 error rows, a note, 1 new row, 3 rows relocated, 1 annotation | B1: direct external normative I-Ds 3 to 2; closure 16 to 14 | D559's trigger, and the four B1 conditions |
+| D-1: Instance Context (P1) | A keep; B1 upstream (candidate) | A. B1 stays a candidate until its full obligation and applicability map is accepted. | B1: a client-instance-id revision carrying d, e, f and h first; then the binding edit, 2 error rows, a note, 3 new rows, 3 rows moved under a ledger mechanism, 1 annotation | B1, only if all five conditions hold: direct external normative I-Ds 3 to 2; latest-revision inventory 16 to 14 (the cited-revision closure must be computed before this is claimed) | D559's trigger; the five B1 conditions; a ledger-mechanism ruling (condition 4) |
 | D-2: Delegated-token rows (P1b) | add; defer | Add now | Two rows, a witness check and a mutation run each | Two stated MUSTs gain rows with honest coverage | None |
 | D-3: Standing-consent list (P2) | informative pointer; keep | Pointer | One paragraph | Four companion citations leave normative text; no obligation changes | The completeness check in 7.3 |
-| D-4: Companion explanations (P3) | move by semantic ownership; keep | Move after the obligation maps, reviewing each move | Edits in the binding and each receiving companion; re-pins | Fewer family citations in normative text, each traced | Obligation map per paragraph |
+| D-4: Companion explanations (P3) | move by semantic ownership; keep | Build the obligation maps; approve each move individually once its reading-task item exists (Section 10) | Edits in the binding and each receiving companion; re-pins | Fewer family citations in normative text, each traced | Obligation map per paragraph; the move's named task item |
 | D-5: #207 (P5) | keep parked; execute | Keep parked | None | None | A #207 trigger |
 | D-6: Side finding (5.3) | update the submission-set record; leave | Update | One table and a sentence | The record matches the front matter | None |
-| D-7: The Actor Profile's own normative references | review them in the Actor Profile draft; leave | Review (outside this repository) | An Actor Profile revision | Could shrink the closure by up to 12 drafts, including an expired individual draft (Appendix E) | Owner's call on that draft |
+| D-7: The Actor Profile's own normative references | review them in the Actor Profile draft; leave | Review separately (outside this repository): for each reference, establish why it is normative, at the revision cited | An Actor Profile review, and a revision if any classification changes | Unknown until each reference is examined. The Actor Profile accounts for 13 of the 16 nodes in the latest-revision inventory (Appendix E), but no reduction is promised. | A verified cited-revision graph (Appendix E caveats); owner's call on that draft |
 
 ## 9. Sequence and verification
 
@@ -501,9 +563,12 @@ none"), record:
 **Dependency.**
 - *Direct external normative I-D references* of the submission set:
   3 today.
-- *Transitive normative closure*: 16 distinct I-Ds today, read from the
-  datatracker on 2026-10-22 (Appendix E).
-- Report both before and after every change that touches a reference.
+- *Latest-revision inventory*: 16 distinct I-Ds, read on 2026-10-22
+  (Appendix E). For planning only.
+- *Cited-revision closure*: not yet computed. Compute it, with a source
+  section for every edge, before any change is justified by a
+  dependency reduction (D-1, D-7).
+- Report each before and after every change that touches a reference.
   No change may add a normative reference to a withheld draft.
 
 **Obligation integrity.**
@@ -528,61 +593,106 @@ every removal traced to a D-3 or D-4 disposition.
   2. **Completeness.** Every key item is found.
   3. **Navigation**, only for answers that pass 1 and 2: sections read,
      documents opened, cross-document jumps.
-- *Tasks, with defined outputs:*
-  1. **D-3:** "List every rule that applies when a specification
+- *Tasks, with defined outputs.* Each task's document set includes
+  every document the moved text lands in. Each D-4 move (M1-M8, 7.4)
+  is reviewed by the task items named for it.
+  1. **T1 (D-3).** "List every rule that applies when a specification
      defines a new standing-consent `approval_basis.type`. For each,
      say whether it binds the defining specification or the activating
-     issuer, and give its section." Documents: the binding and the
-     Architecture.
-  2. **D-4, grant bindings:** "For each of Token Exchange, Cross-Domain
-     projection, Child Missions, expansion successors and continuation
-     handles, state in one sentence whether it creates a new grant
-     binding, and give the section that says so." Documents: the
-     binding and those four companions.
-  3. **D-4, approval provenance:** "State every rule about whether
-     `approval_basis` is committed, disclosed, carried on tokens, or
-     relied on for authority, with its section." Documents: the binding
-     and Approval Governance.
-- *Judging.* Assess D-3 and D-4 separately. A change passes when its
-  own tasks keep correctness and completeness. A change in navigation
+     issuer, and give its section."
+     - Documents: the binding, the Architecture.
+  2. **T2 (D-4, M1-M3).** "For each item, state whether it creates a new
+     grant binding, under what condition, and the section that says so":
+     - (i) a Token Exchange that returns only an access token;
+     - (ii) a Token Exchange that establishes reusable authorization
+       state, such as Continuation's delegation-family-creating
+       exchange;
+     - (iii) a cross-domain projection;
+     - (iv) a Child Mission;
+     - (v) an expansion successor;
+     - (vi) a continuation handle.
+
+     Conditional answers are expected: (i) and (ii) differ.
+     - Documents: the binding, Cross-Domain, Child Delegation,
+       Expansion, Continuation.
+     - Items: M1 is (iii); M2 is (iv) and (v); M3 is (ii) and (vi).
+  3. **T3 (D-4, M4).** "Does a Mission Authority Server's Mission Join
+     make the joined OAuth grant Mission-bound? What does a join rest
+     on? Can one credential be joined to different Missions?" Give
+     sections.
+     - Documents: the binding, the Mission Authority Server.
+  4. **T4 (D-4, M5-M6).** "For each of Child Delegation, Cross-Domain
+     projection, Derivation Limits and Metering, state its effect on
+     the authority a Mission can still yield, with its section. Then
+     state what authority materialized before containment remains
+     usable, and what bounds it."
+     - Documents: the binding, the Security Model, Child Delegation,
+       Cross-Domain, Derivation Limits, Metering, Containment.
+  5. **T5 (D-4, M7-M8).** "State every rule about whether
+     `approval_basis` is committed (by which anchor or profile),
+     disclosed, carried on tokens, or relied on for authority, and every
+     consent-binding rule, with its section."
+     - Documents: the binding, Approval Governance, Mission Audit
+       Transparency, Consent Evidence.
+- *The moves (7.4):*
+  - M1: the Cross-Domain bullet of Grant Bindings and Related
+    Mechanisms;
+  - M2: its Child Missions and successors bullet;
+  - M3: its Continuation bullet;
+  - M4: the MAS-join paragraph;
+  - M5: the composition analysis;
+  - M6: the containment-residual analysis;
+  - M7: the `approval_basis` commitment descriptions (Audit
+    Transparency, Approval Governance);
+  - M8: the consent-binding companion descriptions.
+- *Judging.* Assess D-3 and each D-4 move separately. A move passes
+  when the task items named for it keep correctness and completeness. A change in navigation
   is reported as a trade-off (for example, D-4 may add a document jump
   to task 2), not as a pass or fail condition. No change must improve
   a task it does not touch.
 
-## 11. Questions for review round 4
+## 11. Questions for review round 5
 
-1. Are the four B1 conditions in 7.1 sufficient for client-instance-id
-   to become informative? Is the retained paragraph free of any
-   requirement that client-instance-id defines?
-2. Is the proposed ledger handling for requirements that move outside
-   the family (relocated, with the external revision and section)
-   acceptable, or should the three rows stay until client-instance-id
-   is an RFC?
-3. Is the closure in Appendix E right? Four nodes' normative lists come
-   from the datatracker's heuristic References tab rather than the
-   text.
-4. Are the readability tasks' answer keys writable from the obligation
-   map without ambiguity?
+1. Is the eight-paragraph map in 7.1 complete, and are the kinds and
+   actors right? In particular: is paragraph g already fully stated by
+   client-instance-id Sections 7.3, 7.5 and 7.6, so that removing it
+   loses nothing?
+2. Does the retained B1 text keep the exact meaning of paragraphs a, e
+   (first sentence) and f (second clause)?
+3. Is condition 3 (the same deployments stay bound) the right test, and
+   is it achievable without making client-instance-id Mission-aware?
+4. Do T2-T5 give every D-4 move (M1-M8) an item whose answer would
+   change if that move lost or altered a rule?
+5. Is the edge-source labeling in Appendix E enough to tell a planning
+   number from a verified one?
 
 ## Appendix A. P1 map (option B1, for later)
 
 | Item | Location | Disposition under B1 |
 |---|---|---|
-| Section text | 3652-3717 | replaced by the paragraph in 7.1 |
-| Error row: Client Attestation fails | 3196 | moves to client-instance-id |
-| Error row: association fails | 3197 | moves to client-instance-id |
-| Error-table note | 3210-3214 | removed, since it names a client-instance-id code the binding no longer uses |
+| Paragraph a | 3654-3662 | stays (retained text, two citations dropped) |
+| Paragraph b | 3664-3668 | removed; it is a consequence, and it cites the Actor Profile, which stays normative for 3496 and 3602-3608 |
+| Paragraph c | 3670-3677 | replaced by the retained descriptive sentence; the MAY and the deployment configuration move upstream |
+| Paragraph d | 3679-3691 | moves upstream (condition 2) |
+| Paragraph e, first sentence | 3693-3696 | stays verbatim |
+| Paragraph e, MUST and error pointer | 3696-3699 | moves upstream (condition 2) |
+| Paragraph f, first clause | 3701-3703 | moves upstream (condition 2) |
+| Paragraph f, second clause | 3703-3704 | stays verbatim |
+| Paragraph g | 3706-3709 | removed; client-instance-id Sections 7.3, 7.5 and 7.6 already state it for consumers (to be confirmed by sentence) |
+| Paragraph h | 3711-3716 | moves upstream (condition 2) |
+| Error row: Client Attestation fails | 3196 | moves upstream |
+| Error row: association fails | 3197 | moves upstream |
+| Error-table note | 3210-3214 | removed (it names a client-instance-id code the binding no longer uses) |
 | Future-work example | 6450 | stays; the reference is informative |
 | Document History mention | 7290 | stays |
-| `core.instance-context.current-presenter-binding` | ledger, todo | relocated (condition 4) |
-| `core.instance-context.no-input-substitution` | ledger, todo | relocated (condition 4) |
-| `core.instance-context.required-attribution-refusal` | ledger, todo | relocated (condition 4) |
-| New row `core.instance-context.evidence-not-authorization` | ledger | added, todo (condition 3) |
-| Capability id `core.instance-context` | `model.capabilities` | kept (the new row uses it) |
+| `core.instance-context.current-presenter-binding` | ledger, todo | moves under the condition 4 mechanism, id preserved |
+| `core.instance-context.no-input-substitution` | ledger, todo | moves under the condition 4 mechanism, id preserved |
+| `core.instance-context.required-attribution-refusal` | ledger, todo | moves under the condition 4 mechanism, id preserved |
+| New rows for a, e's first sentence, f's second clause | ledger | added, todo (condition 5) |
+| Capability id `core.instance-context` | `model.capabilities` | kept (the new rows use it) |
 | Provider switch | none | none |
-| `@spec` annotation | `src/packages/mission-core/src/idempotency.ts:106` | repoint to the retained paragraph's anchor (unchanged anchor) |
+| `@spec` annotation | `src/packages/mission-core/src/idempotency.ts:106` | kept; the anchor is unchanged |
 | Companion citations of the section | none | none |
-| Actor Profile citation inside the section | 3664-3667 | removed with the text; the reference stays normative for 3496 and 3602-3608 |
 
 ## Appendix B. Commitment-vocabulary inventory (record for withdrawn P4)
 
@@ -622,57 +732,87 @@ cites both binding and substrate.
 |---|---|
 | Decision verdicts: D-1 keep A with B1 as a candidate; D-2, D-3, D-4 and D-6 proceed; D-5 keep parked | Adopted as the Section 8 recommendations. |
 | 1. P1 keeps a requirement whose row it would retire. "Follow client-instance-id" may stay normative. B1 needs exact text. | Agreed and verified: lines 3696-3698 are `required-attribution-refusal`. 7.1 now gives exact before and after text, an obligation table, four conditions under which the reference becomes informative, a new row for the keyword-free rule, and no row retirement. |
-| 2. "Three to two" counts direct references, not closure. | Agreed and verified. The metric is renamed. The closure is computed (Appendix E): 16 distinct I-Ds, 13 of them the Actor Profile and the drafts it pulls in. New decision D-7. |
+| 2. "Three to two" counts direct references, not closure. | Agreed and verified. The metric is renamed. The traversal is computed (Appendix E): 16 distinct I-Ds, 13 of them the Actor Profile and the drafts it pulls in. Revision 5 relabels it a latest-revision inventory. New decision D-7. |
 | 3. The reading test can reward incomplete answers. | Agreed. Section 10 adds a correctness-and-completeness gate, fresh sessions per version, fixed wording, hidden keys, defined outputs, and separate judging of D-3 and D-4, with navigation reported as a trade-off. |
 | Correction: designation introspection strengthens `active: true only when`. | Agreed. 7.7 separates the reasons: the `active: false` part is a strengthening; only the "no `mission` member" clause conflicts with 3327-3329. |
 | P3: preserve the anchors-do-not-commit and no-widening statements. | Agreed and verified at 4239-4255. 7.4 lists exactly what stays and what moves. |
 | D-2: validate witnesses and preserve partial coverage honestly. D-3: preserve the extension rules and unknown-value handling. D-4: maps first, individual review. | Adopted in 7.2, 7.3 and 7.4. |
 
+**Round 4** (revision 4, at `50e765c2f`, against main `635c1a1b6`):
+
+| Finding | Disposition in revision 5 |
+|---|---|
+| Decision verdicts: D-1 keep A with B1 pending a complete map; D-2, D-3, D-4 (moves approved individually), D-5 and D-6 as recommended; D-7 reviewed separately with no promised reduction | Adopted in Section 8. |
+| 1. B1's map omits paragraphs f (3701-3704), g (3706-3709) and h (3711-3716). Map every paragraph, including keyword-free obligations, with destination and applicability. Prove the same deployments stay bound, or treat it as a ruled scope change. | Agreed and verified. 7.1 maps all eight paragraphs (a-h), with kind, actor, row and dependence. Condition 2 covers d, e, f and h upstream. Condition 3 (the same deployments stay bound) is new. Five unledgered obligations are named. |
+| 2. The retained text drops "by itself" and adds "which alone authorize the exchange". | Agreed. The retained text now uses e's first sentence verbatim ("satisfies none of them by itself"), and the new row is defined by that meaning (condition 5). |
+| 3. T3 lacked Audit Transparency; the MAS-join and composition/containment moves had no task; Token Exchange answers must stay conditional. | Agreed. T2-T5 now name each move M1-M8; T5 adds Audit Transparency and Consent Evidence; T3 covers the MAS join; T4 covers composition and containment; T2 splits Token Exchange into its two cases. |
+| 4. Entity Profiles `-02` lists Transaction Tokens normatively; distinguish the latest-revision inventory from the cited-revision graph; record edge sources. | Agreed and verified: Section 15.1 in both `-01` and `-02`, with the Actor Profile citing `-01`. Appendix E is relabeled, has an edge-source column, and the cited-revision closure is a prerequisite for D-1 and D-7. |
+| Ledger: "relocated" is not a coverage state; decide an explicit mechanism first. | Agreed and verified (`COVERAGES` = tested, partial, todo, blocked). Condition 4 makes the mechanism a prior ruling that preserves ids, destination revisions, applicability and outstanding coverage. |
+
 ## Appendix D. Corrections log
 
 | Earlier claim | Corrected |
 |---|---|
-| Revision 3: the submission set's normative I-D "closure" is three | Three is the direct count. The closure is 16 (Appendix E). |
-| Revision 3: B1 makes client-instance-id informative | Only under the four conditions in 7.1. |
+| Revision 4: B1's obligation table covers the section | It covered 2 of 8 paragraphs; revision 5 maps all eight. |
+| Revision 4: retained text "satisfies none of ... which alone authorize the exchange" | Changed the rule; replaced by the original "satisfies none of them by itself". |
+| Revision 4: rows "recorded as relocated" | No such coverage state; a mechanism needs a ruling first. |
+| Revision 4: Entity Profiles has no normative I-D references | It lists Transaction Tokens (an edge, not a node). |
+| Revision 4: Appendix E is the "transitive normative closure" | It is a latest-revision planning inventory. |
+| Revision 3: the submission set's normative I-D "closure" is three | Three is the direct count. The latest-revision inventory is 16 (Appendix E). |
+| Revision 3: B1 makes client-instance-id informative | Only under the conditions in 7.1 (four in revision 4, five in revision 5). |
 | Revision 3: the retained paragraph is a self-contained extension point; three rows "re-home or retire" | The paragraph contained the refusal MUST. B1's retained text is now given exactly, and no row is retired. |
 | Revision 3: the three withdrawal cases are equivalent base-MUST exceptions | The introspection `active: false` part is a strengthening; see 7.7. |
 | Revision 3: readability passes on navigation counts | Correctness and completeness come first (Section 10). |
 | Earlier rounds | See revision 3's log in `git log` (the Actor Profile and Resource Access; D645; P4; D646; D620 versus D625; the commit date). |
 
-## Appendix E. Transitive normative Internet-Draft closure
+## Appendix E. Latest-revision dependency inventory (planning, not a verified closure)
 
-Read 2026-10-22 from the datatracker at each draft's latest revision
-(pinned `-00` for rar-metadata-remediation). Depth 1 means cited by a
-direct reference. Root: AP = Actor Profile, CI = client-instance-id.
+This is a **planning inventory**. It traverses each draft's latest
+revision on the datatracker as of 2026-10-22 (pinned `-00` for
+rar-metadata-remediation). It is **not** the graph of revisions actually
+cited.
+- Example: the Actor Profile `-01` cites Entity Profiles `-01`, while
+  this inventory reads `-02`. Both list Transaction Tokens as their only
+  normative I-D, so the node set does not change here, but it could
+  elsewhere.
+- **Before any dependency claim is made** (D-1, D-7), build the
+  verified cited-revision graph: each node at the revision its citer
+  names, and each edge with the source section that lists it as
+  normative.
 
-| Draft | Revision | Stream | State | Depth | Root | Normative I-D references |
-|---|---|---|---|---|---|---|
-| draft-mcguinness-oauth-client-instance-id | -00 | individual | I-D Exists | direct | CI | attestation-based-client-auth |
-| draft-mcguinness-oauth-actor-profile | -01 | individual | I-D Exists | direct | AP | transaction-tokens, wimse-workload-creds, wimse-wpt, mora-oauth-entity-profiles, oauth-identity-assertion-authz-grant |
-| draft-ietf-oauth-rar-metadata-remediation | -00 | oauth WG | WG Document | direct | (itself) | none |
-| draft-ietf-oauth-attestation-based-client-auth | -12 | oauth WG | WG Consensus: Waiting for Write-Up | 1 | CI | none |
-| draft-ietf-oauth-transaction-tokens | -11 | oauth WG | WG Consensus: Waiting for Write-Up | 1 | AP | identity-chaining |
-| draft-ietf-wimse-workload-creds | -02 | wimse WG | WG Document | 1 | AP | wimse-identifier, wimse-mutual-tls |
-| draft-ietf-wimse-wpt | -02 | wimse WG | WG Document | 1 | AP | wimse-arch, wimse-workload-creds |
-| draft-mora-oauth-entity-profiles | -02 | individual | I-D Exists | 1 | AP | none listed (unverified: its body cites transaction-tokens) |
-| draft-ietf-oauth-identity-assertion-authz-grant | -04 | oauth WG | WG Document | 1 | AP | identity-chaining, oauth-rfc7523bis, parecki-oauth-jwt-dpop-grant |
-| draft-ietf-oauth-identity-chaining | -17 | oauth WG | RFC Ed Queue | 2 | AP | none |
-| draft-ietf-wimse-identifier | -03 | wimse WG | WG Document | 2 | AP | wimse-workload-creds |
-| draft-ietf-wimse-mutual-tls | -02 | wimse WG | WG Document | 2 | AP | wimse-workload-creds, tls-rfc8446bis |
-| draft-ietf-wimse-arch | -08 | wimse WG | WG Document | 2 | AP | wimse-identifier |
-| draft-ietf-oauth-rfc7523bis | -11 | oauth WG | RFC Ed Queue | 2 | AP | none |
-| draft-parecki-oauth-jwt-dpop-grant | -01 | individual | Expired | 2 | AP | oauth-rfc7523bis |
-| draft-ietf-tls-rfc8446bis | -14 (cited) | tls WG | reported published as RFC 9846 | 3 | AP | branch stops at the RFC |
+Depth 1 means cited by a direct reference. Root: AP = Actor Profile,
+CI = client-instance-id.
 
-**Caveats.**
-- The normative/informative split was read from the text for
-  client-instance-id, the Actor Profile, rar-metadata-remediation,
-  wimse-identifier, wimse-mutual-tls and rfc7523bis.
-- For the other nodes it comes from the datatracker's References tab,
-  which is heuristic.
+**Edge source:**
+- *Text*: read from the draft's normative-references section;
+- *Summary*: from a model summary of that section;
+- *Tab*: the datatracker's References tab, which is heuristic.
+
+| Draft | Revision read | Stream | State | Depth | Root | Normative I-D references | Edge source |
+|---|---|---|---|---|---|---|---|
+| draft-mcguinness-oauth-client-instance-id | -00 | individual | I-D Exists | direct | CI | attestation-based-client-auth (cited -11) | Text, Section 12.1 |
+| draft-mcguinness-oauth-actor-profile | -01 | individual | I-D Exists | direct | AP | transaction-tokens (cited -11), wimse-workload-creds (-02), wimse-wpt (-02), mora-oauth-entity-profiles (-01), oauth-identity-assertion-authz-grant (-04) | Text, Section 16.1 (cited revisions from a summary) |
+| draft-ietf-oauth-rar-metadata-remediation | -00 | oauth WG | WG Document | direct | (itself) | none | Text, Section 10 |
+| draft-ietf-oauth-attestation-based-client-auth | -12 | oauth WG | WG Consensus: Waiting for Write-Up | 1 | CI | none | Tab |
+| draft-ietf-oauth-transaction-tokens | -11 | oauth WG | WG Consensus: Waiting for Write-Up | 1 | AP | identity-chaining | Tab |
+| draft-ietf-wimse-workload-creds | -02 | wimse WG | WG Document | 1 | AP | wimse-identifier, wimse-mutual-tls | Tab |
+| draft-ietf-wimse-wpt | -02 | wimse WG | WG Document | 1 | AP | wimse-arch, wimse-workload-creds | Tab |
+| draft-mora-oauth-entity-profiles | -02 (the Actor Profile cites -01) | individual | I-D Exists | 1 | AP | transaction-tokens (both -01 and -02) | Summary, Section 15.1 |
+| draft-ietf-oauth-identity-assertion-authz-grant | -04 | oauth WG | WG Document | 1 | AP | identity-chaining, oauth-rfc7523bis, parecki-oauth-jwt-dpop-grant | Tab |
+| draft-ietf-oauth-identity-chaining | -17 | oauth WG | RFC Ed Queue | 2 | AP | none | Tab |
+| draft-ietf-wimse-identifier | -03 | wimse WG | WG Document | 2 | AP | wimse-workload-creds | Text, Section 9.1 |
+| draft-ietf-wimse-mutual-tls | -02 | wimse WG | WG Document | 2 | AP | wimse-workload-creds, tls-rfc8446bis | Text, Section 6.1 |
+| draft-ietf-wimse-arch | -08 | wimse WG | WG Document | 2 | AP | wimse-identifier | Tab |
+| draft-ietf-oauth-rfc7523bis | -11 | oauth WG | RFC Ed Queue | 2 | AP | none | Text, Section 9.1 |
+| draft-parecki-oauth-jwt-dpop-grant | -01 | individual | Expired | 2 | AP | oauth-rfc7523bis | Tab |
+| draft-ietf-tls-rfc8446bis | -14 (cited) | tls WG | reported published as RFC 9846 | 3 | AP | branch stops at the RFC | datatracker document page |
+
+**Notes.**
+- The Entity Profiles row was corrected in revision 5: it adds an edge
+  to Transaction Tokens, not a node. The count of 16 distinct I-Ds is
+  unchanged.
 - The Actor Profile lists identity-chaining and jwt-dpop-grant as
-  informative; both enter the closure through other nodes' normative
-  edges.
+  informative. Both enter through other nodes' edges, which come from
+  the Tab source.
 - There are cycles between wimse-workload-creds and wimse-identifier,
   and between wimse-workload-creds and wimse-mutual-tls.
-- Pin these revisions when D-7 or D-1 is taken up.
