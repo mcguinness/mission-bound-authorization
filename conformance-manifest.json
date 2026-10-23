@@ -7193,6 +7193,37 @@
    "notes": "#760 extended this row's citation instead of adding a semantic row: `authority_source` is named beside `approval_basis` in the introspection member list and its issuer-only sentence, the member-scoped disclosure sentence, the Mission Issuer conformance bullet, and the OAuth Token Introspection Response registration. The cited disclosure test asserts the disclosed shape exactly (`type` plus organizational `policy.id`/`policy.version`, no `digest`)."
   },
   {
+   "id": "core.mission-record.approval-idempotency",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "A unique identifier of the approval event, used as the approval idempotency key: a retried or duplicate delivery of the same approval decision (a replayed callback, a double-submitted consent form, a retried standing-consent activation) MUST NOT create a second Mission, and the AS deduplicates on this identifier.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a repeated delivery of a committed approval decision, under the same `approval_event_id`, creates no second Mission: the AS holds exactly one Mission for that `approval_event_id`, its `version` is unchanged, and the repeated decision completes with the committed Mission",
+    "local": "the approval decision derives `approval_event_id` from the interaction (`apev_<uid>`), so a double-submitted decision on one interaction carries the same identifier; it completes like the first, and its code redeems to the committed Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval event as the idempotency key (@spec mission#mission-record, #1608) > a repeated delivery of the same approval decision creates no second Mission: it completes with the committed Mission, the only one for its approval_event_id, at an unchanged version",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here."
+  },
+  {
    "id": "core.discovery.held-credential-no-substitution",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "discovery",
