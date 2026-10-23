@@ -83,8 +83,8 @@
     "content_sha256": "44d6ef289a0c6cbdff9af48520ae48056a55052f037bdfe5dd16938ec88460d6"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
-    "content_sha256": "7b5f80c6b895dabfb51d4cc680d44137098ec8236fd034a9265d56ed10767b38"
+    "revision": "c8b592b01f938c0d6c2064aadcb0598bb652872c",
+    "content_sha256": "efeddee766f86da59e237d7a7e1abb9f1684b09064a2843389d590f95e769c53"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
@@ -37449,8 +37449,8 @@
   {
    "id": "issuance-grant.effective-set-projection.claim-gate",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "effective-set-projection",
-   "text": "A consuming AS that cannot perform this projection MUST NOT claim containment- or discharge-aware issuance.",
+   "anchor": "no-state-integration",
+   "text": "A consuming AS that cannot perform the projection of {{effective-set-projection}} MUST NOT claim containment- or discharge-aware issuance.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -37471,8 +37471,8 @@
   {
    "id": "issuance-grant.effective-set-projection.atomic-consumption",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "effective-set-projection",
-   "text": "the record itself is written atomically with successful issuance, after the state gate and this projection",
+   "anchor": "single-use",
+   "text": "the record itself is written atomically with successful issuance, after the Mission-state check and the projection of {{effective-set-projection}} where they apply",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37600,9 +37600,9 @@
    "id": "issuance-grant.effective-set-projection.equivalent-source-properties",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "An equivalent source MUST be authenticated, MUST be audience-scoped to the resources this AS serves, MUST carry the Mission's current `authorization_details` and a monotonic state `version`, and MUST answer within a staleness bound the deployment publishes",
+   "text": "The consuming AS MUST NOT rely on an equivalent source unless it is authenticated, is audience-scoped to the resources this AS serves, carries the Mission's current `authorization_details` and a monotonic state `version`, and answers within a staleness bound the deployment publishes",
    "role": "AS",
-   "strength": "MUST",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
     "capability": "issuance-grant.state-integration"
@@ -37798,8 +37798,8 @@
   {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "grant",
-   "text": "When it is present, the consuming AS MUST require proof of possession of that key at redemption",
+   "anchor": "grant-validation",
+   "text": "whenever `cnf` is present, the request proves possession of that key, with a DPoP proof",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
