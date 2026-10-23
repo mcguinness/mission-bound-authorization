@@ -10,11 +10,12 @@
  * revision never approves. The decision recomputes the context and compares
  * commitments: the anchors (`intent_hash`, `proposal_hash` where a proposal was
  * submitted, `authority_hash` over the derived set), the established authority
- * source (its root, catalog revision and provenance), and the policy inputs
- * that establish them: the derivation policy's content (which carries
- * `max_mission_lifetime_s`, so the effective `expires_at` inputs), the scope
- * projection, and the activation policies held. A policy edit that leaves
- * every anchor equal still changes the commitment.
+ * source (its root, catalog revision and provenance), the effective
+ * `expires_at` the rendering showed, and the policy inputs that establish
+ * them: the derivation policy's content (which carries
+ * `max_mission_lifetime_s`), the scope projection, and the activation policies
+ * held. A policy edit that leaves every anchor equal still changes the
+ * commitment.
  */
 import { createHash, randomBytes } from "node:crypto";
 import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash } from "@mission/core";
@@ -28,6 +29,7 @@ export interface ApprovalContext {
   proposal_hash: string | null;
   authority_hash: string;
   source: { provenance: unknown; root_id?: string; catalog_revision?: string };
+  expires_at: string;
   derivation_policy: string;
   scope_projection: string | null;
   activation_policies: string | null;
@@ -52,6 +54,8 @@ export function approvalContext(input: {
   clientId: string;
   subject: string | undefined;
   scopeProjection: unknown;
+  /** The effective `expires_at`: a rendering's own, or a decision's ({@link decisionExpiry}). */
+  expiresAt: string;
 }): { context: ApprovalContext; commitment: string } {
   const { kernel, issuer } = input;
   let source: ApprovalContext["source"];
@@ -67,11 +71,28 @@ export function approvalContext(input: {
     proposal_hash: input.proposal?.length ? proposalHash(issuer, input.proposal as unknown as JsonValue[]) : null,
     authority_hash: authorityHash(issuer, input.authority as unknown as JsonValue[]),
     source,
+    expires_at: input.expiresAt,
     derivation_policy: kernel.derivationPolicyDigest(),
     scope_projection: input.scopeProjection === undefined ? null : digest(input.scopeProjection),
     activation_policies: registry === undefined ? null : digest(registry),
   };
   return { context, commitment: digest(context) };
+}
+
+/**
+ * The effective `expires_at` a decision commits. It is the one its rendering
+ * showed while the current inputs still admit it (later than now, and no later
+ * than the expiry they establish now), so a lifetime measured from the
+ * decision never moves it later than the Approver saw. Otherwise it is the
+ * expiry established now, which differs from the rendered one and so asks for
+ * a fresh decision. Where no expiry later than now remains, it is the rendered
+ * one: the commit refuses that approval rather than asking for it again.
+ */
+export function decisionExpiry(kernel: MissionKernel, requested: string, rendered: string): string {
+  const now = kernel.nowDate();
+  const established = kernel.resolveEffectiveExpiry({ requested, createdAt: now.toISOString() });
+  if (Date.parse(established) <= now.getTime()) return rendered;
+  return Date.parse(rendered) > now.getTime() && Date.parse(rendered) <= Date.parse(established) ? rendered : established;
 }
 
 /**
@@ -146,9 +167,44 @@ export function currentRenderRevision(provider: Provider, uid: string, principal
   return interactionRevisions(provider, uid, false)?.get(principalKey);
 }
 
-/** Retire a revision whose context changed, so its form can never approve. */
-export function retireRenderRevision(provider: Provider, uid: string, principalKey: string): void {
-  interactionRevisions(provider, uid, false)?.delete(principalKey);
+/**
+ * Retire a revision whose context changed, so its form can never approve. Only
+ * that revision: a newer rendering to the same principal stays current.
+ */
+export function retireRenderRevision(provider: Provider, uid: string, principalKey: string, revision: string): void {
+  const held = interactionRevisions(provider, uid, false);
+  if (held?.get(principalKey)?.revision === revision) held.delete(principalKey);
+}
+
+/**
+ * @spec mission#approval-event (step 7), mission#approval-context-changes
+ * (#1446, D583): the commits on one approval event, per provider, run one at a
+ * time, each with its cleanup. Every decision on an interaction writes the same
+ * interaction-derived grant, so a decision resuming after asynchronous work
+ * must never write over, or destroy, the grant another decision committed; it
+ * reads the event afresh once its turn comes, and recovers a commit made
+ * meanwhile. A serialization within this process: the reference AS runs as one
+ * process (D663).
+ */
+const commits = new WeakMap<Provider, Map<string, Promise<void>>>();
+
+export async function serializeApprovalEvent<T>(provider: Provider, approvalEventId: string, commit: () => Promise<T>): Promise<T> {
+  let queues = commits.get(provider);
+  if (!queues) {
+    queues = new Map();
+    commits.set(provider, queues);
+  }
+  const run = (queues.get(approvalEventId) ?? Promise.resolve()).then(commit);
+  const settled = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  queues.set(approvalEventId, settled);
+  try {
+    return await run;
+  } finally {
+    if (queues.get(approvalEventId) === settled) queues.delete(approvalEventId);
+  }
 }
 
 /** The principal key of a trusted headless approval service: its credential, the Approver it acts as, and the Subject it names. */

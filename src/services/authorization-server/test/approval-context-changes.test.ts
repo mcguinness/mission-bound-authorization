@@ -85,7 +85,7 @@ async function clientAssertion(): Promise<string> {
 }
 
 /** A pushed request for the read-only proposal, taken to its approval interaction. */
-async function open(): Promise<{ uid: string; cookie: string }> {
+async function open(intent: typeof INTENT = INTENT): Promise<{ uid: string; cookie: string }> {
   const verifier = `approval-context-changes-${crypto.randomUUID()}-0123456789`;
   const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))).toString("base64url");
   const par = await fetch(`${ISSUER}/request`, {
@@ -99,7 +99,7 @@ async function open(): Promise<{ uid: string; cookie: string }> {
       code_challenge: challenge,
       code_challenge_method: "S256",
       login_hint: "alice",
-      mission_intent: JSON.stringify({ intent: INTENT }),
+      mission_intent: JSON.stringify({ intent }),
       authorization_details: JSON.stringify(PROPOSAL),
       client_assertion: await clientAssertion(),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
@@ -117,12 +117,39 @@ async function open(): Promise<{ uid: string; cookie: string }> {
   return { uid: (res.headers.get("location") as string).split("/interaction/")[1] as string, cookie };
 }
 
-/** Render the approval page with these headers: its status and the revision it minted, if any. */
-async function render(uid: string, headers: Record<string, string>): Promise<{ status: number; revision: string | null }> {
+/** Render the approval page with these headers: its status, the revision it minted, if any, and the page. */
+async function render(uid: string, headers: Record<string, string>): Promise<{ status: number; revision: string | null; html: string }> {
   const { "content-type": _type, ...rendering } = headers;
   const res = await fetch(`${ISSUER}/interaction/${uid}`, { headers: rendering });
-  await res.text();
-  return { status: res.status, revision: res.headers.get(RENDER_REVISION_HEADER) };
+  const html = await res.text();
+  return { status: res.status, revision: res.headers.get(RENDER_REVISION_HEADER), html };
+}
+
+/** Hold the AS's own clock, which establishes every effective expiry, at this instant. */
+function clockAt(ms: number) {
+  vi.spyOn(as.kernel as unknown as { now: () => Date }, "now").mockImplementation(() => new Date(ms));
+}
+
+/** The provider grant's save, its first call held until released; later calls pass straight through. */
+function holdFirstGrantSave() {
+  let release!: () => void;
+  const gate = new Promise<void>((r) => {
+    release = r;
+  });
+  const state = { saving: false, calls: 0 };
+  const save = as.provider.Grant.prototype.save;
+  vi.spyOn(as.provider.Grant.prototype, "save").mockImplementation(async function (this: object, ...args: unknown[]) {
+    state.calls += 1;
+    if (state.calls === 1) {
+      state.saving = true;
+      await gate;
+    }
+    return (save as (...a: unknown[]) => Promise<string>).apply(this, args);
+  });
+  const saving = async () => {
+    while (!state.saving) await new Promise((r) => setTimeout(r, 5));
+  };
+  return { release, saving, calls: () => state.calls };
 }
 
 async function decide(uid: string, headers: Record<string, string>, body: Record<string, unknown>) {
@@ -233,7 +260,22 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     await expectNothingCreated(flow.uid);
   });
 
-  it("a policy edit that leaves every anchor equal still changes the context: the lifetime bound behind the effective expires_at", async () => {
+  it("a policy edit that leaves every anchor and the effective expires_at equal still changes the context: a lifetime bound past the requested expiry", async () => {
+    const flow = await open();
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    const first = await render(flow.uid, headers);
+    (POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = 7 * 86_400;
+    const saves = vi.spyOn(as.provider.Grant.prototype, "save");
+    const stale = await decide(flow.uid, headers, approve(first.revision));
+    expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+    // Only the policy input changed: the anchors, the source, the effective expiry and every other input agree.
+    expect(stale.json.changed).toEqual(["derivation_policy"]);
+    // Compared before any write.
+    expect(saves).not.toHaveBeenCalled();
+    await expectNothingCreated(flow.uid);
+  });
+
+  it("a shorter lifetime bound changes the effective expires_at: nothing is created", async () => {
     const flow = await open();
     const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
     const first = await render(flow.uid, headers);
@@ -241,11 +283,66 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     const saves = vi.spyOn(as.provider.Grant.prototype, "save");
     const stale = await decide(flow.uid, headers, approve(first.revision));
     expect(stale.status, JSON.stringify(stale.json)).toBe(409);
-    // Only the policy input changed: the anchors, the source and every other input agree.
-    expect(stale.json.changed).toEqual(["derivation_policy"]);
-    // Compared before any write.
+    expect(stale.json.error).toBe("approval_context_changed");
+    expect(stale.json.changed).toEqual(["expires_at", "derivation_policy"]);
     expect(saves).not.toHaveBeenCalled();
     await expectNothingCreated(flow.uid);
+  });
+
+  it("the Mission commits the effective expires_at its rendering showed: a lifetime measured from a later decision never moves it", async () => {
+    (POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = 60;
+    const flow = await open();
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    const t0 = Math.floor(Date.now() / 1000) * 1000;
+    const shown = new Date(t0 + 60_000).toISOString();
+    clockAt(t0);
+    const { revision, html } = await render(flow.uid, headers);
+    expect(html).toContain(`<time class="mission-expires-at" datetime="${shown}">`);
+    clockAt(t0 + 5_000);
+    const decided = await decide(flow.uid, headers, approve(revision));
+    expect(decided.status, JSON.stringify(decided.json)).toBe(303);
+    const record = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
+    expect(record?.created_at).toBe(new Date(t0 + 5_000).toISOString());
+    expect(record?.expires_at).toBe(shown);
+  });
+
+  it("a rendering whose effective expires_at has passed asks for a fresh decision, which commits the expiry rendered again", async () => {
+    (POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = 60;
+    const flow = await open();
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    const t0 = Math.floor(Date.now() / 1000) * 1000;
+    clockAt(t0);
+    const first = await render(flow.uid, headers);
+    clockAt(t0 + 61_000);
+    const stale = await decide(flow.uid, headers, approve(first.revision));
+    expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+    expect(stale.json.error).toBe("approval_context_changed");
+    expect(stale.json.changed).toEqual(["expires_at"]);
+    await expectNothingCreated(flow.uid);
+    const again = await render(flow.uid, headers);
+    expect((await decide(flow.uid, headers, approve(again.revision))).status).toBe(303);
+    expect(as.kernel.findByApprovalEvent(`apev_${flow.uid}`)?.expires_at).toBe(new Date(t0 + 121_000).toISOString());
+  });
+
+  it("a requested expiry that passes while the decision commits gets its mapped refusal, not a request to review it again", async () => {
+    (POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = 60;
+    const t0 = Math.floor(Date.now() / 1000) * 1000;
+    // Rendered under the lifetime bound (t0 + 60s), short of the requested expiry (t0 + 100s).
+    const flow = await open({ ...INTENT, expires_at: new Date(t0 + 100_000).toISOString().replace(/\.\d{3}Z$/, "Z") });
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    clockAt(t0);
+    const { revision } = await render(flow.uid, headers);
+    clockAt(t0 + 50_000);
+    const hold = holdFirstGrantSave();
+    const held = decide(flow.uid, headers, approve(revision));
+    await hold.saving();
+    clockAt(t0 + 101_000);
+    hold.release();
+    const decided = await held;
+    expect(decided.status, JSON.stringify(decided.json)).toBe(303);
+    const resumed = await fetch(decided.location as string, { redirect: "manual", headers: { cookie: flow.cookie } });
+    expect(new URL(resumed.headers.get("location") as string).searchParams.get("error")).toBe("invalid_request");
+    expect(as.kernel.findByApprovalEvent(`apev_${flow.uid}`)).toBeUndefined();
   });
 
   it("a scope projection change is a changed policy input", async () => {
@@ -318,8 +415,69 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     const decided = await held;
     expect(decided.status, JSON.stringify(decided.json)).toBe(409);
     expect(decided.json.error).toBe("approval_context_changed");
-    expect(decided.json.changed).toEqual(["derivation_policy"]);
+    expect(decided.json.changed).toEqual(["expires_at", "derivation_policy"]);
     await expectNothingCreated(flow.uid);
+  });
+
+  it("a decision held in its grant save never writes over or destroys the grant a newer decision commits", async () => {
+    const flow = await open();
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    const older = await render(flow.uid, headers);
+    const hold = holdFirstGrantSave();
+    const first = decide(flow.uid, headers, approve(older.revision));
+    await hold.saving();
+    narrowCeiling();
+    const newer = await render(flow.uid, headers);
+    const second = decide(flow.uid, headers, approve(newer.revision));
+    // The newer decision waits for the held one: its grant save has not started.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(hold.calls()).toBe(1);
+    hold.release();
+    const [a, b] = await Promise.all([first, second]);
+    expect(a.status, JSON.stringify(a.json)).toBe(409);
+    expect(a.json.error).toBe("approval_context_changed");
+    expect(b.status, JSON.stringify(b.json)).toBe(303);
+    const record = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
+    expect(record?.state).toBe("active");
+    expect(record?.grant_id).toBe(grantIdFor(flow.uid));
+    const grant = (await as.provider.Grant.find(grantIdFor(flow.uid))) as { rar?: { actions: string[] }[] } | undefined;
+    expect(grant).toBeDefined();
+    expect(grant?.rar).toEqual(record?.authority_set);
+    expect(grant?.rar?.flatMap((e) => e.actions)).not.toContain("payments:invoice.list");
+  });
+
+  it("a decision that fails its commit re-check retires only its own rendering: a newer one still approves", async () => {
+    const flow = await open();
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    const older = await render(flow.uid, headers);
+    const hold = holdFirstGrantSave();
+    const first = decide(flow.uid, headers, approve(older.revision));
+    await hold.saving();
+    narrowCeiling();
+    const newer = await render(flow.uid, headers);
+    hold.release();
+    expect((await first).json.error).toBe("approval_context_changed");
+    const decided = await decide(flow.uid, headers, approve(newer.revision));
+    expect(decided.status, JSON.stringify(decided.json)).toBe(303);
+  });
+
+  it("a second decision on the same rendering waits for the first and recovers its commit", async () => {
+    const flow = await open();
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    const { revision } = await render(flow.uid, headers);
+    const hold = holdFirstGrantSave();
+    const first = decide(flow.uid, headers, approve(revision));
+    await hold.saving();
+    const second = decide(flow.uid, headers, approve(revision));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(hold.calls()).toBe(1);
+    hold.release();
+    const [a, b] = await Promise.all([first, second]);
+    expect(a.status, JSON.stringify(a.json)).toBe(303);
+    expect(b.status, JSON.stringify(b.json)).toBe(303);
+    const record = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
+    expect(record?.grant_id).toBe(grantIdFor(flow.uid));
+    expect(((await as.provider.Grant.find(grantIdFor(flow.uid))) as { rar?: unknown } | undefined)?.rar).toEqual(record?.authority_set);
   });
 
   it("a retry of a committed decision recovers it, even after a policy input changed", async () => {

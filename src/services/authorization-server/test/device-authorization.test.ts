@@ -1060,7 +1060,7 @@ describe("a device approval rests on its rendering (@spec mission#approval-conte
       const decided = await decideAsIs(s.uid, s.headers, { ...CONFIRMED, render_revision: revision });
       expect(decided.status).toBe(409);
       expect(decided.body.error).toBe("approval_context_changed");
-      expect(decided.body.changed).toEqual(["derivation_policy"]);
+      expect(decided.body.changed).toEqual(["expires_at", "derivation_policy"]);
       expect(missionOf(s.uid)).toBeUndefined();
       expect((await poll(PUBLIC, s.deviceCode)).body.error).toBe("authorization_pending");
       const again = await decide(s.uid, s.headers, CONFIRMED);

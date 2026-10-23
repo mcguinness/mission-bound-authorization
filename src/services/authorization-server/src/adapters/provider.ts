@@ -12,10 +12,12 @@ import {
   candidateHash,
   changedParts,
   currentRenderRevision,
+  decisionExpiry,
   RENDER_REVISION_HEADER,
   type RenderRevision,
   retainRenderRevision,
   retireRenderRevision,
+  serializeApprovalEvent,
   serviceRenderKey,
 } from "./approval-render-revision.js";
 import { APPROVER_LOGIN_CALLBACK_PATH, ApproverLoginError, type ApproverLoginRelyingParty } from "./approver-login.js";
@@ -3844,6 +3846,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // page shows, committed under a revision bound to the principal it is
       // rendered to, superseding that principal's earlier rendering. An
       // anonymous rendering mints no revision: no decision can rest on it.
+      // The page shows the effective `expires_at` an approval now commits,
+      // the one a decision on this revision commits.
+      const expiresAt = kernel.resolveEffectiveExpiry({ requested: intent.expires_at, createdAt: kernel.nowDate().toISOString() });
       let revision: string | undefined;
       if (rendering) {
         let rendered: ReturnType<typeof approvalContext>;
@@ -3857,6 +3862,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             clientId: String(params.client_id),
             subject: rendering.subject,
             scopeProjection: opts.scopeProjection,
+            expiresAt,
           });
         } catch (e) {
           if (e instanceof IntentError) {
@@ -3895,7 +3901,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           : undefined,
         derivation,
         ceilingOffer,
-        { ...(revision ? { revision } : {}), changed: ctx.query.changed === "1" },
+        { ...(revision ? { revision } : {}), changed: ctx.query.changed === "1", expiresAt },
       );
       return;
     }
@@ -6370,10 +6376,13 @@ async function decide(
   // the rendering its Approver was shown. The decision names that rendering's
   // revision, the latest made to this principal for this client; the context
   // is then re-established and compared with the one rendered. A change to the
-  // task, the proposal, the derived set, the authority source, or a policy
-  // input (even one that leaves every anchor equal) creates nothing and asks
-  // for a fresh decision on the page rendered again. A refusal above, for a
-  // context that no longer admits approval, takes precedence.
+  // task, the proposal, the derived set, the authority source, the effective
+  // `expires_at`, or a policy input (even one that leaves every anchor equal)
+  // creates nothing and asks for a fresh decision on the page rendered again.
+  // The rendered expiry is the one committed while the current inputs admit
+  // it, so a lifetime measured from the decision never moves it later. A
+  // refusal above, for a context that no longer admits approval, takes
+  // precedence.
   const formPost = (ctx.get("content-type") ?? "").includes("application/x-www-form-urlencoded");
   const askToReview = (error: "rendering_required" | "approval_context_changed", description: string, changed?: string[]) => {
     ctx.set("cache-control", "no-store");
@@ -6386,7 +6395,7 @@ async function decide(
     ctx.status = 409;
     ctx.body = { error, error_description: description, ...(changed ? { changed } : {}) };
   };
-  const currentContext = (derived: readonly AuthorityEntry[]) =>
+  const currentContext = (derived: readonly AuthorityEntry[], held: RenderRevision) =>
     approvalContext({
       kernel: opts.kernel,
       issuer: opts.issuer,
@@ -6396,6 +6405,7 @@ async function decide(
       clientId: String(params.client_id),
       subject,
       scopeProjection: opts.scopeProjection,
+      expiresAt: decisionExpiry(opts.kernel, (intent as MissionIntent).expires_at, held.context.expires_at),
     });
   let rendered: RenderRevision | undefined;
   if (!committedEarlier) {
@@ -6411,7 +6421,7 @@ async function decide(
     }
     let current: ReturnType<typeof approvalContext>;
     try {
-      current = currentContext(authority);
+      current = currentContext(authority, rendered);
     } catch (e) {
       if (e instanceof IntentError) {
         await finish({ error: e.code, error_description: e.message });
@@ -6420,7 +6430,7 @@ async function decide(
       throw e;
     }
     if (current.commitment !== rendered.commitment) {
-      retireRenderRevision(provider, details.uid, principalKey as string);
+      retireRenderRevision(provider, details.uid, principalKey as string, rendered.revision);
       askToReview(
         "approval_context_changed",
         "the request changed since it was rendered; review it again",
@@ -6447,16 +6457,20 @@ async function decide(
     authentication: { acr: principal.acr, auth_time: principal.auth_time, interactive },
     clientId: String(params.client_id),
     approvalEventId,
+    ...(rendered ? { renderedExpiresAt: rendered.context.expires_at } : {}),
   };
 
   // The commit, shared by the browser and device paths: the retry check, the
   // prepared approval, the reservation, the provider grant, and the record
   // bound to it, in the order above. It returns undefined when it has already
   // answered the request (a refusal or an `approval_forbidden`), having
-  // written nothing a retry cannot overwrite.
-  const commitApproval = async (): Promise<
+  // written nothing a retry cannot overwrite. It runs alone on its approval
+  // event, cleanup included (serializeApprovalEvent), and reads the event
+  // afresh once its turn comes: a decision that waited recovers a commit made
+  // meanwhile, and never writes over or destroys that commit's grant.
+  const commitApproval = (): Promise<
     { record: MissionRecord; effective: ReturnType<typeof opts.kernel.effectiveAuthoritySet> } | undefined
-  > => {
+  > => serializeApprovalEvent(provider, approvalEventId, async () => {
     const existing = opts.kernel.findByApprovalEvent(approvalEventId);
     // A retry recovers the committed approval only when it is the same decision:
     // the same Approver, Subject and client as the committed record. Anything
@@ -6551,7 +6565,7 @@ async function decide(
       const held = rendered as RenderRevision;
       let changed: string[] | undefined;
       try {
-        const now = currentContext(opts.kernel.derive(intent, proposedAuthority, scopeKey));
+        const now = currentContext(opts.kernel.derive(intent, proposedAuthority, scopeKey), held);
         const again = opts.kernel.prepareApproval(approveInput);
         const parts = changedParts(held.context, now.context);
         if (now.commitment !== held.commitment) changed = parts;
@@ -6570,7 +6584,7 @@ async function decide(
       }
       if (changed) {
         await grant.destroy();
-        retireRenderRevision(provider, details.uid, principalKey as string);
+        retireRenderRevision(provider, details.uid, principalKey as string, held.revision);
         askToReview("approval_context_changed", "the request changed while the decision was committed; review it again", changed);
         return undefined;
       }
@@ -6588,7 +6602,7 @@ async function decide(
       }
     }
     return { record, effective: opts.kernel.effectiveAuthoritySet(record) };
-  };
+  });
 
   // @spec device-authorization#approval, device-authorization#issuance
   // (#1202): the device commit. The pending re-check, the commit above and
@@ -6854,8 +6868,12 @@ function renderApprovalPage(
   derivation?: ApprovalDerivationRendering,
   /** @spec progressive#progressive-authorization: the ceiling the approval surface offers. */
   ceiling?: CeilingConsent,
-  /** @spec mission#approval-context-changes (#1446): this rendering's revision, and whether the request changed since the last. */
-  render: { revision?: string; changed?: boolean } = {},
+  /**
+   * @spec mission#approval-context-changes (#1446): this rendering's revision,
+   * whether the request changed since the last, and the effective `expires_at`
+   * an approval on it commits.
+   */
+  render: { revision?: string; changed?: boolean; expiresAt?: string } = {},
 ): string {
   // @spec mission#approval-event — the rendering distinguishes the submitted
   // proposal (untrusted client input) from the derived Authority Set (what
@@ -6950,7 +6968,7 @@ ${sourceSection}
 ${proposalSection}
 ${provenanceSection}
 <h2>Derived authority (what approval grants)</h2><pre>${escapeHtml(JSON.stringify(authority, null, 2))}</pre>
-${render.changed ? "<p><strong>The request changed since you last reviewed it. Review it again before deciding.</strong></p>\n" : ""}${limitNotice}${derivationSection}${ceilingSection}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
+${render.expiresAt ? `<h2>Mission expiry (when the approved authority ends)</h2><p><time class="mission-expires-at" datetime="${escapeHtml(render.expiresAt)}">${escapeHtml(render.expiresAt)}</time></p>\n` : ""}${render.changed ? "<p><strong>The request changed since you last reviewed it. Review it again before deciding.</strong></p>\n" : ""}${limitNotice}${derivationSection}${ceilingSection}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
 ${render.revision ? `<input type="hidden" name="render_revision" value="${escapeHtml(render.revision)}">\n` : ""}${deviceConfirmations}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`;
 }
