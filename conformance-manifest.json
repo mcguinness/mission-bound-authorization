@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
-    "content_sha256": "339c6e233e26e8920573096fe463dc51903cf5a136de15ee79c899c354529a9b"
+    "revision": "2a90309cc0694d821fe54f27c97b00705f47179a",
+    "content_sha256": "f238dff92d80d30a6a3010e01ed158a912ec650087a5e4de960c73a973581ec9"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -4020,7 +4020,7 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a submission's authority proposal is validated (type, schema, target_resources membership) after the intent object and before any evidence check"
+    "normative": "a submission's authority proposal is validated (type, schema, target_resources membership) after the envelope, with each evidence entry's structure and the size bounds (step 1), and the intent object (step 2), and before required-evidence resolution and evidence dispatch and verification"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -4050,19 +4050,13 @@
      "surface": "par"
     },
     {
-     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
-     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
-     "level": "endpoint",
-     "surface": "par"
-    },
-    {
      "file": "src/services/authorization-server/test/request-object-submission.test.ts",
      "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
      "level": "endpoint",
      "surface": "par"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification. #1512 (D625): on the Request Object path the step 2 test shows a schema failure (an entry missing its resource) and a type failure losing to an invalid Intent. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
+   "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification. #1512 (D625): on the Request Object path the step 2 test shows a schema failure (an entry missing its resource) and a type failure losing to an invalid Intent. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction. #1503 finding 12 (D620): a structurally invalid evidence entry and the evidence size bounds are step 1 checks, so they precede the proposal; the test that showed the proposal first was rewritten to the step 1 order and is cited on core.submission.step1-evidence-structure-and-bounds."
   },
   {
    "id": "core.submission.earliest-step-precedence",
@@ -4123,13 +4117,19 @@
     },
     {
      "file": "src/services/authorization-server/test/submission-precedence.test.ts",
-     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request",
      "level": "endpoint",
      "surface": "par"
     },
     {
      "file": "src/services/authorization-server/test/submission-precedence.test.ts",
-     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > refuses a missing required evidence type before the evidence entry rules (step 5 before step 6)",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a submission over a size bound together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry, or evidence over a size bound, together with a missing required evidence type is refused at step 1, with invalid_request",
      "level": "endpoint",
      "surface": "par"
     },
@@ -4156,9 +4156,15 @@
      "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > refuses a malformed proposal alone, beside a valid envelope, with invalid_authorization_details",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request, and an unsupported evidence type waits for step 6",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. Each cited test runs a combined failure beside each of its single failures as controls. #1512 (D625): the Request Object path, where the provider's RAR check runs before the extraParams validators, so the Request Object hook validates the envelope and the Intent first; its single failures are the separate envelope-only and proposal-only tests, cited as controls, and the step 2 test also carries the Intent-only case. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
+   "notes": "D559 (#1411): ruled qualified A + C. Each cited test runs a combined failure beside each of its single failures as controls. #1512 (D625): the Request Object path, where the provider's RAR check runs before the extraParams validators, so the Request Object hook validates the envelope and the Intent first; its single failures are the separate envelope-only and proposal-only tests, cited as controls, and the step 2 test also carries the Intent-only case. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction. #1503 finding 12 (D620): the step 1 tests run a structurally invalid entry or an evidence size bound beside a malformed or unsupported proposal and beside a missing required type, on the PAR form and the Request Object path."
   },
   {
    "id": "core.submission.precedence-proposal-over-missing-evidence",
@@ -4261,6 +4267,322 @@
     }
    ],
    "notes": "D559 (#1411): ruled qualified A + C. #1512 (D625): the Request Object path is cited too. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
+  },
+  {
+   "id": "core.submission.precedence-structural-evidence-over-proposal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission with an evidence entry that is not a JSON object or has no type, and a malformed authority proposal, fails invalid_request, not invalid_authorization_details"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request, and an unsupported evidence type waits for step 6",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 finding 12 (D620). Each combined case runs beside its single failures, on the PAR form and on the Request Object path. Proved by deferring the structural entry checks with type dispatch (the pre-D620 order): both tests then get invalid_authorization_details for the combined case."
+  },
+  {
+   "id": "core.submission.step1-evidence-structure-and-bounds",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Parse the Submission envelope, enforce both closed top levels and the size bounds ({{submission-via-par}}), and check that each `evidence` entry is a JSON object with a `type` member ({{intent-submission-evidence}})",
+   "facet": "evidence-structure-and-bounds",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an evidence entry that is not a JSON object or has no type, an evidence entry over the per-entry size bound, or an evidence array over the entry-count bound fails at step 1 with invalid_request, even when the authority proposal is malformed or of an unsupported type (step 3) or a required evidence type is absent (step 5); every entry's structure is checked before any entry is dispatched"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a submission over a size bound together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry, or evidence over a size bound, together with a missing required evidence type is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request, and an unsupported evidence type waits for step 6",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > checks every entry's structure before dispatching any entry (@spec mission#submission-processing, step 1 before step 6)",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 finding 12 (D620). The reference AS runs the structural pass over every entry at parse on every carrier; the PAR and Request Object intakes defer only type dispatch (deferEvidenceDispatch). Proved by: deferring the structural pass with dispatch (the step 1 structural-entry, size-bound and required-type tests and the Request Object test fail); deferring only the per-entry size check (the step 1 size-bound and required-type tests fail on their combined cases); dropping the entry-count bound (the same two tests); interleaving structure and dispatch entry by entry (the unit test fails, and together with the deferral also the step 1 structural-entry test's unsupported-type-before-untyped case)."
+  },
+  {
+   "id": "core.submission.step1-envelope-and-intent-bounds",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Parse the Submission envelope, enforce both closed top levels and the size bounds ({{submission-via-par}}), and check that each `evidence` entry is a JSON object with a `type` member ({{intent-submission-evidence}})",
+   "facet": "envelope-and-intent-bounds",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission over the envelope total size, the Intent total size, or an Intent array-length bound fails at step 1 with invalid_request, before a malformed or unsupported authority proposal",
+    "local": "the envelope total (64 KiB) and the Intent total size are not driven at the wire: the provider's 56 KiB PAR form bound refuses a larger form first. The reference AS checks the Intent's array lengths with its member validation, after the envelope; no client can tell that from step 1, since both refuse invalid_request."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a submission over a size bound together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 finding 12 (D620). The Intent array-length case (65 target_resources) is witnessed at PAR, alone and beside a malformed and an unsupported proposal; proved by dropping the target_resources length bound (the Intent-only case is then accepted)."
+  },
+  {
+   "id": "core.submission.step6-evidence-dispatch",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Dispatch each presented entry on its `type`, and validate and verify it under that type's rules ({{intent-submission-evidence}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a well-formed evidence entry of an unsupported type, or one failing its type's validation or verification, is refused after the authority proposal: a proposal failure in the same submission (a malformed or unsupported entry, or an entry outside target_resources) is refused with the proposal's error"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request, and an unsupported evidence type waits for step 6",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 finding 12 (D620): dispatch and verification stay at step 6. Proved by dispatching at parse on the PAR form intake (the proposal-before-dispatch test fails on an unknown type beside an entry outside target_resources) and in the Request Object hook (the Request Object test fails on an unsupported type beside a proposal entry missing its resource)."
+  },
+  {
+   "id": "core.submission-evidence.structural-entry-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "intent-submission-evidence",
+   "text": "An entry that is not a JSON object, or that lacks `type`, is structurally invalid and refused with the `invalid_request` error code at step 1 of the processing order ({{submission-processing}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented evidence entry that is not a JSON object, or has no type, is refused invalid_request, not invalid_mission_intent_evidence, at step 1: a malformed authority proposal or a missing required evidence type in the same submission does not change the code",
+    "local": "an entry whose type is the empty string is refused the same way"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Submission envelope carriage (@spec mission#submission-via-par, issue #506) > refuses a typeless evidence entry on the wire",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry, or evidence over a size bound, together with a missing required evidence type is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request, and an unsupported evidence type waits for step 6",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > refuses an entry without a type (and an empty-string type)",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1482 and #1503 finding 12 (D620). Proved by refusing a typeless or non-object entry with invalid_mission_intent_evidence (the rar-carriage test, the unit tests, and the step 1 structural-entry and required-type tests fail on a typeless case), by refusing only a non-object entry with that code (the same two step 1 tests fail on a non-object case), and by deferring the structural checks to step 6 (those two tests and the Request Object test fail on a combined case)."
+  },
+  {
+   "id": "core.submission-evidence.dispatch-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "intent-submission-evidence",
+   "text": "The AS MUST refuse an entry whose `type` it does not support, and an entry that fails its type's validation or verification, with the `invalid_mission_intent_evidence` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented entry of an unsupported type, an entry failing its type's validation, and an entry failing its type's verification are each refused invalid_mission_intent_evidence"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Submission envelope carriage (@spec mission#submission-via-par, issue #506) > refuses an unknown evidence type on the wire (no types are registered)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a proposed entry outside target_resources together with a presented evidence entry that fails verification is refused at step 3, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > refuses an unknown evidence type with the registered error code",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > a REGISTERED type passes stage 1 at parse; its OWN closed schema is enforced there",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "stage-2 verification (@spec mission#intent-submission-evidence) > maps EVERY verification failure to invalid_mission_intent_evidence",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1482 and #1503 finding 12 (D620). The proposal-before-dispatch test's single-failure controls carry the unsupported type and the type-validation failure, and the target_resources precedence test's control carries the verification failure. A type's validation raises its own code (the test type throws invalid_mission_intent_evidence); the AS dispatches to it and refuses. Proved by refusing an unknown type with invalid_request (the rar-carriage and unit tests fail), by skipping the type's validation (the type-validation control is then accepted, 201), and by mapping a verifier failure to invalid_request (the target_resources precedence test's control and the stage-2 unit test fail)."
+  },
+  {
+   "id": "core.conformance-roles.no-evidence-type-refusals",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "conformance-roles",
+   "text": "Such an AS refuses every presented entry under the dispatch and refusal rules ({{intent-submission-evidence}}): a structurally invalid entry with the `invalid_request` error code, and any other entry, as an unsupported type, with the `invalid_mission_intent_evidence` error code",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an AS supporting no evidence type refuses a presented entry with no type with invalid_request, and a well-formed entry, as an unsupported type, with invalid_mission_intent_evidence"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Submission envelope carriage (@spec mission#submission-via-par, issue #506) > refuses a typeless evidence entry on the wire",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Submission envelope carriage (@spec mission#submission-via-par, issue #506) > refuses an unknown evidence type on the wire (no types are registered)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > the SHIPPED registry is EMPTY: no evidence types are implemented",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1482 (D620). The reference AS ships with an empty evidence registry (the unit test), the configuration this sentence describes, and rar-carriage registers no type, so its wire tests run that configuration. Applicability is that configuration, which the applicability model cannot express; an AS supporting a type follows the same dispatch rules for every type it does not support. Proved by swapping either code (the matching rar-carriage test fails)."
   },
   {
    "id": "core.derivation.configured-mapping-scope-key",
@@ -4389,11 +4711,10 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "submission exceeding the declared evidence entry count or per-entry size fails invalid_request",
-    "local": "driven at the intake parser, not through the PAR endpoint"
+    "normative": "submission exceeding the declared evidence entry count or per-entry size fails invalid_request"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/submission-envelope.test.ts",
@@ -4406,8 +4727,21 @@
      "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > bounds the per-entry SIZE (config default, overridable)",
      "level": "unit",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a submission over a size bound together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry, or evidence over a size bound, together with a missing required evidence type is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
     }
-   ]
+   ],
+   "notes": "#1503 finding 12 (D620): the entry-count and per-entry size bounds are driven through the PAR endpoint, alone and beside a later-step failure. Proved by dropping each bound (the matching single-failure case of the step 1 size-bound test fails)."
   },
   {
    "id": "core.submission.size-bounds-envelope-and-intent",
@@ -4427,11 +4761,20 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "submission exceeding the declared envelope total size, Intent total size, or Intent array-length bounds fails invalid_request at the wire"
+    "normative": "submission exceeding the declared envelope total size, Intent total size, or Intent array-length bounds fails invalid_request at the wire",
+    "local": "Intent array length witnessed at PAR (65 target_resources). The envelope total (64 KiB) and the Intent total size are not driven at the wire: the provider's 56 KiB PAR form bound refuses a larger form first."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a submission over a size bound together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 finding 12 (D620). Proved by dropping the target_resources length bound (the Intent-only case of the step 1 size-bound test is then accepted)."
   },
   {
    "id": "core.submission.pushed-parameters-authoritative",
