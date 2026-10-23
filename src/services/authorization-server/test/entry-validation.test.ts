@@ -21,6 +21,7 @@ import { DERIVATION_POLICY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  ACTION_VALUE,
   type AuthorityEntry,
   type BuiltAs,
   buildAuthorizationServer,
@@ -150,10 +151,22 @@ describe("entry validation at PAR (@spec resource-access#entry-validation, #1376
     }
   });
 
-  it("accepts action identifiers and an action family the grammar admits (positive control)", async () => {
+  it("accepts action identifiers the grammar admits (positive control)", async () => {
     await expectAccepted(entry({ actions: [READ, "payments:invoice.list"] }));
-    await expectAccepted(entry({ actions: ["payments:invoice.*"] }));
     await expectAccepted(entry({ actions: ["A_z-0.9:x"] }));
+  });
+
+  // @spec resource-access#subset (#1377, D538, D684): the grammar admits an
+  // action family, so the grammar check passes it; this implementation refuses
+  // it as unsupported input instead, naming it, before any interaction.
+  it("refuses an action family the grammar admits as unsupported input, not as a grammar violation, creating no Mission (#1377)", async () => {
+    expect(ACTION_VALUE.test("payments:invoice.*")).toBe(true);
+    for (const actions of [["payments:invoice.*"], [READ, "payments:invoice.*"]]) {
+      await expectRefused(
+        entry({ actions }),
+        /^payments:invoice\.\* is an action family, which this authorization server does not support; refusing it as unsupported input$/,
+      );
+    }
   });
 
   it("refuses a negative or fractional delegation.max_depth", async () => {
