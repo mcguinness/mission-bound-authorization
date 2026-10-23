@@ -392,24 +392,19 @@ subset of that Mission's invoice-read entry:
 ## The `mission` Claim {#mission-claim}
 
 The grant's `mission` claim is the issuance profile's `mission` claim
-object, whose `id` and `issuer` members the issuance profile defines
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Claim").
-This profile requires two further members:
+object ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+Claim"), with two members that object does not otherwise require:
 
-- **`expires_at`.** The issuance profile defines `expires_at` as a
-  REQUIRED Mission Record member and an OPTIONAL member of the
-  `mission` claim it mirrors. This profile elevates the claim mirror
-  to REQUIRED for the credentials it governs. The Lifetime rule
-  ({{token-issuance}}) depends on that elevation: it caps every token
-  issued under the grant at the `mission` object's `expires_at`.
+- **`expires_at`.** REQUIRED here, although OPTIONAL in the issuance
+  profile's claim. The Lifetime rule ({{token-issuance}}) caps every
+  token issued under the grant at this value.
 - **`authority_hash`.** The `mission` object MUST carry
   `authority_hash` ({{I-D.draft-mcguinness-oauth-mission}}, Section
-  "Integrity Anchors"), reintroducing it beyond the issuance profile's
-  baseline claim as this profile's lineage anchor: it names the
-  approved Authority Set the grant derives from, for a consuming AS
-  that, without a Mission-state integration, has no further channel
-  back to the Mission Issuer once it holds the grant. The consuming
-  AS records it with each issuance ({{token-issuance}}) and does not
+  "Integrity Anchors"), which the issuance profile's baseline claim
+  omits. It names the approved Authority Set the grant derives from,
+  for a consuming AS that, without a Mission-state integration, has
+  no other channel back to the Mission Issuer. The consuming AS
+  records it with each issuance ({{token-issuance}}) and does not
   verify it.
 
 # Obtaining a Grant {#minting}
