@@ -1452,9 +1452,9 @@ to the Mission being continued. Each transport <span class="bcp14">MUST</span> i
 hop through a reference that resolves to the Mission's rooting anchor.
 Possession of that reference alone <span class="bcp14">MUST NOT</span> be treated as evidence that
 the Mission's work remains authorized. The reference can be a
-continuation handle, which is not a credential (<a href="#invariant" class="auto internal xref">Section 5</a>), or a
-credential the transport defines, such as the async delegation
-transport's refresh token (<a href="#transport-async" class="auto internal xref">Section 6.2</a>). Every transport, whatever
+continuation handle, which is not a credential (<a href="#conventions" class="auto internal xref">Section 2</a>), or a
+credential the transport defines, such as a refresh token
+(<a href="#transport-async" class="auto internal xref">Section 6.2</a>, <a href="#transport-xdomain" class="auto internal xref">Section 6.3</a>). Every transport, whatever
 its wire mechanism, also <span class="bcp14">MUST</span>:<a href="#section-6-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6-2.1">
@@ -1559,16 +1559,16 @@ when the Mission reaches a terminal state, reusing that draft's
 family-revocation and reuse-detection rules with the Mission lifecycle as
 the trigger.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
 <p id="section-6.2-2">This transport's reference (<a href="#transports" class="auto internal xref">Section 6</a>) is the presented refresh
-token. It resolves through its family's delegated authorization state
-(<span><a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05#section-4.3" class="relref">Section 4.3</a> of [<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>) to the
-Mission's rooting anchor, the family's grant binding. Rotation
-(<span><a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05#section-6" class="relref">Section 6</a> of [<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>) preserves that
-state, and the issuance profile resolves the family, one grant
-lineage, to the same Mission for its whole lifetime
+token. It is bound to its family's delegated authorization state
+(Sections <a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05#section-4.3" class="relref">4.3</a> and <a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05#section-4.4" class="relref">4.4</a> of <span>[<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>), through
+which it resolves to the Mission's rooting anchor, the family's grant
+binding. Rotation (<span><a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05#section-6" class="relref">Section 6</a> of [<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>)
+preserves that state, and the issuance profile resolves the family,
+one grant lineage, to the same Mission for its whole lifetime
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Binding the Mission
-to the Grant"). The refresh token is a
-credential, not a continuation handle, protected by that draft's client
-binding (<span><a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05#section-5.2" class="relref">Section 5.2</a> of [<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>).<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+to the Grant"). The refresh token is a credential, not a continuation
+handle, protected by that draft's client binding
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05#section-5.2" class="relref">Section 5.2</a> of [<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>).<a href="#section-6.2-2" class="pilcrow">¶</a></p>
 <p id="section-6.2-3">The exchange's <code>subject_token</code> is a delegation handle (Section 4.3 of
 <span>[<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>): an access token whose
 audience is the acting client's own <code>client_id</code>, sender-constrained to
@@ -1654,13 +1654,15 @@ token into it.<a href="#section-6.2-10" class="pilcrow">¶</a></p>
 cross-boundary transport: a single-hop grant that carries a Mission into a
 partner trust domain, where a Resource Authorization Server mints a local
 token bounded by the projected authority. This profile adds nothing to
-projection's wire. Its reference (<a href="#transports" class="auto internal xref">Section 6</a>) is the cross-domain
-grant, a credential whose <code>mission</code> claim names the originating Mission
-and which is issued only against that Mission's refresh token
+projection's wire. Its reference (<a href="#transports" class="auto internal xref">Section 6</a>) is the Mission's
+refresh token, which the projection exchange presents as its
+<code>subject_token</code> and which resolves to exactly one Mission. The
+cross-domain grant it yields is the continued grant, and carries the
+<code>mission</code> claim naming that Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). It requires that
 a Mission continued in the partner domain remains subject to this
-profile there: continuation handles minted
-in the partner domain grant nothing, and continued grants re-derive a
+profile there: continuation handles minted in the partner domain grant
+nothing, and continued grants re-derive a
 subset of the projected authority under the partner's state view.
 Projection stays single-hop regardless of intra-domain continuation on
 either side of the boundary.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
@@ -1678,7 +1680,7 @@ produces execution evidence and a Mission Receipt
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), recorded against the Mission.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">Under this profile that evidence <span class="bcp14">MUST</span> additionally record the continuation
-hop reference: the continued credential's <code>jti</code> and the Mission lineage it
+hop's identifiers: the continued credential's <code>jti</code> and the Mission lineage it
 carries (the <code>mission</code> claim's parent lineage or the resolved continuation
 handle). An action taken through a continuation therefore attributes to
 both the Mission that authorized it and the specific hop that carried the
@@ -1726,17 +1728,18 @@ with every requesting-party token re-passing fresh assessment.<a href="#section-
       </h2>
 <p id="section-9-1">Continuation handle theft yields no authority. Because a continuation
 handle grants nothing (<a href="#invariant" class="auto internal xref">Section 5</a>), an attacker who steals one
-cannot obtain a
-continued grant without also satisfying the transport's identity
-re-establishment and key confirmation and passing the Mission's live state
-gate. This is the property that makes conveying a continuation handle
-through an intermediary safe: the intermediary gains no ability to act.
+cannot obtain a continued grant without also satisfying the transport's
+identity re-establishment and key confirmation and passing the Mission's
+live state gate. This is the property that makes conveying a
+continuation handle through an intermediary safe: the intermediary
+gains no ability to act.
 A delegation handle does carry authority, and its sender constraint
 (<a href="#transport-async" class="auto internal xref">Section 6.2</a>) withholds that authority from a holder without
-the acting client's key. Neither statement extends to the async
-delegation transport's refresh token, which is a credential: a stolen
-refresh token protected only as a bearer credential can mint access
-tokens until detection, revocation or expiry
+the acting client's key. Neither the handle-theft claim nor the
+safe-intermediary claim extends to a transport reference that is a
+credential, such as a refresh token: a stolen refresh token protected
+only as a bearer credential can mint access tokens until detection,
+revocation or expiry
 (<span><a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05#section-11" class="relref">Section 11</a> of [<a href="#I-D.draft-zhu-oauth-async-delegation" class="cite xref">I-D.draft-zhu-oauth-async-delegation</a>]</span>).<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9-2">Revocation latency for a continuation is bounded by the shorter of the
 continued credential's remaining lifetime and the transport's re-issuance
@@ -1903,10 +1906,11 @@ constrains their use and introduces none of its own.<a href="#section-11-1" clas
 accepted hop through a reference that resolves to the Mission's
 rooting anchor, and forbids treating possession of that reference
 alone as evidence that the work remains authorized. The reference no
-longer has to be a non-credential: the async delegation transport's
-reference is its refresh token, and the cross-domain transport's is the
-cross-domain grant. This is a normative applicability correction; the
-Grants-Nothing Invariant is unchanged (#1588).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+longer has to be a non-credential: the async delegation and
+cross-domain transports' references are refresh tokens. This is a
+normative applicability correction; the Grants-Nothing Invariant is
+unchanged (#1588). Execution-Time Evidence names the continuation
+hop's identifiers, so the term does not read as that reference.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
           <p id="appendix-A-2.2.1">The async transport's handle is called a delegation handle, an
