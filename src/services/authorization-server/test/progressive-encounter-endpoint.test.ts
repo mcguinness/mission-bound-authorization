@@ -1041,6 +1041,25 @@ describe("the encounter's approval page (@spec discovery#adjudication, discovery
     );
   });
 
+  it("a high-consequence encounter's page presents the declaration as the resource's claim, not as fact", async () => {
+    connections.set(ORIGIN, { tls_authenticated: true, metadata: METADATA });
+    authorizedIssuers.add(`${ORIGIN} ${VENDOR_AS}`);
+    const declaration = declarationOf(["payments:invoice.list"]);
+    declarations.set(ORIGIN, declaration);
+    const previous = PROGRESSIVE.actionClasses;
+    PROGRESSIVE.actionClasses = { ...previous, "payments:invoice.list": "irreversible_action" } as ProgressiveDrawdownOptions["actionClasses"];
+    try {
+      const { html } = await encounterPage("payments:invoice.list");
+      expect(one(html, /<p class="encounter-floors">([\s\S]*?)<\/p>/)).toContain("<code>irreversible_action</code>");
+      expect(html).toContain("<h3>Declaration (the resource's claim, not verified fact)</h3>");
+      expect(one(html, /<p class="declaration-claim">([\s\S]*?)<\/p>/)).toBe(
+        `Claimed by the resource and not verified: digest <code>${catalogDigest(declaration)}</code>; claimed operations: <code>payments:invoice.list</code>`,
+      );
+    } finally {
+      PROGRESSIVE.actionClasses = previous;
+    }
+  });
+
   it("an encounter whose identity could not be pinned, with no declaration, is shown as such", async () => {
     const { html, facts } = await encounterPage("payments:invoice.read");
     expect(facts.pinned).toBe(false);

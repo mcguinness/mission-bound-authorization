@@ -2118,6 +2118,23 @@ describe("the expansion deferral's approval page (@spec expansion#completion-mod
     const conditionShown = JSON.parse((discharged as string).match(/<pre class="discharged-condition">([\s\S]*?)<\/pre>/)?.[1] as string);
     expect(entryShown).toEqual(entry);
     expect(conditionShown).toEqual(CLOSE);
+    expect(items(html, "review-discharged")[0]).toBe(
+      `Entries discharged: <code>${RESOURCE}</code> (<code>payments:invoice.list</code>)`,
+    );
+  });
+
+  it("a review record changed since rendering approves nothing: here an escalation landing in between", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    const d1 = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
+    const code = await openFreshApproval(d1.mission_id, d1.access_token, [...READ_LIST, VENDOR]);
+    const headers = login(code);
+    const first = await page(code, headers);
+    // Another widening of the chain escalates to a human: the record now lists two escalations.
+    await openFreshApproval(d1.mission_id, d1.access_token, [...READ_LIST, VENDOR, "payments:invoice.read"]);
+    const stale = await decide(code, headers, { decision: "approve", render_revision: first.revision });
+    expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+    expect(stale.json.changed).toEqual(["review"]);
+    expect((await poll(code)).body.error).toBe("authorization_pending");
   });
 
   it("shows the re-consent offer as at the initial approval; a re-consent consents only that offer, never one the decision supplies", async () => {
@@ -2169,10 +2186,12 @@ describe("the expansion deferral's approval page (@spec expansion#completion-mod
     const since = get(root.missionId).ceiling_consented_at as string;
     const d1 = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
     const code = await openFreshApproval(d1.mission_id, d1.access_token, [...READ_LIST, VENDOR]);
-    // Approved with a re-consent some time after rendering: the record's hourly rate moves, the record does not.
+    // More than a second after the consent, so the record's hourly rate moves between rendering and
+    // decision: the record is committed, its rate is not.
+    await new Promise((r) => setTimeout(r, 1_100));
     const { html, successor } = await approveThroughPage(code, { reconsent: true });
     expect(html).toContain(`The chain's record since the latest ceiling consent (<time datetime="${since}">`);
-    expect(items(html, "review-drawdowns")[0]).toMatch(/^Policy-adjudicated drawdowns: 1 \(/);
+    expect(items(html, "review-drawdowns")[0]).toMatch(/^Policy-adjudicated drawdowns: 1 \([\d.]+ per hour\)$/);
     expect(items(html, "review-escalations")[0]).toContain("external_communication");
     expect(items(html, "review-refusals")[0]).toBe("Refused as out of ceiling: none");
     expect(successor.ceiling_consented_at).not.toBe(since);
@@ -2316,6 +2335,15 @@ describe("the expansion deferral page's refusals (@spec expansion#completion-mod
     const shown = await page(second.code, bob2.cookie);
     expect((await decide(second.code, bob2, { decision: "approve", render_revision: shown.revision })).status).toBe(200);
     expect((await decide(second.code, bob2, { decision: "deny" })).status).toBe(400);
+    // The store records nothing on an approved deferral either.
+    expect(as.expansionDeferrals.denyPending(second.code)).toBe(false);
+    expect(
+      as.expansionDeferrals.approve(second.code, {
+        approver: { iss: ISSUER, sub: "bob" },
+        approvalEventId: `apev-${crypto.randomUUID()}`,
+        approvedUntil: FAR_EXP,
+      }),
+    ).toBe(false);
     expect((await poll(second.code)).status).toBe(200);
   });
 
@@ -2332,6 +2360,42 @@ describe("the expansion deferral page's refusals (@spec expansion#completion-mod
       expect((await poll(code)).body.error).toBe("authorization_pending");
     } finally {
       (DERIVATION_POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = before;
+    }
+  });
+
+  it("the approval-authentication floor applies to the successor's authority: a login below it, or a headless service, is refused", async () => {
+    const { code } = await pending([...READ, "payments:payment.execute"]);
+    const weak = browserApprovalHeaders(store(), code, { ...BOB, acr: "password" }, "");
+    const shown = await page(code, weak.cookie);
+    expect(shown.status).toBe(200);
+    const refused = await decide(code, weak, { decision: "approve", render_revision: shown.revision });
+    expect(refused.status, JSON.stringify(refused.json)).toBe(403);
+    expect(refused.json.error).toBe("access_denied");
+    const service = trustedApprovalHeaders("bob", { approver_acr: "mfa" }, "alice");
+    const serviceShown = await fetch(`${ISSUER}/expansions/deferrals/${code}`, { headers: service });
+    const byService = await decide(code, service, { decision: "approve", render_revision: serviceShown.headers.get("x-approval-render-revision") });
+    expect(byService.status, JSON.stringify(byService.json)).toBe(403);
+    expect((await poll(code)).body.error).toBe("authorization_pending");
+    const strong = browserApprovalHeaders(store(), code, BOB, "");
+    const again = await page(code, strong.cookie);
+    expect((await decide(code, strong, { decision: "approve", render_revision: again.revision })).status).toBe(200);
+  });
+
+  it("a derived successor set changed since rendering approves nothing", async () => {
+    const { code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const first = await page(code, bob.cookie);
+    const given = structuredClone(DERIVATION_POLICY.ceiling);
+    for (const e of DERIVATION_POLICY.ceiling) {
+      (e as { actions: string[] }).actions = (e as { actions: string[] }).actions.filter((a) => a !== VENDOR);
+    }
+    try {
+      const stale = await decide(code, bob, { decision: "approve", render_revision: first.revision });
+      expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+      expect(stale.json.changed).toEqual(["successor_hash"]);
+      expect((await poll(code)).body.error).toBe("authorization_pending");
+    } finally {
+      DERIVATION_POLICY.ceiling.forEach((e, i) => Object.assign(e, structuredClone(given[i])));
     }
   });
 
