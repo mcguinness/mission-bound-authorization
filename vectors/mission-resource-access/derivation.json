@@ -474,6 +474,91 @@
         "#1258 item 7",
         "#1266"
       ]
+    },
+    {
+      "id": "der-mem-01",
+      "description": "A proposal entry carries a top-level member no specification defines for this type",
+      "role": "authorization-server",
+      "requires": [
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "member.x_member"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ],
+            "x_member": [
+              "v"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an unsupported member is refused, never dropped to manufacture a subset",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "der-fam-01",
+      "description": "A proposal names an action family on a consumer that does not implement action families",
+      "role": "authorization-server",
+      "requires": [
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "action-families"
+      ],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://api.example/orders",
+            "actions": [
+              "invoices.*"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an action family is unsupported input where the family clauses are not implemented (D684)",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
     }
   ]
 }
