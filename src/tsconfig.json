@@ -9,6 +9,7 @@
     { "path": "packages/mission-signals" },
     { "path": "packages/orchestration" },
     { "path": "packages/aauth-wire" },
+    { "path": "packages/resource-access-subset-consumer" },
     { "path": "services/authorization-server" },
     { "path": "services/pdp" },
     { "path": "services/mcp-payments" },

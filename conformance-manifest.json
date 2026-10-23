@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "814a3b44db05cc3aefb8cad9b8e8c28540cda0f9",
-    "content_sha256": "b807285532ec41b0d20d66ba61b8c55644d366ab97c0ccac4212ca3cff28d33d"
+    "revision": "b439eaa13c3946d06a8be99cd922a8b7804cb8c2",
+    "content_sha256": "9b36efa07465e2134227cb9793901b76ba97f95b93ecd0327afed89819411b14"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "24fc25962caf421d01e5df49f2916f2b7270e2b7",
@@ -83,8 +83,8 @@
     "content_sha256": "44d6ef289a0c6cbdff9af48520ae48056a55052f037bdfe5dd16938ec88460d6"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "20ed6acae1c19daf8058d52c00b5ecf6ac133a85",
-    "content_sha256": "d072899f6efa62600298b14b8f6de417b5be7c29641fbe4ed62882087cb527b0"
+    "revision": "0625eefa41cd6736e499347f7de35918e561a7e8",
+    "content_sha256": "55160598c34228822eab6bbb1078f23a9a38f1367c9d621971c062f1adc467c5"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
@@ -38822,6 +38822,86 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
   },
   {
+   "id": "issuance-grant.redemption-errors.resume-retry-permitted",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "redemption-errors",
+   "text": "The consuming AS does not treat that earlier refusal as grounds to refuse the retry.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a resume returns a suspended Mission to active, a refresh presenting the same still-valid refresh token that was refused during the suspension is not refused for that earlier refusal: the consuming AS applies the usual refresh checks, which can still refuse it",
+    "local": "the native AS runs the Mission gate without counting inside rotateRefreshToken, before oidc-provider consumes the presented token (provider.ts preCheckRefreshMissionState, #914), on both the rotating approval grant and the delegation-family grant, so a refresh refused while suspended consumes nothing and the same token refreshes after the resume. With the pre-check disabled and the tests' earlier no-save assertions muted, the post-resume refresh of the same token fails as reuse (400 invalid_grant) in both tests"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > rotating approval grant: a refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > delegation-family grant: a family refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Added for #1583 (D702 option a, D707). Witnessed on the native AS's own refresh paths, following #963's precedent for native-AS witnesses; this repository has no issuance-grant redemption path. Partial rather than tested: the pre-check leaves a window (#250) in which a suspension landing between the pre-check and the save-time gate is refused after rotation, so that token is spent and its retry after the resume is reuse (the residual test in the same file records it)."
+  },
+  {
+   "id": "issuance-grant.redemption-errors.resume-restores-nothing",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "redemption-errors",
+   "text": "a resume restores no authority that an earlier issuance removed",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a refresh after a resume is bounded by the family ceiling as an earlier issuance in the family last narrowed it: the resume restores none of the authority that issuance removed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #1583 (D702, D707). Todo: no test narrows a refresh family, suspends and resumes its Mission, and checks the next refresh's authority; the widening rule itself is Section Refresh's."
+  },
+  {
+   "id": "issuance-grant.redemption-errors.terminated-family-refused",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "redemption-errors",
+   "text": "The consuming AS refuses every later refresh in a refresh family bound to that Mission.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "once a Mission is terminated or its expires_at has passed, every later refresh in a refresh family bound to it is refused invalid_grant; this profile requires no revocation beyond that refusal"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #1583 (D702, D707). No native test is cited: the native AS refuses such a refresh through several enforcers (the kernel's active gate, the Lifecycle endpoint's grant destruction, the durable delegation-family revocation and the synchronous family projection). A mutation disabling the first three still refused the refreshes in lifecycle-revoke-only.test.ts and scope-projection.test.ts, so no test is yet shown to witness the refusal by itself."
+  },
+  {
    "id": "issuance-grant.mission-state-source.consistent-version",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "mission-state-source",
@@ -61421,6 +61501,72 @@
    "notes": "Added with the #1569 review of the D685 rulings (Q2 detail): the client assertion's aud is the MAS issuer identifier as its sole value, as Mission Status requires. The reference serves no mission submission endpoint; the join-assertion endpoint in open #1554 still checks the endpoint audience, so its witness lands once #1554 adopts the issuer audience. todo until then."
   },
   {
+   "id": "mas.submission.json-client-assertion",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "The MAS MUST remove them, and authenticate the request with them, before it validates the rest of the body",
+   "facet": "private-key-jwt",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a private-key-JWT client sends client_assertion_type and client_assertion as top-level JSON string members of the intent-submission body; the MAS removes them and authenticates with them before it validates the envelope, so they are never refused as undefined members and a partial or unverifiable pair gets invalid_client; they never appear in the Intent, the authority proposal, proposal_hash, the integrity anchors or submission evidence; the authenticated client is recorded as the Mission's client_id; and any other undefined top-level member is still refused invalid_mission_intent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #1581 (D702 scope, D707: the fields stay out of the envelope, the Intent and their commitments, while the authenticated client identity is still recorded). Todo: the reference serves no MAS submission endpoint."
+  },
+  {
+   "id": "mas.submission.json-client-id-mtls",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "The MAS MUST remove them, and authenticate the request with them, before it validates the rest of the body",
+   "facet": "mtls-client-id",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client authenticating by mTLS sends client_id as a top-level JSON string member of the intent-submission body; the MAS removes it and authenticates with it before it validates the envelope, so it is never refused as an undefined member and never enters the Intent or its commitments, and the client the certificate authenticates is recorded as the Mission's client_id"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #1581 (D702: mutual-TLS carriage coverage stays separate from the private-key-JWT witnesses). Todo: the reference serves no MAS submission endpoint, and mTLS client authentication (tls_client_auth) is implemented nowhere in src."
+  },
+  {
+   "id": "mas.submission.unparseable-before-auth",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "an intent-submission or join-assertion request whose JSON body cannot be parsed as an object is refused before authentication",
+   "facet": "submission-endpoint",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "after request media-type dispatch, an intent submission whose application/json body is not valid JSON, or is valid JSON but not an object, is refused invalid_mission_intent before client authentication, so an unauthenticated caller gets the syntax code, not invalid_client or unauthorized; a body that parses as an object is authenticated before its remaining members are validated, so missing required members, unknown members and invalid member values are refused only after authentication; a form-encoded submission-status request and the HTTP 415 rule are unaffected"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #1581's open question 1, following D704's parsing exception at the Mission Status and Lifecycle endpoints; kept by D713 with its scope narrowed to JSON operations after media-type dispatch. Todo: the reference serves no MAS submission endpoint."
+  },
+  {
    "id": "mas.join-assertion.assertion-audience",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-assertion",
@@ -61455,6 +61601,97 @@
     }
    ],
    "notes": "Added with the #1569 review of the D685 rulings (Q2 detail); witnessed by #1554 once it adopted the issuer audience. Mutation-proved: restoring the endpoint audience fails both tests, and accepting the issuer inside a multi-valued aud fails the refusal test."
+  },
+  {
+   "id": "mas.join-assertion.json-client-assertion",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion",
+   "text": "The request body carries the client authentication parameters as at the mission submission endpoint ({{mission-submission}})",
+   "facet": "private-key-jwt",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a join-assertion caller authenticating by private-key JWT sends client_assertion_type and client_assertion as top-level JSON string members of the request body; the MAS authenticates the caller from them before it validates the join request, a partial or unverifiable pair gets invalid_client, and the join-request validation (invalid_join_request) applies to the remaining members",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts handle) reads client_assertion_type, client_assertion and client_id from the parsed JSON object and authenticates through Mission Status's authenticator before parseJoinAssertionRequest runs. With the pair dropped from the names it reads, the issuer-audienced assertion is no longer presented and both accepting tests get 400 invalid_client instead of an assertion"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > accepts a client assertion whose aud is the MAS issuer identifier as its sole value, as a string or a one-element array, as at Mission Status",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion artifact (@spec authority-server#join-assertion-artifact, #1454) > mints a sender-bound assertion for an enrolled PDP: typ, a listed alg, iss, mission, token with its one confirmation, join, aud, mapping_version",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Added for #1581 (D702, D707). Partial: the tests observe authentication from the JSON pair and the refusal of an unverifiable assertion (mas.join-assertion.assertion-audience), but no test sends a partial pair."
+  },
+  {
+   "id": "mas.join-assertion.json-client-id-mtls",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion",
+   "text": "The request body carries the client authentication parameters as at the mission submission endpoint ({{mission-submission}})",
+   "facet": "mtls-client-id",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a join-assertion caller authenticating by mTLS sends client_id as a top-level JSON string member of the request body; the MAS authenticates with it before it validates the join request, and the join-request validation applies to the remaining members"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #1581 (D702: mutual-TLS carriage coverage stays separate). Todo: the reference implements no mTLS caller authentication at the join-assertion endpoint, and the private-key-JWT witnesses do not cover it."
+  },
+  {
+   "id": "mas.join-assertion.unparseable-before-auth",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "an intent-submission or join-assertion request whose JSON body cannot be parsed as an object is refused before authentication",
+   "facet": "join-assertion-endpoint",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a join-assertion request whose JSON body is not valid JSON, or is valid JSON but not an object, is refused invalid_join_request before caller authentication, so an unauthenticated caller gets the syntax code, not invalid_client or unauthorized; a body that parses as an object is authenticated before its remaining members are validated, so missing required members, unknown members and invalid member values are refused only after authentication",
+    "local": "join-assertion.ts handle refuses a body JSON.parse rejects before it calls the authenticator. With an authentication attempt inserted before that refusal, the test's unauthenticated 'not JSON' case gets invalid_client instead of invalid_join_request"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses a body that is not a JSON object carrying mission_id, a string audience and exactly one token form invalid_join_request (HTTP 400)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Added for #1581's open question 1 (see mas.submission.unparseable-before-auth; kept by D713). Partial: the test sends an unauthenticated body that is not JSON; no unauthenticated case sends valid JSON that is not an object, or an object with missing, unknown or invalid members."
   },
   {
    "id": "mas.errors.invalid-client",

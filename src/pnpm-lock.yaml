@@ -204,6 +204,8 @@ importers:
         specifier: workspace:*
         version: link:../../services/mcp-payments
 
+  packages/resource-access-subset-consumer: {}
+
   packages/store:
     dependencies:
       better-sqlite3:
