@@ -118,11 +118,11 @@ describe("decimal values (resource-access#decimal-values)", () => {
     expect(subsetCheck(amount("500"), amount("500.000000000000000000")).outcome).toBe("subset");
   });
 
-  it("refuses a malformed amount at intake and fails closed in comparison", () => {
+  it("refuses a malformed amount at intake and in comparison", () => {
     for (const v of ["1e300", "-5", "NaN", "1.0000000000000000001"]) {
       expect(validate(amount(v)), v).toBe("refuse");
-      expect(subsetCheck(amount(v), amount("1000")).outcome, v).toBe("not-subset");
-      expect(subsetCheck(amount("1"), amount(v)).outcome, v).toBe("not-subset");
+      expect(subsetCheck(amount(v), amount("1000")).outcome, v).toBe("refuse");
+      expect(subsetCheck(amount("1"), amount(v)).outcome, v).toBe("refuse");
     }
   });
 
@@ -280,19 +280,15 @@ describe("unsupported input is refused, never dropped", () => {
     }
   });
 
-  it("fails a subset comparison closed on input outside the subset in either entry", () => {
+  it("refuses a subset comparison on input outside the subset in either entry", () => {
     const plain = { ...base };
-    expect(subsetCheck({ ...base, resource_match: "prefix" }, plain).outcome).toBe("not-subset");
-    expect(subsetCheck(plain, { ...base, resource_match: "prefix" }).outcome).toBe("not-subset");
-    expect(subsetCheck(plain, { ...base, actions: ["payments:invoice.*"] }).outcome).toBe(
-      "not-subset",
-    );
+    expect(subsetCheck({ ...base, resource_match: "prefix" }, plain).outcome).toBe("refuse");
+    expect(subsetCheck(plain, { ...base, resource_match: "prefix" }).outcome).toBe("refuse");
+    expect(subsetCheck(plain, { ...base, actions: ["payments:invoice.*"] }).outcome).toBe("refuse");
     expect(subsetCheck({ ...base, constraints: { x_unknown: true } }, plain).outcome).toBe(
-      "not-subset",
+      "refuse",
     );
-    expect(subsetCheck(plain, { ...base, constraints: { vendors: ["v"] } }).outcome).toBe(
-      "not-subset",
-    );
+    expect(subsetCheck(plain, { ...base, constraints: { vendors: ["v"] } }).outcome).toBe("refuse");
   });
 
   it("checks type and resource_match values", () => {
@@ -300,6 +296,121 @@ describe("unsupported input is refused, never dropped", () => {
     expect(validate({ ...base, resource_match: "EXACT" })).toBe("refuse");
     expect(validate({ resource: RESOURCE, actions: ["a"] })).toBe("refuse");
     expect(validate({ ...base, type: "other_type" })).toBe("refuse");
+  });
+});
+
+describe("the subset check's three outcomes (vectors README, Checks, subset; D727)", () => {
+  interface Entry extends Record<string, unknown> {
+    readonly resource: string;
+    readonly actions: readonly string[];
+    readonly constraints?: Record<string, unknown>;
+  }
+  const plain: Entry = { ...base };
+  const withConstraints = (e: Entry, added: Record<string, unknown>): Entry => ({
+    ...e,
+    constraints: { ...(e.constraints ?? {}), ...added },
+  });
+
+  // Input outside the subset: valid under the draft, unsupported here.
+  const unsupported: Record<string, (e: Entry) => Entry> = {
+    "prefix resource_match": (e) => ({ ...e, resource_match: "prefix" }),
+    "action family": (e) => ({ ...e, actions: [...e.actions, "payments:invoice.*"] }),
+    "unknown member": (e) => ({ ...e, x_member: ["v"] }),
+    "delegation member": (e) => ({ ...e, delegation: { max_depth: 1 } }),
+    "unknown constraints key": (e) => withConstraints(e, { x_unknown: "v" }),
+    "deployment-defined key": (e) => withConstraints(e, { vendors: ["v1"] }),
+    "Discharge key": (e) => withConstraints(e, { terminal_when: "done" }),
+  };
+  // Input the draft makes invalid, which no comparison may parse.
+  const invalid: Record<string, (e: Entry) => Entry> = {
+    "malformed amount": (e) =>
+      withConstraints(e, { max_amount: { amount: "1,000.00", currency: "USD" } }),
+    "inverted window": (e) =>
+      withConstraints(e, {
+        time_window: { not_before: "2026-06-01T00:00:00Z", not_after: "2026-01-01T00:00:00Z" },
+      }),
+    locations: (e) => ({ ...e, locations: [e.resource] }),
+    "malformed resource_contract": (e) => ({
+      ...e,
+      resource_contract: { ...reference, digest: "sha-256:short" },
+    }),
+    "empty actions": (e) => ({ ...e, actions: [] }),
+  };
+  const uncomparable = { ...unsupported, ...invalid };
+
+  it("refuses unsupported input in the candidate alone, the reference alone, or both", () => {
+    for (const [name, taint] of Object.entries(unsupported)) {
+      expect(subsetCheck(taint(plain), plain).outcome, `candidate: ${name}`).toBe("refuse");
+      expect(subsetCheck(plain, taint(plain)).outcome, `reference: ${name}`).toBe("refuse");
+      expect(subsetCheck(taint(plain), taint(plain)).outcome, `both: ${name}`).toBe("refuse");
+    }
+    for (const [a, taintA] of Object.entries(unsupported)) {
+      for (const [b, taintB] of Object.entries(unsupported)) {
+        expect(subsetCheck(taintA(plain), taintB(plain)).outcome, `${a} under ${b}`).toBe("refuse");
+      }
+    }
+  });
+
+  it("refuses invalid input in either operand or both", () => {
+    for (const [name, taint] of Object.entries(invalid)) {
+      expect(subsetCheck(taint(plain), plain).outcome, `candidate: ${name}`).toBe("refuse");
+      expect(subsetCheck(plain, taint(plain)).outcome, `reference: ${name}`).toBe("refuse");
+      expect(subsetCheck(taint(plain), taint(plain)).outcome, `both: ${name}`).toBe("refuse");
+    }
+    expect(subsetCheck("not an entry", plain).outcome).toBe("refuse");
+    expect(subsetCheck(plain, null).outcome).toBe("refuse");
+  });
+
+  // Valid pairs that fail the relation, most without the candidate being
+  // broader than the reference.
+  const usd = (a: string) => ({ max_amount: { amount: a, currency: "USD" } });
+  const eur = (a: string) => ({ max_amount: { amount: a, currency: "EUR" } });
+  const mismatches: Record<string, readonly [Entry, Entry]> = {
+    "different resources": [{ ...base, resource: "https://other.example/mcp" }, plain],
+    "disjoint actions": [{ ...base, actions: ["payments:payment.execute"] }, plain],
+    "different currencies": [withConstraints(plain, eur("1")), withConstraints(plain, usd("100"))],
+    "a reference key the candidate omits": [plain, withConstraints(plain, { tenant: "acme" })],
+    "a removed resource_contract": [plain, { ...base, resource_contract: { ...reference } }],
+  };
+
+  it("answers not-subset for valid, supported inputs that fail the relation", () => {
+    for (const [name, [a, b]] of Object.entries(mismatches)) {
+      expect(subsetCheck(a, b).outcome, name).toBe("not-subset");
+    }
+    // Disjoint actions and different currencies fail in both directions:
+    // neither operand is a superset of the other.
+    const read = plain;
+    const execute: Entry = { ...base, actions: ["payments:payment.execute"] };
+    expect(subsetCheck(read, execute).outcome).toBe("not-subset");
+    expect(subsetCheck(execute, read).outcome).toBe("not-subset");
+    const inUsd = withConstraints(plain, usd("100"));
+    const inEur = withConstraints(plain, eur("100"));
+    expect(subsetCheck(inUsd, inEur).outcome).toBe("not-subset");
+    expect(subsetCheck(inEur, inUsd).outcome).toBe("not-subset");
+  });
+
+  it("never lets an obvious mismatch conceal input it cannot compare in either operand", () => {
+    for (const [mismatch, [a, b]] of Object.entries(mismatches)) {
+      for (const [name, taint] of Object.entries(uncomparable)) {
+        expect(subsetCheck(taint(a), b).outcome, `${mismatch}, candidate: ${name}`).toBe("refuse");
+        expect(subsetCheck(a, taint(b)).outcome, `${mismatch}, reference: ${name}`).toBe("refuse");
+        expect(subsetCheck(taint(a), taint(b)).outcome, `${mismatch}, both: ${name}`).toBe(
+          "refuse",
+        );
+      }
+    }
+  });
+
+  it("names every operand it cannot compare and carries no error", () => {
+    const result = subsetCheck(
+      { ...base, resource: "https://other.example/mcp", x_member: true },
+      withConstraints(plain, { max_amount: { amount: "1e3", currency: "USD" } }),
+    );
+    expect(result.outcome).toBe("refuse");
+    expect(result.reason).toContain("candidate: unsupported input");
+    expect(result.reason).toContain("reference: invalid input");
+    expect("error" in result).toBe(false);
+    expect("error" in subsetCheck(plain, plain)).toBe(false);
   });
 });
 
@@ -373,7 +484,10 @@ describe("resource_contract (resource-access#resource-contract)", () => {
       // The subset comparison applies no approval rule, so a refusal here
       // isolates the form check: a malformed reference is not comparable.
       const e = withContract(rc);
-      expect(subsetCheck(e, e).outcome, JSON.stringify(rc)).toBe("not-subset");
+      expect(subsetCheck(e, e).outcome, JSON.stringify(rc)).toBe("refuse");
+      expect(subsetCheck(withContract({ ...reference }), e).outcome, JSON.stringify(rc)).toBe(
+        "refuse",
+      );
     }
     // A well-formed reference that is not configured as current is still
     // comparable.
