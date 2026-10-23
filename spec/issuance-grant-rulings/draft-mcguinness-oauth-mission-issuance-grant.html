@@ -1669,10 +1669,17 @@ entry's audience relevance, subset relation, and transformations
 follow its type's specification and the transformation capabilities
 each party declares for that type, through the carriers that section
 lists, deployment documentation among them. A consuming AS
-serves an entry that, under its type, is relevant to an audience for
-which that AS issues tokens. For example, a <code>mission_resource_access</code>
-entry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) is
-relevant to the audience its <code>resource</code> member names.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+serves an entry that is relevant to an audience for which that AS
+issues tokens. An entry's audiences come from its type's
+specification and the deployment's trusted configuration relating
+entries to audiences, not from its operation target: the issuance
+profile keeps an entry's <code>resource</code>, a token request's <code>resource</code>
+parameter, and a token's <code>aud</code> distinct
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Audience and Token
+Response"). For example, a <code>mission_resource_access</code> entry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) whose
+<code>resource</code> is <code>https://api.example.com/orders/123</code> can belong to the
+audience <code>https://api.example.com</code>.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
 <p id="section-4.2-2">Omitting a whole entry always yields a subset. Narrowing within an
 entry, or projecting it to <code>scope</code>, needs the corresponding declared
 capability, and neither party performs a transformation it has not
@@ -2301,10 +2308,11 @@ a new request does not refuse the redemption or refresh
 (<a href="#transient-failure" class="auto internal xref">Section 6.3.3</a>).<a href="#section-6.3.1-4" class="pilcrow">¶</a></p>
 <p id="section-6.3.1-5">Through the Mission Status operation, the consuming AS resolves
 authority per entry audience, not for an audience of its own. For
-each distinct audience the grant's entries are relevant to
-(<a href="#entry-types" class="auto internal xref">Section 4.2</a>; on refresh, the family ceiling's entries), it sends
-one request whose <code>audience</code> is that value, unchanged (for a
-<code>mission_resource_access</code> entry, its <code>resource</code> value); the Mission
+each distinct audience the grant's entries are relevant to (on
+refresh, the family ceiling's entries), resolved as <a href="#entry-types" class="auto internal xref">Section 4.2</a>
+describes, it sends one request whose <code>audience</code> is that audience
+identifier; it sends an entry's <code>resource</code> value as the <code>audience</code>
+only where that resolution establishes the two are equal. The Mission
 Issuer authorizes each audience separately
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Request").
 The consuming AS validates each response against the audience it
@@ -2469,9 +2477,10 @@ with <code>invalid_client</code>. At the PAR endpoint, at redemption, at code
 exchange, and at refresh alike, a DPoP proof that fails the checks of
 <span><a href="https://rfc-editor.org/rfc/rfc9449#section-4.3" class="relref">Section 4.3</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> is refused with <code>invalid_dpop_proof</code>, or
 with <code>use_dpop_nonce</code> where the AS requires a nonce
-(<span><a href="https://rfc-editor.org/rfc/rfc9449#section-8" class="relref">Section 8</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>), and a request that proves no key, proves
-a key other than the grant's <code>cnf</code> key, or presents a DPoP proof for
-another key, with <code>invalid_grant</code>. The other refusals are:<a href="#section-6.6-1" class="pilcrow">¶</a></p>
+(<span><a href="https://rfc-editor.org/rfc/rfc9449#section-8" class="relref">Section 8</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>). When the grant carries <code>cnf</code>, a request
+that proves no key, proves a key other than the <code>cnf</code> key, or
+presents a DPoP proof for another key is refused with
+<code>invalid_grant</code>. The other refusals are:<a href="#section-6.6-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
           <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
@@ -3237,8 +3246,10 @@ refused, not truncated. The refresh family and its ceiling are
 defined, and the ceiling is persisted at every issuance. A Status
 not-found refusal carries no <code>mission_error</code>, and reliance on a
 cached Status response is bounded, a held response that still meets
-those bounds survives a transient failure, and an entry relevant to
-several audiences survives only where all of them admit it. The
+those bounds survives a transient failure, Status requests name each
+entry's resolved audience rather than its <code>resource</code>, and an entry
+relevant to several audiences survives only where all of them admit
+it. The
 grant endpoint publishes Protected Resource Metadata with its DPoP
 algorithms, accepts <code>client_id</code> for mutual TLS, and verifies any
 DPoP proof presented; DPoP error codes are the same at the grant
