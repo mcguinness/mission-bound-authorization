@@ -29755,7 +29755,7 @@
    "id": "authzen.context-audience-freshness.audience-required",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-audience-freshness",
-   "text": "REQUIRED. A string. Carried at `resource.properties.audience` ({{pdp-request}}). The boundary identifier of the enforcement boundary the PEP established for the request, byte for byte",
+   "text": "REQUIRED. A string. Carried at `resource.properties.audience` ({{envelope-mapping}}). The boundary identifier of the enforcement boundary the PEP established for the request, byte for byte",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -30270,7 +30270,7 @@
    "id": "authzen.runtime-denial-classification.terminal-refusal-carries-next-action-none",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "runtime-denial-classification",
-   "text": "A terminal policy refusal SHOULD carry `next_action: none`, except a denial carrying the step-up obligation, which carries neither `next_action` value per above",
+   "text": "A terminal policy refusal SHOULD carry `next_action: none`, except a denial carrying the step-up obligation, which carries no `next_action`",
    "role": "PDP",
    "strength": "SHOULD",
    "applicability": {
@@ -31820,7 +31820,7 @@
    "id": "authzen.decision-id-propagation.no-treat-as-permit",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "decision-id-propagation",
-   "text": "a resource server MUST NOT treat it as a permit; the permit-binding rules above govern.",
+   "text": "a resource server MUST NOT treat it as a permit; the permit-binding rules ({{permit-binding-split}}) govern.",
    "role": "RS",
    "strength": "MUST NOT",
    "applicability": {
@@ -31842,7 +31842,7 @@
    "id": "authzen.execution-evidence.exactly-one-per-permit",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "execution-evidence-requirement",
-   "text": "independent of anything the PDP returns, a PEP that claims Runtime Evidence MUST emit one Execution Evidence Object ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for the final disposition of every consequential permit: `completed`, `failed`, or `suppressed` before release.",
+   "text": "Independent of anything the PDP returns, a PEP that claims Runtime Evidence MUST emit one Execution Evidence Object ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for the final disposition of every consequential permit: `completed`, `failed`, or `suppressed` before release.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
