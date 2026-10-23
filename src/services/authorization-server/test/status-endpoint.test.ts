@@ -267,6 +267,66 @@ describe("Mission Status endpoint errors (@spec status#mission-status-auth-failu
     }
   });
 
+  it("refuses an assertion sent without client_assertion_type or under another type, and a client_assertion_type sent without an assertion, invalid_client (HTTP 400)", async () => {
+    // @spec status#mission-status-request (#1535): private-key-JWT client
+    // authentication carries both parameters, the type with the jwt-bearer value.
+    const record = approve();
+    const n = nonce();
+    const members = { mission_id: record.id, audience: CANONICAL_RESOURCE, nonce: n };
+    const answers = [
+      await post({ ...members, client_assertion: await lifecycleClientAssertion(ISSUER, reader) }),
+      await post({
+        ...members,
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:saml2-bearer",
+        client_assertion: await lifecycleClientAssertion(ISSUER, reader),
+      }),
+      await post({ ...members, client_assertion_type: CLIENT_ASSERTION_TYPE }),
+    ];
+    for (const a of answers) {
+      expect(a.status, a.text).toBe(400);
+      expect(a.json).toMatchObject({ error: "invalid_client", nonce: n });
+    }
+  });
+
+  it("refuses at the first failing step, in order: authentication, then request syntax, then authorization, and reads no Mission before it", async () => {
+    // @spec status#mission-status-processing (#1535): an unauthenticated
+    // request is refused as its authentication failure assigns whatever its
+    // members or Mission; a malformed one invalid_request alike for a known
+    // and an unknown Mission; an unknown Mission and a caller without read
+    // authorization alike with the not-found response.
+    const record = approve();
+    const unauthenticated = [
+      await post({ mission_id: record.id }),
+      await post({ mission_id: UNKNOWN }),
+      await post({ nonce: "x".repeat(256) }),
+    ];
+    for (const a of unauthenticated) expect(a.json?.error, a.text).toBe("invalid_client");
+    const auth = async (client: LifecycleTestClient) => ({
+      client_assertion_type: CLIENT_ASSERTION_TYPE,
+      client_assertion: await lifecycleClientAssertion(ISSUER, client),
+    });
+    // Malformed (no nonce): the same refusal for a known and an unknown
+    // Mission, and for a client without the read grant.
+    const malformed = [
+      await post({ mission_id: record.id, ...(await auth(reader)) }),
+      await post({ mission_id: UNKNOWN, ...(await auth(reader)) }),
+      await post({ mission_id: record.id, ...(await auth(ungranted)) }),
+    ];
+    for (const a of malformed) {
+      expect(a.status, a.text).toBe(400);
+      expect(a.json?.error).toBe("invalid_request");
+    }
+    expect(new Set(malformed.map((a) => a.text)).size).toBe(1);
+    // Authorization: an unknown Mission and an ungranted client, alike.
+    const n = nonce();
+    const refused = [
+      await post({ mission_id: UNKNOWN, nonce: n, ...(await auth(reader)) }),
+      await post({ mission_id: record.id, nonce: n, ...(await auth(ungranted)) }),
+    ];
+    expect(refused.map((a) => a.status)).toEqual([404, 404]);
+    expect(refused[0]?.text).toBe(refused[1]?.text);
+  });
+
   it("answers a client without the mission_status grant and an unknown Mission with one not-found body, echoing the nonce", async () => {
     const record = approve();
     const n = nonce();

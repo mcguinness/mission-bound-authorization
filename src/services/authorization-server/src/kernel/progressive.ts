@@ -28,9 +28,9 @@ import { randomBytes } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { ApprovalFloorPolicy, ProgressiveProfile } from "@mission/demo-data";
 import {
-  catalogDigest,
   type ActivationPolicyRef,
   authorityHash,
+  catalogDigest,
   compareAmounts,
   computeAnchor,
   containmentAtEntries,
@@ -39,6 +39,7 @@ import {
   isSubsetSetIgnoringCapabilitySources,
   isValidAmount,
   type JsonValue,
+  parseRfc3339Instant,
   proposalHash,
   selectorOverlapsEntry,
 } from "@mission/core";
@@ -155,6 +156,12 @@ export interface MissionCeiling {
    * only; never carried forward.
    */
   resource_declaration_digest?: string;
+  /**
+   * @spec discovery#adjudication (#1469 stage 4): the encounter whose human
+   * resolution created this successor, correlating it with the encounter's
+   * facts. On that successor only.
+   */
+  encounter_id?: string;
 }
 
 /**
@@ -251,9 +258,14 @@ export function successorCeilingMembers(
   reconsent?: ReconsentedCeiling,
   /** @spec progressive#audit-linkage (#1469): the digest of the declaration this successor's adjudication evaluated. */
   resourceDeclarationDigest?: string,
+  /** @spec discovery#adjudication (#1469 stage 4): the encounter this successor resolves. */
+  encounterId?: string,
 ): Partial<MissionCeiling> {
   const drawdownCount = predecessor.drawdown_count ?? 0;
-  const digest = resourceDeclarationDigest ? { resource_declaration_digest: resourceDeclarationDigest } : {};
+  const digest = {
+    ...(resourceDeclarationDigest ? { resource_declaration_digest: resourceDeclarationDigest } : {}),
+    ...(encounterId ? { encounter_id: encounterId } : {}),
+  };
   if (reconsent) return { ...reconsent, drawdown_count: drawdownCount, ...digest };
   if (!predecessor.authority_ceiling || !predecessor.ceiling_hash || !predecessor.ceiling_consented_at) return {};
   return {
@@ -298,6 +310,7 @@ export function serializeCeiling(record: MissionRecord): string | null {
     ...(record.ceiling_consent_principal ? { ceiling_consent_principal: record.ceiling_consent_principal } : {}),
     drawdown_count: record.drawdown_count ?? 0,
     ...(record.resource_declaration_digest ? { resource_declaration_digest: record.resource_declaration_digest } : {}),
+    ...(record.encounter_id ? { encounter_id: record.encounter_id } : {}),
   };
   return JSON.stringify(stored);
 }
@@ -325,6 +338,11 @@ const RUNTIME_ACTION_CLASSES: ReadonlySet<string> = new Set<RuntimeActionClass>(
   "external_commitment",
   "privileged_administration",
 ]);
+
+/** Whether `v` names one of the runtime profile's action classes. */
+export function isRuntimeActionClass(v: unknown): v is RuntimeActionClass {
+  return typeof v === "string" && RUNTIME_ACTION_CLASSES.has(v);
+}
 
 /** @spec progressive#in-ceiling-expansion: the classes a drawdown never grants by policy alone. */
 const FRESH_APPROVAL_CLASSES: ReadonlySet<RuntimeActionClass> = new Set<RuntimeActionClass>([
@@ -400,7 +418,36 @@ export interface ProgressiveDrawdownOptions {
    * named issuer is not verified as authorized always routes to a human.
    */
   unpinnedEncounter?: "fresh_approval" | "refuse";
+  /**
+   * @spec discovery#adjudication (#1469 stage 3): the harness's report of the
+   * session taint state, through a channel the agent does not mediate: a
+   * harness attestation the deployment verifies behind this port, as the
+   * connection port carries TLS. It answers for the session or sessions acting
+   * under the Mission for the client, tainted if any is, and returns nothing
+   * when it cannot resolve a session. Nothing the request carries reaches it.
+   */
+  harnessTaint?: (session: { missionId: string; clientId: string }) => Promise<TaintReport | undefined>;
+  /**
+   * @spec discovery#adjudication (#1469 stage 3): how old, in seconds, a taint
+   * report may be and still count. Required with {@link harnessTaint}.
+   */
+  taintMaxAgeSeconds?: number;
 }
+
+/**
+ * @spec harness#decision-api-composition, discovery#adjudication (#1469 stage
+ * 3): the harness's taint report: the harness profile's taint object, scoped to
+ * the session, with the RFC 3339 date-time the harness established it.
+ */
+export interface TaintReport {
+  tainted: boolean;
+  granularity: "session";
+  source_class?: string;
+  reported_at: string;
+}
+
+/** @spec discovery#adjudication (#1469 stage 3): why no trustworthy taint report was used. */
+export type TaintFailure = "missing" | "stale" | "unverifiable";
 
 /** @spec discovery#resource-identity (#1469 stage 2): what the deployment's connection to an origin established. */
 export interface ResourceConnection {
@@ -448,6 +495,37 @@ export interface EncounterFacts {
   pinned: boolean;
   /** Why it is not, when it is not. */
   pin_failure?: PinFailure;
+  /**
+   * @spec discovery#adjudication (#1469 stage 3): the taint state the
+   * adjudication uses: tainted unless a fresh, well-formed harness report says
+   * otherwise. Kept apart from the report itself, so a missing report is never
+   * read as the harness having seen untrusted content.
+   */
+  tainted: boolean;
+  /** Why no trustworthy report was used, when none was. */
+  taint_failure?: TaintFailure;
+  /** The harness's report as given (its known members), when one was obtained. */
+  taint_report?: Record<string, unknown>;
+  /**
+   * @spec discovery#discovery-evidence (#1469 stage 4): unique per
+   * adjudication at this Mission Issuer, refused encounters included; the
+   * human-approved successor carries it.
+   */
+  encounter_id: string;
+  /**
+   * @spec discovery#lying-resource (#1469 stage 4): the action classes of the
+   * authority sought, under the deployment's classification only; a
+   * declaration never classifies.
+   */
+  sought_classes: RuntimeActionClass[];
+  /**
+   * @spec discovery#lying-resource, discovery#injection-discovery,
+   * discovery#adjudication (#1469 stage 4): the floors that require a human
+   * for this encounter; empty when none does.
+   */
+  floors: EncounterFloor[];
+  /** @spec discovery#adjudication (#1469 stage 4): the operations the declaration lists: the resource's claim, never fact. */
+  declaration_claim?: { operations: string[] };
   /** The raw-octet digest of the declaration bytes the Mission Issuer retrieved; absent when it retrieved none. */
   declaration_digest?: string;
   /** Whether the declaration lists every action sought at the resource; absent without a usable declaration. */
@@ -599,6 +677,143 @@ export async function pinEncounteredResource(
 }
 
 /**
+ * @spec discovery#lying-resource, discovery#injection-discovery,
+ * discovery#adjudication (#1469 stage 4): a floor that sends an encounter to a
+ * human: an action the deployment cannot classify, each high-consequence class,
+ * the external-communication predicate, and a tainted session, under which
+ * every binding an encounter would create is egress-capable.
+ */
+export type EncounterFloor =
+  | "unclassified"
+  | "irreversible_action"
+  | "external_commitment"
+  | "privileged_administration"
+  | "external_communication"
+  | "tainted";
+
+/**
+ * @spec discovery#lying-resource, discovery#injection-discovery (#1469 stage
+ * 4): the classes of the actions sought, from the deployment's classification
+ * alone, and the floors they and the taint state trigger. The reference lets no
+ * declaration classify, so none can relax a class (and none makes one
+ * stricter: that option goes unused). Every floor routes to a human; none
+ * refuses.
+ */
+export function encounterFloors(
+  options: ProgressiveDrawdownOptions,
+  sought: readonly string[],
+  tainted: boolean,
+): { sought_classes: RuntimeActionClass[]; floors: EncounterFloor[] } {
+  const classes = new Set<RuntimeActionClass>();
+  const floors = new Set<EncounterFloor>();
+  const external = new Set(options.externalCommunicationActions ?? []);
+  for (const action of sought) {
+    const cls = Object.hasOwn(options.actionClasses, action) ? options.actionClasses[action] : undefined;
+    if (cls === undefined) floors.add("unclassified");
+    if (cls !== undefined) classes.add(cls);
+    if (cls === "irreversible_action") floors.add("irreversible_action");
+    if (cls === "external_commitment") floors.add("external_commitment");
+    if (cls === "privileged_administration") floors.add("privileged_administration");
+    if (external.has(action)) floors.add("external_communication");
+  }
+  if (tainted) floors.add("tainted");
+  return { sought_classes: [...classes].sort(), floors: [...floors].sort() };
+}
+
+/**
+ * @spec discovery#adjudication (#1469 stage 4): what a routed encounter's
+ * disclosure renders: the Encountered Resource object, the declaration as the
+ * resource's claim and not as fact, and the session's taint status, correlated
+ * by `encounter_id`. The taint statement says untrusted content was ingested
+ * only when the harness reported it, a stale tainted report included (taint
+ * persists for the session); when no trustworthy report says either way, the
+ * state is unknown, though the floor treats it as tainted.
+ */
+export interface EncounterDisclosure {
+  /** Absent for an encounter stored before encounter ids. */
+  encounter_id?: string;
+  resource?: EncounteredResource;
+  /** True only when the stored facts record the identity as pinned. */
+  pinned: boolean;
+  declaration?: { claimed_by_resource: true; digest: string; operations?: string[] };
+  taint: "untrusted_content_ingested" | "no_untrusted_content_reported" | "taint_state_unknown";
+  /** Absent for an encounter stored before the floors were recorded, never read as none. */
+  floors?: EncounterFloor[];
+}
+
+export function encounterDisclosure(facts: Partial<EncounterFacts>): EncounterDisclosure {
+  // Only the harness's own report supports a statement. A tainted report,
+  // a stale one included (taint persists for the session), says untrusted
+  // content was ingested; a trusted report of untainted says none was
+  // reported; anything else is unknown, facts stored before trusted taint
+  // (#1469 stages 1 and 2) among them, which carry no report at all.
+  const reported = facts.taint_report?.tainted;
+  const trusted = facts.taint_failure === undefined;
+  const taint =
+    reported === true && (trusted || facts.taint_failure === "stale")
+      ? "untrusted_content_ingested"
+      : reported === false && trusted
+        ? "no_untrusted_content_reported"
+        : "taint_state_unknown";
+  return {
+    ...(facts.encounter_id ? { encounter_id: facts.encounter_id } : {}),
+    ...(facts.resource ? { resource: facts.resource } : {}),
+    pinned: facts.pinned === true,
+    ...(facts.declaration_digest
+      ? {
+          declaration: {
+            claimed_by_resource: true as const,
+            digest: facts.declaration_digest,
+            ...(facts.declaration_claim ? { operations: facts.declaration_claim.operations } : {}),
+          },
+        }
+      : {}),
+    taint,
+    ...(facts.floors ? { floors: facts.floors } : {}),
+  };
+}
+
+/**
+ * @spec discovery#adjudication (#1469 stage 3): the session taint state for an
+ * adjudication. It comes only from the harness, through the deployment's port.
+ * A missing report, one older than the deployment's bound, and one that is
+ * malformed, future-dated or not session-scoped all count as tainted; a stale
+ * tainted report is tainted too, so the rule has no asymmetry. A report is
+ * fresh when 0 <= now - reported_at <= taintMaxAgeSeconds, `reported_at`
+ * being a strict RFC 3339 date-time and `now` read when the report is judged,
+ * after every lookup, so a slow one neither freshens a report nor dates one
+ * in the future.
+ */
+export async function sessionTaint(
+  options: ProgressiveDrawdownOptions,
+  session: { missionId: string; clientId: string },
+  now: () => Date,
+): Promise<{ tainted: boolean; taint_failure?: TaintFailure; taint_report?: Record<string, unknown> }> {
+  let report: unknown;
+  try {
+    report = await options.harnessTaint?.(session);
+  } catch {
+    report = undefined;
+  }
+  if (report === undefined || report === null) return { tainted: true, taint_failure: "missing" };
+  if (typeof report !== "object" || Array.isArray(report)) return { tainted: true, taint_failure: "unverifiable" };
+  const given = report as Record<string, unknown>;
+  const taint_report = Object.fromEntries(
+    ["tainted", "granularity", "source_class", "reported_at"].filter((k) => k in given).map((k) => [k, given[k]]),
+  );
+  const unverifiable = { tainted: true, taint_failure: "unverifiable" as const, taint_report };
+  if (typeof given.tainted !== "boolean") return unverifiable;
+  if (given.granularity !== "session") return unverifiable;
+  if (given.source_class !== undefined && typeof given.source_class !== "string") return unverifiable;
+  const at = parseRfc3339Instant(given.reported_at);
+  if (at === undefined) return unverifiable;
+  const ageSeconds = now().getTime() / 1000 - (Number(at.seconds) + Number(`0.${at.fraction || "0"}`));
+  if (ageSeconds < 0) return unverifiable;
+  if (ageSeconds > (options.taintMaxAgeSeconds as number)) return { tainted: true, taint_failure: "stale", taint_report };
+  return { tainted: given.tainted, taint_report };
+}
+
+/**
  * @spec discovery#adjudication (#1469 stage 2): whether the deployment refuses
  * this encounter outright: its identity cannot be established and the
  * deployment does not escalate such encounters. An issuer that is named but
@@ -623,6 +838,12 @@ export async function encounterFacts(
   encountered: readonly string[],
   requested: readonly AuthorityEntry[],
   hint: EncounterHint | undefined,
+  /**
+   * @spec discovery#adjudication (#1469 stage 3): the session, from the
+   * subject token and client authentication, and the clock, read when the taint
+   * report is judged.
+   */
+  session: { missionId: string; clientId: string; now: () => Date },
 ): Promise<EncounterFacts | string> {
   const origins = [...new Set(encountered.map(originOf))];
   const origin = origins[0];
@@ -630,6 +851,7 @@ export async function encounterFacts(
   if (hint && hint.origin !== origin) return "encountered_resource names an origin other than the encounter's";
   const pin = await pinEncounteredResource(options, origin);
   const identity = pin.resource;
+  const taint = await sessionTaint(options, { missionId: session.missionId, clientId: session.clientId }, session.now);
   let bytes: Uint8Array | string | undefined;
   try {
     bytes = await options.resourceDeclarations?.(origin);
@@ -639,14 +861,23 @@ export async function encounterFacts(
   const digest = bytes === undefined ? undefined : catalogDigest(bytes);
   const sought = requested.filter((e) => encountered.includes(e.resource)).flatMap((e) => e.actions);
   const declared = bytes === undefined ? undefined : declaresActions(bytes, sought);
+  const operations = bytes === undefined ? undefined : declaredOperations(bytes);
+  const floors = encounterFloors(options, sought, taint.tainted);
   return {
+    encounter_id: `${ENCOUNTER_ID_PREFIX}${randomBytes(18).toString("base64url")}`,
     origin,
     resources: [...encountered],
     ...(identity ? { resource: identity } : {}),
     pinned: pin.pinned,
     ...(pin.pin_failure ? { pin_failure: pin.pin_failure } : {}),
+    tainted: taint.tainted,
+    ...(taint.taint_failure ? { taint_failure: taint.taint_failure } : {}),
+    ...(taint.taint_report ? { taint_report: taint.taint_report } : {}),
     ...(digest ? { declaration_digest: digest } : {}),
     ...(declared === undefined ? {} : { declared }),
+    ...(operations ? { declaration_claim: { operations } } : {}),
+    sought_classes: floors.sought_classes,
+    floors: floors.floors,
     ...(hint
       ? {
           hint: {
@@ -669,6 +900,12 @@ export async function encounterFacts(
  * lists every sought action; undefined when the bytes are not that form.
  */
 export function declaresActions(bytes: Uint8Array | string, sought: readonly string[]): boolean | undefined {
+  const operations = declaredOperations(bytes);
+  return operations === undefined ? undefined : sought.every((a) => operations.includes(a));
+}
+
+/** The operations a declaration in the reference's form lists, or undefined when the bytes are not that form. */
+export function declaredOperations(bytes: Uint8Array | string): string[] | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(typeof bytes === "string" ? bytes : Buffer.from(bytes).toString("utf8"));
@@ -677,8 +914,11 @@ export function declaresActions(bytes: Uint8Array | string, sought: readonly str
   }
   const operations = (parsed as { operations?: unknown } | null)?.operations;
   if (!Array.isArray(operations) || !operations.every((o) => typeof o === "string")) return undefined;
-  return sought.every((a) => operations.includes(a));
+  return [...operations];
 }
+
+/** @spec discovery#discovery-evidence (#1469 stage 4): the prefix of an `encounter_id`, as the draft's examples use. */
+export const ENCOUNTER_ID_PREFIX = "enc_";
 
 const isPositiveInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
 
@@ -766,6 +1006,17 @@ export function validateProgressiveDrawdownOptions(
   // every encounter.
   if (o.unpinnedEncounter === "refuse" && o.resourceMetadata === undefined) {
     throw new Error("progressive unpinnedEncounter refuse needs a resourceMetadata port");
+  }
+  if (o.harnessTaint !== undefined && typeof o.harnessTaint !== "function") {
+    throw new Error("progressive harnessTaint must be a function of the session");
+  }
+  if (o.taintMaxAgeSeconds !== undefined && !isPositiveInteger(o.taintMaxAgeSeconds)) {
+    throw new Error("progressive taintMaxAgeSeconds must be a positive integer");
+  }
+  // @spec discovery#adjudication (#1469 stage 3): without a bound no report is
+  // ever fresh, so the port would be consulted and never believed.
+  if (o.harnessTaint !== undefined && o.taintMaxAgeSeconds === undefined) {
+    throw new Error("progressive harnessTaint needs taintMaxAgeSeconds");
   }
   assertDrawdownClassesMeetApprovalFloor(o, approvalFloor);
   return o;
@@ -879,7 +1130,20 @@ export type DrawdownFallbackReason =
   | "entire_remaining_ceiling"
   | "per_drawdown_bound"
   | "chain_rate_bound"
-  | "encounter";
+  | "encounter"
+  // @spec approval-governance#recency-high-risk, approval-governance#recency-evaluation
+  // (#1470 slice 2, D626): where drawdowns are recorded, the Approval
+  // Governance eligibility gate over the whole successor.
+  | DrawdownGovernanceReason;
+
+/** Why the Approval Governance eligibility gate sends a recorded drawdown to a fresh human approval. */
+export type DrawdownGovernanceReason =
+  | "governance_policy_ineligible"
+  | "governance_consent_unverified"
+  | "governance_consent_ineligible"
+  | "governance_unclassified_action"
+  | "governance_high_risk"
+  | "governance_recency";
 
 export type DrawdownAdjudication =
   | { outcome: "out_of_ceiling" }
@@ -956,7 +1220,7 @@ function authorizesPoint(
 }
 
 /** The Missions of an expansion chain, from `missionId` back to its root. */
-function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
+export function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
   const chain: MissionRecord[] = [];
   const seen = new Set<string>();
   let next: string | undefined = missionId;
@@ -968,6 +1232,11 @@ function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
     next = m.predecessor;
   }
   return chain;
+}
+
+/** The creation instants of a chain's ceiling drawdowns: the rate history a drawdown decision reads. */
+export function chainDrawdownInstants(chain: readonly MissionRecord[]): string[] {
+  return chain.filter((m) => m.approval_basis.type === "ceiling_drawdown").map((m) => m.created_at);
 }
 
 /**
@@ -1008,6 +1277,154 @@ function overlaps(entry: AuthorityEntry, restricted: ContainmentSelector): boole
 }
 
 /**
+ * @spec progressive#in-ceiling-expansion, approval-governance#re-check (#1470
+ * slice 2): every value an in-ceiling drawdown adjudication reads, as
+ * observed, so the decision can be replayed from retained state alone. The
+ * deployment configuration it read (action classes, external-communication
+ * actions, the chain rate bound) is carried by value; the policy is carried as
+ * the reference whose held snapshot verified, with the rules it parsed.
+ */
+export interface DrawdownAdjudicationInputs {
+  predecessor_id: string;
+  /** The predecessor's ceiling. */
+  ceiling: AuthorityEntry[];
+  /** The predecessor's effective Authority Set (containment applied). */
+  effective: AuthorityEntry[];
+  /** The successor's complete derived Authority Set. */
+  requested: AuthorityEntry[];
+  drawdown_policy?: ActivationPolicyRef;
+  /** Whether the held snapshot reproduced the committed digest. */
+  policy_verified: boolean;
+  /** The parsed drawdown rules, when the snapshot verified and parsed. */
+  rules?: DrawdownPolicyRules;
+  ceiling_consented_at: string | null;
+  /** The adjudication instant. */
+  now: string;
+  action_classes: Record<string, RuntimeActionClass>;
+  external_communication_actions: string[];
+  /** Each widened resource's cross-domain determination. */
+  cross_domain: Record<string, boolean>;
+  /** The predecessor's non-terminal Child Missions. */
+  live_children: string[];
+  /** The chain's containment and discharge restrictions. */
+  restrictions: Array<{ resource: string; actions?: string[] }>;
+  /** The creation instants of the chain's ceiling drawdowns. */
+  chain_drawdowns: string[];
+  chain_rate_bound: { maxDrawdowns: number; windowSeconds: number };
+}
+
+/**
+ * @spec progressive#in-ceiling-expansion: read every input an adjudication
+ * uses from current state: the activation policy registry, the chain's
+ * records, the predecessor's children and the clock.
+ */
+export function gatherDrawdownInputs(
+  kernel: MissionKernel,
+  options: ProgressiveDrawdownOptions,
+  input: {
+    predecessor: MissionRecord;
+    requested: readonly AuthorityEntry[];
+    isCrossDomain: (resource: string) => boolean;
+    /** The adjudication instant; the kernel clock when absent. */
+    now?: Date;
+  },
+): { inputs: DrawdownAdjudicationInputs; snapshot?: RegisteredActivationPolicy } {
+  const { predecessor } = input;
+  const effective = kernel.effectiveAuthoritySet(predecessor);
+  const requested = [...input.requested];
+  const ref = predecessor.drawdown_policy;
+  // @spec mission#standing-consent-bases, progressive#in-ceiling-expansion: a
+  // snapshot that does not match the committed digest authorizes nothing.
+  const snapshot = ref ? verifiedActivationPolicy(predecessor.issuer, kernel.activationPolicies(), ref) : undefined;
+  const rules = snapshot ? drawdownRulesOf(snapshot) : undefined;
+  const cross_domain: Record<string, boolean> = {};
+  for (const { resource } of widenedPairs(requested, effective)) cross_domain[resource] = input.isCrossDomain(resource);
+  const chain = chainOf(kernel, predecessor.id);
+  return {
+    inputs: {
+      predecessor_id: predecessor.id,
+      ceiling: predecessor.authority_ceiling ?? [],
+      effective,
+      requested,
+      ...(ref ? { drawdown_policy: ref } : {}),
+      policy_verified: snapshot !== undefined,
+      ...(rules ? { rules } : {}),
+      ceiling_consented_at: predecessor.ceiling_consented_at ?? null,
+      now: (input.now ?? kernel.nowDate()).toISOString(),
+      action_classes: { ...options.actionClasses },
+      external_communication_actions: [...(options.externalCommunicationActions ?? [])],
+      cross_domain,
+      live_children: kernel
+        .findChildren(predecessor.id)
+        .filter((c) => !TERMINAL_STATES.has(kernel.observe(c).state))
+        .map((c) => c.id),
+      restrictions: chainRestrictions(chain),
+      chain_drawdowns: chainDrawdownInstants(chain),
+      chain_rate_bound: { ...options.chainRateBound },
+    },
+    ...(snapshot ? { snapshot } : {}),
+  };
+}
+
+/** A drawdown decision over inputs alone: the policy outcome names no snapshot. */
+export type DrawdownDecision = Exclude<DrawdownAdjudication, { outcome: "policy" }> | { outcome: "policy" };
+
+/**
+ * @spec progressive#in-ceiling-expansion: decide an in-ceiling drawdown from
+ * its inputs alone, so the same decision replays from retained state.
+ */
+export function decideDrawdown(i: DrawdownAdjudicationInputs): DrawdownDecision {
+  const { ceiling, requested } = i;
+  // @spec progressive#in-ceiling-expansion: in-ceiling when every successor
+  // entry is a subset of some ceiling entry; otherwise refused out_of_ceiling.
+  if (!isSubsetSetIgnoringCapabilitySources(requested, ceiling)) {
+    return { outcome: "out_of_ceiling" };
+  }
+  const fallback = (reason: DrawdownFallbackReason): DrawdownDecision => ({ outcome: "fresh_approval", reason });
+  // @spec discovery#encounter, discovery#adjudication (#1469 stage 1, D607): a
+  // widened resource no ceiling entry names is an encounter. Until identity
+  // pinning, trusted taint and the floors are in place, no encounter binds by
+  // policy, whatever its other guards: it falls back to a fresh human
+  // approval. Authority the predecessor already holds is no new encounter.
+  const named = new Set(ceiling.map((e) => e.resource));
+  const widened = widenedPairs(requested, i.effective);
+  const encountered = [...new Set(widened.filter((w) => !named.has(w.resource)).map((w) => w.resource))];
+  if (encountered.length) return { outcome: "fresh_approval", reason: "encounter", encountered };
+  if (!i.drawdown_policy) return fallback("no_drawdown_policy");
+  if (!i.policy_verified) return fallback("drawdown_policy_changed");
+  const rules = i.rules;
+  if (!rules) return fallback("drawdown_policy_unusable");
+  const nowMs = Date.parse(i.now);
+  // @spec progressive#ceiling-review: no policy adjudication for a chain whose
+  // ceiling consent, the initial consent or the latest re-consent, is older
+  // than the cadence.
+  const consentedAt = Date.parse(i.ceiling_consented_at ?? "");
+  if (!Number.isFinite(consentedAt) || !(nowMs - consentedAt <= rules.ceiling_review_cadence_s * 1000)) {
+    return fallback("ceiling_review_overdue");
+  }
+  const external = new Set(i.external_communication_actions);
+  for (const { resource, action } of widened) {
+    const cls = Object.hasOwn(i.action_classes, action) ? i.action_classes[action] : undefined;
+    if (cls === undefined) return fallback("unclassified_action");
+    if (FRESH_APPROVAL_CLASSES.has(cls)) return fallback("fresh_approval_class");
+    if (external.has(action)) return fallback("external_communication");
+    if (i.cross_domain[resource] !== false) return fallback("cross_domain");
+  }
+  // @spec progressive#in-ceiling-expansion: no policy adjudication while the
+  // predecessor has non-terminal Child Missions.
+  if (i.live_children.length) return fallback("live_children");
+  if (requested.some((e) => i.restrictions.some((r) => overlaps(e, r)))) return fallback("restricted_overlap");
+  // @spec progressive#drawdown-bounds: never the entire remaining ceiling by
+  // policy; the final increment takes a fresh human approval.
+  if (!ceilingAuthorityLeftUndrawn(requested, ceiling)) return fallback("entire_remaining_ceiling");
+  if (widened.length > rules.max_added_actions) return fallback("per_drawdown_bound");
+  const windowStart = nowMs - i.chain_rate_bound.windowSeconds * 1000;
+  const recent = i.chain_drawdowns.filter((at) => Date.parse(at) > windowStart).length;
+  if (recent >= i.chain_rate_bound.maxDrawdowns) return fallback("chain_rate_bound");
+  return { outcome: "policy" };
+}
+
+/**
  * @spec progressive#in-ceiling-expansion: adjudicate an expansion of a
  * Mission that carries an `authority_ceiling`. `requested` is the successor's
  * complete derived Authority Set. Reads only current state: the current
@@ -1022,78 +1439,25 @@ export function adjudicateDrawdown(
     isCrossDomain: (resource: string) => boolean;
   },
 ): DrawdownAdjudication {
-  const { predecessor, requested } = input;
-  const ceiling = predecessor.authority_ceiling ?? [];
-  // @spec progressive#in-ceiling-expansion: in-ceiling when every successor
-  // entry is a subset of some ceiling entry; otherwise refused out_of_ceiling.
-  if (!isSubsetSetIgnoringCapabilitySources(requested as AuthorityEntry[], ceiling)) {
-    return { outcome: "out_of_ceiling" };
-  }
-  const fallback = (reason: DrawdownFallbackReason): DrawdownAdjudication => ({ outcome: "fresh_approval", reason });
-  // @spec discovery#encounter, discovery#adjudication (#1469 stage 1, D607): a
-  // widened resource no ceiling entry names is an encounter. Until identity
-  // pinning, trusted taint and the floors are in place, no encounter binds by
-  // policy, whatever its other guards: it falls back to a fresh human
-  // approval. Authority the predecessor already holds is no new encounter.
-  const named = new Set(ceiling.map((e) => e.resource));
-  const encountered = [
-    ...new Set(
-      widenedPairs(requested, kernel.effectiveAuthoritySet(predecessor))
-        .filter((w) => !named.has(w.resource))
-        .map((w) => w.resource),
-    ),
-  ];
-  if (encountered.length) return { outcome: "fresh_approval", reason: "encounter", encountered };
-  const ref = predecessor.drawdown_policy;
-  if (!ref) return fallback("no_drawdown_policy");
-  // @spec mission#standing-consent-bases, progressive#in-ceiling-expansion: a
-  // snapshot that does not match the committed digest authorizes nothing.
-  const snapshot = verifiedActivationPolicy(predecessor.issuer, kernel.activationPolicies(), ref);
-  if (!snapshot) return fallback("drawdown_policy_changed");
-  const rules = drawdownRulesOf(snapshot);
-  if (!rules) return fallback("drawdown_policy_unusable");
-  const nowMs = kernel.nowDate().getTime();
-  // @spec progressive#ceiling-review: no policy adjudication for a chain whose
-  // ceiling consent, the initial consent or the latest re-consent, is older
-  // than the cadence.
-  const consentedAt = Date.parse(predecessor.ceiling_consented_at ?? "");
-  if (!Number.isFinite(consentedAt) || nowMs - consentedAt > rules.ceiling_review_cadence_s * 1000) {
-    return fallback("ceiling_review_overdue");
-  }
-  const widened = widenedPairs(requested, kernel.effectiveAuthoritySet(predecessor));
-  const external = new Set(options.externalCommunicationActions ?? []);
-  for (const { resource, action } of widened) {
-    const cls = Object.hasOwn(options.actionClasses, action) ? options.actionClasses[action] : undefined;
-    if (cls === undefined) return fallback("unclassified_action");
-    if (FRESH_APPROVAL_CLASSES.has(cls)) return fallback("fresh_approval_class");
-    if (external.has(action)) return fallback("external_communication");
-    if (input.isCrossDomain(resource)) return fallback("cross_domain");
-  }
-  // @spec progressive#in-ceiling-expansion: no policy adjudication while the
-  // predecessor has non-terminal Child Missions.
-  if (kernel.findChildren(predecessor.id).some((c) => !TERMINAL_STATES.has(kernel.observe(c).state))) {
-    return fallback("live_children");
-  }
-  const chain = chainOf(kernel, predecessor.id);
-  const restrictions = chainRestrictions(chain);
-  if (requested.some((e) => restrictions.some((r) => overlaps(e, r)))) return fallback("restricted_overlap");
-  // @spec progressive#drawdown-bounds: never the entire remaining ceiling by
-  // policy; the final increment takes a fresh human approval.
-  if (!ceilingAuthorityLeftUndrawn(requested, ceiling)) return fallback("entire_remaining_ceiling");
-  if (widened.length > rules.max_added_actions) return fallback("per_drawdown_bound");
-  const windowStart = nowMs - options.chainRateBound.windowSeconds * 1000;
-  const recent = chain.filter(
-    (m) => m.approval_basis.type === "ceiling_drawdown" && Date.parse(m.created_at) > windowStart,
-  ).length;
-  if (recent >= options.chainRateBound.maxDrawdowns) return fallback("chain_rate_bound");
-  return { outcome: "policy", ref, snapshot };
+  const { inputs, snapshot } = gatherDrawdownInputs(kernel, options, input);
+  const decision = decideDrawdown(inputs);
+  if (decision.outcome !== "policy") return decision;
+  return { outcome: "policy", ref: inputs.drawdown_policy as ActivationPolicyRef, snapshot: snapshot as RegisteredActivationPolicy };
 }
 
 /** A drawdown refused at its activating commit; nothing is created or superseded. */
 export class DrawdownRefusal extends Error {
   constructor(
-    readonly code: "derivations_exhausted" | "predecessor_not_active" | "authority_restricted_since_approval",
+    readonly code:
+      | "derivations_exhausted"
+      | "predecessor_not_active"
+      | "authority_restricted_since_approval"
+      // #1470 slice 2: a recorded drawdown its commit-time decision or the
+      // eligibility gate no longer admits; it falls back to a fresh approval.
+      | "governance_refused",
     message: string,
+    /** For `governance_refused`, why the drawdown falls back. */
+    readonly reason?: DrawdownFallbackReason,
   ) {
     super(message);
   }
@@ -1112,6 +1476,12 @@ export interface CeilingDrawdownInput {
   policy: { ref: ActivationPolicyRef; snapshot: RegisteredActivationPolicy };
   /** The predecessor's containment version and discharge-latch count as adjudicated. */
   restrictionsAtAdjudication: { containment: number; discharge: number };
+  /**
+   * @spec approval-governance#re-check (#1470 slice 2): the adjudication's
+   * configuration and cross-domain determination, which a kernel that records
+   * drawdowns reads again in this transaction. Required there.
+   */
+  governance?: { options: ProgressiveDrawdownOptions; isCrossDomain: (resource: string) => boolean };
 }
 
 /**
@@ -1213,7 +1583,12 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     activation_actor: input.activationActor,
     // @spec progressive#ceiling-drawdown-basis (#1438): the decision mechanism,
     // the drawdown policy this adjudication evaluated.
-    adjudication: { kind: "policy", policy: { id: input.policy.ref.id, version: input.policy.ref.version } },
+    adjudication: {
+      kind: "policy",
+      policy: { id: input.policy.ref.id, version: input.policy.ref.version },
+      // @spec approval-governance#issuance-relationship (#1470 slice 2).
+      ...(kernel.recordsCeilingDrawdowns ? { governance_record: true as const } : {}),
+    },
     // @spec progressive#ceiling-drawdown-basis (#1468): the latest explicitly
     // human-consented ceiling, never a hash a policy narrowing recomputed.
     root_commitment: ceilingConsentHash(predecessor) as string,
@@ -1270,6 +1645,20 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     // @spec progressive#audit-linkage: the chain's cumulative drawdown count.
     drawdown_count: (predecessor.drawdown_count ?? 0) + 1,
   };
+  // @spec approval-governance#atomic-commitment (#1470 slice 2): where
+  // drawdowns are recorded, decide again from inputs read in this
+  // transaction, gate, and sign before anything is written.
+  let governed: ReturnType<MissionKernel["prepareDrawdownRecordInCallerTx"]> | undefined;
+  if (kernel.recordsCeilingDrawdowns) {
+    if (!input.governance) throw new Error("a recorded ceiling drawdown needs the adjudication's configuration");
+    governed = kernel.prepareDrawdownRecordInCallerTx({
+      record,
+      predecessor,
+      deciding: input.policy.ref,
+      options: input.governance.options,
+      isCrossDomain: input.governance.isCrossDomain,
+    });
+  }
   kernel.insertRecord(record, undefined, {
     source: { inherited: root },
     // @spec mission#standing-consent-bases: the drawdown policy snapshot this
@@ -1279,5 +1668,6 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
   if (!kernel.supersedeInCallerTx(id)) {
     throw new Error("ceiling drawdown predecessor supersession failed inside the creation transaction");
   }
+  if (governed) kernel.retainDrawdownRecordInCallerTx(id, governed);
   return record;
 }

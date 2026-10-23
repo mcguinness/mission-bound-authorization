@@ -51,6 +51,8 @@ export {
 import type { DpopProofReplay } from "./adapters/dpop-replay.js";
 import {
   buildProvider,
+  type LifecycleClientGrants,
+  type LifecycleMissionScope,
   type ProtectedEventSource,
   type ServiceTokenPrincipal,
   type TxnArs,
@@ -77,6 +79,7 @@ import { TokenIssuanceStore } from "./kernel/token-issuance-store.js";
 import { DeferralStore, ExpansionDeferralStore } from "./kernel/deferred.js";
 import type { GovernedPolicyApprovalConfig } from "./kernel/governed-policy-approval.js";
 import { directApprovalRuleFrom } from "./kernel/direct-approval-record.js";
+import { type DrawdownRecordingRule, drawdownRecordingRuleFrom } from "./kernel/drawdown-approval-record.js";
 import { type ModelAdvisor, MissionApprovalDeferralStore } from "./kernel/mission-approval-deferral.js";
 import {
   CreationIdempotencyStore,
@@ -199,6 +202,9 @@ export {
 } from "./adapters/capabilities.js";
 export {
   DEFAULT_SERVICE_TOKEN_PRINCIPALS,
+  type LifecycleClientGrants,
+  type LifecycleClientPolicy,
+  type LifecycleMissionScope,
   MISSION_DISCHARGE_SCOPE,
   MISSION_LIFECYCLE_SCOPE,
   MISSION_RESUME_SCOPE,
@@ -609,6 +615,21 @@ export {
   type RegisteredDirectApprovalRule,
 } from "./kernel/direct-approval-record.js";
 export {
+  assertDrawdownRecord,
+  consentProvenanceOf,
+  DRAWDOWN_RECORDING_RULE_ID,
+  DrawdownApprovalRecordStore,
+  type DrawdownConsentProvenance,
+  drawdownGovernanceGate,
+  type DrawdownRecordingRule,
+  DrawdownRecordingRuleError,
+  drawdownRecordingRuleFrom,
+  drawdownRecordingRuleRef,
+  type DrawdownRecordInputs,
+  parseDrawdownRecordingRule,
+  type RegisteredDrawdownRecordingRule,
+} from "./kernel/drawdown-approval-record.js";
+export {
   DEFAULT_MAX_PENDING_PER_CLIENT,
   DELIVERY_CLAIM_STALE_S,
   type DeliveryConfirmation,
@@ -774,6 +795,10 @@ export interface LifecycleClientRegistration {
   jwks: { keys: Record<string, unknown>[] };
   /** The lifecycle grants bound to this client, `mission_lifecycle` for the state operations. */
   grants: readonly string[];
+  /** @spec status#lifecycle-authorization (#1535): the operations `mission_lifecycle` reaches for this client; absent, all. */
+  operations?: readonly string[];
+  /** @spec status#lifecycle-authorization (#1535): the Missions it reaches; absent, every Mission. */
+  missions?: LifecycleMissionScope;
 }
 
 export interface BuiltAs {
@@ -953,6 +978,15 @@ export async function buildAuthorizationServer(opts: {
    * eligibility. Default off.
    */
   directApprovalRecording?: boolean;
+  /**
+   * @spec approval-governance#accountable-assertion, approval-governance#recency-declarations
+   * (#1470 slice 2, D626): record a voluntary Approval Governance Record for
+   * every policy-adjudicated ceiling drawdown, under a recording rule built
+   * from this deployment's drawdown policies, Progressive classification,
+   * approval-surface eligibility and catalog, with this recency declaration.
+   * Requires `progressive`. Default off.
+   */
+  ceilingDrawdownRecording?: { recency: DrawdownRecordingRule["recency"] };
   /**
    * @spec mission#intent-submission-evidence — the deployment-GLOBAL
    * policy-required Intent Submission Evidence types (the anti-downgrade
@@ -1152,9 +1186,11 @@ export async function buildAuthorizationServer(opts: {
   /**
    * @spec status#lifecycle-authorization: the grants bound to a client that
    * authenticates to the Mission Lifecycle endpoint by private-key JWT, keyed by
-   * `client_id`. Absent (the default), no client holds any.
+   * `client_id`, each a grant list or the grants with the deployment's policy
+   * for them (#1535): the operations and the Missions `mission_lifecycle`
+   * reaches for that client. Absent (the default), no client holds any.
    */
-  lifecycleClientGrants?: Record<string, readonly string[]>;
+  lifecycleClientGrants?: Record<string, LifecycleClientGrants>;
   /**
    * @spec status#lifecycle-authorization, status#mission-status-authentication:
    * dedicated Lifecycle clients a deployment registers, each with the PUBLIC
@@ -1248,6 +1284,9 @@ export async function buildAuthorizationServer(opts: {
   // @spec progressive#in-ceiling-expansion, mission#approval-authentication
   // (#1255): a configuration refusal, before any key, store or recovery is
   // touched. A drawdown mapping that disagrees with the approval floor does not start.
+  const noProgressiveForRecording = (): never => {
+    throw new Error("ceilingDrawdownRecording requires progressive: there is no drawdown to record without it");
+  };
   const progressive = opts.progressive
     ? validateProgressiveDrawdownOptions(opts.progressive, opts.approvalFloor ?? APPROVAL_FLOOR)
     : undefined;
@@ -1341,9 +1380,20 @@ export async function buildAuthorizationServer(opts: {
       jwks: c.jwks,
     } as Record<string, unknown>;
   });
-  const lifecycleClientGrants: Record<string, readonly string[]> = {
+  const lifecycleClientGrants: Record<string, LifecycleClientGrants> = {
     ...(opts.lifecycleClientGrants ?? {}),
-    ...Object.fromEntries((opts.lifecycleClients ?? []).map((c) => [c.client_id, c.grants])),
+    ...Object.fromEntries(
+      (opts.lifecycleClients ?? []).map((c) => [
+        c.client_id,
+        c.operations === undefined && c.missions === undefined
+          ? c.grants
+          : {
+              grants: c.grants,
+              ...(c.operations !== undefined ? { operations: c.operations } : {}),
+              ...(c.missions !== undefined ? { missions: c.missions } : {}),
+            },
+      ]),
+    ),
   };
   // @spec containment#protected-events — the trusted protected-event source
   // registry: config seeds kid+alg per source (D25), the ES256 keypair is
@@ -1459,6 +1509,22 @@ export async function buildAuthorizationServer(opts: {
           directApprovalRecording: {
             rule: directApprovalRuleFrom({
               floor: approvalFloor,
+              knownSubjects,
+              approverApprovesFor,
+              approverRoleSubs,
+              writeActions: WRITE_ACTIONS,
+              catalog: opts.authoritySources ?? AUTHORITY_SOURCES,
+            }),
+          },
+        }
+      : {}),
+    ...(opts.ceilingDrawdownRecording
+      ? {
+          ceilingDrawdownRecording: {
+            rule: drawdownRecordingRuleFrom(opts.issuer, {
+              recency: opts.ceilingDrawdownRecording.recency,
+              activationPolicies: opts.activationPolicies ?? {},
+              actionClasses: (progressive ?? noProgressiveForRecording()).actionClasses,
               knownSubjects,
               approverApprovesFor,
               approverRoleSubs,

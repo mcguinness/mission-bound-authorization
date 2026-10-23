@@ -600,10 +600,12 @@ presenting that token. In addition to the common members
 `suspend_until`, `on_expiry`:
 : OPTIONAL and CONDITIONAL respectively, valid only when `operation`
   is `suspend`, with the status profile's semantics, applied
-  uniformly to every Mission in the set. A `suspend` whose
-  `on_expiry` is `resume` schedules a bulk `resume` and needs the
-  `resume` grant of {{blast-radius}}, checked at dry run and again at
-  execute.
+  uniformly to every Mission in the set. A `suspend` that carries
+  `on_expiry` schedules a bulk transition of that kind and needs the
+  caller's authorization for it: the `resume` grant of
+  {{blast-radius}} for `resume`, or the authorization the deployment
+  requires for a bulk `revoke` over that filter scope for `revoke`,
+  each checked at dry run and again at execute.
 
 The AS MAY declare a bound on the evaluated set size and refuse a dry
 run whose match count exceeds it with `filter_too_broad`
@@ -635,10 +637,12 @@ returns a signed response carrying:
   minutes: long enough to review, short enough that the reviewed set
   cannot silently age.
 
-Before evaluating the filter for a `suspend` whose `on_expiry` is
-`resume`, the AS MUST verify that the caller holds the `resume` grant
-of {{blast-radius}}, and MUST refuse a caller that lacks it with
-`forbidden` ({{management-errors}}), issuing no bulk token.
+Before evaluating the filter for a `suspend` that carries `on_expiry`,
+the AS MUST verify that the caller holds the authorization for the
+scheduled operation (the `resume` grant of {{blast-radius}}, or the
+authorization for a bulk `revoke` over that filter scope), and MUST
+refuse a caller that lacks it with `forbidden`
+({{management-errors}}), issuing no bulk token.
 
 A dry run commits no transition. To review the membership behind the
 count, the caller runs `enumerate` presenting the `bulk_token`
@@ -668,9 +672,9 @@ pinned members has left the caller's filter scope (administrative
 metadata changed under the reviewed set, {{admin-metadata}}) MUST be
 refused with `stale_bulk_token`, executing nothing and naming no
 member; the caller re-runs the dry run under current scope
-({{bulk-token-security}}). For a `suspend` whose `on_expiry` is
-`resume`, the AS MUST verify again that the caller holds the `resume`
-grant of {{blast-radius}}, and MUST refuse a caller that no longer
+({{bulk-token-security}}). For a `suspend` that carries `on_expiry`,
+the AS MUST verify again that the caller holds the authorization for
+the scheduled operation, and MUST refuse a caller that no longer
 holds it with `forbidden`, executing nothing; the bulk token never
 substitutes for this check. Each check completes before any
 transition commits. The token is then consumed: it is single-use
@@ -853,11 +857,11 @@ operations directly:
   `on_expiry` of `revoke`, investigate, then selectively `resume`
   individual Missions through the status profile's lifecycle endpoint,
   under its `resume` authorization; anything not affirmatively cleared
-  revokes itself at the deadline. The `revoke` deadline needs no
-  `resume` grant and replaces any schedule a member already suspended
-  had recorded, so no earlier scheduled `resume` outlives the triage;
-  a timed pause ending in `resume` needs the `resume` grant
-  ({{blast-radius}}).
+  revokes itself at the deadline. The `revoke` deadline needs the
+  caller's bulk `revoke` authorization rather than the `resume` grant,
+  and replaces any schedule a member already suspended had recorded,
+  so no earlier scheduled `resume` outlives the triage; a timed pause
+  ending in `resume` needs the `resume` grant ({{blast-radius}}).
 
 What bulk revocation does and does not stop is the security model's
 revocation-to-action latency table
@@ -1120,3 +1124,6 @@ this surface.
   committing party, an omitted schedule is preserved, and an execute
   must match the dry run's `suspend_until` as well as its `on_expiry`
   (#1002).
+- A bulk `suspend` whose `on_expiry` is `revoke` needs the caller's
+  bulk `revoke` authorization as well, checked at dry run and again
+  at execute (#1535).

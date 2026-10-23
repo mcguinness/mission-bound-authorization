@@ -1370,8 +1370,9 @@ entries depend on whether an authority proposal was submitted:
   subset of a proposed entry ({{authority-proposal}}).
 - **Configured-mapping mode**: no authority proposal was submitted,
   and a deployment-configured mapping, keyed on the Intent's
-  `purpose` or `target_resources`, yields the candidate entries,
-  which are then narrowed to policy.
+  `purpose` or `target_resources`, or on the requested `scope` values
+  for a `scope`-only target ({{scope-projection}}), yields the
+  candidate entries, which are then narrowed to policy.
 
   The mapping is a lookup, not synthesis. Because no
   `authorization_details` object was submitted, the AS refuses an Intent
@@ -2760,6 +2761,19 @@ client does not request a resource `scope` for a target that consumes
 values with their own semantics, such as `openid` ({{OpenID.Core}}),
 are unaffected and combine with `authorization_details` as
 {{Section 3.1 of RFC9396}} permits.
+
+For a `scope`-only target, the trusted mapping also relates a
+requested `scope` value back to authority, so a deployment's existing
+`scope` values can request a Mission in configured-mapping mode
+({{derivation-modes}}), combining `scope` with the Mission's
+`authorization_details` as {{Section 3.1 of RFC9396}} leaves to the
+AS. Each requested value stands for the entries that the type's
+specification derives from the mapping (for `mission_resource_access`,
+{{I-D.draft-mcguinness-oauth-mission-resource-access}}). The
+Authority Set is those entries narrowed to policy, and the token for
+that target carries their projection under the steps above. A
+requested value the target's trusted mapping does not name cannot be
+granted, and is refused with `invalid_scope` ({{error-mapping}}).
 
 A refusal caused solely by failure to establish a safe scope
 projection MUST NOT invalidate an otherwise-valid refresh token or its
@@ -7206,6 +7220,13 @@ Cross-Domain:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+-02
+
+- Configured-mapping mode can key on the requested `scope` values for
+  a `scope`-only target, through that target's trusted scope-projection
+  mapping, which also relates a requested value back to authority
+  (Derivation Modes, Scope Projection).
 
 -01
 

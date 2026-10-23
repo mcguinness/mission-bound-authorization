@@ -6,6 +6,7 @@
 
 import { createPublicKey, KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
+  type ActivationPolicyRef,
   type ApprovalContextManifestInput,
   authorityHash,
   canonicalize,
@@ -126,6 +127,7 @@ import {
   DischargeEventStore,
   type DischargeEventAudit,
   type DischargeEventKey,
+  type StoredDischargeEvent,
 } from "./lifecycle-idempotency.js";
 import {
   type DerivationReservation,
@@ -147,7 +149,7 @@ import {
   committedActivationPolicy,
   type EvaluatedActivationPolicy,
 } from "./activation-policy-snapshots.js";
-import { ApprovalGovernanceRecordStore, signApprovalGovernanceRecord } from "./approval-governance.js";
+import { type ApprovalGovernanceRecord, ApprovalGovernanceRecordStore, signApprovalGovernanceRecord } from "./approval-governance.js";
 import {
   assertDirectApprovalRecord,
   buildDirectApprovalRecord,
@@ -180,8 +182,26 @@ import {
   ceilingMembersOf,
   consentCeiling,
   consentedDrawdownPolicy,
+  decideDrawdown,
+  type DrawdownFallbackReason,
+  DrawdownRefusal,
+  type DrawdownGovernanceReason,
+  gatherDrawdownInputs,
+  type ProgressiveDrawdownOptions,
   serializeCeiling,
 } from "./progressive.js";
+import {
+  assertDrawdownRecord,
+  buildDrawdownRecord,
+  consentProvenanceOf,
+  DrawdownApprovalRecordStore,
+  drawdownGovernanceGate,
+  type DrawdownRecordingRule,
+  drawdownRecordingRuleRef,
+  type DrawdownRecordInputs,
+  parseDrawdownRecordingRule,
+  type RegisteredDrawdownRecordingRule,
+} from "./drawdown-approval-record.js";
 import {
   IntentError,
   type IntentSubmissionPresenter,
@@ -202,6 +222,7 @@ import {
 } from "./status-list.js";
 import {
   type ApprovalBasis,
+  type ApprovalBasisCeilingDrawdown,
   type ApprovalBasisDirect,
   type AuthorityEntry,
   type AuthoritySource,
@@ -420,6 +441,14 @@ export interface ApproveInput {
    * the record carries neither `proposed_authority` nor `proposal_hash`.
    */
   proposedAuthority?: AuthorityEntry[];
+  /**
+   * @spec mission#derivation-modes, mission#scope-projection: the entries the
+   * request's `scope` values stand for at a `scope`-only target
+   * (`requestedScopeEntries`). Used only when no proposal was submitted, as
+   * the configured-mapping key; not a proposal, so never recorded or hashed
+   * as one.
+   */
+  requestedScope?: AuthorityEntry[];
   subject: { iss: string; sub: string };
   approver: { iss: string; sub: string };
   /**
@@ -680,6 +709,17 @@ export interface KernelOptions {
    */
   directApprovalRecording?: { rule: RegisteredDirectApprovalRule };
   /**
+   * @spec approval-governance#accountable-assertion, approval-governance#recency-high-risk
+   * (#1470 slice 2, D626): voluntary Approval Governance Records for
+   * policy-adjudicated `ceiling_drawdown` successors. OPTIONAL and default
+   * off. Present, a drawdown passes the eligibility gate over the whole
+   * successor or falls back to a fresh human approval, and an activated one
+   * commits its signed record, the recording rule and the inputs its decision
+   * read in the creation transaction. Build the rule with
+   * `drawdownRecordingRuleFrom` from the configuration the deployment enforces.
+   */
+  ceilingDrawdownRecording?: { rule: RegisteredDrawdownRecordingRule };
+  /**
    * @spec resource-access#resource-contract (#249, D553): the trusted
    * configuration "which states whether an entry's `resource` requires a
    * reference and which contract version is current for it": the contract
@@ -871,6 +911,18 @@ export class MissionKernel {
    * is turned off.
    */
   readonly directApprovalRecords: DirectApprovalRecordStore;
+  /**
+   * @spec approval-governance#approval-policy (#1470 slice 2): the retained
+   * ceiling-drawdown recording rules and each recorded drawdown's inputs.
+   * Always present, so records stay re-checkable after recording is turned off.
+   */
+  readonly drawdownApprovalRecords: DrawdownApprovalRecordStore;
+  /** The configured ceiling-drawdown recording rule, parsed, with its `approval_policy` reference. */
+  private readonly drawdownRule?: {
+    registered: RegisteredDrawdownRecordingRule;
+    parsed: DrawdownRecordingRule;
+    ref: { id: string; version: string; digest: string };
+  };
   /** The configured direct approval rule, parsed, with its `approval_policy` reference. */
   private readonly directRule?: {
     registered: RegisteredDirectApprovalRule;
@@ -999,6 +1051,15 @@ export class MissionKernel {
     this.governanceRecords = new ApprovalGovernanceRecordStore(this.db);
     this.governedPolicyConsents = new GovernedPolicyConsentStore(this.db);
     this.directApprovalRecords = new DirectApprovalRecordStore(this.db);
+    this.drawdownApprovalRecords = new DrawdownApprovalRecordStore(this.db);
+    if (opts.ceilingDrawdownRecording) {
+      const registered = opts.ceilingDrawdownRecording.rule;
+      this.drawdownRule = {
+        registered,
+        parsed: parseDrawdownRecordingRule(registered.content),
+        ref: drawdownRecordingRuleRef(opts.issuer, registered),
+      };
+    }
     // A malformed rule refuses construction, never an approval.
     if (opts.directApprovalRecording) {
       const registered = opts.directApprovalRecording.rule;
@@ -1068,8 +1129,15 @@ export class MissionKernel {
    * and grants, with each entry's `resource_contract` assembled from
    * configuration ({@link assembleResourceContracts}, #249).
    */
-  derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {
-    return assembleResourceContracts(this.deriveWithProvenance(intent, proposal).entries, this.resourceContracts());
+  derive(
+    intent: MissionIntent,
+    proposal?: readonly AuthorityEntry[],
+    requestedScope?: readonly AuthorityEntry[],
+  ): AuthorityEntry[] {
+    return assembleResourceContracts(
+      this.deriveWithProvenance(intent, proposal, requestedScope).entries,
+      this.resourceContracts(),
+    );
   }
 
   /** @spec resource-access#resource-contract (#249): the configured contract declarations. */
@@ -1086,8 +1154,19 @@ export class MissionKernel {
    * separate child-actor origins as `child_actor_provenance` (@spec
    * child-delegation#fanout, #1304).
    */
-  deriveWithProvenance(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): DerivedAuthority {
-    const derived = deriveAuthoritySetWithProvenance(intent, this.opts.policy, proposal);
+  deriveWithProvenance(
+    intent: MissionIntent,
+    proposal?: readonly AuthorityEntry[],
+    requestedScope?: readonly AuthorityEntry[],
+  ): DerivedAuthority {
+    const derived = deriveAuthoritySetWithProvenance(
+      intent,
+      this.opts.policy,
+      proposal,
+      undefined,
+      undefined,
+      requestedScope,
+    );
     // @spec discharge#discharge-authority: resolve every `discharge_authority`
     // selector the derived entries carry, refusing the derivation when one maps
     // to nothing. Early and typed here (an IntentError the submission carriers
@@ -1440,7 +1519,7 @@ export class MissionKernel {
     // (IntentError) rather than being approved unbound.
     // @spec resource-access#delegate-eligibility: the derivation's origins
     // stay index-aligned through the two per-entry capability transforms.
-    const derived = this.deriveWithProvenance(input.intent, proposal);
+    const derived = this.deriveWithProvenance(input.intent, proposal, input.requestedScope);
     // @spec resource-access#resource-contract (#249): the reference is
     // assembled from configuration before `authorityHash` below, so
     // `authority_hash` commits it; the transform is one entry per entry, so
@@ -1685,6 +1764,81 @@ export class MissionKernel {
    * `human` assertion; pass the commit gate; sign. A denial refuses the
    * approval `access_denied`.
    */
+  /** Whether policy-adjudicated ceiling drawdowns are recorded. */
+  get recordsCeilingDrawdowns(): boolean {
+    return this.drawdownRule !== undefined;
+  }
+
+  /**
+   * @spec approval-governance#atomic-commitment, approval-governance#recency-high-risk,
+   * approval-governance#re-check (#1470 slice 2, D626): inside the drawdown's
+   * creation transaction, at its creation instant: gather the inputs and
+   * decide from them, run the eligibility gate over the whole successor, then
+   * build, gate and sign the record. A decision or gate that does not admit
+   * the drawdown refuses it before activation, nothing written, and the
+   * adapter falls back to a fresh human approval.
+   */
+  prepareDrawdownRecordInCallerTx(args: {
+    record: MissionRecord;
+    predecessor: MissionRecord;
+    deciding: ActivationPolicyRef;
+    options: ProgressiveDrawdownOptions;
+    isCrossDomain: (resource: string) => boolean;
+  }): { signed: ApprovalGovernanceRecord; inputs: DrawdownRecordInputs } {
+    const rule = this.drawdownRule as NonNullable<MissionKernel["drawdownRule"]>;
+    const { record, predecessor, deciding } = args;
+    const refuse = (reason: DrawdownGovernanceReason | DrawdownFallbackReason) => {
+      throw new DrawdownRefusal("governance_refused", `the recorded drawdown falls back to a fresh human approval: ${reason}`, reason);
+    };
+    const { inputs: adjudication } = gatherDrawdownInputs(this, args.options, {
+      predecessor,
+      requested: record.authority_set,
+      isCrossDomain: args.isCrossDomain,
+      now: new Date(record.created_at),
+    });
+    const decision = decideDrawdown(adjudication);
+    if (decision.outcome === "fresh_approval") refuse(decision.reason);
+    const committed = adjudication.drawdown_policy;
+    if (
+      decision.outcome !== "policy" ||
+      !committed ||
+      committed.id !== deciding.id ||
+      committed.version !== deciding.version ||
+      committed.digest !== deciding.digest
+    ) {
+      refuse("drawdown_policy_changed");
+    }
+    const consent = consentProvenanceOf(this, predecessor);
+    if (!consent) return refuse("governance_consent_unverified");
+    const gate = drawdownGovernanceGate(this.opts.issuer, rule.parsed, {
+      deciding,
+      consent,
+      authority: record.authority_set,
+      decided_at: record.created_at,
+    });
+    if (!gate.ok) refuse(gate.reason);
+    const unsigned = buildDrawdownRecord(record, rule.ref, deciding);
+    assertDrawdownRecord(unsigned, record.approval_basis as ApprovalBasisCeilingDrawdown, rule.ref, deciding);
+    return {
+      signed: signApprovalGovernanceRecord(unsigned, this.statusSigner()),
+      inputs: {
+        approval_event_id: record.approval_event_id,
+        intent_hash: record.intent_hash,
+        authority: record.authority_set,
+        adjudication,
+        consent,
+        decided_at: record.created_at,
+      },
+    };
+  }
+
+  /** Retain a prepared drawdown record, its rule and its inputs; only in the Mission's creation transaction. */
+  retainDrawdownRecordInCallerTx(missionId: string, prepared: { signed: ApprovalGovernanceRecord; inputs: DrawdownRecordInputs }): void {
+    const rule = this.drawdownRule as NonNullable<MissionKernel["drawdownRule"]>;
+    this.drawdownApprovalRecords.retainInCallerTx(missionId, this.opts.issuer, rule.ref, rule.registered, prepared.inputs);
+    this.governanceRecords.retainInCallerTx(missionId, prepared.signed);
+  }
+
   private prepareDirectRecord(record: MissionRecord, input: ApproveInput, sourceRoot: string, ceiling: AuthorityEntry[] | undefined) {
     const rule = this.directRule as NonNullable<MissionKernel["directRule"]>;
     if (!input.authentication) {
@@ -2949,11 +3103,189 @@ export class MissionKernel {
     const found = this.get(id);
     if (!found) throw new DischargeNotFoundError("unknown_mission", `unknown mission: ${id}`);
     const record = this.applyExpiry(found);
-    // --- target resolution (@spec discharge#condition-selectors) ---
-    // A selector resolves to its target; one that resolves to none, or to a
-    // target outside this request's mission_id, joins the same collapse as an
-    // unknown digest. From here on the RESOLVED digests are the target, so the
-    // event tuple and the fingerprint below are the digest form's exactly.
+    const target = this.dischargeTargetIn(record, input);
+    // @spec discharge#discharge-result — the echo is the CURRENT request's
+    // target form and event_id, whichever form the stored occurrence used.
+    const selectors = { ...targetFormOf(input), event_id: input.event_id };
+    // --- event-level dedup (@spec discharge#discharge-idempotency) ---
+    // Scoped by the five-part tuple of the TARGETED record and qualified by the
+    // assertion fingerprint. Looked up BEFORE the terminal check and before any
+    // carryover resolution: an at-least-once sender's retry under a fresh nonce
+    // must recover the ORIGINAL outcome, versions and resolved target even after
+    // the Mission has since gone terminal or been carried again. `nonce` is the
+    // endpoint's own retry key and is deliberately outside the fingerprint.
+    const eventKey: DischargeEventKey = {
+      authority: input.authority,
+      missionId: record.id,
+      entryDigest: target.entry_digest,
+      conditionDigest: target.condition_digest,
+      eventId: input.event_id,
+    };
+    const fingerprint = dischargeAssertionFingerprint({
+      mission_id: record.id,
+      entry_digest: target.entry_digest,
+      condition_digest: target.condition_digest,
+      event_type: input.event_type,
+      event_id: input.event_id,
+      ...(input.evidence_ref !== undefined ? { evidence_ref: input.evidence_ref } : {}),
+      ...(input.evidence_digest !== undefined ? { evidence_digest: input.evidence_digest } : {}),
+      ...(input.observed_at !== undefined ? { observed_at: input.observed_at } : {}),
+    });
+    const forwardedFrom = { issuer: record.issuer, id: record.id };
+    const recorded = this.dischargeEvents.find(eventKey);
+    const route = this.dischargeRoute(record, target, recorded, true);
+    // --- target authorization (@spec discharge#discharge-authority) ---
+    // Against the target the route names, before any outcome is distinguished
+    // (authorizeDischarge decides the same, read-only, before deduplication).
+    this.authorizeDischargeTarget(
+      route.authorize.missionId,
+      route.authorize.entryDigest,
+      target.condition_digest,
+      input,
+    );
+    if (recorded) {
+      // @spec discharge#discharge-carryover ("Replay") — the target recorded at
+      // first processing, never a newly resolved one, decides both the
+      // authorization and the record the result describes.
+      const resolved = recorded.resolved;
+      if (recorded.fingerprint !== fingerprint) {
+        throw new DischargeConflictError(
+          `event_id ${input.event_id} was already asserted against this target with a different assertion`,
+        );
+      }
+      // No state-changing work: no re-latch, no version increment. The caller
+      // signs a FRESH envelope echoing the new nonce and carrying this stored
+      // outcome with the versions the original commit produced.
+      const stored = {
+        ...selectors,
+        outcome: recorded.outcome,
+        prior_version: recorded.priorVersion,
+        new_version: recorded.newVersion,
+      };
+      if (resolved && resolved.missionId !== record.id) {
+        const described = this.get(resolved.missionId);
+        if (!described) {
+          throw new DischargeNotFoundError("unknown_mission", `unknown mission: ${resolved.missionId}`);
+        }
+        return { record: described, result: { ...stored, forwarded_from: forwardedFrom } };
+      }
+      return { record, result: stored };
+    }
+    const audit = {
+      receivedAt: this.now().toISOString(),
+      ...(input.evidence_ref !== undefined ? { evidenceRef: input.evidence_ref } : {}),
+      ...(input.evidence_digest !== undefined ? { evidenceDigest: input.evidence_digest } : {}),
+      ...(input.observed_at !== undefined ? { observedAt: input.observed_at } : {}),
+    };
+    const event = { eventKey, fingerprint, audit, selectors, input };
+
+    // --- forwarding after carryover (@spec discharge#discharge-carryover) ---
+    switch (route.kind) {
+      case "own-latch":
+        return this.applyDischarge(record, target, event, undefined, { latchFirst: true });
+      case "broken":
+        throw new DischargeTraversalError(route.reason);
+      case "forwarded":
+        return this.applyDischarge(
+          route.record,
+          { entry_digest: route.entryDigest, condition_digest: target.condition_digest },
+          event,
+          forwardedFrom,
+        );
+      default:
+        return this.applyDischarge(record, target, event);
+    }
+  }
+
+  /**
+   * @spec discharge#discharge-carryover, discharge#discharge-authority: the route
+   * a discharge takes and the target its authorization is checked against, in
+   * ONE place for {@link discharge} and {@link authorizeDischarge}, so the
+   * check made before deduplication and the one made at commit never differ.
+   *
+   *  - `recorded`: the occurrence was already recorded; the target recorded at
+   *    first processing, never a newly resolved one, is authorized.
+   *  - On a carried old child: `own-latch` (the targeted entry's OWN latch in
+   *    the old child comes first: an entry it had already discharged answers
+   *    already_discharged, unforwarded, since the replacement's effective set
+   *    excludes it); `broken` (a traversal failure is a refusal, never an
+   *    acknowledgement, and only a caller authorized for the target it named
+   *    learns of it); `absent` (no recorded counterpart: the targeted
+   *    terminal old child answers terminal_noop once the caller is authorized
+   *    for the target it named); `forwarded` (authorized against the
+   *    REPLACEMENT's pinned mapping, never the old one).
+   *  - `direct`: everything else, authorized for the target named.
+   */
+  private dischargeRoute(
+    record: MissionRecord,
+    target: { entry_digest: string; condition_digest: string },
+    recorded: StoredDischargeEvent | undefined,
+    materialize: boolean,
+  ): { authorize: { missionId: string; entryDigest: string } } & (
+    | { kind: "recorded" | "own-latch" | "absent" | "direct" }
+    | { kind: "broken"; reason: string }
+    | { kind: "forwarded"; record: MissionRecord; entryDigest: string }
+  ) {
+    const named = { missionId: record.id, entryDigest: target.entry_digest };
+    if (recorded) return { kind: "recorded", authorize: recorded.resolved ?? named };
+    if (!this.carriedRowOf(record)) return { kind: "direct", authorize: named };
+    if (record.discharged?.some((d) => d.entry_digest === target.entry_digest)) {
+      return { kind: "own-latch", authorize: named };
+    }
+    const resolution = this.resolveCarriedTarget(record, target.entry_digest, target.condition_digest, materialize);
+    if (resolution.kind === "broken") return { kind: "broken", reason: resolution.reason, authorize: named };
+    if (resolution.kind === "absent") return { kind: "absent", authorize: named };
+    return {
+      kind: "forwarded",
+      record: resolution.record,
+      entryDigest: resolution.entryDigest,
+      authorize: { missionId: resolution.record.id, entryDigest: resolution.entryDigest },
+    };
+  }
+
+  /**
+   * @spec status#lifecycle-processing, discharge#discharge-anti-oracle (#1535):
+   * the discharge's whole not-found collapse, decided READ-ONLY before the
+   * Lifecycle endpoint deduplicates the request: selector existence, then
+   * condition membership, then target authorization, against the target
+   * {@link discharge} authorizes (an occurrence already recorded authorizes
+   * its recorded target, a forwarded discharge the replacement's, any other
+   * the named one). It throws the {@link DischargeNotFoundError} discharge()
+   * throws at the same step and writes nothing: no expiry or schedule commit,
+   * no latch, no event record, no purge. discharge() repeats every check
+   * inside its own transaction.
+   */
+  authorizeDischarge(id: string, input: DischargeRequest): void {
+    const record = this.get(id);
+    if (!record) throw new DischargeNotFoundError("unknown_mission", `unknown mission: ${id}`);
+    const target = this.dischargeTargetIn(record, input);
+    const recorded = this.dischargeEvents.find(
+      {
+        authority: input.authority,
+        missionId: record.id,
+        entryDigest: target.entry_digest,
+        conditionDigest: target.condition_digest,
+        eventId: input.event_id,
+      },
+      { purge: false },
+    );
+    const { authorize } = this.dischargeRoute(record, target, recorded, false);
+    this.authorizeDischargeTarget(authorize.missionId, authorize.entryDigest, target.condition_digest, input);
+  }
+
+  /**
+   * @spec discharge#condition-selectors, discharge#discharge-anti-oracle: the
+   * target a discharge names, resolved and checked in the normative order:
+   * a selector resolves to its target (one that resolves to none, or to a
+   * target outside this record, joins the collapse as an unknown digest), then
+   * selector existence and condition membership. From here on the RESOLVED
+   * digests are the target, so the event tuple and the fingerprint are the
+   * digest form's exactly.
+   */
+  private dischargeTargetIn(
+    record: MissionRecord,
+    input: DischargeRequest,
+  ): { entry_digest: string; condition_digest: string } {
     let target: { entry_digest: string; condition_digest: string };
     if (input.condition_selector !== undefined) {
       const resolved = this.dischargeSelectors.resolve(input.condition_selector);
@@ -2993,119 +3325,7 @@ export class MissionKernel {
         "event_type does not match the condition condition_digest names",
       );
     }
-    // @spec discharge#discharge-result — the echo is the CURRENT request's
-    // target form and event_id, whichever form the stored occurrence used.
-    const selectors = { ...targetFormOf(input), event_id: input.event_id };
-    // --- event-level dedup (@spec discharge#discharge-idempotency) ---
-    // Scoped by the five-part tuple of the TARGETED record and qualified by the
-    // assertion fingerprint. Looked up BEFORE the terminal check and before any
-    // carryover resolution: an at-least-once sender's retry under a fresh nonce
-    // must recover the ORIGINAL outcome, versions and resolved target even after
-    // the Mission has since gone terminal or been carried again. `nonce` is the
-    // endpoint's own retry key and is deliberately outside the fingerprint.
-    const eventKey: DischargeEventKey = {
-      authority: input.authority,
-      missionId: record.id,
-      entryDigest: target.entry_digest,
-      conditionDigest: target.condition_digest,
-      eventId: input.event_id,
-    };
-    const fingerprint = dischargeAssertionFingerprint({
-      mission_id: record.id,
-      entry_digest: target.entry_digest,
-      condition_digest: target.condition_digest,
-      event_type: input.event_type,
-      event_id: input.event_id,
-      ...(input.evidence_ref !== undefined ? { evidence_ref: input.evidence_ref } : {}),
-      ...(input.evidence_digest !== undefined ? { evidence_digest: input.evidence_digest } : {}),
-      ...(input.observed_at !== undefined ? { observed_at: input.observed_at } : {}),
-    });
-    const forwardedFrom = { issuer: record.issuer, id: record.id };
-    const recorded = this.dischargeEvents.find(eventKey);
-    if (recorded) {
-      // @spec discharge#discharge-carryover ("Replay") — the target recorded at
-      // first processing, never a newly resolved one, decides both the
-      // authorization and the record the result describes.
-      const resolved = recorded.resolved;
-      this.authorizeDischargeTarget(
-        resolved?.missionId ?? record.id,
-        resolved?.entryDigest ?? target.entry_digest,
-        target.condition_digest,
-        input,
-      );
-      if (recorded.fingerprint !== fingerprint) {
-        throw new DischargeConflictError(
-          `event_id ${input.event_id} was already asserted against this target with a different assertion`,
-        );
-      }
-      // No state-changing work: no re-latch, no version increment. The caller
-      // signs a FRESH envelope echoing the new nonce and carrying this stored
-      // outcome with the versions the original commit produced.
-      const stored = {
-        ...selectors,
-        outcome: recorded.outcome,
-        prior_version: recorded.priorVersion,
-        new_version: recorded.newVersion,
-      };
-      if (resolved && resolved.missionId !== record.id) {
-        const described = this.get(resolved.missionId);
-        if (!described) {
-          throw new DischargeNotFoundError("unknown_mission", `unknown mission: ${resolved.missionId}`);
-        }
-        return { record: described, result: { ...stored, forwarded_from: forwardedFrom } };
-      }
-      return { record, result: stored };
-    }
-    const audit = {
-      receivedAt: this.now().toISOString(),
-      ...(input.evidence_ref !== undefined ? { evidenceRef: input.evidence_ref } : {}),
-      ...(input.evidence_digest !== undefined ? { evidenceDigest: input.evidence_digest } : {}),
-      ...(input.observed_at !== undefined ? { observedAt: input.observed_at } : {}),
-    };
-    const event = { eventKey, fingerprint, audit, selectors, input };
-
-    // --- forwarding after carryover (@spec discharge#discharge-carryover) ---
-    if (this.carriedRowOf(record)) {
-      // The targeted entry's OWN latch in the old child first: an entry the old
-      // child had already discharged answers already_discharged, unforwarded,
-      // since the replacement's effective set excludes it.
-      if (record.discharged?.some((d) => d.entry_digest === target.entry_digest)) {
-        this.authorizeDischargeTarget(record.id, target.entry_digest, target.condition_digest, input);
-        return this.applyDischarge(record, target, event, undefined, { latchFirst: true });
-      }
-      const resolution = this.resolveCarriedTarget(record, target.entry_digest, target.condition_digest);
-      if (resolution.kind === "broken") {
-        // A traversal failure is a refusal, never an acknowledgement, and only
-        // a caller authorized for the target it named learns of it.
-        this.authorizeDischargeTarget(record.id, target.entry_digest, target.condition_digest, input);
-        throw new DischargeTraversalError(resolution.reason);
-      }
-      if (resolution.kind === "absent") {
-        // No recorded counterpart: the entry holds no authority in the
-        // replacement, and the targeted (terminal) old child answers
-        // terminal_noop once the caller is authorized for the target it named.
-        this.authorizeDischargeTarget(record.id, target.entry_digest, target.condition_digest, input);
-        return this.applyDischarge(record, target, event);
-      }
-      const resolved = resolution;
-      // Authorized against the REPLACEMENT's pinned mapping, never the old one.
-      this.authorizeDischargeTarget(
-        resolved.record.id,
-        resolved.entryDigest,
-        target.condition_digest,
-        input,
-      );
-      return this.applyDischarge(
-        resolved.record,
-        { entry_digest: resolved.entryDigest, condition_digest: target.condition_digest },
-        event,
-        forwardedFrom,
-      );
-    }
-
-    // --- target authorization (@spec discharge#discharge-authority) ---
-    this.authorizeDischargeTarget(record.id, target.entry_digest, target.condition_digest, input);
-    return this.applyDischarge(record, target, event);
+    return target;
   }
 
   /**
@@ -3292,6 +3512,13 @@ export class MissionKernel {
     record: MissionRecord,
     entryDigestValue: string,
     conditionDigestValue: string,
+    /**
+     * Apply each hop's expiry clock (the default). Off for the read-only
+     * pre-authorization ({@link authorizeDischarge}): expiry changes a hop's
+     * state, never the chain the pairings record, so the resolved record and
+     * entry are the same either way.
+     */
+    materialize = true,
   ):
     | { kind: "resolved"; record: MissionRecord; entryDigest: string }
     | { kind: "absent" }
@@ -3330,7 +3557,7 @@ export class MissionKernel {
           reason: `pairing names an entry of ${next.id} that does not hold the fired condition`,
         };
       }
-      current = this.applyExpiry(next);
+      current = materialize ? this.applyExpiry(next) : next;
       digest = pair.replacement_entry_digest;
     }
   }
@@ -4386,6 +4613,9 @@ export class MissionKernel {
           : {}),
         version: record.version,
         expires_at: record.expires_at,
+        // @spec status#mission-status-caching freshness cap: never later
+        // than the response's `exp` (below, the same instant) nor its `iat`
+        // plus the advertised ceiling (`freshness` is capped at it above).
         fresh_until: new Date((nowS + freshness) * 1000).toISOString(),
         ...(record.containment
           ? { containment_version: record.containment.containment_version }

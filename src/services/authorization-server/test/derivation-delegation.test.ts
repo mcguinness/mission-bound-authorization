@@ -423,3 +423,23 @@ describe("isSubsetEntry compares max_amount by exact decimal value, not IEEE-754
     expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(IntentError);
   });
 });
+
+// @spec resource-access#decimal-values: "Comparison and intersection over two
+// such decimal-string values MUST be computed as exact decimal arithmetic".
+// The intersection keeps the exactly smaller cap, even where both values round
+// to the same IEEE-754 double.
+describe("derivation intersects max_amount by exact decimal value, not IEEE-754 float (@spec resource-access#decimal-values)", () => {
+  const cap = (amount: string) => entry({ constraints: { max_amount: { amount, currency: "USD" } } });
+  const derivedCap = (ceiling: string, proposed: string) => {
+    const ceilingEntry = cap(ceiling);
+    const intent: MissionIntent = { goal: "g", target_resources: [ceilingEntry.resource], expires_at: EXP };
+    return deriveAuthoritySet(intent, { policy_version: "t", ceiling: [ceilingEntry] }, [cap(proposed)])[0]?.constraints
+      ?.max_amount?.amount;
+  };
+
+  it("a proposal 1 unit above the ceiling's cap past 2^53 derives the ceiling's cap, and a narrower proposal keeps its own", () => {
+    expect(Number.parseFloat("9007199254740993.00")).toBe(Number.parseFloat("9007199254740992.00"));
+    expect(derivedCap("9007199254740992.00", "9007199254740993.00")).toBe("9007199254740992.00");
+    expect(derivedCap("9007199254740993.00", "9007199254740992.00")).toBe("9007199254740992.00");
+  });
+});

@@ -936,6 +936,18 @@ describe("re-checking an evaluation (@spec approval-governance#re-check)", () =>
       .run(JSON.stringify(signed), approvalGovernanceRecordDigest(signed), missionId);
   };
 
+  /**
+   * A faulty issuer: the Mission committed at `at` and its record re-signed to
+   * evaluate there, so the evaluation instant is still the creation instant.
+   */
+  const committedAt = (kernel: MissionKernel, missionId: string, at: string, edit: (r: UnsignedApprovalGovernanceRecord) => void = () => {}) => {
+    kernel.db.prepare("UPDATE missions SET created_at = ? WHERE id = ?").run(at, missionId);
+    resign(kernel, missionId, (r) => {
+      r.evaluation.evaluated_at = at;
+      edit(r);
+    });
+  };
+
   const evaluatorKernel = () => {
     const registry: Record<string, RegisteredActivationPolicy> = {
       [EVAL_ID]: { version: "e1", content_type: "application/json", content: JSON.stringify({ max_entries: 3 }) },
@@ -986,6 +998,16 @@ describe("re-checking an evaluation (@spec approval-governance#re-check)", () =>
       .prepare("UPDATE approval_governance_records SET record_json = json_set(record_json, '$.evaluation.evaluated_at', ?)")
       .run(iso(T0 + 1));
     expect(recheck(kernel, mission.id)).toEqual({ rechecked: false, step: 1, reason: "record differs from its signed payload" });
+  });
+
+  it("step 1: refuses an evaluation instant other than the Mission's creation, where recency is measured", () => {
+    const kernel = makeKernel();
+    const c = consent(kernel);
+    clockMs = T0 + 60_000;
+    const { mission } = activate(kernel, c.consent_id);
+    // Committed later than the 30-day default ceiling admits the approval, while the record still evaluates inside it.
+    kernel.db.prepare("UPDATE missions SET created_at = ? WHERE id = ?").run(iso(T0 + 30 * 86400_000 + 1000), mission.id);
+    expect(recheck(kernel, mission.id)).toEqual({ rechecked: false, step: 1, reason: "evaluation.evaluated_at is not the Mission's creation instant" });
   });
 
   it("step 2: refuses when the retained root snapshot is missing or does not reproduce approval_policy.digest", () => {
@@ -1140,26 +1162,21 @@ describe("re-checking an evaluation (@spec approval-governance#re-check)", () =>
     });
   });
 
-  it("step 6: re-applies recency at evaluated_at, including a high-risk class's committed exception", () => {
+  it("step 6: re-applies recency at evaluated_at, the creation instant, including a high-risk class's committed exception", () => {
     const kernel = makeKernel();
     const c = consent(kernel);
     clockMs = T0 + 60_000;
     const { mission } = activate(kernel, c.consent_id);
-    // Older than the 30-day default ceiling at the recorded evaluation instant.
-    resign(kernel, mission.id, (r) => {
-      r.evaluation.evaluated_at = iso(T0 + 30 * 86400_000 + 1000);
-    });
-    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 6 });
-    // Decided after the recorded evaluation instant, beyond the skew.
-    resign(kernel, mission.id, (r) => {
-      r.evaluation.evaluated_at = iso(T0 - 1000);
-    });
-    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 6 });
+    // Committed later than the 30-day default ceiling admits the approval.
+    committedAt(kernel, mission.id, iso(T0 + 30 * 86400_000 + 1000));
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 6, reason: expect.stringMatching(/older than the applicable/) });
+    // Committed before the assertion was decided, beyond the skew.
+    committedAt(kernel, mission.id, iso(T0 - 1000));
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 6, reason: expect.stringMatching(/out of order/) });
     // Removing every assertion does not leave the aged approval unchecked.
-    resign(kernel, mission.id, (r) => {
+    committedAt(kernel, mission.id, iso(T0 + 30 * 86400_000 + 1000), (r) => {
       r.assertions = [];
       r.evaluation.contributing = [];
-      r.evaluation.evaluated_at = iso(T0 + 30 * 86400_000 + 1000);
     });
     expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false });
 
@@ -1176,9 +1193,7 @@ describe("re-checking an evaluation (@spec approval-governance#re-check)", () =>
     const high = activate(excepted, ce.consent_id, { proposedAuthority: proposal }).mission;
     expect(recheck(excepted, high.id)).toEqual({ rechecked: true });
     // Within the default ceiling but past the class exception's age.
-    resign(excepted, high.id, (r) => {
-      r.evaluation.evaluated_at = iso(T0 + 601_000);
-    });
+    committedAt(excepted, high.id, iso(T0 + 601_000));
     expect(recheck(excepted, high.id)).toMatchObject({ rechecked: false, step: 6 });
   });
 });
