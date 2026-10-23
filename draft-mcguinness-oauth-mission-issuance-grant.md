@@ -146,20 +146,18 @@ informative:
 
 This specification defines the Mission Issuance Grant, a profile of
 the JSON Web Token (JWT) authorization grant of RFC 7523. A Mission
-Authority Server approves and records Missions without changing an
-estate's OAuth authorization servers. Under this profile it also
-issues, for an active Mission, a short-lived, audience-restricted,
-single-use JWT that the client presents at an authorization server's
-token endpoint. The authorization server validates the grant and
-issues Mission-bound tokens: they carry the Mission, are bounded by
-the authority the grant conveys, and expire no later than the
-Mission. An authorization server that checks Mission state at
-redemption and at every refresh stops issuing and renewing those
-tokens once the Mission is no longer active, and narrows them when
-its authority is narrowed; one that does not check issues no refresh
-tokens. Approval,
-the Mission record, and its lifecycle stay at the Mission Authority
-Server.
+Authority Server, which approves and records Missions without
+changing an estate's OAuth authorization servers, issues the grant
+for an active Mission: a short-lived, single-use JWT for one client
+and one authorization server. The client presents it at that
+authorization server's token endpoint and receives Mission-bound
+tokens, which carry the Mission, are bounded by the authority the
+grant conveys, and expire no later than the Mission. An authorization
+server that checks Mission state at redemption and at every refresh
+stops issuing and renewing those tokens once the Mission is no longer
+active, and narrows them when its authority is narrowed; one that
+does not issues no refresh tokens. Approval, the Mission record, and
+its lifecycle stay at the Mission Authority Server.
 
 --- middle
 
@@ -187,17 +185,15 @@ This profile defines what the grant contains, how the MAS issues it,
 what the AS issues in return, and how the AS keeps issuance and
 refresh bounded by the Mission's current state and authority.
 
-Every grant is issued against current Mission state, so a revoked
-Mission receives no new grants. An AS with a Mission-state
+Every grant is minted against current Mission state, so a Mission
+that is not active receives no new grants. An AS with a Mission-state
 integration ({{conventions}}) also checks the Mission at redemption
-and at every refresh; one without issues no refresh tokens, so its
-tokens end with their own short lifetime. Either way, every path to
-new tokens passes a Mission-state check, at minting or at redemption:
-the issuance-gate kill switch that a MAS alone does not provide
-({{I-D.draft-mcguinness-mission-authority-server}}). Without the
-integration that check is the grant's minting, so its age at
-redemption adds to the issued token's lifetime
-({{security-considerations}}).
+and at every refresh; one without issues no refresh tokens. Either
+way, every path to new tokens passes a Mission-state check, an
+issuance gate a MAS alone does not provide
+({{I-D.draft-mcguinness-mission-authority-server}}). Where that check
+is the grant's minting, the grant's remaining lifetime adds to the
+issued token's ({{security-considerations}}).
 
 The AS implements none of the issuance profile's intake, approval
 ceremony, authority derivation, record, or lifecycle surfaces; those
