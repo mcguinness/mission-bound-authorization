@@ -44,7 +44,7 @@ import {
   type BuiltAs,
   initSigningKeyRing,
 } from "../src/index.js";
-import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 
 const PORT = 14876;
 const ISSUER = `http://localhost:${PORT}`;
@@ -203,11 +203,13 @@ async function baseMission(running: Running): Promise<{ missionId: string; acces
   storeCookies(res, jar);
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
+  const decideHeaders = { ...floorApprovalHeaders(sessions, uid, cookieHeader(jar)), "content-type": "application/json" };
+  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...floorApprovalHeaders(sessions, uid, cookieHeader(jar)), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;

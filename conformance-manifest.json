@@ -6429,7 +6429,386 @@
      "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half has no observable output to assert. Flips to tested when an approval surface retains its rendering across the decision. The reference AS also derives again at the decision without comparing against what it rendered, so a ceiling or policy change between the two commits an unrendered set: #1446."
+   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half had no observable output here. #1446 (D583) makes it observable at the approval surface: Changes Before the Decision's rows (core.approval-context-changes.*) carry the endpoint witnesses, and this row stays partial on its unit witnesses to assert. Flips to tested when an approval surface retains its rendering across the decision. The reference AS also derives again at the decision without comparing against what it rendered, so a ceiling or policy change between the two commits an unrendered set: #1446."
+  },
+  {
+   "id": "core.approval-context-changes.recompute",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "the AS MUST recompute the affected values and the anchors the Mission records",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a change between rendering and decision, the AS re-establishes the derived Authority Set, the authority source and the policy inputs as they stand at the decision, and a fresh decision commits the recomputed set with the anchors computed over it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a narrower ceiling between rendering and decision creates nothing; a fresh decision on the page rendered again commits exactly the narrower context",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > an unchanged context approves on its rendering's revision, and the Mission commits the rendered set",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.no-create-without-consent",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "MUST NOT create the Mission without the Approver's consent to the changed context",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a decision whose context changed since the rendering it names, before the decision or while it commits, or that names no rendering, a superseded one, or one made to another principal, creates no Mission, grant or code; only a fresh decision on the context rendered again creates one",
+    "local": "Consent is the decision on the latest rendering made to the deciding principal: a browser approval session, or a headless approval service with the Approver and Subject it names. A change answers 409 approval_context_changed (a form post: 303 back to the page), found before any write; a decision whose re-check fails retires only its own rendering; a context that no longer admits approval takes its mapped refusal instead, and a committed decision's retry recovers it."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision with no rendering, or after only an anonymous rendering, approves nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a narrower ceiling between rendering and decision creates nothing; a fresh decision on the page rendered again commits exactly the narrower context",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a wider ceiling between rendering and decision creates nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a stale form after a newer rendering approves nothing; the latest rendering does",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a revision rendered in one approval session approves nothing in another",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a change while the decision commits (during the grant save) creates no Mission and leaves no grant",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision held in its grant save never writes over or destroys the grant a newer decision commits",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision that fails its commit re-check retires only its own rendering: a newer one still approves",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a headless approval service renders before deciding, and its revision binds to the Subject it named",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "a device approval rests on its rendering (@spec mission#approval-context-changes, #1446) > a device approval with no rendering approves nothing, and the session stays pending",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "a device approval rests on its rendering (@spec mission#approval-context-changes, #1446) > a device approval whose context changed after its rendering creates nothing and leaves the session pending; a fresh rendering approves",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.task-or-proposal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "the task or the authority proposal",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a task or proposal that differs from the one rendered creates no Mission from the old decision"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446)."
+  },
+  {
+   "id": "core.approval-context-changes.derived-authority-set",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "the derived Authority Set",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derived Authority Set that narrowed or widened between rendering and decision is detected, and no Mission is created from the old decision"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a narrower ceiling between rendering and decision creates nothing; a fresh decision on the page rendered again commits exactly the narrower context",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a wider ceiling between rendering and decision creates nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.authority-source",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "the established authority source",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authority source whose resolution (root, catalog revision, provenance) changed between rendering and decision is detected, and no Mission is created from the old decision"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > an authority source change between rendering and decision creates nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.effective-expires-at",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "the effective `expires_at`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an effective expires_at that changed between rendering and decision, by an input or by the passage of time, is detected and no Mission is created from the old decision; a Mission created records the effective expires_at its rendering showed",
+    "local": "The rendering commits the effective expires_at it shows (the page displays it). The decision commits exactly that instant while the current inputs admit it (later than now, no later than the expiry they establish now), so a lifetime measured from a later decision never moves it. A rendered expiry that has passed, or that a shorter lifetime bound narrows, asks for a fresh decision; where no expiry later than now remains, the commit's mapped refusal (invalid_request) applies instead."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a shorter lifetime bound changes the effective expires_at: nothing is created",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > the Mission commits the effective expires_at its rendering showed: a lifetime measured from a later decision never moves it",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a rendering whose effective expires_at has passed asks for a fresh decision, which commits the expiry rendered again",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a requested expiry that passes while the decision commits gets its mapped refusal, not a request to review it again",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a change while the decision commits (during the grant save) creates no Mission and leaves no grant",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "a device approval rests on its rendering (@spec mission#approval-context-changes, #1446) > a device approval whose context changed after its rendering creates nothing and leaves the session pending; a fresh rendering approves",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.policy-input",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "a policy input establishing any of them",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a change to a policy input establishing the context is detected even when every anchor it yields is unchanged",
+    "local": "The reference commits the derivation policy's content, the scope projection and the activation policies held. A whole-policy digest also re-renders on an unrelated edit: a fresh decision, never a wrong one."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a policy edit that leaves every anchor and the effective expires_at equal still changes the context: a lifetime bound past the requested expiry",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a scope projection change is a changed policy input",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a change while the decision commits (during the grant save) creates no Mission and leaves no grant",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.anchors-over-approved-context",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "Each anchor (`intent_hash`, `authority_hash`, and `proposal_hash` where a proposal was submitted) is computed over the approved context",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the anchors a created Mission records are computed over the context the Approver approved"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > an unchanged context approves on its rendering's revision, and the Mission commits the rendered set",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a narrower ceiling between rendering and decision creates nothing; a fresh decision on the page rendered again commits exactly the narrower context",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.proposal-swap",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "a proposal swapped between rendering and decision changes `proposal_hash` even where `intent_hash` is unchanged",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a proposal swapped between rendering and decision yields a different proposal_hash though the intent_hash is the same"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446)."
   },
   {
    "id": "core.mission-record.authority-source-required",
@@ -8333,7 +8712,7 @@
    "assertion": "concurrency",
    "observation": {
     "normative": "the Mission Record is created active atomically with the approval decision and the issuance of the authorization code",
-    "local": "decide() prepares the approval (every refusal before any write, except the progressive ceiling consent the commit establishes at its creation instant, which leaves an inert grant), saves the provider grant under an identity derived from the interaction, then commits the record already bound to it (kernel.approve with grantId; bindGrant is compare-and-set). A failure before the commit leaves no Mission, only an inert grant a retry overwrites; a repeated or concurrent decision recovers the one grant and binding. oidc-provider issues the code on the later resume request, so a committed active, grant-bound Mission can precede code creation."
+    "local": "decide() prepares the approval (every refusal before any write, except the progressive ceiling consent the commit establishes at its creation instant, which leaves an inert grant), saves the provider grant under an identity derived from the interaction, then commits the record already bound to it (kernel.approve with grantId; bindGrant is compare-and-set). A failure before the commit leaves no Mission, only an inert grant a retry overwrites; a repeated or concurrent decision recovers the one grant and binding. The commits on one approval event run one at a time, cleanup included (in-process, under the single-process fence), so a decision resuming after asynchronous work recovers a commit made meanwhile and never writes over or destroys its grant (#1446). oidc-provider issues the code on the later resume request, so a committed active, grant-bound Mission can precede code creation."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -8389,6 +8768,24 @@
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
      "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > the commit revalidates the prepared authority source: a source withdrawn during the grant save refuses access_denied and creates no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision held in its grant save never writes over or destroys the grant a newer decision commits",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a second decision on the same rendering waits for the first and recovers its commit, even when a change lands between them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a reservation outlives a failed commit: a decision by another principal is refused before saving a grant",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
