@@ -28,7 +28,7 @@
  *    inputs with different evidence produce a MISMATCH, never a silent replay.
  */
 
-import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { ApprovalSessionStore } from "../src/index.js";
 const FLOOR_SESSIONS = new ApprovalSessionStore();
 
@@ -504,11 +504,13 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
     expect(html).toContain("Verified intent provenance");
     expect(html).toContain("admission.example");
 
+    const decideHeaders = { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader()), "content-type": "application/json" };
+    const render_revision = await renderedRevision(ISSUER_E2E, uid, decideHeaders);
     res = await fetch(`${ISSUER_E2E}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader()), "content-type": "application/json" },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: decideHeaders,
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     expect(res.status, await res.clone().text()).toBe(303);
 

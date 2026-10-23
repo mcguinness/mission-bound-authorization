@@ -5,7 +5,7 @@
  * wire. The PDP and MCP pieces here are throwaway-grade by design.
  */
 
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { createServer, type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, INVOICES, MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
@@ -204,11 +204,13 @@ describe("M1 tracer slice", () => {
     expect(location).toContain("/interaction/");
     const uid = location.split("/interaction/")[1] as string;
 
+    const decideHeaders = { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() };
+    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: decideHeaders,
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     storeCookies(res);
     location = res.headers.get("location") as string;
@@ -471,11 +473,13 @@ describe("mission_error wire carriage: derivations_exhausted (@spec mission#erro
     storeCookies(res);
     let location = res.headers.get("location") as string;
     const uid = location.split("/interaction/")[1] as string;
+    const decideHeaders = { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() };
+    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader() },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: decideHeaders,
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     storeCookies(res);
     location = res.headers.get("location") as string;

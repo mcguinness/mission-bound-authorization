@@ -303,6 +303,12 @@ export interface ExpiryCeilings {
    * consented root's lifetime limit, measured from the creation instant.
    */
   governedPolicy?: { maxLifetimeS: number };
+  /**
+   * @spec mission#approval-context-changes (#1446, D583): direct approval, the
+   * effective `expires_at` the approval rendering showed, so the decision
+   * commits no expiry later than the one its Approver saw.
+   */
+  rendered?: string;
 }
 
 /** The earliest of several {ms, iso} candidates, returning the winner's iso
@@ -370,6 +376,7 @@ export function resolveEffectiveExpiry(input: {
       addLifetime(c.template.instanceLifetimeS);
     }
     if (c.governedPolicy) addLifetime(c.governedPolicy.maxLifetimeS);
+    addIso(c.rendered);
   }
   return earliestIso(candidates);
 }

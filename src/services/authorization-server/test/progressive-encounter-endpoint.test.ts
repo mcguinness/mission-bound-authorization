@@ -62,7 +62,7 @@ import {
 } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
-import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, renderedRevision } from "./approval-fixture.js";
 
 const PORT = 14858;
 const ISSUER = `http://localhost:${PORT}`;
@@ -233,11 +233,14 @@ async function issueMission(): Promise<{ missionId: string; accessToken: string 
   storeCookies(res, jar);
   const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
   expect((await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } })).status).toBe(200);
+  // That anonymous view mints no revision (#1446): the Approver's session renders the page it decides on.
+  const decideHeaders = { ...floorApprovalHeaders(approvalSessions, uid, cookieHeader(jar)), "content-type": "application/json" };
+  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...floorApprovalHeaders(approvalSessions, uid, cookieHeader(jar)), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve", ...CEILING }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision, ...CEILING }),
   });
   storeCookies(res, jar);
   let location = res.headers.get("location") as string;

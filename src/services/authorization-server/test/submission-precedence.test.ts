@@ -27,7 +27,7 @@ import {
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
-import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 
 const PORT = 14751;
 const ISSUER = `http://localhost:${PORT}`;
@@ -339,11 +339,13 @@ async function renderAndApprove(): Promise<{ rendered: unknown; recordId: string
   const html = await page.text();
   const block = (html.split("<h2>Derived authority (what approval grants)</h2><pre>")[1] as string).split("</pre>")[0] as string;
   const rendered: unknown = JSON.parse(block.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"));
+  const decideHeaders = { ...floorApprovalHeaders(SESSIONS, uid, cookieHeader()), "content-type": "application/json" };
+  const render_revision = await renderedRevision(DERIVE_ISSUER, uid, decideHeaders);
   res = await fetch(`${DERIVE_ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...floorApprovalHeaders(SESSIONS, uid, cookieHeader()), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   expect(res.status, await res.clone().text()).toBe(303);
   const record = deriveAs.kernel.findByApprovalEvent(`apev_${uid}`);

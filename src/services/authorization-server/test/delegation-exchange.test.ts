@@ -5,7 +5,7 @@
  * (subagent-invoice-extractor) by Token Exchange, proving its own token's key;
  * the sub-agent redeems the designation as its own client, proving its own key.
  */
-import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { ApprovalSessionStore } from "../src/index.js";
 
 import { type Server } from "node:http";
@@ -184,11 +184,13 @@ async function baseMission(
   storeCookies(res, jar);
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
+  const decideHeaders = { ...floorApprovalHeaders(sessions, uid, cookieHeader(jar)), "content-type": "application/json" };
+  const render_revision = await renderedRevision(h.issuer, uid, decideHeaders);
   res = await fetch(`${h.issuer}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...floorApprovalHeaders(sessions, uid, cookieHeader(jar)), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;

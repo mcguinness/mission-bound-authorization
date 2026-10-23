@@ -1330,7 +1330,12 @@ parameters and HTTP headers, which a retry regenerates. The same
 MUST be refused `invalid_request` ({{mission-status-errors}}); the AS
 MUST NOT answer it with the unrelated original response. A retransmit
 whose original response was `rate_limited`, or was `unavailable` or
-another 5xx response, is processed as a new request, not replayed.
+another 5xx response, is processed as a new request, not replayed. A
+request refused before deduplication ({{lifecycle-processing}}) claims
+no `nonce`: the AS retains nothing for the refusal and leaves any
+response already retained under that `nonce` unchanged, so the rules
+above apply to a later request carrying it as though the refused
+request had never arrived.
 
 The window MUST be at least the validity
 span of the signed response the AS would replay (its `iat` to `exp`,

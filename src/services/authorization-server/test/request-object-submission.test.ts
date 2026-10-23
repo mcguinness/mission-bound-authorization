@@ -16,7 +16,7 @@ import { DERIVATION_POLICY } from "@mission/demo-data";
 import { CompactSign, exportJWK, generateKeyPair, importJWK, SignJWT, UnsecuredJWT, type CryptoKey } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
-import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 
 const PORT = 14961;
 const ISSUER = `http://localhost:${PORT}`;
@@ -159,11 +159,13 @@ async function approve(requestUri: string) {
   const html = await page.text();
   expect(page.status, html.slice(0, 400)).toBe(200);
   expect(html).toContain(INTENT.goal);
+  const decideHeaders = { ...floorApprovalHeaders(SESSIONS, uid, cookieHeader()), "content-type": "application/json" };
+  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...floorApprovalHeaders(SESSIONS, uid, cookieHeader()), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   expect(res.status, await res.clone().text()).toBe(303);
   keep(res);

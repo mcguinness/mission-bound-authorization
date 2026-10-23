@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 export const MISSION_APPROVAL_SCOPE = "mission_approval";
 export const APPROVAL_SESSION_COOKIE = "mission_approver_session";
@@ -74,6 +74,24 @@ export class ApprovalSessionStore {
   subjectFor(cookie: string, uid: string): string | undefined {
     const session = this.sessionFor(cookie, uid);
     return session ? (session.principal.subject ?? session.principal.sub) : undefined;
+  }
+
+  /**
+   * @spec mission#approval-context-changes (#1446, D583): a stable name for the
+   * session this user agent holds for `uid` (a hash of its token, never the
+   * token), so an approval rendering can be bound to the session it was made
+   * in and a decision checked against it. No CSRF: it authorizes nothing.
+   */
+  sessionKey(cookie: string, uid: string): string | undefined {
+    const token = this.tokenFor(cookie, uid);
+    return token === undefined ? undefined : `session:${createHash("sha256").update(token).digest("base64url")}`;
+  }
+
+  private tokenFor(cookie: string, uid: string): string | undefined {
+    const tokens = cookie.split(";").map(s => s.trim()).filter(s => s.startsWith(`${APPROVAL_SESSION_COOKIE}=`));
+    if (tokens.length !== 1) return undefined;
+    const token = tokens[0]!.slice(APPROVAL_SESSION_COOKIE.length + 1);
+    return this.sessionFor(cookie, uid) ? token : undefined;
   }
 
   private sessionFor(cookie: string, uid: string): { uid: string; principal: ApprovalPrincipal; csrf: string } | undefined {

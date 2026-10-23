@@ -17,7 +17,7 @@ import { DERIVATION_POLICY, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = DERIVATION_POLICY.ceiling[0]?.resource as string;
@@ -131,11 +131,13 @@ async function harness(port: number, resourceContracts: ResourceContractDeclarat
     });
     keep(res);
     const uid = (res.headers.get("location") ?? "").split("/interaction/")[1] as string;
+    const decideHeaders = { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() };
+    const render_revision = await renderedRevision(issuer, uid, decideHeaders);
     res = await fetch(`${issuer}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: decideHeaders,
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     keep(res);
     let location = res.headers.get("location") ?? "";

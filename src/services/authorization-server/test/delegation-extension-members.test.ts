@@ -40,7 +40,7 @@ import {
   type MissionIntent,
   projectThroughEffective,
 } from "../src/index.js";
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const PORT = 14634;
 const ISSUER = `http://localhost:${PORT}`;
@@ -185,11 +185,13 @@ describe("PAR refuses a delegation member the authorization server does not supp
     const par = await push(ISSUER, agentKey, [entry({ delegation: { max_depth: 1, children: { max_children: 2 } } })]);
     expect(par.status, JSON.stringify(par.body)).toBe(201);
     const { uid, cookie } = await interaction(ISSUER, par.body.request_uri as string);
+    const decideHeaders = { ...trustedApprovalHeaders(), "content-type": "application/json", cookie };
+    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
     const decided = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: decideHeaders,
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     expect(decided.status, await decided.clone().text()).toBe(303);
     const record = as.kernel.findByApprovalEvent(`apev_${uid}`);
