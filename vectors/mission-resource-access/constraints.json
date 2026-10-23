@@ -1491,6 +1491,496 @@
       "refs": [
         "#1375"
       ]
+    },
+    {
+      "id": "cc-max_amount-omitted",
+      "description": "max_amount: the candidate omits the reference's key",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "a key absent from the candidate is the broadest value, so the reference's restriction is retained only by carrying it"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "cc-resource_issued_after-omitted",
+      "description": "resource_issued_after: the candidate omits the reference's key",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.resource_issued_after"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_after": "2026-01-01T00:00:00Z"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "a key absent from the candidate is the broadest value, so the reference's restriction is retained only by carrying it"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "cc-resource_issued_before-omitted",
+      "description": "resource_issued_before: the candidate omits the reference's key",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.resource_issued_before"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_before": "2026-12-31T00:00:00Z"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "a key absent from the candidate is the broadest value, so the reference's restriction is retained only by carrying it"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "cc-tenant-omitted",
+      "description": "tenant: the candidate omits the reference's key",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.tenant"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "tenant": "acme"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "a key absent from the candidate is the broadest value, so the reference's restriction is retained only by carrying it"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "cc-recipient_domain-omitted",
+      "description": "recipient_domain: the candidate omits the reference's key",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.recipient_domain"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "example.com"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "a key absent from the candidate is the broadest value, so the reference's restriction is retained only by carrying it"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "cc-time_window-omitted",
+      "description": "time_window: the candidate omits the reference's key",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.time_window"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-01-01T00:00:00Z",
+              "not_after": "2026-12-31T00:00:00Z"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "a key absent from the candidate is the broadest value, so the reference's restriction is retained only by carrying it"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "cc-data_classification-omitted",
+      "description": "data_classification: the candidate omits the reference's key",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.data_classification"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "data_classification": [
+              "internal"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "a key absent from the candidate is the broadest value, so the reference's restriction is retained only by carrying it"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "cc-allowed_tools-omitted",
+      "description": "allowed_tools: the candidate omits the reference's key",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.allowed_tools"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "allowed_tools": [
+              "get_invoice"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "a key absent from the candidate is the broadest value, so the reference's restriction is retained only by carrying it"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "cc-max_amount-scale",
+      "description": "max_amount: equal values written with different fractional digit counts",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "1.50",
+              "currency": "USD"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "1.5",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "comparison is in decimal value space, so 1.50 equals 1.5"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "cc-max_amount-exact-fraction",
+      "description": "max_amount: a candidate 10^-18 above the reference",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "0.100000000000000001",
+              "currency": "USD"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "0.1",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "exact decimal arithmetic: an IEEE 754 binary double rounds both to the same value and would admit it"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "cc-max_amount-exact-fraction-within",
+      "description": "max_amount: a candidate 10^-18 below the reference",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "0.1",
+              "currency": "USD"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "0.100000000000000001",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "exact decimal arithmetic keeps the 18th fractional digit"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "cc-max_amount-exact-integer",
+      "description": "max_amount: integers beyond 2^53 that differ by one",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "9007199254740993",
+              "currency": "USD"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "9007199254740992",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "exact decimal arithmetic: an IEEE 754 binary double holds both as the same value"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
     }
   ]
 }

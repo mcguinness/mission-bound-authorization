@@ -30,7 +30,7 @@ Both files are frozen. A changed contract is a new contract version with its own
 
 Registry membership and implementation support are separate. All nine initial Common Constraints are in the subset. The reference implementation also supports `terminal_when`, which Discharge registers, and `vendors`, which the payments deployment defines without registering it. Both stay outside the subset, so subset evidence covers Resource Access semantics only.
 
-Input outside the subset is unsupported input: a `prefix` entry, an action family, an entry member outside `members`, and a constraint key outside `constraints`. An authorization server refuses it before approval or transformation and never drops it to manufacture a subset (D152, D538), and a resource server treats an entry carrying it as providing no authority (Resource Access, Resource Server Enforcement). `locations` is refused by name. Since #1377 the reference implementation refuses an action-family value too, before approval or transformation; the sentence in `supported-subset.json`'s `outside_subset.action_families` that says it admits one predates that change, and the file is frozen. The case that witnesses a subset consumer's refusal is #819's.
+Input outside the subset is unsupported input: a `prefix` entry, an action family, an entry member outside `members`, and a constraint key outside `constraints`. An authorization server refuses it before approval or transformation and never drops it to manufacture a subset (D152, D538), and a resource server treats an entry carrying it as providing no authority (Resource Access, Resource Server Enforcement). `locations` is refused by name. Since #1377 the reference implementation refuses an action-family value too, before approval or transformation; the sentence in `supported-subset.json`'s `outside_subset.action_families` that says it admits one predates that change, and the file is frozen. Cases ev-fam-01 and der-fam-01 witness a subset consumer's refusal (#819).
 
 The constraint set and the action-family refusal are the owner's ruling (2026-10-22).
 
@@ -40,6 +40,22 @@ A consumer declares `capabilities` and runs the files in `vectors/mission-resour
 
 Input outside the subset appears in a case the subset selects only when the case expects it refused. A case expecting such input handled requires the capability for it (for example `member.delegation` or `resource-match.prefix`), so a subset consumer never runs it. The reference implementation's test checks this for every case the subset selects.
 
-`member.resource_contract` selects the cases about the `resource_contract` member: exact preservation under the subset rule, and refusal of a stripped or substituted reference. No case carries it yet. #819 adds those cases against the frozen contract, with the rest of the interoperable vector package and an independently authored second consumer (D676).
+`member.resource_contract` selects the cases about the `resource_contract` member, sub-rc-01 to sub-rc-05: exact preservation of the frozen contract's reference under the subset rule, and a removed, added or substituted reference refused (#819).
 
 Capabilities beyond the subset (delegate matching and eligibility, scope projection, transformation-capability declarations, the `rs.*` resource-server behaviors) are not part of it. A consumer may implement and declare them in addition; its runs of those cases are not subset evidence.
+
+## The second consumer
+
+`src/packages/resource-access-subset-consumer/` is a second consumer of these cases (#819). It declares exactly this fixture's `capabilities`, implements `subset`, `entry-validation`, `resource-match` and `target-resolution` from the Resource Access draft, and runs every case file. It was written against the 152 cases before #1580's additions (71 run, all agreeing); it then ran the 186 cases with no code change: 103 run (53 `subset`, 31 `entry-validation`, 17 `resource-match`, 2 `target-resolution`), all agreeing with the expected outcomes, including the 32 new non-`derive` cases it had not seen, and 83 skipped: 69 for a capability the subset does not declare, 1 inapplicable, and 13 `derive` cases.
+
+- **Disagreements.** `test/disagreements.json` is canonical: each entry is a case id, a classification (`case-bug`, `spec-gap`) and the draft text it rests on. The consumer's test fails on an unlisted disagreement and on a listed case that agrees, so the list cannot go stale. It is empty.
+- **Scoped out.** `derive` encodes the OAuth binding's derivation as well as Resource Access semantics, so this consumer does not run it, and implements no intersection rule. The checks outside the subset are not implemented.
+- **Independence, and its limits.** The consumer imports only Node built-ins and its own modules; its `test/independence.test.ts` fails on any `@mission/*` dependency or on an import leaving the package. It was written in the same repository by the same model family as the reference implementation, under an instruction to read only the Resource Access draft (and the one section of the OAuth binding the draft cites for the digest form), this directory, the case files and their README, and build scaffolding, never the reference's sources or tests; its author's list of every file opened records that it kept to that. That is separate authorship by instruction, not by organization: agreement between the two consumers is evidence that the cases and the draft determine one outcome, not a claim of interoperability between independent implementers.
+- **Open choices the cases do not yet exercise**, where the draft leaves a consumer's choice open and this consumer chose:
+  - the `currency` grammar (the draft names ISO 4217 and states no syntax): any non-empty string, compared by equality;
+  - a leap second in an RFC 3339 instant: admitted only at 23:59:60 UTC, with no leap-second table;
+  - which resource the payments contract is current for (this fixture names none): every resource;
+  - `subset` over input the consumer cannot compare (the check has no refusal outcome): `not-subset`, failing closed;
+  - an internationalized `recipient_domain` label: decoded and round-tripped as an A-label, without the full IDNA2008 code point rules;
+  - userinfo in an `http` or `https` `resource`: admitted;
+  - a constraint key only the candidate carries: treated as narrowing, since no case input states whether the resource server enforces it.
