@@ -59911,7 +59911,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Mission Status response to an enrolled joining PDP carries mission.subject, mission.client_id, and each disclosed entry with its delegation member"
+    "normative": "a Mission Status response to an enrollee holding the PDP role for the requested scope carries mission.subject, mission.client_id, and each disclosed entry with its delegation member"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -59927,9 +59927,15 @@
      "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > binds sub to each caller: two clients read their own identifiers, and the Mission's client reaches only the client enrolled for Join Disclosure",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure takes the PDP role (@spec authority-server#join-disclosure, #1591, D708) > discloses to an enrollee holding the PDP role, alone or with the PEP role, and to no enrollee holding the PEP role alone",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#818 slice 4: the reference authorization server's Mission Status operation, serving as the MAS, discloses mission.subject (iss, sub) and mission.client_id to a caller its enrolledJoinPdps configuration enrolls (a client at the advertised Mission Status endpoint, #1407, or a service principal at the development route) for the requested audience, and every audience-scoped entry keeps its recorded delegation member. The test asserts each clause over HTTP and that the two members are the whole difference from another caller's response; proved by a defect that never discloses (assertion fails) and one that drops client_id."
+   "notes": "#818 slice 4: the reference authorization server's Mission Status operation, serving as the MAS, discloses mission.subject (iss, sub) and mission.client_id to a caller its joinEnrollment configuration enrolls in the PDP role (a client at the advertised Mission Status endpoint, #1407, or a service principal at the development route) for the requested audience, and every audience-scoped entry keeps its recorded delegation member. The test asserts each clause over HTTP and that the two members are the whole difference from another caller's response; proved by a defect that never discloses (assertion fails) and one that drops client_id. #1591 (D708): an enrollee holding the PDP role alone or with the PEP role reads both members; proved by a defect that discloses to any enrollee."
   },
   {
    "id": "mas.join-disclosure.not-to-others",
@@ -59946,7 +59952,7 @@
    "surface": "verification",
    "assertion": "privacy",
    "observation": {
-    "normative": "a Mission Status response to a caller not enrolled as a joining PDP carries neither mission.subject nor mission.client_id",
+    "normative": "a Mission Status response to a caller not enrolled in the PDP role for the requested scope, an enrollee holding the PEP role alone included, carries neither mission.subject nor mission.client_id",
     "local": "enrollment is keyed by the authenticated caller: a client's client_id at the advertised Mission Status endpoint, or a service principal at the development route (#1407); every Status response's envelope sub is that caller"
    },
    "level": "endpoint",
@@ -59969,9 +59975,153 @@
      "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > binds sub to each caller: two clients read their own identifiers, and the Mission's client reaches only the client enrolled for Join Disclosure",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure takes the PDP role (@spec authority-server#join-disclosure, #1591, D708) > discloses to an enrollee holding the PDP role, alone or with the PEP role, and to no enrollee holding the PEP role alone",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#818 slice 4: a Status response to a caller the enrolledJoinPdps configuration does not enroll for the requested audience (enrolled for nothing, enrolled for another scope, naming no audience, or an inherited Object.prototype principal name) carries neither mission.subject nor mission.client_id, and its signing input is byte-identical to the observation the kernel signs for that caller without Join Disclosure. Proved by defects that always disclose, ignore the audience, ignore the principal, and drop the own-property lookup. #1407: the envelope sub names each caller, so a client not enrolled reads the Mission's client neither in mission nor in sub (two clients read at the advertised endpoint); proved by a defect that signs the Mission's client as sub again."
+   "notes": "#818 slice 4: a Status response to a caller the joinEnrollment configuration does not enroll in the PDP role for the requested audience (enrolled for nothing, enrolled for another scope, naming no audience, or an inherited Object.prototype principal name) carries neither mission.subject nor mission.client_id, and its signing input is byte-identical to the observation the kernel signs for that caller without Join Disclosure. Proved by defects that always disclose, ignore the audience, ignore the principal, and drop the own-property lookup. #1407: the envelope sub names each caller, so a client not enrolled reads the Mission's client neither in mission nor in sub (two clients read at the advertised endpoint); proved by a defect that signs the Mission's client as sub again. #1591 (D708): an enrollee holding the PEP role alone reads neither member; proved by a defect that discloses to any enrollee."
+  },
+  {
+   "id": "mas.join-disclosure.enrollment-roles",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-disclosure",
+   "text": "the configuration records each enrollee's role: PEP, PDP, or both",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the MAS's enrollment configuration records each enrollee as a PEP, a PDP, or both, and the MAS acts on the recorded role",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both; a build naming an enrollee with no role, an unknown role, or a role twice is refused, and the pilot's strict loader refuses the same"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure takes the PDP role (@spec authority-server#join-disclosure, #1591, D708) > refuses to build with an enrollee holding no role, an unknown role, or one role twice",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure takes the PDP role (@spec authority-server#join-disclosure, #1591, D708) > discloses to an enrollee holding the PDP role, alone or with the PEP role, and to no enrollee holding the PEP role alone",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PEP role alone as a caller, for a PDP's audience, and refuses it as an audience join_failed, minting nothing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-mapping.test.ts",
+     "name": "pilot configuration: the estate's development Resource-policy grants (@spec runtime#input-resource-policy, #818 slice 2) > refuses an enrollee with no roles member, no role, an unknown role, or one role twice (#1591, D708)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1591 (D708). Proved by defects that skip the build's role validation, accept an empty, unknown or repeated role, and drop the pilot loader's role check; the role-distinct behavior is proved on mas.join-disclosure.pdp-role."
+  },
+  {
+   "id": "mas.join-disclosure.pdp-role",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-disclosure",
+   "text": "Join Disclosure and a Join Assertion's `audience` take an enrollee holding the PDP role",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an enrollee holding only the PEP role receives no Join Disclosure and is refused as a Join Assertion's audience (join_failed); one holding the PDP role, alone or with the PEP role, receives both",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure takes the PDP role (@spec authority-server#join-disclosure, #1591, D708) > discloses to an enrollee holding the PDP role, alone or with the PEP role, and to no enrollee holding the PEP role alone",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PEP role alone as a caller, for a PDP's audience, and refuses it as an audience join_failed, minting nothing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PDP role alone, or both roles, as a caller and as an audience",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1591 (D708). Proved by defects that disclose to any enrollee for the scope, accept an audience of any role, and drop the role check from enrollment, each caught at the endpoint and, for the first two, at the live pilot."
+  },
+  {
+   "id": "mas.join-disclosure.visibility-either-role",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-disclosure",
+   "text": "visibility at the join-assertion endpoint takes an enrollee of either role",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an enrollee holding the PEP role, the PDP role, or both, for the Mission's enforcement scope, is inside the join-assertion endpoint's visibility set",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PEP role alone as a caller, for a PDP's audience, and refuses it as an audience join_failed, minting nothing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PDP role alone, or both roles, as a caller and as an audience",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1591 (D708). Proved by defects that make visibility take the PDP role only (the PEP-only caller gets not_found) and the PEP role only (the PDP-only caller gets not_found)."
   },
   {
    "id": "mas.join-inputs.pep-carries-member",
@@ -60786,8 +60936,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request whose audience names no PDP enrolled for the Mission is refused join_failed, and no assertion is minted",
-    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a request whose audience is enrolled for another scope only, or for nothing, gets join_failed and no assertion. The Mission's enforcement scope is the set of enrolled scopes some entry of its Authority Set overlaps, under the matcher Mission Status scopes entries with (entryOverlapsResource); an audience withdrawn while the token is established or the assertion is signed gets join_failed"
+    "normative": "a request whose audience names no enrollee holding the PDP role for the Mission is refused join_failed, and no assertion is minted",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a request whose audience is enrolled for another scope only, or for nothing, gets join_failed and no assertion. The Mission's enforcement scope is the set of enrolled scopes some entry of its Authority Set overlaps, under the matcher Mission Status scopes entries with (entryOverlapsResource); an audience withdrawn while the token is established or the assertion is signed gets join_failed; an enrollee holding the PEP role alone is refused as an audience (#1591)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -60803,9 +60953,15 @@
      "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed when the Mission's authority_hash changes, or its audience is withdrawn, during the token check or the signing",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PEP role alone as a caller, for a PDP's audience, and refuses it as an audience join_failed, minting nothing",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the audience check. Also proved by a defect that drops the audience from the re-read (#1454 review)."
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the audience check. Also proved by a defect that drops the audience from the re-read (#1454 review). #1591 (D708): proved by a defect that accepts an audience of any role."
   },
   {
    "id": "mas.join-assertion.aud-claim",
@@ -61405,6 +61561,78 @@
     }
    ],
    "notes": "Added with the #1569 review of the D685 rulings (Q2 detail); witnessed by #1554 once it adopted the issuer audience. Mutation-proved: restoring the endpoint audience fails both tests, and accepting the issuer inside a multi-valued aud fails the refusal test."
+  },
+  {
+   "id": "mas.join-assertion.visibility-bounded",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "Any other caller MUST receive `not_found`",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a caller that is neither the Mission's client, a recorded delegate, nor an enrollee for the Mission's enforcement scope receives not_found, the same answer as for an unknown Mission",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both; the reference MAS holds no delegate actor records (follow-up: #1561), so its visibility set is the Mission's client and the enrollees of either role"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > answers an unknown Mission and a caller outside the visibility set with one not_found; the Mission's own client is inside it",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > answers a registered client enrolled for nothing not_found, as an unknown Mission",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1591 (D708). Proved by defects that drop the visibility check (the invisible caller and the enrolled-for-nothing caller are served) and that admit any registered caller."
+  },
+  {
+   "id": "mas.join-assertion.pep-carries-assertion",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "conformance",
+   "text": "where the deployment uses Join Assertions, obtains one for the credential it authenticated and carries it in `context.mission_join`",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-joining PEP in a deployment using Join Assertions obtains an assertion for the credential it authenticated and carries it in context.mission_join",
+    "local": "the reference PEP (services/mcp-payments/src/pep.ts, join-assertion-client.ts) in the separated MAS pilot: it requests the assertion itself for the credential the gateway authenticated and carries the MAS's real assertion with token_sha256 and token_jkt"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1591 (D708). A real MAS-minted assertion witnesses it only end to end; the PEP unit test (mas-join-assertion-pep.test.ts) carries a stand-in string and is not cited. Proved earlier (#1454) by defects that drop the carriage and the transport's hand-over of the credential."
   },
   {
    "id": "mas.errors.invalid-client",
