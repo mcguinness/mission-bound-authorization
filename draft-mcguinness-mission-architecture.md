@@ -1999,6 +1999,11 @@ Authorization bases:
     under a policy version a human approved
     ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
+  The `type` values form a specification-defined namespace with no
+  registry ({{I-D.draft-mcguinness-oauth-mission}}, Section "Namespace
+  Taxonomy"), and this list names the value each companion profile
+  defines.
+
   Every basis fixes the same accountable human as `consent_principal`;
   the bases differ only in what activated this instance and what root
   that activation traces to (the OAuth binding).
@@ -4380,6 +4385,10 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Authorization bases entry says the basis `type` values form a
+  specification-defined namespace and that its list names each
+  companion's value. No requirement changed.
 
 - The Authorization bases entry cites the companion profile that
   defines each standing-consent basis; the OAuth binding points here

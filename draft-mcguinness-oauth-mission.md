@@ -2344,7 +2344,10 @@ The grant binding relates to other mechanisms as follows:
   authorization state, such as the continuation profile's
   delegation-family-creating exchange
   ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a
-  new grant binding, rooted in that same Mission.
+  new grant binding, rooted in that same Mission. Three Token
+  Exchanges are covered by the two items below instead: cross-domain
+  projection and child creation, which return a JWT authorization
+  grant, and expansion, which creates a successor.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
   no destination-side grant binding. A Resource AS consumes the
@@ -3889,7 +3892,9 @@ profile defines the basis's `approval_basis.type` value
 ({{record-principal-members}});
 {{I-D.draft-mcguinness-mission-architecture}} (Section "Mission
 Invariants") lists the standing-consent bases that companion profiles
-define.
+define. The `type` values form a specification-defined namespace with
+no registry ({{namespace-taxonomy}}): each further basis is defined by
+the companion profile that introduces it.
 
 For a standing-consent `type`, `activation` takes the shape that its
 companion profile defines, and `activation_actor` names a dispatching
@@ -4757,9 +4762,9 @@ This document's extensible namespaces follow one of three postures:
   a publication dependency under the registry's policy.
 - **Specification-defined.** A namespace with a defined fail-safe for
   unknown values and no registry, such as the `mission` claim members
-  ({{mission-claim}}) and the Mission Record members
-  ({{mission-record}}), is specification-defined: the defining
-  documents are its value space.
+  ({{mission-claim}}), the Mission Record members ({{mission-record}})
+  and the `approval_basis.type` values ({{record-principal-members}}),
+  is specification-defined: the defining documents are its value space.
 - **Collision-resistant.** Deployment-defined names are
   collision-resistant names ({{Section 4.2 of RFC7519}}) and are never
   registered.
@@ -7196,6 +7201,10 @@ Cross-Domain:
   specify; the sentence on joining one credential to different Missions
   across requests moves to the Mission Authority Server's Mission
   Join.
+- Editorial, no requirement change: Grant Bindings and Related
+  Mechanisms names the Token Exchanges its later items cover, and the
+  Namespace Taxonomy lists the `approval_basis.type` values as
+  specification-defined, which Standing-Consent Bases cites.
 
 -01
 
