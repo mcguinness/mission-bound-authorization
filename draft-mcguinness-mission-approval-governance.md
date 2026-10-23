@@ -1686,7 +1686,10 @@ A Recording Issuer MUST:
 A Relying Auditor MUST verify the envelope by byte equality, MUST
 validate the mission binding, and MUST obtain the retained policy
 version before treating the evaluation as re-checked ({{envelope}},
-{{approval-policy}}, {{re-check}}).
+{{approval-policy}}, {{re-check}}). A Relying Auditor that holds no
+Mission Record can run the portable approval-binding check instead,
+under its own rules and with its narrower result
+({{portable-binding}}).
 
 # Security Considerations {#security-considerations}
 
