@@ -2340,7 +2340,11 @@ The grant binding relates to other mechanisms as follows:
   down-scoping ({{self-exchange}}) both work this way, and the issued
   token is a derived token ({{mission-claim}}) whose `mission` claim
   identifies the one Mission its `subject_token`'s binding resolved
-  to. A Token Exchange that instead establishes reusable
+  to. Such an exchange leaves the existing grant provenance in place:
+  the issued token rests on the grant lineage its `subject_token` was
+  issued under, and a later redemption of a designation derived from
+  it validates that lineage's state ({{delegated-exchange}}). A Token
+  Exchange that instead establishes reusable
   authorization state, such as the continuation profile's
   delegation-family-creating exchange
   ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a
@@ -2683,6 +2687,16 @@ the approved Mission. The cross-domain companion
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) specifies how
 this bound extends transitively to tokens minted in another trust
 domain.
+
+Within that bound, a derived token's lifetime is the AS's policy,
+which {{issuance-gating}} recommends keeping short. Token Exchange
+does not tightly couple an issued token's lifetime to its
+`subject_token`'s ({{Section 2.1 of RFC8693}}): a designation's
+expiry ({{designation}}) bounds when it can be redeemed, not the
+lifetime of the delegated token issued from it, which can outlive
+both the designation and the credential the designation was derived
+from. Revoking or expiring the grant state backing that credential
+refuses every later redemption ({{delegated-exchange}}).
 
 ## Scope Projection {#scope-projection}
 
@@ -3565,6 +3579,8 @@ A designation the AS issues:
 A designation names a delegate and adds none. Whether one may be
 redeemed more than once within its lifetime is the AS's policy; each
 redemption is a delegated exchange of its own ({{delegated-exchange}}).
+Its expiry bounds when it can be redeemed, not the lifetime of a
+delegated token issued from it ({{token-authentication-lifetime}}).
 
 A designation authorizes no resource access. A designated client's
 identifier MUST NOT be an audience that any resource server accepts
@@ -3628,10 +3644,15 @@ subject to all of the following:
   derivation, refused unless the Mission is `active`
   ({{issuance-gating}}). The AS MUST evaluate every redemption of a
   designation afresh, as a derivation of its own: the credential the
-  designation was derived from, and that credential's grant, are
-  still valid; the Mission is `active`; and the delegation policy
-  ({{delegation-constraints}}) and the Mission's current authority
-  admit the result. An earlier redemption establishes none of these.
+  designation was derived from, and all applicable grant state
+  backing that credential, are still valid; the Mission is `active`;
+  and the delegation policy ({{delegation-constraints}}) and the
+  Mission's current authority admit the result. An earlier redemption
+  establishes none of these. The backing grant state includes the
+  grant lineage that credential was issued under, kept through any
+  exchange that established no new grant lineage
+  ({{grant-binding-related}}); the Mission's `active` state never
+  substitutes for it.
 
 The `act` chain nests (`act.act`) for as long as, and only while,
 authority continues under the same approved Mission. A new approval
