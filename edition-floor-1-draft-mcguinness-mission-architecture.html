@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 25 April 2027</td>
+<td class="center">Expires 26 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-architecture-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-22" class="published">22 October 2026</time>
+<time datetime="2026-10-23" class="published">23 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-25">25 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-26">26 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1144,7 +1144,7 @@ it names is defined by the profile it points to.<a href="#section-abstract-1" cl
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 25 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 26 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1323,7 +1323,10 @@ it names is defined by the profile it points to.<a href="#section-abstract-1" cl
                 <p id="section-toc.1-1.11.2.6.1"><a href="#section-11.6" class="auto internal xref">11.6</a>.  <a href="#name-composed-kill-switch-realit" class="internal xref">Composed Kill-Switch Reality</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.7">
-                <p id="section-toc.1-1.11.2.7.1"><a href="#section-11.7" class="auto internal xref">11.7</a>.  <a href="#name-prevention-detection-and-re" class="internal xref">Prevention, Detection, and Residue</a></p>
+                <p id="section-toc.1-1.11.2.7.1"><a href="#section-11.7" class="auto internal xref">11.7</a>.  <a href="#name-what-a-non-active-state-est" class="internal xref">What a Non-Active State Establishes</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.8">
+                <p id="section-toc.1-1.11.2.8.1"><a href="#section-11.8" class="auto internal xref">11.8</a>.  <a href="#name-prevention-detection-and-re" class="internal xref">Prevention, Detection, and Residue</a></p>
 </li>
             </ul>
 </li>
@@ -5598,12 +5601,69 @@ changes row to row is which gate, if any, reaches a class before its
 own bound, and how tight that bound is.<a href="#section-11.6-6" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="prevention-detection">
+<div id="non-active-state">
 <section id="section-11.7">
-        <h3 id="name-prevention-detection-and-re">
-<a href="#section-11.7" class="section-number selfRef">11.7. </a><a href="#name-prevention-detection-and-re" class="section-name selfRef">Prevention, Detection, and Residue</a>
+        <h3 id="name-what-a-non-active-state-est">
+<a href="#section-11.7" class="section-number selfRef">11.7. </a><a href="#name-what-a-non-active-state-est" class="section-name selfRef">What a Non-Active State Establishes</a>
         </h3>
-<p id="section-11.7-1">Each layer earns a specific property and leaves a specific residue:<a href="#section-11.7-1" class="pilcrow">¶</a></p>
+<p id="section-11.7-1">A Mission's state reports whether the Mission permits new
+authorization. A non-active state, <code>suspended</code> or <code>terminated</code> for any
+reason, carries four limits, each set by the documents that enforce
+it:<a href="#section-11.7-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-11.7-2">
+<li id="section-11.7-2.1">
+            <p id="section-11.7-2.1.1">It stops new authorization at every enforcement point that consults
+Mission state, within the deployment's advertised staleness bound
+or, when none is advertised, within the bound of the credential,
+session or cached observation that point relies on, if any
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Revocation
+Propagation"; <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section
+"Mission State and Freshness").<a href="#section-11.7-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.7-2.2">
+            <p id="section-11.7-2.2.1">Conflicting observations are reconciled under the version and
+freshness rules, never by choosing the more permissive surface: a
+legitimate higher-version <code>resume</code> is accepted, since state names
+are not ordered by severity
+(<span>[<a href="#I-D.draft-mcguinness-mission-control-plane" class="cite xref">I-D.draft-mcguinness-mission-control-plane</a>]</span>). While a conflict
+remains unresolved, the safer state governs: an orchestrator uses
+it until it reconciles
+(<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>, Section "Trigger
+Sources"), and PEP-supplied state is a floor for the PDP
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>, Section "PDP-side
+consistency checks").<a href="#section-11.7-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.7-2.3">
+            <p id="section-11.7-2.3.1">It does not establish that accepted or in-flight work has stopped,
+or that completed effects are undone. Those are outcomes, which
+evidence establishes: a step whose outcome is not known stays
+<code>unknown</code> (<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>, Section
+"In-Flight Requests"), and runtime evidence reconciles each executed
+effect with its action (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
+Section "Runtime Enforcement Evidence"). The OAuth binding states
+that revoking a Mission does not undo completed actions
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Missions, Plans,
+and Execution"), and AAuth Management bounds the AAuth residual
+window (<span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>, Section
+"Honest Residual Bounds").<a href="#section-11.7-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-11.7-2.4">
+            <p id="section-11.7-2.4.1">A route that does not consult Mission state is outside these limits.
+It runs to its binding's credential, session or resource-local
+bound, if any: an ungated route can have no bound, and reminting
+from an earlier observation sums the residuals
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Mission State and
+Freshness"; <a href="#validity-model" class="auto internal xref">Section 10.4</a>; <a href="#kill-switch-composition" class="auto internal xref">Section 11.6</a>).<a href="#section-11.7-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+</section>
+</div>
+<div id="prevention-detection">
+<section id="section-11.8">
+        <h3 id="name-prevention-detection-and-re">
+<a href="#section-11.8" class="section-number selfRef">11.8. </a><a href="#name-prevention-detection-and-re" class="section-name selfRef">Prevention, Detection, and Residue</a>
+        </h3>
+<p id="section-11.8-1">Each layer earns a specific property and leaves a specific residue:<a href="#section-11.8-1" class="pilcrow">¶</a></p>
 <span id="name-what-each-layer-prevents-de"></span><table class="center" id="table-14">
           <caption>
 <a href="#table-14" class="selfRef">Table 14</a>:
@@ -5650,13 +5710,13 @@ own bound, and how tight that bound is.<a href="#section-11.6-6" class="pilcrow"
             </tr>
           </tbody>
         </table>
-<p id="section-11.7-3">In each layer, the family commits and checks what a party was shown,
+<p id="section-11.8-3">In each layer, the family commits and checks what a party was shown,
 decided, or did. It does not make the human attentive, the producer
 honest, or the unmediated path disappear. Those are the residues the
 Mission Assurance Levels (<a href="#assurance-levels" class="auto internal xref">Section 11</a>) and the security
 model make a deployment state rather than assume. The input arm
 (<a href="#survivable-incorrectness" class="auto internal xref">Section 4.5</a>) carries the same honesty in the other
-direction.<a href="#section-11.7-3" class="pilcrow">¶</a></p>
+direction.<a href="#section-11.8-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -6152,6 +6212,10 @@ where the binding's minimization and retention duties apply.<a href="#section-14
 <dt id="I-D.draft-mcguinness-mission-capability-binding">[I-D.draft-mcguinness-mission-capability-binding]</dt>
       <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Capability Binding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-control-plane">[I-D.draft-mcguinness-mission-control-plane]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Control-Plane Consistency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-control-plane.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-control-plane.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-discovery">[I-D.draft-mcguinness-mission-discovery]</dt>
       <dd>

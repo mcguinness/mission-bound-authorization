@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         22 October 2026
-Expires: 25 April 2027
+Intended status: Standards Track                         23 October 2026
+Expires: 26 April 2027
 
 
                         AAuth Mission Management
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 April 2027.
+   This Internet-Draft will expire on 26 April 2027.
 
 Copyright Notice
 
@@ -1115,7 +1115,10 @@ Table of Contents
    is effectively access (Section 7.1.1 of
    [I-D.draft-hardt-oauth-aauth-protocol]), so a live Person Token is
    part of the residual.  Network partitions and Resource policy
-   therefore create an unavoidable residual window.
+   therefore create an unavoidable residual window.  Architecture states
+   the limits of a non-active state across the family
+   ([I-D.draft-mcguinness-mission-architecture], Section "What a Non-
+   Active State Establishes").
 
    The PS can provide a time bound only for the Tracked Credentials
    whose expiry it knows.  The conservative tracked bound is the latest

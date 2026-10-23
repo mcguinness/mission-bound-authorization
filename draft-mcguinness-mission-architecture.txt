@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           22 October 2026
-Expires: 25 April 2027
+Intended status: Informational                           23 October 2026
+Expires: 26 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 April 2027.
+   This Internet-Draft will expire on 26 April 2027.
 
 Copyright Notice
 
@@ -121,7 +121,8 @@ Table of Contents
      11.4.  Mission Binding Properties
      11.5.  The Containment Matrix
      11.6.  Composed Kill-Switch Reality
-     11.7.  Prevention, Detection, and Residue
+     11.7.  What a Non-Active State Establishes
+     11.8.  Prevention, Detection, and Residue
    12. Mission Deployment Patterns
      12.1.  Entry Ramps by Estate
      12.2.  The Issuance-Only Deployment
@@ -3707,7 +3708,56 @@ Table of Contents
    changes row to row is which gate, if any, reaches a class before its
    own bound, and how tight that bound is.
 
-11.7.  Prevention, Detection, and Residue
+11.7.  What a Non-Active State Establishes
+
+   A Mission's state reports whether the Mission permits new
+   authorization.  A non-active state, suspended or terminated for any
+   reason, carries four limits, each set by the documents that enforce
+   it:
+
+   1.  It stops new authorization at every enforcement point that
+       consults Mission state, within the deployment's advertised
+       staleness bound or, when none is advertised, within the bound of
+       the credential, session or cached observation that point relies
+       on, if any ([I-D.draft-mcguinness-oauth-mission-status],
+       Section "Revocation Propagation";
+       [I-D.draft-mcguinness-mission-runtime], Section "Mission State
+       and Freshness").
+
+   2.  Conflicting observations are reconciled under the version and
+       freshness rules, never by choosing the more permissive surface: a
+       legitimate higher-version resume is accepted, since state names
+       are not ordered by severity
+       ([I-D.draft-mcguinness-mission-control-plane]).  While a conflict
+       remains unresolved, the safer state governs: an orchestrator uses
+       it until it reconciles
+       ([I-D.draft-mcguinness-mission-orchestration], Section "Trigger
+       Sources"), and PEP-supplied state is a floor for the PDP
+       ([I-D.draft-mcguinness-mission-authzen], Section "PDP-side
+       consistency checks").
+
+   3.  It does not establish that accepted or in-flight work has
+       stopped, or that completed effects are undone.  Those are
+       outcomes, which evidence establishes: a step whose outcome is not
+       known stays unknown
+       ([I-D.draft-mcguinness-mission-orchestration], Section "In-Flight
+       Requests"), and runtime evidence reconciles each executed effect
+       with its action ([I-D.draft-mcguinness-mission-runtime],
+       Section "Runtime Enforcement Evidence").  The OAuth binding
+       states that revoking a Mission does not undo completed actions
+       ([I-D.draft-mcguinness-oauth-mission], Section "Missions, Plans,
+       and Execution"), and AAuth Management bounds the AAuth residual
+       window ([I-D.draft-mcguinness-mission-aauth-management],
+       Section "Honest Residual Bounds").
+
+   4.  A route that does not consult Mission state is outside these
+       limits.  It runs to its binding's credential, session or
+       resource-local bound, if any: an ungated route can have no bound,
+       and reminting from an earlier observation sums the residuals
+       ([I-D.draft-mcguinness-mission-runtime], Section "Mission State
+       and Freshness"; Section 10.4; Section 11.6).
+
+11.8.  Prevention, Detection, and Residue
 
    Each layer earns a specific property and leaves a specific residue:
 
@@ -4203,6 +4253,11 @@ Table of Contents
               McGuinness, K., "Mission Capability Binding", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-capability-binding.html>.
+
+   [I-D.draft-mcguinness-mission-control-plane]
+              McGuinness, K., "Mission Control-Plane Consistency", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-control-plane.html>.
 
    [I-D.draft-mcguinness-mission-discovery]
               McGuinness, K., "Mission Open-World Discovery", 2026,
