@@ -827,28 +827,27 @@ client authentication with `invalid_client`. The other refusals are:
 
 A client tells four cases apart:
 
-- **Retry.** `temporarily_unavailable` with HTTP 503 means the
-  authorization is intact and the same credential can be presented
-  again, without parsing `error_description`. `invalid_scope` and
-  `invalid_authorization_details` name a request the client can
-  narrow and re-send under the same grant.
+- **Retry.** `temporarily_unavailable` means the authorization is
+  intact and the same credential can be presented again.
+  `invalid_scope` and `invalid_authorization_details` name a request
+  the client can narrow and re-send under the same grant.
 - **Get a fresh grant.** An expired or already redeemed grant is
-  cured by obtaining a fresh one ({{minting}}). The other grant
-  validation failures (an untrusted issuer, a wrong audience, an
-  unmappable subject or authority) are configuration faults that a
-  fresh grant does not cure.
+  cured by a fresh one ({{minting}}). The other grant validation failures (an
+  untrusted issuer, a wrong audience, an unmappable subject or
+  authority) are configuration faults that a fresh grant does not
+  cure.
 - **Wait.** A `suspended` Mission refuses until a `resume` returns it
   to `active` ({{I-D.draft-mcguinness-oauth-mission-status}}); a fresh
-  grant ({{minting}}) then cures the refusal.
+  grant then cures the refusal.
 - **Stop.** A `terminated` Mission refuses for good: neither a retry
   nor a fresh grant cures the refusal.
 
 The AS SHOULD include the issuance profile's `mission_error` member
 when it refuses because the Mission is not `active`, so the client can
-tell the last two cases apart: `suspended` for Wait, and for Stop
-`revoked`, `expired`, or `superseded`
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating")
-or `completed` ({{I-D.draft-mcguinness-oauth-mission-status}}). The MAS's own
+tell Wait from Stop: `suspended` for Wait, and for Stop `revoked`,
+`expired`, or `superseded` ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Issuance Gating") or `completed`
+({{I-D.draft-mcguinness-oauth-mission-status}}). The MAS's own
 refusals of a fresh grant request are in {{minting-errors}}.
 
 # Authorization Code Flow Carriage {#par-carriage}
