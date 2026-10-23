@@ -122,8 +122,7 @@ Table of Contents
      17.2.  Fan-Out Amplification
      17.3.  Cascade Failure
      17.4.  Parent Confusion
-     17.5.  Possession Proof and the Eliminated Parent-Grant-at-Rest
-            Concern
+     17.5.  Possession Proof and Parent Credentials at Rest
      17.6.  Subset Bugs
    18. Privacy Considerations
    19. IANA Considerations
@@ -356,11 +355,11 @@ Table of Contents
    grant_type:  REQUIRED. urn:ietf:params:oauth:grant-type:token-
       exchange, the [RFC8693] token-exchange grant type (Section 5.6).
 
-   requested_token_type:  REQUIRED. urn:ietf:params:oauth:token-
-      type:jwt.  This value selects child creation: the Mission Issuer
-      returns the child-bound JWT authorization grant (Section 5.1).
-      Expansion, the peer operation on the same grant, is selected by
-      the access-token type
+   requested_token_type:  REQUIRED. urn:ietf:params:oauth:token-type:jwt
+      (Section 10.2 of [RFC7519]).  This value selects child creation:
+      the Mission Issuer returns the child-bound JWT authorization grant
+      (Section 5.1).  Expansion, the peer operation on the same grant,
+      is selected by the access-token type
       ([I-D.draft-mcguinness-oauth-mission-expansion]).
 
    subject_token:  REQUIRED.  The Parent Mission's sender-constrained
@@ -2204,18 +2203,15 @@ Table of Contents
    possession against the token's own confirmation key, and verifies any
    parent cross-check names the resolved Mission (Section 5.7).
 
-17.5.  Possession Proof and the Eliminated Parent-Grant-at-Rest Concern
+17.5.  Possession Proof and Parent Credentials at Rest
 
-   Earlier revisions of this profile carried the parent grant as a
-   parent_token refresh token pushed through PAR [RFC9126], so a
-   reusable bearer credential sat at rest in the PAR store until the
-   pushed request was redeemed or expired.  The child-creation token
-   exchange eliminates that concern by construction: the possession
-   proof is the parent's short-lived, sender-constrained Mission-bound
-   access token presented directly at the token endpoint as
-   subject_token (Section 5), never a reusable refresh credential and
-   never held at rest awaiting redemption.  A refresh token MUST NOT be
-   accepted as subject_token.
+   The child-creation token exchange holds no reusable parent credential
+   at rest.  Its possession proof is the parent's short-lived, sender-
+   constrained Mission-bound access token presented directly at the
+   token endpoint as subject_token (Section 5): never a reusable refresh
+   credential, and never held at rest awaiting redemption as a refresh
+   token pushed through PAR [RFC9126] would be.  A refresh token MUST
+   NOT be accepted as subject_token.
 
    *  A captured subject_token, without its DPoP key or mTLS
       certificate, cannot carry the possession proof.
@@ -2258,12 +2254,11 @@ Table of Contents
    mission_intent request parameter and the already-registered [RFC8693]
    token-exchange parameters subject_token, subject_token_type,
    requested_token_type, actor_token, and actor_token_type; none of
-   these needs registration by this document.  This document removes the
-   earlier revision's registration request for a parent_token parameter:
-   the parent is resolved from subject_token, so no dedicated parent-
-   token parameter exists.  The parent and child_actor parameters are
-   presented only on the token endpoint's authenticated back channel,
-   never on a front-channel authorization request (Section 5).
+   these needs registration by this document.  No dedicated parent-token
+   parameter exists: the parent is resolved from subject_token.  The
+   parent and child_actor parameters are presented only on the token
+   endpoint's authenticated back channel, never on a front-channel
+   authorization request (Section 5).
 
    The creation_request_id parameter this profile requires on the child-
    creation exchange (Section 5.8) is defined and registered by the
@@ -2373,11 +2368,7 @@ Table of Contents
    urn:ietf:params:oauth:grant-type:token-exchange grant type, selected
    by the requested_token_type value urn:ietf:params:oauth:token-
    type:jwt (Section 5.6); this document requests no new grant-type
-   registration.  An earlier revision requested registration of a
-   dedicated urn:ietf:params:oauth:grant-type:mission-child-creation
-   grant type; this document removes that request, folding child
-   creation into the token-exchange grant the rest of the Mission family
-   already uses.
+   registration.
 
 20.  References
 
@@ -2431,14 +2422,14 @@ Table of Contents
               Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
               <https://www.rfc-editor.org/rfc/rfc3339>.
 
-   [RFC6755]  Campbell, B. and H. Tschofenig, "An IETF URN Sub-Namespace
-              for OAuth", RFC 6755, DOI 10.17487/RFC6755, October 2012,
-              <https://www.rfc-editor.org/rfc/rfc6755>.
-
    [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
               Specifications and Registration Procedures", BCP 13,
               RFC 6838, DOI 10.17487/RFC6838, January 2013,
               <https://www.rfc-editor.org/rfc/rfc6838>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
 
    [RFC7523]  Jones, M., Campbell, B., and C. Mortimore, "JSON Web Token
               (JWT) Profile for OAuth 2.0 Client Authentication and
@@ -2575,11 +2566,6 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-
               signals.html>.
 
-   [RFC8126]  Cotton, M., Leiba, B., and T. Narten, "Guidelines for
-              Writing an IANA Considerations Section in RFCs", BCP 26,
-              RFC 8126, DOI 10.17487/RFC8126, June 2017,
-              <https://www.rfc-editor.org/rfc/rfc8126>.
-
 Appendix A.  Experimental Consumer-Verified Cascade Modes
 
    This appendix is *experimental*: adopt it for evaluation, not as a
@@ -2648,6 +2634,25 @@ Appendix A.  Experimental Consumer-Verified Cascade Modes
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Security Considerations' "Possession Proof and Parent Credentials
+      at Rest" (formerly "the Eliminated Parent-Grant-at-Rest Concern")
+      states the design without narrating earlier revisions, which
+      carried the parent grant as a parent_token refresh token pushed
+      through PAR.  No requirement changed.
+
+   *  IANA Considerations state the registrations as they stand.
+      Earlier revisions requested a parent_token parameter and a
+      dedicated urn:ietf:params:oauth:grant-type:mission-child-creation
+      grant type; this document requests neither.  No requirement
+      changed.
+
+   *  The urn:ietf:params:oauth:token-type:jwt value cites its
+      registration, Section 10.2 of RFC 7519.  No requirement changed.
+
+   *  RFC 6755 and RFC 8126 are removed from the references: neither is
+      cited, and this document creates no registry.  No requirement
+      changed.
 
    *  Completion says any grant binding a Child Mission carries comes
       from the child actor's redemption of its grant, never from the
