@@ -3383,13 +3383,30 @@ async function handleChildJwtBearerGrant(
  * refresh token destroys that Grant but leaves the row, so the row alone
  * would keep the family's tokens, and the delegations derived from them,
  * active after revocation.
+ *
+ * @spec mission#grant-binding-related, mission#delegated-exchange (#1503
+ * finding 11, D620): a grant with a recorded backing grant (a delegation
+ * handle's, minted by an exchange that establishes no new grant lineage) is
+ * live only while its backing grant is live too. A grant records its backing
+ * grant once, at its own mint, from a grant that already exists, so the chain
+ * is acyclic; one that revisits a grant is corrupt state and fails closed.
+ * Every link is a self-exchange the Mission counts as a derivation, so the
+ * Mission's derivation accounting bounds the chain the issuer mints, and a
+ * handle minted at any depth stays usable (#1601 review).
  */
 export async function isGrantLive(opts: AdapterOptions, provider: Provider, grantId: string): Promise<boolean> {
-  const grantExists = !!(await provider.Grant.find(grantId).catch(() => undefined));
-  if (opts.familyStore?.wasEverFamily(grantId)) {
-    return opts.familyStore.resolve(grantId) !== undefined && grantExists;
+  const seen = new Set<string>();
+  for (let current: string | undefined = grantId; current !== undefined; ) {
+    if (seen.has(current)) return false;
+    seen.add(current);
+    const grantExists = !!(await provider.Grant.find(current).catch(() => undefined));
+    const live = opts.familyStore?.wasEverFamily(current)
+      ? opts.familyStore.resolve(current) !== undefined && grantExists
+      : grantExists;
+    if (!live) return false;
+    current = opts.kernel.missionBoundGrants.resolve(current)?.backingGrantId;
   }
-  return grantExists;
+  return true;
 }
 
 /**
