@@ -833,6 +833,22 @@ serves, carries the Mission's current `authorization_details` and
 a monotonic state `version`, and answers within a staleness bound
 the deployment publishes ({{conformance}}).
 
+The consuming AS MUST NOT rely on a response it validated earlier,
+at a later redemption or refresh, unless all of the following hold:
+
+- it is within its reliance bound
+  ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Caching")
+  and within the staleness bound the deployment publishes, whichever
+  ends first;
+- it is for the same Mission (`mission.issuer` and `mission.id`) and
+  the same requested audience; and
+- its `version` is not below the version the AS has retained for the
+  Mission.
+
+Where a held response meets these conditions, a transient failure of
+a new request does not refuse the redemption or refresh
+({{transient-failure}}).
+
 Through the Mission Status operation, the consuming AS resolves
 authority per entry audience, not for an audience of its own. For
 each distinct audience the grant's entries are relevant to

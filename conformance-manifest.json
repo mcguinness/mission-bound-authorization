@@ -38427,6 +38427,28 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q8); todo until that path exists."
   },
   {
+   "id": "issuance-grant.mission-state-source.cached-reliance",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-state-source",
+   "text": "The consuming AS MUST NOT rely on a response it validated earlier, at a later redemption or refresh, unless all of the following hold",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a redemption or refresh decided on a held Status response uses it only within the earlier of its reliance bound and the deployment's staleness bound, for the same mission.issuer, mission.id and audience, and only when its version is not below the retained version; otherwise the AS queries afresh"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q9); todo until that path exists."
+  },
+  {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "grant-validation",
