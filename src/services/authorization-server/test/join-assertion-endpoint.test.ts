@@ -199,6 +199,11 @@ describe("Join Assertion artifact (@spec authority-server#join-assertion-artifac
     const header = decodeProtectedHeader(jws);
     expect(header).toMatchObject({ typ: "mission-join+jwt", alg: "ES256" });
     expect(typeof header.kid).toBe("string");
+    // Signed with an algorithm the MAS lists in mission_status_signing_alg_values_supported.
+    const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as {
+      mission_status_signing_alg_values_supported: string[];
+    };
+    expect(meta.mission_status_signing_alg_values_supported).toContain(header.alg);
     const claims = await verified(jws);
     expect(claims).toMatchObject({
       iss: ISSUER,
