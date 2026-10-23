@@ -190,8 +190,6 @@ export function privateKeyJwtClient(opts: {
   privateKey: CryptoKey | KeyObject | Uint8Array;
   kid: string;
   alg?: string;
-  /** The assertion's `aud` where it is not the issuer: another endpoint's own identifier (#1454). */
-  audience?: string;
   now?: () => Date;
 }): StatusClientCredential {
   return {
@@ -202,7 +200,7 @@ export function privateKeyJwtClient(opts: {
         .setProtectedHeader({ alg: opts.alg ?? "ES256", kid: opts.kid, typ: "client-authentication+jwt" })
         .setIssuer(opts.clientId)
         .setSubject(opts.clientId)
-        .setAudience(opts.audience ?? opts.issuer)
+        .setAudience(opts.issuer)
         .setIssuedAt(iat)
         .setExpirationTime(iat + 60)
         .sign(opts.privateKey);

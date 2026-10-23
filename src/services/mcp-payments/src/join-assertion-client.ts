@@ -7,12 +7,19 @@
  * interoperable `access_token` form, for the credential it authenticated, so
  * the acting client needs no MAS registration and the digest and thumbprint
  * the PEP reports beside the assertion are computed from the same credential
- * it verified. The caller authenticates by private-key JWT, the assertion's
- * `aud` naming the endpoint.
+ * it verified.
+ *
+ * The caller authenticates by private-key JWT exactly as at Mission Status:
+ * its client assertion's `aud` is the MAS's issuer identifier as its sole
+ * value (D685, D690), never the endpoint. This client builds that assertion
+ * itself, so no caller can name another audience.
  *
  * Any refusal or failure yields no assertion; the decision request then
  * carries none, and the PDP applies its declared requirement.
  */
+
+import type { KeyObject } from "node:crypto";
+import { privateKeyJwtClient } from "@mission/pdp";
 
 /** Where the PEP obtains a Join Assertion for one joined request. */
 export interface JoinAssertionSource {
@@ -24,16 +31,19 @@ const CLIENT_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-b
 export interface JoinAssertionClientOptions {
   /** The MAS's advertised `mission_join_assertion_endpoint`. */
   endpoint: string;
+  /** The MAS's issuer identifier: the sole `aud` of the caller's client assertion. */
+  issuer: string;
   /** The consuming PDP, as the MAS's enrollment identifies it. */
   audience: string;
-  /** The caller's credential at the MAS: a fresh client assertion whose `aud` is `endpoint`. */
-  clientAssertion: () => Promise<string>;
+  /** The caller's private-key JWT credential at the MAS. */
+  caller: { clientId: string; privateKey: CryptoKey | KeyObject | Uint8Array; kid: string; alg?: string; now?: () => Date };
   /** Upper bound on one request, milliseconds. */
   timeoutMs: number;
 }
 
 /** A Join Assertion source that asks the MAS's endpoint over HTTP. */
 export function joinAssertionClient(opts: JoinAssertionClientOptions): JoinAssertionSource {
+  const credential = privateKeyJwtClient({ ...opts.caller, issuer: opts.issuer });
   return {
     obtain: async ({ mission, accessToken }) => {
       try {
@@ -45,7 +55,7 @@ export function joinAssertionClient(opts: JoinAssertionClientOptions): JoinAsser
             audience: opts.audience,
             access_token: accessToken,
             client_assertion_type: CLIENT_ASSERTION_TYPE,
-            client_assertion: await opts.clientAssertion(),
+            client_assertion: await credential.assertion(),
           }),
           signal: AbortSignal.timeout(opts.timeoutMs),
         });

@@ -23,7 +23,7 @@ import { join } from "node:path";
 import { initSigningKeyRing } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
 import { accessTokenHash, CANONICAL_RESOURCE, type DecisionEvidence, type JoinAssertionSource } from "@mission/mcp-payments";
-import { type EvaluationRequest, privateKeyJwtClient } from "@mission/pdp";
+import type { EvaluationRequest } from "@mission/pdp";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, type JWTPayload, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { composeMasPilot } from "../src/mas-pilot/compose.js";
@@ -147,22 +147,29 @@ function approveAtMas(label: string, delegable = false): Promise<string> {
   });
 }
 
-/** A request at the MAS's Join Assertion endpoint, as the pilot's enforcement point. */
-async function mintAt(body: Record<string, unknown>): Promise<{ status: number; body: Record<string, unknown> }> {
-  const caller = privateKeyJwtClient({
-    clientId: config.separated_mas.pdp_client_id,
-    issuer: MAS_URL,
-    audience: ENDPOINT,
-    privateKey: (await importJWK(pdpKey, "ES256")) as CryptoKey,
-    kid: pdpKey.kid as string,
-  });
+/**
+ * A request at the MAS's Join Assertion endpoint, as the pilot's enforcement
+ * point, its client assertion audienced to the MAS's issuer identifier, as at
+ * Mission Status (D685, D690), or to `aud` where a test names another.
+ */
+async function mintAt(body: Record<string, unknown>, aud: string = MAS_URL): Promise<{ status: number; body: Record<string, unknown> }> {
+  const iat = Math.floor(Date.now() / 1000);
+  const clientId = config.separated_mas.pdp_client_id;
+  const clientAssertion = await new SignJWT({ jti: crypto.randomUUID() })
+    .setProtectedHeader({ alg: "ES256", kid: pdpKey.kid as string, typ: "client-authentication+jwt" })
+    .setIssuer(clientId)
+    .setSubject(clientId)
+    .setAudience(aud)
+    .setIssuedAt(iat)
+    .setExpirationTime(iat + 60)
+    .sign((await importJWK(pdpKey, "ES256")) as CryptoKey);
   const res = await fetch(ENDPOINT, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       ...body,
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-      client_assertion: await caller.assertion(),
+      client_assertion: clientAssertion,
     }),
   });
   return { status: res.status, body: (await res.json()) as Record<string, unknown> };
@@ -334,6 +341,9 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
     };
     const bot = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
     expect((await mintAt({ mission_id: missionId, audience: pdpAudience, access_token: bot.token })).status).toBe(200);
+    // The caller's client assertion names the MAS's issuer, never the endpoint (D685, D690).
+    const endpointAud = await mintAt({ mission_id: missionId, audience: pdpAudience, access_token: bot.token }, ENDPOINT);
+    expect(endpointAud, "an endpoint aud").toMatchObject({ status: 400, body: { error: "invalid_client" } });
     const digest = await mintAt({
       mission_id: missionId,
       audience: pdpAudience,

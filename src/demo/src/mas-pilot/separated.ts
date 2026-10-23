@@ -186,14 +186,15 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     if (typeof endpoint !== "string") throw new Error(`the MAS at ${base} advertises no mission_join_assertion_endpoint`);
     const listed = metadata.mission_status_signing_alg_values_supported;
     const advertised = Array.isArray(listed) ? listed.filter((a): a is string => typeof a === "string") : [];
-    const caller = privateKeyJwtClient({
+    // The PEP's client assertion names the MAS's issuer identifier as its
+    // sole `aud`, as at Mission Status (D685, D690); the client builds it.
+    const caller = {
       clientId: config.separated_mas.pdp_client_id,
-      issuer: metadata.issuer,
-      audience: endpoint,
       privateKey: (await importJWK(pdpKey, pdpKey.alg ?? "ES256")) as CryptoKey,
       kid: pdpKey.kid,
+      ...(pdpKey.alg ? { alg: pdpKey.alg } : {}),
       ...(resolverNow ? { now: resolverNow } : {}),
-    });
+    };
     joinAssertion = {
       policy: {
         audience: config.separated_mas.pdp_client_id,
@@ -203,7 +204,13 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
         required: declared.required,
         requiredActionClasses: new Set(declared.required_classes),
       },
-      source: joinAssertionClient({ endpoint, audience: config.separated_mas.pdp_client_id, clientAssertion: caller.assertion, timeoutMs: source.timeout_ms }),
+      source: joinAssertionClient({
+        endpoint,
+        issuer: metadata.issuer,
+        audience: config.separated_mas.pdp_client_id,
+        caller,
+        timeoutMs: source.timeout_ms,
+      }),
     };
     if (opts.wrapAssertionSource) joinAssertion.source = opts.wrapAssertionSource(joinAssertion.source);
   }
