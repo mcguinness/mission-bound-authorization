@@ -619,7 +619,7 @@ server enforces the `authorization_details` statelessly and can check
 the `mission` claim ({{rs-enforcement}}), with no callback to the AS
 required.
 
-(5) An authorized revocation ({{revocation}}), or `expires_at`
+(5) A revocation ({{revocation}}), or `expires_at`
 passing, moves the Mission
 to `terminated`, with reason `revoked` or `expired`, after which the
 AS refuses further issuance and refresh. A deployment can also treat
@@ -2099,8 +2099,8 @@ A Mission is in one of two states:
 - `active`: the only state in which the AS derives tokens.
 - `terminated`: a terminal state; the Mission has ended. Its
   `termination` member ({{termination}}) gives the reason: `revoked`
-  when the Subject, Approver, or policy terminated it, or `expired` when
-  its `expires_at` passed.
+  when it was revoked ({{revocation}}), or `expired` when its
+  `expires_at` passed.
 
 The transitions are:
 
@@ -2194,11 +2194,15 @@ before reading it this way.
 
 ## Revocation {#revocation}
 
-A Mission is revoked when the AS receives an authorized revocation
-for it. A deployment MUST provide an authenticated means for the
-Subject, the Approver, or an administrator to revoke a Mission by
-`mission_id`, independent of possession of any token (so a Mission
-can be stopped even when no refresh token is held).
+A Mission is revoked when the AS receives a revocation for it from a
+party the deployment's policy authorizes to revoke it, or when that
+policy itself terminates the Mission; either way, its termination
+reason is `revoked`. The Subject, the Approver, and an administrator
+are parties that policy can authorize; none is authorized by its role
+alone. A deployment MUST provide an authenticated means, independent
+of possession of any token, by which a party its policy authorizes
+revokes a Mission by `mission_id` (so a Mission can be stopped even
+when no refresh token is held).
 
 The wire shape of that operation is out of scope for this document. A
 deployment-defined authenticated surface satisfies this requirement;
@@ -5804,7 +5808,7 @@ This document seeds the registry with the reasons it defines:
 
 | Value | Semantics | Members | Change Controller | Reference |
 |---|---|---|---|---|
-| `revoked` | The Subject, Approver, or policy terminated the Mission. | none | IETF | this document, {{termination}} |
+| `revoked` | An authorized party revoked the Mission, or the deployment's policy terminated it ({{revocation}}). | none | IETF | this document, {{termination}} |
 | `expired` | The Mission's `expires_at` passed; `terminated_at` equals it. | none | IETF | this document, {{termination}} |
 {: title="Mission Termination Reasons registry: initial contents"}
 
