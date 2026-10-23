@@ -1872,14 +1872,15 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // keeps the device authorization endpoint refusing a Request Object.
       // @spec mission#submission-processing (#1512): the hook runs before
       // the provider's RAR check, so it validates a carried Submission
-      // envelope and its Intent (steps 1 and 2) before a proposal inside the
-      // object is checked (step 3); evidence entries wait for their step.
+      // envelope and its Intent (steps 1 and 2), including each evidence
+      // entry's structure and size (step 1), before a proposal inside the
+      // object is checked (step 3); evidence type dispatch waits for step 6.
       requestObjects: {
         enabled: true,
         requireSignedRequestObject: false,
         assertJwtClaimsAndHeader: requestObjectIntake((submission) => {
           try {
-            kernel.validateSubmission(submission, undefined, { deferEvidenceEntries: true });
+            kernel.validateSubmission(submission, undefined, { deferEvidenceDispatch: true });
           } catch (e) {
             if (e instanceof IntentError) throw intentErrorToOidc(e);
             throw e;
@@ -2025,9 +2026,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         }
         // @spec mission#submission-processing (#1411): the PAR intake lifted
         // the proposal, so the envelope and the Intent (steps 1 and 2) are
-        // validated before it (step 3), and the evidence entry rules wait
-        // for the evidence step (step 6). A lifted proposal is always restored and
-        // checked, even where the provider reads no `mission_intent`.
+        // validated before it (step 3), with each evidence entry's structure
+        // and size (step 1, #1503 finding 12), and evidence type dispatch
+        // waits for the evidence step (step 6). A lifted proposal is always
+        // restored and checked, even where the provider reads no `mission_intent`.
         const lifted =
           (ctx as { oidc: { route?: string } }).oidc.route === "pushed_authorization_request"
             ? takeParIntake((ctx as { req: IncomingMessage }).req)
@@ -2053,7 +2055,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           return;
         }
         try {
-          const submission = kernel.validateSubmission(String(submitted), undefined, { deferEvidenceEntries: true });
+          const submission = kernel.validateSubmission(String(submitted), undefined, { deferEvidenceDispatch: true });
           const { intent } = submission;
           if (lifted) {
             params.authorization_details = lifted.proposal;

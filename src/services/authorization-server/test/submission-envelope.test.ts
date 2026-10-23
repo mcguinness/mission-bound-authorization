@@ -248,6 +248,16 @@ describe("Intent Submission Evidence intake, stage 1 (@spec mission#intent-submi
     ).toContain("evidence must be a JSON array");
   });
 
+  it("checks every entry's structure before dispatching any entry (@spec mission#submission-processing, step 1 before step 6)", () => {
+    const e = refusal(() =>
+      validateMissionIntentSubmission(
+        JSON.stringify({ intent: TASK_INTENT, evidence: [EVIDENCE_ENTRY, { assertion: "eyJ" }] }),
+      ),
+    );
+    expect(e.code).toBe("invalid_request");
+    expect(e.message).toContain("evidence entries require a type");
+  });
+
   it("refuses an EMPTY evidence array (evidence, when present, is non-empty)", () => {
     const e = refusal(() =>
       validateMissionIntentSubmission(JSON.stringify({ intent: TASK_INTENT, evidence: [] })),

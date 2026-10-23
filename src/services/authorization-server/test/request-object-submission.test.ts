@@ -360,6 +360,20 @@ describe("Submission Processing Order on the Request Object path (@spec mission#
     ]);
   });
 
+  it("a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request, and an unsupported evidence type waits for step 6", async () => {
+    const untyped = { intent: INTENT, evidence: [{ assertion: "x" }] };
+    const notAnObject = { intent: INTENT, evidence: ["x"] };
+    const unknownType = { intent: INTENT, evidence: [{ type: "urn:test:intent-evidence:unregistered" }] };
+    await expectRefused([
+      ["an evidence entry without a type only", untyped, READ, "invalid_request"],
+      ["an evidence entry that is not an object only", notAnObject, READ, "invalid_request"],
+      ["an unsupported evidence type only", unknownType, READ, "invalid_mission_intent_evidence"],
+      ["an evidence entry without a type and a proposal entry missing its resource", untyped, MISSING_RESOURCE, "invalid_request"],
+      ["an evidence entry that is not an object and a proposal entry of an unsupported type", notAnObject, UNSUPPORTED_TYPE, "invalid_request"],
+      ["an unsupported evidence type and a proposal entry missing its resource", unknownType, MISSING_RESOURCE, "invalid_authorization_details"],
+    ]);
+  });
+
   it("accepts a valid envelope with a valid proposal through PAR, approval, code redemption and token issuance", async () => {
     const par = await pushCarrying(ENVELOPE, READ);
     expect(par.status, JSON.stringify(par.body)).toBe(201);
