@@ -672,13 +672,15 @@ fresh grant under that Mission cures it.
 The client presents the grant to the consuming AS's token endpoint
 as a JWT authorization grant {{RFC7523}}. The following example shows
 a confidential client that authenticates with a JWT
-({{Section 2.2 of RFC7523}}); line breaks are for display purposes
-only:
+({{Section 2.2 of RFC7523}}) and proves possession of the grant's
+`cnf` key with a DPoP proof ({{Section 5 of RFC9449}}); line breaks
+are for display purposes only:
 
 ~~~ http-message
 POST /token HTTP/1.1
 Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
 &assertion=eyJ0eXAiOiJtaXNzaW9uLWlzc3VhbmNlLWdyYW50K2p3dCIs...
@@ -730,7 +732,9 @@ any check fails:
    possession of that key, with a DPoP proof
    ({{Section 4.3 of RFC9449}}) whose public key has the `jkt`
    thumbprint or a client certificate on the TLS connection whose
-   SHA-256 thumbprint matches the `x5t#S256` value;
+   SHA-256 thumbprint matches the `x5t#S256` value, and presents no
+   sender constraint for any other key (a DPoP proof with another key,
+   or at the PAR endpoint a `dpop_jkt` other than the `jkt` value);
 6. the (`iss`, `sub`) pair maps to a local account under the
    deployment's mapping policy ({{trust}}), and every entry of the grant's
    `authorization_details` is of a type this AS supports and is one it
@@ -767,6 +771,17 @@ On success the consuming AS mints tokens under these rules:
   object's `expires_at`. That ceiling is the Mission's expiry, not a
   liveness bound, so access tokens issued under a grant SHOULD be
   short-lived ({{security-considerations}}).
+- **Key binding.** When the grant carries `cnf`, the consuming AS MUST
+  bind every access token it issues under the grant, at redemption, at
+  code exchange under the PAR carriage, and at each refresh, to that
+  confirmation value: as a DPoP-bound access token with `token_type`
+  `DPoP` ({{Section 5 of RFC9449}}) for `jkt`, or as a
+  certificate-bound access token ({{Section 3 of RFC8705}}) for
+  `x5t#S256`. It MUST NOT issue such a token as a bearer token or bind
+  it to any other key. Refresh tokens follow the issuance profile's
+  rules ({{I-D.draft-mcguinness-oauth-mission}}, Section "Refresh
+  Tokens"), and every refresh still proves possession of the grant's
+  `cnf` key ({{refresh}}).
 - **Effective Authority Set projection.** A consuming AS with a
   Mission-state integration also applies {{effective-set-projection}}.
 - **No re-approval.** The approval event already occurred at the
@@ -782,7 +797,7 @@ Cache-Control: no-store
 
 {
   "access_token": "eyJ0eXAiOiJhdCtqd3QiLCJhbGciOiJFUzI1NiJ9...",
-  "token_type": "Bearer",
+  "token_type": "DPoP",
   "expires_in": 300,
   "authorization_details": [
     {
@@ -910,6 +925,12 @@ leaves the family ceiling and the presented refresh token unchanged.
 Concurrent refreshes in one family MUST NOT restore authority that an
 earlier successful issuance in that family removed.
 
+Where the grant carried `cnf`, each refresh request MUST prove
+possession of that key: a DPoP proof whose public key has the `jkt`
+thumbprint, or a TLS client certificate whose SHA-256 thumbprint is
+the `x5t#S256` value. The consuming AS refuses a refresh request that
+does not as {{redemption-errors}} specifies.
+
 ## Without a Mission-State Integration {#no-state-integration}
 
 A consuming AS without a Mission-state integration MUST NOT issue
@@ -939,7 +960,13 @@ The consuming AS responds to a failed redemption or refresh with an
 error response as defined in {{Section 5.2 of RFC6749}}. A grant that
 fails any check of {{grant-validation}} is refused with the
 `invalid_grant` error code ({{Section 3.1 of RFC7523}}), and failed
-client authentication with `invalid_client`. The other refusals are:
+client authentication with `invalid_client`. At redemption, code
+exchange, and refresh alike, a DPoP proof that fails the checks of
+{{Section 4.3 of RFC9449}} is refused with `invalid_dpop_proof`, or
+with `use_dpop_nonce` where the AS requires a nonce
+({{Section 8 of RFC9449}}), and a request that proves no key, or a
+key other than the grant's `cnf` key, with `invalid_grant`. The other
+refusals are:
 
 | Condition | Response |
 |---|---|
@@ -1002,6 +1029,13 @@ request. From then on the `request_uri`, and then the authorization
 code, carry the authorization; a flow the user abandons, or the AS
 refuses, after PAR validation leaves the grant consumed, and the
 client obtains a fresh grant.
+
+When the grant carries `cnf`, the authorization code inherits it. The
+token request at code exchange MUST prove possession of that key, as
+{{Section 10 of RFC9449}} binds a code to a DPoP key (for `jkt`), or
+arrive over a mutual-TLS connection with that certificate (for
+`x5t#S256`, {{Section 3 of RFC8705}}); the AS refuses a code exchange
+that does not as {{redemption-errors}} specifies.
 
 The grant's window is not re-evaluated at code exchange, since the
 authorization code carries its own lifetime. The other redemption

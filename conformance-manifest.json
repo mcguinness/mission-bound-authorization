@@ -38247,6 +38247,133 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q1); todo until that path exists."
   },
   {
+   "id": "issuance-grant.token-issuance.key-bound",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "token-issuance",
+   "text": "When the grant carries `cnf`, the consuming AS MUST bind every access token it issues under the grant, at redemption, at code exchange under the PAR carriage, and at each refresh, to that confirmation value",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every access token issued under a cnf grant (redemption, PAR code exchange, each refresh) carries the grant's confirmation value: cnf.jkt with token_type DPoP for a jkt grant, cnf.x5t#S256 for an x5t#S256 grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.token-issuance.no-bearer-fallback",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "token-issuance",
+   "text": "It MUST NOT issue such a token as a bearer token or bind it to any other key.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "no access token issued under a cnf grant is a bearer token or bound to a key other than the grant's"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.no-other-key",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "presents no sender constraint for any other key",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a redemption under a cnf grant that also presents a DPoP proof for another key, or a pushed authorization request with a dpop_jkt other than the grant's jkt, is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.redemption-errors.dpop-codes",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "redemption-errors",
+   "text": "a DPoP proof that fails the checks of {{Section 4.3 of RFC9449}} is refused with `invalid_dpop_proof`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at redemption, code exchange and refresh, a DPoP proof failing RFC 9449 Section 4.3 gets invalid_dpop_proof (use_dpop_nonce where a nonce is required), and a request proving no key or another key gets invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.par-carriage.code-inherits-cnf",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "par-carriage",
+   "text": "The token request at code exchange MUST prove possession of that key",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a code exchange for a code issued under a cnf grant that proves no key, or another one, is refused invalid_grant, and nothing is issued"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.refresh.possession",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "refresh",
+   "text": "Where the grant carried `cnf`, each refresh request MUST prove possession of that key",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refresh in a family whose grant carried cnf that proves no key, or another one, is refused invalid_grant; a DPoP proof failing RFC 9449 Section 4.3 is refused invalid_dpop_proof"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "grant-validation",
