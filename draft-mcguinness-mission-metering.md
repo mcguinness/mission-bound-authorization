@@ -444,7 +444,9 @@ that a companion profile may add a named member coordinated with it:
   : REQUIRED. A string. A decimal number.
 
   `currency`:
-  : REQUIRED. A string. An ISO 4217 currency code.
+  : REQUIRED. A string in the form `max_amount`'s `currency` takes
+    ({{I-D.draft-mcguinness-oauth-mission-resource-access}}): exactly
+    three upper-case ASCII letters, compared exactly.
 
 `max_calls`:
 : OPTIONAL. An array of objects. Hard caps on the count of
@@ -1350,6 +1352,9 @@ this registry.
 
 \[\[ To be removed from the final specification ]]
 
+- `max_budget`'s `currency` takes the form Resource Access gives
+  `max_amount`'s `currency`: exactly three upper-case ASCII letters,
+  compared exactly.
 - Duration-Lease Renewal: the PDP refuses a renewal at or after the
   activity's current lease boundary and denies `out_of_authority` a
   renewal that continues nothing; a renewal passes every current check,
