@@ -652,6 +652,27 @@ describe("Mission Lifecycle endpoint processing order (@spec status#lifecycle-pr
     expect(replay.text).toBe(first.text);
   });
 
+  it("keeps a retained success through a refusal decided before deduplication, so a later authorized request with that nonce and different members is refused as a divergent retry, never processed fresh", async () => {
+    const m = approve();
+    const n = nonce();
+    const first = await lifecycleRequest(ISSUER, withdrawableClient, { mission_id: m.id, operation: "suspend", nonce: n });
+    expect(first.status, first.text).toBe(200);
+    const retained = retainedRow(withdrawableClient.clientId, m.id, n);
+    const divergent = { mission_id: m.id, operation: "resume", nonce: n };
+    const withdrawn = withdrawableGrants.splice(0);
+    try {
+      const refused = await lifecycleRequest(ISSUER, withdrawableClient, divergent);
+      expect(refused.status, refused.text).toBe(404);
+    } finally {
+      withdrawableGrants.push(...withdrawn);
+    }
+    expect(retainedRow(withdrawableClient.clientId, m.id, n)).toEqual(retained);
+    const later = await lifecycleRequest(ISSUER, withdrawableClient, divergent);
+    expect(later.status, later.text).toBe(400);
+    expect(later.json?.error).toBe("invalid_request");
+    expect(as.kernel.get(m.id)?.state).toBe("suspended");
+  });
+
   it("retains nothing for a refusal decided before deduplication, so a committed success whose bytes were lost survives a refused retransmit and is recovered once the grant returns", async () => {
     const m = approve();
     const n = nonce();

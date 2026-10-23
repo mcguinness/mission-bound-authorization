@@ -55,8 +55,8 @@
     "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "db4c66466351328539b862373675b7bcd7b687cf",
-    "content_sha256": "ed37748db9d2e800e88bc64dc590a675970166a68e512c77ef65040360c11c37"
+    "revision": "b6a36a9708d3a7e9e2f83c3ba90d7dab93d437f9",
+    "content_sha256": "bc99ebe684ce0944206e5ed10da15d422181b1effa4b1d1724305046a089ccc1"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -231,6 +231,12 @@
    "status.lifecycle",
    "status.lifecycle-revoke",
    "status.discharge",
+   "status.mission-status",
+   "status.introspection-projection",
+   "status.mission-status-mtls-client-auth",
+   "status.lifecycle-mtls-client-auth",
+   "status.mission-status-access-token-auth",
+   "status.lifecycle-access-token-auth",
    "signals.events",
    "cross-org.delegation",
    "txn-authz.action",
@@ -1370,7 +1376,13 @@
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.introspection-projection",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -1413,7 +1425,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits."
+   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits. #1563 review: also gated on status.introspection-projection, whose issuer projection MAY carry `fresh_until` governed by this caching rule. The reference's introspection projection carries no `fresh_until`, so the cap is witnessed where the reference stamps it, on the signed Mission Status Response."
   },
   {
    "id": "status.response.consumer-issuer-binding",
@@ -1965,7 +1977,7 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "status.revocation-propagation"
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -1990,7 +2002,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "GET /missions/:id/status requires mayReadStatus (the status capability enabled and MISSION_STATUS_SCOPE on the authenticated service principal), the same predicate that decides a forwarded discharge's response shape (status.discharge.receipt-aud-nonce). The test shows a principal holding the lifecycle and discharge grants but not mission_status gets exactly the not-found body an unknown Mission gets (nonce echoed), while a principal holding only mission_status, and the shipped dev principal, get the signed Status response. Capability and surface follow the neighbouring Mission Status operation row status.caching.freshness-cap: the model has no dedicated Status-operation capability or surface. #1407: the advertised endpoint answers a client without the grant with the unknown Mission's not-found body."
+   "notes": "GET /missions/:id/status requires mayReadStatus (the status capability enabled and MISSION_STATUS_SCOPE on the authenticated service principal), the same predicate that decides a forwarded discharge's response shape (status.discharge.receipt-aud-nonce). The test shows a principal holding the lifecycle and discharge grants but not mission_status gets exactly the not-found body an unknown Mission gets (nonce echoed), while a principal holding only mission_status, and the shipped dev principal, get the signed Status response. Capability and surface follow the neighbouring Mission Status operation row status.caching.freshness-cap: the model has no dedicated Status-operation capability or surface. #1407: the advertised endpoint answers a client without the grant with the unknown Mission's not-found body. Gated on status.mission-status (was status.revocation-propagation): the read authorization belongs to the Mission Status operation."
   },
   {
    "id": "status.read.processing-order",
@@ -2000,7 +2012,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -2035,7 +2048,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -12509,6 +12523,50 @@
    "notes": "#1535 (#1544 review ruling). Proved by reading the Mission before the members (the matrix's read spy fails) and by retaining the syntax refusal (the same-nonce well-formed request is refused 400 as a divergent retry). D175 narrowly superseded (#1544 review ruling): pre-deduplication refusals are read-only; post-authorization processing keeps D175's hoisted expiry. A refusal decided during syntax validation or target authorization commits no expiry, schedule, discharge event, latch or nonce response; the effective expiry still governs authorization and issuance at once, and its persistence and publication wait for the next expiry-materializing path. Proved post-authorization by removing the hoisted materialization (the fingerprint-conflict test fails: the conflict's rollback undoes the expiry)."
   },
   {
+   "id": "status.discharge.observed-at-syntax-and-clock-bounds",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-operation",
+   "text": "The AS validates it for syntax and reasonable clock bounds only, never as trusted ordering or freshness",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an `observed_at` that is not an RFC 3339 date-time is refused `invalid_request`; one outside the AS's clock allowance is refused for a request processed fresh, while an authorized retry whose `observed_at` has since aged past it replays the original response",
+    "local": "syntax in parseDischargeMembers, before authorization; the 24-hour window (OBSERVED_AT_SKEW_MS) in handleDischarge, after deduplication (#1544 re-review)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses malformed wire shapes as invalid_request, never a 500",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses a malformed discharge request without touching the latch",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays an authorized retry whose observed_at has since aged past the admission window: the window is checked only for a request processed fresh (@spec status#lifecycle-processing, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "A present-tense obligation that had no row; Proved: disabling only the RFC 3339 check in parseDischargeMembers (keeping the type and window checks) fails \"refuses malformed wire shapes as invalid_request, never a 500\" on a non-RFC 3339 `observed_at` inside the clock window; disabling the window check in handleDischarge fails the skewed `observed_at` case of \"refuses a malformed discharge request without touching the latch\" and the aged-retry test's fresh-nonce companion."
+  },
+  {
    "id": "status.discharge.well-formed-resolution-not-found",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-anti-oracle",
@@ -12800,6 +12858,56 @@
     }
    ],
    "notes": "Status interface audit (#705); #1191 (D416)."
+  },
+  {
+   "id": "status.idempotency.pre-dedup-refusal-no-nonce",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "A request refused before deduplication ({{lifecycle-processing}}) claims no `nonce`: the AS retains nothing for the refusal and leaves any response already retained under that `nonce` unchanged, so the rules above apply to a later request carrying it as though the refused request had never arrived.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a request refused at syntax or authorization, before deduplication, retains nothing and leaves any response already retained under its nonce unchanged: a later authorized retransmit with the original's members replays the original bytes, one with different members is refused invalid_request as a divergent retry and changes nothing, and where nothing is retained a later request with that nonce is processed as a new request"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > authorizes a retransmit before deduplication: after the client's grant is withdrawn, the same nonce and members under a fresh assertion get the not-found response, not the replayed success, and the success replays once the grant returns",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > keeps a retained success through a refusal decided before deduplication, so a later authorized request with that nonce and different members is refused as a divergent retry, never processed fresh",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > retains nothing for a refusal decided before deduplication, so a committed success whose bytes were lost survives a refused retransmit and is recovered once the grant returns",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > retains nothing for a discharge refused on its syntax: the same nonce with well-formed members is then processed fresh, a discharge for an authorized caller and the not-found response for one outside the target's mapping, never a divergent retry (@spec discharge#discharge-anti-oracle, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535, D658: the sentence states what the processing order already implied. Both witnesses were proved during #1544: retaining a pre-deduplication 404 fails the first, retaining a discharge syntax refusal fails the second. #1563 review: the sentence and observation no longer say a later request is processed as new; a refusal before deduplication leaves a retained success unchanged and a later request follows normal deduplication. Witnesses by clause: the retained row is unchanged (the divergent test, and the lost-bytes recovery test); an identical retransmit replays the original bytes (the retransmit-authorization test); a different-members request is refused invalid_request with the Mission still suspended (the divergent test); with nothing retained the request is processed as new (the Discharge test). Mutation: deleting the Mission's retained responses on the pre-dedup not-found path fails the three Lifecycle tests, and the divergent test fails on its wire assertion alone (200, not 400) with its retained-row check removed."
   },
   {
    "id": "status.idempotency.nonce-malformed",
@@ -14496,6 +14604,8 @@
    "applicability": {
     "kind": "capabilities",
     "any_of": [
+     "status.mission-status",
+     "status.introspection-projection",
      "status.lifecycle",
      "status.lifecycle-revoke",
      "status.revocation-propagation"
@@ -14772,11 +14882,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "capabilities",
-    "any_of": [
-     "status.lifecycle",
-     "status.lifecycle-revoke"
-    ]
+    "kind": "capability",
+    "capability": "status.lifecycle-mtls-client-auth"
    },
    "profiles": [],
    "surface": "verification",
@@ -14787,7 +14894,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented."
+   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.lifecycle.unserved-operation-refused",
@@ -14997,7 +15104,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "lifecycle-endpoint",
@@ -15077,7 +15189,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15098,7 +15211,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15119,7 +15233,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status-mtls-client-auth"
    },
    "profiles": [],
    "surface": "verification",
@@ -15130,7 +15245,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 12 (D649). todo: the advertised Mission Status endpoint (#1407) accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented."
+   "notes": "#1535 finding 12 (D649). todo: the advertised Mission Status endpoint (#1407) accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.request.private-key-jwt-params",
@@ -15140,7 +15255,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15175,7 +15291,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15216,7 +15333,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15237,7 +15355,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15279,7 +15402,12 @@
    "role": "client",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15314,7 +15442,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15349,7 +15482,12 @@
    "role": "client",
    "strength": "SHOULD",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15378,7 +15516,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15419,7 +15562,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15454,7 +15602,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15483,7 +15636,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15511,7 +15665,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15546,7 +15701,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15593,7 +15753,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15640,7 +15805,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15687,7 +15857,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15734,7 +15909,12 @@
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15769,7 +15949,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15804,7 +15989,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15917,7 +16103,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15946,7 +16133,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -16016,7 +16204,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "lifecycle-endpoint",
@@ -16105,7 +16298,11 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status-access-token-auth",
+     "status.lifecycle-access-token-auth"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -16116,7 +16313,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.auth.challenge-no-token",
@@ -16126,7 +16323,11 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status-access-token-auth",
+     "status.lifecycle-access-token-auth"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -16137,7 +16338,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.auth.challenge-resource-metadata",
@@ -16147,7 +16348,11 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status-access-token-auth",
+     "status.lifecycle-access-token-auth"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -16158,7 +16363,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.auth.invalid-client",
@@ -16168,7 +16373,12 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -16480,7 +16690,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "status.lifecycle"
+    "capability": "status.lifecycle-access-token-auth"
    },
    "profiles": [],
    "surface": "lifecycle-endpoint",
@@ -16491,7 +16701,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 1 (D649). Applies to the access-token authentication case only: the reference Lifecycle endpoint accepts private_key_jwt alone (LIFECYCLE_ENDPOINT_AUTH_METHODS), where the acting party is the authenticated client, no delegation context arises, and status.lifecycle.per-mission-authorization covers the evaluation. No manifest capability names the access-token mode, so the gate is this note. Todo until the endpoint accepts a sender-constrained access token."
+   "notes": "#1535 finding 1 (D649). Applies to the access-token authentication case only: the reference Lifecycle endpoint accepts private_key_jwt alone (LIFECYCLE_ENDPOINT_AUTH_METHODS), where the acting party is the authenticated client, no delegation context arises, and status.lifecycle.per-mission-authorization covers the evaluation. No manifest capability names the access-token mode, so the gate is this note. Todo until the endpoint accepts a sender-constrained access token. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.lifecycle.unauthorized-not-found",
@@ -16956,7 +17166,12 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
