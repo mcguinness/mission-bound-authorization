@@ -49644,6 +49644,54 @@
    "notes": "#1376. Guidance to the resource's documented namespace; a departure is recorded, not failed. The reference resources define no action families. A binding compatibility rule for families is out of scope here (#249)."
   },
   {
+   "id": "resource-access.type.action-family-consent-rendering",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "The authorization server MUST ensure that a consent rendering presents a family as every action under its name, not as one action",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consent rendering of an entry whose actions carry an action family presents the family as every action under its name, not as one action"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "In the draft since its first version (#637); the MUST was reshaped by #1258 item 12 and the #1260 review and reworded by #1520, and no row was added at any of those changes. Reference: PAR intake admits a family (ACTION_VALUE, kernel/authorization-details-metadata.ts), and derivation compares actions literally, so a family reaches the approval page only under a ceiling listing the same family string; the shipped policy lists none, so a proposed family is refused at derivation before any rendering, and no test has observed one rendered. Where one does reach the page, the derived entry is shown as JSON (adapters/provider.ts, the derived-authority block) with the family as its verbatim string, not as every action under its name. Owned by #1377, which decides whether the reference refuses family input before approval (D538, D684) and records that under observation.local, or renders families as the clause requires."
+  },
+  {
+   "id": "resource-access.type.action-family-derivation-high-risk",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "An authorization server SHOULD treat deriving a family as high-risk breadth",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorization server deriving an entry whose actions carry an action family treats it as high-risk breadth, for example with a stronger approval, an explicit breadth disclosure, or refusal"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "In the draft since its first version (#637), with no row until now. Reference: derivation compares actions literally and applies no breadth or risk classification to an action value. The approval-authentication floor looks up the literal action (kernel/approval-floor.ts), so a family is refused there as unclassified at the decision, after the approver has seen the page; HIGH_RISK_CLASSES (kernel/drawdown-approval-record.ts) is keyed on runtime action classes, not identifiers; and the write-bearing check is literal, so the distinct-approver rule does not reach a family. A departure is recorded, not failed. Owned by #1377, with resource-access.type.action-family-consent-rendering."
+  },
+  {
    "id": "resource-access.type.emit-enforced-constraint-keys",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-access-type",
