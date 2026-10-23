@@ -112,6 +112,23 @@ export async function postLifecycleForm(
   return readAnswer(res);
 }
 
+/**
+ * POST a body exactly as given, bytes and media type, to `url`: a form with
+ * repeated parameters, a malformed encoding, or another media type
+ * (#1535 Item C).
+ */
+export async function postRaw(url: string, body: string | Uint8Array, contentType = "application/x-www-form-urlencoded"): Promise<LifecycleAnswer> {
+  const res = await fetch(url, { method: "POST", headers: { "content-type": contentType }, body });
+  return readAnswer(res);
+}
+
+/** A form body from ordered pairs, a name repeated where it appears twice. */
+export function formOf(pairs: Array<[string, string]>): string {
+  const form = new URLSearchParams();
+  for (const [name, value] of pairs) form.append(name, value);
+  return form.toString();
+}
+
 /** A Lifecycle request from `client`, under a fresh assertion unless one is given. */
 export async function lifecycleRequest(
   issuer: string,

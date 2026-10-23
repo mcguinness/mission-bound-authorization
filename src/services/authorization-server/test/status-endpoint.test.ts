@@ -23,7 +23,7 @@
 import type { Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { createLocalJWKSet, decodeJwt, generateKeyPair, type JWK, jwtVerify } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { STATUS_ENDPOINT_PATH } from "../src/adapters/lifecycle-endpoint.js";
 import {
   ALL_PROVIDER_CAPABILITIES,
@@ -40,6 +40,8 @@ import {
   lifecycleClientAssertion,
   newLifecycleClient,
   readAnswer,
+  formOf,
+  postRaw,
 } from "./lifecycle-endpoint.helper.js";
 
 const PORT = 14891;
@@ -221,11 +223,15 @@ describe("Mission Status endpoint errors (@spec status#mission-status-auth-failu
         body: JSON.stringify({ mission_id: record.id, nonce: n }),
       }),
     );
+    // A repeated request parameter is malformed once the caller authenticates
+    // (#1535 Item C, D708); unauthenticated, it is an authentication failure.
+    const repeatedForm = new URLSearchParams({ mission_id: record.id, nonce: n, ...(await auth()) });
+    repeatedForm.append("mission_id", UNKNOWN);
     const repeated = await readAnswer(
       await fetch(ENDPOINT, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: `mission_id=${record.id}&mission_id=${UNKNOWN}&nonce=${n}`,
+        body: repeatedForm.toString(),
       }),
     );
     const cases: Array<[string, LifecycleAnswer, string | undefined]> = [
@@ -345,3 +351,101 @@ describe("Mission Status endpoint errors (@spec status#mission-status-auth-failu
   });
 });
 
+
+describe("Mission Status parsing, repeated parameters and authentication precedence (@spec status#mission-status-processing, #1535 Item C, D704, D708)", () => {
+  /** The client authentication pairs for `client`, under a fresh assertion. */
+  const authPairs = async (client: LifecycleTestClient = reader): Promise<Array<[string, string]>> => [
+    ["client_assertion_type", CLIENT_ASSERTION_TYPE],
+    ["client_assertion", await lifecycleClientAssertion(ISSUER, client)],
+  ];
+
+  /** Every Mission read the Status route could make, counted while `run` sends its requests. */
+  async function withoutMissionRead(run: () => Promise<void>): Promise<void> {
+    const reads = [vi.spyOn(as.kernel, "signedStatus"), vi.spyOn(as.kernel, "get"), vi.spyOn(as.kernel, "currentRecord")];
+    try {
+      await run();
+      for (const spy of reads) expect(spy, "a Mission was read").not.toHaveBeenCalled();
+    } finally {
+      for (const spy of reads) spy.mockRestore();
+    }
+  }
+
+  it("refuses a body that cannot be parsed invalid_request, with a valid credential or none: another media type, a malformed escape, invalid UTF-8, an oversized body", async () => {
+    const record = approve();
+    const n = nonce();
+    const members: Array<[string, string]> = [["mission_id", record.id], ["nonce", n]];
+    const cases: Array<[string, () => Promise<LifecycleAnswer>]> = [
+      ["JSON with a valid assertion", async () => postRaw(ENDPOINT, JSON.stringify(Object.fromEntries([...members, ...(await authPairs())])), "application/json")],
+      ["JSON with no credential", async () => postRaw(ENDPOINT, JSON.stringify(Object.fromEntries(members)), "application/json")],
+      ["a malformed escape with a valid assertion", async () => postRaw(ENDPOINT, `${formOf([...members, ...(await authPairs())])}&audience=%zz`)],
+      ["a malformed escape with no credential", async () => postRaw(ENDPOINT, `${formOf(members)}&audience=%zz`)],
+      ["invalid UTF-8 with a valid assertion", async () => postRaw(ENDPOINT, new Uint8Array([...Buffer.from(`${formOf([...members, ...(await authPairs())])}&audience=`), 0xff]))],
+      ["an oversized body with a valid assertion", async () => postRaw(ENDPOINT, `${formOf([...members, ...(await authPairs())])}&pad=${"a".repeat(70_000)}`)],
+    ];
+
+    await withoutMissionRead(async () => {
+      for (const [label, send] of cases) {
+        const answer = await send();
+        expect(answer.status, `${label}: ${answer.text}`).toBe(400);
+        expect(answer.json?.error, label).toBe("invalid_request");
+        expect(answer.json?.nonce, label).toBeUndefined();
+      }
+    });
+  });
+
+  it("refuses a repeated client authentication parameter invalid_client, using no occurrence, though each would authenticate", async () => {
+    const record = approve();
+    const n = nonce();
+    const members: Array<[string, string]> = [["mission_id", record.id], ["audience", CANONICAL_RESOURCE], ["nonce", n]];
+    const cases: Array<[string, Array<[string, string]>]> = [
+      ["client_assertion twice", [...members, ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", await lifecycleClientAssertion(ISSUER, reader)], ["client_assertion", await lifecycleClientAssertion(ISSUER, reader)]]],
+      ["client_assertion_type twice", [...members, ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", await lifecycleClientAssertion(ISSUER, reader)]]],
+      ["client_id twice", [...members, ["client_id", reader.clientId], ["client_id", reader.clientId], ...(await authPairs())]],
+    ];
+    await withoutMissionRead(async () => {
+      for (const [label, pairs] of cases) {
+        const answer = await postRaw(ENDPOINT, formOf(pairs));
+        expect(answer.status, `${label}: ${answer.text}`).toBe(400);
+        expect(answer.json, label).toMatchObject({ error: "invalid_client", nonce: n });
+      }
+    });
+  });
+
+  it("authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too", async () => {
+    const record = approve();
+    const n = nonce();
+    const repeatedMission: Array<[string, string]> = [["mission_id", record.id], ["mission_id", UNKNOWN], ["nonce", n]];
+    const { privateKey: foreignKey } = await generateKeyPair("ES256");
+    await withoutMissionRead(async () => {
+      const noCredential = await postRaw(ENDPOINT, formOf(repeatedMission));
+      const foreign = await postRaw(
+        ENDPOINT,
+        formOf([...repeatedMission, ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", await lifecycleClientAssertion(ISSUER, reader, { key: foreignKey as CryptoKey })]]),
+      );
+      const bothRepeated = await postRaw(
+        ENDPOINT,
+        formOf([...repeatedMission, ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", await lifecycleClientAssertion(ISSUER, reader)], ["client_assertion", await lifecycleClientAssertion(ISSUER, reader)]]),
+      );
+      for (const [label, answer] of [["no credential", noCredential], ["a foreign signature", foreign], ["an authentication parameter repeated too", bothRepeated]] as const) {
+        expect(answer.status, `${label}: ${answer.text}`).toBe(400);
+        expect(answer.json?.error, label).toBe("invalid_client");
+      }
+      // A good credential: the repeated parameter is a malformed request. An
+      // optional member repeated is refused too, never read as absent.
+      const goodMission = await postRaw(ENDPOINT, formOf([...repeatedMission, ...(await authPairs())]));
+      const goodAudience = await postRaw(
+        ENDPOINT,
+        formOf([["mission_id", record.id], ["audience", CANONICAL_RESOURCE], ["audience", "https://other.example/api"], ["nonce", n], ...(await authPairs())]),
+      );
+      for (const [label, answer] of [["mission_id twice", goodMission], ["audience twice", goodAudience]] as const) {
+        expect(answer.status, `${label}: ${answer.text}`).toBe(400);
+        expect(answer.json, label).toMatchObject({ error: "invalid_request", nonce: n });
+      }
+      // A repeated nonce is refused and never echoed: neither occurrence is used.
+      const twoNonces = await postRaw(ENDPOINT, formOf([["mission_id", record.id], ["nonce", n], ["nonce", nonce()], ...(await authPairs())]));
+      expect(twoNonces.status, twoNonces.text).toBe(400);
+      expect(twoNonces.json?.error).toBe("invalid_request");
+      expect(twoNonces.json?.nonce).toBeUndefined();
+    });
+  });
+});
