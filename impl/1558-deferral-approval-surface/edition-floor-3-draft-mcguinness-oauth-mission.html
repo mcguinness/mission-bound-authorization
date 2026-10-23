@@ -2955,7 +2955,8 @@ member names its evidence type.<a href="#section-4.4-1" class="pilcrow">¶</a></
 <li class="normal" id="section-4.4-3.1">
             <p id="section-4.4-3.1.1"><strong>Reject, do not ignore.</strong> An entry that is not a JSON object, or
 that lacks <code>type</code>, is structurally invalid and refused with the
-<code>invalid_request</code> error code. The AS <span class="bcp14">MUST</span> refuse an entry whose
+<code>invalid_request</code> error code at step 1 of the processing order
+(<a href="#submission-processing" class="auto internal xref">Section 4.5</a>). The AS <span class="bcp14">MUST</span> refuse an entry whose
 <code>type</code> it does not support, and an entry that fails its type's
 validation or verification, with the <code>invalid_mission_intent_evidence</code>
 error code (<a href="#oauth-extensions-error-registration" class="auto internal xref">Section 23.2</a>). A
@@ -3009,8 +3010,10 @@ and is complete before the approval rendering
 step 9 to activation.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-4.5-2">
 <li id="section-4.5-2.1">
-            <p id="section-4.5-2.1.1">Parse the Submission envelope and enforce both closed top levels
-(<a href="#submission-via-par" class="auto internal xref">Section 4.2</a>).<a href="#section-4.5-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-4.5-2.1.1">Parse the Submission envelope, enforce both closed top levels and
+the size bounds (<a href="#submission-via-par" class="auto internal xref">Section 4.2</a>), and check that each
+<code>evidence</code> entry is a JSON object with a <code>type</code> member
+(<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>).<a href="#section-4.5-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.5-2.2">
             <p id="section-4.5-2.2.1">Validate the <code>intent</code> object against the Mission Intent member
@@ -3038,9 +3041,8 @@ missing required type
 "Required Evidence Is Resolved Before Derivation").<a href="#section-4.5-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.5-2.6">
-            <p id="section-4.5-2.6.1">Apply the evidence dispatch and refusal rules, verifying every
-presented entry under its type's rules
-(<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>).<a href="#section-4.5-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-4.5-2.6.1">Dispatch each presented entry on its <code>type</code>, and validate and
+verify it under that type's rules (<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>).<a href="#section-4.5-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.5-2.7">
             <p id="section-4.5-2.7.1">Apply admission policy and derive the Authority Set independently
@@ -3072,11 +3074,15 @@ type is refused at step 3, with <code>invalid_authorization_details</code>;<a hr
           <li class="normal" id="section-4.5-4.2">
             <p id="section-4.5-4.2.1">a proposed entry outside <code>target_resources</code> together with a
 presented evidence entry that fails verification is refused at
-step 3, with <code>invalid_request</code>; and<a href="#section-4.5-4.2.1" class="pilcrow">¶</a></p>
+step 3, with <code>invalid_request</code>;<a href="#section-4.5-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.5-4.3">
             <p id="section-4.5-4.3.1">an <code>intent</code> object that fails validation together with a malformed
-proposal is refused at step 2, with <code>invalid_request</code>.<a href="#section-4.5-4.3.1" class="pilcrow">¶</a></p>
+proposal is refused at step 2, with <code>invalid_request</code>; and<a href="#section-4.5-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-4.4">
+            <p id="section-4.5-4.4.1">a structurally invalid evidence entry together with a malformed
+proposal is refused at step 1, with <code>invalid_request</code>.<a href="#section-4.5-4.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-4.5-5">The material verified provenance of step 8 is part of the approval
@@ -5388,7 +5394,7 @@ exchange rows of the third table.<a href="#section-10-3" class="pilcrow">¶</a><
         </thead>
         <tbody>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value) (<a href="#submission-via-par" class="auto internal xref">Section 4.2</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value), including a structurally invalid evidence entry (<a href="#submission-via-par" class="auto internal xref">Section 4.2</a>, <a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>). Detail: safe <code>error_description</code>
 </td>
@@ -7675,9 +7681,10 @@ reference token under the introspected consumption mode
 </li>
         </ul>
 <p id="section-19.1-4">An AS can conform as a Mission Issuer without supporting any Intent
-Submission Evidence type. Such an AS refuses every presented entry as an
-unsupported type under the dispatch and refusal rules
-(<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>), with the
+Submission Evidence type. Such an AS refuses every presented entry
+under the dispatch and refusal rules (<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>):
+a structurally invalid entry with the <code>invalid_request</code> error code, and
+any other entry, as an unsupported type, with the
 <code>invalid_mission_intent_evidence</code> error code. It need not implement the
 evidence framework of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span> for this
