@@ -4299,13 +4299,11 @@ new grant binding, rooted in that same Mission.<a href="#section-8.1.2-2.1.1" cl
             <li class="normal" id="section-8.1.2-2.2">
               <p id="section-8.1.2-2.2.1"><strong>Cross-domain projection.</strong> A cross-domain projection
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) establishes
-no destination-side grant binding. The cross-domain grant a
-Resource AS consumes is single-use and confers no standing
-authority in the partner domain, and the local access token it
-mints there is a derived token: it identifies the one originating
-Mission (<code>mission.id</code>, <code>mission.issuer</code>) but is not backed by a
-persistent local lineage. A Resource AS that needs the projected
-Mission again is presented a fresh cross-domain grant.<a href="#section-8.1.2-2.2.1" class="pilcrow">¶</a></p>
+no destination-side grant binding. A Resource AS consumes the
+cross-domain grant, and the local access token it mints there is a
+derived token: it identifies the one originating Mission
+(<code>mission.id</code>, <code>mission.issuer</code>) but is not backed by a persistent
+local lineage.<a href="#section-8.1.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-8.1.2-2.3">
               <p id="section-8.1.2-2.3.1"><strong>Child Missions and successors.</strong> A Child Mission
@@ -4317,23 +4315,12 @@ own under the same rules, not an extension of the origin Mission's
 binding. They relate to their origin only by lineage (the
 child's <code>parent</code> member, the successor's <code>predecessor</code> member).<a href="#section-8.1.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-8.1.2-2.4">
-              <p id="section-8.1.2-2.4.1"><strong>Continuation handles.</strong> A continuation handle and a
-refresh-token family
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>) are
-credential machinery rooted in one Mission, not the Mission
-itself: they confer no authority of their own, and a live
-derivation re-resolves the reference they carry against the
-Mission's current state.<a href="#section-8.1.2-2.4.1" class="pilcrow">¶</a></p>
-</li>
           </ul>
 <p id="section-8.1.2-3">A grant binding is also distinct from a decision-time runtime join, such
 as the Mission Join of
 <span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>, in which a policy
 decision point joins an ordinary OAuth credential to a Mission per
-request. The same credential can be joined to different Missions across
-separate requests where its subject and client are eligible for more
-than one.<a href="#section-8.1.2-3" class="pilcrow">¶</a></p>
+request.<a href="#section-8.1.2-3" class="pilcrow">¶</a></p>
 <p id="section-8.1.2-4">Such a join is not a Mission grant binding: it does not make the joined
 OAuth grant Mission-bound, and it rests on its own authenticated inputs
 and evidence, never on a Mission grant binding.<a href="#section-8.1.2-4" class="pilcrow">¶</a></p>
@@ -6316,39 +6303,18 @@ unchanged.<a href="#section-12.6-4" class="pilcrow">¶</a></p>
 standing-consent basis. Under it, a template or policy activates
 Mission instances against an accountable human's earlier approval,
 with no fresh human approval per instance; each instance is still
-created at its own approval event (<a href="#approval-event" class="auto internal xref">Section 6</a>). The following
-<code>approval_basis.type</code> values (<a href="#record-principal-members" class="auto internal xref">Section 14.3</a>) are such
-bases:<a href="#section-13-1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-13-2.1">
-          <p id="section-13-2.1.1"><code>template</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>):
-bounded instances of a recurring task;<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-13-2.2">
-          <p id="section-13-2.2.1"><code>policy_drawdown</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>): Child
-Missions that a parent agent requests and a policy adjudicates with
-no human interaction, rooted in the Parent Mission's accountable
-human;<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-13-2.3">
-          <p id="section-13-2.3.1"><code>ceiling_drawdown</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>): successor
-Missions within a previously approved authority ceiling as a task
-evolves; and<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-13-2.4">
-          <p id="section-13-2.4.1"><code>governed_policy</code>
-(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>): an agent's
-own proposals, decided by a policy version that a human approved.<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-13-3">For a standing-consent <code>type</code>, <code>activation</code> takes the shape that its
+created at its own approval event (<a href="#approval-event" class="auto internal xref">Section 6</a>). The companion
+profile defines the basis's <code>approval_basis.type</code> value
+(<a href="#record-principal-members" class="auto internal xref">Section 14.3</a>);
+<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span> (Section "Mission
+Invariants") lists the standing-consent bases that companion profiles
+define.<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-2">For a standing-consent <code>type</code>, <code>activation</code> takes the shape that its
 companion profile defines, and <code>activation_actor</code> names a dispatching
-or requesting party distinct from the consenting human.<a href="#section-13-3" class="pilcrow">¶</a></p>
-<p id="section-13-4">An unrecognized <code>type</code> or <code>adjudication.kind</code> is handled as
-<a href="#record-principal-members" class="auto internal xref">Section 14.3</a> states for every record consumer.<a href="#section-13-4" class="pilcrow">¶</a></p>
-<p id="section-13-5">A companion profile defining a standing-consent <code>type</code> <span class="bcp14">MUST</span> make its
+or requesting party distinct from the consenting human.<a href="#section-13-2" class="pilcrow">¶</a></p>
+<p id="section-13-3">An unrecognized <code>type</code> or <code>adjudication.kind</code> is handled as
+<a href="#record-principal-members" class="auto internal xref">Section 14.3</a> states for every record consumer.<a href="#section-13-3" class="pilcrow">¶</a></p>
+<p id="section-13-4">A companion profile defining a standing-consent <code>type</code> <span class="bcp14">MUST</span> make its
 <code>consent_principal</code> and <code>root_commitment</code> trace to an accountable
 human's approval of the named standing consent, with no fresh human
 approval per instance, <span class="bcp14">MUST</span> carry that approval's instant as
@@ -6356,29 +6322,29 @@ approval per instance, <span class="bcp14">MUST</span> carry that approval's ins
 carries for an instance it activates. That value identifies this
 instance's approval event, never the standing approval, so a retried
 activation deduplicates and each distinct activation creates its own
-Mission.<a href="#section-13-5" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-13-6">
-        <dt id="section-13-6.1">
+Mission.<a href="#section-13-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-13-5">
+        <dt id="section-13-5.1">
 <code>approved_at</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-13-6.2">
-          <p id="section-13-6.2.1"><span class="bcp14">REQUIRED</span> for every standing-consent <code>type</code>. An RFC 3339 date-time:
+        <dd style="margin-left: 1.5em" id="section-13-5.2">
+          <p id="section-13-5.2.1"><span class="bcp14">REQUIRED</span> for every standing-consent <code>type</code>. An RFC 3339 date-time:
 the instant the accountable human approved the exact consented root
 that <code>root_commitment</code> commits (the template version, the drawdown
 policy version), not the instant this Mission instance was
 activated. The activating issuer <span class="bcp14">MUST</span> verify <code>approved_at</code> against
 its retained, authenticated record of that standing consent for
 that exact version; it <span class="bcp14">MUST NOT</span> accept the value as the activating
-request's own uncorroborated assertion.<a href="#section-13-6.2.1" class="pilcrow">¶</a></p>
+request's own uncorroborated assertion.<a href="#section-13-5.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-13-7">The <code>adjudication</code> member (<a href="#record-principal-members" class="auto internal xref">Section 14.3</a>), where
+<p id="section-13-6">The <code>adjudication</code> member (<a href="#record-principal-members" class="auto internal xref">Section 14.3</a>), where
 present, follows the basis. Where a companion profile defining a
 standing-consent <code>type</code> populates <code>adjudication</code>, <code>kind</code> <span class="bcp14">MUST</span> be
 <code>policy</code>, naming the identity and version of the policy or workflow
 that adjudicated the instance. A companion profile <span class="bcp14">MUST NOT</span> flatten a
 policy's or an Approval Governance Record's assertion set into a
-single principal member.<a href="#section-13-7" class="pilcrow">¶</a></p>
+single principal member.<a href="#section-13-6" class="pilcrow">¶</a></p>
 <div id="standing-consent-instances">
 <section id="section-13.1">
         <h3 id="name-standing-consent-instances">
@@ -6809,14 +6775,7 @@ anchors, such as <code>intent_hash</code>, <code>authority_hash</code> or <code>
 covers it
 (<a href="#integrity-anchors" class="auto internal xref">Section 15.1</a>); a profile that commits the Mission Record
 itself covers it under that profile's own anchor. Two optional
-profiles commit it (<a href="#consent-binding" class="auto internal xref">Section 20.1.1</a>). Mission Audit
-Transparency's approval-event registration
-(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) covers the record at
-creation except its <code>state</code> and <code>termination</code>. Approval Governance's
-Approval Context Commitment
-(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>) covers a
-closed manifest of creation facts that includes <code>approval_basis</code>.
-Its disclosure
+profiles commit it (<a href="#consent-binding" class="auto internal xref">Section 20.1.1</a>). Its disclosure
 through introspection follows
 <a href="#caller-authorization-and-minimization" class="auto internal xref">Section 11.1</a>. It is not carried on the
 baseline <code>mission</code> claim (<a href="#mission-claim" class="auto internal xref">Section 8.8</a>), and it <span class="bcp14">MUST NOT</span> be
@@ -8291,26 +8250,16 @@ generation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation
 product of delegation depth, the number of trust domains projected into,
 and the number of child generations, each bounded independently) can
 therefore exceed what a single approval appears to bound at consent
-time.<a href="#section-20.5.3-2" class="pilcrow">¶</a></p>
-<p id="section-20.5.3-3">Child Delegation's <code>max_children</code> and <code>max_child_depth</code> limit the
-descendant Missions live at once, not those created over the root's
-lifetime: a child that terminates frees its slot
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>;
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span> works an
-example).<a href="#section-20.5.3-3" class="pilcrow">¶</a></p>
-<p id="section-20.5.3-4">Cross-domain projection composes separately: a projected grant preserves
-the Mission's lineage rather than rooting a new one, and the Resource
-AS's local issuance under it is bounded by that grant's own lifetime and
-local policy.<a href="#section-20.5.3-4" class="pilcrow">¶</a></p>
-<p id="section-20.5.3-5">At the consent surface, a deployment can disclose the subtree's
-figures, not only the immediate Mission's, as distinct values rather
-than one composed total
+time. <span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span> analyzes this
+composition, including why per-Mission child limits do not add up to a
+lifetime total, and the child-delegation profile states how an
+approval renders the subtree's figures
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Where a
-single approval's apparent bound must hold in practice, it can impose
-a global cap out of band.<a href="#section-20.5.3-5" class="pilcrow">¶</a></p>
-<p id="section-20.5.3-6">Bounding aggregate consumption (calls, spend, or activity over the life
+single approval's apparent bound must hold in practice, a deployment
+can impose a global cap out of band.<a href="#section-20.5.3-2" class="pilcrow">¶</a></p>
+<p id="section-20.5.3-3">Bounding aggregate consumption (calls, spend, or activity over the life
 of a Mission and its descendants) is the metering profile's role
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-20.5.3-6" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-20.5.3-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="the-containment-materialized-capability-residual">
@@ -8319,20 +8268,15 @@ of a Mission and its descendants) is the metering profile's role
 <a href="#section-20.5.4" class="section-number selfRef">20.5.4. </a><a href="#name-authority-materialized-befo" class="section-name selfRef">Authority Materialized Before Containment</a>
           </h4>
 <p id="section-20.5.4-1">Where a deployment runs the Mission Containment profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), containment
-narrows the authority available from an entry for later derivations;
-the approved Authority Set and its commitments remain unchanged.
-Containment also propagates to Child Missions justified by that entry.<a href="#section-20.5.4-1" class="pilcrow">¶</a></p>
-<p id="section-20.5.4-2">Containment does not reach authority materialized before the
-containment transition. A cross-domain grant already redeemed at a
-Resource AS (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), or
-an offline attenuation root already minted and attenuating outside the
-issuer's reach, operates for its own remaining lifetime, the same
-residual bound that revocation carries (<a href="#revocation" class="auto internal xref">Section 7.2</a>).<a href="#section-20.5.4-2" class="pilcrow">¶</a></p>
-<p id="section-20.5.4-3">Where containment needs to take effect quickly against
-already-materialized authority, short cross-domain grant and offline
-attenuation root lifetimes keep that residual window to one the next
-lease or re-mint closes.<a href="#section-20.5.4-3" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), a contain
+transition does not reach authority materialized before it, such as a
+cross-domain grant already redeemed at a Resource AS or an offline
+attenuation root already minted. That authority operates for its own
+remaining lifetime, the same residual bound that revocation carries
+(<a href="#revocation" class="auto internal xref">Section 7.2</a>); the containment profile states the residual and how
+short lifetimes bound it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section "The
+Materialized-Capability Residual").<a href="#section-20.5.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -11080,6 +11024,16 @@ audit companion is active, and Cross-Domain is not among them.<a href="#appendix
 a <code>scope</code>-only target, through that target's trusted scope-projection
 mapping, which also relates a requested value back to authority
 (Derivation Modes, Scope Projection).<a href="#appendix-G-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.2">
+          <p id="appendix-G-3.2.1">Editorial, no requirement change: Standing-Consent Bases points to
+the Architecture for the companion-defined bases instead of listing
+them; Grant Bindings and Related Mechanisms, Composition and the
+Effective Ceiling, Authority Materialized Before Containment, and the
+<code>approval_basis</code> definition no longer restate what the companions
+specify; the sentence on joining one credential to different Missions
+across requests moves to the Mission Authority Server's Mission
+Join.<a href="#appendix-G-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-G-4">-01<a href="#appendix-G-4" class="pilcrow">¶</a></p>

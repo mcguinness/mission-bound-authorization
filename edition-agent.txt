@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-23T00:21:03Z
-Source repository commit: 792f94fb825a7d9d6ca81ee72ba142d4245af96e
+Generated: 2026-10-23T03:49:57Z
+Source repository commit: d5a22addf96682c421a8a0800fd7773522570e1d
 Member count: 9
 
 Reading order:
@@ -1918,14 +1918,15 @@ Table of Contents
       define others:
 
       *  template: a dispatch drawing on a ceiling the human consented
-         to once.
+         to once ([I-D.draft-mcguinness-oauth-mission-template]).
 
       *  policy_drawdown: a child instance a policy adjudicates within a
-         bound the parent's human already consented to.
+         bound the parent's human already consented to
+         ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
 
       *  ceiling_drawdown: a successor a policy adjudicates within an
          authority ceiling the Approver consented to at the initial
-         approval.
+         approval ([I-D.draft-mcguinness-oauth-mission-progressive]).
 
       *  governed_policy: an agent's own proposal a policy adjudicates
          under a policy version a human approved
@@ -3695,17 +3696,17 @@ Table of Contents
    5.  Under the MAS as estate control plane, a consuming AS either has
        a Mission-state integration or has none
        ([I-D.draft-mcguinness-oauth-mission-issuance-grant],
-       Section "Effective Authority Set Projection").  One that has it
-       projects every redemption and refresh through the Mission's
-       current Effective Authority Set, so its issuance excludes
-       contained authority within its published staleness bound.  A
-       lifecycle-state check alone, under which a contained Mission
-       still reads active, is not such an integration.  One that has
-       none checks no Mission state at redemption, issues no refresh
-       tokens, and relies on the Mission Issuer's minting gate, so a
-       grant minted before the transition can still redeem within its
-       300-second lifetime, and the token it yields then runs to its own
-       exp: the residual is the two summed (Section 10.4).
+       Section "Redemption").  One that has it projects every redemption
+       and refresh through the Mission's current Effective Authority
+       Set, so its issuance excludes contained authority within its
+       published staleness bound.  A lifecycle-state check alone, under
+       which a contained Mission still reads active, is not such an
+       integration.  One that has none checks no Mission state at
+       redemption, issues no refresh tokens, and relies on the Mission
+       Issuer's minting gate, so a grant minted before the transition
+       can still redeem within its 300-second lifetime, and the token it
+       yields then runs to its own exp: the residual is the two summed
+       (Section 10.4).
 
    6.  Under the OAuth binding with offline attenuation, a consumer
        accepts a chain only under runtime enforcement, with a fresh
@@ -5603,6 +5604,10 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Authorization bases entry cites the companion profile that
+      defines each standing-consent basis; the OAuth binding points here
+      for the list.  No requirement changed.
 
    *  The integrity-anchor description says the anchors do not cover the
       approval basis, and names Mission Audit Transparency's approval-
@@ -9847,13 +9852,11 @@ Table of Contents
 
    *  *Cross-domain projection.* A cross-domain projection
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]) establishes no
-      destination-side grant binding.  The cross-domain grant a Resource
-      AS consumes is single-use and confers no standing authority in the
-      partner domain, and the local access token it mints there is a
+      destination-side grant binding.  A Resource AS consumes the cross-
+      domain grant, and the local access token it mints there is a
       derived token: it identifies the one originating Mission
       (mission.id, mission.issuer) but is not backed by a persistent
-      local lineage.  A Resource AS that needs the projected Mission
-      again is presented a fresh cross-domain grant.
+      local lineage.
 
    *  *Child Missions and successors.* A Child Mission
       ([I-D.draft-mcguinness-oauth-mission-child-delegation]) and an
@@ -9864,20 +9867,11 @@ Table of Contents
       They relate to their origin only by lineage (the child's parent
       member, the successor's predecessor member).
 
-   *  *Continuation handles.* A continuation handle and a refresh-token
-      family ([I-D.draft-mcguinness-oauth-mission-continuation]) are
-      credential machinery rooted in one Mission, not the Mission
-      itself: they confer no authority of their own, and a live
-      derivation re-resolves the reference they carry against the
-      Mission's current state.
-
    A grant binding is also distinct from a decision-time runtime join,
    such as the Mission Join of
    [I-D.draft-mcguinness-mission-authority-server], in which a policy
    decision point joins an ordinary OAuth credential to a Mission per
-   request.  The same credential can be joined to different Missions
-   across separate requests where its subject and client are eligible
-   for more than one.
+   request.
 
    Such a join is not a Mission grant binding: it does not make the
    joined OAuth grant Mission-bound, and it rests on its own
@@ -11599,26 +11593,11 @@ Table of Contents
    consent basis.  Under it, a template or policy activates Mission
    instances against an accountable human's earlier approval, with no
    fresh human approval per instance; each instance is still created at
-   its own approval event (Section 6).  The following
-   approval_basis.type values (Section 14.3) are such bases:
-
-   *  template ([I-D.draft-mcguinness-oauth-mission-template]): bounded
-      instances of a recurring task;
-
-   *  policy_drawdown
-      ([I-D.draft-mcguinness-oauth-mission-child-delegation]): Child
-      Missions that a parent agent requests and a policy adjudicates
-      with no human interaction, rooted in the Parent Mission's
-      accountable human;
-
-   *  ceiling_drawdown
-      ([I-D.draft-mcguinness-oauth-mission-progressive]): successor
-      Missions within a previously approved authority ceiling as a task
-      evolves; and
-
-   *  governed_policy
-      ([I-D.draft-mcguinness-mission-approval-governance]): an agent's
-      own proposals, decided by a policy version that a human approved.
+   its own approval event (Section 6).  The companion profile defines
+   the basis's approval_basis.type value (Section 14.3);
+   [I-D.draft-mcguinness-mission-architecture] (Section "Mission
+   Invariants") lists the standing-consent bases that companion profiles
+   define.
 
    For a standing-consent type, activation takes the shape that its
    companion profile defines, and activation_actor names a dispatching
@@ -11932,17 +11911,10 @@ Table of Contents
       anchors, such as intent_hash, authority_hash or proposal_hash,
       covers it (Section 15.1); a profile that commits the Mission
       Record itself covers it under that profile's own anchor.  Two
-      optional profiles commit it (Section 20.1.1).  Mission Audit
-      Transparency's approval-event registration
-      ([I-D.draft-mcguinness-mission-audit]) covers the record at
-      creation except its state and termination.  Approval Governance's
-      Approval Context Commitment
-      ([I-D.draft-mcguinness-mission-approval-governance]) covers a
-      closed manifest of creation facts that includes approval_basis.
-      Its disclosure through introspection follows Section 11.1.  It is
-      not carried on the baseline mission claim (Section 8.8), and it
-      MUST NOT be relied on to grant or widen authority wherever it does
-      appear.
+      optional profiles commit it (Section 20.1.1).  Its disclosure
+      through introspection follows Section 11.1.  It is not carried on
+      the baseline mission claim (Section 8.8), and it MUST NOT be
+      relied on to grant or widen authority wherever it does appear.
 
    authority_source:  REQUIRED.  An object.  The source of the authority
       the approval draws on (Section 6.7), established at the approval
@@ -13139,26 +13111,13 @@ Table of Contents
    product of delegation depth, the number of trust domains projected
    into, and the number of child generations, each bounded
    independently) can therefore exceed what a single approval appears to
-   bound at consent time.
-
-   Child Delegation's max_children and max_child_depth limit the
-   descendant Missions live at once, not those created over the root's
-   lifetime: a child that terminates frees its slot
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation];
-   [I-D.draft-mcguinness-oauth-mission-derivation-limits] works an
-   example).
-
-   Cross-domain projection composes separately: a projected grant
-   preserves the Mission's lineage rather than rooting a new one, and
-   the Resource AS's local issuance under it is bounded by that grant's
-   own lifetime and local policy.
-
-   At the consent surface, a deployment can disclose the subtree's
-   figures, not only the immediate Mission's, as distinct values rather
-   than one composed total
+   bound at consent time.  [I-D.draft-mcguinness-mission-security-model]
+   analyzes this composition, including why per-Mission child limits do
+   not add up to a lifetime total, and the child-delegation profile
+   states how an approval renders the subtree's figures
    ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  Where a
-   single approval's apparent bound must hold in practice, it can impose
-   a global cap out of band.
+   single approval's apparent bound must hold in practice, a deployment
+   can impose a global cap out of band.
 
    Bounding aggregate consumption (calls, spend, or activity over the
    life of a Mission and its descendants) is the metering profile's role
@@ -13167,23 +13126,15 @@ Table of Contents
 20.5.4.  Authority Materialized Before Containment
 
    Where a deployment runs the Mission Containment profile
-   ([I-D.draft-mcguinness-oauth-mission-containment]), containment
-   narrows the authority available from an entry for later derivations;
-   the approved Authority Set and its commitments remain unchanged.
-   Containment also propagates to Child Missions justified by that
-   entry.
-
-   Containment does not reach authority materialized before the
-   containment transition.  A cross-domain grant already redeemed at a
-   Resource AS ([I-D.draft-mcguinness-oauth-mission-cross-domain]), or
-   an offline attenuation root already minted and attenuating outside
-   the issuer's reach, operates for its own remaining lifetime, the same
-   residual bound that revocation carries (Section 7.2).
-
-   Where containment needs to take effect quickly against already-
-   materialized authority, short cross-domain grant and offline
-   attenuation root lifetimes keep that residual window to one the next
-   lease or re-mint closes.
+   ([I-D.draft-mcguinness-oauth-mission-containment]), a contain
+   transition does not reach authority materialized before it, such as a
+   cross-domain grant already redeemed at a Resource AS or an offline
+   attenuation root already minted.  That authority operates for its own
+   remaining lifetime, the same residual bound that revocation carries
+   (Section 7.2); the containment profile states the residual and how
+   short lifetimes bound it
+   ([I-D.draft-mcguinness-oauth-mission-containment], Section "The
+   Materialized-Capability Residual").
 
 21.  Privacy Considerations
 
@@ -15472,6 +15423,15 @@ Appendix G.  Document History
       a scope-only target, through that target's trusted scope-
       projection mapping, which also relates a requested value back to
       authority (Derivation Modes, Scope Projection).
+
+   *  Editorial, no requirement change: Standing-Consent Bases points to
+      the Architecture for the companion-defined bases instead of
+      listing them; Grant Bindings and Related Mechanisms, Composition
+      and the Effective Ceiling, Authority Materialized Before
+      Containment, and the approval_basis definition no longer restate
+      what the companions specify; the sentence on joining one
+      credential to different Missions across requests moves to the
+      Mission Authority Server's Mission Join.
 
    -01
 
