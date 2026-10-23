@@ -49667,7 +49667,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a consent rendering of an entry whose actions carry an action family presents the family as every action under its name, not as one action",
-    "local": "the reference refuses action-family input before approval or transformation (#1377, D538, D684): at PAR and the other proposal intakes, the requested-authority exchanges, template consent, the config loaders and derivation, so no approval page it renders presents a family"
+    "local": "the reference refuses action-family input before approval or transformation (#1377, D538, D684): witnessed at PAR, refresh narrowing, derivation, projection, template consent, the config loaders and the RAS, and through the same shared validator (refusedMemberViolation) at device submission and the other requested-authority exchanges, so no approval page it renders presents a family"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -49692,7 +49692,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "an authorization server deriving an entry whose actions carry an action family treats it as high-risk breadth, for example with a stronger approval, an explicit breadth disclosure, or refusal",
-    "local": "the reference refuses action-family input before approval or transformation (#1377, D538, D684): at PAR and the other proposal intakes, the requested-authority exchanges, template consent, the config loaders and derivation, so it never derives a family"
+    "local": "the reference refuses action-family input before approval or transformation (#1377, D538, D684): witnessed at PAR, refresh narrowing, derivation, projection, template consent, the config loaders and the RAS, and through the same shared validator (refusedMemberViolation) at device submission and the other requested-authority exchanges, so it never derives a family"
    },
    "level": "endpoint",
    "coverage": "todo",
