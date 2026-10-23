@@ -1028,19 +1028,31 @@ A client tells four cases apart:
   cure, and so is a refusal after a Status not-found response.
 - **Wait.** A `suspended` Mission refuses until a `resume` returns it
   to `active` ({{I-D.draft-mcguinness-oauth-mission-status}}); a fresh
-  grant then cures the refusal.
+  grant then cures the refusal. A refused refresh leaves its refresh
+  token unchanged ({{refresh}}), so once the Mission is `active` again
+  the client may instead present that token while it remains valid,
+  with the client authentication of {{Section 6 of RFC6749}} and,
+  where the grant carried `cnf`, a new proof of possession of its key.
+  The consuming AS does not treat that earlier refusal as grounds to
+  refuse the retry. Permission to retry is not a promise of issuance:
+  the consuming AS applies every refresh check to the retry, including
+  its current policy, the family ceiling, and the token's validity,
+  rotation and reuse checks, and a resume restores no authority that
+  an earlier issuance removed.
 - **Stop.** A `terminated` Mission, or one whose `expires_at` has
   passed, refuses for good: neither a retry nor a fresh grant cures
-  the refusal.
+  the refusal. The consuming AS refuses every later refresh in a
+  refresh family bound to that Mission. This profile adds no
+  revocation duty and removes none that another specification or the
+  deployment imposes.
 
 The AS SHOULD include the issuance profile's `mission_error` member
 when Mission state reports that the Mission is not `active`, so the
-client can
-tell Wait from Stop: `suspended` for Wait, and for Stop `revoked`,
-`expired`, or `superseded` ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Issuance Gating") or `completed`
-({{I-D.draft-mcguinness-oauth-mission-status}}). The MAS's own
-refusals of a fresh grant request are in {{minting-errors}}.
+client can tell Wait from Stop: `suspended` for Wait, and for Stop
+`revoked`, `expired`, or `superseded`
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating")
+or `completed` ({{I-D.draft-mcguinness-oauth-mission-status}}). The
+MAS's own refusals of a fresh grant request are in {{minting-errors}}.
 
 # Authorization Code Flow Carriage {#par-carriage}
 
@@ -1412,6 +1424,12 @@ Server Metadata" registry {{RFC8414}}:
 
 \[\[ To be removed from the final specification ]]
 
+- Redemption Errors says how a client recovers a refresh refused
+  during a suspension: after a resume it may present the same
+  still-valid refresh token, which the consuming AS checks as any
+  refresh, and a resume restores no removed authority. After
+  termination every later refresh in the family is refused, with no
+  added revocation duty (#1583, D702).
 - Transient Source Failure names Mission Status's `rate_limited` as
   transient, beside `unavailable`; a forwarded `Retry-After` stays
   under the deployment's state-recovery policy (#1582, D702).
