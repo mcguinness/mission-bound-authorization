@@ -55,8 +55,8 @@
     "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "b6a36a9708d3a7e9e2f83c3ba90d7dab93d437f9",
-    "content_sha256": "bc99ebe684ce0944206e5ed10da15d422181b1effa4b1d1724305046a089ccc1"
+    "revision": "2ca3794ef5bf2cadbff4e2053fa19034fd3c73a4",
+    "content_sha256": "50be50d361f82afaaf72d61e5e2eca14d3928e7365b9e18118eccd5f5e9eb13b"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -2020,8 +2020,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Mission Status request is refused at the first failing step of authentication, request syntax and authorization: an unauthenticated request is refused as its authentication failure assigns whatever its members or Mission; a malformed request is refused invalid_request alike for a known and an unknown Mission; an unknown Mission, a caller without read authorization and an audience it is not authorized for are refused alike with the not-found response; only then is the Mission's state read and signed",
-    "local": "the advertised Mission Status endpoint (#1407) authenticates first, then validates nonce, mission_id and audience, then authorizes the read grant and the Mission, then reads and signs. A body that is not an application/x-www-form-urlencoded form, or repeats a member, is refused invalid_request before authentication, as at the Lifecycle endpoint: authentication needs the parsed form"
+    "normative": "a Mission Status request is refused at the first failing step of authentication, request syntax and authorization: a body that cannot be parsed is refused invalid_request whatever credential it presents; a request whose body parses and fails authentication, a repeated client authentication parameter included, is refused as its authentication failure assigns whatever its members or Mission; a malformed request, one repeating any other parameter included, is refused invalid_request alike for a known and an unknown Mission; an unknown Mission, a caller without read authorization and an audience it is not authorized for are refused alike with the not-found response; only then is the Mission's state read and signed",
+    "local": "the advertised Mission Status endpoint (#1407) parses the form, authenticates, then validates repeated parameters, nonce, mission_id and audience, then authorizes the read grant and the Mission, then reads and signs. The reference treats a non-form media type, a body over 64 KiB and a malformed form encoding (invalid UTF-8 or percent-escapes) as a body that cannot be parsed (readLifecycleForm)"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -2037,9 +2037,123 @@
      "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > answers a client without the mission_status grant and an unknown Mission with one not-found body, echoing the nonce",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status parsing, repeated parameters and authentication precedence (@spec status#mission-status-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 3 (D649); #1407. Partial: step 3's audience authorization is not implemented (status.request.served-audience-authorization), so a request's audience is not checked against a per-caller configuration. The development GET /missions/:id/status route keeps its own order (service-token authentication answered 401, then mayReadStatus answered not_found)."
+   "notes": "#1535 finding 3 (D649); #1407. Partial: step 3's audience authorization is not implemented (status.request.served-audience-authorization), so a request's audience is not checked against a per-caller configuration. The development GET /missions/:id/status route keeps its own order (service-token authentication answered 401, then mayReadStatus answered not_found). #1535 Item C (D704, D708): the parse-before-authentication exception and the repeated-parameter order are normative in step 1 and step 2, rowed separately. Its applicability (status.mission-status) follows #1563's re-scoping, and the three new step 1 and step 2 rows take the same."
+  },
+  {
+   "id": "status.read.unparseable-body-refused",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-processing",
+   "text": "A body that cannot be parsed is refused `invalid_request`, whatever credential the request presents",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Status request whose body cannot be parsed is refused invalid_request before authentication, with no credential, an invalid one or a valid one alike, and before any Mission is read",
+    "local": "the reference reads both endpoints' bodies through readLifecycleForm (services/authorization-server/src/adapters/lifecycle-endpoint.ts): a non-form media type, a body over 64 KiB, invalid UTF-8 and a malformed percent-escape cannot be parsed; a repeated parameter is not one of them"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status parsing, repeated parameters and authentication precedence (@spec status#mission-status-processing, #1535 Item C, D704, D708) > refuses a body that cannot be parsed invalid_request, with a valid credential or none: another media type, a malformed escape, invalid UTF-8, an oversized body",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a malformed request invalid_request, echoing a well-formed nonce and never a malformed one",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint."
+  },
+  {
+   "id": "status.read.repeated-auth-parameter",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-processing",
+   "text": "a client authentication parameter included more than once fails authentication, and no occurrence of it is used",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Status request repeating a client authentication parameter fails authentication and receives the outcome assigned by Authentication Failures, whatever its other members, never authenticated by either occurrence",
+    "local": "the authentication parameters the reference reads are client_assertion, client_assertion_type, client_id and client_secret (authenticateLifecycleForm); a repeated one has no value kept, so no occurrence can authenticate The reference's Mission Status endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status parsing, repeated parameters and authentication precedence (@spec status#mission-status-processing, #1535 Item C, D704, D708) > refuses a repeated client authentication parameter invalid_client, using no occurrence, though each would authenticate",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status parsing, repeated parameters and authentication precedence (@spec status#mission-status-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local. The cited repeated-authentication test also sends the first repeated assertion once afterwards and is served, so the assertion's single-use jti was never consumed (ported from #1613): verifying the first occurrence before refusing fails it with \"client_assertion jti was already used\"."
+  },
+  {
+   "id": "status.read.repeated-parameter-malformed",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-processing",
+   "text": "a request that includes a parameter more than once is malformed",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authenticated Mission Status request repeating any other parameter, an optional one included, is refused invalid_request; one that does not authenticate is refused as its authentication failure assigns",
+    "local": "after successful authentication any repeated parameter is refused invalid_request with the request's nonce echoed when a single well-formed one was sent; a repeated nonce is never echoed"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status parsing, repeated parameters and authentication precedence (@spec status#mission-status-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a malformed request invalid_request, echoing a well-formed nonce and never a malformed one",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint."
   },
   {
    "id": "status.read.no-state-before-authorization",
@@ -13586,8 +13700,8 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a lifecycle request for a base operation is refused at the first failing step of authentication, request syntax and served operation, authorization, deduplication, expected_version and the transition rules: an unauthenticated request is refused invalid_client whatever its operation, members or Mission; a malformed request or an unserved operation is refused invalid_request alike for a known and an unknown Mission; a caller not authorized for the Mission gets the not-found response, never a replay, stale_version or conflict; an authorized retransmit replays before expected_version and the transition rules apply; and a stale expected_version is refused before the transition rule",
-    "local": "Form-level parsing (media type, body size, a repeated member) precedes authentication, since the body carries the client assertion. Refusals decided before deduplication are delivered without retention, so they never finalize a committed claim made under the same request digest. The past-deadline check of a schedule runs after deduplication, so an identical retry arriving after its deadline replays."
+    "normative": "a lifecycle request for a base operation is refused at the first failing step of authentication, request syntax and served operation, authorization, deduplication, expected_version and the transition rules: a body that cannot be parsed is refused invalid_request whatever credential it presents; a request whose body parses and fails authentication, a repeated client authentication parameter included, receives the outcome assigned by Authentication Failures whatever its operation, members or Mission; a malformed request, one repeating any other parameter included, or an unserved operation is refused invalid_request alike for a known and an unknown Mission; a caller not authorized for the Mission gets the not-found response, never a replay, stale_version or conflict; an authorized retransmit replays before expected_version and the transition rules apply; and a stale expected_version is refused before the transition rule",
+    "local": "The reference treats a non-form media type, a body over 64 KiB and a malformed form encoding as a body that cannot be parsed (readLifecycleForm). Refusals decided before deduplication are delivered without retention, so they never finalize a committed claim made under the same request digest. The past-deadline check of a schedule runs after deduplication, so an identical retry arriving after its deadline replays. The reference's Lifecycle endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -13639,9 +13753,123 @@
      "name": "Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191) > refuses a stale expected_version 409 stale_version before the transition rule, leaving the Mission unchanged, and applies a current one",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle parsing, repeated parameters and authentication precedence (@spec status#lifecycle-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 finding 3 (D649). Proved by validating the operation and members before authentication, and by looking the Mission up before it (the authentication-order test fails), by looking the Mission up before the syntax checks (the extension-guard and revoke-only ordering tests fail), by letting a retained row skip authorization (both processing-order retransmit tests fail), and by retaining the not-found refusal decided before deduplication (the lost-bytes test fails). The deduplication and expected_version precedences keep the witnesses of status.discharge.nonce-replay and status.lifecycle.stale-version-precedence. The discharge operation is status.discharge.processing-order."
+   "notes": "#1535 finding 3 (D649). Proved by validating the operation and members before authentication, and by looking the Mission up before it (the authentication-order test fails), by looking the Mission up before the syntax checks (the extension-guard and revoke-only ordering tests fail), by letting a retained row skip authorization (both processing-order retransmit tests fail), and by retaining the not-found refusal decided before deduplication (the lost-bytes test fails). The deduplication and expected_version precedences keep the witnesses of status.discharge.nonce-replay and status.lifecycle.stale-version-precedence. The discharge operation is status.discharge.processing-order. #1535 Item C (D704, D708): the parse-before-authentication exception and the repeated-parameter order are normative in step 1 and step 2, rowed separately. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local."
+  },
+  {
+   "id": "status.lifecycle.unparseable-body-refused",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-processing",
+   "text": "A body that cannot be parsed is refused `invalid_request`, whatever credential the request presents",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a lifecycle request whose body cannot be parsed is refused invalid_request before authentication, with no credential, an invalid one or a valid one alike, and no Mission is read or changed",
+    "local": "the reference reads both endpoints' bodies through readLifecycleForm (services/authorization-server/src/adapters/lifecycle-endpoint.ts): a non-form media type, a body over 64 KiB, invalid UTF-8 and a malformed percent-escape cannot be parsed; a repeated parameter is not one of them"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle parsing, repeated parameters and authentication precedence (@spec status#lifecycle-processing, #1535 Item C, D704, D708) > refuses a body that cannot be parsed invalid_request, with a valid credential or none: another media type, a malformed escape, invalid UTF-8, an oversized body",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint transport and client authentication (@spec status#mission-status-authentication, status#mission-status-auth-failures, #1191) > accepts only a form body, with every member single-valued",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint."
+  },
+  {
+   "id": "status.lifecycle.repeated-auth-parameter",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-processing",
+   "text": "a client authentication parameter included more than once fails authentication, and no occurrence of it is used",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a lifecycle request repeating a client authentication parameter fails authentication and receives the outcome assigned by Authentication Failures, whatever its operation and members, never authenticated by either occurrence, and changes nothing",
+    "local": "the authentication parameters the reference reads are client_assertion, client_assertion_type, client_id and client_secret (authenticateLifecycleForm); a repeated one has no value kept, so no occurrence can authenticate The reference's Lifecycle endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle parsing, repeated parameters and authentication precedence (@spec status#lifecycle-processing, #1535 Item C, D704, D708) > refuses a repeated client authentication parameter invalid_client, using no occurrence, though each would authenticate",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle parsing, repeated parameters and authentication precedence (@spec status#lifecycle-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local. The cited repeated-authentication test also sends the first repeated assertion once afterwards and is served, so the assertion's single-use jti was never consumed (ported from #1613): verifying the first occurrence before refusing fails it with \"client_assertion jti was already used\"."
+  },
+  {
+   "id": "status.lifecycle.repeated-parameter-malformed",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-processing",
+   "text": "a request that includes a parameter more than once is malformed",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authenticated lifecycle request repeating any other parameter, an optional one included, is refused invalid_request and changes nothing; one that does not authenticate receives the outcome assigned by Authentication Failures",
+    "local": "after successful authentication any repeated parameter is refused invalid_request with the request's nonce echoed when a single well-formed one was sent; a repeated nonce is never echoed The reference's Lifecycle endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle parsing, repeated parameters and authentication precedence (@spec status#lifecycle-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint transport and client authentication (@spec status#mission-status-authentication, status#mission-status-auth-failures, #1191) > accepts only a form body, with every member single-valued",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local."
   },
   {
    "id": "status.discharge.processing-order",
@@ -15307,7 +15535,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a POST whose body is not form-urlencoded, or repeats a member, is refused `invalid_request` and changes nothing; a form carrying `mission_id`, `operation` and `nonce` is served",
+    "normative": "a POST whose body is not form-urlencoded is refused `invalid_request` and changes nothing; a form carrying `mission_id`, `operation` and `nonce` is served",
     "local": "the dev-only path route also accepts a JSON body, takes the Mission from the path and runs the same engine; it is not advertised. The base operations answer with the signed Mission Status Response; this deployment's contain extension answers a plain JSON outcome, and discharge its companion's result shape"
    },
    "level": "endpoint",
@@ -15332,7 +15560,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 Item C (D708): a repeated parameter is no longer claimed here; its outcomes are status.lifecycle.repeated-auth-parameter and status.lifecycle.repeated-parameter-malformed."
   },
   {
    "id": "status.lifecycle.private-key-jwt-params",
@@ -15793,7 +16021,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Mission Status operation is served as a POST whose form body carries `mission_id`, `audience` and `nonce`; a body of another media type, or a repeated member, is refused invalid_request",
+    "normative": "the Mission Status operation is served as a POST whose form body carries `mission_id`, `audience` and `nonce`",
     "local": "POST /mission/status; TLS is the deployment's (as status.lifecycle.tls). The development GET /missions/{id}/status is not advertised; its callers in src are tests. The reference consumer (MissionStatusResolver) sends the form POST"
    },
    "level": "endpoint",
@@ -15818,7 +16046,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1407 (as #1191 did for the Lifecycle endpoint). Proved by defects that drop the form members the route reads."
+   "notes": "#1407 (as #1191 did for the Lifecycle endpoint). Proved by defects that drop the form members the route reads. #1535 Item C (D708): the repeated-parameter and unparseable-body outcomes are the processing-order rows status.read.unparseable-body-refused, status.read.repeated-auth-parameter and status.read.repeated-parameter-malformed, not this row."
   },
   {
    "id": "status.response.served-audience-aud",
