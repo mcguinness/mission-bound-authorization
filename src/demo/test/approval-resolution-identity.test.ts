@@ -5,7 +5,7 @@ import { SessionStore } from "@mission/console-bff";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, buildAuthorizationServer, MISSION_APPROVAL_SCOPE } from "@mission/authorization-server";
 import { clientAssertionSigner, dpopProofFor, jarClosures, redeemMissionApproval, submitMissionApproval, type IssueOpts, type IssuedMission, type SubmittedApproval } from "../src/oauth-client.js";
-import { resolveMissionApproval } from "../src/approval-console.js";
+import { renderApproval, resolveMissionApproval } from "../src/approval-console.js";
 import { installConsoleSessionBoundary } from "../src/console-session-boundary.js";
 
 const ISSUER = "http://localhost:14959";
@@ -42,7 +42,10 @@ const decide = (p: SubmittedApproval, body: Record<string, unknown> = { decision
 async function resolveInBrowser(p: SubmittedApproval, principal: { sub: string; acr: string; auth_time: number }): Promise<URLSearchParams> {
   const { cookieHeader, storeCookies } = jarClosures(p.jar);
   const login = sessions.establish(p.uid, principal);
-  let res = await decide(p, { decision: "approve" }, { cookie: cookieHeader() + "; " + login.cookie, "x-csrf-token": login.csrf, origin: ISSUER });
+  const headers = { cookie: cookieHeader() + "; " + login.cookie, "x-csrf-token": login.csrf, origin: ISSUER };
+  // The Approver reviews the page in this session; the approval names that rendering (#1446).
+  const render_revision = await renderApproval(ISSUER, p.uid, headers);
+  let res = await decide(p, { decision: "approve", render_revision }, headers);
   storeCookies(res);
   let location = res.headers.get("location");
   while (location && new URL(location, ISSUER).origin === ISSUER) {
@@ -93,11 +96,15 @@ describe("approval resolution establishes identity from the surface (#759, #761)
     // Only trusted login integration establishes this record; no HTTP route does so.
     const login = sessions.establish(p.uid, { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) });
     const headers = { cookie: jarClosures(p.jar).cookieHeader() + "; " + login.cookie, "x-csrf-token": login.csrf, origin: ISSUER };
-    expect((await decide(p, { decision: "approve" }, { ...headers, "x-csrf-token": "wrong" })).status).toBe(401);
-    expect((await decide(p, { decision: "approve" }, { ...headers, origin: "https://attacker.test" })).status).toBe(401);
-    expect((await decide(other, { decision: "approve" }, { ...headers, cookie: jarClosures(other.jar).cookieHeader() + "; " + login.cookie })).status).toBe(401);
-    expect((await decide(p, { decision: "approve", approver: "alice" }, headers)).status).toBe(400);
-    expect((await decide(p, { decision: "approve" }, headers)).status).toBe(303);
+    // The page rendered to this session (#1446): each refusal below holds even
+    // for a decision naming it.
+    const render_revision = await renderApproval(ISSUER, p.uid, headers);
+    expect(render_revision).toBeTruthy();
+    expect((await decide(p, { decision: "approve", render_revision }, { ...headers, "x-csrf-token": "wrong" })).status).toBe(401);
+    expect((await decide(p, { decision: "approve", render_revision }, { ...headers, origin: "https://attacker.test" })).status).toBe(401);
+    expect((await decide(other, { decision: "approve", render_revision }, { ...headers, cookie: jarClosures(other.jar).cookieHeader() + "; " + login.cookie })).status).toBe(401);
+    expect((await decide(p, { decision: "approve", render_revision, approver: "alice" }, headers)).status).toBe(400);
+    expect((await decide(p, { decision: "approve", render_revision }, headers)).status).toBe(303);
     expect(as.kernel.allMissions().at(-1)!.approval_basis.consent_principal.sub).toBe("bob");
   });
 
