@@ -8764,7 +8764,7 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
-     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a second decision on the same rendering waits for the first and recovers its commit",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a second decision on the same rendering waits for the first and recovers its commit, even when a change lands between them",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },

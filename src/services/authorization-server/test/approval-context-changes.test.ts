@@ -461,10 +461,17 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     expect(decided.status, JSON.stringify(decided.json)).toBe(303);
   });
 
-  it("a second decision on the same rendering waits for the first and recovers its commit", async () => {
+  it("a second decision on the same rendering waits for the first and recovers its commit, even when a change lands between them", async () => {
     const flow = await open();
     const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
     const { revision } = await render(flow.uid, headers);
+    const commit = as.kernel.approve.bind(as.kernel);
+    vi.spyOn(as.kernel, "approve").mockImplementationOnce((...args: Parameters<typeof commit>) => {
+      const record = commit(...args);
+      // The ceiling narrows right after the first commit, while the second decision waits its turn.
+      narrowCeiling();
+      return record;
+    });
     const hold = holdFirstGrantSave();
     const first = decide(flow.uid, headers, approve(revision));
     await hold.saving();
@@ -477,7 +484,10 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     expect(b.status, JSON.stringify(b.json)).toBe(303);
     const record = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
     expect(record?.grant_id).toBe(grantIdFor(flow.uid));
-    expect(((await as.provider.Grant.find(grantIdFor(flow.uid))) as { rar?: unknown } | undefined)?.rar).toEqual(record?.authority_set);
+    // The committed decision's grant, as committed: the wider set the first decision approved.
+    const grant = (await as.provider.Grant.find(grantIdFor(flow.uid))) as { rar?: { actions: string[] }[] } | undefined;
+    expect(grant?.rar).toEqual(record?.authority_set);
+    expect(grant?.rar?.flatMap((e) => e.actions)).toContain("payments:invoice.list");
   });
 
   it("a retry of a committed decision recovers it, even after a policy input changed", async () => {
