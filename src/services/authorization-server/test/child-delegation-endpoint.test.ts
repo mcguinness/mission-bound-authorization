@@ -31,6 +31,7 @@ const FLOOR_SESSIONS = new ApprovalSessionStore();
 
 
 import { type Server } from "node:http";
+import { formatWithOptions } from "node:util";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
@@ -523,11 +524,8 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
         .flatMap(({ name }) => as.kernel.db.prepare(`SELECT * FROM "${name}"`).all() as Array<Record<string, unknown>>)
         .map((row) => Object.values(row).map((v) => (v instanceof Uint8Array ? Buffer.from(v).toString("utf8") : String(v))).join("\u0000"))
         .join("\n");
-    const spies = [
-      ...(["log", "info", "warn", "error", "debug"] as const).map((m) => vi.spyOn(console, m)),
-      vi.spyOn(process.stdout, "write"),
-      vi.spyOn(process.stderr, "write"),
-    ];
+    const consoleSpies = (["log", "info", "warn", "error", "debug"] as const).map((m) => vi.spyOn(console, m));
+    const writeSpies = [vi.spyOn(process.stdout, "write"), vi.spyOn(process.stderr, "write")];
     const sentProofs: string[] = [];
     let res: Response;
     let output: string;
@@ -538,9 +536,18 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
         sentProofs,
       });
     } finally {
-      // Read the calls before restoring: mockRestore also clears them.
-      output = spies.flatMap((spy) => spy.mock.calls.map((args) => args.map(String).join(" "))).join("\n");
-      for (const spy of spies) spy.mockRestore();
+      // Read the calls before restoring: mockRestore also clears them. Console
+      // arguments are rendered as Node logs them, at unlimited depth and length,
+      // so a credential inside a logged object is still found; a written chunk
+      // is read as text.
+      const inspectAll = { depth: Infinity, maxArrayLength: Infinity, maxStringLength: Infinity, breakLength: Infinity };
+      output = [
+        ...consoleSpies.flatMap((spy) => spy.mock.calls.map((args) => formatWithOptions(inspectAll, ...args))),
+        ...writeSpies.flatMap((spy) =>
+          spy.mock.calls.map(([chunk]) => (chunk instanceof Uint8Array ? Buffer.from(chunk).toString("utf8") : String(chunk))),
+        ),
+      ].join("\n");
+      for (const spy of [...consoleSpies, ...writeSpies]) spy.mockRestore();
     }
     const body = (await res.json()) as { mission_id?: string };
     expect(res.status, JSON.stringify(body)).toBe(200);
