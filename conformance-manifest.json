@@ -99,8 +99,8 @@
     "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "5ea95ceb221030bbafed05e8dad903f5714c0fbf",
-    "content_sha256": "e166feff2924bad515404c7a84b2140787b26983048017f3d339c3dae5f5a196"
+    "revision": "abfa498c2421789a4ea1c4c724a451d18c2f4874",
+    "content_sha256": "d2c42b389782ed52b6a44e0a3d322d7f5f79ac252ba1a985be27de67cb528218"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
@@ -53116,6 +53116,394 @@
     }
    ],
    "notes": "#1185 implementation: verifyApprovalGovernanceRecord, exercised on a record committed under governed_policy."
+  },
+  {
+   "id": "approval-governance.portable-binding.not-reported-as-verification",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "a Relying Auditor MUST NOT report its success as either",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a successful portable approval-binding check is never reported as verification of the record against the Mission Record or as a re-check of the evaluation",
+    "local": "the result is its own type, PortableApprovalBindingResult, labeled check portable-approval-binding, with only outcome, commitment_agreement and reason; it is distinct from verifyApprovalGovernanceRecord's verified record and from the re-check"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > reports its success as the portable approval-binding check, never as verification against the Mission Record or a re-check",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. Partial: the reference has no Relying Auditor reporting surface. The witness shows only that the check's own result names the portable check and carries no verification or re-check claim; how an auditor reports a success is not exercised."
+  },
+  {
+   "id": "approval-governance.portable-binding.steps",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "A verifier running the check MUST complete these steps",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a portable binding succeeds only when both artifacts authenticate with trust in the expected Mission Issuer's key material (the record by steps 1 to 4 of the envelope, the reference under its own rules), the reference discloses an approval_event_id, issuer, intent_hash and authority_hash each equal to the record's, and any approval_context_commitment both carry is equal; a step that fails or lacks its evidence leaves the check without success"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 3: succeeds without commitment agreement when neither artifact carries a commitment",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 4: fails when both artifacts carry a commitment with different values, or the same value under an unrecognized algorithm prefix",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 5: fails when the reference names another Mission Issuer",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 6: fails when the reference names another approval event, though every Mission anchor matches",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 7: fails when the reference's intent_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 8: fails when the reference's authority_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 9: is insufficient evidence when the reference does not disclose approval_event_id, though both anchors match, or any other required value",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 10: fails when the record's signature does not verify, its payload differs from the record, or its envelope format is unsupported",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 11: fails when the record verifies only under key material not trusted for the expected issuer, including that of the issuer it names",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 13: is insufficient evidence when no record, or no Mission reference, is supplied",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. Partial: The reference's half of step 1, authenticating the Mission reference under its own artifact rules with trust in the expected issuer, is the caller's: checkPortableApprovalBinding takes the values an already-authenticated reference discloses, and the reference implementation has no Mandate verifier, so no test authenticates or refuses a reference. Every other step is witnessed; the mutations are recorded on the rows for each step."
+  },
+  {
+   "id": "approval-governance.portable-binding.expected-issuer-trust",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "The verifier MUST establish trust in the key material of the expected Mission Issuer for both: an issuer the artifact asserts for itself, with a valid signature, is not thereby trusted",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the record and the Mission reference each authenticate under key material trusted for the expected Mission Issuer; an artifact that verifies only under the key material of an issuer it names for itself, or of any other issuer, fails the check",
+    "local": "the record's key resolves only from the expected issuer's trusted key material passed to the check, and the record must name that issuer as its Mission Issuer, since the envelope is signed by the Mission Issuer; the second is derived from the envelope's signer rule rather than stated in the section"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 10: fails when the record's signature does not verify, its payload differs from the record, or its envelope format is unsupported",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 11: fails when the record verifies only under key material not trusted for the expected issuer, including that of the issuer it names",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > fails when the record names a Mission Issuer other than the expected one whose key material authenticated it",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. Partial: The reference's half of step 1, authenticating the Mission reference under its own artifact rules with trust in the expected issuer, is the caller's: checkPortableApprovalBinding takes the values an already-authenticated reference discloses, and the reference implementation has no Mandate verifier, so no test authenticates or refuses a reference. The record's half is witnessed: a record signed by another issuer's key, which verifies under that key material, fails; so does a record naming that issuer and signed by its own key, which succeeds only when that issuer is the expected one; and so does a record naming another issuer under the expected issuer's key. Mutations: skipping the record's authentication (cases 10 and 11 fail); skipping the check that the record names the expected issuer (the misnamed-record test fails)."
+  },
+  {
+   "id": "approval-governance.portable-binding.event-and-anchors",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "The authenticated reference MUST disclose `approval_event_id`, the Mission `issuer`, `intent_hash`, and `authority_hash`, and each MUST equal the record's `approval_event_id` or the member of the same name in the record's `mission` binding",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a reference that does not disclose approval_event_id, issuer, intent_hash or authority_hash leaves insufficient evidence, even when intent_hash and authority_hash both match, and one whose disclosed value differs from the record's approval_event_id or mission member of that name fails, even when every other value matches; the reference's own consistency rules still apply, so a Mandate whose iss differs from its mission.issuer fails",
+    "local": "a disclosed mismatch is a failure even when another required value is undisclosed: a failure the evidence shows takes precedence over insufficient evidence"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 5: fails when the reference names another Mission Issuer",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 6: fails when the reference names another approval event, though every Mission anchor matches",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 7: fails when the reference's intent_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 8: fails when the reference's authority_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 9: is insufficient evidence when the reference does not disclose approval_event_id, though both anchors match, or any other required value",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 12: fails when the reference is a Mandate whose iss differs from its mission.issuer",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > reports a disclosed mismatch as a failure even when another required value is undisclosed",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. Case 12's Mandate rule is present-tense in the same step and witnessed here. Mutations, each alone: skipping the comparison of approval_event_id (case 6 fails), issuer (case 5), intent_hash (case 7 and the precedence test) or authority_hash (case 8); counting an undisclosed value as matching, or reporting it as success (case 9); skipping the Mandate iss rule (case 12)."
+  },
+  {
+   "id": "approval-governance.portable-binding.commitment-equal",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "When both artifacts carry `approval_context_commitment`, the two values MUST be equal",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the record and the reference both carry approval_context_commitment, the check succeeds, with commitment agreement established, only when the two strings are equal; differing values fail, and neither value is recomputed"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 1: succeeds with commitment agreement established when both artifacts carry an equal commitment",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 4: fails when both artifacts carry a commitment with different values, or the same value under an unrecognized algorithm prefix",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. Mutations: skipping the equality (case 4 fails); skipping the commitments' form check, so two equal values under an unrecognized algorithm prefix agree (case 4 fails)."
+  },
+  {
+   "id": "approval-governance.portable-binding.commitment-not-established",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "When one or neither carries it, the check can succeed, and its result MUST state that commitment agreement was not established",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when only the record, only the reference, or neither carries approval_context_commitment, the check can succeed, and a successful result states that commitment agreement was not established",
+    "local": "commitment_agreement is not_established on such a success, and the reason says so; a failure or insufficient-evidence result states no commitment agreement"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 2: succeeds without commitment agreement when only one artifact carries a commitment",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 3: succeeds without commitment agreement when neither artifact carries a commitment",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. Mutations: stating agreement established when either artifact carries a commitment (case 2 fails); stating it always (cases 2 and 3 fail)."
+  },
+  {
+   "id": "approval-governance.portable-binding.no-success-on-failure",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "portable-binding",
+   "text": "A verifier MUST NOT report a successful portable binding on failure or on insufficient evidence",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "on failure (an authentication failure, a malformed required value such as an anchor with an unrecognized algorithm prefix, or a mismatch in the approval event, an anchor or a commitment both carry) or on insufficient evidence (an absent record or reference, or a required value the reference does not disclose), the check reports failure or insufficient evidence, never success",
+    "local": "a non-success result carries no commitment_agreement"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 4: fails when both artifacts carry a commitment with different values, or the same value under an unrecognized algorithm prefix",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 5: fails when the reference names another Mission Issuer",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 6: fails when the reference names another approval event, though every Mission anchor matches",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 7: fails when the reference's intent_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 8: fails when the reference's authority_hash differs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 9: is insufficient evidence when the reference does not disclose approval_event_id, though both anchors match, or any other required value",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 10: fails when the record's signature does not verify, its payload differs from the record, or its envelope format is unsupported",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 11: fails when the record verifies only under key material not trusted for the expected issuer, including that of the issuer it names",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > fails when the record names a Mission Issuer other than the expected one whose key material authenticated it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 12: fails when the reference is a Mandate whose iss differs from its mission.issuer",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 13: is insufficient evidence when no record, or no Mission reference, is supplied",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "portable approval-binding check (@spec approval-governance#portable-binding, #1572) > case 14: fails when a required value carries an unrecognized algorithm prefix or is otherwise malformed, on either artifact, even where both agree",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. The authentication failures witnessed are the record's; the reference's own authentication is the caller's (the expected-issuer-trust row is partial for it). Mutations, each alone, turn a failure or insufficient-evidence case into a reported success or the wrong outcome, and each is caught: skipping the record's authentication (cases 10, 11), the expected-issuer naming (misnamed-record test), the Mandate iss rule (case 12), the reference's or the record's malformed-value check (case 14 each), each anchor comparison (cases 5 to 8), the undisclosed-value rule (case 9), the commitment equality or form check (case 4); reporting an absent record or reference as failure (case 13); stating a commitment agreement on a non-success result (cases 4 to 8, 10 to 12, 14 and the misnamed-record test)."
   },
   {
    "id": "approval-governance.governed-policy.agr-every-activation",
