@@ -29,68 +29,10 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { EXECUTABLE_CHECKS, IMPLEMENTED, knownCapability } from "./resource-access-capabilities.helper.js";
 
 const DIR = fileURLToPath(new URL("../../../../vectors/mission-resource-access/", import.meta.url));
 const FORMAT = "mission-resource-access-cases/1";
-
-/**
- * The deployment capability configuration: what this reference implementation implements.
- *
- * `operation-target` and `resource-match.exact` (#1276, D457): the payments PEP and the
- * SaaS resource establish each operation's target from an explicit service-level
- * operation contract and refuse a missing, unsupported or ambiguous one; the PDP, the
- * payments PEP and the SaaS resource match entries against that target with the one
- * Resource Access matcher in `@mission/core`. The executors below run that same matcher
- * and contract evaluation (helper level).
- *
- * `resource-match.prefix` (#1276): that matcher also enforces `prefix` entries, and the
- * authorization server's subset test (`isSubsetEntry`), PAR intake and derivation compare
- * them with the same prefix comparison, so the unsupported-prefix refusals (der-03, der-04)
- * no longer apply.
- */
-const IMPLEMENTED = new Set([
-  "subset.exact-resource",
-  "constraint.max_amount",
-  "constraint.requires_action_approval",
-  "constraint.resource_issued_after",
-  "constraint.resource_issued_before",
-  "constraint.tenant",
-  "constraint.time_window",
-  "constraint.recipient_domain",
-  "constraint.data_classification",
-  "constraint.allowed_tools",
-  "refusal.unsupported-input",
-  "refusal.locations",
-  "delegate-matcher",
-  "operation-target",
-  "resource-match.exact",
-  "resource-match.prefix",
-  // #1275 (D457): retained eligibility provenance and the delegation-authorization policy hook.
-  "delegation.policy",
-  "delegation.inherited-eligibility",
-]);
-
-/** The declared capability vocabulary (README.md). */
-const KNOWN_CAPABILITIES = new Set([
-  ...IMPLEMENTED,
-  "resource-match.prefix",
-  "action-families",
-  "constraint.resource_issued_after",
-  "constraint.resource_issued_before",
-  "constraint.tenant",
-  "constraint.recipient_domain",
-  "constraint.time_window",
-  "constraint.data_classification",
-  "constraint.allowed_tools",
-  "rs.enforcement",
-  "rs.alternative-grants",
-  "rs.member-roles",
-  "rs.extension-members",
-  "delegation.policy",
-  "delegation.inherited-eligibility",
-  "transformation-capabilities",
-  "scope-projection",
-]);
 
 /** The outcomes each check may expect. */
 const OUTCOMES: Record<string, readonly string[]> = {
@@ -330,19 +272,6 @@ function runDelegateEligibility(c: Case): void {
   const [decision] = kernel.delegationEligibility(record, candidates, delegate, input.depth);
   expect(decision?.outcome, c.expected.reason).toBe(c.expected.outcome);
 }
-
-const EXECUTABLE_CHECKS = new Set([
-  "subset",
-  "derive",
-  "delegate-matcher",
-  "delegate-eligibility",
-  "resource-match",
-  "target-resolution",
-  "entry-validation",
-]);
-
-/** A capability is known when the README names it, or it is one `constraints` key or entry member. */
-const knownCapability = (cap: string) => KNOWN_CAPABILITIES.has(cap) || /^(constraint|member)\.[a-z0-9_]+$/.test(cap);
 
 /** Why a case does not run for a consumer implementing `implemented`, or undefined when it applies. */
 function skipReason(c: Case, implemented: ReadonlySet<string> = IMPLEMENTED): string | undefined {

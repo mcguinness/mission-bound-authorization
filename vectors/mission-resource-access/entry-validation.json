@@ -256,7 +256,9 @@
       "id": "ev-depth-03",
       "description": "A delegation.max_depth of 0 beside a children grant",
       "role": "authorization-server",
-      "requires": [],
+      "requires": [
+        "member.delegation"
+      ],
       "check": "entry-validation",
       "input": {
         "entry": {
@@ -285,7 +287,9 @@
       "id": "ev-dlg-01",
       "description": "An empty allowed_delegates list",
       "role": "authorization-server",
-      "requires": [],
+      "requires": [
+        "member.delegation"
+      ],
       "check": "entry-validation",
       "input": {
         "entry": {
@@ -700,7 +704,9 @@
       "id": "ev-depth-05",
       "description": "max_depth 0 with a children grant, in the ceiling and the proposal",
       "role": "authorization-server",
-      "requires": [],
+      "requires": [
+        "member.delegation"
+      ],
       "check": "derive",
       "input": {
         "ceiling": [
