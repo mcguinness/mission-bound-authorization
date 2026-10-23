@@ -16,6 +16,13 @@
  *   pilot composition reading it through its signed Mission Status
  *   (`composeSeparatedMasPilot`).
  *
+ * Where the configuration declares `join_assertion` (#1454), the separated
+ * launcher runs the Join Assertion path: it generates the MAS's introspection
+ * client secret and hands it to the MAS process
+ * (`MAS_PILOT_JOIN_INTROSPECTION_SECRET`) and to the estate it starts, or, for
+ * a running MAS, takes the secret that MAS was given from the same variable.
+ * The in-process topology refuses such a configuration.
+ *
  * Either way the MAS's URL is the Mission issuer, approval runs on its
  * approval surface and revocation and containment on its Lifecycle
  * endpoint, through the operator console (`operator-console.ts`). The
@@ -62,6 +69,8 @@ export interface MasPilotLaunchOptions {
   mas?: { url: string; pdpKey: JWK };
   /** The MAS process's key environment (`MISSION_KEY_RING`, `MISSION_EPHEMERAL_KEYS`, `MISSION_KERNEL_STORE`). */
   masKeyEnv?: Record<string, string>;
+  /** A running MAS's introspection client secret at the estate, where the configuration declares `join_assertion` (#1454). */
+  joinIntrospectionSecret?: string;
 }
 
 const KEY_ENV = ["MISSION_KEY_RING", "MISSION_EPHEMERAL_KEYS", "MISSION_KERNEL_STORE"] as const;
@@ -136,7 +145,20 @@ export function masPilotLaunchOptions(env: Readonly<Record<string, string | unde
     openfga: { apiUrl, presharedKey: env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey, ...(ca ? { caCertPath: ca } : {}) },
     resourcePolicyStore,
   };
-  if (masUrl !== undefined && pdpKey !== undefined) return { ...base, mas: { url: masUrl, pdpKey } };
+  // @spec authority-server#join-assertion (#1454): the path runs separated
+  // only; a running MAS's introspection secret comes from the environment,
+  // and only where the configuration declares the path.
+  const joinSecret = env.MAS_PILOT_JOIN_INTROSPECTION_SECRET;
+  if (config.join_assertion && topology === "in-process") throw new Error("join_assertion applies to the separated topology only");
+  if (joinSecret !== undefined && (config.join_assertion === undefined || masUrl === undefined)) {
+    throw new Error("MAS_PILOT_JOIN_INTROSPECTION_SECRET applies only to a running MAS whose configuration declares join_assertion");
+  }
+  if (masUrl !== undefined && pdpKey !== undefined) {
+    if (config.join_assertion && joinSecret === undefined) {
+      throw new Error("the configuration declares join_assertion: set MAS_PILOT_JOIN_INTROSPECTION_SECRET to the running MAS's introspection client secret");
+    }
+    return { ...base, mas: { url: masUrl, pdpKey }, ...(joinSecret !== undefined ? { joinIntrospectionSecret: joinSecret } : {}) };
+  }
   // The launcher runs the MAS: it says where its keys come from (#831), and
   // where its kernel lives, if anywhere (#250).
   const signingKeys = signingKeysFromEnv(env);
@@ -310,6 +332,7 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
     } else {
       let masUrl = issuer;
       let pdpKey: JWK;
+      let joinIntrospectionSecret = options.joinIntrospectionSecret;
       if (options.mas) {
         masUrl = options.mas.url;
         pdpKey = options.mas.pdpKey;
@@ -319,12 +342,16 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
         const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id);
         pdpKey = pdp.privateJwk;
         const env: NodeJS.ProcessEnv = { ...process.env };
-        for (const name of ["NODE_OPTIONS", ...KEY_ENV, "MAS_PILOT_CONFIG"]) delete env[name];
+        for (const name of ["NODE_OPTIONS", ...KEY_ENV, "MAS_PILOT_CONFIG", "MAS_PILOT_JOIN_INTROSPECTION_SECRET"]) delete env[name];
+        // @spec authority-server#join-assertion-request (#1454): the MAS's
+        // introspection client secret, generated here for the MAS and the estate.
+        if (config.join_assertion) joinIntrospectionSecret = crypto.randomUUID();
         Object.assign(env, options.masKeyEnv ?? {}, {
           ...(options.configPath ? { MAS_PILOT_CONFIG: options.configPath } : {}),
           MAS_PILOT_STATUS_CLIENTS: JSON.stringify([pdp.registration]),
           MAS_PILOT_OPERATOR_TOKEN: token,
           MAS_PILOT_OPERATOR_CONSOLE_PORT: "0",
+          ...(joinIntrospectionSecret !== undefined ? { MAS_PILOT_JOIN_INTROSPECTION_SECRET: joinIntrospectionSecret } : {}),
         });
         scope.check();
         const child = spawnMasProcess(env);
@@ -336,7 +363,9 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
         progress(`the MAS process ${child.pid} is ready at ${issuer}${masConsole ? `, its operator console at ${masConsole}` : ""}`);
       }
       await scope.step(requireMasIssuer(masUrl, config.mission_issuer, scope));
-      pilot = await scope.step(composeSeparatedMasPilot({ ...common, mas: { url: masUrl, pdpKey } }));
+      pilot = await scope.step(
+        composeSeparatedMasPilot({ ...common, mas: { url: masUrl, pdpKey }, ...(joinIntrospectionSecret !== undefined ? { joinIntrospectionSecret } : {}) }),
+      );
       pilotConsole = await scope.acquire(startOperatorConsole([pilotConsoleRoutes(pilot)], { port: 0, token }), (c) => c.close());
     }
     const consoles = { ...(masConsole ? { mas: masConsole } : {}), pilot: pilotConsole.url, token };
@@ -358,6 +387,13 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
         `  gateway            ${pilot.gateway.url}  (estate credentials, joined under the mapping contract)`,
         `  resource route     ${pilot.resourceRoute.url}  (Mission-bound credentials only)`,
         `  Resource policy    ${pilot.resourcePolicy.development ? "development store" : "attached store"} ${pilot.resourcePolicy.storeId} model ${pilot.resourcePolicy.modelId}`,
+        ...(config.join_assertion
+          ? [
+              `  Join Assertions    requested by the PEP from the MAS; required ${
+                config.join_assertion.required ? "on every joined decision" : `for ${config.join_assertion.required_classes.join(", ") || "no class"}`
+              }`,
+            ]
+          : []),
         options.topology === "in-process"
           ? `  operator console   ${pilotConsole.url}  (MAS and pilot)`
           : `  operator console   ${masConsole ?? "on the MAS's own process"}  (MAS)  ${pilotConsole.url}  (pilot)`,

@@ -53,6 +53,25 @@ export interface MasPilotSeparatedConfig {
   state_source: { placement: "pdp"; timeout_ms: number; max_response_bytes: number };
 }
 
+/**
+ * @spec authority-server#join-assertion, authority-server#join-assertion-pdp
+ * (#1454): the separated pilot's Join Assertion path, which runs only where
+ * this member is declared. The MAS introspects the estate's opaque tokens as
+ * `introspection_client_id`, a client the estate registers with a secret
+ * generated where the MAS is started. `required` declares that every joined
+ * decision requires an assertion, and `required_classes` that the joined
+ * decisions of the named action classes do. A joined decision that carries no
+ * assertion and is not declared to require one joins under the mapping rules.
+ * `pdp_algorithms` is the PDP's own algorithm allowlist: it accepts those of
+ * the MAS's advertised algorithms the allowlist names, never `none`.
+ */
+export interface MasPilotJoinAssertionConfig {
+  introspection_client_id: string;
+  required: boolean;
+  required_classes: string[];
+  pdp_algorithms: string[];
+}
+
 export interface MasPilotInventoryEntry {
   tool: string;
   class: string;
@@ -82,6 +101,8 @@ export interface MasPilotConfig {
   mapping_cache: { max_stale_seconds: number };
   introspection: MasPilotIntrospectionConfig;
   separated_mas: MasPilotSeparatedConfig;
+  /** Absent: no Join Assertion path; the mapping join alone. */
+  join_assertion?: MasPilotJoinAssertionConfig;
   mission_bound_only_classes: string[];
   /**
    * @spec runtime#input-resource-policy (#828, #818): the grants a development
@@ -203,7 +224,10 @@ function separatedMas(raw: unknown): MasPilotSeparatedConfig {
 
 /** Validate a parsed pilot configuration. */
 export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
+  // `join_assertion` is the one optional member: declared, or absent.
+  const optional = raw !== null && typeof raw === "object" && Object.hasOwn(raw, "join_assertion") ? ["join_assertion"] : [];
   const root = obj(raw, "root", [
+    ...optional,
     "pilot",
     "mission_issuer",
     "mas_delegates",
@@ -272,6 +296,24 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
   if (seen.has(introspectionClient)) {
     throw new MasPilotConfigError("introspection.client_id must not be one of the estate's own clients");
   }
+  let joinAssertion: MasPilotJoinAssertionConfig | undefined;
+  if (optional.length > 0) {
+    const ja = obj(root.join_assertion, "join_assertion", ["introspection_client_id", "required", "required_classes", "pdp_algorithms"]);
+    if (typeof ja.required !== "boolean") throw new MasPilotConfigError("join_assertion.required must be a boolean");
+    const client = str(ja.introspection_client_id, "join_assertion.introspection_client_id");
+    if (seen.has(client) || client === introspectionClient) {
+      throw new MasPilotConfigError("join_assertion.introspection_client_id must be a client of its own at the estate");
+    }
+    const algorithms = strs(ja.pdp_algorithms, "join_assertion.pdp_algorithms");
+    if (algorithms.length === 0) throw new MasPilotConfigError("join_assertion.pdp_algorithms must name at least one algorithm");
+    if (new Set(algorithms).size !== algorithms.length) throw new MasPilotConfigError("join_assertion.pdp_algorithms names an algorithm twice");
+    joinAssertion = {
+      introspection_client_id: client,
+      required: ja.required,
+      required_classes: strs(ja.required_classes, "join_assertion.required_classes"),
+      pdp_algorithms: algorithms,
+    };
+  }
   const cache = obj(root.mapping_cache, "mapping_cache", ["max_stale_seconds"]);
   const maxStale = cache.max_stale_seconds;
   if (typeof maxStale !== "number" || !Number.isInteger(maxStale) || maxStale <= 0) {
@@ -300,6 +342,7 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
     mapping_cache: { max_stale_seconds: maxStale },
     introspection: { client_id: introspectionClient, timeout_ms: timeoutMs, cache_max_seconds: cacheMax },
     separated_mas: separatedMas(root.separated_mas),
+    ...(joinAssertion ? { join_assertion: joinAssertion } : {}),
     mission_bound_only_classes: strs(root.mission_bound_only_classes, "mission_bound_only_classes"),
     resource_policy: resourcePolicySeed(root.resource_policy),
     mapping_contract: root.mapping_contract,

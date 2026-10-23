@@ -7,7 +7,7 @@ refusal with its evidence record. What the pilot is, and what each of its
 properties rests on, is [mas-pilot-deployment.md](mas-pilot-deployment.md);
 this document covers running it.
 
-Every statement here is true of the reference implementation at `56c86f92`
+Every statement here is true of the reference implementation at `f1acfdfc`
 (paths relative to `src/`). The launcher tests are
 `demo/test/mas-pilot-launcher.test.ts` (§7); its smoke tests need a live
 OpenFGA and are skipped without one, and its startup refusals always run.
@@ -75,6 +75,7 @@ In process, both consoles are the one printed URL.
 | `MAS_PILOT_CONFIG` | The configuration file (default `config/mas-pilot.json`). |
 | `OPENFGA_HTTP_URL`, `OPENFGA_PRESHARED_KEY`, `OPENFGA_CA_CERT` | The OpenFGA connection; the defaults reach the `docker compose` OpenFGA, and `scripts/mas-pilot.mjs` trusts `certs/openfga.crt` when it exists and no CA is set. |
 | `MAS_PILOT_MAS_URL`, `MAS_PILOT_PDP_KEY` | Separated only: use a MAS already running, and the PDP's private key (a JWK with its `kid`) whose public half that MAS registered (§3.7). |
+| `MAS_PILOT_JOIN_INTROSPECTION_SECRET` | With a running MAS whose configuration declares `join_assertion` only: the secret that MAS was given for its introspection client at the estate (§3.8). |
 
 **Startup refusals.** Each prints one `mas-pilot: startup failed: <reason>`
 line and exits 1:
@@ -94,6 +95,12 @@ line and exits 1:
   ("answers as issuer ..., not the configured Mission issuer ..."), or a MAS
   process that fails its own startup (its reason, for example
   `http://127.0.0.1:14834 cannot listen`);
+- a declared `join_assertion.pdp_algorithms` that shares no algorithm with
+  the MAS's advertised list (§3.8);
+- a configuration declaring `join_assertion` in process, a running MAS's
+  declared path without `MAS_PILOT_JOIN_INTROSPECTION_SECRET`, and that
+  variable where the configuration declares no path or the launcher starts
+  the MAS (§3.8);
 - an `OPENFGA_HTTP_URL` that is not an http or https URL, an
   `OPENFGA_CA_CERT` that names no file, and a signing-key environment that
   `signingKeysFromEnv` refuses.
@@ -269,7 +276,56 @@ Approve, revoke and contain at the MAS's console with the MAS's bearer; the
 launcher's printed bearer covers its pilot console only. Stopping the
 launcher leaves the MAS running.
 
-### 3.8 Stop it
+### 3.8 Run the Join Assertion path
+
+The separated topology runs sender-bound Join Assertions (deployment §8)
+where the configuration declares `join_assertion`; the shipped one does
+not. Declare it in a copy, from `src/`:
+
+```sh
+node -e '
+const c = require("./config/mas-pilot.json");
+c.join_assertion = { introspection_client_id: "mas-join-introspector", required: false, required_classes: ["consequential_read"], pdp_algorithms: ["ES256"] };
+require("node:fs").writeFileSync("/tmp/mas-pilot-join.json", JSON.stringify(c, null, 2));
+'
+MAS_PILOT_CONFIG=/tmp/mas-pilot-join.json MAS_PILOT_DEVELOPMENT_STORE=1 MISSION_EPHEMERAL_KEYS=1 pnpm mas-pilot:separated
+```
+
+The launcher generates the secret of the MAS's introspection client at the
+estate, hands it to the MAS process (`MAS_PILOT_JOIN_INTROSPECTION_SECRET`)
+and to the estate it starts, and prints one more line:
+
+```text
+  Join Assertions    requested by the PEP from the MAS; required for consequential_read
+```
+
+`pdp_algorithms` is the PDP's own algorithm allowlist: it accepts those of
+the MAS's advertised `mission_status_signing_alg_values_supported` that the
+list names, never `none`, and the launcher refuses to start when the two
+share nothing. The reference MAS signs ES256.
+
+§3.1 to §3.4 then run unchanged. For each joined call the PEP asks the
+MAS's `mission_join_assertion_endpoint` for an assertion for the presented
+credential, and the PDP joins on it. Every read is `consequential_read`, so
+under this declaration a read the MAS mints no assertion for is denied
+`mission_binding_failed`, with its Decision Evidence (§3.4), instead of
+being joined under the mapping contract. With the class removed from
+`required_classes`, such a read joins under the mapping contract, the
+floor.
+
+`pnpm mas-pilot` refuses this configuration ("join_assertion applies to the
+separated topology only"). To attach to a MAS you started (§3.7), start it
+with the same configuration and `MAS_PILOT_JOIN_INTROSPECTION_SECRET=<a
+secret>`, and give the launcher the same variable.
+
+The MAS installs the mapping contract once, when it starts, under the same
+300 s bound as the gateway's (deployment §3); after that it mints nothing,
+and a read that requires an assertion is denied. The launcher records no
+delegate in either actor-record store, so no delegate joins here
+(follow-up: #1561); the
+tests show the delegate path (deployment §8).
+
+### 3.9 Stop it
 
 Ctrl-C (or SIGTERM or SIGHUP) closes the consoles, the gateway, the
 resource route, the estate AS and the MAS's listener, stops the MAS process
@@ -331,7 +387,8 @@ The MAS process's IPC messages `approve` and `clock` are test harness
 (`demo/test/mas-process.ts`), registered only when the process has an IPC
 channel. The launcher spawns it with `stdio: ["pipe", "pipe", "pipe"]`
 and no `ipc`, so neither exists there; the stdin pipe only tells the MAS
-that the launcher has gone (§3.8).
+that the launcher has gone (§3.9). The `actor` message (#1454), a delegate
+recorded in the MAS's actor records, is test harness the same way.
 
 ## 5. Keys, clients and rotation
 
@@ -396,7 +453,9 @@ stops and starts". Do not rotate the MAS's keys while the pilot runs.
 - A SIGKILL of the `scripts/mas-pilot.mjs` wrapper itself leaves the
   launcher process it started running, as for every `run-demo-ts`
   wrapper; a SIGKILL of the launcher process does not orphan the MAS
-  process (§3.8).
+  process (§3.9).
+- The Join Assertion path stops minting once the MAS's mapping contract is
+  stale, and joins no delegate (§3.8; follow-up: #1561).
 
 ## 7. Witnesses
 
@@ -442,3 +501,10 @@ answers. It needs no OpenFGA:
   registration after release.
 
 These bind `127.0.0.1:14876` to `14889`.
+
+`demo/test/mas-pilot-join-assertion.test.ts` drives the same functions for
+the Join Assertion path (§3.8):
+
+- `the separated launcher runs the declared Join Assertion path (#1454) > generates the MAS's introspection client secret for the MAS process and the estate, and a joined read that requires an assertion permits, by JWT and by opaque credential`
+  (on `127.0.0.1:14907` and `14908`; needs a live OpenFGA);
+- `the launcher refuses a Join Assertion path it cannot run, before anything connects (#1454) > refuses the path in process, a running MAS's path without its secret, and a secret where none applies`.
