@@ -15,8 +15,8 @@
     "content_sha256": "45ee6a69279bb2bd7e6eee690ecc5edca3fc9d8fbb6742b18db49fb6b2d3478b"
    },
    "draft-mcguinness-mission-metering.md": {
-    "revision": "d57add70451f53586de8f4f38e10df89397ee43c",
-    "content_sha256": "fba47845dbec53cd2c3b032ef9e102268bebc29e0b5f9e4910a241b4f17b5904"
+    "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
+    "content_sha256": "e0466f26a42dc89f7f1637996066ed8de81addad3a6190db9b7f814e21525036"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "8d60794eb32a6435d7140512bc30ca2585d8f5b9",
@@ -75,8 +75,8 @@
     "content_sha256": "f296e4b63bf026532fd4c56130f7a37535962da4de837bcffd2949c82417782b"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
-    "content_sha256": "52dcce6f6f809438190f6b8685a9c24cf0d4f261f13f04f63f078d4ca8e44a54"
+    "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
+    "content_sha256": "a5d4486c5b3f708b16b0a86aabd670a429d37de62aa2436b87c2aadaf10e8ef9"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
@@ -31773,6 +31773,48 @@
    "notes": "#1464 (D606). Mutation: adding prior_evaluation_id to operationIdentity (services/pdp/src/projections.ts) fails the witness, while every conflict witness still passes."
   },
   {
+   "id": "metering.bounds.max-budget-currency-form",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "bounds",
+   "text": "exactly three upper-case ASCII letters, compared exactly",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Intent's max_budget currency takes max_amount's form: the authorization server admits exactly three upper-case ASCII letters and refuses any other value"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. Todo: the reference implements no max_budget."
+  },
+  {
+   "id": "metering.bounds.max-budget-currency-exact",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "bounds",
+   "text": "exactly three upper-case ASCII letters, compared exactly",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the cumulative budget counter compares currencies exactly: a debit whose currency differs from max_budget's in any character, case included, is never counted as within the cap, and no conversion applies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. Todo: the reference implements no max_budget."
+  },
+  {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "decision-id-propagation",
@@ -46608,6 +46650,232 @@
     }
    ],
    "notes": "#1375. The predicate is applied by the PDP on the Mission bound; the payments resource's endpoint witness is resource-access.common-constraints.max-amount-input."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-currency-form",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "a `currency` value is exactly three characters, each an upper-case ASCII letter (`A` to `Z`)",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a max_amount currency is exactly three characters, each A to Z: the authorization server refuses lower or mixed case, two or four letters, the numeric code, a trailing line terminator, a leading space and a non-ASCII letter, and admits three upper-case letters",
+    "local": "isCurrencyCode (mission-core) tests the length and each character code, with no regex end anchor; intake, the authority-entry guard, the subset relation, the scope-projection loader, credential parsing, the AAT amount_ argument mapping and the PDP's Mission-view cap all call it, and the published schema carries minLength, maxLength and the pattern"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "currency codes at PAR (@spec resource-access#initial-common-constraints, #1595) > refuses a max_amount currency that is not exactly three upper-case ASCII letters, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "currency codes at PAR (@spec resource-access#initial-common-constraints, #1595) > accepts a well-formed currency code whether or not ISO 4217 assigns it (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/packages/mission-core/test/decimal-amount.test.ts",
+     "name": "isCurrencyCode: exactly three upper-case ASCII letters (#1595, D727) > refuses any other length, a line terminator included, and any other character",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/packages/mission-core/test/decimal-amount.test.ts",
+     "name": "isCurrencyCode: exactly three upper-case ASCII letters (#1595, D727) > admits three upper-case ASCII letters, whether or not ISO 4217 assigns the code",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Before it the reference admitted any non-empty currency string at PAR and in a credential. Proved by mutation: letting isCurrencyCode admit a fourth character, or lower case, fails its unit witness; admitting any string at intake fails the PAR witness and vector cases ev-cur-01 to ev-cur-09, sub-cur-01 and sub-cur-02."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-currency-malformed-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "the authorization server MUST refuse an authority proposal carrying one with the `invalid_authorization_details` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose max_amount currency is malformed is refused invalid_authorization_details at submission, before any interaction, with no request_uri and no Mission; a well-formed code is admitted",
+    "local": "the shared intake validator (validateMissionResourceAccessSchema), which PAR, the token endpoint and continuation call, applies isCurrencyCode after the amount check"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "currency codes at PAR (@spec resource-access#initial-common-constraints, #1595) > refuses a max_amount currency that is not exactly three upper-case ASCII letters, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "currency codes at PAR (@spec resource-access#initial-common-constraints, #1595) > accepts a well-formed currency code whether or not ISO 4217 assigns it (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: replacing the intake check with a string-type test fails the PAR witness."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-currency-rs-unenforceable",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "a resource server treats one as a `constraints` key it cannot enforce",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at the point of use, an applicable entry whose max_amount currency is malformed provides no authority: the decision is a denial, even when the input's currency is spelled the same",
+    "local": "in the reference the payments resource server's decision is the PDP's (runtime-enforced profile): the PDP denies a malformed Mission-view cap currency as parameter_violation, credential parsing refuses a credential whose authority carries one, and an AAT amount_ argument whose suffix is not three lower-case letters is refused rather than folded"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a malformed cap currency in the Mission view is denied, even when the request's currency is spelled the same",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/credential-authority.test.ts",
+     "name": "parseCredentialAuthority: a credential's authority is read in full or refused (#825) > refuses an amount cap whose currency is \"usd\"",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/credential-authority.test.ts",
+     "name": "credentialEntriesFromAatTools: attenuation tools keep every restriction (#825) > refuses an upper-case currency suffix rather than dropping it",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Before it the PDP compared a Mission-view cap currency only by equality with the input's, and credential parsing admitted any non-empty string. Proved by mutation: removing the PDP's isCurrencyCode check fails its witness; admitting any string in credential parsing fails the parse witnesses; folding the amount_ suffix to upper case fails the suffix witness."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-currency-exact",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Values are compared exactly, character for character, with no trimming, case folding, numeric code, or conversion.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the authorization server compares currency values exactly: values differing in case or whitespace are never equal, a malformed value equals nothing, even itself, and no mapping folds a value's case on the way out or back",
+    "local": "isSubsetEntry refuses a malformed currency on either side before comparing; the AAT root mapping names amount_<code> only for a well-formed code and reads back only three lower-case letters; the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/authority-subset.test.ts",
+     "name": "a max_amount currency is exactly three upper-case ASCII letters (#1595, D727) > isSubsetEntry compares well-formed codes exactly, with no case folding or conversion",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-subset.test.ts",
+     "name": "a max_amount currency is exactly three upper-case ASCII letters (#1595, D727) > isSubsetEntry compares nothing with a malformed currency on either side, even a byte-identical pair",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
+     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapAuthorityToTools refuses a malformed currency rather than naming an argument for it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
+     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapToolsToAuthority refuses an amount suffix that is not three lower-case letters",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's currency check fails the byte-identical witness; letting the root mapping name any string, or folding the read-back suffix to upper case, fails its attenuation witness."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-currency-unassigned-admitted",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "A well-formed value is admitted for comparison whether or not ISO 4217 assigns it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a well-formed code ISO 4217 does not assign (XYZ) is admitted at submission and compared like any other: equal codes satisfy the relation and different codes fail it",
+    "local": "the reference keeps no assignment list"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "currency codes at PAR (@spec resource-access#initial-common-constraints, #1595) > accepts a well-formed currency code whether or not ISO 4217 assigns it (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-subset.test.ts",
+     "name": "a max_amount currency is exactly three upper-case ASCII letters (#1595, D727) > isAuthorityEntry refuses a malformed currency and admits an unassigned well-formed code",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
+     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > round-trips a well-formed code ISO 4217 does not assign",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. The permission that follows ('a resource server or deployment MAY refuse a currency it does not support') has no row: it is a permission, and the reference refuses no well-formed code."
   },
   {
    "id": "resource-access.common-constraints.issued-after-enforced",
