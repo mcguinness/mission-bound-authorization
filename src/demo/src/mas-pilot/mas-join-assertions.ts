@@ -11,11 +11,14 @@
  *   gateway uses (#1400): "Where the AS offers token introspection, the MAS
  *   introspects the token". An answer that the token is inactive refuses it,
  *   and nothing checks it locally after that. An estate that cannot be asked
- *   (no answer, a timeout, a server error, a malformed answer, any other
- *   error) is `unavailable`, with no local fallback.
- * - The estate's `unsupported_token_type` error, read exactly, means it offers
- *   no introspection for that token's type (the reference estate answers so
- *   for its JWTs). Then, the draft's other branch: the token is validated
+ *   (no answer, a timeout, a redirect, any status but the one below, a
+ *   malformed answer, any other error) is `unavailable`, with no local
+ *   fallback.
+ * - The estate's own contract for a token type it does not introspect is an
+ *   HTTP 400 whose JSON `error` is exactly `unsupported_token_type` (the
+ *   reference estate answers so for its JWTs). RFC 7662 defines no such
+ *   fallback; this is that estate's specific behavior, and only that exact
+ *   400 answer counts. Then, the draft's other branch: the token is validated
  *   locally under RFC 9068, signed under a key the estate publishes at its
  *   metadata's `jwks_uri` (fetched when first needed, so the MAS may start
  *   before the estate), issued by the estate, `typ` `at+jwt` and unexpired.
@@ -24,7 +27,8 @@
  * - A digest-only request is refused: the estate resolves no token by digest.
  *
  * Defined for the owner's confirmation (#1454 review): introspection first,
- * and `unsupported_token_type` as the one answer that is not a refusal.
+ * and the estate's 400 `unsupported_token_type` as the one answer that is not
+ * a refusal.
  * - The join is evaluated under the pilot's mapping contract, which supplies
  *   `mapping_version`: the subject and client the contract maps the token's
  *   to, against the Mission's own; a delegate under the contract's delegate
