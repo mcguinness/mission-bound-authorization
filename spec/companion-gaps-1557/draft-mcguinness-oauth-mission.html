@@ -4301,10 +4301,10 @@ to. A Token Exchange that instead establishes reusable
 authorization state, such as the continuation profile's
 delegation-family-creating exchange
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>), creates a
-new grant binding, rooted in that same Mission. A Token Exchange
-that returns a JWT authorization grant rather than an access token,
-as cross-domain projection and child creation do, is covered by the
-two items below.<a href="#section-8.1.2-2.1.1" class="pilcrow">¶</a></p>
+new grant binding, rooted in that same Mission. Three Token
+Exchanges are covered by the two items below instead: cross-domain
+projection and child creation, which return a JWT authorization
+grant, and expansion, which creates a successor.<a href="#section-8.1.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-8.1.2-2.2">
               <p id="section-8.1.2-2.2.1"><strong>Cross-domain projection.</strong> A cross-domain projection
@@ -11046,6 +11046,12 @@ Effective Ceiling, Authority Materialized Before Containment, and the
 specify; the sentence on joining one credential to different Missions
 across requests moves to the Mission Authority Server's Mission
 Join.<a href="#appendix-G-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.3">
+          <p id="appendix-G-3.3.1">Editorial, no requirement change: Grant Bindings and Related
+Mechanisms names the Token Exchanges its later items cover, and the
+Namespace Taxonomy lists the <code>approval_basis.type</code> values as
+specification-defined, which Standing-Consent Bases cites.<a href="#appendix-G-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-G-4">-01<a href="#appendix-G-4" class="pilcrow">¶</a></p>

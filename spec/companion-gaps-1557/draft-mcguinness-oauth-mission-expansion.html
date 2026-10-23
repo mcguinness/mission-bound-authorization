@@ -2177,12 +2177,12 @@ drawdown that passes that companion's policy-adjudication guards
 completes synchronously in the token-exchange response, which returns
 the successor's access token. One that falls back to a fresh human
 approval completes in one of the two modes above.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
-<p id="section-5.2-6">Whatever the mode, the successor's grant binding is the lineage of the
-first credential that completion returns: the access token the poll
-resolves to (deferred), the authorization code the client redeems
-(interactive), or the access token in the token-exchange response (an
-in-ceiling drawdown). That binding is the successor's own, never an
-extension of the predecessor's
+<p id="section-5.2-6">Whatever the mode, any grant binding the successor carries is its own,
+never an extension of the predecessor's: in an interactive completion,
+the authorization code the client redeems and any refresh-token family
+that redemption emits; otherwise, a refresh-token family the completing
+response emits, if any. A completion that returns only an access token
+leaves the successor with derived tokens and no grant binding
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Grant Bindings and
 Related Mechanisms").<a href="#section-5.2-6" class="pilcrow">¶</a></p>
 <p id="section-5.2-7">In either mode, obtaining the fresh approval follows the issuance
@@ -4670,18 +4670,24 @@ approved, not the predecessor's authority plus a delta.<a href="#appendix-A-3" c
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">A failed check 3 where the token-exchange response completes an
-expansion answers <code>invalid_request</code>, as Section 2.2.2 of RFC 8693
-requires on that surface, instead of <code>invalid_grant</code>.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.1.1">Completion Modes says where any grant binding a successor carries
+comes from in each mode, and that a completion returning only an
+access token leaves the successor no grant binding. No requirement
+changed.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">The deferred mode applies only to an exchange whose
-<code>completion_mode</code> includes <code>deferred</code>; any other exchange gets the
-interactive handoff or <code>invalid_request</code>, and the client polls with
-the deferred token response's deferred grant type.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.2.1">A failed check 3 where the token-exchange response completes an
+expansion answers <code>invalid_request</code>, as Section 2.2.2 of RFC 8693
+requires on that surface, instead of <code>invalid_grant</code>.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">A completion refused on a deferred poll answers <code>access_denied</code> with
+          <p id="appendix-B-2.3.1">The deferred mode applies only to an exchange whose
+<code>completion_mode</code> includes <code>deferred</code>; any other exchange gets the
+interactive handoff or <code>invalid_request</code>, and the client polls with
+the deferred token response's deferred grant type.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">A completion refused on a deferred poll answers <code>access_denied</code> with
 the reconciliation status, as the deferred token response requires,
 replacing the <code>invalid_grant</code> the #1154 entry below records for a
 deferred poll;
@@ -4689,52 +4695,52 @@ a code redemption keeps <code>invalid_grant</code>, and
 <code>mission_expansion_status</code> is also carried on code redemption. When
 <code>intent.expires_at</code> passes while an expansion is pending, a poll
 answers <code>access_denied</code>, a code redemption <code>invalid_grant</code>, and a
-token-exchange-response completion <code>invalid_request</code>.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">A pushed request after activation is refused with <code>invalid_request</code>;
-the pushed request may carry <code>predecessor</code> as a cross-check.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+token-exchange-response completion <code>invalid_request</code>.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1"><code>requested_token_type</code> selects the operation, and an expansion
-exchange that carries <code>child_actor</code> is refused with
-<code>invalid_request</code>.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.5.1">A pushed request after activation is refused with <code>invalid_request</code>;
+the pushed request may carry <code>predecessor</code> as a cross-check.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">The fingerprint's <code>cnf</code> is a confirmation object and its <code>actor</code> an
-object with the <code>actor_token</code>'s <code>iss</code> and <code>sub</code>; <code>completion_mode</code> is
-outside the fingerprint.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.6.1"><code>requested_token_type</code> selects the operation, and an expansion
+exchange that carries <code>child_actor</code> is refused with
+<code>invalid_request</code>.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1"><code>related_to</code> is a Mission Record member, not a <code>mission</code> claim
-member, and a rollback Mission links to the superseded predecessor
-with <code>related_to</code>, not <code>predecessor</code>.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.7.1">The fingerprint's <code>cnf</code> is a confirmation object and its <code>actor</code> an
+object with the <code>actor_token</code>'s <code>iss</code> and <code>sub</code>; <code>completion_mode</code> is
+outside the fingerprint.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">The deferred window fails completion on a containment or discharge
-restriction that overlaps the successor's authority, as check 3
-states, and the request-time status follows reconciliation's
-attribution rule.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.8.1"><code>related_to</code> is a Mission Record member, not a <code>mission</code> claim
+member, and a rollback Mission links to the superseded predecessor
+with <code>related_to</code>, not <code>predecessor</code>.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.9">
-          <p id="appendix-B-2.9.1">A reservation becomes <code>failed</code> on a denial, a passed deadline or a
-refused activation, and a retry receives the recorded failure.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.9.1">The deferred window fails completion on a containment or discharge
+restriction that overlaps the successor's authority, as check 3
+states, and the request-time status follows reconciliation's
+attribution rule.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.10">
-          <p id="appendix-B-2.10.1">A client conformance target; a client does not initiate expansion for
-an authentication shortfall.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.10.1">A reservation becomes <code>failed</code> on a denial, a passed deadline or a
+refused activation, and a retry receives the recorded failure.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.11">
-          <p id="appendix-B-2.11.1"><code>creation_request_id</code> randomness is at least 122 bits, which a
-version 4 UUID provides.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.11.1">A client conformance target; a client does not initiate expansion for
+an authentication shortfall.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.12">
-          <p id="appendix-B-2.12.1">Removed: the undefined parameter for refusing an expansion while live
-Child Missions exist, and <code>invalid_token</code> from the token-endpoint
-refusals.<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.12.1"><code>creation_request_id</code> randomness is at least 122 bits, which a
+version 4 UUID provides.<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.13">
-          <p id="appendix-B-2.13.1">Editorial restructure, with no change to any requirement: sections
+          <p id="appendix-B-2.13.1">Removed: the undefined parameter for refusing an expansion while live
+Child Missions exist, and <code>invalid_token</code> from the token-endpoint
+refusals.<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.14">
+          <p id="appendix-B-2.14.1">Editorial restructure, with no change to any requirement: sections
 reordered and titled in Title Case; Successor Activation and Child
 Missions of the Predecessor collect the activation and child-cascade
 rules previously spread across several sections; dense paragraphs
@@ -4742,69 +4748,69 @@ become lists; restatements in the Lineage, Security and IANA text
 point to the rule's home instead of repeating the keyword; the main
 messages have examples, and Appendix A walks one expansion end to
 end; the OAuth Parameters
-registrations use the RFC 6749 template.<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.14">
-          <p id="appendix-B-2.14.1">No <code>predecessor_token</code> parameter is registered: the predecessor is
-resolved from <code>subject_token</code>.<a href="#appendix-B-2.14.1" class="pilcrow">¶</a></p>
+registrations use the RFC 6749 template.<a href="#appendix-B-2.14.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.15">
-          <p id="appendix-B-2.15.1">A failed expansion exchange uses the code this document assigns to
+          <p id="appendix-B-2.15.1">No <code>predecessor_token</code> parameter is registered: the predecessor is
+resolved from <code>subject_token</code>.<a href="#appendix-B-2.15.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.16">
+          <p id="appendix-B-2.16.1">A failed expansion exchange uses the code this document assigns to
 the failure; otherwise an invalid, unproven or unacceptable
 <code>subject_token</code> or <code>actor_token</code> is <code>invalid_request</code>, as Section
 2.2.2 of RFC 8693 requires; a required DPoP proof that is missing, or
 one that fails validation, is <code>invalid_dpop_proof</code>, and a proof
-lacking a required nonce keeps <code>use_dpop_nonce</code> (#1178).<a href="#appendix-B-2.15.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.16">
-          <p id="appendix-B-2.16.1">A predecessor that is not <code>active</code> refuses the expansion exchange
-with <code>invalid_request</code>, following the issuance profile's Token
-Exchange rule; a predecessor cross-check mismatch, and a completion
-by code redemption or deferred poll, keep <code>invalid_grant</code> (#1154).<a href="#appendix-B-2.16.1" class="pilcrow">¶</a></p>
+lacking a required nonce keeps <code>use_dpop_nonce</code> (#1178).<a href="#appendix-B-2.16.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.17">
-          <p id="appendix-B-2.17.1">Supersession terminates the predecessor: it becomes <code>terminated</code> with
+          <p id="appendix-B-2.17.1">A predecessor that is not <code>active</code> refuses the expansion exchange
+with <code>invalid_request</code>, following the issuance profile's Token
+Exchange rule; a predecessor cross-check mismatch, and a completion
+by code redemption or deferred poll, keep <code>invalid_grant</code> (#1154).<a href="#appendix-B-2.17.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.18">
+          <p id="appendix-B-2.18.1">Supersession terminates the predecessor: it becomes <code>terminated</code> with
 reason <code>superseded</code>, registered in the Mission Termination Reasons
 registry, and its <code>termination</code> carries the <span class="bcp14">REQUIRED</span> <code>successor</code>; the
 record's mutable members are <code>state</code> and <code>termination</code>, and a
-refused derivation's <code>mission_error</code> is <code>superseded</code> (#705).<a href="#appendix-B-2.17.1" class="pilcrow">¶</a></p>
+refused derivation's <code>mission_error</code> is <code>superseded</code> (#705).<a href="#appendix-B-2.18.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.18">
-          <p id="appendix-B-2.18.1">Successor Subject and authority source: every successor keeps the
+        <li class="normal" id="appendix-B-2.19">
+          <p id="appendix-B-2.19.1">Successor Subject and authority source: every successor keeps the
 predecessor's <code>subject</code> and <code>authority_source</code>, whatever approval
 basis creates it; another Subject or source needs a separately
 approved Mission outside succession, and the activating commit
 verifies that the source applies and that its current ceiling covers
-the successor (#1118).<a href="#appendix-B-2.18.1" class="pilcrow">¶</a></p>
+the successor (#1118).<a href="#appendix-B-2.19.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.19">
-          <p id="appendix-B-2.19.1">Interactive completion has a defined handoff: the token exchange
+        <li class="normal" id="appendix-B-2.20">
+          <p id="appendix-B-2.20.1">Interactive completion has a defined handoff: the token exchange
 answers <code>mission_interaction_required</code> with a <code>mission_continuation</code>
 handle, the client pushes an RFC 9126 request carrying it, and code
 redemption activates the successor; the handle names the durable
-operation and each <code>request_uri</code> is a temporary reference.<a href="#appendix-B-2.19.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-2.20">
-          <p id="appendix-B-2.20.1">An in-ceiling drawdown under the progressive authorization companion
-completes synchronously in the token-exchange response, a third
-issuance point; fresh-consent expansion still completes deferred or
-interactively.<a href="#appendix-B-2.20.1" class="pilcrow">¶</a></p>
+operation and each <code>request_uri</code> is a temporary reference.<a href="#appendix-B-2.20.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.21">
-          <p id="appendix-B-2.21.1">Successor activation's compare-and-set also rechecks the complete
-successor Authority Set against current containment and discharge
-restrictions, refusing with <code>authority_restricted_since_approval</code>
-when narrowing landed after adjudication.<a href="#appendix-B-2.21.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.21.1">An in-ceiling drawdown under the progressive authorization companion
+completes synchronously in the token-exchange response, a third
+issuance point; fresh-consent expansion still completes deferred or
+interactively.<a href="#appendix-B-2.21.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.22">
-          <p id="appendix-B-2.22.1">A fresh-consent restoration of authority under a discharge
-restriction authorizes that authority explicitly and discloses the
-discharged entry and its condition; the consent also surfaces the
-chain's outstanding containment restrictions.<a href="#appendix-B-2.22.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.22.1">Successor activation's compare-and-set also rechecks the complete
+successor Authority Set against current containment and discharge
+restrictions, refusing with <code>authority_restricted_since_approval</code>
+when narrowing landed after adjudication.<a href="#appendix-B-2.22.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-2.23">
-          <p id="appendix-B-2.23.1">Added explicitly approved carryover hooks for disclosure, atomic
-  completion, and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-B-2.23.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.23.1">A fresh-consent restoration of authority under a discharge
+restriction authorizes that authority explicitly and discloses the
+discharged entry and its condition; the consent also surfaces the
+chain's outstanding containment restrictions.<a href="#appendix-B-2.23.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.24">
+          <p id="appendix-B-2.24.1">Added explicitly approved carryover hooks for disclosure, atomic
+  completion, and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-B-2.24.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

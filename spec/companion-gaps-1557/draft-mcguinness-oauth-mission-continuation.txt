@@ -198,9 +198,10 @@ Table of Contents
       through a rooting anchor.  A grant-anchored rooting is durable and
       MAY outlive the session in which it was established.  A session-
       anchored rooting MUST NOT outlive its session; when the session
-      ends, the anchor and every handle under it cease to resolve.  A
-      continuation MUST NOT be rooted in a bare access token; the root
-      is the Mission's grant or an authenticated session bound to it.
+      ends, the anchor and every continuation handle under it cease to
+      resolve.  A continuation MUST NOT be rooted in a bare access
+      token; the root is the Mission's grant or an authenticated session
+      bound to it.
 
    Subset derivation:  The authorization a continued grant conveys MUST
       be derived as a subset of the Mission's Authority Set at the time
@@ -220,11 +221,11 @@ Table of Contents
 
    Termination:  When a Mission reaches a terminal state, continuation
       under it MUST cease: subsequent continuation requests MUST fail,
-      and any durable transport state (a handle, a refresh-token family)
-      MUST be invalidated.  Termination does not shorten an already-
-      issued credential; a continued credential retains its own expiry,
-      and revocation acts on future issuance, not on tokens already in
-      flight.
+      and any durable transport state (a continuation handle, a refresh-
+      token family) MUST be invalidated.  Termination does not shorten
+      an already-issued credential; a continued credential retains its
+      own expiry, and revocation acts on future issuance, not on tokens
+      already in flight.
 
    Continuation is bounded in time by the Mission's expiry; that expiry
    is the continuity ceiling.  The Mission's derivation_limit
@@ -693,6 +694,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The async transport's handle is called a delegation handle, an
+      access token carrying authority, distinct from a continuation
+      handle; the Rooting and Termination requirements name the
+      continuation handle; and the document calls itself a profile, not
+      a binding.  No requirement changed.
 
    *  The Identity Continuation Transport's onward ID-JAG conveys
       delegation under the cross-domain projection rule, so a requested

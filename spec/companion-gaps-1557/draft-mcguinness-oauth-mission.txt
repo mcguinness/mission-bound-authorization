@@ -2322,10 +2322,10 @@ Table of Contents
       authorization state, such as the continuation profile's
       delegation-family-creating exchange
       ([I-D.draft-mcguinness-oauth-mission-continuation]), creates a new
-      grant binding, rooted in that same Mission.  A Token Exchange that
-      returns a JWT authorization grant rather than an access token, as
-      cross-domain projection and child creation do, is covered by the
-      two items below.
+      grant binding, rooted in that same Mission.  Three Token Exchanges
+      are covered by the two items below instead: cross-domain
+      projection and child creation, which return a JWT authorization
+      grant, and expansion, which creates a successor.
 
    *  *Cross-domain projection.* A cross-domain projection
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]) establishes no
@@ -7912,6 +7912,11 @@ Appendix G.  Document History
       what the companions specify; the sentence on joining one
       credential to different Missions across requests moves to the
       Mission Authority Server's Mission Join.
+
+   *  Editorial, no requirement change: Grant Bindings and Related
+      Mechanisms names the Token Exchanges its later items cover, and
+      the Namespace Taxonomy lists the approval_basis.type values as
+      specification-defined, which Standing-Consent Bases cites.
 
    -01
 

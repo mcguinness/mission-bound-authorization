@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-23T17:11:59Z
-Source repository commit: 47e2489cbdb6d0646580ec0a2881f500f7ded025
+Generated: 2026-10-23T17:30:00Z
+Source repository commit: 0f264e2d944880d6da9b28c457d0e03682a5e9f7
 Member count: 9
 
 Reading order:
@@ -5610,6 +5610,10 @@ Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  The Authorization bases entry says the basis type values form a
+      specification-defined namespace and that its list names each
+      companion's value.  No requirement changed.
+
    *  The Authorization bases entry cites the companion profile that
       defines each standing-consent basis; the OAuth binding points here
       for the list.  No requirement changed.
@@ -9864,10 +9868,10 @@ Table of Contents
       authorization state, such as the continuation profile's
       delegation-family-creating exchange
       ([I-D.draft-mcguinness-oauth-mission-continuation]), creates a new
-      grant binding, rooted in that same Mission.  A Token Exchange that
-      returns a JWT authorization grant rather than an access token, as
-      cross-domain projection and child creation do, is covered by the
-      two items below.
+      grant binding, rooted in that same Mission.  Three Token Exchanges
+      are covered by the two items below instead: cross-domain
+      projection and child creation, which return a JWT authorization
+      grant, and expansion, which creates a successor.
 
    *  *Cross-domain projection.* A cross-domain projection
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]) establishes no
@@ -15454,6 +15458,11 @@ Appendix G.  Document History
       what the companions specify; the sentence on joining one
       credential to different Missions across requests moves to the
       Mission Authority Server's Mission Join.
+
+   *  Editorial, no requirement change: Grant Bindings and Related
+      Mechanisms names the Token Exchanges its later items cover, and
+      the Namespace Taxonomy lists the approval_basis.type values as
+      specification-defined, which Standing-Consent Bases cites.
 
    -01
 
