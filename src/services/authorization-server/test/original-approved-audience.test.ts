@@ -22,7 +22,7 @@ import { APPROVAL_FLOOR, AUTHORITY_SOURCES, SCOPE_PROJECTION } from "@mission/de
 import { type CryptoKey, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
-import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 
 const PORT = 14813;
 const ISSUER = `http://localhost:${PORT}`;
@@ -126,11 +126,14 @@ async function approve(): Promise<string> {
   keep(res);
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
+  // The decision names the rendering the Approver saw (#1446).
+  const decideHeaders = floorApprovalHeaders(SESSIONS, uid, cookie());
+  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...floorApprovalHeaders(SESSIONS, uid, cookie()), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: { ...decideHeaders, "content-type": "application/json" },
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   keep(res);
   location = res.headers.get("location") as string;
