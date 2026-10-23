@@ -3354,13 +3354,18 @@ async function handleChildJwtBearerGrant(
  * @spec mission#grant-binding-related, mission#delegated-exchange (#1503
  * finding 11, D620): a grant with a recorded backing grant (a delegation
  * handle's, minted by an exchange that establishes no new grant lineage) is
- * live only while its backing grant is live too. The chain is bounded, and
- * one longer than the bound fails closed.
+ * live only while its backing grant is live too. A grant records its backing
+ * grant once, at its own mint, from a grant that already exists, so the chain
+ * is acyclic; one that revisits a grant is corrupt state and fails closed.
+ * Every link is a self-exchange the Mission counts as a derivation, so the
+ * Mission's derivation accounting bounds the chain the issuer mints, and a
+ * handle minted at any depth stays usable (#1601 review).
  */
 export async function isGrantLive(opts: AdapterOptions, provider: Provider, grantId: string): Promise<boolean> {
-  let current: string | undefined = grantId;
-  for (let hop = 0; current !== undefined; hop++) {
-    if (hop > MAX_BACKING_GRANT_HOPS) return false;
+  const seen = new Set<string>();
+  for (let current: string | undefined = grantId; current !== undefined; ) {
+    if (seen.has(current)) return false;
+    seen.add(current);
     const grantExists = !!(await provider.Grant.find(current).catch(() => undefined));
     const live = opts.familyStore?.wasEverFamily(current)
       ? opts.familyStore.resolve(current) !== undefined && grantExists
@@ -3370,9 +3375,6 @@ export async function isGrantLive(opts: AdapterOptions, provider: Provider, gran
   }
   return true;
 }
-
-/** The longest chain of backing grants {@link isGrantLive} follows before failing closed. */
-const MAX_BACKING_GRANT_HOPS = 8;
 
 /**
  * @spec mission#caller-authorization-and-minimization (cleanup, issue #541) —

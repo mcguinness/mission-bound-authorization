@@ -916,6 +916,38 @@ describe("each redemption validates the grant state backing the designated crede
     expect(redeemed.body.error_description).toMatch(/source grant is no longer valid/);
     expect(derivations(on, missionId)).toBe(before);
   });
+
+  it("a handle minted at any depth of consecutive self-exchanges stays designatable, and still falls with the approval grant (#1601 review)", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    let handle = accessToken;
+    for (let depth = 1; depth <= 9; depth++) {
+      const next = await designate(on, handle, "ap-agent");
+      expect(next.status, `self-exchange ${depth}: ${JSON.stringify(next.body)}`).toBe(200);
+      handle = next.body.access_token as string;
+    }
+    const designated = await designate(on, handle, SUBAGENT);
+    expect(designated.status, JSON.stringify(designated.body)).toBe(200);
+
+    await (await on.as.provider.Grant.find(on.as.kernel.get(missionId)?.grant_id as string))?.destroy();
+    const before = derivations(on, missionId);
+    const refused = await designate(on, handle, SUBAGENT);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_request");
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
+  it("a backing chain that revisits a grant is corrupt state and fails closed (#1601 review)", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const handle = (await designate(on, accessToken, "ap-agent")).body.access_token as string;
+    const approvalGrant = on.as.kernel.get(missionId)?.grant_id as string;
+    const handleGrant = on.as.tokenIssuanceStore.resolve(on.issuer, jtiOf(handle))?.grantId as string;
+    expect(on.as.kernel.missionBoundGrants.resolve(handleGrant)?.backingGrantId).toBe(approvalGrant);
+    // Both grants stay live; only the forged link back makes the chain a cycle.
+    on.as.kernel.missionBoundGrants.db.prepare("UPDATE mission_bound_grants SET backing_grant_id = ? WHERE grant_id = ?").run(handleGrant, approvalGrant);
+    const refused = await designate(on, handle, SUBAGENT);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_request");
+  });
 });
 
 describe("a designation's expiry bounds its redemption, not the delegated token's lifetime (@spec mission#designation, mission#token-authentication-lifetime, #1503 finding 11)", () => {
