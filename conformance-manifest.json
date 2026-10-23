@@ -41673,6 +41673,131 @@
    "notes": "#1195 (D390): skipping the handoff skips neither the handle nor its count. Mutation proofs: removing the handle exchange's gateDerivation call fails the success witness on the count; disabling the exchange's explicit active check alone fails the revoked and completed cases on their description while the suspended case is still refused identically by the kernel's lineage gate inside gateDerivation (defense in depth); disabling that check and the lineage gate's state checks together fails all three cases on status."
   },
   {
+   "id": "template.handoff.grant-no-lineage",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "The handoff grant establishes no grant lineage",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after its one redemption the handoff grant resolves nothing: a second presentation is refused and counts nothing"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > single use: a second redemption is refused invalid_grant and counts nothing"
+    }
+   ],
+   "notes": "#1589 (D726, Q1). Witnessed: a consumed grant resolves nothing again. The clause that the replay-prevention state is not a lineage is definitional and has no observable of its own."
+  },
+  {
+   "id": "template.handoff.redemption-resolves-from-grant",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "The Mission Issuer resolves the instance from the authenticated `mission` claim of the grant step 1 verifies, and applies steps 2 through 5 to that instance.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the token a redemption issues names the instance the grant's `mission` claim identifies, and a grant whose `mission` names a Mission that is not a dispatched instance is refused"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > defence in depth: a grant naming a client that is not the instance's Agent, or a non-instance Mission, is refused"
+    }
+   ],
+   "notes": "#1589 (D726, Q3). Witnessed: the issued token's `mission.id` is the grant's instance, and a grant naming a non-instance Mission is refused invalid_grant. Not witnessed: that resolution precedes steps 2 to 5."
+  },
+  {
+   "id": "template.handoff.redemption-no-binding",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "It issues a derived token for the instance, and creates or extends no grant binding; it needs none.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a redemption returns the instance's delegation handle and no refresh token, for an instance that holds no grant binding"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family"
+    }
+   ],
+   "notes": "#1589 (D726, Q2). Witnessed: the redemption's response carries no refresh token and its token names the instance. The reference's internal grant for the instance is unchanged by the redemption, but an internal record is not a protocol lineage (D709)."
+  },
+  {
+   "id": "template.handoff.first-binding-at-family",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "That family is the instance's first grant binding: on this Dispatch path the instance carries none until it exists.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.dispatch",
+     "continuation.async-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the delegation-family exchange returns the instance's first refresh token, and refreshing it yields tokens for the instance; nothing before it returns a refresh token"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family"
+    }
+   ],
+   "notes": "#1589 (D726, Q4). Witnessed: the family exchange returns a refresh token whose refresh names the instance, and the redemption before it returns none. Not witnessed: that the Dispatch response itself returns no refresh token."
+  },
+  {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",

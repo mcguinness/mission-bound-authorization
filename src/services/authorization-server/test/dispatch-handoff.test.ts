@@ -406,6 +406,9 @@ describe("Dispatch Handoff: the handoff to the selected Agent and its continuati
     };
     expect(r.status, JSON.stringify(rb)).toBe(200);
     expect(rb.token_type).toBe("DPoP");
+    // @spec mission-template#dispatch-handoff (#1589): the redemption returns only the
+    // delegation handle, no refresh token, so it opens no grant lineage of its own.
+    expect((rb as { refresh_token?: string }).refresh_token).toBeUndefined();
     const agentToken = decodeJwt(rb.access_token);
     expect(agentToken.client_id).toBe(AGENT_ID);
     // #1157 (D358): the redeemed token is the Agent's delegation handle,

@@ -1229,7 +1229,10 @@ identifies the Mission Issuer, `aud` identifies its token endpoint,
 instance's Subject, `mission` is the instance's `mission` claim,
 `authorization_details` is the handed-off authority, and `jti`, `iat`
 and `exp` bound it. Its lifetime is short and never outlasts the
-instance's `expires_at`.
+instance's `expires_at`. The handoff grant establishes no grant lineage
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding the Mission to
+the Grant"): the state the Mission Issuer keeps to
+refuse its replay ({{handoff-redemption}}) is not one.
 
 The scenario's handoff response is:
 
@@ -1290,13 +1293,19 @@ proof under its own key. The Mission Issuer MUST:
    DPoP proof, whose authority is the grant's narrowed by the
    instance's current Effective Authority Set.
 
+The Mission Issuer resolves the instance from the authenticated
+`mission` claim of the grant step 1 verifies, and applies steps 2
+through 5 to that instance.
+
 The token issued at redemption is the Agent's delegation handle: its
 audience identifies the Agent and it is sender-constrained to the
 Agent's key, so the Agent continues the instance as its approved agent
 on the continuation profile's async delegation transport
 ({{I-D.draft-mcguinness-oauth-mission-continuation}}). The redemption
 is a derivation from the instance, gated and counted as the issuance
-profile requires ({{I-D.draft-mcguinness-oauth-mission}}).
+profile requires ({{I-D.draft-mcguinness-oauth-mission}}). It issues a
+derived token for the instance, and creates or extends no grant
+binding; it needs none.
 
 In the scenario, `s6BhdRkqt3` redeems the grant under its own DPoP
 key. Its client authentication is omitted:
@@ -1349,7 +1358,9 @@ creation_request_id=7cdd0cf2-01ac-5239-b300-70ec9a30c1bc
 The response carries an access token for `https://erp.example.com`
 and the first refresh token of a family that ends no later than the
 instance's `expires_at`. The Agent calls the ERP with those tokens and
-refreshes within the family, as for any Mission.
+refreshes within the family, as for any Mission. That family is the
+instance's first grant binding: on this Dispatch path the instance
+carries none until it exists.
 
 ## When the Dispatcher is the Agent {#dispatcher-as-agent}
 
@@ -1740,6 +1751,13 @@ IANA action. Following the restraint of the sibling profiles:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Dispatch Handoff states its effect on grant bindings: the handoff
+  grant establishes no grant lineage, its redemption resolves the
+  instance from the grant's authenticated `mission` claim and issues a
+  derived token without creating or extending a binding, and the
+  delegation-family exchange creates the instance's first binding
+  (#1589, D726).
 
 - Dispatch and Conformance: a dispatched instance's
   `activation_actor` has the Mission Issuer's identifier as `iss` and,
