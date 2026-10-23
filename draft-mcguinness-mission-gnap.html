@@ -1922,10 +1922,9 @@ GNAP's model:<a href="#section-9-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-4.1">
           <p id="section-9-4.1.1"><strong>Revocation.</strong> The authorization server <span class="bcp14">MUST</span> provide an
-authenticated means for the Subject, the Approver, or an
-administrator to revoke a Mission by <code>mission_id</code>, independent of
-any token and of the grant's continuation, per the issuance
-profile. On revocation the authorization server finalizes the
+authenticated means for a party the deployment's policy authorizes
+to revoke a Mission by <code>mission_id</code>, independent of any token and
+of the grant's continuation, per the issuance profile. On revocation the authorization server finalizes the
 grant and treats the Mission's outstanding tokens as inactive at
 introspection; a deployment that validates structured tokens
 without introspection needs the state surfaces below.<a href="#section-9-4.1.1" class="pilcrow">¶</a></p>
@@ -2319,7 +2318,7 @@ commit; the grant does not reach <em>approved</em> before the record does
           <p id="section-11-3.6.1"><strong>Governance gate</strong>: only the issuance profile's <code>active</code> state
 is active. Every other or unrecognized value fails closed at
 continuation, issuance, rotation, and the introspection
-projection. The Subject, Approver, and administrator have an
+projection. A party the deployment's policy authorizes has an
 authenticated revocation path (<a href="#lifecycle" class="auto internal xref">Section 9</a>, <a href="#gating" class="auto internal xref">Section 9.1</a>).<a href="#section-11-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-11-3.7">

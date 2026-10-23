@@ -1791,9 +1791,9 @@ model:<a href="#section-8-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8-4.1">
           <p id="section-8-4.1.1"><strong>Revocation.</strong> The authorization server <span class="bcp14">MUST</span> provide an
-authenticated means for the Subject, the Approver, or an
-administrator to revoke a Mission by <code>mission_id</code>, independent of
-any token, per the issuance profile. Because resource servers
+authenticated means for a party the deployment's policy authorizes
+to revoke a Mission by <code>mission_id</code>, independent of any token, per
+the issuance profile. Because resource servers
 introspect RPTs per use (<span>[<a href="#UMA-FEDAUTHZ" class="cite xref">UMA-FEDAUTHZ</a>]</span>), revocation takes
 effect at the next introspection with no further plumbing; a
 deployment that validates RPTs without introspection needs the
@@ -2133,8 +2133,8 @@ the effective expiry at that commit (<a href="#approval" class="auto internal xr
         <li id="section-10-3.6">
           <p id="section-10-3.6.1"><strong>Governance gate</strong>: only the issuance profile's <code>active</code> state is
 active. Every other or unrecognized value fails closed at the token
-endpoint and introspection projection. The Subject, Approver, and
-administrator have an authenticated revocation path
+endpoint and introspection projection. A party the deployment's
+policy authorizes has an authenticated revocation path
 (<a href="#lifecycle" class="auto internal xref">Section 8</a>, <a href="#gating" class="auto internal xref">Section 8.1</a>).<a href="#section-10-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-10-3.7">
