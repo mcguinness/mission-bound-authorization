@@ -27,6 +27,7 @@ import {
   type OriginProjection,
   validateAuthorityProposal,
   validateMissionIntent,
+  validateMissionResourceAccessSchema,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 import { EXECUTABLE_CHECKS, IMPLEMENTED, knownCapability } from "./resource-access-capabilities.helper.js";
@@ -38,7 +39,7 @@ const FORMAT = "mission-resource-access-cases/1";
 const OUTCOMES: Record<string, readonly string[]> = {
   "resource-match": ["match", "no-match"],
   "target-resolution": ["refuse-resolution", "no-match"],
-  subset: ["subset", "not-subset"],
+  subset: ["subset", "not-subset", "refuse"],
   derive: ["derived", "refuse"],
   "delegate-matcher": ["permitted", "not-permitted"],
   "delegate-eligibility": ["eligible", "not-eligible", "narrowed-out"],
@@ -79,8 +80,22 @@ function run(c: Case): void {
   const input = c.input;
   switch (c.check) {
     case "subset": {
-      const result = isSubsetEntry(input.candidate as AuthorityEntry, input.reference as AuthorityEntry);
-      expect(result, c.expected.reason).toBe(c.expected.outcome === "subset");
+      // #1596 (D727): a three-way result. Both operands are validated with the
+      // intake's supported-input checks before any comparison, each on its own,
+      // so an obvious mismatch never conceals unsupported or malformed input in
+      // the other: either failing is `refuse`. Only then does the boolean subset
+      // relation, which stays fail-closed, decide `subset` or `not-subset`.
+      const candidateViolation = validateMissionResourceAccessSchema(input.candidate);
+      const referenceViolation = validateMissionResourceAccessSchema(input.reference);
+      const outcome =
+        candidateViolation !== undefined || referenceViolation !== undefined
+          ? "refuse"
+          : isSubsetEntry(input.candidate as AuthorityEntry, input.reference as AuthorityEntry)
+            ? "subset"
+            : "not-subset";
+      expect(outcome, `${c.expected.reason} (${candidateViolation ?? referenceViolation ?? "valid operands"})`).toBe(
+        c.expected.outcome,
+      );
       return;
     }
     case "derive": {
@@ -339,7 +354,13 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
         if (c.requires.includes("refusal.unsupported-input")) {
           expect(c.unless?.length ?? 0, `${c.id}: an unsupported-input case needs unless`).toBeGreaterThan(0);
         }
-        if (c.expected.outcome === "refuse") expect(typeof c.expected.error, c.id).toBe("string");
+        // A refusal at a protocol surface names its OAuth error. A `subset`
+        // refusal is a comparison the input prevents (#1596, D727), not a wire
+        // response, so it names none.
+        if (c.expected.outcome === "refuse" && c.check !== "subset") {
+          expect(typeof c.expected.error, c.id).toBe("string");
+        }
+        if (c.check === "subset") expect(c.expected.error, `${c.id}: a subset case names no error`).toBeUndefined();
       }
     }
   });

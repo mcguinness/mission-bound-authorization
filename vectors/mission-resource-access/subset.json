@@ -742,6 +742,493 @@
         "#819",
         "D684"
       ]
+    },
+    {
+      "id": "sub-ref-01",
+      "description": "The candidate carries a constraint key the consumer does not implement",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "constraint.x_unknown"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "x_unknown": "v"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an unsupported key prevents the comparison; it is never compared as absent"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-02",
+      "description": "The reference carries a constraint key the consumer does not implement",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "constraint.x_unknown"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "x_unknown": "v"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the reference operand is validated too, so its unsupported key prevents the comparison"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-03",
+      "description": "Both operands carry constraint keys the consumer does not implement",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "constraint.x_unknown",
+        "constraint.x_region"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "x_unknown": "v"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "x_region": "eu"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "either unsupported key alone prevents the comparison"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-04",
+      "description": "The resources differ and the reference carries an unsupported key",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "constraint.x_unknown"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "x_unknown": "v"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an obvious mismatch must not conceal unsupported input in the other operand: refuse, not not-subset"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-05",
+      "description": "The actions are disjoint and the candidate carries an unknown top-level member",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "member.x_member"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.write"
+          ],
+          "x_member": [
+            "v"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the unknown member prevents the comparison although the actions alone would fail the relation"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-06",
+      "description": "The candidate's max_amount amount is malformed",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "1e3",
+              "currency": "USD"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a malformed decimal value is never parsed, so it prevents the comparison"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-07",
+      "description": "The reference's time_window is inverted",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.time_window"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-03-01T00:00:00Z",
+              "not_after": "2026-04-01T00:00:00Z"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-06-01T00:00:00Z",
+              "not_after": "2026-01-01T00:00:00Z"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an inverted window in either operand is malformed and prevents the comparison"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-08",
+      "description": "The candidate names an action family on a consumer that does not implement action families",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "action-families"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.*"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an action family is unsupported input where the family clauses are not implemented (D684)"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-09",
+      "description": "The reference names resource_match prefix on a consumer without prefix matching",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "refusal.unsupported-input"
+      ],
+      "unless": [
+        "resource-match.prefix"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders/123",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders",
+          "actions": [
+            "invoices.read"
+          ],
+          "resource_match": "prefix"
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a prefix entry is unsupported input where prefix matching is not implemented"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-10",
+      "description": "The candidate carries locations",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "refusal.locations"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "locations": [
+            "https://erp.example.com"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an entry carrying locations is refused by name, so no comparison is made"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-11",
+      "description": "The currencies differ and the candidate's amount is malformed",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "1,000.00",
+              "currency": "EUR"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "USD"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "different currencies alone would fail the relation, but the malformed amount prevents the comparison"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-dis-01",
+      "description": "The candidate's actions are disjoint from the reference's",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.write"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "the valid inputs fail the relation without the candidate being broader than the reference"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
     }
   ]
 }
