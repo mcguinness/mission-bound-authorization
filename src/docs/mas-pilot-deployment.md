@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `dd38ffdf`
+Every statement here is true of the reference implementation at `65e0fd95`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -347,11 +347,19 @@ contract alone, unchanged. By party:
   `pilotJoinAssertions` (`demo/src/mas-pilot/mas-join-assertions.ts`), which
   `mas-serve.ts` supplies where the configuration declares the path and
   `MAS_PILOT_JOIN_INTROSPECTION_SECRET` carries the secret; it refuses
-  either without the other. A JWT is validated under RFC 9068 against the
+  either without the other. Every acting token, JWT or opaque, is
+  introspected first at the estate, as the MAS's own client, through §5's
+  adapter (`TokenIntrospector`). An inactive answer refuses it, with no
+  local check after that; an estate that cannot answer (no answer, a
+  timeout, a server error, a malformed answer, any other error) is
+  `unavailable` (503), with no local fallback. Only the estate's
+  `unsupported_token_type` error, read exactly, means it offers no
+  introspection for the token's type, and the reference estate answers so
+  for its JWTs: such a token is then validated under RFC 9068 against the
   keys at the estate's published `jwks_uri`, fetched when first needed so
-  the MAS may start before the estate. An opaque token is introspected at
-  the estate as the MAS's own client, through §5's adapter
-  (`TokenIntrospector`). Either must be audienced to an enrolled
+  the MAS may start before the estate; an opaque token fails that
+  validation. This definition is the implementer's, recorded for the
+  owner's confirmation. The token must be audienced to an enrolled
   enforcement scope. A digest-only request is refused: the estate resolves
   no token by digest. The joins are evaluated under the mapping contract,
   installed when the MAS starts under the same `mapping_cache` bound as
@@ -385,8 +393,10 @@ contract alone, unchanged. By party:
   come from `join`, rule 5 narrows a delegate with them, and `join_view_id`
   commits the join claim's client and disposition. A failed check, or a
   reported `delegate_depth` that differs from the asserted depth, denies
-  `mission_binding_failed` with no fallback. A client join counts as depth
-  0, the depth the PEP's actor records give the Mission's own client.
+  `mission_binding_failed` with no fallback. By the owner's ruling, a
+  client join counts as `delegate_depth` 0, the depth the PEP's actor
+  records give the Mission's own client: a reported 0 agrees, and any other
+  value denies.
   Whether a joined decision needs an assertion is declared:
   `join_assertion.required` for every joined decision, `required_classes`
   per action class. A joined decision carrying none where neither applies
@@ -413,9 +423,16 @@ Decision Evidence:
 - `the Join Assertion path is declared, and runs only where it can (#1454) > …`, `the separated MAS pilot refuses a declared Join Assertion path it cannot run (#1454) > …`, and the launcher's (walkthrough §7).
 
 Unit witnesses: `services/pdp/test/evaluate-join-assertion.test.ts`
-(every check, an algorithm the PDP's list does not name, and the
-requirement) and `services/mcp-payments/test/mas-join-assertion-pep.test.ts`
-(the carriage).
+(every check, the `token` claim's one confirmation member, an algorithm the
+PDP's list does not name, and the requirement),
+`services/mcp-payments/test/mas-join-assertion-pep.test.ts` (the carriage),
+and `demo/test/mas-pilot-join-deployment.test.ts` (the MAS's
+introspection-first establishment against a stub estate: a JWT the estate
+introspects, `unsupported_token_type` and local validation, an inactive
+JWT refused though it validates locally, an unanswered estate
+`unavailable` with no fallback, and an opaque token by introspection
+only). The positive separated witness also shows that the live estate
+answers `unsupported_token_type` for its JWTs.
 
 Gaps:
 
@@ -427,7 +444,7 @@ Gaps:
 - The MAS's and the PEP's actor records are separate stores; the tests
   write each (the MAS's through its test-harness `actor` message). The
   launcher writes neither, so no delegate joins on the assertion path
-  there.
+  there (follow-up: #1561).
 - The MAS installs the contract once, at its start: after
   `mapping_cache.max_stale_seconds` (300) it mints nothing until it is
   restarted, and a joined decision that requires an assertion denies.
@@ -691,7 +708,7 @@ pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.
   demo/test/mas-pilot-separated.test.ts demo/test/mas-pilot-separated-wiring.test.ts \
   services/pdp/test/evaluate-own-read.test.ts services/mcp-payments/test/view-source.test.ts \
   demo/test/mas-pilot-launcher.test.ts demo/test/mas-pilot-launcher-shutdown.test.ts \
-  demo/test/mas-pilot-join-assertion.test.ts services/pdp/test/evaluate-join-assertion.test.ts \
+  demo/test/mas-pilot-join-assertion.test.ts demo/test/mas-pilot-join-deployment.test.ts services/pdp/test/evaluate-join-assertion.test.ts \
   services/mcp-payments/test/mas-join-assertion-pep.test.ts services/authorization-server/test/join-assertion-endpoint.test.ts
 ```
 

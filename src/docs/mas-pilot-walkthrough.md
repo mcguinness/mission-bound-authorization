@@ -7,7 +7,7 @@ refusal with its evidence record. What the pilot is, and what each of its
 properties rests on, is [mas-pilot-deployment.md](mas-pilot-deployment.md);
 this document covers running it.
 
-Every statement here is true of the reference implementation at `dd38ffdf`
+Every statement here is true of the reference implementation at `65e0fd95`
 (paths relative to `src/`). The launcher tests are
 `demo/test/mas-pilot-launcher.test.ts` (§7); its smoke tests need a live
 OpenFGA and are skipped without one, and its startup refusals always run.
@@ -314,7 +314,8 @@ secret>`, and give the launcher the same variable.
 The MAS installs the mapping contract once, when it starts, under the same
 300 s bound as the gateway's (deployment §3); after that it mints nothing,
 and a read that requires an assertion is denied. The launcher records no
-delegate in either actor-record store, so no delegate joins here; the
+delegate in either actor-record store, so no delegate joins here
+(follow-up: #1561); the
 tests show the delegate path (deployment §8).
 
 ### 3.9 Stop it
@@ -447,7 +448,7 @@ stops and starts". Do not rotate the MAS's keys while the pilot runs.
   wrapper; a SIGKILL of the launcher process does not orphan the MAS
   process (§3.9).
 - The Join Assertion path stops minting once the MAS's mapping contract is
-  stale, and joins no delegate (§3.8).
+  stale, and joins no delegate (§3.8; follow-up: #1561).
 
 ## 7. Witnesses
 
