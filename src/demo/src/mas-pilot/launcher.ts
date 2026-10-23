@@ -32,10 +32,11 @@ import { dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { kernelStoreFromEnv, type SigningKeySource, signingKeysFromEnv } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
+import type { JWK } from "jose";
 import type { ResourcePolicyStore } from "../resource-policy-store.js";
 import { composeMasPilot, type MasPilotParts, requireDeclaredMappingContract } from "./compose.js";
 import { loadMasPilotConfig, type MasPilotConfig, relocateMissionIssuer } from "./config.js";
-import { buildPilotMas, masIssuer } from "./mas-as.js";
+import { buildPilotMas, masIssuer, newStatusClientKey } from "./mas-as.js";
 import { masConsoleRoutes, type OperatorConsole, pilotConsoleRoutes, startOperatorConsole } from "./operator-console.js";
 import { composeSeparatedMasPilot } from "./separated.js";
 import { StartupCancelled, StartupScope } from "./startup.js";
@@ -53,8 +54,12 @@ export interface MasPilotLaunchOptions {
   /** The MAS's signing keys and kernel file, where this launcher runs the MAS. */
   signingKeys?: SigningKeySource;
   kernelStore?: { file: string };
-  /** Separated only: an already running MAS and the PDP credential it registered, instead of starting one. */
-  mas?: { url: string; pdpToken: string };
+  /**
+   * Separated only: an already running MAS, and the private key (a JWK with
+   * its `kid`) the PDP authenticates with there as `separated_mas.pdp_client_id`,
+   * whose public half that MAS registered, instead of starting one.
+   */
+  mas?: { url: string; pdpKey: JWK };
   /** The MAS process's key environment (`MISSION_KEY_RING`, `MISSION_EPHEMERAL_KEYS`, `MISSION_KERNEL_STORE`). */
   masKeyEnv?: Record<string, string>;
 }
@@ -106,12 +111,23 @@ export function masPilotLaunchOptions(env: Readonly<Record<string, string | unde
   }
 
   const masUrl = env.MAS_PILOT_MAS_URL;
-  const pdpToken = env.MAS_PILOT_PDP_TOKEN;
-  if (topology === "in-process" && (masUrl !== undefined || pdpToken !== undefined)) {
-    throw new Error("MAS_PILOT_MAS_URL and MAS_PILOT_PDP_TOKEN apply to the separated topology only; in process, the launcher runs the MAS");
+  const pdpKeyRaw = env.MAS_PILOT_PDP_KEY;
+  if (topology === "in-process" && (masUrl !== undefined || pdpKeyRaw !== undefined)) {
+    throw new Error("MAS_PILOT_MAS_URL and MAS_PILOT_PDP_KEY apply to the separated topology only; in process, the launcher runs the MAS");
   }
-  if ((masUrl === undefined) !== (pdpToken === undefined)) {
-    throw new Error("set both MAS_PILOT_MAS_URL and MAS_PILOT_PDP_TOKEN to use a running MAS, or neither to start one");
+  if ((masUrl === undefined) !== (pdpKeyRaw === undefined)) {
+    throw new Error("set both MAS_PILOT_MAS_URL and MAS_PILOT_PDP_KEY to use a running MAS, or neither to start one");
+  }
+  let pdpKey: JWK | undefined;
+  if (pdpKeyRaw !== undefined) {
+    try {
+      pdpKey = JSON.parse(pdpKeyRaw) as JWK;
+    } catch {
+      pdpKey = undefined;
+    }
+    if (pdpKey === null || typeof pdpKey !== "object" || typeof pdpKey.kid !== "string" || typeof pdpKey.d !== "string") {
+      throw new Error("MAS_PILOT_PDP_KEY is not a private JWK with a kid");
+    }
   }
   const base: MasPilotLaunchOptions = {
     topology,
@@ -120,7 +136,7 @@ export function masPilotLaunchOptions(env: Readonly<Record<string, string | unde
     openfga: { apiUrl, presharedKey: env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey, ...(ca ? { caCertPath: ca } : {}) },
     resourcePolicyStore,
   };
-  if (masUrl !== undefined && pdpToken !== undefined) return { ...base, mas: { url: masUrl, pdpToken } };
+  if (masUrl !== undefined && pdpKey !== undefined) return { ...base, mas: { url: masUrl, pdpKey } };
   // The launcher runs the MAS: it says where its keys come from (#831), and
   // where its kernel lives, if anywhere (#250).
   const signingKeys = signingKeysFromEnv(env);
@@ -293,17 +309,20 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
       );
     } else {
       let masUrl = issuer;
-      let pdpToken: string;
+      let pdpKey: JWK;
       if (options.mas) {
         masUrl = options.mas.url;
-        pdpToken = options.mas.pdpToken;
+        pdpKey = options.mas.pdpKey;
       } else {
-        pdpToken = crypto.randomUUID();
+        // @spec status#mission-status-authentication (#1407): the PDP's key is
+        // generated here, where the PDP runs; the MAS gets the public half.
+        const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id);
+        pdpKey = pdp.privateJwk;
         const env: NodeJS.ProcessEnv = { ...process.env };
         for (const name of ["NODE_OPTIONS", ...KEY_ENV, "MAS_PILOT_CONFIG"]) delete env[name];
         Object.assign(env, options.masKeyEnv ?? {}, {
           ...(options.configPath ? { MAS_PILOT_CONFIG: options.configPath } : {}),
-          MAS_PILOT_PDP_TOKEN: pdpToken,
+          MAS_PILOT_STATUS_CLIENTS: JSON.stringify([pdp.registration]),
           MAS_PILOT_OPERATOR_TOKEN: token,
           MAS_PILOT_OPERATOR_CONSOLE_PORT: "0",
         });
@@ -317,7 +336,7 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
         progress(`the MAS process ${child.pid} is ready at ${issuer}${masConsole ? `, its operator console at ${masConsole}` : ""}`);
       }
       await scope.step(requireMasIssuer(masUrl, config.mission_issuer, scope));
-      pilot = await scope.step(composeSeparatedMasPilot({ ...common, mas: { url: masUrl, pdpToken } }));
+      pilot = await scope.step(composeSeparatedMasPilot({ ...common, mas: { url: masUrl, pdpKey } }));
       pilotConsole = await scope.acquire(startOperatorConsole([pilotConsoleRoutes(pilot)], { port: 0, token }), (c) => c.close());
     }
     const consoles = { ...(masConsole ? { mas: masConsole } : {}), pilot: pilotConsole.url, token };

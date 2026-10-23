@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { loadMasPilotConfig } from "../src/mas-pilot/config.js";
 import { launchMasPilot, masPilotLaunchOptions, stopChild } from "../src/mas-pilot/launcher.js";
+import { newStatusClientKey } from "../src/mas-pilot/mas-as.js";
 import { StartupCancelled, StartupScope } from "../src/mas-pilot/startup.js";
 import { relocateEstate } from "./mas-pilot-support.js";
 
@@ -84,7 +85,7 @@ async function refusingStore(): Promise<{ url: string; close: () => Promise<void
 
 function launcherEnv(config: string, storeUrl: string): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env, NODE_OPTIONS: "" };
-  for (const name of ["OPENFGA_CA_CERT", "OPENFGA_STORE_ID", "OPENFGA_MODEL_ID", "MAS_PILOT_MAS_URL", "MAS_PILOT_PDP_TOKEN", "MISSION_KEY_RING"]) {
+  for (const name of ["OPENFGA_CA_CERT", "OPENFGA_STORE_ID", "OPENFGA_MODEL_ID", "MAS_PILOT_MAS_URL", "MAS_PILOT_PDP_KEY", "MISSION_KEY_RING"]) {
     delete env[name];
   }
   return {
@@ -290,7 +291,12 @@ describe("the MAS process outlives no launcher (#818 slice 5B review)", () => {
   it("a MAS process started without MAS_PILOT_EXIT_WITH_PARENT ignores the end of its stdin", async () => {
     const env: NodeJS.ProcessEnv = { ...process.env, NODE_OPTIONS: "" };
     delete env.MAS_PILOT_EXIT_WITH_PARENT;
-    Object.assign(env, { MAS_PILOT_CONFIG: configFile(14889, 14888), MISSION_EPHEMERAL_KEYS: "1", MAS_PILOT_PDP_TOKEN: "pdp" });
+    const pdp = await newStatusClientKey("mas-pilot-pdp");
+    Object.assign(env, {
+      MAS_PILOT_CONFIG: configFile(14889, 14888),
+      MISSION_EPHEMERAL_KEYS: "1",
+      MAS_PILOT_STATUS_CLIENTS: JSON.stringify([pdp.registration]),
+    });
     const mas = spawn(process.execPath, ["--import", "tsx", "src/mas-pilot/mas-serve.ts"], { cwd: DEMO, env, stdio: ["pipe", "pipe", "pipe"] });
     try {
       await new Promise<void>((resolve, reject) => {

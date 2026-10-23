@@ -4,10 +4,12 @@
  *
  * The PDP's remote Mission Status resolver (`@mission/pdp`) against the
  * reference authorization server serving Mission Status over HTTP, with no
- * handle on its kernel: the keys and `mission_max_stale_seconds` come from the
- * server's published metadata, the Mission's Subject and client from its Join
- * Disclosure, and state changes from its Lifecycle surface. The test holds the
- * kernel only to approve Missions, as an operator console would.
+ * handle on its kernel: the endpoint, the keys and `mission_max_stale_seconds`
+ * come from the server's published metadata, the Mission's Subject and client
+ * from its Join Disclosure, and state changes from its Lifecycle surface. The
+ * PDP is a private-key-JWT client of the advertised Mission Status endpoint
+ * (#1407). The test holds the kernel only to approve Missions, as an operator
+ * console would.
  */
 
 import { createServer, type Server } from "node:http";
@@ -19,6 +21,8 @@ import {
   type MissionStatusResolution,
   MissionStatusResolver,
   type MissionStatusResolverOptions,
+  privateKeyJwtClient,
+  type StatusClientCredential,
 } from "@mission/pdp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -28,12 +32,20 @@ import {
   type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
+import { type LifecycleTestClient, newLifecycleClient } from "./lifecycle-endpoint.helper.js";
 
 const PORT = 14827;
 const ISSUER = `http://localhost:${PORT}`;
-const PDP_TOKEN = "resolver-as-pdp-token";
-const PDP = "svc:resolver-pdp";
-const READER_TOKEN = "resolver-as-reader-token";
+/** The joining PDP: a Status client enrolled for the payments scope. */
+let pdp: LifecycleTestClient;
+/** A Status client holding the same grant, enrolled for nothing. */
+let reader: LifecycleTestClient;
+/** A client the server has never registered. */
+let stranger: LifecycleTestClient;
+let statusEndpoint: string;
+
+const credential = (client: LifecycleTestClient): StatusClientCredential =>
+  privateKeyJwtClient({ clientId: client.clientId, issuer: ISSUER, privateKey: client.privateKey, kid: client.kid, now: clock });
 
 /** The AS's kernel clock and the resolver's, moved together. */
 let offsetMs = 0;
@@ -54,24 +66,27 @@ const stop = (): Promise<void> => {
 };
 
 beforeAll(async () => {
+  pdp = await newLifecycleClient("resolver-as-pdp");
+  reader = await newLifecycleClient("resolver-as-reader");
+  stranger = await newLifecycleClient("resolver-as-stranger");
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     now: clock,
-    serviceTokenPrincipals: {
-      [PDP_TOKEN]: { principal_id: PDP, scopes: [MISSION_STATUS_SCOPE] },
-      [READER_TOKEN]: { principal_id: "svc:resolver-reader", scopes: [MISSION_STATUS_SCOPE] },
-    },
-    enrolledJoinPdps: { [PDP]: [CANONICAL_RESOURCE] },
+    testClients: [pdp.metadata, reader.metadata],
+    lifecycleClientGrants: { [pdp.clientId]: [MISSION_STATUS_SCOPE], [reader.clientId]: [MISSION_STATUS_SCOPE] },
+    enrolledJoinPdps: { [pdp.clientId]: [CANONICAL_RESOURCE] },
   });
   await listen();
   // What the PDP is configured from is what the server publishes.
   const metadata = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as {
     jwks_uri: string;
     mission_max_stale_seconds: number;
+    mission_status_endpoint: string;
   };
   published = (await (await fetch(metadata.jwks_uri)).json()) as { keys: Record<string, unknown>[] };
   maxStaleSeconds = metadata.mission_max_stale_seconds;
+  statusEndpoint = metadata.mission_status_endpoint;
 });
 
 afterAll(async () => {
@@ -85,10 +100,10 @@ beforeEach(() => {
 function resolver(extra: Partial<MissionStatusResolverOptions> = {}): MissionStatusResolver {
   return new MissionStatusResolver({
     issuer: ISSUER,
-    statusUrl: (id) => `${ISSUER}/missions/${id}/status`,
+    statusEndpoint,
     audience: CANONICAL_RESOURCE,
     keys: declaredStatusKeys(published as never, [TOPOLOGY.keys.asStatus.kid]),
-    serviceToken: PDP_TOKEN,
+    client: credential(pdp),
     maxStaleSeconds,
     timeoutMs: 2000,
     maxResponseBytes: 64 * 1024,
@@ -166,10 +181,52 @@ describe("the remote resolver against the reference authorization server (@spec 
 
   it("reads no subject and no client_id with the credential of a PDP the server has not enrolled", async () => {
     const record = approve("not-enrolled");
-    const { view } = resolved(await resolver({ serviceToken: READER_TOKEN }).resolve({ id: record.id, issuer: ISSUER }));
+    const { view } = resolved(await resolver({ client: credential(reader) }).resolve({ id: record.id, issuer: ISSUER }));
     expect(view.state).toBe("active");
     expect("subject" in view).toBe(false);
     expect("client_id" in view).toBe(false);
+  });
+
+  it("is refused unauthorized when the server does not know its client", async () => {
+    const record = approve("stranger");
+    expect(await resolver({ client: credential(stranger) }).resolve({ id: record.id, issuer: ISSUER })).toMatchObject({
+      ok: false,
+      reason: "unauthorized",
+      detail: "invalid_client",
+    });
+  });
+
+  it("refuses an answer the server signed for another client, as a relay that swaps in its own credential obtains (consumer check 6)", async () => {
+    const record = approve("relay");
+    // A relay in front of the server that presents its own client's
+    // assertion in place of the PDP's: the server answers the relay's client.
+    const relay: Server = createServer((req, res) => {
+      const chunks: Buffer[] = [];
+      req.on("data", (c: Buffer) => chunks.push(c));
+      req.on("end", async () => {
+        const form = new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
+        form.set("client_assertion", await credential(reader).assertion());
+        const upstream = await fetch(statusEndpoint, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: form.toString(),
+        });
+        res.writeHead(upstream.status, { "content-type": upstream.headers.get("content-type") ?? "text/plain" });
+        res.end(Buffer.from(await upstream.arrayBuffer()));
+      });
+    });
+    await new Promise<void>((resolve) => relay.listen(0, "127.0.0.1", resolve));
+    try {
+      const via = `http://127.0.0.1:${(relay.address() as AddressInfo).port}/mission/status`;
+      expect(await resolver({ statusEndpoint: via }).resolve({ id: record.id, issuer: ISSUER })).toMatchObject({
+        ok: false,
+        reason: "unverifiable",
+        detail: "sub",
+      });
+    } finally {
+      relay.closeAllConnections();
+      await new Promise<void>((resolve) => relay.close(() => resolve()));
+    }
   });
 
   it("observes a revocation at once on a fresh read, and on a cached read once the signed bound passes", async () => {
@@ -223,25 +280,33 @@ describe("the remote resolver against the reference authorization server (@spec 
     const record = approve("slow");
     // A forwarding proxy in front of the server that holds each request.
     const proxy: Server = createServer((req, res) => {
-      setTimeout(async () => {
-        try {
-          const upstream = await fetch(`${ISSUER}${req.url}`, { headers: { "x-service-token": String(req.headers["x-service-token"]) } });
-          res.writeHead(upstream.status, { "content-type": upstream.headers.get("content-type") ?? "text/plain" });
-          res.end(Buffer.from(await upstream.arrayBuffer()));
-        } catch {
-          res.destroy();
-        }
-      }, 1500);
+      const chunks: Buffer[] = [];
+      req.on("data", (c: Buffer) => chunks.push(c));
+      req.on("end", () => {
+        setTimeout(async () => {
+          try {
+            const upstream = await fetch(`${ISSUER}${req.url}`, {
+              method: "POST",
+              headers: { "content-type": String(req.headers["content-type"]) },
+              body: Buffer.concat(chunks),
+            });
+            res.writeHead(upstream.status, { "content-type": upstream.headers.get("content-type") ?? "text/plain" });
+            res.end(Buffer.from(await upstream.arrayBuffer()));
+          } catch {
+            res.destroy();
+          }
+        }, 1500);
+      });
     });
     await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
     const via = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`;
     try {
-      const r = resolver({ statusUrl: (id) => `${via}/missions/${id}/status`, timeoutMs: 300 });
+      const r = resolver({ statusEndpoint: `${via}/mission/status`, timeoutMs: 300 });
       const started = Date.now();
       expect(await r.resolve({ id: record.id, issuer: ISSUER })).toMatchObject({ ok: false, reason: "unavailable", detail: "timeout" });
       expect(Date.now() - started).toBeLessThan(1200);
       // The same proxy, given the time, delivers an answer that verifies.
-      const patient = resolver({ statusUrl: (id) => `${via}/missions/${id}/status`, timeoutMs: 5000 });
+      const patient = resolver({ statusEndpoint: `${via}/mission/status`, timeoutMs: 5000 });
       expect(resolved(await patient.resolve({ id: record.id, issuer: ISSUER })).view.state).toBe("active");
     } finally {
       proxy.closeAllConnections();

@@ -131,6 +131,13 @@ export interface VerifiedMissionStatus {
  * absent, nothing can be verified. Each caller adds the checks its own input
  * needs; this function adds none of theirs.
  *
+ * Checks 6 (`sub` is the requesting client) and 7 (`nonce`) are the
+ * requester's, so they are not here (#1407). The PDP's own read requested its
+ * response and makes both (`mission-status-resolver.ts`). A PEP-carried
+ * `assertion` was requested by the PEP, which makes them when it obtains it;
+ * the PDP did not request it and cannot check its nonce, so it does not check
+ * its `sub` either, and relies on what binds the snapshot to its decision.
+ *
  * `clockToleranceSeconds` is check 9's receipt-time allowance on `exp`: it
  * decides whether the response is accepted, never how long it is relied on.
  * The returned reliance bound carries no allowance.

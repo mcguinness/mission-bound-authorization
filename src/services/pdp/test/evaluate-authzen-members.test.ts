@@ -209,10 +209,12 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
       mission?: Record<string, unknown>;
       /** Sign with no `iat`, or no `exp`, claim at all. */
       omit?: "iat" | "exp";
+      /** The envelope `sub`: the caller the response was signed for; `null` for none. */
+      sub?: string | null;
     };
     const signStatus = (s: Signing) => {
       const jwt = new SignJWT({
-        sub: "ap-agent",
+        ...(s.sub === null ? {} : { sub: s.sub ?? "pep-status-client" }),
         mission: {
           id: "msn_1004",
           issuer: "https://as.test",
@@ -248,6 +250,24 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
         options({ stateSourcePlacement: "pep" as const, stateAssertionKeys: keys }),
       );
       expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
+    });
+
+    // @spec status#mission-status-response check 6 (#1407): the envelope
+    // `sub` names the client that requested the response, here the PEP.
+    // Checks 6 and 7 are the requester's: the PEP makes them when it obtains
+    // the response, and the PDP, which did not request it, cannot check the
+    // nonce either. The PDP relies on what binds the snapshot to its decision:
+    // the declared source's signature, the issuer, the enforcement scope as
+    // `aud`, the Mission, `state`, `version` and the signed times.
+    it("an assertion verifies whichever caller its envelope sub names, or none: sub binds the response to the PEP that requested it, not to the PDP", async () => {
+      const { privateKey, keys } = await statusKeys();
+      for (const sub of ["another-pep", "ap-agent", null] as const) {
+        const dec = await evaluate(
+          observedRequest({ actionClass: "irreversible_action", observation: withAssertion(await signStatus({ privateKey, sub })) }),
+          options({ stateSourcePlacement: "pep" as const, stateAssertionKeys: keys }),
+        );
+        expect(dec.decision, `${String(sub)}: ${JSON.stringify(dec.context)}`).toBe(true);
+      }
     });
 
     it("an assertion the PDP cannot verify, or one that does not match the observation, denies stale_state", async () => {

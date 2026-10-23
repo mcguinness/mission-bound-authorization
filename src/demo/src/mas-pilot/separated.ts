@@ -5,14 +5,16 @@
  * The separated MAS pilot: the same estate, gateway, mapping contract,
  * Resource policy, PEP and decision point as `composeMasPilot`, with no
  * Mission kernel at all. The MAS runs elsewhere (its own process,
- * `mas-process.ts`), and the pilot knows it only by its URL and the
- * credential its PDP presents.
+ * `mas-process.ts`), and the pilot knows it only by its URL and the key its
+ * PDP authenticates with.
  *
  * - The PDP resolves each referenced Mission through the MAS's signed
  *   Mission Status (`MissionStatusResolver`), configured from what the MAS
- *   publishes: its metadata (`issuer`, `jwks_uri`,
- *   `mission_max_stale_seconds`) and its status-response key. The state
- *   source is placed with the PDP (`separated_mas.state_source.placement`).
+ *   publishes: its metadata (`issuer`, `jwks_uri`, `mission_status_endpoint`,
+ *   `mission_max_stale_seconds`) and its status-response key. It is the
+ *   client `separated_mas.pdp_client_id` at that endpoint, authenticating by
+ *   private-key JWT (#1407). The state source is placed with the PDP
+ *   (`separated_mas.state_source.placement`).
  * - Each decision reads within its action class's staleness window
  *   (`maxAgeSeconds`); a commit-phase decision reads the source now
  *   (`fresh: true`). The observation point is the response's signed `iat`,
@@ -34,17 +36,22 @@
 
 import { TOPOLOGY } from "@mission/demo-data";
 import { CANONICAL_RESOURCE, type LoadedView, type MissionReference, type MissionViewSource } from "@mission/mcp-payments";
-import { declaredStatusKeys, type MissionView, MissionStatusResolver, type ResolvedMission } from "@mission/pdp";
+import { declaredStatusKeys, type MissionView, MissionStatusResolver, privateKeyJwtClient, type ResolvedMission } from "@mission/pdp";
+import { importJWK, type JWK } from "jose";
 import { assembleMasPilot, type MasPilotOptions, type MasPilotParts, type PdpDecide, requireDeclaredMappingContract } from "./compose.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "./config.js";
 
 export interface SeparatedMasPilotOptions extends MasPilotOptions {
-  /** Where the MAS serves, and the credential this PDP presents to its Mission Status. */
-  mas: { url: string; pdpToken: string };
+  /**
+   * Where the MAS serves, and the private key (a JWK with its `kid`) this PDP
+   * authenticates with at its Mission Status endpoint, as the client
+   * `separated_mas.pdp_client_id`; the MAS holds the public half.
+   */
+  mas: { url: string; pdpKey: JWK };
   /** The resolver's clock. Defaults to `now`. */
   resolverNow?: () => Date;
-  /** Override the Status URL (a test points it at a proxy or a double). */
-  statusUrl?: (encodedMissionId: string) => string;
+  /** Override the advertised Status endpoint (a test points it at a proxy or a double). */
+  statusEndpoint?: string;
 }
 
 /** The separated pilot: everything `composeMasPilot` assembles, and no kernel. */
@@ -133,18 +140,34 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     issuer: string;
     jwks_uri: string;
     mission_max_stale_seconds: number;
+    mission_status_endpoint?: unknown;
   };
   if (metadata.issuer !== config.mission_issuer) {
     throw new Error(`the MAS at ${base} is issuer ${metadata.issuer}, not the configured Mission issuer ${config.mission_issuer}`);
   }
+  // @spec status#mission-status, status#as-metadata (#1407): the endpoint the
+  // MAS advertises, never a path guessed from its URL.
+  if (typeof metadata.mission_status_endpoint !== "string") {
+    throw new Error(`the MAS at ${base} advertises no mission_status_endpoint`);
+  }
+  const pdpKey = opts.mas.pdpKey;
+  if (typeof pdpKey.kid !== "string" || pdpKey.d === undefined) throw new Error("the PDP's key is not a private JWK with a kid");
+  const client = privateKeyJwtClient({
+    clientId: config.separated_mas.pdp_client_id,
+    issuer: metadata.issuer,
+    privateKey: (await importJWK(pdpKey, pdpKey.alg ?? "ES256")) as CryptoKey,
+    kid: pdpKey.kid,
+    ...(pdpKey.alg ? { alg: pdpKey.alg } : {}),
+    ...((opts.resolverNow ?? opts.now) ? { now: (opts.resolverNow ?? opts.now) as () => Date } : {}),
+  });
   const jwks = (await read(metadata.jwks_uri)) as { keys: Record<string, unknown>[] };
   const resolverNow = opts.resolverNow ?? opts.now;
   const resolver = new MissionStatusResolver({
     issuer: metadata.issuer,
-    statusUrl: opts.statusUrl ?? ((id) => `${base}/missions/${id}/status`),
+    statusEndpoint: opts.statusEndpoint ?? metadata.mission_status_endpoint,
     audience: CANONICAL_RESOURCE,
     keys: declaredStatusKeys(jwks as never, [TOPOLOGY.keys.asStatus.kid]),
-    serviceToken: opts.mas.pdpToken,
+    client,
     maxStaleSeconds: metadata.mission_max_stale_seconds,
     timeoutMs: source.timeout_ms,
     maxResponseBytes: source.max_response_bytes,

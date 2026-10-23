@@ -467,6 +467,8 @@ import {
   LIFECYCLE_ENDPOINT_PATH,
   parseTransitionMembers,
   readLifecycleForm,
+  STATUS_ENDPOINT_AUTH_METHODS,
+  STATUS_ENDPOINT_PATH,
   wellFormedNonce,
 } from "./lifecycle-endpoint.js";
 import { DISPATCH_HANDOFF_TYP, handleDispatchHandoffRedemption } from "./dispatch-handoff.js";
@@ -692,8 +694,10 @@ export interface AdapterOptions {
   /**
    * @spec authority-server#join-disclosure (#818): the PDPs enrolled for each
    * enforcement scope, the deployment configuration the MAS holds, keyed by
-   * the service principal's `principal_id`, each naming the enforcement
-   * scopes (the Status request's `audience`) it is enrolled for. A Status
+   * the authenticated caller's identifier (the Status response's `sub`): a
+   * client's `client_id` at the Mission Status endpoint (#1407), or a service
+   * principal's `principal_id` at the development route, each naming the
+   * enforcement scopes (the Status request's `audience`) it is enrolled for. A Status
    * response to an enrolled principal for one of its scopes discloses the
    * Mission's `subject` and `client_id`; every other response omits both.
    * Absent (the default), no caller is enrolled.
@@ -704,7 +708,9 @@ export interface AdapterOptions {
    * to a client that authenticates to the Mission Lifecycle endpoint by
    * private-key JWT, keyed by `client_id`: `mission_lifecycle` for `revoke`,
    * `suspend`, `resume` and `complete`, `mission_discharge` for `discharge`,
-   * and `mission_status` deciding a forwarded discharge's response. Absent (the
+   * and `mission_status` deciding a forwarded discharge's response and
+   * authorizing a read at the Mission Status endpoint, which authenticates
+   * its clients the same way (#1407). Absent (the
    * default), no client holds any, and every authenticated client is refused
    * as an unknown Mission. A client's entry may instead carry its grants with
    * the deployment's policy for them ({@link LifecycleClientPolicy}): the
@@ -3896,6 +3902,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...optional("audience", statusAudience),
           ...optional("nonce", statusNonce),
           requester: principal.principal_id,
+          // @spec status#mission-status-response check 6 (#1407): `sub` is the caller.
+          caller: principal.principal_id,
           // @spec authority-server#join-disclosure (#818): set only for an
           // enrolled PDP's own enforcement scope; every other request leaves
           // the option out, so its response is unchanged.
@@ -3916,6 +3924,92 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           error_description: "Mission reference is not found or not visible.",
           ...(statusNonce ? { nonce: statusNonce } : {}),
         };
+      }
+      return;
+    }
+
+    // --- Mission Status endpoint (@spec status#mission-status-request,
+    // status#mission-status-authentication) (#1407) ---
+    // The advertised `mission_status_endpoint`: a form body carrying
+    // `mission_id`, `audience` and `nonce`, the caller authenticated by
+    // private-key JWT as at the Lifecycle endpoint and authorized by the
+    // `mission_status` grant the deployment binds to that client. The
+    // `GET /missions/{id}/status` route above is a development convenience
+    // over the service-token stand-in, not advertised.
+    if (ctx.path === STATUS_ENDPOINT_PATH && ctx.method === "POST" && enabled("status")) {
+      const refuse = (status: number, error: string, description: string, nonce: string | undefined) => {
+        ctx.status = status;
+        ctx.set("cache-control", "no-store");
+        ctx.body = { error, error_description: description, ...(nonce ? { nonce } : {}) };
+      };
+      const form = await readLifecycleForm(ctx.req, ctx.get("content-type") ?? "");
+      if (!form.ok) {
+        refuse(400, "invalid_request", form.description, form.nonce);
+        return;
+      }
+      const echo = wellFormedNonce(form.params.nonce);
+      // @spec status#mission-status-auth-failures: a failed private-key-JWT
+      // authentication, or no credential (this endpoint accepts no
+      // access-token scheme), is HTTP 400 `invalid_client` with no challenge,
+      // decided before any Mission is read.
+      const auth = await authenticateLifecycleClient(
+        {
+          issuer: opts.issuer,
+          clients: opts.clients,
+          replay: opts.dpopProofReplay as DpopProofReplay,
+          now: () => kernel.nowDate(),
+        },
+        form.params,
+        ctx.get("authorization") ?? "",
+      );
+      if (!auth.ok) {
+        if (auth.retryAfterS !== undefined) {
+          ctx.set("Retry-After", String(auth.retryAfterS));
+          refuse(503, "unavailable", auth.description, echo);
+        } else {
+          refuse(400, "invalid_client", auth.description, echo);
+        }
+        return;
+      }
+      // @spec status#mission-status-request, status#mission-status-errors: the
+      // members: `nonce` REQUIRED and well formed (a malformed one is refused
+      // and never echoed), `mission_id` REQUIRED, `audience` non-empty when sent.
+      if (echo === undefined) {
+        refuse(400, "invalid_request", "nonce is required: a string of 1 to 255 characters", undefined);
+        return;
+      }
+      const missionId = form.params.mission_id;
+      if (!missionId) {
+        refuse(400, "invalid_request", "mission_id is required", echo);
+        return;
+      }
+      const audience = form.params.audience;
+      if (audience === "") {
+        refuse(400, "invalid_request", "audience, when sent, names an audience", echo);
+        return;
+      }
+      const principal: ServiceTokenPrincipal = {
+        principal_id: auth.clientId,
+        scopes: [...lifecycleGrantList(lifecycleClientGrants[auth.clientId])],
+      };
+      try {
+        // A client without the read grant gets the same not-found body as an
+        // unknown reference (@spec status#mission-status-anti-oracle).
+        if (!mayReadStatus(principal)) throw new Error("status read not authorized");
+        const jws = await kernel.signedStatus(missionId, {
+          ...optional("audience", audience),
+          nonce: echo,
+          requester: principal.principal_id,
+          // @spec status#mission-status-response check 6: `sub` is the client.
+          caller: principal.principal_id,
+          ...(joinDisclosureFor(principal, audience) ? { joinDisclosure: true } : {}),
+        });
+        ctx.status = 200;
+        ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
+        ctx.set("cache-control", "no-store");
+        ctx.body = jws;
+      } catch {
+        refuse(404, "not_found", "Mission reference is not found or not visible.", echo);
       }
       return;
     }
@@ -5352,6 +5446,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec status#as-metadata, status#mission-lifecycle-endpoint: the
       // Lifecycle endpoint, the methods it accepts and, for private_key_jwt,
       // the client-assertion algorithms, wherever it is served.
+      // @spec status#as-metadata, status#mission-status (#1407): the Mission
+      // Status endpoint, the methods it accepts and, for private_key_jwt, the
+      // client-assertion algorithms, wherever the Status operation is served.
+      if (enabled("status")) {
+        meta.mission_status_endpoint = `${opts.issuer}${STATUS_ENDPOINT_PATH}`;
+        meta.mission_status_endpoint_auth_methods_supported = [...STATUS_ENDPOINT_AUTH_METHODS];
+        meta.mission_status_endpoint_auth_signing_alg_values_supported = [...LIFECYCLE_CLIENT_ASSERTION_ALGS];
+      }
       if (lifecycleServed) {
         meta.mission_lifecycle_endpoint = `${opts.issuer}${LIFECYCLE_ENDPOINT_PATH}`;
         meta.mission_lifecycle_endpoint_auth_methods_supported = [...LIFECYCLE_ENDPOINT_AUTH_METHODS];
