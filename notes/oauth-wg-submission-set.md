@@ -51,6 +51,23 @@ state. Computed at main commit `c41a39844fc1bedf04470f6c88ed5d9c06bd7fb1`
 A later change to either file does not retroactively change this record;
 it would need a fresh binding.
 
+**The binding above is out of date (noted 2026-10-22).** Since the
+bound commit, the OAuth binding's `normative:` block has gained three
+external Internet-Drafts:
+- `draft-mcguinness-oauth-client-instance-id`, by `45221526` (#851,
+  D159, 2026-09-28);
+- `draft-ietf-oauth-rar-metadata-remediation`, by `2e7c08608` (#1503
+  finding 9, D620);
+- `draft-mcguinness-oauth-actor-profile`, by `e6f6c911a` (D625).
+
+All three reached `-01` (D644). `DEPENDENCIES.md` lists
+rar-metadata-remediation among the external normative references; it
+skips `draft-mcguinness-*` references by prefix. The closure property
+below, "None is a work-in-progress external Internet-Draft", holds at
+the bound commit but not for the current drafts. Use this record for a
+working-group conversation only after a fresh binding recomputes the
+closure.
+
 ## Normative dependency closure
 
 Extracted from each draft's front matter `normative:` block at the bound
