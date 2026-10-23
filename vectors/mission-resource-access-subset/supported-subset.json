@@ -1,0 +1,112 @@
+{
+  "format": "mission-resource-access-subset/1",
+  "id": "payments-exact-explicit/2026-10-20",
+  "description": "The initial interoperable implementation subset of Mission Resource Access, frozen against the payments resource contract version 2026-10-20: exact resource matching, explicit actions and the nine initial Common Constraints. An implementation profile for independent consumers, not a requirement on every conforming implementation and not a conformance claim by the reference implementation.",
+  "spec": "draft-mcguinness-oauth-mission-resource-access",
+  "refs": [
+    "#249",
+    "#819",
+    "D414",
+    "D553",
+    "D676"
+  ],
+  "type": "mission_resource_access",
+  "contract": {
+    "file": "payments-contract-2026-10-20.json",
+    "reference": {
+      "id": "https://payments.example/contracts/payments",
+      "version": "2026-10-20",
+      "digest": "sha-256:JOUSo-Axu_CQ7BktLeK9cp4dVJOtCKLLcAG4IKPW2bQ"
+    }
+  },
+  "resource_match": [
+    "exact"
+  ],
+  "actions": [
+    "payments:invoice.list",
+    "payments:invoice.read",
+    "payments:payment.execute",
+    "payments:payment.schedule",
+    "payments:payment.schedule.cancel",
+    "payments:remittance.send",
+    "payments:vendor.read"
+  ],
+  "members": [
+    "type",
+    "resource",
+    "resource_match",
+    "actions",
+    "constraints",
+    "resource_contract"
+  ],
+  "constraints": {
+    "max_amount": {
+      "registered_by": "draft-mcguinness-oauth-mission-resource-access"
+    },
+    "resource_issued_after": {
+      "registered_by": "draft-mcguinness-oauth-mission-resource-access"
+    },
+    "resource_issued_before": {
+      "registered_by": "draft-mcguinness-oauth-mission-resource-access"
+    },
+    "tenant": {
+      "registered_by": "draft-mcguinness-oauth-mission-resource-access"
+    },
+    "recipient_domain": {
+      "registered_by": "draft-mcguinness-oauth-mission-resource-access"
+    },
+    "time_window": {
+      "registered_by": "draft-mcguinness-oauth-mission-resource-access"
+    },
+    "data_classification": {
+      "registered_by": "draft-mcguinness-oauth-mission-resource-access"
+    },
+    "allowed_tools": {
+      "registered_by": "draft-mcguinness-oauth-mission-resource-access"
+    },
+    "requires_action_approval": {
+      "registered_by": "draft-mcguinness-oauth-mission-resource-access"
+    }
+  },
+  "outside_subset": {
+    "resource_match": [
+      "prefix"
+    ],
+    "action_families": "An action value ending in .* is outside the subset. D538 routes it to refusal before approval or transformation; the reference implementation admits it today and compares it literally, never expanding it (#1377).",
+    "members": [
+      "delegation",
+      "capability_sources"
+    ],
+    "constraints": {
+      "terminal_when": {
+        "registered_by": "draft-mcguinness-oauth-mission-discharge",
+        "reason": "Discharge semantics, read from the Mission Issuer's discharge state, not Resource Access semantics"
+      },
+      "vendors": {
+        "registered_by": null,
+        "reason": "deployment-defined for the payments resource, with no registered semantics"
+      }
+    }
+  },
+  "capabilities": [
+    "operation-target",
+    "resource-match.exact",
+    "subset.exact-resource",
+    "constraint.max_amount",
+    "constraint.resource_issued_after",
+    "constraint.resource_issued_before",
+    "constraint.tenant",
+    "constraint.recipient_domain",
+    "constraint.time_window",
+    "constraint.data_classification",
+    "constraint.allowed_tools",
+    "constraint.requires_action_approval",
+    "member.resource_contract",
+    "refusal.unsupported-input",
+    "refusal.locations"
+  ],
+  "excluded_capabilities": [
+    "resource-match.prefix",
+    "action-families"
+  ]
+}
