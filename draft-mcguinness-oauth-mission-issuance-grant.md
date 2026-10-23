@@ -423,9 +423,8 @@ TLS, authenticated as {{minting-rules}} requires:
   `issuer` is this MAS.
 
 `audience`:
-: REQUIRED. A string. The consuming AS the grant is for, becoming the
-  grant's `aud`. The MAS mints only for audiences its configuration
-  names ({{trust}}).
+: REQUIRED. A string. The issuer identifier of the consuming AS the
+  grant is for, which becomes the grant's `aud` ({{trust}}).
 
 `authorization_details`:
 : OPTIONAL. An array. A narrower subset the requester asks the grant
