@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-23T22:06:39Z
-Source repository commit: 31fa68a30a2d16ac39c28a9c0a5387dab15f0677
+Generated: 2026-10-23T22:24:17Z
+Source repository commit: ed46d495e4001c7c3d73f03522afef26947aa1d4
 Member count: 7
 
 Reading order:
@@ -9830,11 +9830,11 @@ Table of Contents
 
    It then applies the gating of Section 8.2.
 
-   A Mission MAY carry zero or more grant bindings.  Beyond the
+   A Mission MAY carry zero or more grant bindings.  Beyond any
    authorization-code lineage established at approval, a refresh-token
    family a continuation transport establishes later (above) is a
-   further binding, rooted in the Mission its own subject_token resolved
-   to.
+   further binding, or the Mission's first where it has none, rooted in
+   the Mission its own subject_token resolved to.
 
    The AS MUST resolve a bound grant lineage to the same Mission on
    every derivation performed against it: the mapping is fixed for the
@@ -9876,14 +9876,15 @@ Table of Contents
       The Template profile's Dispatch Handoff
       ([I-D.draft-mcguinness-oauth-mission-template]) returns a handoff
       grant that establishes no grant lineage; its redemption issues a
-      derived token for the instance, creating or extending no grant
-      binding, and the later delegation-family exchange creates the
-      instance's first.  In the continuation profile's Identity
-      Continuation Transport, the IdP's hop record is continuation
-      state, not a grant lineage, and a Resource Authorization Server
-      holds a destination-side grant binding only where it establishes a
-      redeemable grant lineage mapped to the Mission, such as a refresh-
-      token family ([I-D.draft-mcguinness-oauth-mission-continuation]).
+      derived token for the dispatched Mission, creating or extending no
+      grant binding, and the later delegation-family exchange creates
+      that Mission's first grant binding.  In the continuation profile's
+      Identity Continuation Transport, the identity provider's hop
+      record is continuation state, not a grant lineage, and a Resource
+      AS holds a destination-side grant binding only where it
+      establishes a redeemable grant lineage mapped to the Mission, such
+      as a refresh-token family
+      ([I-D.draft-mcguinness-oauth-mission-continuation]).
 
    *  *Cross-domain projection.* A cross-domain projection
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]) establishes no

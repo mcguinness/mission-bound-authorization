@@ -1491,7 +1491,8 @@ Mission rooting anchor; the issued ID-JAG's authorization detail <span class="bc
 subset of that Mission's Authority Set, state-gated, and lifetime-clamped
 per <a href="#authorization-continuity" class="auto internal xref">Section 4</a>; and the ID-JAG <span class="bcp14">MUST</span> be bound
 (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) to the acting identity's key.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
-<p id="section-6.1-2">The root ID-JAG (<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-5.1.1" class="relref">Section 5.1.1</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>)
+<p id="section-6.1-2">The root ID-JAG
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-5.1.1" class="relref">Section 5.1.1</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>)
 and each onward ID-JAG <span class="bcp14">MUST</span> identify the originating Mission by
 carrying its <code>mission</code> claim (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 Section "Mission Claim") with that Mission's <code>id</code> and <code>issuer</code>. A
@@ -1502,10 +1503,12 @@ lineage (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">
 Mission to the Grant"). A Resource Authorization Server's association
 of a continuation handle with the authorization state it establishes is
 not by itself a Mission grant binding; a redeemable grant lineage that
-server establishes and maps to the Mission is one. The base ID-JAG
-profile recommends against a Resource Authorization Server issuing a
-refresh token (<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-6" class="relref">Section 6</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>); a
-refresh-token family one creates by exception is a destination-side
+server establishes and maps to the Mission is one. That draft records
+that the base ID-JAG profile recommends against a Resource
+Authorization Server issuing a refresh token
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-6" class="relref">Section 6</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>); a
+refresh-token family such a server creates by exception is a
+destination-side
 Mission grant binding, under the Mission's authority, state, expiry and
 termination rules (<a href="#authorization-continuity" class="auto internal xref">Section 4</a>).<a href="#section-6.1-3" class="pilcrow">¶</a></p>
 <p id="section-6.1-4">The root exchange can coincide with a cross-domain projection exchange

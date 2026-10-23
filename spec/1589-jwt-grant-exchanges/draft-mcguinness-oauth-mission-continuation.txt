@@ -325,12 +325,12 @@ Table of Contents
    association of a continuation handle with the authorization state it
    establishes is not by itself a Mission grant binding; a redeemable
    grant lineage that server establishes and maps to the Mission is one.
-   The base ID-JAG profile recommends against a Resource Authorization
-   Server issuing a refresh token (Section 6 of
+   That draft records that the base ID-JAG profile recommends against a
+   Resource Authorization Server issuing a refresh token (Section 6 of
    [I-D.draft-mcguinness-oauth-id-continuation-assertion]); a refresh-
-   token family one creates by exception is a destination-side Mission
-   grant binding, under the Mission's authority, state, expiry and
-   termination rules (Section 4).
+   token family such a server creates by exception is a destination-side
+   Mission grant binding, under the Mission's authority, state, expiry
+   and termination rules (Section 4).
 
    The root exchange can coincide with a cross-domain projection
    exchange ([I-D.draft-mcguinness-oauth-mission-cross-domain]) where
