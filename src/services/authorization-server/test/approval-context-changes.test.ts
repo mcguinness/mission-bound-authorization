@@ -191,9 +191,13 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
     const first = await render(flow.uid, headers);
     narrowCeiling();
+    // Compared before any write: the provider grant is never saved for the stale decision.
+    const saves = vi.spyOn(as.provider.Grant.prototype, "save");
     const stale = await decide(flow.uid, headers, approve(first.revision));
     expect(stale.status, JSON.stringify(stale.json)).toBe(409);
     expect(stale.json.error).toBe("approval_context_changed");
+    expect(saves).not.toHaveBeenCalled();
+    saves.mockRestore();
     expect(stale.json.changed).toEqual(expect.arrayContaining(["authority_hash", "derivation_policy"]));
     await expectNothingCreated(flow.uid);
     // The changed revision is retired: it never approves, even resent.
@@ -224,10 +228,13 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
     const first = await render(flow.uid, headers);
     (POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = 3600;
+    const saves = vi.spyOn(as.provider.Grant.prototype, "save");
     const stale = await decide(flow.uid, headers, approve(first.revision));
     expect(stale.status, JSON.stringify(stale.json)).toBe(409);
     // Only the policy input changed: the anchors, the source and every other input agree.
     expect(stale.json.changed).toEqual(["derivation_policy"]);
+    // Compared before any write.
+    expect(saves).not.toHaveBeenCalled();
     await expectNothingCreated(flow.uid);
   });
 
