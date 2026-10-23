@@ -35,7 +35,8 @@ import { type MasProcess, startMasProcess } from "../src/mas-pilot/mas-process.j
 import { composeSeparatedMasPilot, type SeparatedMasPilot } from "../src/mas-pilot/separated.js";
 import { call, type Credential, estateToken, OPENFGA, openfgaReachable, READ_ACTIONS, relocateEstate } from "./mas-pilot-support.js";
 
-const d = (await openfgaReachable()) ? describe : describe.skip;
+const fgaReachable = await openfgaReachable();
+const d = fgaReachable ? describe : describe.skip;
 
 const MAS_PORT = 14905;
 const MAS_URL = `http://127.0.0.1:${MAS_PORT}`;
@@ -95,6 +96,9 @@ const obtained: Array<string | undefined> = [];
 let substitute: ((input: Parameters<JoinAssertionSource["obtain"]>[0], real: JoinAssertionSource) => Promise<string | undefined>) | undefined;
 
 beforeAll(async () => {
+  // The shared separated pilot needs OpenFGA. Without it every `d` block is
+  // skipped and the ungated blocks build their own fixtures, so start nothing.
+  if (!fgaReachable) return;
   const dir = mkdtempSync(join(tmpdir(), "mas-pilot-join-assertion-"));
   dirs.push(dir);
   const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
