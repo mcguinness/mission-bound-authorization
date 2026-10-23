@@ -933,7 +933,8 @@ credential to it before evaluating the action. When no cryptographic
 binding exists, a permit "under this Mission" rests on the join.
 Because the Mission is named per request, the same credential can be
 joined to different Missions across separate requests where its
-subject and client are eligible for more than one.
+subject and client pass the subject and client joins (rules 3 and 4
+of {{join-rules}}) for more than one Mission.
 
 This section defines the baseline mapping join. The Mission Join
 Assertion ({{join-assertion}}) builds on it. The Enterprise profile
@@ -3449,6 +3450,11 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Editorial: Mission Join states that, because the Mission is named
+  per request, one credential can be joined to different Missions
+  across requests; the sentence moved here from the OAuth binding's
+  Grant Bindings and Related Mechanisms. No requirement changes.
 
 - Editorial (#1382): the Mission Substrate Statement's capability
   table is a capability list, one entry per capability, which fits

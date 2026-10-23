@@ -5427,7 +5427,9 @@ cross-domain grant already redeemed at a Resource AS or an offline
 attenuation root already minted. That authority operates for its own
 remaining lifetime, the same residual bound that revocation carries
 ({{revocation}}); the containment profile states the residual and how
-short lifetimes bound it.
+short lifetimes bound it
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The
+Materialized-Capability Residual").
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -7180,7 +7182,9 @@ Cross-Domain:
   them; Grant Bindings and Related Mechanisms, Composition and the
   Effective Ceiling, Authority Materialized Before Containment, and the
   `approval_basis` definition no longer restate what the companions
-  specify.
+  specify; the sentence on joining one credential to different Missions
+  across requests moves to the Mission Authority Server's Mission
+  Join.
 
 -01
 
