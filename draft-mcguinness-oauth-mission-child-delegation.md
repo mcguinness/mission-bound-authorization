@@ -2274,18 +2274,15 @@ possession against the token's own confirmation key, and verifies any
 `parent` cross-check names the resolved Mission
 ({{request-processing}}).
 
-## Possession Proof and the Eliminated Parent-Grant-at-Rest Concern
+## Possession Proof and Parent Credentials at Rest
 
-Earlier revisions of this profile carried the parent grant as a
-`parent_token` refresh token pushed through PAR {{RFC9126}}, so a
-reusable bearer credential sat at rest in the PAR store until the
-pushed request was redeemed or expired. The child-creation token
-exchange eliminates that concern by construction: the possession proof
-is the parent's short-lived, sender-constrained Mission-bound access
-token presented directly at the token endpoint as `subject_token`
-({{child-creation}}), never a reusable refresh credential and never
-held at rest awaiting redemption. A refresh token MUST NOT be accepted
-as `subject_token`.
+The child-creation token exchange holds no reusable parent credential
+at rest. Its possession proof is the parent's short-lived,
+sender-constrained Mission-bound access token presented directly at
+the token endpoint as `subject_token` ({{child-creation}}): never a
+reusable refresh credential, and never held at rest awaiting
+redemption as a refresh token pushed through PAR {{RFC9126}} would be.
+A refresh token MUST NOT be accepted as `subject_token`.
 
 - A captured `subject_token`, without its DPoP key or mTLS certificate,
   cannot carry the possession proof.
@@ -2467,6 +2464,11 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- Security Considerations' "Possession Proof and Parent Credentials
+  at Rest" (formerly "the Eliminated Parent-Grant-at-Rest Concern")
+  states the design without narrating earlier revisions, which
+  carried the parent grant as a `parent_token` refresh token pushed
+  through PAR. No requirement changed.
 - IANA Considerations state the registrations as they stand. Earlier
   revisions requested a `parent_token` parameter and a dedicated
   `urn:ietf:params:oauth:grant-type:mission-child-creation` grant
