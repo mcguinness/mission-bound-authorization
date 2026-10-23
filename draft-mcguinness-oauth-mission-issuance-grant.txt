@@ -959,17 +959,19 @@ Table of Contents
 
 6.3.3.  Transient Source Failure
 
-   A source that is unavailable, fails verification, or reports a state
+   A source that is unavailable or rate-limited (Mission Status's
+   unavailable or rate_limited), fails verification, or reports a state
    version older than one already observed for this Mission is a
    transient failure, never authority exhaustion, and is refused in a
    machine-readable shape: this profile defines a token-endpoint use of
    the OAuth temporarily_unavailable error code [RFC6749]
    (Section 14.4), carried with HTTP status 503.  The response MAY carry
-   Retry-After per the deployment's declared state-recovery policy.  A
-   held response that meets the conditions of Section 6.3.1 still
-   satisfies the check, and the failure then refuses nothing.  For a
-   per-audience resolution, the version already observed is the one the
-   AS retained before the resolution began (Section 6.3.1).  The
+   Retry-After per the deployment's declared state-recovery policy,
+   which also governs any value forwarded from a Mission Status Retry-
+   After.  A held response that meets the conditions of Section 6.3.1
+   still satisfies the check, and the failure then refuses nothing.  For
+   a per-audience resolution, the version already observed is the one
+   the AS retained before the resolution began (Section 6.3.1).  The
    consuming AS leaves the family ceiling unchanged.  On the refresh
    path a transient source failure MUST NOT consume or rotate the
    presented refresh token, so the client retries with the credential it
@@ -1631,6 +1633,10 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Transient Source Failure names Mission Status's rate_limited as
+      transient, beside unavailable; a forwarded Retry-After stays under
+      the deployment's state-recovery policy (#1582, D702).
 
    *  Normative follow-ups to the tightening pass (D685).  The grant
       admits any supported authorization-details type under that type's
