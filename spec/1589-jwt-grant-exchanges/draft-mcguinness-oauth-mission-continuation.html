@@ -1495,9 +1495,13 @@ per <a href="#authorization-continuity" class="auto internal xref">Section 4</a>
 (<span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-id-continuation-assertion-02#section-5.1.1" class="relref">Section 5.1.1</a> of [<a href="#I-D.draft-mcguinness-oauth-id-continuation-assertion" class="cite xref">I-D.draft-mcguinness-oauth-id-continuation-assertion</a>]</span>)
 and each onward ID-JAG <span class="bcp14">MUST</span> identify the originating Mission by
 carrying its <code>mission</code> claim (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
-Section "Mission Claim") with that Mission's <code>id</code> and <code>issuer</code>. A
-Resource Authorization Server's local access token issued on such an
-ID-JAG <span class="bcp14">MUST</span> preserve that <code>mission</code> reference.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+Section "Mission Claim") with that Mission's <code>id</code>, <code>issuer</code> and
+<code>expires_at</code>. A Resource Authorization Server <span class="bcp14">MUST</span> refuse with
+<code>invalid_grant</code> to redeem such an ID-JAG whose <code>mission</code> claim lacks
+<code>expires_at</code>. A Resource Authorization Server's local access token
+issued on such an ID-JAG <span class="bcp14">MUST</span> preserve that <code>mission</code> reference, and a
+local token from which further credentials are issued <span class="bcp14">MUST</span> carry its
+<code>expires_at</code>.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
 <p id="section-6.1-3">The IdP's hop record is continuation state, not an additional grant
 lineage (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Binding the
 Mission to the Grant"). A Resource Authorization Server's association
@@ -1510,7 +1514,9 @@ Authorization Server issuing a refresh token
 refresh-token family such a server creates by exception is a
 destination-side
 Mission grant binding, under the Mission's authority, state, expiry and
-termination rules (<a href="#authorization-continuity" class="auto internal xref">Section 4</a>).<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+termination rules (<a href="#authorization-continuity" class="auto internal xref">Section 4</a>). The ID-JAG's own
+expiry bounds only its redemption, not that family's lifetime, which the
+Mission's <code>expires_at</code> bounds.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
 <p id="section-6.1-4">The root exchange can coincide with a cross-domain projection exchange
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) where both
 profiles' conditions hold. The two are not the same exchange in
@@ -1928,7 +1934,8 @@ constrains their use and introduces none of its own.<a href="#section-11-1" clas
 <li class="normal" id="appendix-A-2.1">
           <p id="appendix-A-2.1.1">The Identity Continuation Transport requires the root and onward
 ID-JAGs to identify the originating Mission through the <code>mission</code>
-claim, and a Resource Authorization Server's local access token to
+claim, <code>expires_at</code> included, refuses a redemption without it, and
+requires a Resource Authorization Server's local access token to
 preserve it. It also places the hop record, a Resource Authorization
 Server's handle association and any refresh family against grant
 bindings, and says when the root exchange coincides with cross-domain

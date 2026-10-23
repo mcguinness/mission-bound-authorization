@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-23T22:24:17Z
-Source repository commit: ed46d495e4001c7c3d73f03522afef26947aa1d4
+Generated: 2026-10-23T22:47:21Z
+Source repository commit: 28b7de42e5d1c1c4a3ccbf4305e38be3190f5a0a
 Member count: 7
 
 Reading order:
@@ -9866,25 +9866,28 @@ Table of Contents
       down-scoping (Section 12.4) both work this way, and the issued
       token is a derived token (Section 8.8) whose mission claim
       identifies the one Mission its subject_token resolved to.  A Token
-      Exchange that instead establishes reusable authorization state,
-      such as the continuation profile's delegation-family-creating
-      exchange ([I-D.draft-mcguinness-oauth-mission-continuation]),
-      creates a new grant binding, rooted in that same Mission.  Three
-      Token Exchanges are covered by the two items below instead: cross-
-      domain projection and child creation, which return a JWT
-      authorization grant, and expansion, which creates a successor.
-      The Template profile's Dispatch Handoff
+      Exchange that instead establishes a redeemable grant lineage, such
+      as the continuation profile's delegation-family-creating exchange
+      ([I-D.draft-mcguinness-oauth-mission-continuation]), creates a new
+      grant binding, rooted in that same Mission.  Three Token Exchanges
+      are covered by the two items below instead: cross-domain
+      projection and child creation, which return a JWT authorization
+      grant, and expansion, which creates a successor.  The Template
+      profile's Dispatch Handoff
       ([I-D.draft-mcguinness-oauth-mission-template]) returns a handoff
       grant that establishes no grant lineage; its redemption issues a
       derived token for the dispatched Mission, creating or extending no
       grant binding, and the later delegation-family exchange creates
       that Mission's first grant binding.  In the continuation profile's
-      Identity Continuation Transport, the identity provider's hop
-      record is continuation state, not a grant lineage, and a Resource
-      AS holds a destination-side grant binding only where it
-      establishes a redeemable grant lineage mapped to the Mission, such
-      as a refresh-token family
-      ([I-D.draft-mcguinness-oauth-mission-continuation]).
+      Identity Continuation Transport
+      ([I-D.draft-mcguinness-oauth-mission-continuation]), the root and
+      onward exchanges return ID-JAGs that identify the Mission, and the
+      identity provider's hop record is continuation state, not a grant
+      lineage.  Redeeming such an ID-JAG at a Resource AS produces a
+      local derived access token.  A Resource AS holds a destination-
+      side grant binding only where it separately establishes a
+      redeemable grant lineage mapped to the Mission, such as a refresh-
+      token family.
 
    *  *Cross-domain projection.* A cross-domain projection
       ([I-D.draft-mcguinness-oauth-mission-cross-domain]) establishes no
@@ -15479,6 +15482,7 @@ Appendix G.  Document History
    *  Editorial, no requirement change: Grant Bindings and Related
       Mechanisms places the Template profile's Dispatch Handoff and the
       continuation profile's Identity Continuation Transport, the
+      reusable-state case reads as a redeemable grant lineage, the
       derivation resolution list points to profile-defined grants, and a
       derived token's Mission is the one its subject_token resolved to,
       with no binding assumed (#1589, D726).
@@ -16348,11 +16352,16 @@ Table of Contents
    it at the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax (Section 3.1).  A malformed request
-       is refused invalid_request.
+       is refused invalid_request; a request that includes a parameter
+       more than once is malformed, as at the token endpoint
+       (Section 3.2 of [RFC6749]).
 
    3.  Authorize the request: the caller's read authorization, the
        Mission the mission_id names, and any requested audience
@@ -17075,12 +17084,17 @@ Table of Contents
    the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax and the operation (Section 5.1).  A
        malformed request, or an operation the AS does not serve, is
-       refused invalid_request.
+       refused invalid_request; a request that includes a parameter more
+       than once is malformed, as at the token endpoint (Section 3.2 of
+       [RFC6749]).
 
    3.  Authorize the request.  For a base operation this is the
        lifecycle authorization of Section 5.4 for the acting party, the
