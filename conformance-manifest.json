@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "b439eaa13c3946d06a8be99cd922a8b7804cb8c2",
-    "content_sha256": "9b36efa07465e2134227cb9793901b76ba97f95b93ecd0327afed89819411b14"
+    "revision": "7d9ee8735b8bb4fc31546ed72e39157de300c861",
+    "content_sha256": "913731cbed17daa0f4c243f23ee1c072c5f162dec33655cb60285db7925b10ef"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "24fc25962caf421d01e5df49f2916f2b7270e2b7",
@@ -55,8 +55,8 @@
     "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "b6a36a9708d3a7e9e2f83c3ba90d7dab93d437f9",
-    "content_sha256": "bc99ebe684ce0944206e5ed10da15d422181b1effa4b1d1724305046a089ccc1"
+    "revision": "2ca3794ef5bf2cadbff4e2053fa19034fd3c73a4",
+    "content_sha256": "50be50d361f82afaaf72d61e5e2eca14d3928e7365b9e18118eccd5f5e9eb13b"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "63a744561acf66fb2dc397ab69f190ac3f46945b",
-    "content_sha256": "f296e4b63bf026532fd4c56130f7a37535962da4de837bcffd2949c82417782b"
+    "revision": "93784b372ec1fc2cd33cee98831c28edfe2abbbd",
+    "content_sha256": "15a1d38f98362751c15c4d8528a99407587615feb4fa657ebbf7d83ea9de3fa6"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -2020,8 +2020,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Mission Status request is refused at the first failing step of authentication, request syntax and authorization: an unauthenticated request is refused as its authentication failure assigns whatever its members or Mission; a malformed request is refused invalid_request alike for a known and an unknown Mission; an unknown Mission, a caller without read authorization and an audience it is not authorized for are refused alike with the not-found response; only then is the Mission's state read and signed",
-    "local": "the advertised Mission Status endpoint (#1407) authenticates first, then validates nonce, mission_id and audience, then authorizes the read grant and the Mission, then reads and signs. A body that is not an application/x-www-form-urlencoded form, or repeats a member, is refused invalid_request before authentication, as at the Lifecycle endpoint: authentication needs the parsed form"
+    "normative": "a Mission Status request is refused at the first failing step of authentication, request syntax and authorization: a body that cannot be parsed is refused invalid_request whatever credential it presents; a request whose body parses and fails authentication, a repeated client authentication parameter included, is refused as its authentication failure assigns whatever its members or Mission; a malformed request, one repeating any other parameter included, is refused invalid_request alike for a known and an unknown Mission; an unknown Mission, a caller without read authorization and an audience it is not authorized for are refused alike with the not-found response; only then is the Mission's state read and signed",
+    "local": "the advertised Mission Status endpoint (#1407) parses the form, authenticates, then validates repeated parameters, nonce, mission_id and audience, then authorizes the read grant and the Mission, then reads and signs. The reference treats a non-form media type, a body over 64 KiB and a malformed form encoding (invalid UTF-8 or percent-escapes) as a body that cannot be parsed (readLifecycleForm)"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -2037,9 +2037,123 @@
      "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > answers a client without the mission_status grant and an unknown Mission with one not-found body, echoing the nonce",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status parsing, repeated parameters and authentication precedence (@spec status#mission-status-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 3 (D649); #1407. Partial: step 3's audience authorization is not implemented (status.request.served-audience-authorization), so a request's audience is not checked against a per-caller configuration. The development GET /missions/:id/status route keeps its own order (service-token authentication answered 401, then mayReadStatus answered not_found)."
+   "notes": "#1535 finding 3 (D649); #1407. Partial: step 3's audience authorization is not implemented (status.request.served-audience-authorization), so a request's audience is not checked against a per-caller configuration. The development GET /missions/:id/status route keeps its own order (service-token authentication answered 401, then mayReadStatus answered not_found). #1535 Item C (D704, D708): the parse-before-authentication exception and the repeated-parameter order are normative in step 1 and step 2, rowed separately. Its applicability (status.mission-status) follows #1563's re-scoping, and the three new step 1 and step 2 rows take the same."
+  },
+  {
+   "id": "status.read.unparseable-body-refused",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-processing",
+   "text": "A body that cannot be parsed is refused `invalid_request`, whatever credential the request presents",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Status request whose body cannot be parsed is refused invalid_request before authentication, with no credential, an invalid one or a valid one alike, and before any Mission is read",
+    "local": "the reference reads both endpoints' bodies through readLifecycleForm (services/authorization-server/src/adapters/lifecycle-endpoint.ts): a non-form media type, a body over 64 KiB, invalid UTF-8 and a malformed percent-escape cannot be parsed; a repeated parameter is not one of them"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status parsing, repeated parameters and authentication precedence (@spec status#mission-status-processing, #1535 Item C, D704, D708) > refuses a body that cannot be parsed invalid_request, with a valid credential or none: another media type, a malformed escape, invalid UTF-8, an oversized body",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a malformed request invalid_request, echoing a well-formed nonce and never a malformed one",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint."
+  },
+  {
+   "id": "status.read.repeated-auth-parameter",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-processing",
+   "text": "a client authentication parameter included more than once fails authentication, and no occurrence of it is used",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Status request repeating a client authentication parameter fails authentication and receives the outcome assigned by Authentication Failures, whatever its other members, never authenticated by either occurrence",
+    "local": "the authentication parameters the reference reads are client_assertion, client_assertion_type, client_id and client_secret (authenticateLifecycleForm); a repeated one has no value kept, so no occurrence can authenticate The reference's Mission Status endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status parsing, repeated parameters and authentication precedence (@spec status#mission-status-processing, #1535 Item C, D704, D708) > refuses a repeated client authentication parameter invalid_client, using no occurrence, though each would authenticate",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status parsing, repeated parameters and authentication precedence (@spec status#mission-status-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local. The cited repeated-authentication test also sends the first repeated assertion once afterwards and is served, so the assertion's single-use jti was never consumed (ported from #1613): verifying the first occurrence before refusing fails it with \"client_assertion jti was already used\"."
+  },
+  {
+   "id": "status.read.repeated-parameter-malformed",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-processing",
+   "text": "a request that includes a parameter more than once is malformed",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authenticated Mission Status request repeating any other parameter, an optional one included, is refused invalid_request; one that does not authenticate is refused as its authentication failure assigns",
+    "local": "after successful authentication any repeated parameter is refused invalid_request with the request's nonce echoed when a single well-formed one was sent; a repeated nonce is never echoed"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status parsing, repeated parameters and authentication precedence (@spec status#mission-status-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a malformed request invalid_request, echoing a well-formed nonce and never a malformed one",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint."
   },
   {
    "id": "status.read.no-state-before-authorization",
@@ -9050,6 +9164,49 @@
    "notes": "A prohibition every AS meets; one that uses no model in derivation meets it trivially, so the row is unconditional rather than gated on a capability. Candidate authority keeps a proposal or configured-mapping origin; model-generated proposals stay permitted through Shaping and ordinary admission (#1010)."
   },
   {
+   "id": "core.approval-authentication.floor-published",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-authentication",
+   "text": "A deployment MUST publish a statement declaring the minimum approval-authentication strength (the approval-authentication floor) it enforces for Missions whose derived Authority Set carries high-risk authority, and the deployment scope it applies to",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the deployment publishes a statement that declares the deployment scope it applies to and the minimum approval-authentication strength it enforces for every kind of high-risk authority the deployment can admit; a statement with no deployment scope or no floor is not a publication of the floor",
+    "local": "config/approval-floor.json is the published statement, documented in config/README.md and read at boot by the strict loader loadApprovalFloor as APPROVAL_FLOOR, which is the AS's floor (buildAuthorizationServer uses opts.approvalFloor ?? APPROVAL_FLOOR). Its deployment_scope is every Mission the AS approves through its approval interaction; its high-risk-authority floor covers irreversible_action, external_commitment and privileged_administration with a browser Approver, accepted acr mfa and a 300 second age bound. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so the three action kinds are the high-risk kinds it can admit. The binding requires no serialization, so the AS serves no endpoint or metadata member for the statement; publication is the deployment document. The loader refuses a statement with no or an empty deployment_scope and one with no floors, so the AS does not start without a published floor."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "the deployment publishes its approval-authentication floor (@spec mission#approval-authentication, #1503, D620) > the published statement (config/approval-floor.json, the AS's default floor) declares its deployment scope and, for every high-risk class, a minimum Approver authentication: a browser surface, accepted acr values and an age bound",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "the published floor policy loads strictly (@spec mission#approval-authentication, #826, D425) > refuses a statement that declares no deployment scope, or an empty one",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "the published floor policy loads strictly (@spec mission#approval-authentication, #826, D425) > refuses %s",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#1503 finding 13 (D620): the owner rejected an opt-out (\"where a deployment publishes\") because it would weaken D425, and made publication explicit. Enforcement of the published floor at the approval decision is core.approval-authentication.floor-and-requested-carriage-both-satisfied; this row witnesses only the publication. Mutation proofs, each restored from a saved copy: dropping external_commitment from the published floor's applies_to fails the publication test (\"a published floor for external_commitment: expected 0 to be greater than 0\"); a blank deployment_scope (\" \") in the published file fails it on the scope assertion; a loader that defaults a missing deployment_scope to the empty string fails the scope-refusal test; a loader that accepts an empty floors list fails \"refuses no floors\"."
+  },
+  {
    "id": "core.approval-authentication.floor-and-requested-carriage-both-satisfied",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-authentication",
@@ -10716,11 +10873,61 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a Mission-bound token that carries an emitted act chain, whatever path emitted it, never reaches a Mission-unaware resource server, or logging or audit infrastructure, that authorizes or logs the caller on client_id without processing the act chain",
-    "local": "the AS portion only: the AS issues an act-bearing Mission-bound token only for an audience its trusted scope-projection mapping classifies mission_aware, and refuses any other or unmapped audience with invalid_target (D166) before issuance"
+    "local": "the deployment's part beyond the AS issuance gate (core.rs-enforcement.delegated-issuance-gate): the reference deployment's trusted mapping classifies an audience mission_aware only when its Resource Server processes the act chain and the mission claim; routing a token past its audience and the logging and audit pipelines that record its use are not exercised"
    },
    "level": "endpoint",
    "coverage": "partial",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "config/scope-projection.json loader (@spec mission#scope-projection) > classifies each shipped audience mission_aware from what its Resource Server processes (@spec mission#rs-enforcement)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Inventory per D415. #1503 finding 8 (D620): the AS issuance gate is its own row, core.rs-enforcement.delegated-issuance-gate, which carries the AS witnesses this row cited before; this row keeps the deployment's obligation for what the AS cannot verify. Partial: the shipped-config test witnesses the deployment's input to the gate, that each shipped audience is classified by what its Resource Server processes (only mcp-payments reads the act chain and the mission claim; mcp-saas requires the mission claim but never reads act, so it is not classified mission_aware). Not witnessed: routing a token beyond its audience, and logging or audit pipelines that key on client_id; model.roles has no deployment role."
+  },
+  {
+   "id": "core.rs-enforcement.delegated-issuance-gate",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-mission-unaware",
+   "text": "The AS MUST refuse, with `invalid_target` ({{error-mapping}}), a request for a delegated Mission-bound token whose audience it has not established as a Mission-aware Resource Server ({{rs-requirements}}) that also processes the `act` chain, authorizing and logging the caller from the chain rather than from `client_id` alone. That the audience parses `act` does not establish this.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS issues a Mission-bound token carrying an act chain only for an audience it has established as a Mission-aware Resource Server that also processes the act chain; a request for any other audience, including one that enforces the Mission's authorization_details but is not established as processing the act chain, is refused with invalid_target and issues no token",
+    "local": "establishment is the trusted scope-projection mapping's mission_aware classification, true only for a target that processes the act chain and the mission claim; an audience the mapping does not name fails closed; the refusal precedes counting the derivation on the delegated exchange and admitting a workflow on the transaction endpoint; error_description names the routing reason"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the exchange selector (@spec mission#delegation) > a delegated token reaches only a Mission-aware target: otherwise invalid_target, counting nothing (D166)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870) > refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
      "name": "delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection",
@@ -10734,31 +10941,31 @@
      "surface": "token-endpoint"
     },
     {
-     "file": "src/services/authorization-server/test/scope-projection.test.ts",
-     "name": "the JWT customizer backstop, invoked directly (@spec mission#scope-projection, mission#rs-enforcement) > refuses invalid_target an act-bearing Mission-bound payload to an audience not classified Mission-aware or not mapped, and passes it to a Mission-aware audience",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
-     "name": "the exchange selector (@spec mission#delegation) > a delegated token reaches only a Mission-aware target: otherwise invalid_target, counting nothing (D166)",
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is",
      "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
-     "name": "the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870) > refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check",
-     "level": "endpoint",
-     "surface": "token-endpoint"
+     "surface": "transaction-authorization-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
      "name": "delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, when the actor context comes only from the subject token, a same-Mission delegated token, for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the JWT customizer backstop, invoked directly (@spec mission#scope-projection, mission#rs-enforcement) > refuses invalid_target an act-bearing Mission-bound payload to an audience not classified Mission-aware or not mapped, and passes it to a Mission-aware audience",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "delegated routing (@spec mission#rs-enforcement) > a delegated token reaches only audiences classified mission_aware; an undelegated one keeps its projection",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role); it does not establish every deployment route, and the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. Witnessed at the token endpoint on the cross-org exchange and on same-Mission delegation (#869), whose exchange refuses a target not classified Mission-aware before counting; the JWT customizer backstop is witnessed directly (unit) and at the endpoint on a real delegated mint, where a target reclassified after the exchange's own check is refused at the save (disabling the customizer's act branch issues the token). Transaction tokens (#870 review): the transaction endpoint refuses before admitting a workflow whenever either upstream carrier supplies actor context, the condition under which the issued token carries act, for the challenge issuer that becomes its audience (txn-endpoint.test.ts, delegated routing of transaction tokens). Both carriers are witnessed as direct handler tests ending at admission: the challenge's act, and the subject token's, a real same-Mission delegated token presented by the delegate with its own key against a challenge carrying no act; restricting the gate to the challenge carrier fails the latter."
+   "notes": "#1503 finding 8 (D620): the AS issuance gate, split from the deployment routing row (core.rs-enforcement.delegated-routing-mission-aware), which keeps what the AS cannot verify. The condition is literal: any Mission-bound token carrying an emitted act chain, so the cross-org exchange and transaction tokens are witnessed alongside same-Mission delegation (#869). Refusal: the delegated exchange refuses a target that enforces the Mission's authorization_details (the shipped payments audience with its constraints keys) but is classified mission_aware false, with the gate's own reason, no token, and no derivation counted; that target's Resource Server does process act, so the refusal follows the AS's established classification, not the target's token handling. Issuance: the same target classified mission_aware true receives the delegated token. Mutation: disabling the exchange's own check alone leaves the save-time customizer backstop refusing invalid_target with the same reason, but after the derivation is counted, so the first witness fails on its count (expected 3 to be 2); refusing every audience at that check fails the issuance witnesses (18 tests, 400 instead of 200); making delegatedRoutingRefusal ignore the classification fails every refusal witness cited here (200 instead of 400). The customizer backstop's own branch is witnessed by the third and eighth tests."
   },
   {
    "id": "core.rs-enforcement.unenforceable-entry-no-authority",
@@ -11184,6 +11391,51 @@
     }
    ],
    "notes": "#825 acceptance item 7 (D402): introspection and the resource read the Mission access-token profile with one reader, readMissionAccessProfile in @mission/core (the typed claim set and its clock bounds, the `mission` claim's members, the authority through parseCredentialAuthority, a present `act` through the Actor Profile's validateActChain (#904, D428), and `cnf` structure through parseConfirmation), and run one negative-vector list, @mission/core/test-vectors. Each adds only its own rule: the resource requires the DPoP key it proves possession of; introspection requires `cnf` where the token's profile requires sender constraint and never proves possession, as Composite Active State says. The authority read only gates; the projection still reads the raw entries, delegation and capability bindings included. Sender constraint is required where a draft requires it of the issued token: a delegated token (the OAuth binding's Delegation section), a Child Mission's token (child-delegation, Attenuation Rules) and a dispatched template instance's token (the Template's Dispatch request and response, and its Dispatch Handoff), identified by the record's template basis. The Child Mission case stubs the kernel read; the dispatch case re-signs a real dispatched token. #250: a delegated token minted before a restart, whose issuance record the restart lost, is correctly signed under the key ring and introspects bare inactive while its Mission is active, where it introspected active before the restart. Proven by disabling the code it covers: reading a missing issuance record as the Mission's approval grant answers it active."
+  },
+  {
+   "id": "core.introspection.active-response-carries-mission",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspection",
+   "text": "When it does, an `active: true` response for such a token, to a caller authorized to receive Mission data ({{caller-authorization-and-minimization}}), MUST carry, in addition to the standard members, a `mission` member",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspection"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an active (`active: true`) introspection response for a Mission-bound access token, or for a Mission-bound refresh token, returned to a caller authorized to receive Mission data, carries the `mission` member with the Mission's `id`, `issuer` and, from the Mission issuer, `state`, whether or not the caller holds any member-scoped disclosure privilege",
+    "local": "the reference serves introspection only for Missions it holds, as their issuer, so `state` is always present; the privilege-gated members follow core.introspection.member-scoped-disclosure, and the projection also carries `version`, outside this row. A caller that is not an audience of the token receives a bare `{active: false}` (core.introspection.caller-authorization), so every active response goes to an authorized caller. Both active branches, the JWT access token and the opaque refresh token, set `mission` to the minimized projection."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "active composite + projection matrix (@spec mission#composite-active) > active Mission + valid token: complete pinned key set, audience-minimized",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "active composite + projection matrix (@spec mission#composite-active) > an active response carries the mission member to every caller authorized for the token, a resource server with no disclosure privilege included (@spec mission#introspection, #1503)",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "Mission-bound refresh tokens (@spec mission#introspection) > a valid refresh token on an active Mission introspects under the composite rule",
+     "level": "endpoint",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "#1503 finding 13 (D620): the general mode's `mission` member became a MUST for an active response, as the opaque-token mode already stated it, keeping the inactive-response rules (core.introspection.malformed-token-inactive, core.introspection.designation-inactive), the terminated-Mission reporting (core.introspection.composite-active), the issuer-only members and the disclosure limits unchanged. Mutation proofs, each restored from a saved copy: removing `mission` from the JWT active body fails the pinned key set (\"expected [ 'active', 'aud', ...(9) ] to deeply equal [ ...(10) ]\") and the new witness (\"rs-payments: expected { active: true, ... } to have property \"mission\"\"); carrying it only to a caller holding some disclosure privilege fails the new witness for rs-payments-basic; removing it from the refresh-token active body fails the refresh-token key set. Answering a terminated Mission's otherwise-valid token bare inactive still fails the composite-active witnesses, so that preserved rule stays witnessed."
   },
   {
    "id": "core.introspection.caller-authentication",
@@ -13586,8 +13838,8 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a lifecycle request for a base operation is refused at the first failing step of authentication, request syntax and served operation, authorization, deduplication, expected_version and the transition rules: an unauthenticated request is refused invalid_client whatever its operation, members or Mission; a malformed request or an unserved operation is refused invalid_request alike for a known and an unknown Mission; a caller not authorized for the Mission gets the not-found response, never a replay, stale_version or conflict; an authorized retransmit replays before expected_version and the transition rules apply; and a stale expected_version is refused before the transition rule",
-    "local": "Form-level parsing (media type, body size, a repeated member) precedes authentication, since the body carries the client assertion. Refusals decided before deduplication are delivered without retention, so they never finalize a committed claim made under the same request digest. The past-deadline check of a schedule runs after deduplication, so an identical retry arriving after its deadline replays."
+    "normative": "a lifecycle request for a base operation is refused at the first failing step of authentication, request syntax and served operation, authorization, deduplication, expected_version and the transition rules: a body that cannot be parsed is refused invalid_request whatever credential it presents; a request whose body parses and fails authentication, a repeated client authentication parameter included, receives the outcome assigned by Authentication Failures whatever its operation, members or Mission; a malformed request, one repeating any other parameter included, or an unserved operation is refused invalid_request alike for a known and an unknown Mission; a caller not authorized for the Mission gets the not-found response, never a replay, stale_version or conflict; an authorized retransmit replays before expected_version and the transition rules apply; and a stale expected_version is refused before the transition rule",
+    "local": "The reference treats a non-form media type, a body over 64 KiB and a malformed form encoding as a body that cannot be parsed (readLifecycleForm). Refusals decided before deduplication are delivered without retention, so they never finalize a committed claim made under the same request digest. The past-deadline check of a schedule runs after deduplication, so an identical retry arriving after its deadline replays. The reference's Lifecycle endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -13639,9 +13891,123 @@
      "name": "Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191) > refuses a stale expected_version 409 stale_version before the transition rule, leaving the Mission unchanged, and applies a current one",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle parsing, repeated parameters and authentication precedence (@spec status#lifecycle-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 finding 3 (D649). Proved by validating the operation and members before authentication, and by looking the Mission up before it (the authentication-order test fails), by looking the Mission up before the syntax checks (the extension-guard and revoke-only ordering tests fail), by letting a retained row skip authorization (both processing-order retransmit tests fail), and by retaining the not-found refusal decided before deduplication (the lost-bytes test fails). The deduplication and expected_version precedences keep the witnesses of status.discharge.nonce-replay and status.lifecycle.stale-version-precedence. The discharge operation is status.discharge.processing-order."
+   "notes": "#1535 finding 3 (D649). Proved by validating the operation and members before authentication, and by looking the Mission up before it (the authentication-order test fails), by looking the Mission up before the syntax checks (the extension-guard and revoke-only ordering tests fail), by letting a retained row skip authorization (both processing-order retransmit tests fail), and by retaining the not-found refusal decided before deduplication (the lost-bytes test fails). The deduplication and expected_version precedences keep the witnesses of status.discharge.nonce-replay and status.lifecycle.stale-version-precedence. The discharge operation is status.discharge.processing-order. #1535 Item C (D704, D708): the parse-before-authentication exception and the repeated-parameter order are normative in step 1 and step 2, rowed separately. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local."
+  },
+  {
+   "id": "status.lifecycle.unparseable-body-refused",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-processing",
+   "text": "A body that cannot be parsed is refused `invalid_request`, whatever credential the request presents",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a lifecycle request whose body cannot be parsed is refused invalid_request before authentication, with no credential, an invalid one or a valid one alike, and no Mission is read or changed",
+    "local": "the reference reads both endpoints' bodies through readLifecycleForm (services/authorization-server/src/adapters/lifecycle-endpoint.ts): a non-form media type, a body over 64 KiB, invalid UTF-8 and a malformed percent-escape cannot be parsed; a repeated parameter is not one of them"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle parsing, repeated parameters and authentication precedence (@spec status#lifecycle-processing, #1535 Item C, D704, D708) > refuses a body that cannot be parsed invalid_request, with a valid credential or none: another media type, a malformed escape, invalid UTF-8, an oversized body",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint transport and client authentication (@spec status#mission-status-authentication, status#mission-status-auth-failures, #1191) > accepts only a form body, with every member single-valued",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint."
+  },
+  {
+   "id": "status.lifecycle.repeated-auth-parameter",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-processing",
+   "text": "a client authentication parameter included more than once fails authentication, and no occurrence of it is used",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a lifecycle request repeating a client authentication parameter fails authentication and receives the outcome assigned by Authentication Failures, whatever its operation and members, never authenticated by either occurrence, and changes nothing",
+    "local": "the authentication parameters the reference reads are client_assertion, client_assertion_type, client_id and client_secret (authenticateLifecycleForm); a repeated one has no value kept, so no occurrence can authenticate The reference's Lifecycle endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle parsing, repeated parameters and authentication precedence (@spec status#lifecycle-processing, #1535 Item C, D704, D708) > refuses a repeated client authentication parameter invalid_client, using no occurrence, though each would authenticate",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle parsing, repeated parameters and authentication precedence (@spec status#lifecycle-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local. The cited repeated-authentication test also sends the first repeated assertion once afterwards and is served, so the assertion's single-use jti was never consumed (ported from #1613): verifying the first occurrence before refusing fails it with \"client_assertion jti was already used\"."
+  },
+  {
+   "id": "status.lifecycle.repeated-parameter-malformed",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-processing",
+   "text": "a request that includes a parameter more than once is malformed",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authenticated lifecycle request repeating any other parameter, an optional one included, is refused invalid_request and changes nothing; one that does not authenticate receives the outcome assigned by Authentication Failures",
+    "local": "after successful authentication any repeated parameter is refused invalid_request with the request's nonce echoed when a single well-formed one was sent; a repeated nonce is never echoed The reference's Lifecycle endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle parsing, repeated parameters and authentication precedence (@spec status#lifecycle-processing, #1535 Item C, D704, D708) > authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint transport and client authentication (@spec status#mission-status-authentication, status#mission-status-auth-failures, #1191) > accepts only a form body, with every member single-valued",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local."
   },
   {
    "id": "status.discharge.processing-order",
@@ -15307,7 +15673,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a POST whose body is not form-urlencoded, or repeats a member, is refused `invalid_request` and changes nothing; a form carrying `mission_id`, `operation` and `nonce` is served",
+    "normative": "a POST whose body is not form-urlencoded is refused `invalid_request` and changes nothing; a form carrying `mission_id`, `operation` and `nonce` is served",
     "local": "the dev-only path route also accepts a JSON body, takes the Mission from the path and runs the same engine; it is not advertised. The base operations answer with the signed Mission Status Response; this deployment's contain extension answers a plain JSON outcome, and discharge its companion's result shape"
    },
    "level": "endpoint",
@@ -15332,7 +15698,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 Item C (D708): a repeated parameter is no longer claimed here; its outcomes are status.lifecycle.repeated-auth-parameter and status.lifecycle.repeated-parameter-malformed."
   },
   {
    "id": "status.lifecycle.private-key-jwt-params",
@@ -15793,7 +16159,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Mission Status operation is served as a POST whose form body carries `mission_id`, `audience` and `nonce`; a body of another media type, or a repeated member, is refused invalid_request",
+    "normative": "the Mission Status operation is served as a POST whose form body carries `mission_id`, `audience` and `nonce`",
     "local": "POST /mission/status; TLS is the deployment's (as status.lifecycle.tls). The development GET /missions/{id}/status is not advertised; its callers in src are tests. The reference consumer (MissionStatusResolver) sends the form POST"
    },
    "level": "endpoint",
@@ -15818,7 +16184,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1407 (as #1191 did for the Lifecycle endpoint). Proved by defects that drop the form members the route reads."
+   "notes": "#1407 (as #1191 did for the Lifecycle endpoint). Proved by defects that drop the form members the route reads. #1535 Item C (D708): the repeated-parameter and unparseable-body outcomes are the processing-order rows status.read.unparseable-body-refused, status.read.repeated-auth-parameter and status.read.repeated-parameter-malformed, not this row."
   },
   {
    "id": "status.response.served-audience-aud",
@@ -60933,7 +61299,7 @@
    "id": "mas.join-disclosure.members",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-disclosure",
-   "text": "When the authenticated caller is a PDP enrolled for the Mission's enforcement scope, the MAS MUST include `subject` and `client_id`, and MUST disclose each `authorization_details` entry in the response with its `delegation` member as recorded",
+   "text": "When the authenticated caller is enrolled for the Mission's enforcement scope in the PDP role, the MAS MUST include `subject` and `client_id`, and MUST disclose each `authorization_details` entry in the response with its `delegation` member as recorded",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
@@ -60944,7 +61310,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Mission Status response to an enrolled joining PDP carries mission.subject, mission.client_id, and each disclosed entry with its delegation member"
+    "normative": "a Mission Status response to an enrollee holding the PDP role for the requested scope carries mission.subject, mission.client_id, and each disclosed entry with its delegation member"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -60960,9 +61326,15 @@
      "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > binds sub to each caller: two clients read their own identifiers, and the Mission's client reaches only the client enrolled for Join Disclosure",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure takes the PDP role (@spec authority-server#join-disclosure, #1591, D708) > discloses to an enrollee holding the PDP role, alone or with the PEP role, and to no enrollee holding the PEP role alone",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#818 slice 4: the reference authorization server's Mission Status operation, serving as the MAS, discloses mission.subject (iss, sub) and mission.client_id to a caller its enrolledJoinPdps configuration enrolls (a client at the advertised Mission Status endpoint, #1407, or a service principal at the development route) for the requested audience, and every audience-scoped entry keeps its recorded delegation member. The test asserts each clause over HTTP and that the two members are the whole difference from another caller's response; proved by a defect that never discloses (assertion fails) and one that drops client_id."
+   "notes": "#818 slice 4: the reference authorization server's Mission Status operation, serving as the MAS, discloses mission.subject (iss, sub) and mission.client_id to a caller its joinEnrollment configuration enrolls in the PDP role (a client at the advertised Mission Status endpoint, #1407, or a service principal at the development route) for the requested audience, and every audience-scoped entry keeps its recorded delegation member. The test asserts each clause over HTTP and that the two members are the whole difference from another caller's response; proved by a defect that never discloses (assertion fails) and one that drops client_id. #1591 (D708): an enrollee holding the PDP role alone or with the PEP role reads both members; proved by a defect that discloses to any enrollee."
   },
   {
    "id": "mas.join-disclosure.not-to-others",
@@ -60979,7 +61351,7 @@
    "surface": "verification",
    "assertion": "privacy",
    "observation": {
-    "normative": "a Mission Status response to a caller not enrolled as a joining PDP carries neither mission.subject nor mission.client_id",
+    "normative": "a Mission Status response to a caller not enrolled in the PDP role for the requested scope, an enrollee holding the PEP role alone included, carries neither mission.subject nor mission.client_id",
     "local": "enrollment is keyed by the authenticated caller: a client's client_id at the advertised Mission Status endpoint, or a service principal at the development route (#1407); every Status response's envelope sub is that caller"
    },
    "level": "endpoint",
@@ -61002,9 +61374,153 @@
      "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > binds sub to each caller: two clients read their own identifiers, and the Mission's client reaches only the client enrolled for Join Disclosure",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure takes the PDP role (@spec authority-server#join-disclosure, #1591, D708) > discloses to an enrollee holding the PDP role, alone or with the PEP role, and to no enrollee holding the PEP role alone",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#818 slice 4: a Status response to a caller the enrolledJoinPdps configuration does not enroll for the requested audience (enrolled for nothing, enrolled for another scope, naming no audience, or an inherited Object.prototype principal name) carries neither mission.subject nor mission.client_id, and its signing input is byte-identical to the observation the kernel signs for that caller without Join Disclosure. Proved by defects that always disclose, ignore the audience, ignore the principal, and drop the own-property lookup. #1407: the envelope sub names each caller, so a client not enrolled reads the Mission's client neither in mission nor in sub (two clients read at the advertised endpoint); proved by a defect that signs the Mission's client as sub again."
+   "notes": "#818 slice 4: a Status response to a caller the joinEnrollment configuration does not enroll in the PDP role for the requested audience (enrolled for nothing, enrolled for another scope, naming no audience, or an inherited Object.prototype principal name) carries neither mission.subject nor mission.client_id, and its signing input is byte-identical to the observation the kernel signs for that caller without Join Disclosure. Proved by defects that always disclose, ignore the audience, ignore the principal, and drop the own-property lookup. #1407: the envelope sub names each caller, so a client not enrolled reads the Mission's client neither in mission nor in sub (two clients read at the advertised endpoint); proved by a defect that signs the Mission's client as sub again. #1591 (D708): an enrollee holding the PEP role alone reads neither member; proved by a defect that discloses to any enrollee."
+  },
+  {
+   "id": "mas.join-disclosure.enrollment-roles",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-disclosure",
+   "text": "the configuration records each enrollee's role: PEP, PDP, or both",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the MAS's enrollment configuration records each enrollee as a PEP, a PDP, or both, and the MAS acts on the recorded role",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both; a build naming an enrollee with no role, an unknown role, or a role twice is refused, and the pilot's strict loader refuses the same"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure takes the PDP role (@spec authority-server#join-disclosure, #1591, D708) > refuses to build with an enrollee holding no role, an unknown role, or one role twice",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure takes the PDP role (@spec authority-server#join-disclosure, #1591, D708) > discloses to an enrollee holding the PDP role, alone or with the PEP role, and to no enrollee holding the PEP role alone",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PEP role alone as a caller, for a PDP's audience, and refuses it as an audience join_failed, minting nothing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-mapping.test.ts",
+     "name": "pilot configuration: the estate's development Resource-policy grants (@spec runtime#input-resource-policy, #818 slice 2) > refuses an enrollee with no roles member, no role, an unknown role, or one role twice (#1591, D708)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1591 (D708). Proved by defects that skip the build's role validation, accept an empty, unknown or repeated role, and drop the pilot loader's role check; the role-distinct behavior is proved on mas.join-disclosure.pdp-role."
+  },
+  {
+   "id": "mas.join-disclosure.pdp-role",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-disclosure",
+   "text": "Join Disclosure and a Join Assertion's `audience` take an enrollee holding the PDP role",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an enrollee holding only the PEP role receives no Join Disclosure and is refused as a Join Assertion's audience (join_failed); one holding the PDP role, alone or with the PEP role, receives both",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure takes the PDP role (@spec authority-server#join-disclosure, #1591, D708) > discloses to an enrollee holding the PDP role, alone or with the PEP role, and to no enrollee holding the PEP role alone",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PEP role alone as a caller, for a PDP's audience, and refuses it as an audience join_failed, minting nothing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PDP role alone, or both roles, as a caller and as an audience",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1591 (D708). Proved by defects that disclose to any enrollee for the scope, accept an audience of any role, and drop the role check from enrollment, each caught at the endpoint and, for the first two, at the live pilot."
+  },
+  {
+   "id": "mas.join-disclosure.visibility-either-role",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-disclosure",
+   "text": "visibility at the join-assertion endpoint takes an enrollee of either role",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an enrollee holding the PEP role, the PDP role, or both, for the Mission's enforcement scope, is inside the join-assertion endpoint's visibility set",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PEP role alone as a caller, for a PDP's audience, and refuses it as an audience join_failed, minting nothing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PDP role alone, or both roles, as a caller and as an audience",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1591 (D708). Proved by defects that make visibility take the PDP role only (the PEP-only caller gets not_found) and the PEP role only (the PDP-only caller gets not_found)."
   },
   {
    "id": "mas.join-inputs.pep-carries-member",
@@ -61808,7 +62324,7 @@
    "id": "mas.join-assertion.audience-enrolled",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-assertion-request",
-   "text": "The MAS MUST NOT mint for an `audience` that names no PDP enrolled for the Mission's enforcement scope",
+   "text": "The MAS MUST NOT mint for an `audience` that names no enrollee holding the PDP role for the Mission's enforcement scope",
    "role": "Controller",
    "strength": "MUST NOT",
    "applicability": {
@@ -61819,8 +62335,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request whose audience names no PDP enrolled for the Mission is refused join_failed, and no assertion is minted",
-    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a request whose audience is enrolled for another scope only, or for nothing, gets join_failed and no assertion. The Mission's enforcement scope is the set of enrolled scopes some entry of its Authority Set overlaps, under the matcher Mission Status scopes entries with (entryOverlapsResource); an audience withdrawn while the token is established or the assertion is signed gets join_failed"
+    "normative": "a request whose audience names no enrollee holding the PDP role for the Mission is refused join_failed, and no assertion is minted",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a request whose audience is enrolled for another scope only, or for nothing, gets join_failed and no assertion. The Mission's enforcement scope is the set of enrolled scopes some entry of its Authority Set overlaps, under the matcher Mission Status scopes entries with (entryOverlapsResource); an audience withdrawn while the token is established or the assertion is signed gets join_failed; an enrollee holding the PEP role alone is refused as an audience (#1591)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -61836,9 +62352,15 @@
      "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed when the Mission's authority_hash changes, or its audience is withdrawn, during the token check or the signing",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > admits an enrollee holding the PEP role alone as a caller, for a PDP's audience, and refuses it as an audience join_failed, minting nothing",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the audience check. Also proved by a defect that drops the audience from the re-read (#1454 review)."
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the audience check. Also proved by a defect that drops the audience from the re-read (#1454 review). #1591 (D708): proved by a defect that accepts an audience of any role."
   },
   {
    "id": "mas.join-assertion.aud-claim",
@@ -62504,6 +63026,78 @@
     }
    ],
    "notes": "Added with the #1569 review of the D685 rulings (Q2 detail); witnessed by #1554 once it adopted the issuer audience. Mutation-proved: restoring the endpoint audience fails both tests, and accepting the issuer inside a multi-valued aud fails the refusal test."
+  },
+  {
+   "id": "mas.join-assertion.visibility-bounded",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-request",
+   "text": "Any other caller MUST receive `not_found`",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a caller that is neither the Mission's client, a recorded delegate, nor an enrollee for the Mission's enforcement scope receives not_found, the same answer as for an unknown Mission",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both; the reference MAS holds no delegate actor records (follow-up: #1561), so its visibility set is the Mission's client and the enrollees of either role"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > answers an unknown Mission and a caller outside the visibility set with one not_found; the Mission's own client is inside it",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708) > answers a registered client enrolled for nothing not_found, as an unknown Mission",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1591 (D708). Proved by defects that drop the visibility check (the invisible caller and the enrolled-for-nothing caller are served) and that admit any registered caller."
+  },
+  {
+   "id": "mas.join-assertion.pep-carries-assertion",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "conformance",
+   "text": "where the deployment uses Join Assertions, obtains one for the credential it authenticated and carries it in `context.mission_join`",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-joining PEP in a deployment using Join Assertions obtains an assertion for the credential it authenticated and carries it in context.mission_join",
+    "local": "the reference PEP (services/mcp-payments/src/pep.ts, join-assertion-client.ts) in the separated MAS pilot: it requests the assertion itself for the credential the gateway authenticated and carries the MAS's real assertion with token_sha256 and token_jkt"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1591 (D708). A real MAS-minted assertion witnesses it only end to end; the PEP unit test (mas-join-assertion-pep.test.ts) carries a stand-in string and is not cited. Proved earlier (#1454) by defects that drop the carriage and the transport's hand-over of the credential."
   },
   {
    "id": "mas.join-assertion.json-client-assertion",
