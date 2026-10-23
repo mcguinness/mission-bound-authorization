@@ -735,8 +735,9 @@ any check fails:
    ({{Section 4.3 of RFC9449}}) whose public key has the `jkt`
    thumbprint or a client certificate on the TLS connection whose
    SHA-256 thumbprint matches the `x5t#S256` value, and presents no
-   sender constraint for any other key (a DPoP proof with another key,
-   or at the PAR endpoint a `dpop_jkt` other than the `jkt` value);
+   DPoP proof for any other key (at the PAR endpoint, no `dpop_jkt`
+   other than the `jkt` value); a client certificate that only
+   authenticates the client does not conflict with a `jkt` value;
 6. the (`iss`, `sub`) pair maps to a local account under the
    deployment's mapping policy ({{trust}}), and every entry of the grant's
    `authorization_details` is of a type this AS supports and is one it
@@ -950,8 +951,9 @@ earlier successful issuance in that family removed.
 Where the grant carried `cnf`, each refresh request MUST prove
 possession of that key: a DPoP proof whose public key has the `jkt`
 thumbprint, or a TLS client certificate whose SHA-256 thumbprint is
-the `x5t#S256` value. The consuming AS refuses a refresh request that
-does not as {{redemption-errors}} specifies.
+the `x5t#S256` value, and present no DPoP proof for any other key. The
+consuming AS refuses a refresh request that does not as
+{{redemption-errors}} specifies.
 
 ## Without a Mission-State Integration {#no-state-integration}
 
@@ -986,9 +988,9 @@ client authentication with `invalid_client`. At redemption, code
 exchange, and refresh alike, a DPoP proof that fails the checks of
 {{Section 4.3 of RFC9449}} is refused with `invalid_dpop_proof`, or
 with `use_dpop_nonce` where the AS requires a nonce
-({{Section 8 of RFC9449}}), and a request that proves no key, or a
-key other than the grant's `cnf` key, with `invalid_grant`. The other
-refusals are:
+({{Section 8 of RFC9449}}), and a request that proves no key, proves
+a key other than the grant's `cnf` key, or presents a DPoP proof for
+another key, with `invalid_grant`. The other refusals are:
 
 | Condition | Response |
 |---|---|
@@ -1060,8 +1062,9 @@ When the grant carries `cnf`, the authorization code inherits it. The
 token request at code exchange MUST prove possession of that key, as
 {{Section 10 of RFC9449}} binds a code to a DPoP key (for `jkt`), or
 arrive over a mutual-TLS connection with that certificate (for
-`x5t#S256`, {{Section 3 of RFC8705}}); the AS refuses a code exchange
-that does not as {{redemption-errors}} specifies.
+`x5t#S256`, {{Section 3 of RFC8705}}), and present no DPoP proof for
+any other key; the AS refuses a code exchange that does not as
+{{redemption-errors}} specifies.
 
 The grant's window is not re-evaluated at code exchange, since the
 authorization code carries its own lifetime. The other redemption

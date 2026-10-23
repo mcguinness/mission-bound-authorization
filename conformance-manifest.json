@@ -38293,7 +38293,7 @@
    "id": "issuance-grant.grant-validation.no-other-key",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "grant-validation",
-   "text": "presents no sender constraint for any other key",
+   "text": "presents no DPoP proof for any other key",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
