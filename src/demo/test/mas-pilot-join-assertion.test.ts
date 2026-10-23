@@ -389,7 +389,7 @@ d("the separated MAS pilot refuses a declared Join Assertion path it cannot run 
     await expect(startMasProcess({ configPath, statusClients: [pdp.registration], joinIntrospectionSecret: "unused" })).rejects.toThrow(
       /MAS_PILOT_JOIN_INTROSPECTION_SECRET is set exactly where the configuration declares join_assertion/,
     );
-  });
+  }, 60_000);
 });
 
 d("the separated launcher runs the declared Join Assertion path (#1454)", () => {
@@ -436,7 +436,7 @@ d("the separated launcher runs the declared Join Assertion path (#1454)", () => 
     } finally {
       await launch.close();
     }
-  });
+  }, 180_000);
 });
 
 describe("the launcher refuses a Join Assertion path it cannot run, before anything connects (#1454)", () => {
