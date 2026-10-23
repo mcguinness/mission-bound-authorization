@@ -4,7 +4,7 @@
  * oidc-provider types cross this boundary.
  */
 
-import { createPublicKey, KeyObject, randomBytes, randomInt, sign } from "node:crypto";
+import { createHash, createPublicKey, KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
   type ActivationPolicyRef,
   type ApprovalContextManifestInput,
@@ -1271,6 +1271,18 @@ export class MissionKernel {
   /** The derivation policy version a Mission created here records as `policy_version`. */
   policyVersion(): string {
     return this.opts.policy.policy_version;
+  }
+
+  /**
+   * @spec mission#approval-context-changes (#1446, D583): a content digest of
+   * the whole derivation policy as it stands, so an edit under the same
+   * `policy_version` (a ceiling, a mapping, `max_mission_lifetime_s`,
+   * `derivation_limit_ceiling`) is a changed policy input even when every
+   * anchor agrees. It covers the whole policy, so an unrelated edit also
+   * re-renders an approval: a fresh decision, never a wrong one.
+   */
+  derivationPolicyDigest(): string {
+    return `sha-256:${createHash("sha256").update(canonicalize(this.opts.policy as unknown as JsonValue)).digest("base64url")}`;
   }
 
   /**
