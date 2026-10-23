@@ -3559,7 +3559,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       return undefined;
     }
     const subject = ctx.get(APPROVAL_SUBJECT_HEADER) || service.approver.sub;
-    return { key: serviceRenderKey(token, subject), subject };
+    return { key: serviceRenderKey(token, service.approver.sub, subject), subject };
   };
 
   /** @spec mission-template#template-consent: template proposals and their decisions. */
@@ -3960,7 +3960,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // principal, keyed as its rendering was.
       const principalKey = resolved.interactive
         ? opts.approvalSessions?.sessionKey(ctx.get("cookie"), uid)
-        : serviceRenderKey(ctx.get("x-service-token"), resolved.principal.subject ?? resolved.principal.sub);
+        : serviceRenderKey(ctx.get("x-service-token"), resolved.principal.sub, resolved.principal.subject ?? resolved.principal.sub);
       await decide(provider, opts, ctx, body, resolved.principal, resolved.interactive, principalKey);
       return;
     }

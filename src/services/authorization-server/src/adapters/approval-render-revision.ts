@@ -151,7 +151,7 @@ export function retireRenderRevision(provider: Provider, uid: string, principalK
   interactionRevisions(provider, uid, false)?.delete(principalKey);
 }
 
-/** The principal key of a trusted headless approval service deciding for a Subject. */
-export function serviceRenderKey(token: string, subject: string): string {
-  return `service:${createHash("sha256").update(token).digest("base64url")}:${subject}`;
+/** The principal key of a trusted headless approval service: its credential, the Approver it acts as, and the Subject it names. */
+export function serviceRenderKey(token: string, approver: string, subject: string): string {
+  return `service:${createHash("sha256").update(token).digest("base64url")}:${approver}:${subject}`;
 }

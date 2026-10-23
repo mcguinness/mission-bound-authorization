@@ -38,6 +38,7 @@ import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
+export { RENDER_REVISION_HEADER } from "./adapters/approval-render-revision.js";
 import { ApproverLoginRelyingParty, type ApproverLoginOptions } from "./adapters/approver-login.js";
 export {
   APPROVER_LOGIN_CALLBACK_PATH,
