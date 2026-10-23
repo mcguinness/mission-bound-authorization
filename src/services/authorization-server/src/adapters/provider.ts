@@ -1892,14 +1892,15 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // keeps the device authorization endpoint refusing a Request Object.
       // @spec mission#submission-processing (#1512): the hook runs before
       // the provider's RAR check, so it validates a carried Submission
-      // envelope and its Intent (steps 1 and 2) before a proposal inside the
-      // object is checked (step 3); evidence entries wait for their step.
+      // envelope and its Intent (steps 1 and 2), including each evidence
+      // entry's structure and size (step 1), before a proposal inside the
+      // object is checked (step 3); evidence type dispatch waits for step 6.
       requestObjects: {
         enabled: true,
         requireSignedRequestObject: false,
         assertJwtClaimsAndHeader: requestObjectIntake((submission) => {
           try {
-            kernel.validateSubmission(submission, undefined, { deferEvidenceEntries: true });
+            kernel.validateSubmission(submission, undefined, { deferEvidenceDispatch: true });
           } catch (e) {
             if (e instanceof IntentError) throw intentErrorToOidc(e);
             throw e;
@@ -2045,9 +2046,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         }
         // @spec mission#submission-processing (#1411): the PAR intake lifted
         // the proposal, so the envelope and the Intent (steps 1 and 2) are
-        // validated before it (step 3), and the evidence entry rules wait
-        // for the evidence step (step 6). A lifted proposal is always restored and
-        // checked, even where the provider reads no `mission_intent`.
+        // validated before it (step 3), with each evidence entry's structure
+        // and size (step 1, #1503 finding 12), and evidence type dispatch
+        // waits for the evidence step (step 6). A lifted proposal is always
+        // restored and checked, even where the provider reads no `mission_intent`.
         const lifted =
           (ctx as { oidc: { route?: string } }).oidc.route === "pushed_authorization_request"
             ? takeParIntake((ctx as { req: IncomingMessage }).req)
@@ -2073,7 +2075,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           return;
         }
         try {
-          const submission = kernel.validateSubmission(String(submitted), undefined, { deferEvidenceEntries: true });
+          const submission = kernel.validateSubmission(String(submitted), undefined, { deferEvidenceDispatch: true });
           const { intent } = submission;
           if (lifted) {
             params.authorization_details = lifted.proposal;
@@ -3370,13 +3372,30 @@ async function handleChildJwtBearerGrant(
  * refresh token destroys that Grant but leaves the row, so the row alone
  * would keep the family's tokens, and the delegations derived from them,
  * active after revocation.
+ *
+ * @spec mission#grant-binding-related, mission#delegated-exchange (#1503
+ * finding 11, D620): a grant with a recorded backing grant (a delegation
+ * handle's, minted by an exchange that establishes no new grant lineage) is
+ * live only while its backing grant is live too. A grant records its backing
+ * grant once, at its own mint, from a grant that already exists, so the chain
+ * is acyclic; one that revisits a grant is corrupt state and fails closed.
+ * Every link is a self-exchange the Mission counts as a derivation, so the
+ * Mission's derivation accounting bounds the chain the issuer mints, and a
+ * handle minted at any depth stays usable (#1601 review).
  */
 export async function isGrantLive(opts: AdapterOptions, provider: Provider, grantId: string): Promise<boolean> {
-  const grantExists = !!(await provider.Grant.find(grantId).catch(() => undefined));
-  if (opts.familyStore?.wasEverFamily(grantId)) {
-    return opts.familyStore.resolve(grantId) !== undefined && grantExists;
+  const seen = new Set<string>();
+  for (let current: string | undefined = grantId; current !== undefined; ) {
+    if (seen.has(current)) return false;
+    seen.add(current);
+    const grantExists = !!(await provider.Grant.find(current).catch(() => undefined));
+    const live = opts.familyStore?.wasEverFamily(current)
+      ? opts.familyStore.resolve(current) !== undefined && grantExists
+      : grantExists;
+    if (!live) return false;
+    current = opts.kernel.missionBoundGrants.resolve(current)?.backingGrantId;
   }
-  return grantExists;
+  return true;
 }
 
 /**

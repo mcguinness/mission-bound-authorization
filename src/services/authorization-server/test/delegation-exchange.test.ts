@@ -871,6 +871,111 @@ describe("delegation depth from the AS's accounting (@spec mission#delegation-co
   });
 });
 
+describe("each redemption validates the grant state backing the designated credential (@spec mission#delegated-exchange, mission#grant-binding-related, #1503 finding 11)", () => {
+  it("a self-exchanged token keeps the grant it was derived under: revoking the approval grant refuses a pending redemption and a new designation, counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    // A no-actor self-exchange (the delegation handle) returns only an access
+    // token, so it establishes no new grant lineage, though it rides a
+    // provider Grant of its own.
+    const handle = await designate(on, accessToken, "ap-agent");
+    expect(handle.status, JSON.stringify(handle.body)).toBe(200);
+    const narrowed = handle.body.access_token as string;
+    const pending = (await designate(on, narrowed, SUBAGENT)).body.access_token as string;
+    const delegated = await redeem(on, pending);
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+
+    const approvalGrant = on.as.kernel.get(missionId)?.grant_id as string;
+    const handleGrant = on.as.tokenIssuanceStore.resolve(on.issuer, jtiOf(narrowed))?.grantId as string;
+    expect(handleGrant).not.toBe(approvalGrant);
+    await (await on.as.provider.Grant.find(approvalGrant))?.destroy();
+    expect(await on.as.provider.Grant.find(handleGrant)).toBeDefined();
+    expect(on.as.kernel.get(missionId)?.state).toBe("active");
+    const before = derivations(on, missionId);
+
+    const redeemed = await redeem(on, pending);
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(400);
+    expect(redeemed.body.error).toBe("invalid_request");
+    expect(redeemed.body.error_description).toMatch(/source grant is no longer valid/);
+    const designated = await designate(on, narrowed, SUBAGENT);
+    expect(designated.status, JSON.stringify(designated.body)).toBe(400);
+    expect(designated.body.error).toBe("invalid_request");
+    expect(derivations(on, missionId)).toBe(before);
+    expect(await introspect(on, delegated.body.access_token as string)).toEqual({ active: false });
+  });
+
+  it("a delegated token keeps the grant its designation was derived under: revoking the approval grant refuses a pending depth-2 redemption, counting nothing", async () => {
+    const { missionId, delegated } = await delegatedToSubagent(on);
+    const pending = await designate(on, delegated, SECOND, SUBAGENT);
+    expect(pending.status, JSON.stringify(pending.body)).toBe(200);
+
+    await (await on.as.provider.Grant.find(on.as.kernel.get(missionId)?.grant_id as string))?.destroy();
+    expect(on.as.kernel.get(missionId)?.state).toBe("active");
+    const before = derivations(on, missionId);
+
+    const redeemed = await redeem(on, pending.body.access_token as string, SECOND);
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(400);
+    expect(redeemed.body.error).toBe("invalid_request");
+    expect(redeemed.body.error_description).toMatch(/source grant is no longer valid/);
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
+  it("a handle minted at any depth of consecutive self-exchanges stays designatable, and still falls with the approval grant (#1601 review)", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    let handle = accessToken;
+    for (let depth = 1; depth <= 9; depth++) {
+      const next = await designate(on, handle, "ap-agent");
+      expect(next.status, `self-exchange ${depth}: ${JSON.stringify(next.body)}`).toBe(200);
+      handle = next.body.access_token as string;
+    }
+    const designated = await designate(on, handle, SUBAGENT);
+    expect(designated.status, JSON.stringify(designated.body)).toBe(200);
+
+    await (await on.as.provider.Grant.find(on.as.kernel.get(missionId)?.grant_id as string))?.destroy();
+    const before = derivations(on, missionId);
+    const refused = await designate(on, handle, SUBAGENT);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_request");
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
+  it("a backing chain that revisits a grant is corrupt state and fails closed (#1601 review)", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const handle = (await designate(on, accessToken, "ap-agent")).body.access_token as string;
+    const approvalGrant = on.as.kernel.get(missionId)?.grant_id as string;
+    const handleGrant = on.as.tokenIssuanceStore.resolve(on.issuer, jtiOf(handle))?.grantId as string;
+    expect(on.as.kernel.missionBoundGrants.resolve(handleGrant)?.backingGrantId).toBe(approvalGrant);
+    // Both grants stay live; only the forged link back makes the chain a cycle.
+    on.as.kernel.missionBoundGrants.db.prepare("UPDATE mission_bound_grants SET backing_grant_id = ? WHERE grant_id = ?").run(handleGrant, approvalGrant);
+    const refused = await designate(on, handle, SUBAGENT);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_request");
+  });
+});
+
+describe("a designation's expiry bounds its redemption, not the delegated token's lifetime (@spec mission#designation, mission#token-authentication-lifetime, #1503 finding 11)", () => {
+  it("a designation pinned to its presented token's expiry is redeemed for a delegated token that outlives both, within the Mission", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const presentedExp = decodeJwt(accessToken).exp as number;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime((presentedExp - 20) * 1000);
+      const designation = await designate(on, accessToken, SUBAGENT);
+      expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+      const designationExp = decodeJwt(designation.body.access_token as string).exp as number;
+      expect(designationExp).toBe(presentedExp);
+
+      const delegated = await redeem(on, designation.body.access_token as string);
+      expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+      const exp = decodeJwt(delegated.body.access_token as string).exp as number;
+      expect(exp).toBeGreaterThan(designationExp);
+      expect(exp).toBeGreaterThan(presentedExp);
+      expect(exp).toBeLessThanOrEqual(Date.parse(on.as.kernel.get(missionId)?.expires_at as string) / 1000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("lifetimes are absolute across the request (@spec mission#designation, #1279 review)", () => {
   it("a designation whose source expires while the exchange awaits its checks is refused invalid_request, counting nothing", async () => {
     const { missionId, accessToken } = await baseMission(on);
@@ -1035,6 +1140,10 @@ describe("the exchange selector (@spec mission#delegation)", () => {
   });
 
   it("a delegated token reaches only a Mission-aware target: otherwise invalid_target, counting nothing (D166)", async () => {
+    // @spec mission#rs-mission-unaware (#1503 finding 8): the target enforces
+    // the Mission's authority (an authorization_details audience with its
+    // constraints keys), but the AS has not established that it processes the
+    // act chain, so the issuance gate refuses before the derivation is counted.
     const { missionId, accessToken } = await baseMission(only);
     const designation = await designate(only, accessToken, SUBAGENT);
     expect(designation.status, JSON.stringify(designation.body)).toBe(200);
@@ -1042,6 +1151,8 @@ describe("the exchange selector (@spec mission#delegation)", () => {
     const res = await redeem(only, designation.body.access_token as string);
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_target");
+    expect(res.body.error_description).toMatch(/routed only to a Mission-aware Resource Server/);
+    expect(res.body.access_token).toBeUndefined();
     expect(derivations(only, missionId)).toBe(before);
   });
 });
