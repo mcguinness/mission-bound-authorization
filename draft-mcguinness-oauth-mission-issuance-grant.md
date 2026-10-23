@@ -579,14 +579,12 @@ client-assertion-type%3Ajwt-bearer
 &client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6IjE2In0...
 ~~~
 
-The grant is an authorization, not a client credential: the client
-still proves it is the grant's `client_id`. A confidential client
-authenticates to this AS as {{Section 3.2.1 of RFC6749}} requires, and
-possession of a `cnf` key does not replace that authentication. A
-public client, which cannot authenticate, sends `client_id` in the
-request and can redeem only a grant that carries `cnf`: proof of
-possession of that key binds the redemption to the grant's
-`client_id`, and without `cnf` nothing does.
+The grant is an authorization, not a client credential. A
+confidential client authenticates as {{Section 3.2.1 of RFC6749}}
+requires, and possession of a `cnf` key does not replace that
+authentication. A public client sends `client_id` and can redeem only
+a grant that carries `cnf`, since proof of possession of that key is
+then the only binding of the redemption to the grant's `client_id`.
 
 ## Grant Validation {#grant-validation}
 
