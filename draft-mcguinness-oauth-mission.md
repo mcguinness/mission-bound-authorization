@@ -2336,13 +2336,10 @@ The grant binding relates to other mechanisms as follows:
   new grant binding, rooted in that same Mission.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
-  no destination-side grant binding. The cross-domain grant a
-  Resource AS consumes is single-use and confers no standing
-  authority in the partner domain, and the local access token it
-  mints there is a derived token: it identifies the one originating
-  Mission (`mission.id`, `mission.issuer`) but is not backed by a
-  persistent local lineage. A Resource AS that needs the projected
-  Mission again is presented a fresh cross-domain grant.
+  no destination-side grant binding. The local access token a
+  Resource AS mints is a derived token: it identifies the one
+  originating Mission (`mission.id`, `mission.issuer`) but is not
+  backed by a persistent local lineage.
 - **Child Missions and successors.** A Child Mission
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) and an
   expansion successor
