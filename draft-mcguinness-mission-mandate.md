@@ -816,6 +816,49 @@ commitment, and proves nothing further about the approval beyond what
 this Mandate's own signature already authenticates. Its absence is
 never a verification failure.
 
+Where `approval_governance_digest` ({{claims}}) is present and a
+verifier relies on an Approval Governance Record presented with this
+Mandate, it MUST run the portable approval-binding check with this
+Mandate as the Mission reference
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Portable Approval-Binding Check"), MUST recompute the record digest
+over the presented record, and MUST NOT rely on the record unless the
+check succeeds and the recomputed digest equals
+`approval_governance_digest`. A matching digest alone is not a
+binding: a correct digest of a record for another approval event or
+another Mission still fails the check. Where no record is presented,
+the Mandate's own verification is unaffected, but the Mandate cannot
+satisfy a relying party's requirement for governance evidence. The
+claim's absence is never a verification failure.
+
+A Mandate that pins a record carries, beside its other claims:
+
+~~~ json
+{
+  "approval_event_id": "ape_hON9D0svLKQAMyy-uug",
+  "approval_governance_digest":
+    "sha-256:j6eaQoHcHpH-fntRE1DkZgCDjBZZLxXrCwpHfTWCWnQ"
+}
+~~~
+
+Here the digest stands for the record digest of the Approval
+Governance Record example, whose envelope that example abbreviates.
+The following cases start from such a Mandate and a presented record
+whose portable approval-binding check would otherwise succeed:
+
+| Case | Presented record | Result |
+|---|---|---|
+| 1 | The pinned record | Relied on |
+| 2 | Another record for the same approval event | Not relied on: digest mismatch |
+| 3 | The pinned record, naming another approval event | Not relied on: binding fails |
+| 4 | The pinned record, naming another Mission's anchors | Not relied on: binding fails |
+| 5 | None | Mandate verified; no governance evidence |
+| 6 | The pinned record, with the Mandate omitting `approval_event_id` | Not relied on: insufficient evidence |
+{: title="Approval Governance digest cases"}
+
+Cases 3 and 4 arise only from an issuer that minted an inconsistent
+Mandate; the binding check, not the digest, detects them.
+
 Where the deployment runs the audit transparency profile, a verifier
 MAY additionally confirm an audit-registration Receipt
 ({{audit-evidence}}) before high-consequence reliance, and under a
