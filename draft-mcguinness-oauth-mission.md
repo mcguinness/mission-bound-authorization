@@ -7175,6 +7175,12 @@ Cross-Domain:
   a `scope`-only target, through that target's trusted scope-projection
   mapping, which also relates a requested value back to authority
   (Derivation Modes, Scope Projection).
+- Editorial, no requirement change: Standing-Consent Bases points to
+  the Architecture for the companion-defined bases instead of listing
+  them; Grant Bindings and Related Mechanisms, Composition and the
+  Effective Ceiling, Authority Materialized Before Containment, and the
+  `approval_basis` definition no longer restate what the companions
+  specify.
 
 -01
 
