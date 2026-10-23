@@ -58,6 +58,10 @@ state. Computed at main commit `a9e35e79064409136f438b6495f110c68f67b059`
 A later change to either file does not retroactively change this record;
 it would need a fresh binding.
 
+The verified Internet-Draft closure is computed from published texts
+instead: the core's `-01` and each archived draft, checked 2026-10-23.
+Its roots are the three drafts this commit cites.
+
 This binding replaces the first one, at `c41a39844fc1bedf04470f6c88ed5d9c06bd7fb1`
 (2026-08-25, the merge of PR #727; that record is in this file's git
 history). The first binding's closure property ("None is a
@@ -192,7 +196,8 @@ Method, so a future audit can re-run and diff:
 - Start from the three drafts at the revisions the published core `-01`
   cites (its Section 24.1). The source at the bound commit cites them
   unversioned, and each of those revisions is its draft's current one
-  (the table above), so the roots are the bound commit's.
+  (the Internet-Draft dependencies table above), so the roots are the
+  bound commit's.
 - For each node, read the Normative References section of
   `https://www.ietf.org/archive/id/<name>-<rev>.txt`.
 - Record every Internet-Draft entry with the revision it names. An entry
