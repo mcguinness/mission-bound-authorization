@@ -14,7 +14,7 @@ only publication surface the family maintains:
 | Product | Composition |
 |---|---|
 | Initial WG conversation | The OAuth Mission core and, separately, the Mission Resource Access RAR profile (this document) |
-| Normative dependency closure | Whatever each selected specification actually imports (computed below) |
+| Normative dependency closure | Whatever each selected specification actually imports; direct references are inventoried below, while the transitive closure remains unverified |
 | Implementation reader bundle | `notes/oauth-mission-baseline-bundle-preview.md`, a separate publication artifact |
 
 The reader-bundle preview constrains nothing here: it is an implementation
@@ -45,7 +45,7 @@ informative and its own invariants stated in the profile (D645).
 
 ## Record binding
 
-The composition, the dependency closure, and the category verification
+The composition, the direct-reference inventory, and the category verification
 below are all bound to one commit, not asserted as a standing current
 state. Computed at main commit `a9e35e79064409136f438b6495f110c68f67b059`
 (2026-10-23):
@@ -69,7 +69,7 @@ the core's `normative:` block has gained three external Internet-Drafts:
   finding 9, D620);
 - `draft-mcguinness-oauth-actor-profile`, by `e6f6c911a` (D625).
 
-## Normative dependency closure
+## Direct normative references and dependency planning
 
 Extracted from each draft's front matter `normative:` block at the bound
 commit.
@@ -187,11 +187,16 @@ notes branch `worktree-notes+oauth-binding-layering-plan`, PLAN.md
 Appendix E):
 - It traverses each draft's latest revision, not the revisions actually
   cited.
-- It finds 16 distinct Internet-Drafts reachable from the three above:
-  - 13 through the Actor Profile: itself and 12 it pulls in, including
+- It lists 16 distinct draft names reachable from the three above,
+  including `draft-ietf-tls-rfc8446bis`, already published as
+  [RFC 9846](https://datatracker.ietf.org/doc/rfc9846/). Within that
+  inventory, 15 nodes remain unpublished drafts:
+  - 12 through the Actor Profile: itself and 11 it pulls in, including
     an expired individual draft;
   - 2 through client-instance-id;
   - 1 through rar-metadata-remediation, which cites none.
+- These counts describe the existing planning inventory after separating
+  its published node; they do not establish a verified transitive closure.
 - Some of its edges come from the datatracker's heuristic References
   tab.
 
