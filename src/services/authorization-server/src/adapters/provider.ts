@@ -460,6 +460,7 @@ import type {
   MissionRecord,
 } from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
+import { JOIN_ASSERTION_ENDPOINT_PATH, type JoinAssertionService, readJoinAssertionBody } from "./join-assertion.js";
 import {
   authenticateLifecycleClient,
   LIFECYCLE_CLIENT_ASSERTION_ALGS,
@@ -703,6 +704,12 @@ export interface AdapterOptions {
    * Absent (the default), no caller is enrolled.
    */
   enrolledJoinPdps?: Readonly<Record<string, readonly string[]>>;
+  /**
+   * @spec authority-server#join-assertion (#1454): the MAS's Join Assertion
+   * endpoint, where the deployment serves one (`buildAuthorizationServer`'s
+   * `joinAssertions`). Absent, it is neither served nor advertised.
+   */
+  joinAssertionService?: JoinAssertionService;
   /**
    * @spec status#lifecycle-authorization: the deployment-defined grants bound
    * to a client that authenticates to the Mission Lifecycle endpoint by
@@ -4014,6 +4021,24 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       return;
     }
 
+    // --- Mission Join Assertion endpoint (@spec authority-server#join-assertion) (#1454) ---
+    // A JSON body; the caller authenticated as at Mission Status, its
+    // assertion's `aud` this endpoint. The error body is the MAS's
+    // (authority-server#submission-errors): no `nonce`.
+    if (ctx.path === JOIN_ASSERTION_ENDPOINT_PATH && ctx.method === "POST" && opts.joinAssertionService) {
+      const raw = await readJoinAssertionBody(ctx.req);
+      const answer =
+        raw === undefined
+          ? { status: 400, body: { error: "invalid_join_request", error_description: "request body is too large" } as Record<string, unknown> }
+          : await opts.joinAssertionService.handle(raw, ctx.get("content-type") ?? "", ctx.get("authorization") ?? "");
+      ctx.status = answer.status;
+      ctx.set("content-type", "application/json");
+      ctx.set("cache-control", "no-store");
+      if (answer.status === 429 && typeof answer.body.retry_after === "number") ctx.set("Retry-After", String(answer.body.retry_after));
+      ctx.body = answer.body;
+      return;
+    }
+
     // --- Mission Status List whole-list fetch (@spec status-list#status-list) ---
     // Deliberately unauthenticated (NOT behind requireServiceToken): the fetch
     // covers every opaque index at once and reveals no per-mission interest, so
@@ -5449,6 +5474,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec status#as-metadata, status#mission-status (#1407): the Mission
       // Status endpoint, the methods it accepts and, for private_key_jwt, the
       // client-assertion algorithms, wherever the Status operation is served.
+      // @spec authority-server#discovery (#1454): `mission_join_assertion_endpoint`,
+      // "Present when the MAS mints Mission Join Assertions".
+      if (opts.joinAssertionService) meta.mission_join_assertion_endpoint = `${opts.issuer}${JOIN_ASSERTION_ENDPOINT_PATH}`;
       if (enabled("status")) {
         meta.mission_status_endpoint = `${opts.issuer}${STATUS_ENDPOINT_PATH}`;
         meta.mission_status_endpoint_auth_methods_supported = [...STATUS_ENDPOINT_AUTH_METHODS];

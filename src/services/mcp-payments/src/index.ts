@@ -106,6 +106,7 @@ export {
   type HttpMcpChannel,
   type HttpMediatedClient,
 } from "./mcp-http-transport.js";
+export { accessTokenHash } from "./dpop.js";
 export { Connectors, type WireCommit, type EmailCommit, type CommitResult, type CommittedEffect } from "./connectors.js";
 export { TransactionEngine, operationKey, type OpState } from "./transaction.js";
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
