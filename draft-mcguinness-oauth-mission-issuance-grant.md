@@ -1040,7 +1040,9 @@ outside PAR. The front channel then carries only `client_id` and the
 ({{redemption}}) is unaffected.
 
 The AS applies the grant validation of {{grant-validation}} at the PAR
-endpoint and treats the grant as the authorization already obtained.
+endpoint, refusing a grant that fails it with the `invalid_grant`
+error code, which {{Section 2.3 of RFC9126}} permits there, and
+treats the grant as the authorization already obtained.
 It MUST NOT re-prompt for consent; at most it renders the Mission
 reference.
 
@@ -1073,7 +1075,10 @@ where an authenticated resource owner exists to bind. The AS MUST
 refuse the request unless the resource owner authenticated at the
 authorization endpoint is the grant's Subject under the deployment's
 mapping policy ({{trust}}), so the grant cannot mint tokens for
-another resource owner. A grant for a service-owned or organizational
+another resource owner. It refuses with the `access_denied` error
+code ({{Section 4.1.2.1 of RFC6749}}), redirecting the error to the
+client only where that section allows. A grant for a service-owned
+or organizational
 Mission has no delegating user to authenticate; it is redeemed
 directly ({{redemption}}), not carried through the authorization code
 flow.
