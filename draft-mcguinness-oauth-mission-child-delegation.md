@@ -29,6 +29,7 @@ author:
 normative:
   RFC3339:
   RFC6838:
+  RFC7519:
   RFC7523:
   RFC8259:
   RFC8414:
@@ -430,10 +431,11 @@ The child-creation token exchange carries:
   {{RFC8693}} token-exchange grant type ({{grant-type}}).
 
 `requested_token_type`:
-: REQUIRED. `urn:ietf:params:oauth:token-type:jwt`. This value selects
-  child creation: the Mission Issuer returns the child-bound JWT
-  authorization grant ({{child-client-identity}}). Expansion, the peer
-  operation on the same grant, is selected by the access-token type
+: REQUIRED. `urn:ietf:params:oauth:token-type:jwt`
+  ({{Section 10.2 of RFC7519}}). This value selects child creation:
+  the Mission Issuer returns the child-bound JWT authorization grant
+  ({{child-client-identity}}). Expansion, the peer operation on the
+  same grant, is selected by the access-token type
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 `subject_token`:
@@ -2470,6 +2472,8 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- The `urn:ietf:params:oauth:token-type:jwt` value cites its
+  registration, Section 10.2 of RFC 7519. No requirement changed.
 - RFC 6755 and RFC 8126 are removed from the references: neither is
   cited, and this document creates no registry. No requirement
   changed.
