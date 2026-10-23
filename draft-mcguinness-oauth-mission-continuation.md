@@ -333,11 +333,15 @@ rule to the OAuth transports.
 # Continuation Transports {#transports}
 
 A Continuation Transport carries an acting identity onward and a reference
-to the Mission being continued. Every transport, whatever its wire
-mechanism, MUST:
+to the Mission being continued. Each transport MUST identify the accepted
+hop through a reference that resolves to the Mission's rooting anchor.
+Possession of that reference alone MUST NOT be treated as evidence that
+the Mission's work remains authorized. The reference can be a
+continuation handle, which is not a credential ({{invariant}}), or a
+credential the transport defines, such as the async delegation
+transport's refresh token ({{transport-async}}). Every transport, whatever
+its wire mechanism, also MUST:
 
-- name the accepted hop with a continuation handle that is not itself a
-  credential and that resolves to the Mission's rooting anchor;
 - re-establish the acting identity at each hop and bind the continued
   credential to a confirmed key held by that identity; and
 - convey no authorization the Mission did not derive under
@@ -433,6 +437,18 @@ when the Mission reaches a terminal state, reusing that draft's
 family-revocation and reuse-detection rules with the Mission lifecycle as
 the trigger.
 
+This transport's reference ({{transports}}) is the presented refresh
+token. It resolves through its family's delegated authorization state
+({{Section 4.3 of I-D.draft-zhu-oauth-async-delegation}}) to the
+Mission's rooting anchor, the family's grant binding. Rotation
+({{Section 6 of I-D.draft-zhu-oauth-async-delegation}}) preserves that
+state, and the issuance profile resolves the family, one grant
+lineage, to the same Mission for its whole lifetime
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding the Mission
+to the Grant"). The refresh token is a
+credential, not a continuation handle, protected by that draft's client
+binding ({{Section 5.2 of I-D.draft-zhu-oauth-async-delegation}}).
+
 The exchange's `subject_token` is a delegation handle (Section 4.3 of
 {{I-D.draft-zhu-oauth-async-delegation}}): an access token whose
 audience is the acting client's own `client_id`, sender-constrained to
@@ -521,8 +537,12 @@ Cross-domain projection
 cross-boundary transport: a single-hop grant that carries a Mission into a
 partner trust domain, where a Resource Authorization Server mints a local
 token bounded by the projected authority. This profile adds nothing to
-projection's wire. It requires that a Mission continued in the partner
-domain remains subject to this profile there: continuation handles minted
+projection's wire. Its reference ({{transports}}) is the cross-domain
+grant, a credential whose `mission` claim names the originating Mission
+and which is issued only against that Mission's refresh token
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). It requires that
+a Mission continued in the partner domain remains subject to this
+profile there: continuation handles minted
 in the partner domain grant nothing, and continued grants re-derive a
 subset of the projected authority under the partner's state view.
 Projection stays single-hop regardless of intra-domain continuation on
@@ -586,7 +606,11 @@ gate. This is the property that makes conveying a continuation handle
 through an intermediary safe: the intermediary gains no ability to act.
 A delegation handle does carry authority, and its sender constraint
 ({{transport-async}}) withholds that authority from a holder without
-the acting client's key.
+the acting client's key. Neither statement extends to the async
+delegation transport's refresh token, which is a credential: a stolen
+refresh token protected only as a bearer credential can mint access
+tokens until detection, revocation or expiry
+({{Section 11 of I-D.draft-zhu-oauth-async-delegation}}).
 
 Revocation latency for a continuation is bounded by the shorter of the
 continued credential's remaining lifetime and the transport's re-issuance
@@ -633,6 +657,15 @@ constrains their use and introduces none of its own.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Continuation Transports requires each transport to identify the
+  accepted hop through a reference that resolves to the Mission's
+  rooting anchor, and forbids treating possession of that reference
+  alone as evidence that the work remains authorized. The reference no
+  longer has to be a non-credential: the async delegation transport's
+  reference is its refresh token, and the cross-domain transport's is the
+  cross-domain grant. This is a normative applicability correction; the
+  Grants-Nothing Invariant is unchanged (#1588).
 
 - The async transport's handle is called a delegation handle, an
   access token carrying authority, distinct from a continuation

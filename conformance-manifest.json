@@ -45031,6 +45031,131 @@
    "notes": "#1195 (D387, D390). On a self-dispatched instance the async exchange's handle-audience check is the only guard against the instance token: self-exchange rule 1 and possession both hold. Mutation proof: disabling that check opens a family from the instance token, failing the direct-async witness on status."
   },
   {
+   "id": "continuation.transports.reference-resolves-to-anchor",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transports",
+   "text": "Each transport MUST identify the accepted hop through a reference that resolves to the Mission's rooting anchor.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every continued grant is issued against a reference that resolves to exactly the Mission's rooting anchor; a reference that resolves to no anchor, or to another Mission's, continues nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1588 (D709). Gated on the two Continuation transport capabilities; the cross-domain transport has no Continuation-specific capability, and `cross-domain.projection` would also claim deployments that project without adopting Continuation. No witness yet."
+  },
+  {
+   "id": "continuation.transports.reference-possession-not-evidence",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transports",
+   "text": "Possession of that reference alone MUST NOT be treated as evidence that the Mission's work remains authorized.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented reference whose Mission is no longer active, or whose re-derivation fails, yields no continued grant, however valid the reference itself"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1588 (D709). Gated on the two Continuation transport capabilities; the cross-domain transport has no Continuation-specific capability, and `cross-domain.projection` would also claim deployments that project without adopting Continuation. No witness yet."
+  },
+  {
+   "id": "continuation.invariant.possession-not-evidence",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "invariant",
+   "text": "possession of a continuation handle, a refresh token, or any other transport artifact MUST NOT be treated as evidence that the work is still authorized",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a transport artifact presented for a Mission that is no longer active or no longer authorizes the requested authority yields no grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1588 (D709). Gated on the two Continuation transport capabilities; the cross-domain transport has no Continuation-specific capability, and `cross-domain.projection` would also claim deployments that project without adopting Continuation. No witness yet. Issuer facet of the invariant; the relying-party facet is continuation.invariant.relying-party-no-artifact-decision."
+  },
+  {
+   "id": "continuation.invariant.derivation-at-issuance",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "invariant",
+   "text": "Authorization is established only by deriving a subset of the Mission's Authority Set under a live state check ({{authorization-continuity}}) at each issuance.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each continued grant's authority is a subset of the Mission's Authority Set derived under a state check atomic with that issuance"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1588 (D709). Gated on the two Continuation transport capabilities; the cross-domain transport has no Continuation-specific capability, and `cross-domain.projection` would also claim deployments that project without adopting Continuation. No witness yet."
+  },
+  {
+   "id": "continuation.invariant.relying-party-no-artifact-decision",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "invariant",
+   "text": "A relying party MUST NOT make an authorization decision from the mere existence or contents of a continuation artifact.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a relying party presented with a continuation artifact but no Mission-bound credential valid for the request refuses it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1588 (D709). Gated on the two Continuation transport capabilities; the cross-domain transport has no Continuation-specific capability, and `cross-domain.projection` would also claim deployments that project without adopting Continuation. No witness yet. Relying-party facet of the invariant; the issuer facet is continuation.invariant.possession-not-evidence."
+  },
+  {
    "id": "resource-access.type.prefix-query-fragment-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-access-type",
