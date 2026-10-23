@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-23T17:38:36Z
-Source repository commit: 01373e32c6d718024ae13fe631bc0113473fea0c
+Generated: 2026-10-23T17:49:10Z
+Source repository commit: 12794c84c1dfa8f7e837e9a1de438e5bcf1fddb2
 Member count: 9
 
 Reading order:
