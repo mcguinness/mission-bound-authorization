@@ -59934,6 +59934,49 @@
    "notes": "The reference stack has no MAS submission or join-assertion endpoint. Todo until a MAS service exists (#972 item 18)."
   },
   {
+   "id": "mas.submission.assertion-audience",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "a client assertion's `aud` is the MAS's issuer identifier as its sole value",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mission submission authenticated by a private-key-JWT client assertion is accepted only when the assertion's aud is the MAS issuer identifier as its sole value; an assertion audienced to the submission endpoint URL, or carrying any other or additional audience, is refused invalid_client"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the #1569 review of the D685 rulings (Q2 detail): the client assertion's aud is the MAS issuer identifier as its sole value, as Mission Status requires. The reference serves no mission submission endpoint; the join-assertion endpoint in open #1554 still checks the endpoint audience, so its witness lands once #1554 adopts the issuer audience. todo until then."
+  },
+  {
+   "id": "mas.join-assertion.assertion-audience",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion",
+   "text": "a client assertion's `aud` MUST be the MAS's issuer identifier as its sole value",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a join-assertion request authenticated by a private-key-JWT client assertion is accepted only when the assertion's aud is the MAS issuer identifier as its sole value; an assertion audienced to the join-assertion endpoint URL, or carrying any other or additional audience, is refused invalid_client and no assertion is minted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the #1569 review of the D685 rulings (Q2 detail): the client assertion's aud is the MAS issuer identifier as its sole value, as Mission Status requires. The reference serves no mission submission endpoint; the join-assertion endpoint in open #1554 still checks the endpoint audience, so its witness lands once #1554 adopts the issuer audience. todo until then."
+  },
+  {
    "id": "mas.errors.invalid-client",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "submission-errors",
