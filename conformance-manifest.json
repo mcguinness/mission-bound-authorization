@@ -7209,11 +7209,11 @@
    "surface": "approval-ceremony",
    "assertion": "replay",
    "observation": {
-    "normative": "a repeated delivery of a committed approval decision, under the same `approval_event_id`, creates no second Mission: the AS holds exactly one Mission for that `approval_event_id`, its `version` is unchanged, and the repeated decision completes with the committed Mission",
+    "normative": "a repeated delivery of a committed approval decision, under the same `approval_event_id`, creates no second Mission: the AS holds exactly one Mission for that `approval_event_id`, the duplicate delivery causes no version change, and the repeated decision completes with the committed Mission; a retried standing-consent activation likewise resolves to the instance its first delivery committed",
     "local": "the approval decision derives `approval_event_id` from the interaction (`apev_<uid>`), so a double-submitted decision on one interaction carries the same identifier; it completes like the first, and its code redeems to the committed Mission"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
@@ -7222,7 +7222,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here. Strength is MUST NOT, the clause's keyword. The retried standing-consent activation is witnessed where each standing-consent type defines its event identity, by the companions' tested rows template.dispatch.approval-event-id-per-dispatch, progressive.in-ceiling.approval-event-id-per-drawdown and child-delegation.record.policy-drawdown-approval-event-id; this row's own witness covers the direct approval decision."
+   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here. Strength is MUST NOT, the clause's keyword. Partial (#1614 review): this row's witness covers the direct approval decision only. Of the standing-consent types, a retried Template Dispatch and a retried Progressive ceiling drawdown are witnessed by template.dispatch.approval-event-id-per-dispatch and progressive.in-ceiling.approval-event-id-per-drawdown, each citing a retry that recovers the committed instance. A retried Child Delegation policy_drawdown activation is not witnessed: child-delegation.record.policy-drawdown-approval-event-id checks only the identifier on a single creation."
   },
   {
    "id": "core.discovery.held-credential-no-substitution",
