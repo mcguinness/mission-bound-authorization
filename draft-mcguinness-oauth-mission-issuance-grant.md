@@ -29,6 +29,7 @@ author:
 
 normative:
   RFC6749:
+  RFC3339:
   RFC6838:
   RFC7515:
   RFC7519:
@@ -644,7 +645,14 @@ any check fails:
 2. the signature, under a `kid` resolving in the published key
    material of an `iss` its local policy trusts for issuance joins;
    and the `mission` claim's `issuer` equals `iss`;
-3. `aud` is a single string identical to this AS's issuer
+3. the `mission` claim carries `id`, a string in the Mission
+   Identifier character set ({{I-D.draft-mcguinness-oauth-mission}},
+   Section "Mission Identifier Format"); `expires_at`, an RFC 3339
+   date-time {{RFC3339}} later than the current time; and
+   `authority_hash`, in
+   the form of the issuance profile's Section "Integrity Anchors",
+   which the consuming AS does not recompute;
+4. `aud` is a single string identical to this AS's issuer
    identifier, compared as a literal string with no normalization, so
    an array, a token endpoint URL, or another alias fails; `exp` is no
    more than 300 seconds after
@@ -654,14 +662,14 @@ any check fails:
    the current time only; and the `jti` has not been seen, a seen
    `jti` being retained until `exp` plus that leeway passes
    ({{single-use}});
-4. the client is the grant's `client_id` ({{redemption}}): the
+5. the client is the grant's `client_id` ({{redemption}}): the
    authenticated client equals it, or, for a public client, the grant
    carries `cnf`; and whenever `cnf` is present, the request proves
    possession of that key, with a DPoP proof
    ({{Section 4.3 of RFC9449}}) whose public key has the `jkt`
    thumbprint or a client certificate on the TLS connection whose
    SHA-256 thumbprint matches the `x5t#S256` value;
-5. the (`iss`, `sub`) pair maps to a local account under the
+6. the (`iss`, `sub`) pair maps to a local account under the
    deployment's mapping policy ({{trust}}), and every entry of the grant's
    `authorization_details` is of a type this AS supports and is one it
    serves ({{entry-types}}).

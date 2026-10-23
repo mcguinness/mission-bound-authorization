@@ -38079,6 +38079,27 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q11); todo until that path exists."
   },
   {
+   "id": "issuance-grant.grant-validation.mission-members",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "the `mission` claim carries `id`, a string in the Mission Identifier character set",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant whose mission claim lacks id, expires_at or authority_hash, carries one in a form other than its definition (an id outside the Mission Identifier syntax, an expires_at that is not an RFC 3339 date-time or is not later than now, an authority_hash outside the sha-256 anchor form), or whose issuer differs from iss, is refused invalid_grant; authority_hash is not recomputed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q4); todo until that path exists."
+  },
+  {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "grant-validation",
