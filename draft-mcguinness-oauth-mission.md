@@ -2343,8 +2343,8 @@ The grant binding relates to other mechanisms as follows:
   down-scoping ({{self-exchange}}) both work this way, and the issued
   token is a derived token ({{mission-claim}}) whose `mission` claim
   identifies the one Mission its `subject_token` resolved to. A
-  Token Exchange that instead establishes reusable
-  authorization state, such as the continuation profile's
+  Token Exchange that instead establishes a redeemable grant
+  lineage, such as the continuation profile's
   delegation-family-creating exchange
   ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a
   new grant binding, rooted in that same Mission. Three Token
@@ -2357,12 +2357,14 @@ The grant binding relates to other mechanisms as follows:
   derived token for the dispatched Mission, creating or extending no
   grant binding, and the later delegation-family exchange creates
   that Mission's first grant binding. In the continuation profile's
-  Identity Continuation Transport, the identity provider's hop record
-  is continuation state, not a grant lineage, and a Resource AS holds a
-  destination-side grant binding only where it establishes a
-  redeemable grant lineage mapped to the Mission, such as a
-  refresh-token family
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}).
+  Identity Continuation Transport
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), the root and
+  onward exchanges return ID-JAGs that identify the Mission, and the
+  identity provider's hop record is continuation state, not a grant
+  lineage. Redeeming such an ID-JAG at a Resource AS produces a local
+  derived access token. A Resource AS holds a destination-side grant
+  binding only where it separately establishes a redeemable grant
+  lineage mapped to the Mission, such as a refresh-token family.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
   no destination-side grant binding. A Resource AS consumes the
@@ -7223,6 +7225,7 @@ Cross-Domain:
 - Editorial, no requirement change: Grant Bindings and Related
   Mechanisms places the Template profile's Dispatch Handoff and the
   continuation profile's Identity Continuation Transport, the
+  reusable-state case reads as a redeemable grant lineage, the
   derivation resolution list points to profile-defined grants, and a
   derived token's Mission is the one its `subject_token` resolved to,
   with no binding assumed (#1589, D726).
