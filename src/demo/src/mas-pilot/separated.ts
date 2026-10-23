@@ -35,8 +35,15 @@
  */
 
 import { TOPOLOGY } from "@mission/demo-data";
-import { CANONICAL_RESOURCE, type LoadedView, type MissionReference, type MissionViewSource } from "@mission/mcp-payments";
-import { declaredStatusKeys, type MissionView, MissionStatusResolver, privateKeyJwtClient, type ResolvedMission } from "@mission/pdp";
+import { CANONICAL_RESOURCE, joinAssertionClient, type JoinAssertionSource, type LoadedView, type MissionReference, type MissionViewSource } from "@mission/mcp-payments";
+import {
+  declaredStatusKeys,
+  type JoinAssertionPolicy,
+  type MissionView,
+  MissionStatusResolver,
+  privateKeyJwtClient,
+  type ResolvedMission,
+} from "@mission/pdp";
 import { importJWK, type JWK } from "jose";
 import { assembleMasPilot, type MasPilotOptions, type MasPilotParts, type PdpDecide, requireDeclaredMappingContract } from "./compose.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "./config.js";
@@ -52,6 +59,8 @@ export interface SeparatedMasPilotOptions extends MasPilotOptions {
   resolverNow?: () => Date;
   /** Override the advertised Status endpoint (a test points it at a proxy or a double). */
   statusEndpoint?: string;
+  /** Interpose on the PEP's Join Assertion requests (a test substitutes or withholds what the MAS returns). */
+  wrapAssertionSource?: (source: JoinAssertionSource) => JoinAssertionSource;
 }
 
 /** The separated pilot: everything `composeMasPilot` assembles, and no kernel. */
@@ -141,6 +150,8 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     jwks_uri: string;
     mission_max_stale_seconds: number;
     mission_status_endpoint?: unknown;
+    mission_join_assertion_endpoint?: unknown;
+    mission_status_signing_alg_values_supported?: unknown;
   };
   if (metadata.issuer !== config.mission_issuer) {
     throw new Error(`the MAS at ${base} is issuer ${metadata.issuer}, not the configured Mission issuer ${config.mission_issuer}`);
@@ -161,12 +172,46 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     ...((opts.resolverNow ?? opts.now) ? { now: (opts.resolverNow ?? opts.now) as () => Date } : {}),
   });
   const jwks = (await read(metadata.jwks_uri)) as { keys: Record<string, unknown>[] };
+  const statusKeys = declaredStatusKeys(jwks as never, [TOPOLOGY.keys.asStatus.kid]);
   const resolverNow = opts.resolverNow ?? opts.now;
+  // @spec authority-server#join-assertion-request, #join-assertion-pdp
+  // (#1454): where the configuration declares a Join Assertion path, the PEP
+  // requests assertions at the endpoint the MAS advertises, as the PDP's own
+  // enrolled client (the pilot's PEP and PDP are one enforcement point), and
+  // the PDP consumes them under the declared requirement.
+  const declared = config.join_assertion;
+  let joinAssertion: { policy: JoinAssertionPolicy; source: JoinAssertionSource } | undefined;
+  if (declared) {
+    const endpoint = metadata.mission_join_assertion_endpoint;
+    if (typeof endpoint !== "string") throw new Error(`the MAS at ${base} advertises no mission_join_assertion_endpoint`);
+    const listed = metadata.mission_status_signing_alg_values_supported;
+    const advertised = Array.isArray(listed) ? listed.filter((a): a is string => typeof a === "string") : [];
+    const caller = privateKeyJwtClient({
+      clientId: config.separated_mas.pdp_client_id,
+      issuer: metadata.issuer,
+      audience: endpoint,
+      privateKey: (await importJWK(pdpKey, pdpKey.alg ?? "ES256")) as CryptoKey,
+      kid: pdpKey.kid,
+      ...(resolverNow ? { now: resolverNow } : {}),
+    });
+    joinAssertion = {
+      policy: {
+        audience: config.separated_mas.pdp_client_id,
+        keys: statusKeys,
+        // The MAS's listed algorithms; jose refuses `none` and an algorithm the key does not suit.
+        algorithms: advertised,
+        required: declared.required,
+        requiredActionClasses: new Set(declared.required_classes),
+      },
+      source: joinAssertionClient({ endpoint, audience: config.separated_mas.pdp_client_id, clientAssertion: caller.assertion, timeoutMs: source.timeout_ms }),
+    };
+    if (opts.wrapAssertionSource) joinAssertion.source = opts.wrapAssertionSource(joinAssertion.source);
+  }
   const resolver = new MissionStatusResolver({
     issuer: metadata.issuer,
     statusEndpoint: opts.statusEndpoint ?? metadata.mission_status_endpoint,
     audience: CANONICAL_RESOURCE,
-    keys: declaredStatusKeys(jwks as never, [TOPOLOGY.keys.asStatus.kid]),
+    keys: statusKeys,
     client,
     maxStaleSeconds: metadata.mission_max_stale_seconds,
     timeoutMs: source.timeout_ms,
@@ -181,7 +226,12 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     },
     viewSource: statusViewSource(resolver),
     stateSourcePlacement: source.placement,
-    decide: ownReadDecide(resolver),
+    decide: (inner) => {
+      if (!joinAssertion) return ownReadDecide(resolver)(inner);
+      const policy = joinAssertion.policy;
+      return ownReadDecide(resolver)((request, options) => inner(request, { ...options, joinAssertion: policy }));
+    },
+    ...(joinAssertion ? { assertionSource: joinAssertion.source } : {}),
   });
   return { ...parts, resolver };
 }

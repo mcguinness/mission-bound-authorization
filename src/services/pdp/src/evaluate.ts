@@ -1515,8 +1515,10 @@ async function evaluateInner(
         now(),
       );
       if (!asserted) return deny("mission_binding_failed");
+      // The Mission's own client is depth 0 in the actor records a PEP reads
+      // `delegate_depth` from, so a client join disagrees with any other depth.
       const reportedDepth = req.context.mission_join.delegate_depth;
-      if (reportedDepth !== undefined && reportedDepth !== (asserted.disposition === "delegate" ? asserted.depth : undefined)) {
+      if (reportedDepth !== undefined && reportedDepth !== (asserted.disposition === "delegate" ? asserted.depth : 0)) {
         return deny("mission_binding_failed");
       }
       const joined = resolveAssertedJoin({ view, join: asserted, onEntryEvaluated: entry => { contributions.add(entry.type); } });

@@ -45,6 +45,7 @@ import {
   createHttpMcpChannel,
   EvidenceStore,
   type HttpMcpChannel,
+  type JoinAssertionSource,
   type LoadedView,
   McpPaymentsServer,
   type MissionReference,
@@ -116,6 +117,12 @@ export interface MasPilotOptions {
    * stops the composition at its next step and releases what it opened.
    */
   startup?: StartupScope;
+  /**
+   * @spec authority-server#join-assertion-request (#1454): where the
+   * configuration declares `join_assertion`, the secret of the MAS's
+   * introspection client, which the estate registers beside the gateway's.
+   */
+  joinIntrospectionSecret?: string;
 }
 
 /** Everything the pilot assembles around its Mission state source, kernel or not. */
@@ -162,6 +169,8 @@ export interface MissionStateWiring {
   viewSource?: MissionViewSource;
   stateSourcePlacement?: StateSourcePlacement;
   decide?: (inner: PdpDecide) => PdpDecide;
+  /** @spec authority-server#join-assertion-request (#1454): where the PEP obtains Join Assertions. */
+  assertionSource?: JoinAssertionSource;
 }
 
 /**
@@ -195,10 +204,20 @@ export function requireDeclaredMappingContract(config: MasPilotConfig): void {
   }
 }
 
+/** The MAS's introspection client secret, which a declared `join_assertion` needs. */
+function requireSecret(secret: string | undefined): string {
+  if (!secret) throw new Error("the configuration declares join_assertion, but no secret for the MAS's introspection client was given");
+  return secret;
+}
+
 /** Assemble and start the pilot. `close()` releases every listener and store it opened. */
 export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> {
   const config = opts.config ?? loadMasPilotConfig();
   requireDeclaredMappingContract(config);
+  // @spec authority-server#join-assertion (#1454): the in-process pilot
+  // reads the kernel and runs no Join Assertion path, so a configuration
+  // declaring one is refused here rather than run without it.
+  if (config.join_assertion) throw new Error("join_assertion applies to the separated topology only");
   const missionIssuer = config.mission_issuer;
   const scope = new StartupScope(opts.startup);
   try {
@@ -244,6 +263,11 @@ export async function assembleMasPilot(
   );
   // The gateway's introspection client at the estate, its secret generated here.
   const introspectionClient = { client_id: config.introspection.client_id, client_secret: crypto.randomUUID() };
+  // The MAS's introspection client, where the configuration declares a Join
+  // Assertion path: its secret was generated where the MAS was started.
+  const joinIntrospector = config.join_assertion
+    ? [{ client_id: config.join_assertion.introspection_client_id, client_secret: requireSecret(opts.joinIntrospectionSecret) }]
+    : [];
   // Each listener and store is registered as it opens (#818 slice 5B review).
   const scope = new StartupScope(opts.startup);
   const close = () => scope.release();
@@ -256,7 +280,7 @@ export async function assembleMasPilot(
         port: config.estate.port,
         accounts: config.estate.accounts,
         clients: [...estateClients.values()],
-        introspectionClients: [introspectionClient],
+        introspectionClients: [introspectionClient, ...joinIntrospector],
         resourceServers: config.estate.resource_servers,
       }),
       (e) => e.close(),
@@ -339,6 +363,7 @@ export async function assembleMasPilot(
         mappingContract: () => mapping.current(),
         resolveDelegateDepth: actorRecords.resolveDepth.bind(actorRecords),
         missionBoundOnlyClasses: new Set(config.mission_bound_only_classes),
+        ...(wiring.assertionSource ? { assertionSource: wiring.assertionSource } : {}),
       },
     });
 

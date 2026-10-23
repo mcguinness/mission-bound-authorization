@@ -258,6 +258,9 @@ describe("evaluate(): an assertion that fails a check denies mission_binding_fai
     await expectBindingFailed(joinedReq(carrying(await mint(), { delegate_depth: 1 }), READ), opts(), "client with a reported depth");
     const agrees = await decide(joinedReq(carrying(delegate, { delegate_depth: 1 }), LIST), opts());
     expect(agrees.decision.decision, JSON.stringify(agrees.decision)).toBe(true);
+    // The Mission's own client is depth 0 in the PEP's actor records.
+    const client = await decide(joinedReq(carrying(await mint(), { delegate_depth: 0 }), READ), opts());
+    expect(client.decision.decision, JSON.stringify(client.decision)).toBe(true);
   });
 });
 
