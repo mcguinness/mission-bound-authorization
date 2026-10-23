@@ -5427,22 +5427,13 @@ of a Mission and its descendants) is the metering profile's role
 ### Authority Materialized Before Containment {#the-containment-materialized-capability-residual}
 
 Where a deployment runs the Mission Containment profile
-({{I-D.draft-mcguinness-oauth-mission-containment}}), containment
-narrows the authority available from an entry for later derivations;
-the approved Authority Set and its commitments remain unchanged.
-Containment also propagates to Child Missions justified by that entry.
-
-Containment does not reach authority materialized before the
-containment transition. A cross-domain grant already redeemed at a
-Resource AS ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or
-an offline attenuation root already minted and attenuating outside the
-issuer's reach, operates for its own remaining lifetime, the same
-residual bound that revocation carries ({{revocation}}).
-
-Where containment needs to take effect quickly against
-already-materialized authority, short cross-domain grant and offline
-attenuation root lifetimes keep that residual window to one the next
-lease or re-mint closes.
+({{I-D.draft-mcguinness-oauth-mission-containment}}), a contain
+transition does not reach authority materialized before it, such as a
+cross-domain grant already redeemed at a Resource AS or an offline
+attenuation root already minted. That authority operates for its own
+remaining lifetime, the same residual bound that revocation carries
+({{revocation}}); the containment profile states the residual and how
+short lifetimes bound it.
 
 # Privacy Considerations {#privacy-considerations}
 
