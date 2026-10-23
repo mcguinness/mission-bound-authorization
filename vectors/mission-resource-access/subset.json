@@ -1229,6 +1229,240 @@
         "#1596",
         "D727"
       ]
+    },
+    {
+      "id": "sub-ref-12",
+      "description": "Both operands carry another type, byte-identical",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "other_type",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "other_type",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an operand whose type is absent or names another type is not a mission_resource_access entry, so the comparison is refused; identical operands are not certified as a subset"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-13",
+      "description": "The reference carries another type",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "other_type",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an operand whose type is absent or names another type is not a mission_resource_access entry, so the comparison is refused; the reference operand is validated too"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-14",
+      "description": "The candidate omits type",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an operand whose type is absent or names another type is not a mission_resource_access entry, so the comparison is refused"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-15",
+      "description": "The candidate's max_amount carries another member, against an uncapped reference",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "USD",
+              "extra": true
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the amount object has exactly the members amount and currency; any other member is malformed input, never ignored; a candidate-only cap is validated as well"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-16",
+      "description": "The reference's max_amount carries another member",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "USD"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD",
+              "extra": true
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the amount object has exactly the members amount and currency; any other member is malformed input, never ignored; the reference operand is validated too"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "sub-ref-17",
+      "description": "Both operands carry the same max_amount with another member, byte-identical",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "USD",
+              "extra": true
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "USD",
+              "extra": true
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the amount object has exactly the members amount and currency; any other member is malformed input, never ignored; identical operands are not certified as a subset"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
     }
   ]
 }
