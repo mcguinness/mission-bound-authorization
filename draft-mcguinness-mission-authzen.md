@@ -74,6 +74,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime-evidence:
+    title: "Mission Runtime Evidence"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -108,14 +116,6 @@ normative:
 informative:
   RFC9457:
   RFC9470:
-  I-D.draft-mcguinness-mission-runtime-evidence:
-    title: "Mission Runtime Evidence"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-evidence.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-mission-runtime-oauth:
     title: "Mission-Bound Runtime Enforcement: OAuth 2.0 Profile"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime-oauth.html
@@ -2687,7 +2687,7 @@ This is the Runtime Evidence feature profile
 ({{profiles-and-capabilities}}): a PDP and PEP that claim it emit the
 Decision Evidence, Execution Evidence, and Refusal Records of the
 runtime evidence companion {{I-D.draft-mcguinness-mission-runtime-evidence}}
-(normative reference) for every decision, execution outcome, and
+for every decision, execution outcome, and
 pre-decision refusal this profile produces; a PEP/PDP pair claiming
 only the Decision Base satisfies the runtime profile's baseline
 evidence duty in its own internal form instead
