@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-23T22:28:15Z
-Source repository commit: 3265fa3dd873e6b0955025482c05ff69aaa64a28
+Generated: 2026-10-23T23:10:15Z
+Source repository commit: 94dcf0657e54eb602c456eada9bbe028d863fd49
 Member count: 9
 
 Reading order:
@@ -9510,7 +9510,7 @@ Table of Contents
 
 6.8.  Approver Authentication Strength
 
-   A deployment publishes a statement declaring the minimum approval-
+   A deployment MUST publish a statement declaring the minimum approval-
    authentication strength (the approval-authentication floor) it
    enforces for Missions whose derived Authority Set carries high-risk
    authority, and the deployment scope it applies to.  High-risk
@@ -10496,10 +10496,23 @@ Table of Contents
 
 9.2.  Mission-Unaware Resource Servers
 
-   A deployment MUST NOT route a delegated Mission-bound token to a
-   Mission-unaware resource server, or to logging or audit
-   infrastructure, that authorizes or logs the caller on client_id
-   without processing the act chain.
+   Two parties keep a delegated Mission-bound token, one carrying an act
+   claim, from consumers that do not process the act chain:
+
+   *  *The AS, at issuance.* The AS MUST refuse, with invalid_target
+      (Section 10), a request for a delegated Mission-bound token whose
+      audience it has not established as a Mission-aware Resource Server
+      (Section 9.1) that also processes the act chain, authorizing and
+      logging the caller from the chain rather than from client_id
+      alone.  That the audience parses act does not establish this.
+
+   *  *The deployment, after issuance.* A deployment MUST NOT route a
+      delegated Mission-bound token to a Mission-unaware resource
+      server, or to logging or audit infrastructure, that authorizes or
+      logs the caller on client_id without processing the act chain.
+      The AS cannot verify where a token travels beyond its audience or
+      which pipelines log its use, so that routing and logging remain
+      the deployment's.
 
    A Mission-unaware [RFC9068] resource server reads client_id as the
    immediate client, which is accurate for that single token.  It cannot
@@ -10512,7 +10525,9 @@ Table of Contents
    A resource that requires Mission-bound tokens can advertise that
    through the mission_bound_authorization_required protected resource
    metadata member (Section 18); a resource server that serves such a
-   resource is, by that requirement, Mission-aware.
+   resource is, by that requirement, Mission-aware.  That requirement
+   does not by itself establish that the resource server processes the
+   act chain.
 
    A Mission-unaware resource server that authorizes only from scope
    operates within the Mission only to the extent the AS established a
@@ -10721,12 +10736,12 @@ Table of Contents
    +=================================+=================================+
    | PAR, or a companion's token-    | invalid_mission_intent_evidence |
    | endpoint submission: a          | (Section 4.4).  Detail: safe    |
-   | presented evidence entry of     | error_description               |
-   | an unsupported type, or         |                                 |
-   | failing its type's validation   |                                 |
-   | or verification                 |                                 |
-   | (Section 4.4), or a required    |                                 |
-   | evidence type absent            |                                 |
+   | presented evidence entry of an  | error_description               |
+   | unsupported type, or failing    |                                 |
+   | its type's validation or        |                                 |
+   | verification (Section 4.4), or  |                                 |
+   | a required evidence type        |                                 |
+   | absent                          |                                 |
    +---------------------------------+---------------------------------+
    | Authorization or token          | invalid_target (Section 2 of    |
    | request: invalid, unknown, or   | [RFC8707]).  Detail: safe       |
@@ -10738,20 +10753,20 @@ Table of Contents
    +---------------------------------+---------------------------------+
    | Authorization or token          | invalid_target (Section 2 of    |
    | request: the target's scope-    | [RFC8707]).  Detail: safe       |
-   | projection mapping is           | error_description               |
-   | unknown, ambiguous, or stale,   |                                 |
-   | whether or not the request      |                                 |
-   | names a scope value, or the     |                                 |
-   | target is scope-only and no     |                                 |
-   | safe projection exists for      |                                 |
-   | the applicable entries when     |                                 |
-   | the request names no scope      |                                 |
-   | value (Section 8.7); or,        |                                 |
-   | where the AS applies            |                                 |
-   | Section 9's delegated-token     |                                 |
-   | routing rule at issuance, the   |                                 |
-   | delegated token's target is     |                                 |
-   | not known to be Mission-aware   |                                 |
+   | projection mapping is unknown,  | error_description               |
+   | ambiguous, or stale, whether    |                                 |
+   | or not the request names a      |                                 |
+   | scope value, or the target is   |                                 |
+   | scope-only and no safe          |                                 |
+   | projection exists for the       |                                 |
+   | applicable entries when the     |                                 |
+   | request names no scope value    |                                 |
+   | (Section 8.7); or the AS has    |                                 |
+   | not established a delegated     |                                 |
+   | Mission-bound token's audience  |                                 |
+   | as a Mission-aware Resource     |                                 |
+   | Server that also processes the  |                                 |
+   | act chain (Section 9.2)         |                                 |
    +---------------------------------+---------------------------------+
    | Authorization or token          | invalid_scope (Section 4.1.2.1  |
    | request: an explicitly          | of [RFC6749], Section 5.2 of    |
@@ -10760,18 +10775,18 @@ Table of Contents
    | scope-projection mapping the    |                                 |
    | AS trusts (Section 8.7)         |                                 |
    +---------------------------------+---------------------------------+
-   | Profile-defined operation       | invalid_grant (Section 5.2 of   |
-   | that lets a client present a    | [RFC6749]).  Detail: safe       |
-   | Mission Identifier alongside    | error_description               |
-   | a credential (Section 8.1.1):   |                                 |
+   | Profile-defined operation that  | invalid_grant (Section 5.2 of   |
+   | lets a client present a         | [RFC6749]).  Detail: safe       |
+   | Mission Identifier alongside a  | error_description               |
+   | credential (Section 8.1.1):     |                                 |
    | the identifier does not match   |                                 |
    | the Mission the credential      |                                 |
    | resolves to                     |                                 |
    +---------------------------------+---------------------------------+
-   | Token endpoint: the Mission     | invalid_request on a Token      |
-   | is terminated (revoked,         | Exchange (Section 2.2.2 of      |
-   | expired, superseded, or         | [RFC8693]), invalid_grant       |
-   | another termination reason)     | (Section 5.2 of [RFC6749]) on   |
+   | Token endpoint: the Mission is  | invalid_request on a Token      |
+   | terminated (revoked, expired,   | Exchange (Section 2.2.2 of      |
+   | superseded, or another          | [RFC8693]), invalid_grant       |
+   | termination reason)             | (Section 5.2 of [RFC6749]) on   |
    |                                 | any other grant, or the code a  |
    |                                 | Token Exchange profile assigns  |
    |                                 | (Section 8.2).  Detail:         |
@@ -10957,9 +10972,10 @@ Table of Contents
       grant state (Section 11.4).
 
    An AS MAY support OAuth 2.0 Token Introspection [RFC7662] for
-   Mission-bound access tokens.  When it does, the response for such a
-   token carries, in addition to the standard members, a mission member:
-   a JSON object with the following members:
+   Mission-bound access tokens.  When it does, an active: true response
+   for such a token, to a caller authorized to receive Mission data
+   (Section 11.1), MUST carry, in addition to the standard members, a
+   mission member: a JSON object with the following members:
 
    *  id and issuer: as in the mission claim (Section 8.8).
 
@@ -11337,6 +11353,11 @@ Table of Contents
       in the previous actor's act member.  Each actor object carries the
       members that profile defines (for example, sub, iss, and the
       sub_profile actor-type classification, such as ai_agent).
+
+   *  *The audience processes the chain.* The AS issues the delegated
+      token only for an audience it has established as a Mission-aware
+      Resource Server that also processes the act chain, and refuses any
+      other with invalid_target (Section 9.2).
 
    *  *Authority only narrows.* The delegated token's
       authorization_details MUST be a subset (Section 5.4) of the
@@ -16334,11 +16355,16 @@ Table of Contents
    it at the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax (Section 3.1).  A malformed request
-       is refused invalid_request.
+       is refused invalid_request; a request that includes a parameter
+       more than once is malformed, as at the token endpoint
+       (Section 3.2 of [RFC6749]).
 
    3.  Authorize the request: the caller's read authorization, the
        Mission the mission_id names, and any requested audience
@@ -17061,12 +17087,17 @@ Table of Contents
    the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax and the operation (Section 5.1).  A
        malformed request, or an operation the AS does not serve, is
-       refused invalid_request.
+       refused invalid_request; a request that includes a parameter more
+       than once is malformed, as at the token endpoint (Section 3.2 of
+       [RFC6749]).
 
    3.  Authorize the request.  For a base operation this is the
        lifecycle authorization of Section 5.4 for the acting party, the
