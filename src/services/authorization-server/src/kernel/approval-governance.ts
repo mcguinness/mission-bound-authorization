@@ -110,6 +110,8 @@ export interface UnsignedApprovalGovernanceRecord {
   approval_policy: ActivationPolicyRef;
   assertions: AgrAssertion[];
   evaluation: { decision: "approved"; evaluated_at: string; contributing: string[] };
+  /** OPTIONAL: the Approval Context Commitment, signed with the rest of the record. */
+  approval_context_commitment?: string;
 }
 
 /** @spec approval-governance#record, approval-governance#envelope: the signed, retained form. */
@@ -168,6 +170,24 @@ export function verifyApprovalGovernanceRecord(
   record: ApprovalGovernanceRecord,
   opts: { resolveKey: (kid: string) => KeyObject | undefined; mission: MissionRecord },
 ): ApprovalGovernanceRecord {
+  authenticateApprovalGovernanceEnvelope(record, opts.resolveKey);
+  // Step 5: the mission binding.
+  assertMissionBinding(record, opts.mission);
+  return record;
+}
+
+/**
+ * @spec approval-governance#envelope: steps 1 to 4 of the verifier, refusing
+ * on any failure: the signing key from the protected `kid` in the key material
+ * `resolveKey` holds; the signature and the protected `typ`/`cty`; and byte
+ * equality between the decoded payload and the canonical record without
+ * `envelope`. It authenticates the record; it does not bind it to a Mission
+ * Record (step 5, {@link verifyApprovalGovernanceRecord}).
+ */
+function authenticateApprovalGovernanceEnvelope(
+  record: ApprovalGovernanceRecord,
+  resolveKey: (kid: string) => KeyObject | undefined,
+): void {
   const envelope = record.envelope;
   if (!envelope || envelope.format !== AGR_ENVELOPE_FORMAT || typeof envelope.value !== "string") {
     throw new ApprovalGovernanceError("unsupported or missing envelope format");
@@ -182,7 +202,7 @@ export function verifyApprovalGovernanceRecord(
     throw new ApprovalGovernanceError("malformed protected header");
   }
   // Step 1: the signing key from the protected `kid`.
-  const key = typeof header.kid === "string" ? opts.resolveKey(header.kid) : undefined;
+  const key = typeof header.kid === "string" ? resolveKey(header.kid) : undefined;
   if (!key) throw new ApprovalGovernanceError("protected kid does not resolve to the issuer's key material");
   // Step 2: the signature and the protected header.
   if (header.alg !== "ES256") throw new ApprovalGovernanceError("unsupported alg");
@@ -196,9 +216,6 @@ export function verifyApprovalGovernanceRecord(
   if (payload !== canonicalize(withoutEnvelope(record))) {
     throw new ApprovalGovernanceError("record differs from its signed payload");
   }
-  // Step 5: the mission binding.
-  assertMissionBinding(record, opts.mission);
-  return record;
 }
 
 /**
@@ -215,6 +232,162 @@ export function assertMissionBinding(record: UnsignedApprovalGovernanceRecord, m
   ) {
     throw new ApprovalGovernanceError("record mission binding does not match the Mission record");
   }
+}
+
+/**
+ * @spec approval-governance#portable-binding: the values a Mission reference
+ * discloses, read by the caller from an artifact it authenticated under that
+ * artifact's own rules, with trust in the expected Mission Issuer's key
+ * material. Authenticating the reference is the caller's; this check reads
+ * only what it discloses. A member the reference does not disclose is absent
+ * (`undefined`). For a Mandate (`kind` `mandate`), `iss` is its `iss` claim
+ * and `issuer` its `mission.issuer`.
+ */
+export interface PortableMissionReference {
+  kind?: string;
+  iss?: unknown;
+  issuer?: unknown;
+  approval_event_id?: unknown;
+  intent_hash?: unknown;
+  authority_hash?: unknown;
+  approval_context_commitment?: unknown;
+}
+
+/**
+ * @spec approval-governance#portable-binding: the portable approval-binding
+ * check's result, named for that check. A success is never a verification of
+ * the record against the Mission Record or a re-check of the evaluation.
+ * `commitment_agreement` is stated on success only: `established` when both
+ * artifacts carry an equal `approval_context_commitment`, `not_established`
+ * when one or neither carries it.
+ */
+export interface PortableApprovalBindingResult {
+  check: "portable-approval-binding";
+  outcome: "success" | "failure" | "insufficient_evidence";
+  commitment_agreement: "established" | "not_established" | undefined;
+  reason: string;
+}
+
+/** The integrity-anchor encoded form ({@link approvalGovernanceRecordDigest}): `sha-256:` and an unpadded base64url SHA-256. */
+const ENCODED_ANCHOR = /^sha-256:[A-Za-z0-9_-]{43}$/;
+
+const isNonEmptyString = (v: unknown): boolean => typeof v === "string" && v.length > 0;
+const isEncodedAnchor = (v: unknown): boolean => typeof v === "string" && ENCODED_ANCHOR.test(v);
+
+/** The values step 2 requires, and the form each must take. */
+const PORTABLE_BINDING_MEMBERS = [
+  ["approval_event_id", isNonEmptyString],
+  ["issuer", isNonEmptyString],
+  ["intent_hash", isEncodedAnchor],
+  ["authority_hash", isEncodedAnchor],
+] as const;
+type PortableBindingMember = (typeof PORTABLE_BINDING_MEMBERS)[number][0];
+
+/**
+ * @spec approval-governance#portable-binding: the portable approval-binding
+ * check, for a Relying Auditor holding a record and an authenticated Mission
+ * reference but not the Mission Record or the evaluation's inputs. It is a
+ * separate procedure from {@link verifyApprovalGovernanceRecord} and from the
+ * re-check, and replaces neither.
+ *
+ * 1. The record authenticates by steps 1 to 4 of the envelope, with its key
+ *    resolved only from `expectedIssuer`'s trusted key material, and names
+ *    that issuer as its Mission Issuer (the envelope is signed by the Mission
+ *    Issuer). The reference was authenticated by the caller.
+ * 2. The reference discloses `approval_event_id`, `issuer`, `intent_hash` and
+ *    `authority_hash`, each equal to the record's `approval_event_id` or the
+ *    record's `mission` member of that name. A Mandate's `iss` equals its
+ *    `mission.issuer`.
+ * 3. Where both carry `approval_context_commitment`, the two are equal; where
+ *    one or neither does, commitment agreement is not established.
+ *
+ * Failure: an authentication failure, a malformed required value (such as an
+ * anchor with an unrecognized algorithm prefix), or a mismatch. Insufficient
+ * evidence: an absent record or reference, or a required value the reference
+ * does not disclose. A failure the supplied evidence shows takes precedence
+ * over insufficient evidence, so a disclosed value that mismatches is a
+ * failure even when another is undisclosed. Never a success on either.
+ */
+export function checkPortableApprovalBinding(input: {
+  record: ApprovalGovernanceRecord | undefined;
+  reference: PortableMissionReference | undefined;
+  expectedIssuer: { issuer: string; resolveKey: (kid: string) => KeyObject | undefined };
+}): PortableApprovalBindingResult {
+  const { record, reference, expectedIssuer } = input;
+  const result = (
+    outcome: PortableApprovalBindingResult["outcome"],
+    reason: string,
+    commitment_agreement?: "established" | "not_established",
+  ): PortableApprovalBindingResult => ({ check: "portable-approval-binding", outcome, commitment_agreement, reason });
+  const failure = (reason: string) => result("failure", reason);
+
+  if (reference !== undefined) {
+    // Step 2: the reference's own consistency rules still apply.
+    if (reference.kind === "mandate" && reference.iss !== reference.issuer) {
+      return failure("the Mandate's iss does not equal its mission.issuer");
+    }
+    for (const [name, wellFormed] of PORTABLE_BINDING_MEMBERS) {
+      const v = reference[name];
+      if (v !== undefined && !wellFormed(v)) return failure(`the reference's ${name} is malformed`);
+    }
+  }
+
+  let bound: Record<PortableBindingMember, unknown> | undefined;
+  if (record !== undefined) {
+    // Step 1: the record authenticates under the expected issuer's key material only.
+    try {
+      authenticateApprovalGovernanceEnvelope(record, expectedIssuer.resolveKey);
+    } catch (e) {
+      return failure(`the record does not authenticate: ${(e as Error).message}`);
+    }
+    const mission = (record.mission ?? {}) as Partial<UnsignedApprovalGovernanceRecord["mission"]>;
+    bound = {
+      approval_event_id: record.approval_event_id,
+      issuer: mission.issuer,
+      intent_hash: mission.intent_hash,
+      authority_hash: mission.authority_hash,
+    };
+    for (const [name, wellFormed] of PORTABLE_BINDING_MEMBERS) {
+      if (!wellFormed(bound[name])) return failure(`the record's ${name} is malformed`);
+    }
+    if (bound.issuer !== expectedIssuer.issuer) {
+      return failure("the record names a Mission Issuer other than the expected one");
+    }
+  }
+
+  if (reference === undefined) return result("insufficient_evidence", "no Mission reference is supplied");
+  if (record === undefined || bound === undefined) return result("insufficient_evidence", "no record is supplied");
+
+  // Step 2: each disclosed value equals the record's.
+  const undisclosed: string[] = [];
+  for (const [name] of PORTABLE_BINDING_MEMBERS) {
+    const v = reference[name];
+    if (v === undefined) undisclosed.push(name);
+    else if (v !== bound[name]) return failure(`the reference's ${name} does not match the record's`);
+  }
+
+  // Step 3: the Approval Context Commitment.
+  let agreement: "established" | "not_established" = "not_established";
+  const recorded = record.approval_context_commitment;
+  const referenced = reference.approval_context_commitment;
+  if (recorded !== undefined && referenced !== undefined) {
+    if (!isEncodedAnchor(recorded) || !isEncodedAnchor(referenced)) {
+      return failure("an approval_context_commitment is malformed");
+    }
+    if (recorded !== referenced) return failure("the approval_context_commitment values differ");
+    agreement = "established";
+  }
+
+  if (undisclosed.length > 0) {
+    return result("insufficient_evidence", `the reference does not disclose ${undisclosed.join(", ")}`);
+  }
+  return result(
+    "success",
+    `the record and the reference agree on the approval event and the Mission anchors; commitment agreement ${
+      agreement === "established" ? "established" : "not established"
+    }`,
+    agreement,
+  );
 }
 
 const samePrincipal = (a: AgrPrincipal, b: AgrPrincipal): boolean => a.iss === b.iss && a.sub === b.sub;
