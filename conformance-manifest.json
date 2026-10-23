@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "814a3b44db05cc3aefb8cad9b8e8c28540cda0f9",
-    "content_sha256": "b807285532ec41b0d20d66ba61b8c55644d366ab97c0ccac4212ca3cff28d33d"
+    "revision": "b439eaa13c3946d06a8be99cd922a8b7804cb8c2",
+    "content_sha256": "9b36efa07465e2134227cb9793901b76ba97f95b93ecd0327afed89819411b14"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "24fc25962caf421d01e5df49f2916f2b7270e2b7",
@@ -61666,6 +61666,72 @@
    "notes": "Added with the #1569 review of the D685 rulings (Q2 detail): the client assertion's aud is the MAS issuer identifier as its sole value, as Mission Status requires. The reference serves no mission submission endpoint; the join-assertion endpoint in open #1554 still checks the endpoint audience, so its witness lands once #1554 adopts the issuer audience. todo until then."
   },
   {
+   "id": "mas.submission.json-client-assertion",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "The MAS MUST remove them, and authenticate the request with them, before it validates the rest of the body",
+   "facet": "private-key-jwt",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a private-key-JWT client sends client_assertion_type and client_assertion as top-level JSON string members of the intent-submission body; the MAS removes them and authenticates with them before it validates the envelope, so they are never refused as undefined members and a partial or unverifiable pair gets invalid_client; they never appear in the Intent, the authority proposal, proposal_hash, the integrity anchors or submission evidence; the authenticated client is recorded as the Mission's client_id; and any other undefined top-level member is still refused invalid_mission_intent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #1581 (D702 scope, D707: the fields stay out of the envelope, the Intent and their commitments, while the authenticated client identity is still recorded). Todo: the reference serves no MAS submission endpoint."
+  },
+  {
+   "id": "mas.submission.json-client-id-mtls",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "The MAS MUST remove them, and authenticate the request with them, before it validates the rest of the body",
+   "facet": "mtls-client-id",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client authenticating by mTLS sends client_id as a top-level JSON string member of the intent-submission body; the MAS removes it and authenticates with it before it validates the envelope, so it is never refused as an undefined member and never enters the Intent or its commitments, and the client the certificate authenticates is recorded as the Mission's client_id"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #1581 (D702: mutual-TLS carriage coverage stays separate from the private-key-JWT witnesses). Todo: the reference serves no MAS submission endpoint, and mTLS client authentication (tls_client_auth) is implemented nowhere in src."
+  },
+  {
+   "id": "mas.submission.unparseable-before-auth",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "an intent-submission or join-assertion request whose JSON body cannot be parsed as an object is refused before authentication",
+   "facet": "submission-endpoint",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "after request media-type dispatch, an intent submission whose application/json body is not valid JSON, or is valid JSON but not an object, is refused invalid_mission_intent before client authentication, so an unauthenticated caller gets the syntax code, not invalid_client or unauthorized; a body that parses as an object is authenticated before its remaining members are validated, so missing required members, unknown members and invalid member values are refused only after authentication; a form-encoded submission-status request and the HTTP 415 rule are unaffected"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #1581's open question 1, following D704's parsing exception at the Mission Status and Lifecycle endpoints; kept by D713 with its scope narrowed to JSON operations after media-type dispatch. Todo: the reference serves no MAS submission endpoint."
+  },
+  {
    "id": "mas.join-assertion.assertion-audience",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-assertion",
@@ -61700,6 +61766,97 @@
     }
    ],
    "notes": "Added with the #1569 review of the D685 rulings (Q2 detail); witnessed by #1554 once it adopted the issuer audience. Mutation-proved: restoring the endpoint audience fails both tests, and accepting the issuer inside a multi-valued aud fails the refusal test."
+  },
+  {
+   "id": "mas.join-assertion.json-client-assertion",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion",
+   "text": "The request body carries the client authentication parameters as at the mission submission endpoint ({{mission-submission}})",
+   "facet": "private-key-jwt",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a join-assertion caller authenticating by private-key JWT sends client_assertion_type and client_assertion as top-level JSON string members of the request body; the MAS authenticates the caller from them before it validates the join request, a partial or unverifiable pair gets invalid_client, and the join-request validation (invalid_join_request) applies to the remaining members",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts handle) reads client_assertion_type, client_assertion and client_id from the parsed JSON object and authenticates through Mission Status's authenticator before parseJoinAssertionRequest runs. With the pair dropped from the names it reads, the issuer-audienced assertion is no longer presented and both accepting tests get 400 invalid_client instead of an assertion"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > accepts a client assertion whose aud is the MAS issuer identifier as its sole value, as a string or a one-element array, as at Mission Status",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion artifact (@spec authority-server#join-assertion-artifact, #1454) > mints a sender-bound assertion for an enrolled PDP: typ, a listed alg, iss, mission, token with its one confirmation, join, aud, mapping_version",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Added for #1581 (D702, D707). Partial: the tests observe authentication from the JSON pair and the refusal of an unverifiable assertion (mas.join-assertion.assertion-audience), but no test sends a partial pair."
+  },
+  {
+   "id": "mas.join-assertion.json-client-id-mtls",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion",
+   "text": "The request body carries the client authentication parameters as at the mission submission endpoint ({{mission-submission}})",
+   "facet": "mtls-client-id",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a join-assertion caller authenticating by mTLS sends client_id as a top-level JSON string member of the request body; the MAS authenticates with it before it validates the join request, and the join-request validation applies to the remaining members"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added for #1581 (D702: mutual-TLS carriage coverage stays separate). Todo: the reference implements no mTLS caller authentication at the join-assertion endpoint, and the private-key-JWT witnesses do not cover it."
+  },
+  {
+   "id": "mas.join-assertion.unparseable-before-auth",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "an intent-submission or join-assertion request whose JSON body cannot be parsed as an object is refused before authentication",
+   "facet": "join-assertion-endpoint",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a join-assertion request whose JSON body is not valid JSON, or is valid JSON but not an object, is refused invalid_join_request before caller authentication, so an unauthenticated caller gets the syntax code, not invalid_client or unauthorized; a body that parses as an object is authenticated before its remaining members are validated, so missing required members, unknown members and invalid member values are refused only after authentication",
+    "local": "join-assertion.ts handle refuses a body JSON.parse rejects before it calls the authenticator. With an authentication attempt inserted before that refusal, the test's unauthenticated 'not JSON' case gets invalid_client instead of invalid_join_request"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses a body that is not a JSON object carrying mission_id, a string audience and exactly one token form invalid_join_request (HTTP 400)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Added for #1581's open question 1 (see mas.submission.unparseable-before-auth; kept by D713). Partial: the test sends an unauthenticated body that is not JSON; no unauthenticated case sends valid JSON that is not an object, or an object with missing, unknown or invalid members."
   },
   {
    "id": "mas.errors.invalid-client",
