@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-23T19:33:54Z
-Source repository commit: 8a9aaf635dd7fd207bcf42db72614368e9482a1c
+Generated: 2026-10-23T22:58:34Z
+Source repository commit: 72dcb0378bc9429974e01f3487f01ac1c4370e0f
 Member count: 7
 
 Reading order:
@@ -9508,7 +9508,7 @@ Table of Contents
 
 6.8.  Approver Authentication Strength
 
-   A deployment publishes a statement declaring the minimum approval-
+   A deployment MUST publish a statement declaring the minimum approval-
    authentication strength (the approval-authentication floor) it
    enforces for Missions whose derived Authority Set carries high-risk
    authority, and the deployment scope it applies to.  High-risk
@@ -10967,9 +10967,10 @@ Table of Contents
       grant state (Section 11.4).
 
    An AS MAY support OAuth 2.0 Token Introspection [RFC7662] for
-   Mission-bound access tokens.  When it does, the response for such a
-   token carries, in addition to the standard members, a mission member:
-   a JSON object with the following members:
+   Mission-bound access tokens.  When it does, an active: true response
+   for such a token, to a caller authorized to receive Mission data
+   (Section 11.1), MUST carry, in addition to the standard members, a
+   mission member: a JSON object with the following members:
 
    *  id and issuer: as in the mission claim (Section 8.8).
 
@@ -12001,8 +12002,12 @@ Table of Contents
    approval_event_id:  REQUIRED.  A string.  A unique identifier of the
       approval event, used as the approval idempotency key: a retried or
       duplicate delivery of the same approval decision (a replayed
-      callback, a double-submitted consent form) MUST NOT create a
-      second Mission, and the AS deduplicates on this identifier.
+      callback, a double-submitted consent form, a retried standing-
+      consent activation) MUST NOT create a second Mission, and the AS
+      deduplicates on this identifier.  The identifier names the
+      approval event that creates this Mission (Section 6); under a
+      standing-consent basis (Section 13), it identifies this instance's
+      creation, not the earlier standing approval.
 
    created_at:  REQUIRED.  A string.  RFC 3339 timestamp of creation.
 
@@ -15482,6 +15487,11 @@ Appendix G.  Document History
       the Namespace Taxonomy lists the approval_basis.type values as
       specification-defined, which Standing-Consent Bases cites.
 
+   *  Editorial, no requirement change: the approval_event_id definition
+      names the approval event that creates the Mission and states that,
+      under a standing-consent basis, it identifies the instance's
+      creation, not the earlier standing approval.
+
    -01
 
    *Breaking wire changes*
@@ -16337,11 +16347,16 @@ Table of Contents
    it at the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax (Section 3.1).  A malformed request
-       is refused invalid_request.
+       is refused invalid_request; a request that includes a parameter
+       more than once is malformed, as at the token endpoint
+       (Section 3.2 of [RFC6749]).
 
    3.  Authorize the request: the caller's read authorization, the
        Mission the mission_id names, and any requested audience
@@ -16997,7 +17012,11 @@ Table of Contents
    the AS MUST NOT answer it with the unrelated original response.  A
    retransmit whose original response was rate_limited, or was
    unavailable or another 5xx response, is processed as a new request,
-   not replayed.
+   not replayed.  A request refused before deduplication (Section 5.7)
+   claims no nonce: the AS retains nothing for the refusal and leaves
+   any response already retained under that nonce unchanged, so the
+   rules above apply to a later request carrying it as though the
+   refused request had never arrived.
 
    The window MUST be at least the validity span of the signed response
    the AS would replay (its iat to exp, Section 3.5), so any retransmit
@@ -17060,12 +17079,17 @@ Table of Contents
    the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax and the operation (Section 5.1).  A
        malformed request, or an operation the AS does not serve, is
-       refused invalid_request.
+       refused invalid_request; a request that includes a parameter more
+       than once is malformed, as at the token endpoint (Section 3.2 of
+       [RFC6749]).
 
    3.  Authorize the request.  For a base operation this is the
        lifecycle authorization of Section 5.4 for the acting party, the

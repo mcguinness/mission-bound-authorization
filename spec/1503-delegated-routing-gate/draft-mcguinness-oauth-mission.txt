@@ -1964,7 +1964,7 @@ Table of Contents
 
 6.8.  Approver Authentication Strength
 
-   A deployment publishes a statement declaring the minimum approval-
+   A deployment MUST publish a statement declaring the minimum approval-
    authentication strength (the approval-authentication floor) it
    enforces for Missions whose derived Authority Set carries high-risk
    authority, and the deployment scope it applies to.  High-risk
@@ -3423,9 +3423,10 @@ Table of Contents
       grant state (Section 11.4).
 
    An AS MAY support OAuth 2.0 Token Introspection [RFC7662] for
-   Mission-bound access tokens.  When it does, the response for such a
-   token carries, in addition to the standard members, a mission member:
-   a JSON object with the following members:
+   Mission-bound access tokens.  When it does, an active: true response
+   for such a token, to a caller authorized to receive Mission data
+   (Section 11.1), MUST carry, in addition to the standard members, a
+   mission member: a JSON object with the following members:
 
    *  id and issuer: as in the mission claim (Section 8.8).
 
@@ -4457,8 +4458,12 @@ Table of Contents
    approval_event_id:  REQUIRED.  A string.  A unique identifier of the
       approval event, used as the approval idempotency key: a retried or
       duplicate delivery of the same approval decision (a replayed
-      callback, a double-submitted consent form) MUST NOT create a
-      second Mission, and the AS deduplicates on this identifier.
+      callback, a double-submitted consent form, a retried standing-
+      consent activation) MUST NOT create a second Mission, and the AS
+      deduplicates on this identifier.  The identifier names the
+      approval event that creates this Mission (Section 6); under a
+      standing-consent basis (Section 13), it identifies this instance's
+      creation, not the earlier standing approval.
 
    created_at:  REQUIRED.  A string.  RFC 3339 timestamp of creation.
 
@@ -7937,6 +7942,11 @@ Appendix G.  Document History
       Mechanisms names the Token Exchanges its later items cover, and
       the Namespace Taxonomy lists the approval_basis.type values as
       specification-defined, which Standing-Consent Bases cites.
+
+   *  Editorial, no requirement change: the approval_event_id definition
+      names the approval event that creates the Mission and states that,
+      under a standing-consent basis, it identifies the instance's
+      creation, not the earlier standing approval.
 
    -01
 
