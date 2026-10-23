@@ -101,7 +101,7 @@ describe("the PEP carries a Join Assertion with the credential's digest and one 
     const noCredential = build({
       obtain: async () => {
         called = true;
-        return "header.claims.signature";
+        return undefined;
       },
     });
     await noCredential.pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN, undefined, { missionReference: REFERENCE });
