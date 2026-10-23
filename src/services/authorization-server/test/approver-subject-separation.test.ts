@@ -16,7 +16,7 @@ import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoK
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountFinder } from "../src/adapters/provider.js";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
-import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const PORT = 14771;
 const ISSUER = `http://localhost:${PORT}`;
@@ -163,11 +163,19 @@ async function authorize(args: {
     "browser" in args.approval
       ? browserApprovalHeaders(SESSIONS, uid, args.approval.browser, cookieOf(jar))
       : { ...trustedApprovalHeaders(args.approval.headless.sub, {}, args.approval.headless.subject), cookie: cookieOf(jar) };
+  const decision = args.decision ?? "approve";
+  // An approval names the page rendered to its principal (#1446). A selection
+  // the surface refuses renders nothing; its decision is refused before any
+  // rendering is consulted, so it is posted without one.
+  const render_revision =
+    decision === "approve"
+      ? await renderedRevision(ISSUER, uid, { ...headers, ...(args.decideHeaders ?? {}) }).catch(() => undefined)
+      : undefined;
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
     headers: { ...headers, ...(args.decideHeaders ?? {}), "content-type": "application/json" },
-    body: JSON.stringify({ decision: args.decision ?? "approve" }),
+    body: JSON.stringify({ decision, render_revision }),
   });
   const decideStatus = res.status;
   keep(jar, res);

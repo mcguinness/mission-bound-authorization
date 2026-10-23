@@ -28,8 +28,8 @@ author:
 
 normative:
   RFC3339:
-  RFC6755:
   RFC6838:
+  RFC7519:
   RFC7523:
   RFC8259:
   RFC8414:
@@ -97,7 +97,6 @@ normative:
     date: 2026
 
 informative:
-  RFC8126:
   I-D.draft-ietf-oauth-deferred-token-response:
   I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-mcguinness-mission-authority-server:
@@ -432,10 +431,11 @@ The child-creation token exchange carries:
   {{RFC8693}} token-exchange grant type ({{grant-type}}).
 
 `requested_token_type`:
-: REQUIRED. `urn:ietf:params:oauth:token-type:jwt`. This value selects
-  child creation: the Mission Issuer returns the child-bound JWT
-  authorization grant ({{child-client-identity}}). Expansion, the peer
-  operation on the same grant, is selected by the access-token type
+: REQUIRED. `urn:ietf:params:oauth:token-type:jwt`
+  ({{Section 10.2 of RFC7519}}). This value selects child creation:
+  the Mission Issuer returns the child-bound JWT authorization grant
+  ({{child-client-identity}}). Expansion, the peer operation on the
+  same grant, is selected by the access-token type
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 `subject_token`:
@@ -2274,18 +2274,15 @@ possession against the token's own confirmation key, and verifies any
 `parent` cross-check names the resolved Mission
 ({{request-processing}}).
 
-## Possession Proof and the Eliminated Parent-Grant-at-Rest Concern
+## Possession Proof and Parent Credentials at Rest
 
-Earlier revisions of this profile carried the parent grant as a
-`parent_token` refresh token pushed through PAR {{RFC9126}}, so a
-reusable bearer credential sat at rest in the PAR store until the
-pushed request was redeemed or expired. The child-creation token
-exchange eliminates that concern by construction: the possession proof
-is the parent's short-lived, sender-constrained Mission-bound access
-token presented directly at the token endpoint as `subject_token`
-({{child-creation}}), never a reusable refresh credential and never
-held at rest awaiting redemption. A refresh token MUST NOT be accepted
-as `subject_token`.
+The child-creation token exchange holds no reusable parent credential
+at rest. Its possession proof is the parent's short-lived,
+sender-constrained Mission-bound access token presented directly at
+the token endpoint as `subject_token` ({{child-creation}}): never a
+reusable refresh credential, and never held at rest awaiting
+redemption as a refresh token pushed through PAR {{RFC9126}} would be.
+A refresh token MUST NOT be accepted as `subject_token`.
 
 - A captured `subject_token`, without its DPoP key or mTLS certificate,
   cannot carry the possession proof.
@@ -2325,9 +2322,8 @@ The child-creation token exchange carries the already-registered
 {{RFC8693}} token-exchange parameters `subject_token`,
 `subject_token_type`, `requested_token_type`, `actor_token`, and
 `actor_token_type`; none of these needs registration by this document.
-This document removes the earlier revision's registration request for a
-`parent_token` parameter: the parent is resolved from `subject_token`,
-so no dedicated parent-token parameter exists. The `parent` and `child_actor`
+No dedicated parent-token parameter exists: the parent is resolved
+from `subject_token`. The `parent` and `child_actor`
 parameters are presented only on the token endpoint's authenticated
 back channel, never on a front-channel authorization request
 ({{child-creation}}).
@@ -2408,10 +2404,6 @@ Child creation uses the already-registered {{RFC8693}}
 `urn:ietf:params:oauth:grant-type:token-exchange` grant type, selected
 by the `requested_token_type` value `urn:ietf:params:oauth:token-type:jwt`
 ({{grant-type}}); this document requests no new grant-type registration.
-An earlier revision requested registration of a dedicated
-`urn:ietf:params:oauth:grant-type:mission-child-creation` grant type;
-this document removes that request, folding child creation into the
-token-exchange grant the rest of the Mission family already uses.
 
 --- back
 
@@ -2472,6 +2464,20 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- Security Considerations' "Possession Proof and Parent Credentials
+  at Rest" (formerly "the Eliminated Parent-Grant-at-Rest Concern")
+  states the design without narrating earlier revisions, which
+  carried the parent grant as a `parent_token` refresh token pushed
+  through PAR. No requirement changed.
+- IANA Considerations state the registrations as they stand. Earlier
+  revisions requested a `parent_token` parameter and a dedicated
+  `urn:ietf:params:oauth:grant-type:mission-child-creation` grant
+  type; this document requests neither. No requirement changed.
+- The `urn:ietf:params:oauth:token-type:jwt` value cites its
+  registration, Section 10.2 of RFC 7519. No requirement changed.
+- RFC 6755 and RFC 8126 are removed from the references: neither is
+  cited, and this document creates no registry. No requirement
+  changed.
 - Completion says any grant binding a Child Mission carries comes from
   the child actor's redemption of its grant, never from the parent's
   exchange. No requirement changed.
