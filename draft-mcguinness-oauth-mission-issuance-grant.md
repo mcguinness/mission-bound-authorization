@@ -904,19 +904,20 @@ metadata ({{I-D.draft-mcguinness-mission-authority-server}}, Section
 "Mission Authority Server Metadata"):
 
 `mission_issuance_grant_endpoint`:
-: URL of the MAS's Mission Issuance Grant endpoint ({{minting}}).
+: REQUIRED. A string containing the URL of the MAS's Mission Issuance
+  Grant endpoint ({{minting}}).
 
 A consuming AS publishes the following members in its Authorization
 Server Metadata {{RFC8414}}:
 
 `mission_issuance_grant_supported`:
-: OPTIONAL. Boolean value; `true` when the AS redeems Mission Issuance
-  Grants at its token endpoint ({{redemption}}). If omitted, the
-  default value is `false`.
+: OPTIONAL. Boolean value indicating whether the AS redeems Mission
+  Issuance Grants at its token endpoint ({{redemption}}). If omitted,
+  the default value is `false`.
 
 `mission_issuance_grant_par_supported`:
-: OPTIONAL. Boolean value; `true` when the AS accepts the
-  `mission_issuance_grant` parameter in Pushed Authorization Requests
+: OPTIONAL. Boolean value indicating whether the AS accepts the
+  `mission_issuance_grant` parameter in pushed authorization requests
   ({{par-carriage}}). If omitted, the default value is `false`.
 
 # Relationship to Other Artifacts {#relationships}
