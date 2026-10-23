@@ -771,10 +771,9 @@ family state surfaces ({{state-surfaces}}). This binding adds to
 GNAP's model:
 
 - **Revocation.** The authorization server MUST provide an
-  authenticated means for the Subject, the Approver, or an
-  administrator to revoke a Mission by `mission_id`, independent of
-  any token and of the grant's continuation, per the issuance
-  profile. On revocation the authorization server finalizes the
+  authenticated means for a party the deployment's policy authorizes
+  to revoke a Mission by `mission_id`, independent of any token and
+  of the grant's continuation, per the issuance profile. On revocation the authorization server finalizes the
   grant and treats the Mission's outstanding tokens as inactive at
   introspection; a deployment that validates structured tokens
   without introspection needs the state surfaces below.
@@ -1117,7 +1116,7 @@ The contextual-governance kernel maps as follows:
 6. **Governance gate**: only the issuance profile's `active` state
    is active. Every other or unrecognized value fails closed at
    continuation, issuance, rotation, and the introspection
-   projection. The Subject, Approver, and administrator have an
+   projection. A party the deployment's policy authorizes has an
    authenticated revocation path ({{lifecycle}}, {{gating}}).
 7. **Reliance bound**: issuance, modification, and rotation
    establish `active` at the authorization server. An opaque token

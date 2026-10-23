@@ -473,9 +473,15 @@ import type {
   MissionRecord,
 } from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
-import { JOIN_ASSERTION_ENDPOINT_PATH, type JoinAssertionService, readJoinAssertionBody } from "./join-assertion.js";
 import {
-  authenticateLifecycleClient,
+  enrolleeOf,
+  JOIN_ASSERTION_ENDPOINT_PATH,
+  type JoinAssertionService,
+  type JoinEnrollmentConfig,
+  readJoinAssertionBody,
+} from "./join-assertion.js";
+import {
+  authenticateLifecycleForm,
   LIFECYCLE_CLIENT_ASSERTION_ALGS,
   LIFECYCLE_ENDPOINT_AUTH_METHODS,
   LIFECYCLE_ENDPOINT_PATH,
@@ -714,9 +720,10 @@ export interface AdapterOptions {
    * enforcement scopes (the Status request's `audience`) it is enrolled for. A Status
    * response to an enrolled principal for one of its scopes discloses the
    * Mission's `subject` and `client_id`; every other response omits both.
-   * Absent (the default), no caller is enrolled.
+   * Absent (the default), no caller is enrolled. Each enrollee holds the
+   * PEP role, the PDP role, or both; only the PDP role discloses (#1591, D708).
    */
-  enrolledJoinPdps?: Readonly<Record<string, readonly string[]>>;
+  joinEnrollment?: JoinEnrollmentConfig;
   /**
    * @spec authority-server#join-assertion (#1454): the MAS's Join Assertion
    * endpoint, where the deployment serves one (`buildAuthorizationServer`'s
@@ -3596,18 +3603,18 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
 
   /**
-   * @spec authority-server#join-disclosure (#818): whether the authenticated
-   * caller is a PDP enrolled for the requested enforcement scope, read from
-   * the deployment's enrollment configuration (`enrolledJoinPdps`). Both
-   * halves decide it: an enrolled principal asking for a scope it is not
-   * enrolled for, or naming no `audience` at all, is any other caller. An own
+   * @spec authority-server#join-disclosure (#818; #1591, D708): whether the
+   * authenticated caller is enrolled in the PDP role for the requested
+   * enforcement scope, read from the deployment's enrollment configuration
+   * (`joinEnrollment`). All three decide it: an enrollee holding only the PEP
+   * role, an enrolled principal asking for a scope it is not enrolled for,
+   * and one naming no `audience` at all are each any other caller. An own
    * property lookup, so no inherited name resolves an enrollment.
    */
-  const enrolledJoinPdps = opts.enrolledJoinPdps ?? {};
-  const joinDisclosureFor = (principal: ServiceTokenPrincipal, audience: string | undefined): boolean =>
-    audience !== undefined &&
-    Object.hasOwn(enrolledJoinPdps, principal.principal_id) &&
-    (enrolledJoinPdps[principal.principal_id] ?? []).includes(audience);
+  const joinDisclosureFor = (principal: ServiceTokenPrincipal, audience: string | undefined): boolean => {
+    const enrollee = enrolleeOf(opts.joinEnrollment, principal.principal_id);
+    return audience !== undefined && enrollee !== undefined && enrollee.roles.includes("pdp") && enrollee.enforcementScopes.includes(audience);
+  };
 
   /**
    * @spec discharge#condition-selectors — add `discharge_selectors` to an ACTIVE
@@ -4052,24 +4059,28 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.set("cache-control", "no-store");
         ctx.body = { error, error_description: description, ...(nonce ? { nonce } : {}) };
       };
+      // @spec status#mission-status-processing step 1 (#1535 Item C, D704):
+      // a body that cannot be parsed is refused invalid_request whatever
+      // credential it carries; no nonce can be read from it.
       const form = await readLifecycleForm(ctx.req, ctx.get("content-type") ?? "");
       if (!form.ok) {
-        refuse(400, "invalid_request", form.description, form.nonce);
+        refuse(400, "invalid_request", form.description, undefined);
         return;
       }
       const echo = wellFormedNonce(form.params.nonce);
       // @spec status#mission-status-auth-failures: a failed private-key-JWT
-      // authentication, or no credential (this endpoint accepts no
-      // access-token scheme), is HTTP 400 `invalid_client` with no challenge,
-      // decided before any Mission is read.
-      const auth = await authenticateLifecycleClient(
+      // authentication, a repeated authentication parameter included (D708),
+      // or no credential (this endpoint accepts no access-token scheme), is
+      // HTTP 400 `invalid_client` with no challenge, decided before any
+      // Mission is read.
+      const auth = await authenticateLifecycleForm(
         {
           issuer: opts.issuer,
           clients: opts.clients,
           replay: opts.dpopProofReplay as DpopProofReplay,
           now: () => kernel.nowDate(),
         },
-        form.params,
+        form,
         ctx.get("authorization") ?? "",
       );
       if (!auth.ok) {
@@ -4079,6 +4090,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         } else {
           refuse(400, "invalid_client", auth.description, echo);
         }
+        return;
+      }
+      // @spec status#mission-status-processing step 2 (#1535 Item C, D708): any
+      // other repeated parameter makes the request malformed.
+      const repeatedParameter = form.repeated[0];
+      if (repeatedParameter !== undefined) {
+        refuse(400, "invalid_request", `${repeatedParameter} MUST NOT appear more than once`, echo);
         return;
       }
       // @spec status#mission-status-request, status#mission-status-errors: the
@@ -4189,32 +4207,32 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // `mission_id`, the caller authenticated by private-key JWT.
     if (ctx.path === LIFECYCLE_ENDPOINT_PATH && ctx.method === "POST" && lifecycleServed) {
       const form = await readLifecycleForm(ctx.req, ctx.get("content-type") ?? "");
-      // @spec status#mission-status-errors: every refusal before the engine
-      // echoes the request's `nonce` when it carried a well-formed one, and
-      // none is retained: the nonce key needs an authenticated client.
+      // @spec status#lifecycle-processing step 1 (#1535 Item C, D704): a body
+      // that cannot be parsed is refused invalid_request whatever credential
+      // it carries; no nonce can be read from it, and none is retained.
       if (!form.ok) {
         ctx.status = 400;
         ctx.set("cache-control", "no-store");
-        ctx.body = {
-          error: "invalid_request",
-          error_description: form.description,
-          ...(form.nonce ? { nonce: form.nonce } : {}),
-        };
+        ctx.body = { error: "invalid_request", error_description: form.description };
         return;
       }
+      // @spec status#mission-status-errors: every refusal before the engine
+      // echoes the request's `nonce` when it carried a well-formed one, and
+      // none is retained: the nonce key needs an authenticated client.
       const echo = wellFormedNonce(form.params.nonce);
       // @spec status#mission-status-authentication, status#mission-status-auth-failures
-      // a failed private-key-JWT authentication, or no credential where no
-      // access-token scheme is accepted, is HTTP 400 `invalid_client` with no
-      // challenge, decided before any Mission is read.
-      const auth = await authenticateLifecycleClient(
+      // a failed private-key-JWT authentication, a repeated authentication
+      // parameter included (D708), or no credential where no access-token
+      // scheme is accepted, is HTTP 400 `invalid_client` with no challenge,
+      // decided before any Mission is read.
+      const auth = await authenticateLifecycleForm(
         {
           issuer: opts.issuer,
           clients: opts.clients,
           replay: opts.dpopProofReplay as DpopProofReplay,
           now: () => kernel.nowDate(),
         },
-        form.params,
+        form,
         ctx.get("authorization") ?? "",
       );
       if (!auth.ok) {
@@ -4227,6 +4245,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ctx.status = 400;
           ctx.body = { error: "invalid_client", error_description: auth.description, ...(echo ? { nonce: echo } : {}) };
         }
+        return;
+      }
+      // @spec status#lifecycle-processing step 2 (#1535 Item C, D708): any
+      // other repeated parameter makes the request malformed, refused before
+      // the engine and retained nowhere.
+      const repeatedParameter = form.repeated[0];
+      if (repeatedParameter !== undefined) {
+        ctx.status = 400;
+        ctx.set("cache-control", "no-store");
+        ctx.body = {
+          error: "invalid_request",
+          error_description: `${repeatedParameter} MUST NOT appear more than once`,
+          ...(echo ? { nonce: echo } : {}),
+        };
         return;
       }
       lifecycleCall = {
