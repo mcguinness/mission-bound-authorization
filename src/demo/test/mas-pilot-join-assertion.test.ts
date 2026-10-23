@@ -29,6 +29,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { composeMasPilot } from "../src/mas-pilot/compose.js";
 import { loadMasPilotConfig, type MasPilotConfig, parseMasPilotConfig } from "../src/mas-pilot/config.js";
 import { obtainEstateToken } from "../src/mas-pilot/estate-client.js";
+import { launchMasPilot, masPilotLaunchOptions } from "../src/mas-pilot/launcher.js";
 import { newStatusClientKey } from "../src/mas-pilot/mas-as.js";
 import { type MasProcess, startMasProcess } from "../src/mas-pilot/mas-process.js";
 import { composeSeparatedMasPilot, type SeparatedMasPilot } from "../src/mas-pilot/separated.js";
@@ -368,5 +369,79 @@ d("the separated MAS pilot refuses a declared Join Assertion path it cannot run 
     await expect(startMasProcess({ configPath, statusClients: [pdp.registration], joinIntrospectionSecret: "unused" })).rejects.toThrow(
       /MAS_PILOT_JOIN_INTROSPECTION_SECRET is set exactly where the configuration declares join_assertion/,
     );
+  });
+});
+
+d("the separated launcher runs the declared Join Assertion path (#1454)", () => {
+  it("generates the MAS's introspection client secret for the MAS process and the estate, and a joined read that requires an assertion permits, by JWT and by opaque credential", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mas-pilot-join-launcher-"));
+    dirs.push(dir);
+    const declared = joinConfig();
+    const launched = relocateEstate({ ...declared, separated_mas: { ...declared.separated_mas, port: MAS_PORT + 2 } }, ESTATE_PORT + 2);
+    const configPath = join(dir, "mas-pilot.json");
+    writeFileSync(configPath, JSON.stringify(launched));
+    const env = {
+      OPENFGA_HTTP_URL: OPENFGA.apiUrl,
+      OPENFGA_PRESHARED_KEY: OPENFGA.presharedKey,
+      ...(OPENFGA.caCertPath ? { OPENFGA_CA_CERT: OPENFGA.caCertPath } : {}),
+      MAS_PILOT_CONFIG: configPath,
+      MAS_PILOT_DEVELOPMENT_STORE: "1",
+      MISSION_EPHEMERAL_KEYS: "1",
+    };
+    const launch = await launchMasPilot(masPilotLaunchOptions(env, "separated"));
+    try {
+      expect(launch.summary).toContain("  Join Assertions    requested by the PEP from the MAS; required for consequential_read");
+      const request = async (base: string, path: string, body: Record<string, unknown>) => {
+        const res = await fetch(`${base}${path}`, {
+          method: "POST",
+          headers: { authorization: `Bearer ${launch.consoles.token}`, "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return (await res.json()) as Record<string, unknown>;
+      };
+      const missionId = (await request(launch.consoles.mas as string, "/missions", { subject: "alice", label: "join-launcher" })).mission_id;
+      for (const client of ["estate-ap-bot-7f3", "estate-opaque-bot-4e2"]) {
+        const credential = await request(launch.consoles.pilot, "/estate-tokens", { client_id: client, account: "u-1001", scope: "invoices.read" });
+        const read = await request(launch.consoles.pilot, "/calls", {
+          credential_id: credential.credential_id,
+          mission_id: missionId,
+          tool: "get_invoice",
+          arguments: { invoice_id: "inv-1" },
+        });
+        expect(read.ok, `${client}: ${JSON.stringify(read)}`).toBe(true);
+      }
+    } finally {
+      await launch.close();
+    }
+  });
+});
+
+describe("the launcher refuses a Join Assertion path it cannot run, before anything connects (#1454)", () => {
+  it("refuses the path in process, a running MAS's path without its secret, and a secret where none applies", () => {
+    const dir = mkdtempSync(join(tmpdir(), "mas-pilot-join-launcher-refusals-"));
+    dirs.push(dir);
+    const declaredPath = join(dir, "declared.json");
+    writeFileSync(declaredPath, JSON.stringify(joinConfig()));
+    const { join_assertion: _declared, ...undeclared } = joinConfig();
+    const undeclaredPath = join(dir, "undeclared.json");
+    writeFileSync(undeclaredPath, JSON.stringify(undeclared));
+    const store = { MAS_PILOT_DEVELOPMENT_STORE: "1" };
+    const running = { MAS_PILOT_MAS_URL: MAS_URL, MAS_PILOT_PDP_KEY: JSON.stringify({ kty: "EC", kid: "k", d: "x" }) };
+    expect(() => masPilotLaunchOptions({ ...store, MAS_PILOT_CONFIG: declaredPath }, "in-process")).toThrow(/separated topology only/);
+    expect(() => masPilotLaunchOptions({ ...store, ...running, MAS_PILOT_CONFIG: declaredPath }, "separated")).toThrow(
+      /set MAS_PILOT_JOIN_INTROSPECTION_SECRET/,
+    );
+    expect(
+      masPilotLaunchOptions({ ...store, ...running, MAS_PILOT_CONFIG: declaredPath, MAS_PILOT_JOIN_INTROSPECTION_SECRET: "s" }, "separated")
+        .joinIntrospectionSecret,
+    ).toBe("s");
+    for (const [label, extra] of [
+      ["undeclared", { ...running, MAS_PILOT_CONFIG: undeclaredPath }],
+      ["a MAS the launcher starts", { MAS_PILOT_CONFIG: declaredPath }],
+    ] as const) {
+      expect(() => masPilotLaunchOptions({ ...store, ...extra, MAS_PILOT_JOIN_INTROSPECTION_SECRET: "s" }, "separated"), label).toThrow(
+        /applies only to a running MAS whose configuration declares join_assertion/,
+      );
+    }
   });
 });
