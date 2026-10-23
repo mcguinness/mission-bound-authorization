@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `c98c17b8`
+Every statement here is true of the reference implementation at `25fa49f7`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -326,13 +326,17 @@ authorization server; the pilot does not use it yet. By party:
   one `not_found` outside it; it rate-limits per caller. It mints only for
   an `active` Mission, an `audience` enrolled for that scope, and an active
   acting token with one `cnf` confirmation whose joins hold, else
-  `join_failed`. The artifact is `typ` `mission-join+jwt` under the Status
+  `join_failed`. It reads the Mission again after the token check and
+  after signing, so a Mission revoked, suspended or expired, an
+  `authority_hash` changed, or an `audience` withdrawn while either is
+  awaited gets `join_failed`, with nothing returned, cached or recorded.
+  The artifact is `typ` `mission-join+jwt` under the Status
   key and `ES256`, carrying `mission` (`id`, `issuer`, `authority_hash`),
   `token` (`sha256` and `jkt` or `x5t#S256`), `join`, `aud`,
   `mapping_version` and an `exp` capped by the token's. It caches on
   (`issuer`, `mission_id`), the token digest and the `audience`, rechecking
   before it serves, and records each minting as a join evidence event, in
-  process memory. How the acting token is established (validation or
+  process memory only (retention, follow-up: #1560). How the acting token is established (validation or
   introspection at the estate) and how the joins are evaluated are the
   deployment's hook: the pilot's MAS (`mas-serve.ts`) does not supply one
   yet. Witnesses: `services/authorization-server/test/join-assertion-endpoint.test.ts`.
