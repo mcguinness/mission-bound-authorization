@@ -2695,8 +2695,8 @@ does not tightly couple an issued token's lifetime to its
 expiry ({{designation}}) bounds when it can be redeemed, not the
 lifetime of the delegated token issued from it, which can outlive
 both the designation and the credential the designation was derived
-from. Revoking or expiring the grant state backing that credential
-refuses every later redemption ({{delegated-exchange}}).
+from. Revoking the grant state backing that credential still refuses
+every later redemption ({{delegated-exchange}}).
 
 ## Scope Projection {#scope-projection}
 
