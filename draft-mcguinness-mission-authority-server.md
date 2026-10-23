@@ -465,9 +465,11 @@ served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
 recommendations of {{RFC9325}}. The endpoint MUST authenticate the
 client using the authentication mechanisms of the Mission Status
 endpoint ({{I-D.draft-mcguinness-oauth-mission-status}}): mTLS client
-authentication, a DPoP- or mTLS-bound access token, or private-key JWT,
-with a token's audience and a client assertion's `aud` naming this
-endpoint. The MAS advertises the accepted methods in the
+authentication, a DPoP- or mTLS-bound access token, or private-key JWT.
+An access token's audience names this endpoint, and a client
+assertion's `aud` is the MAS's issuer identifier as its sole value,
+the client-authentication audience Mission Status requires. The MAS
+advertises the accepted methods in the
 `mission_submission_endpoint_auth_methods_supported` metadata member
 ({{discovery}}).
 
@@ -1527,8 +1529,10 @@ authentication methods and client-assertion algorithms advertised in
 `mission_submission_endpoint_auth_methods_supported` and
 `mission_submission_endpoint_auth_signing_alg_values_supported`.
 
-A client assertion's `aud` claim and a caller-authentication access
-token's audience MUST name the join-assertion endpoint.
+A caller-authentication access token's audience MUST name the
+join-assertion endpoint, and a client assertion's `aud` MUST be the
+MAS's issuer identifier as its sole value, as at the mission
+submission endpoint ({{mission-submission}}).
 
 For access-token authentication, the MAS publishes Protected Resource
 Metadata {{RFC9728}} for this endpoint, identifying its resource,
