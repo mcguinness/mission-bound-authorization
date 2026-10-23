@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "016f333588f6946c085b9cb856fb115f139cf053",
-    "content_sha256": "c05c497da3a6cb57d1b5996704c26e60e930a02f707820a5d892e5ce732adf1d"
+    "revision": "8a16c95a59e44459ba9c065b172e657cecf0ca5b",
+    "content_sha256": "84d5037f19a6c9e46f01910ad3edc3dad9e8c7bbd43fe89deb99bf166b543ce5"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "24fc25962caf421d01e5df49f2916f2b7270e2b7",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
-    "content_sha256": "e758acf47c3dd2043c6db6ff53ede2cb108950287315b0d289f54e444b193780"
+    "revision": "8a16c95a59e44459ba9c065b172e657cecf0ca5b",
+    "content_sha256": "7b5f76eb4de93469d688e8d5420ad6f9fecdcd8f9a95234ec3dc0b4ae760b3ae"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -83,8 +83,8 @@
     "content_sha256": "44d6ef289a0c6cbdff9af48520ae48056a55052f037bdfe5dd16938ec88460d6"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
-    "content_sha256": "7b5f80c6b895dabfb51d4cc680d44137098ec8236fd034a9265d56ed10767b38"
+    "revision": "c8b592b01f938c0d6c2064aadcb0598bb652872c",
+    "content_sha256": "efeddee766f86da59e237d7a7e1abb9f1684b09064a2843389d590f95e769c53"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
@@ -9124,7 +9124,7 @@
    "surface": "decision-request",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a Mission-joining PDP's decision-time join of an ordinary credential to a Mission (the Mission Authority Server's Mission Join, {{I-D.draft-mcguinness-mission-authority-server}}) creates no grant binding: the joined OAuth grant remains unbound, the join's outcome is not persisted as this section's binding, and the same credential may join a different Mission on a later request without rebinding anything"
+    "normative": "a Mission-joining PDP's decision-time join of an ordinary credential to a Mission (the Mission Authority Server's Mission Join, {{I-D.draft-mcguinness-mission-authority-server}}) creates no grant binding: the joined OAuth grant remains unbound, the join's outcome is not persisted as this section's binding, and the same credential may join a different Mission on a later request without rebinding anything ({{I-D.draft-mcguinness-mission-authority-server}}, Section \"Mission Join\")"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -11101,6 +11101,76 @@
     }
    ],
    "notes": "#869 (D449): proven by disabling the code it covers. Every clause is witnessed at a redemption: the source grant or family's validity (an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses; requiring the row alone fails that witness), the Mission's state, the designation's own expiry, the delegation policy (a delegate whose AS-asserted profile is withdrawn after the designation is refused; skipping the redemption's eligibility gate fails it), the Mission's current authority (a containment after the designation narrows the result, or refuses when nothing is left; skipping the projection through current authority fails it), and a separate count per redemption, none for a refusal (#869 acceptance review). #1275: the delegation-authorization policy is also witnessed changing between a designation and its redemption (the redemption is refused; skipping the gate at redemption, or caching the policy decision, fails that witness)."
+  },
+  {
+   "id": "core.delegation.authority-narrows-from-designation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "The delegated token's `authorization_details` MUST be a subset ({{subset}}) of the designation's authority, hence of the delegating token's and of the Mission Authority Set",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegated token issued by redeeming a designation carries no authority beyond the designation's: when the designation was derived from a credential narrower than its Mission, the delegated token does not regain the authority the credential omitted"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > a credential narrower than its Mission: neither the designation nor the delegated token regains the omitted action",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D-2 of the OAuth binding layering plan. Exercised: the delegated token does not regain authority the delegating credential omitted, and narrowing the redemption from the Mission's full Authority Set instead (a mutation) fails the witness: the delegated token regains payments:invoice.list. Not exercised: authority the designation omitted although the delegating credential carried it. In the reference AS a designation carries the presented authority narrowed only by delegate eligibility, which the redemption re-applies, so the two differ only when eligibility widens between designation and redemption, and no test constructs that case."
+  },
+  {
+   "id": "core.delegation.delegate-own-key",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "The delegated token MUST be sender-constrained ({{token-claims}}) to the **delegate's own** key: its `cnf` is the delegate's DPoP or mTLS key, not the delegating party's, and the delegate proves possession of that key in the Token Exchange",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the delegated token's confirmation key is the key the delegate proved at the Token Exchange; a redemption proven under the delegating party's key is refused and issues no token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a redemption proven under the designator's key is refused: the delegate's key must be its own",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a redemption whose DPoP proof presents the delegate's key but is signed by another key is refused invalid_dpop_proof, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D-2 of the OAuth binding layering plan: each clause is proven by disabling the code it covers. Binding the delegated token to the delegating party's key fails the first witness (cnf.jkt no longer matches the delegate's key). Removing the refusal of a proof under the delegating party's key fails the second (200 instead of 400). Taking the thumbprint from the unverified proof header instead of verifying the DPoP signature fails the third (200 with a token instead of 400 invalid_dpop_proof), while the first two still pass, which is why the third was added on review of #1557. The reference AS sender-constrains by DPoP only; mTLS is the clause's alternative mechanism, not a second obligation."
   },
   {
    "id": "core.delegation-constraints.designation-adds-no-delegate",
@@ -37449,8 +37519,8 @@
   {
    "id": "issuance-grant.effective-set-projection.claim-gate",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "effective-set-projection",
-   "text": "A consuming AS that cannot perform this projection MUST NOT claim containment- or discharge-aware issuance.",
+   "anchor": "no-state-integration",
+   "text": "A consuming AS that cannot perform the projection of {{effective-set-projection}} MUST NOT claim containment- or discharge-aware issuance.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -37471,8 +37541,8 @@
   {
    "id": "issuance-grant.effective-set-projection.atomic-consumption",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "effective-set-projection",
-   "text": "the record itself is written atomically with successful issuance, after the state gate and this projection",
+   "anchor": "single-use",
+   "text": "the record itself is written atomically with successful issuance, after the Mission-state check and the projection of {{effective-set-projection}} where they apply",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37600,9 +37670,9 @@
    "id": "issuance-grant.effective-set-projection.equivalent-source-properties",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "An equivalent source MUST be authenticated, MUST be audience-scoped to the resources this AS serves, MUST carry the Mission's current `authorization_details` and a monotonic state `version`, and MUST answer within a staleness bound the deployment publishes",
+   "text": "The consuming AS MUST NOT rely on an equivalent source unless it is authenticated, is audience-scoped to the resources this AS serves, carries the Mission's current `authorization_details` and a monotonic state `version`, and answers within a staleness bound the deployment publishes",
    "role": "AS",
-   "strength": "MUST",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
     "capability": "issuance-grant.state-integration"
@@ -37798,8 +37868,8 @@
   {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "grant",
-   "text": "When it is present, the consuming AS MUST require proof of possession of that key at redemption",
+   "anchor": "grant-validation",
+   "text": "whenever `cnf` is present, the request proves possession of that key, with a DPoP proof",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
