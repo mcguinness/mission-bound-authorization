@@ -380,6 +380,368 @@
       "refs": [
         "#1258 item 11"
       ]
+    },
+    {
+      "id": "sub-eq-01",
+      "description": "A equals B, carrying all nine initial Common Constraints",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount",
+        "constraint.resource_issued_after",
+        "constraint.resource_issued_before",
+        "constraint.tenant",
+        "constraint.recipient_domain",
+        "constraint.time_window",
+        "constraint.data_classification",
+        "constraint.allowed_tools",
+        "constraint.requires_action_approval"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD"
+            },
+            "resource_issued_after": "2026-01-01T00:00:00Z",
+            "resource_issued_before": "2026-12-31T00:00:00Z",
+            "tenant": "acme",
+            "recipient_domain": "example.com",
+            "time_window": {
+              "not_before": "2026-01-01T00:00:00Z",
+              "not_after": "2026-12-31T00:00:00Z"
+            },
+            "data_classification": [
+              "internal"
+            ],
+            "allowed_tools": [
+              "get_invoice"
+            ],
+            "requires_action_approval": true
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "500.00",
+              "currency": "USD"
+            },
+            "resource_issued_after": "2026-01-01T00:00:00Z",
+            "resource_issued_before": "2026-12-31T00:00:00Z",
+            "tenant": "acme",
+            "recipient_domain": "example.com",
+            "time_window": {
+              "not_before": "2026-01-01T00:00:00Z",
+              "not_after": "2026-12-31T00:00:00Z"
+            },
+            "data_classification": [
+              "internal"
+            ],
+            "allowed_tools": [
+              "get_invoice"
+            ],
+            "requires_action_approval": true
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "every value is within an equal value"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "sub-act-02",
+      "description": "A names an action B lacks",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read",
+            "invoices.write"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "every candidate action must be within some reference action"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "sub-act-03",
+      "description": "A names a proper subset of B's actions",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read",
+            "invoices.write"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "each candidate action is within an equal reference action"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "sub-rc-01",
+      "description": "A and B carry the same contract reference",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "member.resource_contract"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-20",
+            "digest": "sha-256:JOUSo-Axu_CQ7BktLeK9cp4dVJOtCKLLcAG4IKPW2bQ"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-20",
+            "digest": "sha-256:JOUSo-Axu_CQ7BktLeK9cp4dVJOtCKLLcAG4IKPW2bQ"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "subset",
+        "reason": "the reference is preserved exactly, member for member"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "sub-rc-02",
+      "description": "B carries a contract reference and A omits it",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "member.resource_contract"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ]
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-20",
+            "digest": "sha-256:JOUSo-Axu_CQ7BktLeK9cp4dVJOtCKLLcAG4IKPW2bQ"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "removing a reference is never narrowing"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "sub-rc-03",
+      "description": "A carries a contract reference that B, an approved entry, lacks",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "member.resource_contract"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-20",
+            "digest": "sha-256:JOUSo-Axu_CQ7BktLeK9cp4dVJOtCKLLcAG4IKPW2bQ"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "adding a reference is never narrowing; the approval exception applies only against a policy ceiling"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "sub-rc-04",
+      "description": "A's contract reference differs from B's in digest",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "member.resource_contract"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-20",
+            "digest": "sha-256:JOUSo-Axu_CQ7BktLeK9cp4dVJOtCKLLcAG4IKPW2bA"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-20",
+            "digest": "sha-256:JOUSo-Axu_CQ7BktLeK9cp4dVJOtCKLLcAG4IKPW2bQ"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "id, version and digest must each equal B's"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
+    },
+    {
+      "id": "sub-rc-05",
+      "description": "A's contract reference differs from B's in version",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "member.resource_contract"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-21",
+            "digest": "sha-256:JOUSo-Axu_CQ7BktLeK9cp4dVJOtCKLLcAG4IKPW2bQ"
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-20",
+            "digest": "sha-256:JOUSo-Axu_CQ7BktLeK9cp4dVJOtCKLLcAG4IKPW2bQ"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "not-subset",
+        "reason": "replacing a reference is never narrowing"
+      },
+      "refs": [
+        "#819",
+        "D684"
+      ]
     }
   ]
 }
