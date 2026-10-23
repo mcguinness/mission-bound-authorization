@@ -254,7 +254,9 @@ export {
 export {
   type IntrospectedToken,
   type IntrospectionSettings,
+  IntrospectionTokenTypeUnsupportedError,
   IntrospectionUnavailableError,
   TokenInactiveError,
   TokenIntrospector,
 } from "./introspection.js";
+export { joinAssertionClient, type JoinAssertionClientOptions, type JoinAssertionSource } from "./join-assertion-client.js";

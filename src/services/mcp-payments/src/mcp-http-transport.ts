@@ -316,7 +316,10 @@ async function authenticate(
     scopes: [],
     extra: {
       tokenFacts: facts,
-      signals: { acceptTxnChallenge, ...(missionReference ? { missionReference } : {}) },
+      // @spec authority-server#join-assertion-request (#1454): a MAS-governed
+      // route hands the PEP the credential it authenticated, for its Join
+      // Assertion request.
+      signals: { acceptTxnChallenge, ...(missionReference ? { missionReference } : {}), ...(masGoverned ? { accessToken } : {}) },
     },
   };
   return facts;
