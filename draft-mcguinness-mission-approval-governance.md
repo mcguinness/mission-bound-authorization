@@ -1098,7 +1098,10 @@ A verifier running the check MUST complete these steps:
    of {{envelope}}; for the reference, apply its own artifact rules.
    The verifier MUST establish trust in the key material of the
    expected Mission Issuer for both: an issuer the artifact asserts
-   for itself, with a valid signature, is not thereby trusted.
+   for itself, with a valid signature, is not thereby trusted. The
+   record's `mission.issuer` MUST be that expected Mission Issuer,
+   since the issuer the record names is the one that signs it
+   ({{envelope}}).
 2. Require the event and the anchors. The authenticated reference MUST
    disclose `approval_event_id`, the Mission `issuer`, `intent_hash`,
    and `authority_hash`, and each MUST equal the record's
@@ -1107,21 +1110,35 @@ A verifier running the check MUST complete these steps:
    apply; a Mandate's `iss` equals its `mission.issuer`. Matching
    `intent_hash` and `authority_hash` never suffice without a matching
    approval-event identifier, since two Missions can share both.
-3. Compare the Approval Context Commitment. When both artifacts carry
-   `approval_context_commitment`, the two values MUST be equal. When
-   one or neither carries it, the check can succeed, and its result
-   MUST state that commitment agreement was not established. Equality
+3. Compare the Approval Context Commitment. Each
+   `approval_context_commitment` an artifact carries MUST be
+   well-formed, whether or not the other artifact carries one. When
+   both carry it, the two values MUST be equal. When one or neither
+   carries it, the check can succeed, and its result MUST state that
+   commitment agreement was not established. Equality
    establishes agreement on the commitment value only; recomputing it
    from the Mission's creation facts is a separate check
    ({{approval-context-computation}}).
 
+A value the check compares, each anchor and each disclosed commitment,
+is well-formed only in the encoded form
+{{conventions-and-definitions}} fixes: a recognized algorithm prefix,
+then the unpadded base64url encoding of a digest of that algorithm's
+length, whose text re-encodes to exactly the same characters. A value
+that decodes but does not re-encode to itself, for example one with
+nonzero padding bits, is malformed.
+
 The check has three outcomes:
 
 - Success: every step completes.
-- Failure: an authentication failure, a malformed required value, or a
-  mismatch in step 2 or step 3.
+- Failure: an authentication failure, a malformed required value or
+  disclosed commitment, or a mismatch in step 1, step 2, or step 3.
 - Insufficient evidence: an absent artifact, or a value step 2
   requires that the reference does not disclose.
+
+When the evidence both fails a step and is insufficient for another,
+the outcome is failure: a disclosed mismatch or malformed value is
+definitive, whatever else is undisclosed.
 
 A verifier MUST NOT report a successful portable binding on failure or
 on insufficient evidence.
@@ -2166,7 +2183,8 @@ record's `approval_event_id` (`ape_hON9D0svLKQAMyy-uug`), `issuer`,
 `intent_hash`, and `authority_hash`. Where a case says both artifacts
 carry a commitment, each carries `approval_context_commitment`; the
 check compares the two strings and never recomputes them. Each case
-changes one thing from the base.
+changes one thing from the base, except case 19, which tests the
+precedence of failure over insufficient evidence.
 
 | Case | Change from the base pair | Outcome |
 |---|---|---|
@@ -2184,12 +2202,20 @@ changes one thing from the base.
 | 12 | The reference is a Mandate whose `iss` differs from its `mission.issuer` | Failure |
 | 13 | No record is supplied | Insufficient evidence |
 | 14 | The reference's `intent_hash` carries an unrecognized algorithm prefix | Failure |
+| 15 | The record carries a malformed commitment; the reference carries none | Failure |
+| 16 | The reference carries a malformed commitment; the record carries none | Failure |
+| 17 | Both `intent_hash` values are equal but noncanonical: they decode, with nonzero padding bits, but do not re-encode to themselves | Failure |
+| 18 | The record names the Mission Issuer `https://as2.example.com` and verifies under the expected issuer's key | Failure |
+| 19 | The reference's `authority_hash` differs, and it does not disclose `approval_event_id` | Failure |
 {: title="Portable approval-binding check cases"}
 
 Cases 6 to 8 succeed on every other comparison, which is why the check
 compares each anchor rather than any one of them. Case 9 matches
 `intent_hash` and `authority_hash`, which two Missions can share, and
-still cannot succeed.
+still cannot succeed. Cases 15 and 16 fail although the other artifact
+carries no commitment: a disclosed value is validated on its own.
+Case 19 reports failure, not insufficient evidence, because a
+disclosed mismatch is definitive.
 
 # Document History {#document-history}
 
