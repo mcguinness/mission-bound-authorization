@@ -40,7 +40,7 @@ import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapt
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
-import { browserApprovalHeaders, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { browserApprovalHeaders, floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14620;
@@ -252,20 +252,22 @@ async function authorize(
   keep(res);
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
+  // An `openid` request needs an End-User authenticated in this user agent
+  // and approving for themself (#826): a trusted browser self-approval.
+  // Every other request is Bob's browser approval for alice, which the
+  // approval-authentication floor accepts for high-risk authority (D425).
+  const approval = opts.scope?.split(" ").includes("openid")
+    ? browserApprovalHeaders(SESSIONS, uid, { sub: "alice" }, cookie())
+    : floorApprovalHeaders(SESSIONS, uid, cookie());
+  // The decision names the page rendered to that session (#1446). A request
+  // the page refuses to render is refused by the decision before it consults
+  // any rendering, so it is decided without one.
+  const render_revision = await renderedRevision(ISSUER, uid, approval).catch(() => undefined);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    // An `openid` request needs an End-User authenticated in this user agent
-    // and approving for themself (#826): a trusted browser self-approval.
-    // Every other request is Bob's browser approval for alice, which the
-    // approval-authentication floor accepts for high-risk authority (D425).
-    headers: {
-      ...(opts.scope?.split(" ").includes("openid")
-        ? browserApprovalHeaders(SESSIONS, uid, { sub: "alice" }, cookie())
-        : floorApprovalHeaders(SESSIONS, uid, cookie())),
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: { ...approval, "content-type": "application/json" },
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   keep(res);
   location = res.headers.get("location") as string;
@@ -1190,11 +1192,13 @@ describe("the Intent-only completion workaround is never a client proposal (@spe
       return { status: page.status, html: await page.text() };
     };
     const decide = async () => {
+      const decideHeaders = { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() };
+      const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
       const r = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
         method: "POST",
         redirect: "manual",
-        headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() },
-        body: JSON.stringify({ decision: "approve" }),
+        headers: decideHeaders,
+        body: JSON.stringify({ decision: "approve", render_revision }),
       });
       keep(r);
       return r;

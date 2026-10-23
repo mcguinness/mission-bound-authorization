@@ -43,8 +43,8 @@
     "content_sha256": "c3ecaf45e6e17579e7374b0e733c7d4de7d58cbacdfecddfe37c3568eb74138a"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
-    "content_sha256": "fa83d94eb5521d5662b31710abcd3d4c9c60cfa39c6b9391ea3072c17fbd2225"
+    "revision": "3a857d7464a9a158a6994a4bb5417e8a6694ab09",
+    "content_sha256": "ad693045d450b97201cc096e34891d91987e13d74623d5c318d950bfeeab5a89"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "213893760b7c447ff475d568bc8a54be8a85176b",
@@ -55,8 +55,8 @@
     "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "db4c66466351328539b862373675b7bcd7b687cf",
-    "content_sha256": "ed37748db9d2e800e88bc64dc590a675970166a68e512c77ef65040360c11c37"
+    "revision": "b6a36a9708d3a7e9e2f83c3ba90d7dab93d437f9",
+    "content_sha256": "bc99ebe684ce0944206e5ed10da15d422181b1effa4b1d1724305046a089ccc1"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "9533a9d2ad59b0ed6f410918bd2fd44b80b1b5c7",
-    "content_sha256": "54f2fbb17b88d89f1a541262f6acf08055207975d88286dd9342098984399c2d"
+    "revision": "63a744561acf66fb2dc397ab69f190ac3f46945b",
+    "content_sha256": "f296e4b63bf026532fd4c56130f7a37535962da4de837bcffd2949c82417782b"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -111,8 +111,8 @@
     "content_sha256": "74d6ce91fa5bf904e532dfae6ead1982c0a17325fd90b491e1ef51e19a891741"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
-    "content_sha256": "607c3661d7e078651a9590775bd5f714a311a997bb3c01cf9822b56430fba262"
+    "revision": "c8eae0680f33d532b24db43e4b4b782586fe23f3",
+    "content_sha256": "d6688982eb8b956a4af4c2c62f6a8fb49a517a2b585beec700a0dc662347263f"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
@@ -231,6 +231,12 @@
    "status.lifecycle",
    "status.lifecycle-revoke",
    "status.discharge",
+   "status.mission-status",
+   "status.introspection-projection",
+   "status.mission-status-mtls-client-auth",
+   "status.lifecycle-mtls-client-auth",
+   "status.mission-status-access-token-auth",
+   "status.lifecycle-access-token-auth",
    "signals.events",
    "cross-org.delegation",
    "txn-authz.action",
@@ -300,6 +306,7 @@
    "expansion.interactive-completion",
    "expansion.related-to-correlation",
    "continuation.async-transport",
+   "continuation.cross-domain-transport",
    "aauth.supervision-server",
    "aauth.supervision-proof",
    "aauth.reference-projection",
@@ -1370,7 +1377,13 @@
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.introspection-projection",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -1413,7 +1426,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits."
+   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits. #1563 review: also gated on status.introspection-projection, whose issuer projection MAY carry `fresh_until` governed by this caching rule. The reference's introspection projection carries no `fresh_until`, so the cap is witnessed where the reference stamps it, on the signed Mission Status Response."
   },
   {
    "id": "status.response.consumer-issuer-binding",
@@ -1965,7 +1978,7 @@
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
-    "capability": "status.revocation-propagation"
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -1990,7 +2003,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "GET /missions/:id/status requires mayReadStatus (the status capability enabled and MISSION_STATUS_SCOPE on the authenticated service principal), the same predicate that decides a forwarded discharge's response shape (status.discharge.receipt-aud-nonce). The test shows a principal holding the lifecycle and discharge grants but not mission_status gets exactly the not-found body an unknown Mission gets (nonce echoed), while a principal holding only mission_status, and the shipped dev principal, get the signed Status response. Capability and surface follow the neighbouring Mission Status operation row status.caching.freshness-cap: the model has no dedicated Status-operation capability or surface. #1407: the advertised endpoint answers a client without the grant with the unknown Mission's not-found body."
+   "notes": "GET /missions/:id/status requires mayReadStatus (the status capability enabled and MISSION_STATUS_SCOPE on the authenticated service principal), the same predicate that decides a forwarded discharge's response shape (status.discharge.receipt-aud-nonce). The test shows a principal holding the lifecycle and discharge grants but not mission_status gets exactly the not-found body an unknown Mission gets (nonce echoed), while a principal holding only mission_status, and the shipped dev principal, get the signed Status response. Capability and surface follow the neighbouring Mission Status operation row status.caching.freshness-cap: the model has no dedicated Status-operation capability or surface. #1407: the advertised endpoint answers a client without the grant with the unknown Mission's not-found body. Gated on status.mission-status (was status.revocation-propagation): the read authorization belongs to the Mission Status operation."
   },
   {
    "id": "status.read.processing-order",
@@ -2000,7 +2013,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -2035,7 +2049,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -6414,7 +6429,386 @@
      "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half has no observable output to assert. Flips to tested when an approval surface retains its rendering across the decision. The reference AS also derives again at the decision without comparing against what it rendered, so a ceiling or policy change between the two commits an unrendered set: #1446."
+   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half had no observable output here. #1446 (D583) makes it observable at the approval surface: Changes Before the Decision's rows (core.approval-context-changes.*) carry the endpoint witnesses, and this row stays partial on its unit witnesses to assert. Flips to tested when an approval surface retains its rendering across the decision. The reference AS also derives again at the decision without comparing against what it rendered, so a ceiling or policy change between the two commits an unrendered set: #1446."
+  },
+  {
+   "id": "core.approval-context-changes.recompute",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "the AS MUST recompute the affected values and the anchors the Mission records",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a change between rendering and decision, the AS re-establishes the derived Authority Set, the authority source and the policy inputs as they stand at the decision, and a fresh decision commits the recomputed set with the anchors computed over it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a narrower ceiling between rendering and decision creates nothing; a fresh decision on the page rendered again commits exactly the narrower context",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > an unchanged context approves on its rendering's revision, and the Mission commits the rendered set",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.no-create-without-consent",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "MUST NOT create the Mission without the Approver's consent to the changed context",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a decision whose context changed since the rendering it names, before the decision or while it commits, or that names no rendering, a superseded one, or one made to another principal, creates no Mission, grant or code; only a fresh decision on the context rendered again creates one",
+    "local": "Consent is the decision on the latest rendering made to the deciding principal: a browser approval session, or a headless approval service with the Approver and Subject it names. A change answers 409 approval_context_changed (a form post: 303 back to the page), found before any write; a decision whose re-check fails retires only its own rendering; a context that no longer admits approval takes its mapped refusal instead, and a committed decision's retry recovers it."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision with no rendering, or after only an anonymous rendering, approves nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a narrower ceiling between rendering and decision creates nothing; a fresh decision on the page rendered again commits exactly the narrower context",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a wider ceiling between rendering and decision creates nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a stale form after a newer rendering approves nothing; the latest rendering does",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a revision rendered in one approval session approves nothing in another",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a change while the decision commits (during the grant save) creates no Mission and leaves no grant",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision held in its grant save never writes over or destroys the grant a newer decision commits",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision that fails its commit re-check retires only its own rendering: a newer one still approves",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a headless approval service renders before deciding, and its revision binds to the Subject it named",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "a device approval rests on its rendering (@spec mission#approval-context-changes, #1446) > a device approval with no rendering approves nothing, and the session stays pending",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "a device approval rests on its rendering (@spec mission#approval-context-changes, #1446) > a device approval whose context changed after its rendering creates nothing and leaves the session pending; a fresh rendering approves",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.task-or-proposal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "the task or the authority proposal",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a task or proposal that differs from the one rendered creates no Mission from the old decision"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446)."
+  },
+  {
+   "id": "core.approval-context-changes.derived-authority-set",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "the derived Authority Set",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derived Authority Set that narrowed or widened between rendering and decision is detected, and no Mission is created from the old decision"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a narrower ceiling between rendering and decision creates nothing; a fresh decision on the page rendered again commits exactly the narrower context",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a wider ceiling between rendering and decision creates nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.authority-source",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "the established authority source",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authority source whose resolution (root, catalog revision, provenance) changed between rendering and decision is detected, and no Mission is created from the old decision"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > an authority source change between rendering and decision creates nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.effective-expires-at",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "the effective `expires_at`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an effective expires_at that changed between rendering and decision, by an input or by the passage of time, is detected and no Mission is created from the old decision; a Mission created records the effective expires_at its rendering showed",
+    "local": "The rendering commits the effective expires_at it shows (the page displays it). The decision commits exactly that instant while the current inputs admit it (later than now, no later than the expiry they establish now), so a lifetime measured from a later decision never moves it. A rendered expiry that has passed, or that a shorter lifetime bound narrows, asks for a fresh decision; where no expiry later than now remains, the commit's mapped refusal (invalid_request) applies instead."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a shorter lifetime bound changes the effective expires_at: nothing is created",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > the Mission commits the effective expires_at its rendering showed: a lifetime measured from a later decision never moves it",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a rendering whose effective expires_at has passed asks for a fresh decision, which commits the expiry rendered again",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a requested expiry that passes while the decision commits gets its mapped refusal, not a request to review it again",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a change while the decision commits (during the grant save) creates no Mission and leaves no grant",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "a device approval rests on its rendering (@spec mission#approval-context-changes, #1446) > a device approval whose context changed after its rendering creates nothing and leaves the session pending; a fresh rendering approves",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.policy-input",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "a policy input establishing any of them",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a change to a policy input establishing the context is detected even when every anchor it yields is unchanged",
+    "local": "The reference commits the derivation policy's content, the scope projection and the activation policies held. A whole-policy digest also re-renders on an unrelated edit: a fresh decision, never a wrong one."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a policy edit that leaves every anchor and the effective expires_at equal still changes the context: a lifetime bound past the requested expiry",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a scope projection change is a changed policy input",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a change while the decision commits (during the grant save) creates no Mission and leaves no grant",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.anchors-over-approved-context",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "Each anchor (`intent_hash`, `authority_hash`, and `proposal_hash` where a proposal was submitted) is computed over the approved context",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the anchors a created Mission records are computed over the context the Approver approved"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > an unchanged context approves on its rendering's revision, and the Mission commits the rendered set",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a narrower ceiling between rendering and decision creates nothing; a fresh decision on the page rendered again commits exactly the narrower context",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1446 (D583): render revisions, the context comparison at the decision and again before the commit, in the reference AS approval surface."
+  },
+  {
+   "id": "core.approval-context-changes.proposal-swap",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-context-changes",
+   "text": "a proposal swapped between rendering and decision changes `proposal_hash` even where `intent_hash` is unchanged",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a proposal swapped between rendering and decision yields a different proposal_hash though the intent_hash is the same"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446)."
   },
   {
    "id": "core.mission-record.authority-source-required",
@@ -8297,9 +8691,27 @@
      "name": "mission record expiry ceiling (@spec mission#mission-record) > insertRecord refuses a record whose expires_at is not later than created_at",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a requested expiry that passes while the decision commits gets its mapped refusal, not a request to review it again",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "a pushed request that no longer validates is refused, never a 500 (@spec mission#approval-event, mission#error-mapping, #1610) > a decision after the request's expires_at passed completes the request invalid_request and creates nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "a device decision on a request that no longer validates (@spec mission#approval-event, mission#error-mapping, #1610) > a decision after the request's expires_at passed denies the session, never a 500",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
-   "notes": "insertRecord, the single Mission-record creation funnel, checks created_at < expires_at inside the creation transaction, so every creating surface inherits it. Endpoint arm: a deferred expansion whose approved horizon has passed by completion creates no successor and fails with the profile's denial semantics."
+   "notes": "insertRecord, the single Mission-record creation funnel, checks created_at < expires_at inside the creation transaction, so every creating surface inherits it. Endpoint arm: a deferred expansion whose approved horizon has passed by completion creates no successor and fails with the profile's denial semantics. Direct-approval arm (#1610): a requested ceiling that passed before the decision completes the authorization request invalid_request (a device session is denied), and one that passes during the commit is refused by the commit's own check; neither creates a Mission or grant."
   },
   {
    "id": "core.approval-event.record-code-atomicity",
@@ -8318,7 +8730,7 @@
    "assertion": "concurrency",
    "observation": {
     "normative": "the Mission Record is created active atomically with the approval decision and the issuance of the authorization code",
-    "local": "decide() prepares the approval (every refusal before any write, except the progressive ceiling consent the commit establishes at its creation instant, which leaves an inert grant), saves the provider grant under an identity derived from the interaction, then commits the record already bound to it (kernel.approve with grantId; bindGrant is compare-and-set). A failure before the commit leaves no Mission, only an inert grant a retry overwrites; a repeated or concurrent decision recovers the one grant and binding. oidc-provider issues the code on the later resume request, so a committed active, grant-bound Mission can precede code creation."
+    "local": "decide() prepares the approval (every refusal before any write, except the progressive ceiling consent the commit establishes at its creation instant, which leaves an inert grant), saves the provider grant under an identity derived from the interaction, then commits the record already bound to it (kernel.approve with grantId; bindGrant is compare-and-set). A failure before the commit leaves no Mission, only an inert grant a retry overwrites; a repeated or concurrent decision recovers the one grant and binding. The commits on one approval event run one at a time, cleanup included (in-process, under the single-process fence), so a decision resuming after asynchronous work recovers a commit made meanwhile and never writes over or destroys its grant (#1446). oidc-provider issues the code on the later resume request, so a committed active, grant-bound Mission can precede code creation."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -8374,6 +8786,24 @@
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
      "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > the commit revalidates the prepared authority source: a source withdrawn during the grant save refuses access_denied and creates no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision held in its grant save never writes over or destroys the grant a newer decision commits",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a second decision on the same rendering waits for the first and recovers its commit, even when a change lands between them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a reservation outlives a failed commit: a decision by another principal is refused before saving a grant",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
@@ -9142,6 +9572,85 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding-related",
+   "text": "Any grant binding or derived token they carry is their own under the same rules, not an extension of the origin Mission's binding.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "expansion.adjudication",
+     "expansion.interactive-completion",
+     "progressive.ceiling-drawdown",
+     "child-delegation.policy-drawdown",
+     "child-delegation.direct-approval",
+     "child-delegation.carryover"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "level": "endpoint",
+   "id": "core.grant-binding.new-missions-isolated",
+   "facet": "derived-token-isolation",
+   "observation": {
+    "normative": "a token issued to a successor or Child Mission identifies that Mission, and the AS's records for it are its own: distinct from the origin's, with the origin's still resolving to the origin"
+   },
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #child-client-identity) > happy path: child redeems its assertion -> 200 DPoP-bound child token carrying the child mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a widening request defers (authorization_pending + deferral_code); after async approval a poll (no subject_token) mints the successor and supersedes the predecessor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1590 (D709). Witnessed for the deferred expansion poll, the in-ceiling drawdown and synchronous policy-drawdown child creation. Not witnessed: interactive expansion, which the reference does not implement, and direct-basis children, which the reference creates only as carryover replacements, redeemed through the same first-bind path but not covered by these witnesses. The gate omits mas.expansion-child-creation: a Mission Authority Server issues no token on that surface. The witnesses assert isolation of the AS's internal grant records, which support issuance and lookup and are not a protocol grant lineage (D709). Mutation: binding the origin's grant to the new Mission at its first mint, with grant lookup returning the newest Mission so the reuse is silent, fails each witness at its grant-differs assertion; the other 170 tests in the three files pass. The protocol facet is core.grant-binding.new-missions-own-binding."
+  },
+  {
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding-related",
+   "text": "Any grant binding or derived token they carry is their own under the same rules, not an extension of the origin Mission's binding.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "expansion.adjudication",
+     "expansion.interactive-completion",
+     "progressive.ceiling-drawdown",
+     "child-delegation.policy-drawdown",
+     "child-delegation.direct-approval",
+     "child-delegation.carryover"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "level": "endpoint",
+   "id": "core.grant-binding.new-missions-own-binding",
+   "facet": "protocol-grant-binding",
+   "observation": {
+    "normative": "any protocol grant lineage a successor or Child Mission carries, such as an interactive completion's authorization code or a refresh-token family, resolves to that Mission and never to the origin's"
+   },
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1590 (D709). No reference path gives a successor or Child Mission a protocol grant lineage: there is no interactive completion, and no successor or child path issues a refresh token. The isolation facet is core.grant-binding.new-missions-isolated."
   },
   {
    "id": "core.grant-binding.runtime-join-not-persistent-binding",
@@ -12688,6 +13197,50 @@
    "notes": "#1535 (#1544 review ruling). Proved by reading the Mission before the members (the matrix's read spy fails) and by retaining the syntax refusal (the same-nonce well-formed request is refused 400 as a divergent retry). D175 narrowly superseded (#1544 review ruling): pre-deduplication refusals are read-only; post-authorization processing keeps D175's hoisted expiry. A refusal decided during syntax validation or target authorization commits no expiry, schedule, discharge event, latch or nonce response; the effective expiry still governs authorization and issuance at once, and its persistence and publication wait for the next expiry-materializing path. Proved post-authorization by removing the hoisted materialization (the fingerprint-conflict test fails: the conflict's rollback undoes the expiry)."
   },
   {
+   "id": "status.discharge.observed-at-syntax-and-clock-bounds",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-operation",
+   "text": "The AS validates it for syntax and reasonable clock bounds only, never as trusted ordering or freshness",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an `observed_at` that is not an RFC 3339 date-time is refused `invalid_request`; one outside the AS's clock allowance is refused for a request processed fresh, while an authorized retry whose `observed_at` has since aged past it replays the original response",
+    "local": "syntax in parseDischargeMembers, before authorization; the 24-hour window (OBSERVED_AT_SKEW_MS) in handleDischarge, after deduplication (#1544 re-review)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses malformed wire shapes as invalid_request, never a 500",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > refuses a malformed discharge request without touching the latch",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays an authorized retry whose observed_at has since aged past the admission window: the window is checked only for a request processed fresh (@spec status#lifecycle-processing, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "A present-tense obligation that had no row; Proved: disabling only the RFC 3339 check in parseDischargeMembers (keeping the type and window checks) fails \"refuses malformed wire shapes as invalid_request, never a 500\" on a non-RFC 3339 `observed_at` inside the clock window; disabling the window check in handleDischarge fails the skewed `observed_at` case of \"refuses a malformed discharge request without touching the latch\" and the aged-retry test's fresh-nonce companion."
+  },
+  {
    "id": "status.discharge.well-formed-resolution-not-found",
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-anti-oracle",
@@ -12979,6 +13532,56 @@
     }
    ],
    "notes": "Status interface audit (#705); #1191 (D416)."
+  },
+  {
+   "id": "status.idempotency.pre-dedup-refusal-no-nonce",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "A request refused before deduplication ({{lifecycle-processing}}) claims no `nonce`: the AS retains nothing for the refusal and leaves any response already retained under that `nonce` unchanged, so the rules above apply to a later request carrying it as though the refused request had never arrived.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a request refused at syntax or authorization, before deduplication, retains nothing and leaves any response already retained under its nonce unchanged: a later authorized retransmit with the original's members replays the original bytes, one with different members is refused invalid_request as a divergent retry and changes nothing, and where nothing is retained a later request with that nonce is processed as a new request"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > authorizes a retransmit before deduplication: after the client's grant is withdrawn, the same nonce and members under a fresh assertion get the not-found response, not the replayed success, and the success replays once the grant returns",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > keeps a retained success through a refusal decided before deduplication, so a later authorized request with that nonce and different members is refused as a divergent retry, never processed fresh",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535) > retains nothing for a refusal decided before deduplication, so a committed success whose bytes were lost survives a refused retransmit and is recovered once the grant returns",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > retains nothing for a discharge refused on its syntax: the same nonce with well-formed members is then processed fresh, a discharge for an authorized caller and the not-found response for one outside the target's mapping, never a divergent retry (@spec discharge#discharge-anti-oracle, status#idempotency, #1535)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535, D658: the sentence states what the processing order already implied. Both witnesses were proved during #1544: retaining a pre-deduplication 404 fails the first, retaining a discharge syntax refusal fails the second. #1563 review: the sentence and observation no longer say a later request is processed as new; a refusal before deduplication leaves a retained success unchanged and a later request follows normal deduplication. Witnesses by clause: the retained row is unchanged (the divergent test, and the lost-bytes recovery test); an identical retransmit replays the original bytes (the retransmit-authorization test); a different-members request is refused invalid_request with the Mission still suspended (the divergent test); with nothing retained the request is processed as new (the Discharge test). Mutation: deleting the Mission's retained responses on the pre-dedup not-found path fails the three Lifecycle tests, and the divergent test fails on its wire assertion alone (200, not 400) with its retained-row check removed."
   },
   {
    "id": "status.idempotency.nonce-malformed",
@@ -14675,6 +15278,8 @@
    "applicability": {
     "kind": "capabilities",
     "any_of": [
+     "status.mission-status",
+     "status.introspection-projection",
      "status.lifecycle",
      "status.lifecycle-revoke",
      "status.revocation-propagation"
@@ -14951,11 +15556,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "capabilities",
-    "any_of": [
-     "status.lifecycle",
-     "status.lifecycle-revoke"
-    ]
+    "kind": "capability",
+    "capability": "status.lifecycle-mtls-client-auth"
    },
    "profiles": [],
    "surface": "verification",
@@ -14966,7 +15568,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented."
+   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.lifecycle.unserved-operation-refused",
@@ -15176,7 +15778,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "lifecycle-endpoint",
@@ -15256,7 +15863,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15277,7 +15885,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15298,7 +15907,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status-mtls-client-auth"
    },
    "profiles": [],
    "surface": "verification",
@@ -15309,7 +15919,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 12 (D649). todo: the advertised Mission Status endpoint (#1407) accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented."
+   "notes": "#1535 finding 12 (D649). todo: the advertised Mission Status endpoint (#1407) accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.request.private-key-jwt-params",
@@ -15319,7 +15929,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15354,7 +15965,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15395,7 +16007,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15416,7 +16029,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15458,7 +16076,12 @@
    "role": "client",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15493,7 +16116,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15528,7 +16156,12 @@
    "role": "client",
    "strength": "SHOULD",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15557,7 +16190,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15598,7 +16236,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15633,7 +16276,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15662,7 +16310,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15690,7 +16339,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -15725,7 +16375,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15772,7 +16427,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15819,7 +16479,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15866,7 +16531,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15913,7 +16583,12 @@
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15948,7 +16623,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -15983,7 +16663,8 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -16096,7 +16777,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -16125,7 +16807,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "status.mission-status"
    },
    "profiles": [],
    "surface": "verification",
@@ -16195,7 +16878,12 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "lifecycle-endpoint",
@@ -16284,7 +16972,11 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status-access-token-auth",
+     "status.lifecycle-access-token-auth"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -16295,7 +16987,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.auth.challenge-no-token",
@@ -16305,7 +16997,11 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status-access-token-auth",
+     "status.lifecycle-access-token-auth"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -16316,7 +17012,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.auth.challenge-resource-metadata",
@@ -16326,7 +17022,11 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status-access-token-auth",
+     "status.lifecycle-access-token-auth"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -16337,7 +17037,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18)."
+   "notes": "The reference AS emits no WWW-Authenticate on the Status or Lifecycle endpoint and publishes no Protected Resource Metadata for them, so resource_metadata has no target. Todo until the AS publishes that metadata (#972 item 18). #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.auth.invalid-client",
@@ -16347,7 +17047,12 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -16659,7 +17364,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "status.lifecycle"
+    "capability": "status.lifecycle-access-token-auth"
    },
    "profiles": [],
    "surface": "lifecycle-endpoint",
@@ -16670,7 +17375,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 1 (D649). Applies to the access-token authentication case only: the reference Lifecycle endpoint accepts private_key_jwt alone (LIFECYCLE_ENDPOINT_AUTH_METHODS), where the acting party is the authenticated client, no delegation context arises, and status.lifecycle.per-mission-authorization covers the evaluation. No manifest capability names the access-token mode, so the gate is this note. Todo until the endpoint accepts a sender-constrained access token."
+   "notes": "#1535 finding 1 (D649). Applies to the access-token authentication case only: the reference Lifecycle endpoint accepts private_key_jwt alone (LIFECYCLE_ENDPOINT_AUTH_METHODS), where the acting party is the authenticated client, no delegation context arises, and status.lifecycle.per-mission-authorization covers the evaluation. No manifest capability names the access-token mode, so the gate is this note. Todo until the endpoint accepts a sender-constrained access token. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
   },
   {
    "id": "status.lifecycle.unauthorized-not-found",
@@ -17135,7 +17840,12 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
    },
    "profiles": [],
    "surface": "verification",
@@ -45290,6 +46000,186 @@
    "notes": "#1195 (D387, D390). On a self-dispatched instance the async exchange's handle-audience check is the only guard against the instance token: self-exchange rule 1 and possession both hold. Mutation proof: disabling that check opens a family from the instance token, failing the direct-async witness on status."
   },
   {
+   "id": "continuation.transports.reference-resolves-to-anchor",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transports",
+   "text": "Each transport MUST identify the accepted hop through a reference that resolves to the Mission's rooting anchor.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every continued grant is issued against a reference that resolves to exactly the Mission's rooting anchor; a reference that resolves to no anchor, or to another Mission's, continues nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1588 (D709). Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names. No witness yet."
+  },
+  {
+   "id": "continuation.transports.reference-possession-not-evidence",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transports",
+   "text": "Possession of that reference alone MUST NOT be treated as evidence that the Mission's work remains authorized.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented reference whose Mission is no longer active, or whose re-derivation fails, yields no continued grant, however valid the reference itself"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b2) a Mission whose authority is fully contained -> invalid_target (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b4) a revoked Mission whose hop the store has not yet ended -> invalid_continuation at the gate, not unauthorized_client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1588 (D709). Existing gate witnesses, also cited by continuation.ica-transport.refusal-codes and status.conformance.revoke-only-class. Witnessed: a still-valid Identity Continuation Assertion presented for a suspended or revoked Mission, or for one whose authority is fully contained, is refused and nothing is issued; a delegated family refresh token that worked before the Mission's revocation is refused invalid_grant, issuing and saving nothing. Not witnessed: a failed re-derivation on the async transport, and the cross-domain transport. Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names."
+  },
+  {
+   "id": "continuation.invariant.possession-not-evidence",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "invariant",
+   "text": "possession of a continuation handle, a refresh token, or any other transport artifact MUST NOT be treated as evidence that the work is still authorized",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a transport artifact presented for a Mission that is no longer active or no longer authorizes the requested authority yields no grant"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b2) a Mission whose authority is fully contained -> invalid_target (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b4) a revoked Mission whose hop the store has not yet ended -> invalid_continuation at the gate, not unauthorized_client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1588 (D709). Existing gate witnesses, also cited by continuation.ica-transport.refusal-codes and status.conformance.revoke-only-class. Witnessed: a still-valid Identity Continuation Assertion presented for a suspended or revoked Mission, or for one whose authority is fully contained, is refused and nothing is issued; a delegated family refresh token that worked before the Mission's revocation is refused invalid_grant, issuing and saving nothing. Not witnessed: a failed re-derivation on the async transport, and the cross-domain transport. Issuer facet of the invariant; the relying-party facet is continuation.invariant.relying-party-no-artifact-decision. Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names."
+  },
+  {
+   "id": "continuation.invariant.derivation-at-issuance",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "invariant",
+   "text": "Authorization is established only by deriving a subset of the Mission's Authority Set under a live state check ({{authorization-continuity}}) at each issuance.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each continued grant's authority is a subset of the Mission's Authority Set derived under a state check atomic with that issuance"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1588 (D709). Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names. No witness yet."
+  },
+  {
+   "id": "continuation.invariant.relying-party-no-artifact-decision",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "invariant",
+   "text": "A relying party MUST NOT make an authorization decision from the mere existence or contents of a continuation artifact.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a relying party presented with a continuation artifact but no Mission-bound credential valid for the request refuses it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1588 (D709). Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names. No witness yet. Relying-party facet of the invariant; the issuer facet is continuation.invariant.possession-not-evidence."
+  },
+  {
    "id": "resource-access.type.prefix-query-fragment-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-access-type",
@@ -48726,9 +49616,21 @@
      "name": "PAR intake validates a proposed reference against the shipped configuration (@spec resource-access#resource-contract, #249) > admits a proposal carrying the configured current reference",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "a proposed contract no longer current after the push is refused, never a 500 (@spec resource-access#resource-contract, mission#error-mapping, #1610) > at the render: 400 invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "a proposed contract no longer current after the push is refused, never a 500 (@spec resource-access#resource-contract, mission#error-mapping, #1610) > at the decision: the request completes invalid_authorization_details and no Mission is created",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn. A reference current at the push that configuration no longer names as current is refused the same way at the approval render and decision (#1610)."
   },
   {
    "id": "resource-access.resource-contract.no-new-approval-non-current",
@@ -48756,6 +49658,12 @@
      "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > a value whose mapping names a contract version that is not current is refused at the approval: invalid_authorization_details, and no Mission (@spec resource-access#resource-contract)",
      "level": "endpoint",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "a proposed contract no longer current after the push is refused, never a 500 (@spec resource-access#resource-contract, mission#error-mapping, #1610) > at the decision: the request completes invalid_authorization_details and no Mission is created",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
    "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1)."
@@ -59026,9 +59934,16 @@
     "normative": "the child-creation exchange binds no grant lineage to the Child Mission; any lineage the Child Mission carries comes from the child actor's redemption of the child-bound grant, and no step extends the parent's grant"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1557 cold readers' follow-up. The reference AS binds no grant at child creation, issues no refresh token at the child actor's JWT-bearer redemption, and never reuses the parent's grant for the child's tokens; it implements only synchronous creation. No test asserts that separation."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #child-client-identity) > happy path: child redeems its assertion -> 200 DPoP-bound child token carrying the child mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1557 cold readers' follow-up; #1590 (D709). Witnessed: the Child Mission has no bound record after the parent's exchange, and after the child actor's redemption its record is its own, distinct from the parent's, with the parent's still resolving to the parent and the token identifying the child. The witnesses assert isolation of the AS's internal grant records, which support issuance and lookup and are not a protocol grant lineage (D709). Not witnessed: a protocol lineage (the redemption issues no refresh token) and deferred or interactive creation (the reference implements only synchronous creation). Mutation: binding the origin's grant to the new Mission at its first mint, with grant lookup returning the newest Mission so the reuse is silent, fails each witness at its grant-differs assertion; the other 170 tests in the three files pass."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
@@ -63549,9 +64464,22 @@
     "normative": "any grant lineage a successor carries is its own: the authorization code an interactive completion redeems and any refresh-token family it emits, or a refresh-token family a deferred or drawdown response emits; a deferred completion or synchronous drawdown returning only an access token establishes no grant binding, while an interactive completion's authorization code is a binding whether or not its redemption emits a refresh token, and no completion extends the predecessor's grant"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1557 cold readers' follow-up. The reference AS issues no refresh token on any successor path and implements no interactive completion, so its successors carry derived tokens only; it never reuses the predecessor's grant for a successor's tokens. No test asserts that separation."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a widening request defers (authorization_pending + deferral_code); after async approval a poll (no subject_token) mints the successor and supersedes the predecessor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1557 cold readers' follow-up; #1590 (D709). Witnessed: on the deferred poll and the in-ceiling drawdown the successor's records are its own, distinct from the predecessor's, each still resolving to its own Mission, and the issued token identifies the successor. The witnesses assert isolation of the AS's internal grant records, which support issuance and lookup and are not a protocol grant lineage (D709). Not witnessed: the interactive completion's authorization code and any refresh-token family (the reference implements no interactive completion and issues no refresh token on these paths), and the clause that an access-token-only completion establishes no grant binding. Mutation: binding the origin's grant to the new Mission at its first mint, with grant lookup returning the newest Mission so the reuse is silent, fails each witness at its grant-differs assertion; the other 170 tests in the three files pass."
   },
   {
    "id": "expansion.successor-expiry.completion-codes",
