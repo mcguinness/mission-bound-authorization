@@ -4,7 +4,7 @@
  * oidc-provider types cross this boundary.
  */
 
-import { createPublicKey, KeyObject, randomBytes, randomInt, sign } from "node:crypto";
+import { createHash, createPublicKey, KeyObject, randomBytes, randomInt, sign } from "node:crypto";
 import {
   type ActivationPolicyRef,
   type ApprovalContextManifestInput,
@@ -503,6 +503,13 @@ export interface ApproveInput {
    * Absent: the Mission has no progressive authorization.
    */
   ceiling?: CeilingConsent;
+  /**
+   * @spec mission#approval-context-changes (#1446, D583): the effective
+   * `expires_at` the approval rendering showed, a ceiling on the one this
+   * approval commits, so a lifetime measured from the decision never commits
+   * a later expiry than the Approver saw. Absent: no rendering bounds it.
+   */
+  renderedExpiresAt?: string;
 }
 
 /**
@@ -1292,6 +1299,18 @@ export class MissionKernel {
   }
 
   /**
+   * @spec mission#approval-context-changes (#1446, D583): a content digest of
+   * the whole derivation policy as it stands, so an edit under the same
+   * `policy_version` (a ceiling, a mapping, `max_mission_lifetime_s`,
+   * `derivation_limit_ceiling`) is a changed policy input even when every
+   * anchor agrees. It covers the whole policy, so an unrelated edit also
+   * re-renders an approval: a fresh decision, never a wrong one.
+   */
+  derivationPolicyDigest(): string {
+    return `sha-256:${createHash("sha256").update(canonicalize(this.opts.policy as unknown as JsonValue)).digest("base64url")}`;
+  }
+
+  /**
    * The public half of the Status key {@link statusSigner} signs with, as a
    * verifier resolves it by `kid` from the issuer's published key material.
    */
@@ -1714,11 +1733,13 @@ export class MissionKernel {
       created_at: createdAt,
       // @spec mission#mission-record — the AS-ESTABLISHED effective expiry, not
       // the requested value copied verbatim: the requested ceiling narrowed by
-      // this deployment's own `max_mission_lifetime_s`. Direct creation under
-      // the core carries no other ceiling.
+      // this deployment's own `max_mission_lifetime_s`, and by the expiry the
+      // approval rendering showed (#1446), the one other ceiling direct
+      // creation carries.
       expires_at: this.resolveEffectiveExpiry({
         requested: input.intent.expires_at,
         createdAt,
+        ...(input.renderedExpiresAt ? { ceilings: { rendered: input.renderedExpiresAt } } : {}),
       }),
       version: 1,
       // @spec mission#derivation-issuance-policy — the immutable EFFECTIVE

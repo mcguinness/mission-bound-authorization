@@ -25,7 +25,7 @@
  *     client_id security gate, lazy Grant binding, and single-derivation gating.
  */
 
-import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { ApprovalSessionStore } from "../src/index.js";
 const FLOOR_SESSIONS = new ApprovalSessionStore();
 
@@ -246,11 +246,13 @@ async function issueParentMission(): Promise<{ missionId: string; refreshToken: 
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
 
+  const decideHeaders = { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)), "content-type": "application/json" };
+  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;
@@ -745,6 +747,7 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
   });
 
   it("happy path: child redeems its assertion -> 200 DPoP-bound child token carrying the child mission", async () => {
+    const parentGrant = as.kernel.get(p.missionId)?.grant_id as string;
     const { missionId, assertion } = await makeChild({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" });
 
     // ADVISOR CHECK 1 (single-gate): derivation_count is 0 pre-redemption.
@@ -808,6 +811,15 @@ describe("PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #
     expect(boundGrant).toBeTruthy();
     expect(as.kernel.findByGrant(boundGrant)?.id).toBe(missionId);
     expect(as.kernel.get(missionId)?.derivation_count).toBe(1);
+
+    // @spec mission#grant-binding-related (#1590): the child's internal grant is its own. It
+    // differs from the parent's, the parent's still resolves to the parent, and the index entry
+    // names the child. These witness isolation of the AS's records, not a protocol lineage.
+    expect(parentGrant).toBeTruthy();
+    expect(boundGrant).not.toBe(parentGrant);
+    expect(as.kernel.get(p.missionId)?.grant_id).toBe(parentGrant);
+    expect(as.kernel.findByGrant(parentGrant)?.id).toBe(p.missionId);
+    expect(as.kernel.missionBoundGrants.resolve(boundGrant)?.missionId).toBe(missionId);
   });
 
   // @spec RFC 9449 Section 4.3 (#1173): the redemption's proof is complete and fresh.

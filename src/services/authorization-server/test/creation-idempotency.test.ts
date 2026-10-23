@@ -24,7 +24,7 @@
  *    pending retry returns the SAME deferral_code.
  */
 
-import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { ApprovalSessionStore } from "../src/index.js";
 const FLOOR_SESSIONS = new ApprovalSessionStore();
 
@@ -162,11 +162,13 @@ async function issueMission(actions: string[]): Promise<{ missionId: string; acc
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
 
+  const decideHeaders = { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)), "content-type": "application/json" };
+  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;

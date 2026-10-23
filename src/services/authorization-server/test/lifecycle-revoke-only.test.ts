@@ -35,7 +35,7 @@ import {
   MISSION_STATUS_SCOPE,
   type ProviderCapability,
 } from "../src/index.js";
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 import {
   decodeStatusResponse,
@@ -152,11 +152,13 @@ async function issue(): Promise<{ missionId: string; accessToken: string; refres
   );
   keep(res);
   const uid = (res.headers.get("location") ?? "").split("/interaction/")[1] as string;
+  const decideHeaders = { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() };
+  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   keep(res);
   let location = res.headers.get("location") ?? "";
