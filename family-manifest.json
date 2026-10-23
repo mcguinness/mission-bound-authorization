@@ -2071,11 +2071,9 @@
     }
    ],
    "references": [
-    "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-mandate",
     "draft-mcguinness-mission-runtime",
-    "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-consent-evidence",
     "draft-mcguinness-oauth-mission-containment",

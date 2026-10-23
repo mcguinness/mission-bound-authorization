@@ -125,22 +125,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-architecture:
-    title: "An Architecture for Mission-Bound Authorization"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-substrate:
-    title: "Mission Substrate Requirements"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
 
 --- abstract
 
@@ -922,12 +906,6 @@ Server Metadata {{RFC8414}}:
 
 # Relationship to Other Artifacts {#relationships}
 
-**The Mandate is evidence; this grant authorizes.** Both are
-issuer-signed statements about a Mission, and their `typ` values keep
-them apart: the token endpoint refuses a Mandate
-({{grant-validation}}), and a Mandate verifier refuses a grant
-({{I-D.draft-mcguinness-mission-mandate}}).
-
 **The cross-domain grant is this shape across a trust boundary.**
 Cross-domain projection
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) carries a
@@ -951,18 +929,6 @@ the Mission's parties, never that it was issued for the Mission
 ({{I-D.draft-mcguinness-mission-authority-server}}, Section "Mission
 Join"). The estate's other tokens are unchanged and compose through
 the Mission Join; the two joins coexist per resource and per AS.
-
-## Composite Provision {#composite}
-
-In the substrate's terms ({{I-D.draft-mcguinness-mission-substrate}}),
-a MAS alone claims neither Credential-Bound nor Lifecycle-Gated
-Authorization for tokens its unchanged authorization servers issue.
-Together with its consuming Authorization Servers under this profile,
-it supplies both, for the resources those servers serve. In the
-Mission Assurance Levels
-({{I-D.draft-mcguinness-mission-architecture}}), this profile makes
-Baseline Issuance reachable under the standalone binding, and a
-consuming AS's refresh gating adds the state-aware half-step.
 
 # Conformance {#conformance}
 
@@ -1054,8 +1020,10 @@ and its local policy MAY narrow further. The AS remains free to
 refuse any grant its policy distrusts; nothing obliges issuance.
 
 **Type confusion.** Three issuer-signed JWT artifacts describe
-Missions: the Mandate (evidence), the cross-domain grant (foreign
-domain), and this grant (same estate). Explicit typing with mutually
+Missions: the Mission Mandate
+({{I-D.draft-mcguinness-mission-mandate}}, evidence), the
+cross-domain grant (foreign domain), and this grant (same estate).
+Explicit typing with mutually
 exclusive validation rules ({{Section 3.11 of RFC8725}} and
 {{Section 3.12 of RFC8725}}) is the defense: every consumer checks
 `typ` first, and none accepts another's type.
