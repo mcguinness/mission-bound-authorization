@@ -56,10 +56,7 @@ export interface ReportedTokenBinding {
 }
 
 /** The `join` claim of a verified assertion. */
-export type AssertedJoin = { mappingVersion?: string } & (
-  | { clientId: string; disposition: "client" }
-  | { clientId: string; disposition: "delegate"; depth: number }
-);
+export type AssertedJoin = { clientId: string; disposition: "client" } | { clientId: string; disposition: "delegate"; depth: number };
 
 const isRecord = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
 const isString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
@@ -88,7 +85,8 @@ export async function verifyJoinAssertion(
       audience: policy.audience,
       currentDate: now,
       clockTolerance: policy.clockToleranceSeconds ?? 0,
-      requiredClaims: ["exp", "iat", "aud"],
+      // `aud` is required by the audience check itself.
+      requiredClaims: ["exp", "iat"],
     });
     const m = payload.mission;
     if (!isRecord(m) || m.id !== mission.id || m.issuer !== mission.issuer) return undefined;
@@ -104,10 +102,9 @@ export async function verifyJoinAssertion(
 
     const join = payload.join;
     if (!isRecord(join) || !isString(join.client_id)) return undefined;
-    const mappingVersion = isString(payload.mapping_version) ? { mappingVersion: payload.mapping_version } : {};
-    if (join.disposition === "client") return { clientId: join.client_id, disposition: "client", ...mappingVersion };
+    if (join.disposition === "client") return { clientId: join.client_id, disposition: "client" };
     if (join.disposition !== "delegate" || !Number.isSafeInteger(join.depth) || (join.depth as number) < 0) return undefined;
-    return { clientId: join.client_id, disposition: "delegate", depth: join.depth as number, ...mappingVersion };
+    return { clientId: join.client_id, disposition: "delegate", depth: join.depth as number };
   } catch {
     return undefined;
   }

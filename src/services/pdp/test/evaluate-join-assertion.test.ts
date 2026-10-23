@@ -206,8 +206,10 @@ describe("evaluate(): an assertion that fails a check denies mission_binding_fai
     const floor = await decide(joinedReq({}), opts({ joinMapping: MAPPED }));
     expect(floor.decision.decision, JSON.stringify(floor.decision)).toBe(true);
 
-    const cases: Array<[string, Promise<string>, Record<string, unknown>?]> = [
+    const cases: Array<[string, Promise<string>, string?]> = [
       ["typ", mint(() => {}, { header: { typ: "JWT" } })],
+      ["no exp", mint((c) => { delete c.exp; })],
+      ["no iat", mint((c) => { delete c.iat; })],
       ["signature under another key", mint(() => {}, { key: otherSigner })],
       ["iss", mint((c) => { c.iss = "https://other-mas.test"; })],
       ["mission.id", mint((c) => { (c.mission as Record<string, unknown>).id = "msn_other"; })],
@@ -215,11 +217,13 @@ describe("evaluate(): an assertion that fails a check denies mission_binding_fai
       ["authority_hash", mint((c) => { (c.mission as Record<string, unknown>).authority_hash = "sha-256:other"; })],
       ["expired", mint((c) => { c.exp = NOW_S - 1; })],
       ["join without client_id", mint((c) => { c.join = { disposition: "client" }; })],
-      ["join with an unknown disposition", mint((c) => { c.join = { client_id: "ap-agent", disposition: "owner" }; })],
-      ["delegate with no depth", mint((c) => { c.join = { client_id: "helper-agent", disposition: "delegate" }; })],
+      // The delegable action: each of these would join as the delegate if read as one.
+      ["join with an unknown disposition", mint((c) => { c.join = { client_id: "helper-agent", disposition: "owner", depth: 1 }; }), LIST],
+      ["delegate with no depth", mint((c) => { c.join = { client_id: "helper-agent", disposition: "delegate" }; }), LIST],
+      ["delegate with a negative depth", mint((c) => { c.join = { client_id: "helper-agent", disposition: "delegate", depth: -1 }; }), LIST],
     ];
-    for (const [label, assertion] of cases) {
-      await expectBindingFailed(joinedReq(carrying(await assertion)), opts({ joinMapping: MAPPED }), label);
+    for (const [label, assertion, action] of cases) {
+      await expectBindingFailed(joinedReq(carrying(await assertion), action), opts({ joinMapping: MAPPED }), label);
     }
   });
 
@@ -235,6 +239,7 @@ describe("evaluate(): an assertion that fails a check denies mission_binding_fai
     const cases: Array<[string, Record<string, unknown>]> = [
       ["another token's digest", { assertion, token_sha256: "another-digest", token_jkt: JKT }],
       ["no digest", { assertion, token_jkt: JKT }],
+      ["no digest reported or asserted", { assertion: await mint((c) => { c.token = { jkt: JKT }; }), token_jkt: JKT }],
       ["another key's thumbprint", { assertion, token_sha256: SHA, token_jkt: "another-jkt" }],
       ["no thumbprint", { assertion, token_sha256: SHA }],
       ["both thumbprints", { assertion, token_sha256: SHA, token_jkt: JKT, token_x5t: "cert-thumb" }],
