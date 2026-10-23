@@ -469,49 +469,37 @@ The MAS MUST apply the following rules:
    "Mission Submission"). The requester MUST be the Mission's
    recorded client. Any other caller, including a delegate or
    enforcement point that the Mission Join Assertion endpoint admits,
-   receives `not_found`, which preserves the MAS's anti-oracle
-   property.
-2. **State gate.** A grant is minted only while the Mission is
-   `active`, established from the MAS's own record at minting. In any
-   other state the MAS refuses.
+   receives `not_found` ({{minting-errors}}).
+2. **State gate.** The MAS mints a grant only while its own record
+   shows the Mission `active`, and otherwise refuses.
 3. **Subset and audience.** The grant's `authorization_details` MUST
    be a subset, under the issuance profile's subset rule
    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Subset Rule"), of
    the Mission's current Effective Authority Set
-   ({{I-D.draft-mcguinness-oauth-mission-status}}). That is the
-   consented Authority Set less what any composed narrowing companion
-   has removed; a grant is a derivation, so a contained capability is
-   absent from it ({{I-D.draft-mcguinness-oauth-mission-containment}},
-   Section "Derivation Gating"). The grant MUST carry only the
-   entries the named consuming AS serves. The requester MAY request a
-   narrower subset. The MAS MUST refuse a request for a wider one.
+   ({{I-D.draft-mcguinness-oauth-mission-status}}), so a contained
+   capability is absent from it
+   ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section
+   "Derivation Gating"). The grant MUST carry only the entries the
+   named consuming AS serves. The requester MAY request a narrower
+   subset. The MAS MUST refuse a request for a wider one.
 4. **Derivation event.** Each grant minted is a derivation event.
-   Where the Mission's established `derivation_limit`
-   ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}) is set, the MAS MUST count
-   grants against it atomically and refuse beyond
-   it, which gives that ceiling a binding locus under the standalone
-   binding. A grant counts when its minting commits. Redemption and
-   refresh at a consuming AS do not increment this counter, so the
-   limit bounds the grants the MAS issues, not the number of tokens
-   consuming Authorization Servers issue from them
-   ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
-   "Mission Issuance Grant Minting").
+   Where the Mission's established `derivation_limit` is set, the MAS
+   MUST count grants against it atomically and refuse beyond it, as
+   {{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
+   "Mission Issuance Grant Minting", defines; redemption and refresh
+   at a consuming AS are not counted.
 5. **Key binding.** When the MAS includes `cnf`, it MUST take the key
    from a sender constraint it verified on the grant request: the
-   public key of the request's DPoP proof, as `jkt`, or the client
-   certificate of the mutual-TLS connection, as `x5t#S256` (the TLS
-   handshake proves possession of its key whether or not the
-   certificate also authenticated the client). The MAS MUST NOT
-   derive `cnf` solely from client-assertion authentication: a
-   private-key-JWT client assertion authenticates the client, and DPoP
-   is not client authentication ({{Section 3 of RFC9449}}), so only an
-   independent sender-constraint verification on the request supplies
-   the binding, even where it proves the same key. A grant request with
-   no verified
-   sender constraint yields a grant without `cnf`. The redemption
-   rules for client authentication and public clients
-   ({{redemption}}) apply unchanged, so a public client cannot redeem
-   such a grant.
+   public key of the request's DPoP proof, as `jkt`, or the
+   certificate of the mutual-TLS connection, as `x5t#S256`, whether
+   or not that certificate also authenticated the client. The MAS
+   MUST NOT derive `cnf` solely from client-assertion authentication:
+   a client assertion authenticates the client, and DPoP is not client
+   authentication ({{Section 3 of RFC9449}}), so the binding comes
+   only from a sender constraint verified independently on the
+   request, even where its key is the one the assertion used. A
+   request with no verified sender constraint yields a grant without
+   `cnf`, which a public client cannot redeem ({{redemption}}).
 6. **Evidence.** Each minting is recorded with the Mission record:
    the `jti`, audience, requested and granted entries, any `cnf`, and
    time.
