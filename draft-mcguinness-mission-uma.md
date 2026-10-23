@@ -689,9 +689,9 @@ terminated Mission ({{mission-claim}}). This binding adds to UMA's
 model:
 
 - **Revocation.** The authorization server MUST provide an
-  authenticated means for the Subject, the Approver, or an
-  administrator to revoke a Mission by `mission_id`, independent of
-  any token, per the issuance profile. Because resource servers
+  authenticated means for a party the deployment's policy authorizes
+  to revoke a Mission by `mission_id`, independent of any token, per
+  the issuance profile. Because resource servers
   introspect RPTs per use ({{UMA-FEDAUTHZ}}), revocation takes
   effect at the next introspection with no further plumbing; a
   deployment that validates RPTs without introspection needs the
@@ -981,8 +981,8 @@ The contextual-governance kernel maps as follows:
    the effective expiry at that commit ({{approval}}).
 6. **Governance gate**: only the issuance profile's `active` state is
    active. Every other or unrecognized value fails closed at the token
-   endpoint and introspection projection. The Subject, Approver, and
-   administrator have an authenticated revocation path
+   endpoint and introspection projection. A party the deployment's
+   policy authorizes has an authenticated revocation path
    ({{lifecycle}}, {{gating}}).
 7. **Reliance bound**: RPT issuance and upgrade establish `active` at
    the token endpoint. An opaque RPT is bounded by authenticated
