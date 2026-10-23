@@ -3031,18 +3031,19 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 \[\[ To be removed from the final specification ]]
 
-- Editorial and structural pass. The core draft is named the OAuth
-  binding. Each repeated rule keeps one home, with pointers elsewhere:
-  obligation processing, the idempotency claim (now its own subsection),
-  ARAP's re-evaluation reasons, unrecognized denial reasons, evidence as
-  authorization, and the step-up shapes. Decision conditions and
-  obligations gain subsections. Mission Substrate folds into the
-  Introduction and Mission Status Composition into the state observation
-  section. The capability advertisement rules move from IANA
-  Considerations to a Capability Discovery subsection of Conformance,
-  and IANA Considerations drop the withdrawn composite obligation's
-  history. Mission Runtime Evidence is a normative reference and RAR
-  metadata remediation an informative one. No requirement changed.
+- Editorial and structural pass. Mission-Bound Authorization for OAuth
+  2.0 is called the OAuth binding throughout. Each repeated rule keeps
+  one home, with pointers elsewhere: obligation processing, the
+  idempotency claim (now its own subsection), ARAP's re-evaluation
+  reasons, unrecognized denial reasons, evidence as authorization, and
+  the step-up shapes. Decision conditions and obligations gain
+  subsections. Mission Substrate folds into the Introduction and Mission
+  Status Composition into the state observation section. The capability
+  advertisement rules move from IANA Considerations to a Capability
+  Discovery subsection of Conformance, and IANA Considerations drop the
+  withdrawn composite obligation's history. Mission Runtime Evidence is
+  a normative reference and RAR metadata remediation an informative one.
+  No requirement changed.
 
 - Failure-condition coverage: a duration-lease renewal that names no
   lease the PDP issued or an ended activity, or fails continuity with
