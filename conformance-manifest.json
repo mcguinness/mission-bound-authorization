@@ -58041,12 +58041,32 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a decision request carrying an assertion also carries token_sha256"
+    "normative": "a decision request carrying an assertion also carries token_sha256",
+    "local": "the reference PEP (services/mcp-payments/src/pep.ts), which requests the assertion itself for the credential the gateway authenticated (join-assertion-client.ts), unit-tested with a recorded decision request and end to end in the separated MAS pilot: a decision request carrying an assertion carries token_sha256, the digest of the presented access token; one obtaining none carries neither"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join-assertion-pep.test.ts",
+     "name": "the PEP carries a Join Assertion with the credential's digest and one thumbprint (@spec authority-server#join-authzen, #1454) > asks for an assertion for the authenticated credential and carries it with token_sha256 and token_jkt alone",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join-assertion-pep.test.ts",
+     "name": "the PEP carries a Join Assertion with the credential's digest and one thumbprint (@spec authority-server#join-authzen, #1454) > carries none of the assertion members when the source obtains no assertion, or no credential was handed over",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that drop token_sha256, digest another value, and carry the members with no assertion."
   },
   {
    "id": "mas.join-assertion.one-thumbprint",
@@ -58063,12 +58083,26 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a decision request carrying an assertion carries exactly one of token_jkt and token_x5t, matching the credential"
+    "normative": "a decision request carrying an assertion carries exactly one of token_jkt and token_x5t, matching the credential",
+    "local": "the reference PEP (services/mcp-payments/src/pep.ts), which requests the assertion itself for the credential the gateway authenticated (join-assertion-client.ts), unit-tested with a recorded decision request and end to end in the separated MAS pilot: a decision request carrying an assertion carries token_jkt alone, the thumbprint of the key the request's DPoP proof verified against (the gateway admits only DPoP-bound credentials, so token_x5t is never reported)"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mas-join-assertion-pep.test.ts",
+     "name": "the PEP carries a Join Assertion with the credential's digest and one thumbprint (@spec authority-server#join-authzen, #1454) > asks for an assertion for the authenticated credential and carries it with token_sha256 and token_jkt alone",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that add token_x5t and that report another value as token_jkt."
   },
   {
    "id": "mas.join-assertion.pdp-checks-reported-binding",
@@ -58085,12 +58119,32 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an assertion whose token binding differs from the PEP-reported digest or thumbprint is denied mission_binding_failed"
+    "normative": "an assertion whose token binding differs from the PEP-reported digest or thumbprint is denied mission_binding_failed",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion whose token.sha256 differs from the reported token_sha256 (or with no digest on either side), or whose same-method thumbprint differs from the reported one (or with no, two, or the other method's thumbprint reported), is denied mission_binding_failed; in the pilot, an assertion minted for another token and one re-signed with another key's thumbprint"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies a token binding that differs from the PEP-reported digest or thumbprint",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): a verified Join Assertion is the join (@spec authority-server#join-assertion-pdp, #1454) > joins a certificate-bound credential on token_x5t against the assertion's x5t#S256, and an assertion with no authority_hash",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that drop the digest comparison, the digest-present check, the exactly-one-thumbprint check, and the thumbprint comparison, and that compare token_x5t with jkt."
   },
   {
    "id": "mas.join-assertion.join-claim",
@@ -58149,12 +58203,26 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "on the assertion path, rule 5 narrowing and the rule 9 commitment use the join claim"
+    "normative": "on the assertion path, rule 5 narrowing and the rule 9 commitment use the join claim",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: under a mapping contract that resolves nothing, a verified assertion joins; rule 5 narrows a delegate by join.client_id and join.depth, and the join_view_id commitment is computed over the join claim's client and disposition; in the pilot, a delegate joins at the MAS's recorded depth"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): a verified Join Assertion is the join (@spec authority-server#join-assertion-pdp, #1454) > joins on the assertion alone, under a mapping that resolves nothing: the joining client, disposition and depth come from the join claim, and so does the commitment",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a delegate at the depth the MAS's actor records give, and denies when the PEP's actor records report another depth",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that commit the authenticated client instead of join.client_id, narrow at depth 0 and as another client, and consult the mapping contract on the assertion path."
   },
   {
    "id": "mas.join-assertion.depth-disagreement-denies",
@@ -58171,12 +58239,26 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a PEP-reported delegate_depth that disagrees with join.depth is denied mission_binding_failed"
+    "normative": "a PEP-reported delegate_depth that disagrees with join.depth is denied mission_binding_failed",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: a reported delegate_depth that differs from join.depth is denied mission_binding_failed, as is a nonzero depth reported for a client join (the Mission's own client is depth 0 in the PEP's actor records); one that agrees permits; in the pilot, the PEP's actor records put the delegate at depth 2 where the MAS's say 1"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies a reported delegate_depth that differs from join.depth, and permits one that agrees",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a delegate at the depth the MAS's actor records give, and denies when the PEP's actor records report another depth",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that drop the comparison, skip it for a client join, and read a client join as no depth."
   },
   {
    "id": "mas.join-assertion.one-confirmation-member",
@@ -58235,12 +58317,38 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an assertion failing any PDP Consumption check is denied mission_binding_failed, never treated as absent"
+    "normative": "an assertion failing any PDP Consumption check is denied mission_binding_failed, never treated as absent",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion failing typ, signature, iss, mission id or issuer, authority_hash, exp (passed or absent), iat (absent), aud, the token binding, or the join claim's shape is denied mission_binding_failed with no join_view_id, though the mapping contract would join the same credential"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies each failed check, though the mapping contract would join the same credential",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies an assertion whose aud names another PDP, or that carries no aud",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies a token binding that differs from the PEP-reported digest or thumbprint",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect per check (typ, issuer, audience, required exp and iat, clock, tolerance, mission id and issuer, authority_hash, client_id, disposition, depth integer and sign) and by one that denies a failed assertion with another reason."
   },
   {
    "id": "mas.metadata.max-stale-required",
@@ -58479,12 +58587,26 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an assertion signed with none or an unlisted alg is rejected"
+    "normative": "an assertion signed with none or an unlisted alg is rejected",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion whose alg the PDP's list does not name (the pilot's list is the MAS's advertised mission_status_signing_alg_values_supported) is denied, and one with alg none is denied even with none listed; in the pilot, an unsecured assertion"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): the assertion's alg is one this PDP accepts (@spec authority-server#discovery, #1454) > denies an assertion signed with an algorithm the PDP's list does not name, and one with alg none",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect that drops the algorithm list. jose refuses alg none under a key whatever the list says, so no defect in this code admits it."
   },
   {
    "id": "mas.mapping-contract.floor-documented",
@@ -58645,12 +58767,26 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an assertion with no aud, or one naming another PDP, is denied"
+    "normative": "an assertion with no aud, or one naming another PDP, is denied",
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion whose aud names another PDP, or that carries no aud, is denied mission_binding_failed; in the pilot, one the MAS minted for a second enrolled PDP"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Implementation owner: #1454 (sender-bound Join Assertions). The MAS endpoint and the assertion exist (services/authorization-server/src/adapters/join-assertion.ts); no PEP carries an assertion and no PDP consumes one yet. Todo until that side is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies an assertion whose aud names another PDP, or that carries no aud",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect that drops the audience check."
   },
   {
    "id": "mas.join-assertion.cache-key",
