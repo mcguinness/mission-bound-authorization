@@ -20,7 +20,7 @@
 
 import type { AuthorityEntry } from "./authority-entry.js";
 import { resourceWithin } from "./authority-subset.js";
-import { compareAmounts, isValidAmount } from "./decimal-amount.js";
+import { compareAmounts, isCurrencyCode, isValidAmount } from "./decimal-amount.js";
 import { isEnforceablePrefixBase, prefixAdmits } from "./operation-target.js";
 import {
   type ResourceContractRef,
@@ -192,10 +192,10 @@ function parseControls(v: unknown, path: string): ScopeMandatoryControls {
         "must be a decimal amount",
       );
     }
-    if (!/^[A-Z]{3}$/.test(currency)) {
+    if (!isCurrencyCode(currency)) {
       throw new ScopeProjectionMappingError(
         `${path}.max_amount.currency`,
-        "must be an ISO 4217 code",
+        "must be exactly three upper-case ASCII letters",
       );
     }
     out.max_amount = { amount, currency };

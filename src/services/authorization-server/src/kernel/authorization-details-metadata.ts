@@ -17,6 +17,7 @@ import {
   entryDelegateMatcherViolation,
   isAbsoluteUri,
   isActivationPolicyRef,
+  isCurrencyCode,
   isImplementedCommonConstraint,
   isValidAmount,
   refusedEntryMember,
@@ -136,7 +137,10 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
           // @spec resource-access#decimal-values: the decimal-string grammar.
           properties: {
             amount: { type: "string", pattern: "^[0-9]+(\\.[0-9]{1,18})?$" },
-            currency: { type: "string" },
+            // @spec resource-access#initial-common-constraints (#1595, D727):
+            // exactly three upper-case ASCII letters; the lengths state the
+            // count apart from the pattern's anchors.
+            currency: { type: "string", minLength: 3, maxLength: 3, pattern: "^[A-Z]{3}$" },
           },
           required: ["amount", "currency"],
           additionalProperties: false,
@@ -391,6 +395,12 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
       const amount = (c.max_amount as Record<string, unknown>).amount as string;
       if (!isValidAmount(amount)) {
         return `constraints.max_amount.amount ${JSON.stringify(amount)} is not a decimal string`;
+      }
+      // @spec resource-access#initial-common-constraints (#1595, D727): "the
+      // authorization server MUST refuse an authority proposal carrying one".
+      const currency = (c.max_amount as Record<string, unknown>).currency;
+      if (!isCurrencyCode(currency)) {
+        return `constraints.max_amount.currency ${JSON.stringify(currency)} is not three upper-case ASCII letters`;
       }
     }
     if (c.vendors !== undefined) {

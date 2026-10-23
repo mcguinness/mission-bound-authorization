@@ -21,6 +21,7 @@ import {
   type AATToolArgs,
   type AATTools,
   aatToolId,
+  isCurrencyCode,
   isValidAmount,
   parHash,
   parseAatToolId,
@@ -115,6 +116,12 @@ function argsFromConstraints(constraints: AuthorityEntry["constraints"]): AATToo
     if (!isValidAmount(amount)) {
       throw new Error(`attenuation root-mapping: malformed max_amount value ${JSON.stringify(amount)}`);
     }
+    // @spec resource-access#initial-common-constraints (#1595, D727): the
+    // argument name carries the code in lower case, so only a well-formed
+    // code is named.
+    if (!isCurrencyCode(currency)) {
+      throw new Error(`attenuation root-mapping: malformed max_amount currency ${JSON.stringify(currency)}`);
+    }
     args[`amount_${currency.toLowerCase()}`] = {
       constraint_type: "range",
       max: Number.parseFloat(amount),
@@ -156,8 +163,13 @@ function constraintsFromArgs(args: AATToolArgs): AuthorityEntry["constraints"] |
       if (c.constraint_type !== "range" || c.max === undefined) {
         throw new Error("attenuation: amount_* must be a range constraint carrying max");
       }
-      const currency = name.slice("amount_".length).toUpperCase();
-      if (!currency) throw new Error("attenuation: amount_* argument missing a currency suffix");
+      // The suffix is exactly three lower-case ASCII letters, mapped to the
+      // upper-case code; any other suffix is refused, never folded (#1595, D727).
+      const suffix = name.slice("amount_".length);
+      const currency = /^[a-z]{3}$/.test(suffix) ? suffix.toUpperCase() : "";
+      if (!isCurrencyCode(currency)) {
+        throw new Error(`attenuation: amount_* argument ${JSON.stringify(name)} does not name a currency code`);
+      }
       constraints.max_amount = { amount: String(c.max), currency };
     } else {
       throw new Error(`attenuation root-mapping: unknown tool argument '${name}'`);

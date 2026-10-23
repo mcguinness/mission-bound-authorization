@@ -10,7 +10,7 @@ import {
   isImplementedCommonConstraint,
   validCommonConstraint,
 } from "./common-constraints.js";
-import { compareAmounts, isValidAmount } from "./decimal-amount.js";
+import { compareAmounts, isCurrencyCode, isValidAmount } from "./decimal-amount.js";
 import { isEnforceablePrefixBase, prefixAdmits } from "./operation-target.js";
 import { resourceContractViolation, sameResourceContract } from "./resource-contract.js";
 
@@ -366,8 +366,7 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
         typeof cap !== "object" ||
         Array.isArray(cap) ||
         Object.keys(cap).some((k) => k !== "amount" && k !== "currency") ||
-        typeof cap.currency !== "string" ||
-        !/^[A-Z]{3}$/.test(cap.currency) ||
+        !isCurrencyCode(cap.currency) ||
         typeof cap.amount !== "string" ||
         !isValidAmount(cap.amount)
       )
@@ -609,6 +608,9 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   const cCap = candidate.constraints?.max_amount;
   if (gCap) {
     if (!cCap) return false;
+    // @spec resource-access#initial-common-constraints (#1595, D727): a
+    // malformed currency on either side is compared as nothing, exactly.
+    if (!isCurrencyCode(cCap.currency) || !isCurrencyCode(gCap.currency)) return false;
     if (cCap.currency !== gCap.currency) return false;
     // @spec mission#max-amount — exact decimal-value comparison. A malformed
     // amount on either side fails closed (not a subset) rather than comparing

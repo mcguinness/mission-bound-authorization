@@ -33,6 +33,25 @@ export function isValidAmount(s: string): boolean {
   return AMOUNT_FORMAT.test(s);
 }
 
+/**
+ * @spec resource-access#initial-common-constraints `max_amount` (#1595, D727):
+ * "a `currency` value is exactly three characters, each an upper-case ASCII
+ * letter (`A` to `Z`) ... Values are compared exactly, character for
+ * character, with no trimming, case folding, numeric code, or conversion. A
+ * well-formed value is admitted for comparison whether or not ISO 4217
+ * assigns it." The length is checked as a length, so a value ending in a line
+ * terminator is refused however a pattern's end anchor behaves. The SINGLE
+ * check every boundary that reads a `currency` uses.
+ */
+export function isCurrencyCode(v: unknown): v is string {
+  if (typeof v !== "string" || v.length !== 3) return false;
+  for (let i = 0; i < 3; i++) {
+    const c = v.charCodeAt(i);
+    if (c < 0x41 || c > 0x5a) return false;
+  }
+  return true;
+}
+
 /** Thrown by {@link compareAmounts} when either operand fails {@link isValidAmount}. */
 export class InvalidAmountError extends Error {
   constructor(readonly value: string) {
