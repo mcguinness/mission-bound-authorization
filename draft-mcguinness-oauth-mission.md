@@ -2298,9 +2298,12 @@ At each subsequent derivation the AS resolves the Mission from the
 grant the client presents:
 
 - the authorization code at the token endpoint;
-- the refresh token on refresh; or
+- the refresh token on refresh;
 - the Mission-bound `subject_token` on Token Exchange (the
-  `actor_token` identifies the delegate, {{delegated-exchange}}).
+  `actor_token` identifies the delegate, {{delegated-exchange}}); or
+- a profile-defined grant, through the authenticated `mission`
+  reference it carries, such as the Template profile's handoff grant
+  ({{I-D.draft-mcguinness-oauth-mission-template}}).
 
 It then applies the gating of {{issuance-gating}}.
 
@@ -2339,15 +2342,27 @@ The grant binding relates to other mechanisms as follows:
   ordinary in-Mission delegation ({{delegation}}) and self-exchange
   down-scoping ({{self-exchange}}) both work this way, and the issued
   token is a derived token ({{mission-claim}}) whose `mission` claim
-  identifies the one Mission its `subject_token`'s binding resolved
-  to. A Token Exchange that instead establishes reusable
+  identifies the one Mission its `subject_token` resolved to. A
+  Token Exchange that instead establishes reusable
   authorization state, such as the continuation profile's
   delegation-family-creating exchange
   ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a
   new grant binding, rooted in that same Mission. Three Token
   Exchanges are covered by the two items below instead: cross-domain
   projection and child creation, which return a JWT authorization
-  grant, and expansion, which creates a successor.
+  grant, and expansion, which creates a successor. The Template
+  profile's Dispatch Handoff
+  ({{I-D.draft-mcguinness-oauth-mission-template}}) returns a handoff
+  grant that establishes no grant lineage; its redemption issues a
+  derived token for the instance, creating or extending no grant
+  binding, and the later delegation-family exchange creates the
+  instance's first. In the continuation profile's Identity
+  Continuation Transport, the IdP's hop record is continuation state,
+  not a grant lineage, and a Resource Authorization Server holds a
+  destination-side grant binding only where it establishes a
+  redeemable grant lineage mapped to the Mission, such as a
+  refresh-token family
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}).
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
   no destination-side grant binding. A Resource AS consumes the
@@ -7205,6 +7220,12 @@ Cross-Domain:
   specify; the sentence on joining one credential to different Missions
   across requests moves to the Mission Authority Server's Mission
   Join.
+- Editorial, no requirement change: Grant Bindings and Related
+  Mechanisms places the Template profile's Dispatch Handoff and the
+  continuation profile's Identity Continuation Transport, the
+  derivation resolution list points to profile-defined grants, and a
+  derived token's Mission is the one its `subject_token` resolved to,
+  with no binding assumed (#1589, D726).
 - Editorial, no requirement change: Grant Bindings and Related
   Mechanisms names the Token Exchanges its later items cover, and the
   Namespace Taxonomy lists the `approval_basis.type` values as
