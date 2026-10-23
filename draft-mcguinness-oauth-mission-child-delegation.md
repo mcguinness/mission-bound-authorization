@@ -2325,9 +2325,8 @@ The child-creation token exchange carries the already-registered
 {{RFC8693}} token-exchange parameters `subject_token`,
 `subject_token_type`, `requested_token_type`, `actor_token`, and
 `actor_token_type`; none of these needs registration by this document.
-This document removes the earlier revision's registration request for a
-`parent_token` parameter: the parent is resolved from `subject_token`,
-so no dedicated parent-token parameter exists. The `parent` and `child_actor`
+No dedicated parent-token parameter exists: the parent is resolved
+from `subject_token`. The `parent` and `child_actor`
 parameters are presented only on the token endpoint's authenticated
 back channel, never on a front-channel authorization request
 ({{child-creation}}).
@@ -2408,10 +2407,6 @@ Child creation uses the already-registered {{RFC8693}}
 `urn:ietf:params:oauth:grant-type:token-exchange` grant type, selected
 by the `requested_token_type` value `urn:ietf:params:oauth:token-type:jwt`
 ({{grant-type}}); this document requests no new grant-type registration.
-An earlier revision requested registration of a dedicated
-`urn:ietf:params:oauth:grant-type:mission-child-creation` grant type;
-this document removes that request, folding child creation into the
-token-exchange grant the rest of the Mission family already uses.
 
 --- back
 
@@ -2472,6 +2467,10 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- IANA Considerations state the registrations as they stand. Earlier
+  revisions requested a `parent_token` parameter and a dedicated
+  `urn:ietf:params:oauth:grant-type:mission-child-creation` grant
+  type; this document requests neither. No requirement changed.
 - The `urn:ietf:params:oauth:token-type:jwt` value cites its
   registration, Section 10.2 of RFC 7519. No requirement changed.
 - RFC 6755 and RFC 8126 are removed from the references: neither is
