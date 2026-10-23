@@ -5,7 +5,7 @@
  * under the issuer `http://{separated_mas.host}:{separated_mas.port}`
  * (`mas-as.ts`), with the pilot's derivation ceiling. It serves Mission
  * Status (signed responses, Join Disclosure to the PDPs
- * `separated_mas.enrolled_pdps` enrolls), the Mission Lifecycle surface and
+ * `separated_mas.enrollment` enrolls in the PDP role), the Mission Lifecycle surface and
  * the approval surface, and is the only holder of the Mission records; the
  * pilot's PEP and PDP reach it over HTTP alone. Its URL is the Mission
  * issuer: the configuration's `mission_issuer` is moved to it

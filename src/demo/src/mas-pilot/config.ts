@@ -41,15 +41,20 @@ export interface MasPilotIntrospectionConfig {
  * is then the Mission issuer; the PDP reads Missions through its Mission
  * Status endpoint as the client `pdp_client_id`, authenticating by
  * private-key JWT under a key generated where the PDP runs (#1407).
- * `enrolled_pdps` is the MAS-held enrollment, keyed by client, that releases
- * Join Disclosure. The state source is placed with the PDP, read within
- * `timeout_ms` and `max_response_bytes`.
+ * `enrollment` is the MAS-held enrollment, keyed by client (#1591, D708):
+ * each enrollee holds the `pep` role, the `pdp` role or both, for its
+ * enforcement scopes. Join Disclosure and a Join Assertion's `audience` take
+ * the `pdp` role; join-assertion visibility takes either. The pilot's PEP
+ * and PDP are one enforcement point that authenticates as `pdp_client_id`,
+ * so the shipped configuration enrolls that client with both roles. The
+ * state source is placed with the PDP, read within `timeout_ms` and
+ * `max_response_bytes`.
  */
 export interface MasPilotSeparatedConfig {
   host: string;
   port: number;
   pdp_client_id: string;
-  enrolled_pdps: Array<{ client_id: string; enforcement_scopes: string[] }>;
+  enrollment: Array<{ client_id: string; roles: Array<"pep" | "pdp">; enforcement_scopes: string[] }>;
   state_source: { placement: "pdp"; timeout_ms: number; max_response_bytes: number };
 }
 
@@ -199,12 +204,20 @@ function positiveInt(v: unknown, ctx: string): number {
 
 /** The separated configuration: closed shapes, a `pdp` placement, positive bounds. */
 function separatedMas(raw: unknown): MasPilotSeparatedConfig {
-  const o = obj(raw, "separated_mas", ["host", "port", "pdp_client_id", "enrolled_pdps", "state_source"]);
-  if (!Array.isArray(o.enrolled_pdps)) throw new MasPilotConfigError("separated_mas.enrolled_pdps must be an array");
-  const enrolled = o.enrolled_pdps.map((e, i) => {
-    const ctx = `separated_mas.enrolled_pdps[${i}]`;
-    const eo = obj(e, ctx, ["client_id", "enforcement_scopes"]);
-    return { client_id: str(eo.client_id, `${ctx}.client_id`), enforcement_scopes: strs(eo.enforcement_scopes, `${ctx}.enforcement_scopes`) };
+  const o = obj(raw, "separated_mas", ["host", "port", "pdp_client_id", "enrollment", "state_source"]);
+  if (!Array.isArray(o.enrollment)) throw new MasPilotConfigError("separated_mas.enrollment must be an array");
+  const enrolled = o.enrollment.map((e, i) => {
+    const ctx = `separated_mas.enrollment[${i}]`;
+    const eo = obj(e, ctx, ["client_id", "roles", "enforcement_scopes"]);
+    const roles = strs(eo.roles, `${ctx}.roles`);
+    if (roles.length === 0 || roles.some((r) => r !== "pep" && r !== "pdp") || new Set(roles).size !== roles.length) {
+      throw new MasPilotConfigError(`${ctx}.roles must be "pep", "pdp", or both`);
+    }
+    return {
+      client_id: str(eo.client_id, `${ctx}.client_id`),
+      roles: roles as Array<"pep" | "pdp">,
+      enforcement_scopes: strs(eo.enforcement_scopes, `${ctx}.enforcement_scopes`),
+    };
   });
   const source = obj(o.state_source, "separated_mas.state_source", ["placement", "timeout_ms", "max_response_bytes"]);
   // The PDP is the party that resolves the Mission at the MAS (rule 2).
@@ -213,7 +226,7 @@ function separatedMas(raw: unknown): MasPilotSeparatedConfig {
     host: str(o.host, "separated_mas.host"),
     port: positiveInt(o.port, "separated_mas.port"),
     pdp_client_id: str(o.pdp_client_id, "separated_mas.pdp_client_id"),
-    enrolled_pdps: enrolled,
+    enrollment: enrolled,
     state_source: {
       placement: "pdp",
       timeout_ms: positiveInt(source.timeout_ms, "separated_mas.state_source.timeout_ms"),

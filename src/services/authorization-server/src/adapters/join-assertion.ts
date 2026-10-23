@@ -3,9 +3,10 @@
  * authority-server#join-assertion-artifact, authority-server#submission-errors (#1454):
  * the MAS's Mission Join Assertion endpoint.
  *
- * The caller (a PEP, or the client acting for it) asks the MAS to verify the
- * join of an acting estate credential to a Mission centrally and to mint a
- * signed, sender-bound assertion of it for one consuming PDP.
+ * The caller, a PEP (a client or delegate calls only as the PEP it hosts),
+ * asks the MAS to verify the join of an acting estate credential to a Mission
+ * centrally and to mint a signed, sender-bound assertion of it for one
+ * consuming PDP.
  *
  * - Caller authentication. Private-key JWT, the Mission Status endpoint's
  *   authenticator (`authenticateLifecycleClient`, #1407), with the
@@ -14,15 +15,20 @@
  *   The request body is JSON, so `client_assertion_type` and
  *   `client_assertion` travel as top-level JSON members; the draft names no
  *   carriage for a JSON body (a reported gap).
+ * - Enrollment roles (#1591, D708). Each enrollee (`joinEnrollment`, keyed
+ *   by the authenticated caller) holds the PEP role, the PDP role, or both,
+ *   and its enforcement scopes. Visibility takes either role; the `audience`
+ *   takes the PDP role. Visibility alone does not establish a caller's role.
  * - Visibility. A Mission is visible to its `client_id` and to the clients
- *   enrolled (`enrolledJoinPdps`, keyed by client) for the Mission's
+ *   enrolled, in either role, for the Mission's
  *   enforcement scope: an enrolled scope that some entry of the Mission's
  *   Authority Set overlaps, under the matcher Mission Status scopes its
  *   entries with. The reference MAS holds no delegate actor records, so no
  *   delegate is in the set. Any other caller, and an unknown Mission, get
  *   one `not_found`.
  * - Minting checks (`join_failed`, 403): the Mission is `active`; the
- *   `audience` names a client enrolled for its enforcement scope; the acting
+ *   `audience` names a client enrolled in the PDP role for its enforcement
+ *   scope; the acting
  *   token is active and carries exactly one `cnf` confirmation; its subject
  *   and client join the Mission. The deployment establishes the token and
  *   evaluates the join (`JoinAssertionDeployment`): the MAS calls the
@@ -121,6 +127,39 @@ export interface JoinAssertionEvent {
 
 export type JoinAssertionAnswer = { status: number; body: Record<string, unknown> };
 
+/** @spec authority-server#join-disclosure (#1591, D708): an enrollee's role. */
+export type JoinEnrollmentRole = "pep" | "pdp";
+
+/** One enrollee: its roles (PEP, PDP, or both) and the enforcement scopes it is enrolled for. */
+export interface JoinEnrollment {
+  roles: readonly JoinEnrollmentRole[];
+  /** Enforcement scopes: the Status request's `audience` values. */
+  enforcementScopes: readonly string[];
+}
+
+/**
+ * @spec authority-server#join-disclosure (#1591, D708): the deployment's
+ * enrollment configuration, keyed by the authenticated caller's identifier.
+ * Join Disclosure and a Join Assertion's `audience` take an enrollee holding
+ * the PDP role; join-assertion visibility takes either role.
+ */
+export type JoinEnrollmentConfig = Readonly<Record<string, JoinEnrollment>>;
+
+/** The caller's enrollment: an own-property lookup, so no inherited name resolves one. */
+export function enrolleeOf(config: JoinEnrollmentConfig | undefined, caller: string): JoinEnrollment | undefined {
+  return config !== undefined && Object.hasOwn(config, caller) ? config[caller] : undefined;
+}
+
+/** Refuses a configuration with an enrollee holding no role, an unknown role, or one twice. */
+export function assertJoinEnrollment(config: JoinEnrollmentConfig): void {
+  for (const [caller, enrollee] of Object.entries(config)) {
+    const roles = enrollee.roles;
+    if (roles.length === 0 || roles.some((r) => r !== "pep" && r !== "pdp") || new Set(roles).size !== roles.length) {
+      throw new Error(`joinEnrollment: ${caller} must hold the PEP role, the PDP role, or both`);
+    }
+  }
+}
+
 type Json = Record<string, unknown>;
 
 type ParsedRequest = {
@@ -195,8 +234,8 @@ export interface JoinAssertionServiceDeps {
   issuer: string;
   kernel: MissionKernel;
   deployment: JoinAssertionDeployment;
-  /** The enforcement scopes enrolled for a client (`enrolledJoinPdps`). */
-  enrolledScopes: (clientId: string) => readonly string[];
+  /** A client's enrollment (`joinEnrollment`), if it is enrolled. */
+  enrollment: (clientId: string) => JoinEnrollment | undefined;
   /** The Mission Status endpoint's client authentication, its assertion `aud` the MAS issuer identifier as its sole value. */
   authenticate: (params: Record<string, string>, authorization: string) => Promise<{ ok: true; clientId: string } | { ok: false; description: string; retryAfterS?: number }>;
 }
@@ -216,10 +255,21 @@ export class JoinAssertionService {
     return this.minted;
   }
 
-  /** Whether `clientId` is enrolled for a scope some entry of the Mission's Authority Set overlaps. */
-  private enrolledFor(clientId: string, record: MissionRecord): boolean {
-    const scopes = this.deps.enrolledScopes(clientId);
+  /**
+   * Whether `clientId` is enrolled for a scope some entry of the Mission's
+   * Authority Set overlaps, holding `role` where one is named. With no role
+   * named, either role is enough: join-assertion visibility.
+   */
+  private enrolledFor(clientId: string, record: MissionRecord, role?: JoinEnrollmentRole): boolean {
+    const enrollee = this.deps.enrollment(clientId);
+    if (!enrollee || (role !== undefined && !enrollee.roles.includes(role))) return false;
+    const scopes = enrollee.enforcementScopes;
     return scopes.length > 0 && record.authority_set.some((e) => scopes.some((s) => entryOverlapsResource(e, s)));
+  }
+
+  /** @spec authority-server#join-assertion-request (#1591, D708): the `audience` takes an enrollee holding the PDP role. */
+  private audienceEnrolled(audience: string, record: MissionRecord): boolean {
+    return this.enrolledFor(audience, record, "pdp");
   }
 
   /**
@@ -234,7 +284,7 @@ export class JoinAssertionService {
     const current = this.deps.kernel.currentRecord(first.id);
     if (!current || current.state !== "active") return err(403, "join_failed", "the Mission is not active");
     if (current.authority_hash !== first.authority_hash) return err(403, "join_failed", "the Mission's authority changed");
-    if (!this.enrolledFor(audience, current)) {
+    if (!this.audienceEnrolled(audience, current)) {
       return err(403, "join_failed", "the audience names no PDP enrolled for the Mission's enforcement scope");
     }
     return undefined;
@@ -284,7 +334,7 @@ export class JoinAssertionService {
 
     // The minting checks, applied on every request, a cached answer included.
     if (record.state !== "active") return err(403, "join_failed", "the Mission is not active");
-    if (!this.enrolledFor(request.audience, record)) {
+    if (!this.audienceEnrolled(request.audience, record)) {
       return err(403, "join_failed", "the audience names no PDP enrolled for the Mission's enforcement scope");
     }
     const sha256 = "accessToken" in request.token ? accessTokenHash(request.token.accessToken) : request.token.tokenSha256;

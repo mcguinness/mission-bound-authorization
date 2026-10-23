@@ -460,7 +460,13 @@ import type {
   MissionRecord,
 } from "../kernel/types.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
-import { JOIN_ASSERTION_ENDPOINT_PATH, type JoinAssertionService, readJoinAssertionBody } from "./join-assertion.js";
+import {
+  enrolleeOf,
+  JOIN_ASSERTION_ENDPOINT_PATH,
+  type JoinAssertionService,
+  type JoinEnrollmentConfig,
+  readJoinAssertionBody,
+} from "./join-assertion.js";
 import {
   authenticateLifecycleClient,
   LIFECYCLE_CLIENT_ASSERTION_ALGS,
@@ -701,9 +707,10 @@ export interface AdapterOptions {
    * enforcement scopes (the Status request's `audience`) it is enrolled for. A Status
    * response to an enrolled principal for one of its scopes discloses the
    * Mission's `subject` and `client_id`; every other response omits both.
-   * Absent (the default), no caller is enrolled.
+   * Absent (the default), no caller is enrolled. Each enrollee holds the
+   * PEP role, the PDP role, or both; only the PDP role discloses (#1591, D708).
    */
-  enrolledJoinPdps?: Readonly<Record<string, readonly string[]>>;
+  joinEnrollment?: JoinEnrollmentConfig;
   /**
    * @spec authority-server#join-assertion (#1454): the MAS's Join Assertion
    * endpoint, where the deployment serves one (`buildAuthorizationServer`'s
@@ -3558,18 +3565,18 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
 
   /**
-   * @spec authority-server#join-disclosure (#818): whether the authenticated
-   * caller is a PDP enrolled for the requested enforcement scope, read from
-   * the deployment's enrollment configuration (`enrolledJoinPdps`). Both
-   * halves decide it: an enrolled principal asking for a scope it is not
-   * enrolled for, or naming no `audience` at all, is any other caller. An own
+   * @spec authority-server#join-disclosure (#818; #1591, D708): whether the
+   * authenticated caller is enrolled in the PDP role for the requested
+   * enforcement scope, read from the deployment's enrollment configuration
+   * (`joinEnrollment`). All three decide it: an enrollee holding only the PEP
+   * role, an enrolled principal asking for a scope it is not enrolled for,
+   * and one naming no `audience` at all are each any other caller. An own
    * property lookup, so no inherited name resolves an enrollment.
    */
-  const enrolledJoinPdps = opts.enrolledJoinPdps ?? {};
-  const joinDisclosureFor = (principal: ServiceTokenPrincipal, audience: string | undefined): boolean =>
-    audience !== undefined &&
-    Object.hasOwn(enrolledJoinPdps, principal.principal_id) &&
-    (enrolledJoinPdps[principal.principal_id] ?? []).includes(audience);
+  const joinDisclosureFor = (principal: ServiceTokenPrincipal, audience: string | undefined): boolean => {
+    const enrollee = enrolleeOf(opts.joinEnrollment, principal.principal_id);
+    return audience !== undefined && enrollee !== undefined && enrollee.roles.includes("pdp") && enrollee.enforcementScopes.includes(audience);
+  };
 
   /**
    * @spec discharge#condition-selectors — add `discharge_selectors` to an ACTIVE

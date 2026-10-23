@@ -7,8 +7,9 @@
  * `client_id` in the `mission` object, with every audience-scoped entry's
  * recorded `delegation`; every other caller reads neither member, and its
  * response is the one the operation served before enrollment existed.
- * Enrollment is the AS's `enrolledJoinPdps` configuration, keyed by the
- * authenticated caller and the requested `audience`; here the caller is a
+ * Enrollment is the AS's `joinEnrollment` configuration, keyed by the
+ * authenticated caller, each enrollee with its roles (PEP, PDP or both) and
+ * enforcement scopes; only the PDP role discloses (#1591, D708). Here the caller is a
  * service principal at the development GET route (the advertised endpoint's
  * client-keyed enrollment: `status-endpoint.test.ts`). Every response's `sub`
  * names its own caller (#1407).
@@ -38,6 +39,11 @@ const PDP = "svc:joining-pdp";
 /** A Status reader holding the same grant, enrolled for nothing. */
 const READER_TOKEN = "join-disclosure-reader-token";
 const READER = "svc:status-reader";
+/** Enrolled for the payments scope in the PEP role alone, and in both roles (#1591). */
+const PEP_ONLY_TOKEN = "join-disclosure-pep-token";
+const PEP_ONLY = "svc:joining-pep";
+const BOTH_TOKEN = "join-disclosure-both-token";
+const BOTH = "svc:joining-pep-and-pdp";
 /** A principal whose identifier is an inherited `Object.prototype` name. */
 const INHERITED_TOKEN = "join-disclosure-inherited-token";
 
@@ -53,8 +59,14 @@ beforeAll(async () => {
       [PDP_TOKEN]: { principal_id: PDP, scopes: [MISSION_STATUS_SCOPE] },
       [READER_TOKEN]: { principal_id: READER, scopes: [MISSION_STATUS_SCOPE] },
       [INHERITED_TOKEN]: { principal_id: "constructor", scopes: [MISSION_STATUS_SCOPE] },
+      [PEP_ONLY_TOKEN]: { principal_id: PEP_ONLY, scopes: [MISSION_STATUS_SCOPE] },
+      [BOTH_TOKEN]: { principal_id: BOTH, scopes: [MISSION_STATUS_SCOPE] },
     },
-    enrolledJoinPdps: { [PDP]: [CANONICAL_RESOURCE] },
+    joinEnrollment: {
+      [PDP]: { roles: ["pdp"], enforcementScopes: [CANONICAL_RESOURCE] },
+      [PEP_ONLY]: { roles: ["pep"], enforcementScopes: [CANONICAL_RESOURCE] },
+      [BOTH]: { roles: ["pep", "pdp"], enforcementScopes: [CANONICAL_RESOURCE] },
+    },
   });
   server = as.provider.listen(PORT);
 });
@@ -92,6 +104,40 @@ async function status(missionId: string, token: string, audience?: string): Prom
 }
 
 const missionOf = (jws: string) => (decodeJwt(jws) as { mission: Record<string, unknown> }).mission;
+
+describe("Join Disclosure takes the PDP role (@spec authority-server#join-disclosure, #1591, D708)", () => {
+  it("discloses to an enrollee holding the PDP role, alone or with the PEP role, and to no enrollee holding the PEP role alone", async () => {
+    const record = approve();
+    for (const [label, token, discloses] of [
+      ["the PDP role", PDP_TOKEN, true],
+      ["both roles", BOTH_TOKEN, true],
+      ["the PEP role alone", PEP_ONLY_TOKEN, false],
+    ] as const) {
+      const read = await status(record.id, token, CANONICAL_RESOURCE);
+      expect(read.code, label).toBe(200);
+      const mission = missionOf(read.jws);
+      if (discloses) {
+        expect(mission.subject, label).toEqual({ iss: ISSUER, sub: "alice" });
+        expect(mission.client_id, label).toBe("ap-agent");
+      } else {
+        expect("subject" in mission, label).toBe(false);
+        expect("client_id" in mission, label).toBe(false);
+      }
+    }
+  });
+
+  it("refuses to build with an enrollee holding no role, an unknown role, or one role twice", async () => {
+    for (const roles of [[], ["admin"], ["pdp", "pdp"]]) {
+      await expect(
+        buildAuthorizationServer({
+          issuer: "http://localhost:14897",
+          joinEnrollment: { "svc:enrollee": { roles: roles as never, enforcementScopes: [CANONICAL_RESOURCE] } },
+        }),
+        JSON.stringify(roles),
+      ).rejects.toThrow(/must hold the PEP role, the PDP role, or both/);
+    }
+  });
+});
 
 describe("Join Disclosure on Mission Status (@spec authority-server#join-disclosure)", () => {
   it("discloses subject, client_id and each entry's recorded delegation to a PDP enrolled for the requested enforcement scope", async () => {

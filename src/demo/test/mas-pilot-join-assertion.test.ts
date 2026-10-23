@@ -43,14 +43,19 @@ const ESTATE_PORT = 14906;
 const ENDPOINT = `${MAS_URL}/mission/join-assertion`;
 const LEDGER = "https://ledger.estate.invalid/api";
 const OTHER_PDP = "mas-pilot-pdp-2";
+/** Enrolled for the payments scope in the PEP role alone (#1591). */
+const PEP_ONLY = "mas-pilot-pep-only";
+/** A registered Status client the MAS enrolls for nothing (#1591). */
+const OUTSIDER = "mas-pilot-outsider";
 const DELEGATE = "subagent-invoice-extractor";
 const PAYEE = "acct-acme-001";
 
 /**
  * The separated configuration with the Join Assertion path declared: the
- * estate on its own port, the Mission issuer at the MAS, a second PDP enrolled
- * for the payments scope, the JWT bot also registered for the estate's ledger,
- * and an assertion required on every joined read.
+ * estate on its own port, the Mission issuer at the MAS, a second PDP and a
+ * PEP-only client enrolled for the payments scope, the JWT bot also
+ * registered for the estate's ledger, and an assertion required on every
+ * joined read.
  */
 function joinConfig(): MasPilotConfig {
   const base = relocateEstate(loadMasPilotConfig(), ESTATE_PORT);
@@ -64,7 +69,11 @@ function joinConfig(): MasPilotConfig {
     separated_mas: {
       ...moved.separated_mas,
       port: MAS_PORT,
-      enrolled_pdps: [...moved.separated_mas.enrolled_pdps, { client_id: OTHER_PDP, enforcement_scopes: [CANONICAL_RESOURCE] }],
+      enrollment: [
+        ...moved.separated_mas.enrollment,
+        { client_id: OTHER_PDP, roles: ["pdp"], enforcement_scopes: [CANONICAL_RESOURCE] },
+        { client_id: PEP_ONLY, roles: ["pep"], enforcement_scopes: [CANONICAL_RESOURCE] },
+      ],
     },
     join_assertion: { introspection_client_id: "mas-join-introspector", required: false, required_classes: ["consequential_read"], pdp_algorithms: ["ES256"] },
   };
@@ -99,11 +108,20 @@ beforeAll(async () => {
   writeFileSync(configPath, JSON.stringify(config));
   const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id);
   pdpKey = pdp.privateJwk;
+  const pepOnly = await newStatusClientKey(PEP_ONLY);
+  const outsider = await newStatusClientKey(OUTSIDER);
+  callerKeys.set(PEP_ONLY, pepOnly.privateJwk);
+  callerKeys.set(OUTSIDER, outsider.privateJwk);
   // The MAS's introspection client secret, generated here and given to both
   // the MAS and the estate the pilot starts.
   const joinIntrospectionSecret = crypto.randomUUID();
   joinSecret = joinIntrospectionSecret;
-  mas = await startMasProcess({ configPath, statusClients: [pdp.registration], keyRing, joinIntrospectionSecret });
+  mas = await startMasProcess({
+    configPath,
+    statusClients: [pdp.registration, pepOnly.registration, outsider.registration],
+    keyRing,
+    joinIntrospectionSecret,
+  });
   pilot = await composeSeparatedMasPilot({
     openfga: OPENFGA,
     resourcePolicyStore: { bootstrap: "development" },
@@ -152,27 +170,55 @@ function approveAtMas(label: string, delegable = false): Promise<string> {
  * point, its client assertion audienced to the MAS's issuer identifier, as at
  * Mission Status (D685, D690), or to `aud` where a test names another.
  */
-async function mintAt(body: Record<string, unknown>, aud: string = MAS_URL): Promise<{ status: number; body: Record<string, unknown> }> {
-  const iat = Math.floor(Date.now() / 1000);
-  const clientId = config.separated_mas.pdp_client_id;
-  const clientAssertion = await new SignJWT({ jti: crypto.randomUUID() })
-    .setProtectedHeader({ alg: "ES256", kid: pdpKey.kid as string, typ: "client-authentication+jwt" })
-    .setIssuer(clientId)
-    .setSubject(clientId)
-    .setAudience(aud)
-    .setIssuedAt(iat)
-    .setExpirationTime(iat + 60)
-    .sign((await importJWK(pdpKey, "ES256")) as CryptoKey);
+async function mintAt(
+  body: Record<string, unknown>,
+  aud: string = MAS_URL,
+  caller: string = config.separated_mas.pdp_client_id,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const res = await fetch(ENDPOINT, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       ...body,
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-      client_assertion: clientAssertion,
+      client_assertion: await clientAssertion(caller, aud),
     }),
   });
   return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+}
+
+/** The other Status clients' private keys, by client identifier (#1591). */
+const callerKeys = new Map<string, JWK>();
+
+/** A private-key JWT client assertion for `caller`, audienced to `aud`. */
+async function clientAssertion(caller: string, aud: string = MAS_URL): Promise<string> {
+  const key = caller === config.separated_mas.pdp_client_id ? pdpKey : (callerKeys.get(caller) as JWK);
+  const iat = Math.floor(Date.now() / 1000);
+  return new SignJWT({ jti: crypto.randomUUID() })
+    .setProtectedHeader({ alg: "ES256", kid: key.kid as string, typ: "client-authentication+jwt" })
+    .setIssuer(caller)
+    .setSubject(caller)
+    .setAudience(aud)
+    .setIssuedAt(iat)
+    .setExpirationTime(iat + 60)
+    .sign((await importJWK(key, "ES256")) as CryptoKey);
+}
+
+/** A Mission Status read at the MAS as `caller`, for the payments scope: its `mission` object. */
+async function statusMission(caller: string, missionId: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`${MAS_URL}/mission/status`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      mission_id: missionId,
+      audience: CANONICAL_RESOURCE,
+      nonce: crypto.randomUUID(),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      client_assertion: await clientAssertion(caller),
+    }).toString(),
+  });
+  expect(res.status, `${caller} Status read`).toBe(200);
+  return (decodeJwt(await res.text()) as { mission: Record<string, unknown> }).mission;
 }
 
 /** The MAS's real assertion for `accessToken`, its claims edited and re-signed with the MAS's Status key. */
@@ -328,6 +374,29 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
     expect(requests.at(-1)?.context.mission_join).toEqual({ delegate_depth: 0 });
     expectJoinRefused(res, missionId, "required, none carried");
     substitute = undefined;
+  });
+
+  it("takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none", async () => {
+    const missionId = await approveAtMas("roles");
+    const pdpClient = config.separated_mas.pdp_client_id;
+    const token = (await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read")).token;
+    // The PEP-only enrollee: visible as a caller, for the PDP's audience.
+    const asCaller = await mintAt({ mission_id: missionId, audience: pdpClient, access_token: token }, MAS_URL, PEP_ONLY);
+    expect(asCaller.status, JSON.stringify(asCaller.body)).toBe(200);
+    expect(decodeJwt(asCaller.body.assertion as string).aud).toBe(pdpClient);
+    // ... refused as an audience, and given no Join Disclosure.
+    const asAudience = await mintAt({ mission_id: missionId, audience: PEP_ONLY, access_token: token });
+    expect(asAudience).toMatchObject({ status: 403, body: { error: "join_failed" } });
+    const pepView = await statusMission(PEP_ONLY, missionId);
+    expect("subject" in pepView || "client_id" in pepView).toBe(false);
+    // The pilot's enforcement point holds both roles: the disclosure and an audience.
+    const pdpView = await statusMission(pdpClient, missionId);
+    expect(pdpView).toMatchObject({ subject: { iss: MAS_URL, sub: "alice" }, client_id: "ap-agent" });
+    // A registered client enrolled for nothing.
+    const outside = await mintAt({ mission_id: missionId, audience: pdpClient, access_token: token }, MAS_URL, OUTSIDER);
+    expect(outside).toMatchObject({ status: 404, body: { error: "not_found" } });
+    const outsiderView = await statusMission(OUTSIDER, missionId);
+    expect("subject" in outsiderView || "client_id" in outsiderView).toBe(false);
   });
 
   it("the MAS mints nothing for a token it cannot establish or that does not join: a digest it cannot resolve, a token for another resource, an unmapped or other subject, a delegate it holds no record of or holds too deep", async () => {

@@ -3,9 +3,10 @@
  *
  * The pilot's MAS as the reference authorization server, one definition for
  * the separated MAS process (`mas-serve.ts`) and the in-process launcher
- * (`launcher.ts`): the pilot's derivation ceiling (`mas-policy.ts`), Join
- * Disclosure enrollment from `config/mas-pilot.json` `separated_mas`, keyed
- * by client, the Status clients given (the PDP's among them, #1407), and the
+ * (`launcher.ts`): the pilot's derivation ceiling (`mas-policy.ts`), the
+ * enrollment from `config/mas-pilot.json` `separated_mas.enrollment`, keyed
+ * by client, each enrollee with its roles (PEP, PDP or both; #1591), the
+ * Status clients given (the PDP's among them, #1407), and the
  * operator's two credentials at this MAS, both generated at each boot and
  * held in memory:
  *
@@ -148,7 +149,9 @@ export async function buildPilotMas(config: MasPilotConfig, opts: PilotMasOption
     lifecycleClients: [lifecycle.registration as LifecycleClientRegistration, ...statusClients],
     // @spec authority-server#join-disclosure: keyed by the authenticated
     // Status client, the identity the response's `sub` names (#1407).
-    enrolledJoinPdps: Object.fromEntries(separated.enrolled_pdps.map((e) => [e.client_id, e.enforcement_scopes])),
+    joinEnrollment: Object.fromEntries(
+      separated.enrollment.map((e) => [e.client_id, { roles: e.roles, enforcementScopes: e.enforcement_scopes }]),
+    ),
     ...(opts.joinAssertions ? { joinAssertions: opts.joinAssertions } : {}),
     ...(opts.now ? { now: opts.now } : {}),
   });

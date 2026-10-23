@@ -45,6 +45,9 @@ export {
   type JoinAssertionDeployment,
   type JoinAssertionEvent,
   JoinAssertionService,
+  type JoinEnrollment,
+  type JoinEnrollmentConfig,
+  type JoinEnrollmentRole,
   type JoinEvaluation,
   type TokenConfirmation,
 } from "./adapters/join-assertion.js";
@@ -59,7 +62,13 @@ export {
   type ApproverLoginOptions,
 } from "./adapters/approver-login.js";
 import { type DpopProofReplay, newDpopProofReplay } from "./adapters/dpop-replay.js";
-import { type JoinAssertionDeployment, JoinAssertionService } from "./adapters/join-assertion.js";
+import {
+  assertJoinEnrollment,
+  enrolleeOf,
+  type JoinAssertionDeployment,
+  JoinAssertionService,
+  type JoinEnrollmentConfig,
+} from "./adapters/join-assertion.js";
 import { authenticateLifecycleClient } from "./adapters/lifecycle-endpoint.js";
 import {
   buildProvider,
@@ -1193,15 +1202,18 @@ export async function buildAuthorizationServer(opts: {
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   /**
-   * @spec authority-server#join-disclosure (#818): the PDPs enrolled for each
-   * enforcement scope, keyed by the authenticated caller's identifier (a
-   * Mission Status endpoint client's `client_id`, or a service principal at
-   * the development route; #1407), each naming the Status
-   * `audience` values it is enrolled for. Deployment configuration the MAS
-   * holds; absent (the default), no caller is enrolled and no Status response
-   * discloses the Mission's `subject` or `client_id`.
+   * @spec authority-server#join-disclosure (#818; #1591, D708): the PEPs and
+   * PDPs enrolled for each enforcement scope, keyed by the authenticated
+   * caller's identifier (a Mission Status endpoint client's `client_id`, or a
+   * service principal at the development route; #1407), each with its roles
+   * (PEP, PDP, or both) and the Status `audience` values it is enrolled for.
+   * Join Disclosure and a Join Assertion's `audience` take the PDP role;
+   * join-assertion visibility takes either. Deployment configuration the MAS
+   * holds; absent (the default), no caller is enrolled and no Status
+   * response discloses the Mission's `subject` or `client_id`. An enrollee
+   * holding no role, or an unknown one, refuses the build.
    */
-  enrolledJoinPdps?: Readonly<Record<string, readonly string[]>>;
+  joinEnrollment?: JoinEnrollmentConfig;
   /**
    * @spec authority-server#join-assertion (#1454): serve the MAS's Join
    * Assertion endpoint, advertised as `mission_join_assertion_endpoint`, with
@@ -1686,6 +1698,9 @@ export async function buildAuthorizationServer(opts: {
   // @spec deferred-approval#deferred-approval: the Deferred Mission Approval
   // store, on the kernel database, only where the opt-in capability is on.
   // The client registrations this assembly serves (the provider's, below).
+  // @spec authority-server#join-disclosure (#1591, D708): every enrollee
+  // holds the PEP role, the PDP role, or both.
+  if (opts.joinEnrollment) assertJoinEnrollment(opts.joinEnrollment);
   const clientRegistrations: Record<string, unknown>[] = [
     agent.metadata,
     // The child actor is also the demo templates' selected Agent, which
@@ -1759,8 +1774,7 @@ export async function buildAuthorizationServer(opts: {
         issuer: opts.issuer,
         kernel,
         deployment: opts.joinAssertions,
-        enrolledScopes: (clientId) =>
-          opts.enrolledJoinPdps && Object.hasOwn(opts.enrolledJoinPdps, clientId) ? (opts.enrolledJoinPdps[clientId] ?? []) : [],
+        enrollment: (clientId) => enrolleeOf(opts.joinEnrollment, clientId),
         authenticate: (params, authorization) =>
           authenticateLifecycleClient(
             { issuer: opts.issuer, clients: clientRegistrations, replay: dpopProofReplay, now: () => kernel.nowDate() },
@@ -1805,7 +1819,7 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.serviceTokenPrincipals
       ? { serviceTokenPrincipals: opts.serviceTokenPrincipals }
       : {}),
-    ...(opts.enrolledJoinPdps ? { enrolledJoinPdps: opts.enrolledJoinPdps } : {}),
+    ...(opts.joinEnrollment ? { joinEnrollment: opts.joinEnrollment } : {}),
     ...(Object.keys(lifecycleClientGrants).length > 0 ? { lifecycleClientGrants } : {}),
     ...(opts.distinctResumeGrant ? { distinctResumeGrant: true } : {}),
     ...(schedulesAdopted ? { suspensionSchedules: true } : {}),

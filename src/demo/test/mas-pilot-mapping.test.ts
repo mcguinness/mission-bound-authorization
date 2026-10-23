@@ -254,7 +254,8 @@ describe("pilot configuration: the estate's development Resource-policy grants (
   it("loads the shipped separated MAS: its PDP enrolled for the payments enforcement scope, the state source placed with the PDP (#818 slice 4b)", () => {
     const separated = loadMasPilotConfig().separated_mas;
     expect(separated.state_source.placement).toBe("pdp");
-    expect(separated.enrolled_pdps).toContainEqual({ client_id: separated.pdp_client_id, enforcement_scopes: [RESOURCE] });
+    // The pilot's PEP and PDP are one enforcement point under one client: both roles (#1591).
+    expect(separated.enrollment).toContainEqual({ client_id: separated.pdp_client_id, roles: ["pep", "pdp"], enforcement_scopes: [RESOURCE] });
   });
 
   it("refuses a separated MAS whose state source is placed anywhere but the PDP, a non-positive bound, or an unknown member (#818 slice 4b)", () => {

@@ -122,7 +122,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     testClients: [pdp.metadata, reader.metadata, ungranted.metadata],
     lifecycleClientGrants: { [pdp.clientId]: [MISSION_STATUS_SCOPE], [reader.clientId]: [MISSION_STATUS_SCOPE] },
-    enrolledJoinPdps: { [pdp.clientId]: [CANONICAL_RESOURCE] },
+    joinEnrollment: { [pdp.clientId]: { roles: ["pdp"], enforcementScopes: [CANONICAL_RESOURCE] } },
     serviceTokenPrincipals: { [SERVICE_TOKEN]: { principal_id: SERVICE_PRINCIPAL, scopes: [MISSION_STATUS_SCOPE] } },
   });
   server = as.provider.listen(PORT);
