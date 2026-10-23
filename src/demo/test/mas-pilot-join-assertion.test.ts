@@ -388,7 +388,10 @@ d("the separated launcher runs the declared Join Assertion path (#1454)", () => 
       MAS_PILOT_DEVELOPMENT_STORE: "1",
       MISSION_EPHEMERAL_KEYS: "1",
     };
-    const launch = await launchMasPilot(masPilotLaunchOptions(env, "separated"));
+    // A launch that refuses to start fails here, on the assertion.
+    const started = await launchMasPilot(masPilotLaunchOptions(env, "separated")).catch((e: unknown) => e);
+    expect(started, String(started)).not.toBeInstanceOf(Error);
+    const launch = started as Awaited<ReturnType<typeof launchMasPilot>>;
     try {
       expect(launch.summary).toContain("  Join Assertions    requested by the PEP from the MAS; required for consequential_read");
       const request = async (base: string, path: string, body: Record<string, unknown>) => {
