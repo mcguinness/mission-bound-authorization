@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `c8429f7e`
+Every statement here is true of the reference implementation at `f1acfdfc`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -353,11 +353,13 @@ contract alone, unchanged. By party:
   introspected first at the estate, as the MAS's own client, through §5's
   adapter (`TokenIntrospector`). An inactive answer refuses it, with no
   local check after that; an estate that cannot answer (no answer, a
-  timeout, a server error, a malformed answer, any other error) is
-  `unavailable` (503), with no local fallback. Only the estate's
-  `unsupported_token_type` error, read exactly, means it offers no
-  introspection for the token's type, and the reference estate answers so
-  for its JWTs: such a token is then validated under RFC 9068 against the
+  timeout, a redirect, a 401, 403, 429 or 5xx whatever its body says, a
+  400 with any other error, a malformed answer) is `unavailable` (503),
+  with no local fallback. The one exception is the reference estate's own
+  contract for a token type it does not introspect, which RFC 7662 does
+  not define: an HTTP 400 whose JSON `error` is exactly
+  `unsupported_token_type`, which it answers for its JWTs. Such a token is
+  then validated under RFC 9068 against the
   keys at the estate's published `jwks_uri`, fetched when first needed so
   the MAS may start before the estate; an opaque token fails that
   validation. This definition is the implementer's, recorded for the
@@ -388,8 +390,11 @@ contract alone, unchanged. By party:
   (`services/pdp/src/join-assertion.ts`, `evaluate.ts` step 4b), set by the
   separated pilot's decision wrapper: the audience
   `separated_mas.pdp_client_id`, the MAS's declared Status key, and the
-  algorithms the MAS advertises in
-  `mission_status_signing_alg_values_supported`. A carried assertion is
+  PDP's own algorithm policy: its allowlist,
+  `join_assertion.pdp_algorithms`, intersected with the algorithms the MAS
+  advertises in `mission_status_signing_alg_values_supported`, and never
+  `none` (`acceptedJoinAssertionAlgorithms`). An allowlist sharing nothing
+  with the advertised list refuses at composition. A carried assertion is
   verified (signature, `typ`, `alg`, `iss` and `mission`, `authority_hash`
   where carried, `exp`, `aud`, and the token binding) and is then the join,
   in place of the mapping checks: the joining client, disposition and depth
@@ -433,7 +438,8 @@ PDP's list does not name, and the requirement),
 assertion's sole `aud` the MAS's issuer, against a stub endpoint),
 and `demo/test/mas-pilot-join-deployment.test.ts` (the MAS's
 introspection-first establishment against a stub estate: a JWT the estate
-introspects, `unsupported_token_type` and local validation, an inactive
+introspects, the estate's 400 `unsupported_token_type` and local
+validation, the same error under any other status `unavailable`, an inactive
 JWT refused though it validates locally, an unanswered estate
 `unavailable` with no fallback, and an opaque token by introspection
 only). The positive separated witness also shows that the live estate

@@ -7,7 +7,7 @@ refusal with its evidence record. What the pilot is, and what each of its
 properties rests on, is [mas-pilot-deployment.md](mas-pilot-deployment.md);
 this document covers running it.
 
-Every statement here is true of the reference implementation at `c8429f7e`
+Every statement here is true of the reference implementation at `f1acfdfc`
 (paths relative to `src/`). The launcher tests are
 `demo/test/mas-pilot-launcher.test.ts` (§7); its smoke tests need a live
 OpenFGA and are skipped without one, and its startup refusals always run.
@@ -95,6 +95,8 @@ line and exits 1:
   ("answers as issuer ..., not the configured Mission issuer ..."), or a MAS
   process that fails its own startup (its reason, for example
   `http://127.0.0.1:14834 cannot listen`);
+- a declared `join_assertion.pdp_algorithms` that shares no algorithm with
+  the MAS's advertised list (§3.8);
 - a configuration declaring `join_assertion` in process, a running MAS's
   declared path without `MAS_PILOT_JOIN_INTROSPECTION_SECRET`, and that
   variable where the configuration declares no path or the launcher starts
@@ -283,7 +285,7 @@ not. Declare it in a copy, from `src/`:
 ```sh
 node -e '
 const c = require("./config/mas-pilot.json");
-c.join_assertion = { introspection_client_id: "mas-join-introspector", required: false, required_classes: ["consequential_read"] };
+c.join_assertion = { introspection_client_id: "mas-join-introspector", required: false, required_classes: ["consequential_read"], pdp_algorithms: ["ES256"] };
 require("node:fs").writeFileSync("/tmp/mas-pilot-join.json", JSON.stringify(c, null, 2));
 '
 MAS_PILOT_CONFIG=/tmp/mas-pilot-join.json MAS_PILOT_DEVELOPMENT_STORE=1 MISSION_EPHEMERAL_KEYS=1 pnpm mas-pilot:separated
@@ -296,6 +298,11 @@ and to the estate it starts, and prints one more line:
 ```text
   Join Assertions    requested by the PEP from the MAS; required for consequential_read
 ```
+
+`pdp_algorithms` is the PDP's own algorithm allowlist: it accepts those of
+the MAS's advertised `mission_status_signing_alg_values_supported` that the
+list names, never `none`, and the launcher refuses to start when the two
+share nothing. The reference MAS signs ES256.
 
 §3.1 to §3.4 then run unchanged. For each joined call the PEP asks the
 MAS's `mission_join_assertion_endpoint` for an assertion for the presented
