@@ -46523,6 +46523,44 @@
    "notes": "#1263 (D446). Proved by restoring the former 'ceiling wins' return in minAmount: the test fails. The projection path (intersectForProjection) drops the fragment instead, since no submitted proposal exists there to refuse."
   },
   {
+   "id": "resource-access.common-constraints.max-amount-value-members",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "an object with two members",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed max_amount carrying any member beside amount and currency is refused invalid_authorization_details at submission, with no request_uri and no Mission; one carrying exactly the two is admitted",
+    "local": "the shared intake validator (validateMissionResourceAccessSchema) closes the amount object, as the published schema's additionalProperties: false does"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "the max_amount object at PAR (@spec resource-access#initial-common-constraints, #1596) > refuses a max_amount carrying a member beside amount and currency, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "the max_amount object at PAR (@spec resource-access#initial-common-constraints, #1596) > accepts a max_amount carrying exactly amount and currency (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1596 review: before it PAR admitted max_amount {amount, currency, extra} with a request_uri, although the published schema closes the object. Proved by mutation: disabling the closed-member check fails the PAR witness and vector cases ev-amt-11, sub-ref-15, sub-ref-16 and sub-ref-17."
+  },
+  {
    "id": "resource-access.common-constraints.max-amount-input",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "initial-common-constraints",
