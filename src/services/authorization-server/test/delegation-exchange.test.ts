@@ -1033,6 +1033,10 @@ describe("the exchange selector (@spec mission#delegation)", () => {
   });
 
   it("a delegated token reaches only a Mission-aware target: otherwise invalid_target, counting nothing (D166)", async () => {
+    // @spec mission#rs-mission-unaware (#1503 finding 8): the target enforces
+    // the Mission's authority (an authorization_details audience with its
+    // constraints keys), but the AS has not established that it processes the
+    // act chain, so the issuance gate refuses before the derivation is counted.
     const { missionId, accessToken } = await baseMission(only);
     const designation = await designate(only, accessToken, SUBAGENT);
     expect(designation.status, JSON.stringify(designation.body)).toBe(200);
@@ -1040,6 +1044,8 @@ describe("the exchange selector (@spec mission#delegation)", () => {
     const res = await redeem(only, designation.body.access_token as string);
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_target");
+    expect(res.body.error_description).toMatch(/routed only to a Mission-aware Resource Server/);
+    expect(res.body.access_token).toBeUndefined();
     expect(derivations(only, missionId)).toBe(before);
   });
 });
