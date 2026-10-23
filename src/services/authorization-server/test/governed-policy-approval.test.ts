@@ -733,7 +733,7 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     }
   });
 
-  it("measures an approval's age at the atomic-commitment instant, the Mission's creation, not at a later clock read", () => {
+  it("measures an approval's age at the atomic-commitment instant, the Mission's creation, not at the request's start or a later clock read", () => {
     const doc = rootDoc({ recency: { ceilings: { default: 3600 }, clock_skew_s: 60 } });
     // How far a first activation's own clock reads move a ticking clock before it fixes its creation instant.
     const probe = makeKernel({ doc });
@@ -755,6 +755,18 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     const approvedAt = record.assertions.find((a) => a.kind === "policy")?.authority.approved_at;
     expect(Date.parse(mission.created_at) - Date.parse(String(approvedAt))).toBe(3600_000);
     expect(record.evaluation.evaluated_at).toBe(mission.created_at);
+    // One millisecond later: within the ceiling when the request starts, past it at the creation instant.
+    clockMs = T0;
+    const late = makeKernel({ doc });
+    const lc = consent(late);
+    const requestStart = T0 + 3600_000 - lead + 1;
+    expect(requestStart - T0).toBeLessThanOrEqual(3600_000);
+    clockMs = requestStart;
+    ticking = true;
+    const refused = outcome(() => activate(late, lc.consent_id));
+    ticking = false;
+    expect(refused).toBe("recency_exceeded");
+    nothingCommitted(late);
   });
 
   it("re-checks against the capability resolution retained at activation, while a new activation resolves current trusted state", () => {

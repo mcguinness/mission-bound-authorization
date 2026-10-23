@@ -51331,7 +51331,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a policy approval's age is the Mission's creation instant minus its approved_at: an approval exactly at the ceiling at the creation instant activates, one past it is refused, and the record's evaluated_at is the creation instant",
-    "local": "Witnessed on governed activation: at a 3600-second ceiling an approval activates at exactly 3600 seconds and is refused at 3601, nothing committed (also over the wire); under a clock that moves on every read, an approval exactly at the ceiling at the creation instant activates, with created_at minus approved_at equal to the ceiling and evaluated_at equal to created_at; a committed record's assertion decided_at and evaluated_at are the Mission's created_at. A recorded ceiling drawdown's gate measures the consent's age at the successor's created_at and falls back on a stale consent."
+    "local": "Witnessed on governed activation: at a 3600-second ceiling an approval activates at exactly 3600 seconds and is refused at 3601, nothing committed (also over the wire); under a clock that moves on every read, an approval exactly at the ceiling at the creation instant activates, with created_at minus approved_at equal to the ceiling and evaluated_at equal to created_at, and one a millisecond later, within the ceiling when the request starts but past it at the creation instant, is refused with no Mission and no record; a committed record's assertion decided_at and evaluated_at are the Mission's created_at. A recorded ceiling drawdown's gate falls back on a stale consent; it is passed the successor's created_at as the decision instant, which no drawdown test distinguishes from an earlier instant, and the re-check binds it."
    },
    "level": "unit",
    "coverage": "tested",
@@ -51344,7 +51344,7 @@
     },
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
-     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > measures an approval's age at the atomic-commitment instant, the Mission's creation, not at a later clock read",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > measures an approval's age at the atomic-commitment instant, the Mission's creation, not at the request's start or a later clock read",
      "level": "unit",
      "surface": "governance-record"
     },
@@ -51367,7 +51367,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "Mutation: reading the clock again for the age check instead of the creation instant fails the instant witness alone. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+   "notes": "Mutations: reading the clock again for the age check, and measuring the age at the request's start, each fail the instant witness alone (owner review of #1546 at c2f8cac0: the request-start mutation had passed every cited test). The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
   },
   {
    "id": "approval-governance.recency.order-within-skew",
