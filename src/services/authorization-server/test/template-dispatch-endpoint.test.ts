@@ -310,6 +310,25 @@ describe("Mission Template admin plane (@spec mission-template)", () => {
     }
   });
 
+  // @spec resource-access#subset (#1377, D538, D684): a template ceiling entry
+  // naming an action family is unsupported input, refused at consent, naming
+  // the entry and the family, rather than stored and refused only at dispatch.
+  it("refuses a template whose ceiling entry names an action family, naming the entry, and creates no template (#1377)", async () => {
+    const body = readOnlyTemplateBody();
+    const ceiling = (body.ceiling as Record<string, unknown>[]).map((e, i) =>
+      i === 0 ? { ...e, actions: [...(e.actions as string[]), "payments:invoice.*"] } : e,
+    );
+    const res = await createTemplateAdmin({ ...body, ceiling });
+    const out = (await res.json()) as { error?: string; error_description?: string; template_id?: string };
+    expect(res.status, JSON.stringify(out)).toBe(400);
+    expect(out.error).toBe("invalid_request");
+    expect(out.error_description).toBe(
+      "ceiling[0] carries the action family payments:invoice.*, which this authorization server does not support",
+    );
+    expect(out.template_id).toBeUndefined();
+    expect(as.templateStore.getByApprovalEvent(body.approval_event_id as string)).toBeUndefined();
+  });
+
   // @spec resource-access#resource-access-type (D634): a template ceiling entry
   // whose `delegation` carries a member the authorization server does not
   // implement is refused at consent, naming the entry and the member, rather
