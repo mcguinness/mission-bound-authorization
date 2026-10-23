@@ -38491,6 +38491,112 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q12); todo until that path exists."
   },
   {
+   "id": "issuance-grant.records.mas-minting",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "records",
+   "text": "The MAS MUST record each minting with the Mission record",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every minted grant has a record with the Mission record carrying its jti, audience, requested and granted entries, any cnf, and the minting time"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q14); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.records.consuming-as",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "records",
+   "text": "consuming AS MUST record each issuance under a grant, each refresh included, with the grant's `jti`, Mission reference, and `authority_hash`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every issuance under a grant, each refresh included, has a consuming-AS record naming the grant's jti, the Mission reference and authority_hash"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q14); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.records.reconcile",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "records",
+   "text": "A deployment SHOULD reconcile MAS minting records against consuming-AS redemption records.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the deployment reconciles MAS minting records against consuming-AS redemption records by jti, or its statement says it does not"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q14); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.records.unmatched-event",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "records",
+   "text": "A deployment SHOULD treat a redemption with no matching minting record as a security event.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a redemption record with no matching minting record raises a security event"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q14); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.records.enterprise-window",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "records",
+   "text": "MUST reconcile within the window its statement declares",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "under the Enterprise Mission Authority Profile, every redemption record is reconciled against minting records within the window the deployment statement declares"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q14); todo until that path exists."
+  },
+  {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "grant-validation",

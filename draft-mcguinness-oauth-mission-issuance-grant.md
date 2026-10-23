@@ -1087,8 +1087,9 @@ flow.
 
 The MAS MUST record each minting with the Mission record: the `jti`,
 audience, requested and granted entries, any `cnf`, and time. The
-consuming AS records each issuance under a grant with the grant's
-`jti`, Mission reference, and `authority_hash`. Only the `jti`
+consuming AS MUST record each issuance under a grant, each refresh
+included, with the grant's `jti`, Mission reference, and
+`authority_hash`. Only the `jti`
 identifies the minting: several grants can share a Mission and an
 `authority_hash`, and the single-use record ({{single-use}}) expires
 with the grant's acceptance window. Together the records attribute
