@@ -17150,7 +17150,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#705 (D359). The reference implementation has no Management bulk endpoint."
+   "notes": "#705 (D359). The reference implementation has no Management bulk endpoint. #705 closed under D675: this witness is deferred, not passed; it is tracked here until the reference implementation builds the surface."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
@@ -62302,6 +62302,27 @@
    "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
   },
   {
+   "id": "mandate.claims.approver-from-consent-principal",
+   "spec": "draft-mcguinness-mission-mandate.md",
+   "anchor": "claims",
+   "text": "REQUIRED. An object with `iss` and `sub`, the Mission record's `approval_basis.consent_principal`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a minted Mandate's `approver` claim is the Mission record's `approval_basis.consent_principal` (`iss` and `sub`), so the claim is unchanged from the value the v1 approval-context commitment uses and its digest is equivalent"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#705 acceptance item 13, the Mandate half (the OAuth binding's half, its digest-equivalence witness, is cited on its own row, D613). No Mandate minting code exists in the reference implementation. #705 closed under D675: this witness is deferred, not passed; it is tracked here until the reference implementation builds the surface."
+  },
+  {
    "id": "mandate.minting.termination-at-issuance",
    "spec": "draft-mcguinness-mission-mandate.md",
    "anchor": "minting",
@@ -62320,7 +62341,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#705 (D359). No Mandate minting code exists in the reference implementation."
+   "notes": "#705 (D359). No Mandate minting code exists in the reference implementation. #705 closed under D675: this witness is deferred, not passed; it is tracked here until the reference implementation builds the surface."
   },
   {
    "id": "device-authorization.discovery.explicit-support-before-sending",
