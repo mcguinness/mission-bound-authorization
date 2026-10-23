@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
+  actionFamilyRefusal,
   delegateMatcherListViolation,
   entryWithinCeiling,
   isAuthorityEntry,
@@ -10,6 +11,7 @@ import {
   narrowToCeiling,
   resourceWithin,
   SUPPORTED_ENTRY_MEMBERS,
+  unsupportedActionFamily,
   unsupportedEntryMember,
 } from "../src/index.js";
 
@@ -343,5 +345,43 @@ describe("resource containment under resource_match (@spec resource-access#subse
     }
     expect(isAuthorityEntry(at(ORDERS, "prefix"))).toBe(true);
     expect(isAuthorityEntry(at(ORDERS, "exact"))).toBe(true);
+  });
+});
+
+describe("an action family is unsupported input (@spec resource-access#subset, #1377, D538)", () => {
+  // This implementation compares actions literally and implements none of the
+  // subset rule's family clauses, so a family is refused, never carried.
+  const family = { ...entry, actions: ["read", "invoices.*"] } as AuthorityEntry;
+
+  it("unsupportedActionFamily names the first family an entry's actions carry, and nothing for identifiers", () => {
+    expect(unsupportedActionFamily(family)).toBe("invoices.*");
+    expect(unsupportedActionFamily({ ...entry, actions: ["invoices.q3.*", "invoices.*"] })).toBe(
+      "invoices.q3.*",
+    );
+    expect(unsupportedActionFamily(entry)).toBeUndefined();
+    expect(
+      unsupportedActionFamily({ ...entry, actions: ["invoices.read", "invoices."] }),
+    ).toBeUndefined();
+    expect(actionFamilyRefusal("invoices.*")).toBe(
+      "invoices.* is an action family, which this authorization server does not support; refusing it as unsupported input",
+    );
+  });
+
+  it("isAuthorityEntry refuses an entry carrying an action family", () => {
+    expect(isAuthorityEntry(family)).toBe(false);
+    expect(isAuthorityEntry({ ...entry, actions: ["read"] })).toBe(true);
+  });
+
+  it("isSubsetEntry refuses a comparison involving an action family on either side, even a byte-identical pair", () => {
+    expect(isSubsetEntry({ ...entry, actions: ["read"] }, family)).toBe(false);
+    expect(isSubsetEntry(family, entry)).toBe(false);
+    expect(isSubsetEntry(family, { ...family })).toBe(false);
+    expect(isSubsetSet([{ ...entry, actions: ["read"] }], [family])).toBe(false);
+    expect(isSubsetEntry({ ...entry, actions: ["read"] }, entry)).toBe(true);
+  });
+
+  it("narrowToCeiling retains no entry carrying an action family, on either operand", () => {
+    expect(narrowToCeiling([family], [entry])).toEqual([]);
+    expect(narrowToCeiling([{ ...entry, actions: ["read"] }], [family])).toEqual([]);
   });
 });

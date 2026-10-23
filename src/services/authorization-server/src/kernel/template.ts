@@ -32,6 +32,7 @@ import {
   MISSION_TEMPLATE_TYP,
   proposalHash,
   refusedEntryMember,
+  unsupportedActionFamily,
   unsupportedDelegationMember,
   unsupportedEntryMember,
 } from "@mission/core";
@@ -244,6 +245,12 @@ export function assertTemplateBody(input: TemplateProposalBody): void {
       throw new TemplateError(
         `ceiling[${i}] carries ${delegationMember}, which is not a supported delegation member`,
       );
+    }
+    // @spec resource-access#subset (#1377, D538, D684): likewise an action
+    // family, unsupported input refused at consent rather than at dispatch.
+    const family = unsupportedActionFamily(entry);
+    if (family !== undefined) {
+      throw new TemplateError(`ceiling[${i}] carries the action family ${family}, which this authorization server does not support`);
     }
     // @spec resource-access#resource-contract (#249, D553): template consent
     // does not assemble or validate a contract reference against
