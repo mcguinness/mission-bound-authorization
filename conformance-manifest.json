@@ -52930,6 +52930,293 @@
    "notes": "#1436 item 7: the stricter value, which the reference already takes (the minimum of the default ceiling, the class ceiling and the exception). Mutation: ignoring the class ceiling when an exception applies."
   },
   {
+   "id": "approval-governance.recency.classify-whole-mission",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "At evaluation, the issuer MUST classify the committed Mission's consequence classes from the derived Authority Set and from any consumption bound the Mission Intent carries",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the issuer classifies the committed Mission's whole derived Authority Set and any Intent consumption bound, so an unclassified action or a high-risk class the Mission carries governs the evaluation",
+    "local": "Witnessed for the derived Authority Set: a governed activation refuses an action the root does not classify and holds a high-risk class to its exception, while a Mission without the class activates under the default ceiling; a recorded ceiling drawdown's gate classifies the whole successor and falls back on a kept high-risk action. The consumption-bound source has no witness: the reference's closed Intent admits no consumption-bound member (intent.ts TOP_LEVEL), so no Mission here can carry one."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an action the root does not classify instead of treating it as low-risk",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a high-risk class only under a committed, class-named exception, whose age then binds",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends a successor that keeps approved high-risk authority to a fresh approval, though Progressive would activate it",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Rows the recency-evaluation section (#1522 review follow-up). The same consumption-bound gap is recorded on approval-governance.governed-policy.check-recency-high-risk and approval-governance.recency.high-risk-standing-consent-no-record. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.strictest-across-classes",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "The issuer MUST select, across every class either source carries, the strictest maximum age that applies, accounting for any declared exception",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for a Mission carrying several high-risk classes, the smallest maximum age any of them admits binds the policy approval, whichever class declares it",
+    "local": "Witnessed on a governed activation carrying two high-risk classes (irreversible_action and external_commitment) with exceptions of 600 and 300 seconds, and the mirror case: each activates at 299 seconds and is refused at 301. The consumption-bound source is classify-whole-mission's gap."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > holds a Mission carrying two high-risk classes to the strictest of their maximum ages, whichever class declares it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a high-risk class only under a committed, class-named exception, whose age then binds",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Mutations on applicableRecencyMaxAge: keeping only the first class's bound, and keeping only the last class's, each fail the two-class witness alone. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.age-at-commitment-instant",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "MUST measure the assertion's age as `evaluation.evaluated_at` minus `authority.approved_at`, using the atomic-commitment instant",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy approval's age is the Mission's creation instant minus its approved_at: an approval exactly at the ceiling at the creation instant activates, one past it is refused, and the record's evaluated_at is the creation instant",
+    "local": "Witnessed on governed activation: at a 3600-second ceiling an approval activates at exactly 3600 seconds and is refused at 3601, nothing committed (also over the wire); under a clock that moves on every read, an approval exactly at the ceiling at the creation instant activates, with created_at minus approved_at equal to the ceiling and evaluated_at equal to created_at, and one a millisecond later, within the ceiling when the request starts but past it at the creation instant, is refused with no Mission and no record; a committed record's assertion decided_at and evaluated_at are the Mission's created_at. A recorded ceiling drawdown's gate falls back on a stale consent; it is passed the successor's created_at as the decision instant, which no drawdown test distinguishes from an earlier instant, and the re-check binds it."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > measures an approval's age at the atomic-commitment instant, the Mission's creation, not at the request's start or a later clock read",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a bounded Mission and commits a signed Approval Governance Record with it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends an unclassified action, a stale consent, an ineligible deciding policy or consent to a fresh approval, nothing written",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Mutations: reading the clock again for the age check, and measuring the age at the request's start, each fail the instant witness alone (owner review of #1546 at c2f8cac0: the request-start mutation had passed every cited test). The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.order-within-skew",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "MUST enforce `authority.approved_at` <= `decided_at` <= `evaluation.evaluated_at`, subject to the declared clock-skew allowance",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approved_at later than the evaluation instant beyond the clock-skew allowance is refused and creates no Mission; one within the allowance activates; decided_at never follows evaluated_at",
+    "local": "Witnessed on governed activation: an approval 61 seconds after the evaluation instant under a 60-second skew is refused with nothing committed, and one 59 seconds after activates (also over the wire). decided_at <= evaluated_at holds as equality: the issuer decides at the creation instant, and the committed record's decided_at and evaluated_at are both the Mission's created_at. For recorded ceiling drawdowns the gate's ordering clause is witnessed at function level (a decision 61 seconds before the consent falls back), and the record commit gate refuses a decided_at other than evaluated_at."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a bounded Mission and commits a signed Approval Governance Record with it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > verifies the consent's commitment to the exact drawdown policy version, and its principal's eligibility as the consenting approval enforced it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the ceiling-drawdown record commit gate (@spec approval-governance#accountable-assertion, approval-governance#assertion-authority) > admits the one contributing policy assertion, and refuses another principal, policy, instant, or contributing set",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "The drawdown witness calls the gate as a function; the commit path cannot produce a decision before its consent. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.not-after-issuer-clock",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "MUST reject the assertion if `authority.approved_at` or `decided_at` is later than the issuer's own clock at evaluation, beyond that allowance",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy assertion whose approved_at or decided_at is later than the issuer's clock at evaluation, beyond the allowance, is refused",
+    "local": "Witnessed for approved_at: the evaluation instant is the issuer's own clock at the commit, so the order-within-skew witness (an approval 61 seconds in the future refused, 59 seconds admitted) is this check. The decided_at half has no witness: the issuer writes decided_at from its own clock at the commit, so no later decided_at can reach the evaluation."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "The decided_at half needs an assertion the issuer did not decide itself, which the reference does not produce. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.failed-assertion-not-counted",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "the issuer MUST NOT count it toward the evaluation, and by {{atomic-commitment}} the Mission MUST NOT be created `active` on an evaluation that depended on it",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy assertion too old or out of order is not counted, and no Mission is created active on an evaluation that needed it",
+    "local": "Witnessed for the no-activation half: a stale or misordered approval refuses the governed activation with no Mission and no record committed (also over the wire), and a stale consent sends a recorded drawdown to a fresh approval with nothing written. The not-counted half alone has no witness: every reference evaluation counts exactly one policy assertion, so dropping it always ends the evaluation."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends an unclassified action, a stale consent, an ineligible deciding policy or consent to a fresh approval, nothing written",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Not counting a failing assertion while others still satisfy the rule needs an evaluation that counts more than one policy assertion (#1470 Q2: no multi-decider rule built solely for coverage). The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.evaluated-at-not-future",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "the evaluation MUST NOT be treated as complete, and by {{atomic-commitment}} the Mission MUST NOT be created `active` on it",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an evaluation whose evaluated_at is later than the issuer's clock beyond the allowance is not complete, and no Mission is created active on it",
+    "local": "No witness: the issuer writes evaluated_at from its own clock at the commit, so no reference evaluation can carry a later one. The Relying Auditor re-check binds evaluated_at to the Mission's creation instead."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Unreachable in the reference as built: it needs an evaluation produced apart from the commit. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
    "id": "approval-governance.recency.high-risk-standing-consent-no-record",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "recency-high-risk",

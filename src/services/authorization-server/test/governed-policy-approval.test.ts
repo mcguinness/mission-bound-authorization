@@ -49,7 +49,9 @@ import {
 const ISS = "https://as.test";
 const T0 = Date.parse("2026-07-01T00:00:00Z");
 let clockMs = T0;
-const now = () => new Date(clockMs);
+/** A ticking clock moves on every read, so an instant read twice is told apart. */
+let ticking = false;
+const now = () => new Date(ticking ? clockMs++ : clockMs);
 const iso = (ms: number) => new Date(ms).toISOString();
 
 let key: CryptoKey;
@@ -61,6 +63,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   clockMs = T0;
+  ticking = false;
 });
 
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
@@ -700,6 +703,70 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     // Older than the class ceiling but within the exception's looser age: refused.
     clockMs = T0 + 301_000;
     expect(outcome(() => activate(kernel, c.consent_id, { proposedAuthority: proposal }))).toBe("recency_exceeded");
+  });
+
+  it("holds a Mission carrying two high-risk classes to the strictest of their maximum ages, whichever class declares it", () => {
+    const both = { ...executeEntry(), actions: ["payments:payment.execute", "payments:remittance.send"] };
+    const proposal = [{ ...both, constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }];
+    // The stricter exception on one class, then on the other.
+    for (const [irreversible, external] of [
+      [600, 300],
+      [300, 600],
+    ]) {
+      clockMs = T0;
+      const kernel = makeKernel({
+        doc: rootDoc({
+          authority_ceiling: [readEntry(), both],
+          recency: {
+            ceilings: { default: 30 * 86400 },
+            clock_skew_s: 60,
+            exceptions: { irreversible_action: { max_age_s: irreversible as number }, external_commitment: { max_age_s: external as number } },
+          },
+        }),
+      });
+      const c = consent(kernel);
+      clockMs = T0 + 299_000;
+      const { mission } = activate(kernel, c.consent_id, { proposedAuthority: proposal });
+      expect(mission.authority_set.flatMap((e) => e.actions)).toEqual(["payments:payment.execute", "payments:remittance.send"]);
+      clockMs = T0 + 301_000;
+      expect(outcome(() => activate(kernel, c.consent_id, { proposedAuthority: proposal })), `${irreversible}/${external}`).toBe("recency_exceeded");
+    }
+  });
+
+  it("measures an approval's age at the atomic-commitment instant, the Mission's creation, not at the request's start or a later clock read", () => {
+    const doc = rootDoc({ recency: { ceilings: { default: 3600 }, clock_skew_s: 60 } });
+    // How far a first activation's own clock reads move a ticking clock before it fixes its creation instant.
+    const probe = makeKernel({ doc });
+    const pc = consent(probe);
+    const start = T0 + 1_000_000;
+    clockMs = start;
+    ticking = true;
+    const lead = Date.parse(activate(probe, pc.consent_id).mission.created_at) - start;
+    ticking = false;
+    // An approval exactly at the ceiling at the creation instant, under a clock that moves on every read.
+    clockMs = T0;
+    const kernel = makeKernel({ doc });
+    const c = consent(kernel);
+    clockMs = T0 + 3600_000 - lead;
+    ticking = true;
+    const { mission } = activate(kernel, c.consent_id);
+    ticking = false;
+    const record = kernel.governanceRecords.forMission(mission.id) as ApprovalGovernanceRecord;
+    const approvedAt = record.assertions.find((a) => a.kind === "policy")?.authority.approved_at;
+    expect(Date.parse(mission.created_at) - Date.parse(String(approvedAt))).toBe(3600_000);
+    expect(record.evaluation.evaluated_at).toBe(mission.created_at);
+    // One millisecond later: within the ceiling when the request starts, past it at the creation instant.
+    clockMs = T0;
+    const late = makeKernel({ doc });
+    const lc = consent(late);
+    const requestStart = T0 + 3600_000 - lead + 1;
+    expect(requestStart - T0).toBeLessThanOrEqual(3600_000);
+    clockMs = requestStart;
+    ticking = true;
+    const refused = outcome(() => activate(late, lc.consent_id));
+    ticking = false;
+    expect(refused).toBe("recency_exceeded");
+    nothingCommitted(late);
   });
 
   it("re-checks against the capability resolution retained at activation, while a new activation resolves current trusted state", () => {
