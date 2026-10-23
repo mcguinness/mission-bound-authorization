@@ -3346,8 +3346,9 @@ reason, carries four limits, each set by the documents that enforce
 it:
 
 1. It stops new authorization at every enforcement point that consults
-   Mission state, within the deployment's advertised staleness bound,
-   or within token lifetime when no bound is advertised
+   Mission state, within the deployment's advertised staleness bound
+   or, when none is advertised, within the bound of the credential,
+   session or cached observation that point relies on, if any
    ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Revocation
    Propagation"; {{I-D.draft-mcguinness-mission-runtime}}, Section
    "Mission State and Freshness").
@@ -3372,10 +3373,12 @@ it:
    and Execution"), and AAuth Management bounds the AAuth residual
    window ({{I-D.draft-mcguinness-mission-aauth-management}}, Section
    "Honest Residual Bounds").
-4. A route that does not consult Mission state is outside these limits:
-   its lag is its own credential lifetime
+4. A route that does not consult Mission state is outside these limits.
+   It runs to its binding's credential, session or resource-local
+   bound, if any: an ungated route can have no bound, and reminting
+   from an earlier observation sums the residuals
    ({{I-D.draft-mcguinness-mission-runtime}}, Section "Mission State and
-   Freshness").
+   Freshness"; {{validity-model}}; {{kill-switch-composition}}).
 
 ## Prevention, Detection, and Residue {#prevention-detection}
 
