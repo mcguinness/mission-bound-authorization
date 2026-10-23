@@ -2426,6 +2426,42 @@ describe("the expansion deferral page's refusals (@spec expansion#completion-mod
     }
   });
 
+  it("completion creates the successor only with the authority approved: authority added after the approval refuses it, as does authority removed", async () => {
+    const given = structuredClone(DERIVATION_POLICY.ceiling);
+    const narrow = () => {
+      for (const e of DERIVATION_POLICY.ceiling) {
+        (e as { actions: string[] }).actions = (e as { actions: string[] }).actions.filter((a) => a !== VENDOR);
+      }
+    };
+    const restoreCeiling = () => DERIVATION_POLICY.ceiling.forEach((e, i) => Object.assign(e, structuredClone(given[i])));
+    // Approved without the vendor read, which the policy restores before the client polls.
+    const wider = await pending();
+    const bob = browserApprovalHeaders(store(), wider.code, BOB, "");
+    narrow();
+    try {
+      const shown = await page(wider.code, bob.cookie);
+      expect(as.expansionDeferrals.pendingReview(wider.code)?.successor.flatMap((e) => e.actions)).not.toContain(VENDOR);
+      expect((await decide(wider.code, bob, { decision: "approve", render_revision: shown.revision })).status).toBe(200);
+    } finally {
+      restoreCeiling();
+    }
+    expect((await poll(wider.code)).body.error).toBe("access_denied");
+    expect(successorsOf(wider.root.missionId)).toEqual([]);
+    expect(as.kernel.get(wider.root.missionId)?.state).toBe("active");
+    // Approved with it, which the policy removes before the client polls.
+    const narrower = await pending();
+    const bob2 = browserApprovalHeaders(store(), narrower.code, BOB, "");
+    const shown = await page(narrower.code, bob2.cookie);
+    expect((await decide(narrower.code, bob2, { decision: "approve", render_revision: shown.revision })).status).toBe(200);
+    narrow();
+    try {
+      expect((await poll(narrower.code)).body.error).toBe("access_denied");
+    } finally {
+      restoreCeiling();
+    }
+    expect(successorsOf(narrower.root.missionId)).toEqual([]);
+  });
+
   it("a deferral past its lifetime is neither rendered nor decided", async () => {
     const { code } = await pending();
     const bob = browserApprovalHeaders(store(), code, BOB, "");

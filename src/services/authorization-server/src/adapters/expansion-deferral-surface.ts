@@ -8,8 +8,9 @@
  * A pending deferral is rendered only to an authenticated Approver: the
  * successor's authority and the request it came from, the client and Subject,
  * the expiry the approval commits, and the consent disclosure the store holds
- * (the chain's restrictions, the re-consent offer and the review record, and
- * for a discovery encounter the Encountered Resource, the declaration as the
+ * (the chain's restrictions, the re-consent offer and the review record, the
+ * Carryover Manifest for the predecessor's live Child Missions, and for a
+ * discovery encounter the Encountered Resource, the declaration as the
  * resource's claim, the taint status, the floors and the `encounter_id`). The
  * rendering commits that context under a render revision bound to its
  * principal, as the Mission approval page does (#1446), and the decision is
@@ -17,6 +18,7 @@
  * approves nothing.
  */
 import { authorityHash, intentHash, type JsonValue, proposalHash } from "@mission/core";
+import type { CarryoverManifest } from "../kernel/carryover.js";
 import type { DeferralReview, ExpansionDisclosure } from "../kernel/deferred.js";
 import type { MissionKernel } from "../kernel/kernel.js";
 import type { CeilingConsent, EncounterDisclosure } from "../kernel/progressive.js";
@@ -37,6 +39,8 @@ export interface DeferralContext {
   /** The offer itself, so a re-consent consents exactly the one rendered. */
   reconsent_offer: CeilingConsent | null;
   review: string | null;
+  /** The Carryover Manifest the approval commits, fixed while the deferral is pending. */
+  carryover: string | null;
 }
 
 /** The URL path of a deferral's approval page. */
@@ -94,6 +98,7 @@ export function deferralContext(review: DeferralReview, expiresAt: string): { co
           discharged: review_.discharged,
         })
       : null,
+    carryover: review.carryover ? contentDigest(review.carryover) : null,
   };
   return { context, commitment: contentDigest(context) };
 }
@@ -154,6 +159,32 @@ function restrictionsSection(disclosure: ExpansionDisclosure): string {
 ${items.length ? `<ul class="restrictions">\n${items.join("\n")}\n</ul>` : `<p class="restrictions">None.</p>`}`;
 }
 
+/**
+ * @spec child-delegation#carryover-manifest (#1558 review): the Carryover
+ * Manifest the approval commits. Every live Child Mission of the predecessor
+ * is rendered: carried, with the replacement's facts, or terminated when the
+ * successor supersedes, with the reason; and the exclusion policy that decides
+ * what a change before completion does.
+ */
+function carryoverSection(manifest: CarryoverManifest | undefined): string {
+  if (!manifest) return "";
+  const policy = manifest.exclusion_policy;
+  const policyText =
+    policy.mode === "all_or_nothing"
+      ? "Any change to these Child Missions before completion refuses the whole expansion, which then needs a fresh approval."
+      : `A change of these classes before completion excludes the affected Child Mission instead: ${policy.change_classes.map((c) => `<code>${escapeHtml(c)}</code>`).join(", ")}; a dependent descendant is excluded with it, and a Child Mission not rendered here is terminated.`;
+  const entries = manifest.entries.map((entry) =>
+    entry.outcome === "carry"
+      ? `<li class="carryover-entry" data-child-id="${escapeHtml(entry.child_id)}" data-outcome="carry">Child Mission <code>${escapeHtml(entry.child_id)}</code> (actor <code>${escapeHtml(entry.child_actor.sub)}</code>) is carried to a replacement under the successor: <pre class="carryover-replacement">${json(entry.replacement ?? null)}</pre></li>`
+      : `<li class="carryover-entry" data-child-id="${escapeHtml(entry.child_id)}" data-outcome="cascade">Child Mission <code>${escapeHtml(entry.child_id)}</code> (actor <code>${escapeHtml(entry.child_actor.sub)}</code>) is terminated when the successor supersedes the Mission: ${escapeHtml(entry.reason ?? "")}</li>`,
+  );
+  return `<section class="carryover">
+<h2>Child Missions of the Mission being widened</h2>
+<p class="carryover-exclusion-policy" data-mode="${escapeHtml(policy.mode)}">${policyText}</p>
+${entries.length ? `<ul>\n${entries.join("\n")}\n</ul>` : `<p>None.</p>`}
+</section>`;
+}
+
 function ceilingSection(disclosure: ExpansionDisclosure): string {
   const ceiling = disclosure.ceiling;
   if (!ceiling) return "";
@@ -204,6 +235,7 @@ ${review.proposal ? `<h2>Proposed authority (submitted, untrusted)</h2><pre clas
 <h2>Expiry (when the approved authority ends)</h2><p><time class="successor-expires-at" datetime="${escapeHtml(context.expires_at)}">${escapeHtml(context.expires_at)}</time></p>
 ${encounterSection(disclosure)}
 ${restrictionsSection(disclosure)}
+${carryoverSection(review.carryover)}
 ${ceilingSection(disclosure)}
 ${view.changed ? `<p class="deferral-changed"><strong>The request changed since you last reviewed it. Review it again before deciding.</strong></p>\n` : ""}<form method="post" action="${deferralPagePath(review.deferralCode)}/decide">
 ${view.revision ? `<input type="hidden" name="render_revision" value="${escapeHtml(view.revision)}">\n` : ""}${view.csrf ? `<input type="hidden" name="csrf_token" value="${escapeHtml(view.csrf)}">\n` : ""}${reconsent}<button name="decision" value="approve">Approve</button>
