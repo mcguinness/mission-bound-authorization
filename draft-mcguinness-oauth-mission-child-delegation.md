@@ -2472,6 +2472,10 @@ apply unchanged.
 
 \[\[ To be removed from the final specification ]]
 
+- Completion says any grant binding a Child Mission carries comes from
+  the child actor's redemption of its grant, never from the parent's
+  exchange. No requirement changed.
+
 - Fan-Out Controls cites Resource Access for the `delegation` extension
   rules and drops the claim that an unrecognized member is carried
   unchanged: an authorization server that does not implement this

@@ -634,6 +634,12 @@ constrains their use and introduces none of its own.
 
 \[\[ To be removed from the final specification ]]
 
+- The async transport's handle is called a delegation handle, an
+  access token carrying authority, distinct from a continuation
+  handle; the Rooting and Termination requirements name the
+  continuation handle; and the document calls itself a profile, not a
+  binding. No requirement changed.
+
 - The Identity Continuation Transport's onward ID-JAG conveys
   `delegation` under the cross-domain projection rule, so a requested
   authorization detail that keeps an omitted member exceeds the

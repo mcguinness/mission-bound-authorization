@@ -7201,6 +7201,10 @@ Cross-Domain:
   specify; the sentence on joining one credential to different Missions
   across requests moves to the Mission Authority Server's Mission
   Join.
+- Editorial, no requirement change: Grant Bindings and Related
+  Mechanisms names the Token Exchanges its later items cover, and the
+  Namespace Taxonomy lists the `approval_basis.type` values as
+  specification-defined, which Standing-Consent Bases cites.
 
 -01
 

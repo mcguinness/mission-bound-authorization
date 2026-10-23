@@ -4386,6 +4386,10 @@ with no `suspended` state and its own termination reasons, served by
 
 \[\[ To be removed from the final specification ]]
 
+- The Authorization bases entry says the basis `type` values form a
+  specification-defined namespace and that its list names each
+  companion's value. No requirement changed.
+
 - The Authorization bases entry cites the companion profile that
   defines each standing-consent basis; the OAuth binding points here
   for the list. No requirement changed.

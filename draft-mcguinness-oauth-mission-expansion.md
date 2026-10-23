@@ -2465,6 +2465,11 @@ approved, not the predecessor's authority plus a delta.
 
 \[\[ To be removed from the final specification ]]
 
+- Completion Modes says where any grant binding a successor carries
+  comes from in each mode, and that a completion returning only an
+  access token leaves the successor no grant binding. No requirement
+  changed.
+
 - A failed check 3 where the token-exchange response completes an
   expansion answers `invalid_request`, as Section 2.2.2 of RFC 8693
   requires on that surface, instead of `invalid_grant`.
