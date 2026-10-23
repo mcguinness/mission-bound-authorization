@@ -1141,6 +1141,23 @@ Server Metadata" registry {{RFC8414}}:
   values follow the lifecycle migration and include `suspended` and
   `completed`, and `mission_not_active` at the MAS is no longer called
   an unconditional signal to stop. No requirement changes.
+- Tightened throughout with no requirement change. Each rule has one
+  home: the `cnf` possession check is in Grant Validation, the `jti`
+  record in Single Use, the `typ` refusal in Grant Validation, the
+  per-resource version rule in Mission State Source, and the MAS's
+  refusal notes in Grant Errors. Single Use and Without a
+  Mission-State Integration are Redemption subsections, Issued Tokens
+  folds into Relationship to Other Artifacts, Composite Provision is
+  removed (Architecture and the MAS draft state its positioning), and
+  a new Issuance Records section holds minting records, redemption
+  records, and reconciliation, including the Enterprise
+  reconciliation requirement that Security Considerations carried.
+  Restatements of the issuance profile's Scope Projection, the MAS
+  error object, and Derivation Limits' counting rule are pointers.
+  The equivalent-source properties bind the consuming AS. The Mission
+  Authority Server Metadata registration uses that registry's
+  template fields. The Substrate, Architecture, and Consent Evidence
+  references are removed.
 
 # Acknowledgments
 {:numbered="false"}
