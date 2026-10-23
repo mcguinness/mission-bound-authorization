@@ -185,10 +185,10 @@ function expectJoinRefused(res: Record<string, unknown>, missionId: string, labe
   expect(evidence?.join_view_id, label).toBeUndefined();
 }
 
-async function tokenFor(clientId: string, account: string, scope: string, resource = CANONICAL_RESOURCE): Promise<Credential> {
-  if (resource === CANONICAL_RESOURCE) return estateToken(pilot, clientId, account, scope);
+/** An estate token for `resource`, bound to `dpopKeys` (a fresh key unless given). */
+async function tokenFor(clientId: string, account: string, scope: string, resource: string, keys?: Credential["dpopKeys"]): Promise<Credential> {
   const registration = pilot.estateClients.get(clientId);
-  const dpopKeys = await generateKeyPair("ES256", { extractable: true });
+  const dpopKeys = keys ?? (await generateKeyPair("ES256", { extractable: true }));
   const result = await obtainEstateToken({
     issuer: pilot.estate.issuer,
     clientId,
@@ -265,8 +265,9 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
   it("denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none", async () => {
     const missionId = await approveAtMas("refusals");
     const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
-    const other = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
-    const otherJkt = await calculateJwkThumbprint(await exportJWK(other.dpopKeys.publicKey));
+    // Another token bound to the same key: only its digest differs.
+    const other = await tokenFor("estate-ap-bot-7f3", "u-1001", "invoices.read", CANONICAL_RESOURCE, credential.dpopKeys);
+    const otherJkt = await calculateJwkThumbprint(await exportJWK((await generateKeyPair("ES256", { extractable: true })).publicKey));
     const b64 = (v: unknown) => Buffer.from(JSON.stringify(v)).toString("base64url");
     const cases: Array<[string, NonNullable<typeof substitute>]> = [
       ["minted for another PDP", async ({ mission, accessToken }) =>
