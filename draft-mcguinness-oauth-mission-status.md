@@ -528,7 +528,10 @@ The members are:
     forward-compatibility rule: only `active` permits reliance, and
     every other value, recognized or not, is non-active. This
     profile's reliance behavior does not depend on recognizing a
-    companion-defined state; the fail-safe rule above governs.
+    companion-defined state; the fail-safe rule above governs. A
+    non-active state gates new authorization only: it does not
+    establish that work already accepted under the Mission has
+    stopped, or that completed effects were undone.
   - `termination`: CONDITIONAL. Present exactly when `state` is
     `terminated`: the Mission's `termination`
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
