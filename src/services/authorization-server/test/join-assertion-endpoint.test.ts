@@ -37,6 +37,7 @@ import {
   JOIN_ASSERTION_ENDPOINT_PATH,
   type JoinAssertionDeployment,
   JoinAssertionService,
+  type JoinEnrollment,
   type MissionKernel,
   type MissionRecord,
   validateMissionIntent,
@@ -85,8 +86,12 @@ let bare: BuiltAs;
 let bareServer: Server;
 /** Enrolled for the payments scope: the consuming PDP. */
 let pdp: LifecycleTestClient;
-/** Enrolled for the payments scope: the PEP that requests on the PDP's behalf. */
+/** Enrolled for the payments scope in the PEP role alone: the PEP that requests for the PDP (#1591). */
 let pep: LifecycleTestClient;
+/** Enrolled for the payments scope in both roles. */
+let both: LifecycleTestClient;
+/** Registered, enrolled for nothing. */
+let outsider: LifecycleTestClient;
 /** Registered, enrolled for another scope only. */
 let stranger: LifecycleTestClient;
 let approvals = 0;
@@ -156,13 +161,16 @@ beforeAll(async () => {
   pdp = await newLifecycleClient("join-assertion-pdp");
   pep = await newLifecycleClient("join-assertion-pep");
   stranger = await newLifecycleClient("join-assertion-stranger");
+  both = await newLifecycleClient("join-assertion-both");
+  outsider = await newLifecycleClient("join-assertion-outsider");
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    testClients: [pdp.metadata, pep.metadata, stranger.metadata],
-    enrolledJoinPdps: {
-      [pdp.clientId]: [CANONICAL_RESOURCE],
-      [pep.clientId]: [CANONICAL_RESOURCE],
-      [stranger.clientId]: ["https://other.example/api"],
+    testClients: [pdp.metadata, pep.metadata, stranger.metadata, both.metadata, outsider.metadata],
+    joinEnrollment: {
+      [pdp.clientId]: { roles: ["pdp"], enforcementScopes: [CANONICAL_RESOURCE] },
+      [pep.clientId]: { roles: ["pep"], enforcementScopes: [CANONICAL_RESOURCE] },
+      [both.clientId]: { roles: ["pep", "pdp"], enforcementScopes: [CANONICAL_RESOURCE] },
+      [stranger.clientId]: { roles: ["pdp"], enforcementScopes: ["https://other.example/api"] },
     },
     joinAssertions: deployment(),
   });
@@ -170,7 +178,7 @@ beforeAll(async () => {
   bare = await buildAuthorizationServer({
     issuer: BARE_ISSUER,
     testClients: [pdp.metadata],
-    enrolledJoinPdps: { [pdp.clientId]: [CANONICAL_RESOURCE] },
+    joinEnrollment: { [pdp.clientId]: { roles: ["pdp"], enforcementScopes: [CANONICAL_RESOURCE] } },
   });
   bareServer = bare.provider.listen(BARE_PORT);
 });
@@ -286,10 +294,10 @@ describe("Join Assertion minting, the service alone (@spec authority-server#join
     expect(direct.join).toEqual({ client_id: "ap-agent", disposition: "client" });
     expect(Object.keys(direct.token as object).sort()).toEqual(["jkt", "sha256"]);
     expect(direct.aud).toBe(pdp.clientId);
-    const delegate = await mint(actingToken({ clientId: "estate-helper", cnf: { "x5t#S256": "x5t-delegate" } }), pep.clientId);
+    const delegate = await mint(actingToken({ clientId: "estate-helper", cnf: { "x5t#S256": "x5t-delegate" } }), both.clientId);
     expect(delegate.join).toEqual({ client_id: "helper-agent", disposition: "delegate", depth: 1 });
     expect(Object.keys(delegate.token as object).sort()).toEqual(["sha256", "x5t#S256"]);
-    expect(delegate.aud).toBe(pep.clientId);
+    expect(delegate.aud).toBe(both.clientId);
   });
 });
 
@@ -417,7 +425,7 @@ describe("Join Assertion endpoint outcomes (@spec authority-server#join-assertio
     const limited = await buildAuthorizationServer({
       issuer: `http://localhost:14895`,
       testClients: [pep.metadata],
-      enrolledJoinPdps: { [pep.clientId]: [CANONICAL_RESOURCE] },
+      joinEnrollment: { [pep.clientId]: { roles: ["pep"], enforcementScopes: [CANONICAL_RESOURCE] } },
       joinAssertions: deployment({ max: 2, windowSeconds: 60 }),
     });
     const listening = limited.provider.listen(14895);
@@ -442,6 +450,41 @@ describe("Join Assertion endpoint outcomes (@spec authority-server#join-assertio
   });
 });
 
+describe("Join Assertion enrollment roles (@spec authority-server#join-disclosure, authority-server#join-assertion-request, #1591, D708)", () => {
+  it("admits an enrollee holding the PEP role alone as a caller, for a PDP's audience, and refuses it as an audience join_failed, minting nothing", async () => {
+    const record = approve();
+    const asCaller = await request(pep, { mission_id: record.id, audience: pdp.clientId, access_token: actingToken() });
+    expect(asCaller.status, JSON.stringify(asCaller.json)).toBe(200);
+    const before = events();
+    const asAudience = await request(pdp, { mission_id: record.id, audience: pep.clientId, access_token: actingToken() });
+    expect(asAudience.status, JSON.stringify(asAudience.json)).toBe(403);
+    expect(asAudience.json.error).toBe("join_failed");
+    expect("assertion" in asAudience.json).toBe(false);
+    expect(events()).toBe(before);
+  });
+
+  it("admits an enrollee holding the PDP role alone, or both roles, as a caller and as an audience", async () => {
+    const record = approve();
+    for (const [label, client] of [
+      ["the PDP role", pdp],
+      ["both roles", both],
+    ] as const) {
+      const answer = await request(client, { mission_id: record.id, audience: client.clientId, access_token: actingToken() });
+      expect(answer.status, `${label}: ${JSON.stringify(answer.json)}`).toBe(200);
+      expect(decodeJwt(answer.json.assertion as string).aud, label).toBe(client.clientId);
+    }
+  });
+
+  it("answers a registered client enrolled for nothing not_found, as an unknown Mission", async () => {
+    const record = approve();
+    const token = actingToken();
+    const outside = await request(outsider, { mission_id: record.id, audience: pdp.clientId, access_token: token });
+    const unknown = await request(pep, { mission_id: UNKNOWN, audience: pdp.clientId, access_token: token });
+    expect(outside.status).toBe(404);
+    expect(outside.json).toEqual(unknown.json);
+  });
+});
+
 describe("Join Assertion cache (@spec authority-server#join-assertion-request, #1454)", () => {
   it("serves a repeated request its cached assertion, keyed on the Mission, the token digest and the audience: a change in any one mints anew", async () => {
     const record = approve();
@@ -455,7 +498,7 @@ describe("Join Assertion cache (@spec authority-server#join-assertion-request, #
     const variants: Array<[string, Record<string, unknown>]> = [
       ["another Mission", { ...members, mission_id: other.id }],
       ["another token", { ...members, access_token: actingToken() }],
-      ["another audience", { ...members, audience: pep.clientId }],
+      ["another audience", { ...members, audience: both.clientId }],
     ];
     for (const [label, changed] of variants) {
       const minted = (await request(pep, changed)).json.assertion as string;
@@ -504,7 +547,9 @@ interface Hooks {
   hash?: () => string | undefined;
 }
 
-function heldService(kernel: MissionKernel, hooks: Hooks, enrolled: (clientId: string) => readonly string[] = () => [CANONICAL_RESOURCE]) {
+const BOTH_ROLES: JoinEnrollment = { roles: ["pep", "pdp"], enforcementScopes: [CANONICAL_RESOURCE] };
+
+function heldService(kernel: MissionKernel, hooks: Hooks, enrolled: (clientId: string) => JoinEnrollment | undefined = () => BOTH_ROLES) {
   const inner = deployment();
   const held = {
     currentRecord: (id: string) => {
@@ -522,7 +567,7 @@ function heldService(kernel: MissionKernel, hooks: Hooks, enrolled: (clientId: s
   return new JoinAssertionService({
     issuer: ISSUER,
     kernel: held,
-    enrolledScopes: enrolled,
+    enrollment: enrolled,
     authenticate: async () => ({ ok: true, clientId: pep.clientId }),
     deployment: {
       ...inner,
@@ -693,7 +738,7 @@ describe("Join Assertion minting re-reads the Mission after every await (@spec a
 
       const withdrawnFrom = approve();
       let withdrawn = false;
-      const enrolled = (clientId: string) => (withdrawn && clientId === pdp.clientId ? [] : [CANONICAL_RESOURCE]);
+      const enrolled = (clientId: string) => (withdrawn && clientId === pdp.clientId ? undefined : BOTH_ROLES);
       const withdrawGate = gate();
       await expectRefused(heldService(as.kernel, { [point]: withdrawGate.wait }, enrolled), withdrawnFrom.id, actingToken(), `audience withdrawn at ${point}`, {
         gate: withdrawGate,

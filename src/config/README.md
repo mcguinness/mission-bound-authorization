@@ -109,8 +109,10 @@ introspection of opaque tokens (`introspection`: its registered
 introspection client, call timeout and positive-cache bound); the separated
 MAS (`separated_mas`, #818 slice 4b: its host and port, the PDP's client
 identifier at its Mission Status endpoint (`pdp_client_id`, #1407), the
-clients it enrolls for Join Disclosure by enforcement scope
-(`enrolled_pdps[].client_id`), and the state source's placement, which must be `pdp`,
+clients it enrolls by enforcement scope, each with its roles (`enrollment[]`:
+`client_id`, `roles` of `pep`, `pdp` or both, `enforcement_scopes`; Join
+Disclosure and a Join Assertion's `audience` take `pdp`, join-assertion
+visibility either; #1591), and the state source's placement, which must be `pdp`,
 read timeout and response-size cap); the mapping
 cache's staleness bound;
 the action classes the gateway reserves for Mission-bound credentials; the
