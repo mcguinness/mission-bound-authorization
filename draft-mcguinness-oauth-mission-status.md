@@ -1864,10 +1864,11 @@ authentication-method value space is a closed set defined inline
 ({{as-metadata}}), and Mission Lifecycle `operation` values have no
 IANA registry; a companion profile registers an extension operation
 by defining it in its own specification
-({{mission-lifecycle-endpoint}}). `suspended` and `completed`
-({{mission-lifecycle-endpoint}}) are values of the issuance profile's
-`mission_error` member, which has no IANA registry, so this document
-requests no registration for them.
+({{mission-lifecycle-endpoint}}). The `mission_error` values
+`suspended` and `completed` ({{mission-lifecycle-endpoint}}) need no
+registration, because the issuance profile's `mission_error` member
+has no registry of values; their registrations as a lifecycle state
+and a termination reason are in {{iana-lifecycle-registrations}}.
 
 This document registers no new Well-Known URI: the metadata members of
 {{as-metadata}} are published in the OAuth Authorization Server Metadata
