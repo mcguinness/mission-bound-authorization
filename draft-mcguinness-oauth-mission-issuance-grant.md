@@ -1033,16 +1033,17 @@ confusion where the Subject holds accounts at both.
 
 # Privacy Considerations {#privacy-considerations}
 
-The grant carries the Mission reference and an authority subset to
-the consuming AS, which may be operated by a different organizational
-unit than the MAS. Minimization is structural: the MAS scopes
-`authorization_details` to what the audience serves ({{minting}}),
-and nothing else of the record (no `purpose` text, no Intent, no full
-Authority Set) travels. The Mission identifier is a correlator across
-MAS and AS logs by design; that correlation is the audit trail, and
-deployments that need to limit broader correlation apply the
-issuance profile's guidance ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Mission Identifier Correlation").
+The grant carries the Mission reference, the recorded `sub` and
+`client_id`, and an authority subset to the consuming AS, which may
+be operated by a different organizational unit than the MAS.
+Minimization is structural: the MAS scopes `authorization_details`
+to what the audience serves ({{minting}}), and nothing else of the
+record (no `purpose` text, no Intent, no full Authority Set) travels.
+The Mission identifier is a correlator across MAS and AS logs by
+design; that correlation is the audit trail, and the issuance
+profile provides no cross-audience unlinkability
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Identifier
+Correlation").
 
 # IANA Considerations {#iana}
 
