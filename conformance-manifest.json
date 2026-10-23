@@ -11162,9 +11162,15 @@
      "name": "who presents which proof (@spec mission#designation, mission#delegation) > a redemption proven under the designator's key is refused: the delegate's key must be its own",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a redemption whose DPoP proof presents the delegate's key but is signed by another key is refused invalid_dpop_proof, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "D-2 of the OAuth binding layering plan: proven by disabling the code it covers. Binding the delegated token to the delegating party's key fails the first witness (cnf.jkt no longer matches the delegate's key); removing the refusal of a proof under the delegating party's key fails the second (200 instead of 400). The reference AS sender-constrains by DPoP only; mTLS is the clause's alternative mechanism, not a second obligation."
+   "notes": "D-2 of the OAuth binding layering plan: each clause is proven by disabling the code it covers. Binding the delegated token to the delegating party's key fails the first witness (cnf.jkt no longer matches the delegate's key). Removing the refusal of a proof under the delegating party's key fails the second (200 instead of 400). Taking the thumbprint from the unverified proof header instead of verifying the DPoP signature fails the third (200 with a token instead of 400 invalid_dpop_proof), while the first two still pass, which is why the third was added on review of #1557. The reference AS sender-constrains by DPoP only; mTLS is the clause's alternative mechanism, not a second obligation."
   },
   {
    "id": "core.delegation-constraints.designation-adds-no-delegate",
