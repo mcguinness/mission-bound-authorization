@@ -11135,7 +11135,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "D-2 of the OAuth binding layering plan; #1567. Two witnesses, each proved by its own mutation. A credential narrower than its Mission: narrowing the redemption from the Mission's full Authority Set instead fails it (the delegated token regains payments:invoice.list). A designation narrower than its credential: the deferring deployment's policy, deciding per entry, denies payments:vendor.read at designation and permits it at redemption. Recording the delegating credential's authority at designation and narrowing the redemption from it instead of the designation's claims (a mutation) fails only that witness, the delegated token gaining payments:vendor.read; the file's other 51 tests pass. Its control designation, issued after the change, carries and delivers both entries. In the reference AS a designation carries the presented authority narrowed only by delegate eligibility, so the two authorities differ only when eligibility widens between designation and redemption, the case the second witness constructs."
+   "notes": "D-2 of the OAuth binding layering plan; #1567. Two witnesses, each proved by its own mutation. A credential narrower than its Mission: narrowing the redemption from the Mission's full Authority Set instead fails it (the delegated token regains payments:invoice.list). A designation narrower than its credential: the deferring deployment's policy, deciding per entry, denies payments:vendor.read at designation and permits it at redemption. Recording the delegating credential's authority at designation and narrowing the redemption from it instead of the designation's claims (a mutation) fails only that witness, the delegated token gaining payments:vendor.read; the file's other 51 tests pass. Its control designation, issued after the change, carries and delivers both entries. In the reference AS a designation carries the presented authority within the Mission's current effective authority, narrowed by delegate eligibility, and the redemption re-applies both, so the two authorities differ only when eligibility or the effective authority widens between designation and redemption. The second witness constructs the eligibility case."
   },
   {
    "id": "core.delegation.delegate-own-key",
@@ -57471,6 +57471,28 @@
    "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
   },
   {
+   "id": "core.instance-context.consumer-scope-mapping",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-instance-context",
+   "text": "Context is mapped from that validated instance into the output audience's Consumer Scope under {{Section 7.1 of I-D.draft-mcguinness-oauth-client-instance-id}}.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.instance-context"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the client_instance context a delegated token carries is derived from the validated presenting instance and mapped into the Consumer Scope of that token's audience"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1566. Keyword-free obligation of the instance-context composition. Optional capability; not claimed by the reference deployment, which has no instance-context provider switch. Positive and negative implementation coverage remains to be added. Found by the #1566 review; the issue's table listed five obligations."
+  },
+  {
    "id": "core.instance-context.no-input-substitution",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "delegated-instance-context",
@@ -57529,12 +57551,12 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an exchange whose delegate is established only by instance evidence, without a separately authenticated actor or a trusted association between that actor and the instance, issues no delegated token"
+    "normative": "an exchange whose only evidence of the delegate's actor identity is instance evidence issues no delegated token"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1566. Keyword-free obligation of the instance-context composition. Optional capability; not claimed by the reference deployment, which has no instance-context provider switch. Positive and negative implementation coverage remains to be added."
+   "notes": "#1566. Keyword-free obligation of the instance-context composition. Optional capability; not claimed by the reference deployment, which has no instance-context provider switch. Positive and negative implementation coverage remains to be added. The clause's association half is observed where context is issued (core.instance-context.current-presenter-binding), and refuses only where deployment policy requires instance attribution (core.instance-context.required-attribution-refusal)."
   },
   {
    "id": "core.instance-context.evidence-not-authorization",
@@ -57573,7 +57595,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a refresh of a delegated grant issued under this composition is checked against both the instance grant-continuity rules and the grant binding; a refresh that presents instance continuity alone neither replaces the recorded instance nor rebinds the key"
+    "normative": "a refresh of a delegated grant issued under this composition is refused unless it satisfies both the instance grant-continuity rules and the grant binding; instance continuity alone neither replaces the recorded instance nor rebinds the key"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -57595,7 +57617,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consumer that requires presenter attribution rejects a delegated token whose instance association it cannot establish under the instance specification's attribution rules"
+    "normative": "a consumer establishes presenter attribution only under the instance specification's attribution rules (its Sections 7.3 and 7.5), and a consumer that requires attribution rejects a delegated token whose instance association it cannot establish"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -57615,7 +57637,7 @@
    },
    "profiles": [],
    "surface": "resource-operation",
-   "assertion": "refusal",
+   "assertion": "no-side-effect",
    "observation": {
     "normative": "a consumer establishes no presenter attribution through the direct-attestation trust configuration from an issuer that does not meet that configuration's restriction against upstream context"
    },
@@ -57636,10 +57658,10 @@
     "capability": "core.instance-context"
    },
    "profiles": [],
-   "surface": "token-endpoint",
+   "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an AS that also conveys upstream context offers its client_instance context for presenter attribution only under a separately specified, authenticated provenance mechanism; this composition adds no provenance to client_instance"
+    "normative": "a deployment whose AS also conveys upstream context declares a separately specified, authenticated provenance mechanism before presenting its context as supporting presenter attribution; without one, its context supports no presenter attribution"
    },
    "level": "endpoint",
    "coverage": "todo",
