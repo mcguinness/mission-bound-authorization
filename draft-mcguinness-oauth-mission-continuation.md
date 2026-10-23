@@ -257,10 +257,10 @@ Rooting:
 : A continuation MUST be rooted in exactly one Mission through a rooting
   anchor. A grant-anchored rooting is durable and MAY outlive the session
   in which it was established. A session-anchored rooting MUST NOT outlive
-  its session; when the session ends, the anchor and every handle under it
-  cease to resolve. A continuation MUST NOT be rooted in a bare access
-  token; the root is the Mission's grant or an authenticated session
-  bound to it.
+  its session; when the session ends, the anchor and every continuation
+  handle under it cease to resolve. A continuation MUST NOT be rooted in
+  a bare access token; the root is the Mission's grant or an
+  authenticated session bound to it.
 
 Subset derivation:
 : The authorization a continued grant conveys MUST be derived as a subset
@@ -283,7 +283,8 @@ Lifetime:
 Termination:
 : When a Mission reaches a terminal state, continuation under it MUST
   cease: subsequent continuation requests MUST fail, and any durable
-  transport state (a handle, a refresh-token family) MUST be invalidated.
+  transport state (a continuation handle, a refresh-token family) MUST
+  be invalidated.
   Termination does not shorten an already-issued credential; a continued
   credential retains its own expiry, and revocation acts on future
   issuance, not on tokens already in flight.
@@ -442,18 +443,19 @@ require proof of possession of the `subject_token`'s own confirmation
 key; client authentication never satisfies that sender constraint.
 
 An agent obtains its delegation handle with a Token Exchange that
-presents its own
-Mission access token, proves possession of that token's key, and names
-its own `client_id` as `audience`. The delegation handle keeps that key and
-carries the presented token's authority narrowed by the Mission's
-current effective authority. The exchange is a no-actor self-exchange
-under the issuance profile's Self-Exchange Down-Scoping rules
+presents its own Mission access token, proves possession of that
+token's key, and names its own `client_id` as `audience`. The
+delegation handle keeps that key and carries the presented token's
+authority narrowed by the Mission's current effective authority. The
+exchange is a no-actor self-exchange under the issuance profile's
+Self-Exchange Down-Scoping rules
 ({{I-D.draft-mcguinness-oauth-mission}}). A dispatched Mission's
 selected Agent instead redeems the Template profile's Dispatch Handoff
-for its delegation handle ({{I-D.draft-mcguinness-oauth-mission-template}}),
-unless it is also the Dispatcher (the same authenticated client),
-which obtains its delegation handle through this exchange from the instance's
-access token.
+for its delegation handle
+({{I-D.draft-mcguinness-oauth-mission-template}}), unless it is also
+the Dispatcher (the same authenticated client), which obtains its
+delegation handle through this exchange from the instance's access
+token.
 
 This is the "scheduled continuation roots in durable
 authorization" case: the Mission is that durable authorization. Successive
@@ -575,8 +577,9 @@ with every requesting-party token re-passing fresh assessment.
 
 # Security Considerations {#security}
 
-Continuation handle theft yields no authority. Because a continuation handle grants
-nothing ({{invariant}}), an attacker who steals one cannot obtain a
+Continuation handle theft yields no authority. Because a continuation
+handle grants nothing ({{invariant}}), an attacker who steals one
+cannot obtain a
 continued grant without also satisfying the transport's identity
 re-establishment and key confirmation and passing the Mission's live state
 gate. This is the property that makes conveying a continuation handle
