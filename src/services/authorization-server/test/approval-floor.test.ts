@@ -571,6 +571,34 @@ describe("the published floor policy loads strictly (@spec mission#approval-auth
   it("refuses a duplicated member", () => {
     expect(() => loadApprovalFloor('{"policy_id":"a","policy_id":"b"}')).toThrow(/ambiguous policy/);
   });
+
+  it("refuses a statement that declares no deployment scope, or an empty one", () => {
+    const { deployment_scope: _omitted, ...unscoped } = valid;
+    for (const policy of [unscoped, { ...valid, deployment_scope: "" }]) {
+      expect(() => loadApprovalFloor(JSON.stringify(policy))).toThrow(/deployment_scope must be a non-empty string/);
+    }
+  });
+});
+
+describe("the deployment publishes its approval-authentication floor (@spec mission#approval-authentication, #1503, D620)", () => {
+  // The binding's high-risk action kinds. The AS admits no consumption bound
+  // (derive() refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS),
+  // so no derived entry can invoke the floor through one.
+  const HIGH_RISK = ["irreversible_action", "external_commitment", "privileged_administration"] as const;
+
+  it("the published statement (config/approval-floor.json, the AS's default floor) declares its deployment scope and, for every high-risk class, a minimum Approver authentication: a browser surface, accepted acr values and an age bound", () => {
+    expect(APPROVAL_FLOOR.policy_id).toMatch(/\S/);
+    expect(APPROVAL_FLOOR.deployment_scope).toMatch(/\S/);
+    for (const cls of HIGH_RISK) {
+      const floors = APPROVAL_FLOOR.floors.filter((f) => f.applies_to.includes(cls));
+      expect(floors.length, `a published floor for ${cls}`).toBeGreaterThan(0);
+      for (const f of floors) {
+        expect(f.approval_surface, `${cls} ${f.id}`).toBe("browser");
+        expect(f.accepted_acr.length, `${cls} ${f.id}`).toBeGreaterThan(0);
+        expect(f.max_authentication_age_seconds, `${cls} ${f.id}`).toBeGreaterThan(0);
+      }
+    }
+  });
 });
 
 describe("a recorded direct approval carries the approval surface's authentication (@spec approval-governance#assertion-authority, #1470)", () => {
