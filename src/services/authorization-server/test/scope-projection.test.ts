@@ -700,8 +700,7 @@ describe("scope projection on the dispatch and expansion-successor mints (@spec 
   it("a template dispatch to the scope-only target carries only the scope the instance's template-bounded entry proves, which the plain RS enforces, and refuses invalid_target while the target's mapping is unknown", async () => {
     const templateId = await newTemplate();
     const keys = await newKeys();
-    const dispatchEventId = crypto.randomUUID();
-    const dispatch = () =>
+    const dispatch = (dispatchEventId: string) =>
       token(
         {
           grant_type: MISSION_DISPATCH_GRANT_TYPE,
@@ -712,18 +711,28 @@ describe("scope projection on the dispatch and expansion-successor mints (@spec 
         keys,
       );
 
+    const unmapped = crypto.randomUUID();
     await withPlain(undefined, async () => {
-      const refused = await dispatch();
+      const refused = await dispatch(unmapped);
       expect(refused.status, JSON.stringify(refused.body)).toBe(400);
       expect(refused.body.error).toBe("invalid_target");
       expect(refused.body.error_description).toMatch(/no scope-projection mapping/);
       expect(refused.body.access_token).toBeUndefined();
     });
 
+    // @spec mission#transformation-capabilities (#1503 finding 7): that
+    // Dispatch created its instance while the mapping assigned the entry no
+    // audience. Recovering it once the mapping is back is still refused: a
+    // later mapping change does not redefine the original approved audience.
+    const recovered = await dispatch(unmapped);
+    expect(recovered.status, JSON.stringify(recovered.body)).toBe(400);
+    expect(recovered.body.error).toBe("invalid_target");
+    expect(recovered.body.error_description).toMatch(/is not an original approved audience/);
+
     // The template's ceiling keeps only the read action, while the policy
     // ceiling and the target's mapping also name the write action: the
     // token's scope is the projection of the derived entry alone.
-    const res = await dispatch();
+    const res = await dispatch(crypto.randomUUID());
     expect(res.status, JSON.stringify(res.body)).toBe(200);
     expect(res.body.authorization_details).toEqual([{ type: "mission_resource_access", resource: PLAIN, actions: [READ] }]);
     expect(res.body.scope).toBe("reports.read");

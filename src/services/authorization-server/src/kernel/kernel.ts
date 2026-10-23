@@ -313,7 +313,8 @@ CREATE TABLE IF NOT EXISTS missions (
   ceiling_json TEXT,
   schedule_json TEXT,
   eligibility_provenance_json TEXT,
-  child_actor_provenance_json TEXT
+  child_actor_provenance_json TEXT,
+  approved_audiences_json TEXT
 ) STRICT;
 CREATE TABLE IF NOT EXISTS approval_reservations (
   approval_event_id TEXT PRIMARY KEY,
@@ -384,6 +385,14 @@ function migrateMissions(db: Database): void {
   // its entries rather than one being guessed from the entry's list.
   if (!columns.has("child_actor_provenance_json")) {
     db.exec("ALTER TABLE missions ADD COLUMN child_actor_provenance_json TEXT");
+  }
+  // @spec mission#transformation-capabilities (#1503 finding 7): each
+  // approved entry's original approved audience, written once at creation.
+  // Nullable with no default and no backfill: a row that predates it retains
+  // no association, so it approves no audience rather than one being read
+  // from the mapping current at issuance.
+  if (!columns.has("approved_audiences_json")) {
+    db.exec("ALTER TABLE missions ADD COLUMN approved_audiences_json TEXT");
   }
 }
 
@@ -741,6 +750,15 @@ export interface KernelOptions {
    * is exactly the fail-open the five gates exist to prevent.
    */
   authoritySourceCatalog: AuthoritySourceCatalog;
+  /**
+   * @spec mission#transformation-capabilities (#1503 finding 7, D620): the
+   * AS's trusted mapping of entries to the audiences that consume them, read
+   * by the record-creation funnel and retained with the Mission as each
+   * entry's original approved audience. Deployment configuration, never taken
+   * from a request. Absent, a record retains no association and approves no
+   * audience.
+   */
+  entryAudiences?: (entry: AuthorityEntry) => readonly string[];
   /**
    * @spec mission#authority-sources (#829): the one issuer namespace this
    * kernel's Subjects and Approvers belong to: the catalog's subject strings
@@ -1916,6 +1934,16 @@ export class MissionKernel {
     ) {
       throw new Error(`mission ${record.id}: child-actor provenance is not aligned with its Authority Set`);
     }
+    // @spec mission#transformation-capabilities (#1503 finding 7): every
+    // creating body funnels through here, so each entry's original approved
+    // audience is assigned once, from the trusted mapping as it stands at
+    // creation, and retained. Issuance reads this, never the later mapping.
+    const entryAudiences = this.opts.entryAudiences;
+    if (entryAudiences) {
+      record.approved_audiences = record.authority_set.map((entry) => [...entryAudiences(entry)]);
+    } else {
+      delete record.approved_audiences;
+    }
     const inheritedPin = this.inheritedPinResolver(record, options.inheritPinsFrom);
     // @spec discharge#discharge-authority — the LAST point at which a
     // `terminal_when` condition can enter an immutable Mission-record entry: the
@@ -1989,8 +2017,8 @@ export class MissionKernel {
            policy_version, approval_event_id, created_at, expires_at, version, derivation_limit,
            derivation_count, grant_id, predecessor, related_to, parent_id, parent_json, template_id,
            template_json, projected_from, submission_evidence_json, ceiling_json,
-           eligibility_provenance_json, child_actor_provenance_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           eligibility_provenance_json, child_actor_provenance_json, approved_audiences_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           record.id,
@@ -2059,6 +2087,10 @@ export class MissionKernel {
           // @spec child-delegation#fanout (#1304): the child-actor origins,
           // immutable after creation, written only here.
           record.child_actor_provenance ? JSON.stringify(record.child_actor_provenance) : null,
+          // @spec mission#transformation-capabilities (#1503 finding 7): the
+          // original approved audiences, immutable after creation, written
+          // only here.
+          record.approved_audiences ? JSON.stringify(record.approved_audiences) : null,
         );
       // @spec mission#authority-sources (#827): the committed root, in the
       // SAME transaction as the record: a Mission never exists without the
@@ -5199,6 +5231,9 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     // @spec child-delegation#fanout (#1304): the child-actor origins, read
     // the same fail-closed way, with no fallback to the delegate origins.
     ...childActorProvenanceMemberOf(row.child_actor_provenance_json),
+    // @spec mission#transformation-capabilities (#1503 finding 7): absent
+    // when the row retains none or it cannot be read; never re-derived.
+    ...approvedAudiencesMemberOf(row.approved_audiences_json),
     intent_hash: row.intent_hash as string,
     ...(row.proposal_hash ? { proposal_hash: row.proposal_hash as string } : {}),
     ...(row.submission_evidence_json
@@ -5285,6 +5320,25 @@ function childActorProvenanceMemberOf(text: unknown): { child_actor_provenance?:
     return {};
   }
   return Array.isArray(parsed) ? { child_actor_provenance: parsed.map(readOrigin) } : {};
+}
+
+/**
+ * @spec mission#transformation-capabilities (#1503 finding 7): the stored
+ * original approved audiences as the record member, or no member where none is
+ * stored or it is not an array of string arrays.
+ */
+function approvedAudiencesMemberOf(text: unknown): { approved_audiences?: string[][] } {
+  if (typeof text !== "string" || text === "") return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return {};
+  }
+  const valid =
+    Array.isArray(parsed) &&
+    parsed.every((a) => Array.isArray(a) && a.every((aud) => typeof aud === "string"));
+  return valid ? { approved_audiences: parsed as string[][] } : {};
 }
 
 /** `condition_digest`, or undefined for a structurally invalid condition (never throws). */

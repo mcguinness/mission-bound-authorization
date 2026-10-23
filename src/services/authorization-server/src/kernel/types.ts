@@ -637,6 +637,17 @@ export interface MissionRecord {
    * no child is created or carried under an entry it cannot resolve.
    */
   child_actor_provenance?: RetainedOrigin[];
+  /**
+   * @spec mission#transformation-capabilities (#1503 finding 7, D620): each
+   * approved entry's original approved audience, index-aligned with
+   * `authority_set`: the audiences the AS's trusted mapping assigned the entry
+   * when the record was created, never re-read from a later mapping. The same
+   * authorization-server state as `eligibility_provenance`: outside every
+   * integrity anchor, never on the wire, immutable after creation. Absent, or
+   * not aligned with `authority_set`, it approves no audience, so no token is
+   * issued for an audience that serves one of the record's entries.
+   */
+  approved_audiences?: string[][];
   intent_hash: string;
   authority_hash: string;
   /**

@@ -434,6 +434,7 @@ import {
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { IntentError } from "../kernel/intent.js";
 import { evaluateApprovalFloor } from "../kernel/approval-floor.js";
+import { unapprovedAudienceRefusal } from "../kernel/approved-audience.js";
 import {
   type DischargeReceiptObservation,
   GateError,
@@ -1481,6 +1482,14 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * replaces whatever oidc-provider computed on `token.scope`, so the JWT
    * claim (the customizer) carries it, and the token response reports the
    * granted values (the response middleware below).
+   *
+   * @spec mission#transformation-capabilities, mission#error-mapping (#1503
+   * finding 7): after the projection decides, every carried entry an audience
+   * of the token serves must come from an approved entry whose retained
+   * original approved audience includes it, or the issuance is refused
+   * `invalid_target` ({@link unapprovedAudienceRefusal}). `record` is the
+   * Mission the token is issued under; the check reads its retained
+   * audiences, never the mapping current at this issuance.
    */
   function projectMissionBoundScope(
     ctx: unknown,
@@ -1489,6 +1498,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
       scope?: string | undefined;
       resourceServer?: { audience?: unknown };
     },
+    record: MissionRecord,
   ): void {
     if (delegationHandles.has(token)) {
       // @spec mission#scope-projection step 4: a delegation handle's consumer
@@ -1501,11 +1511,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
     }
     const aud = token.resourceServer?.audience;
     const audiences = typeof aud === "string" ? [aud] : Array.isArray(aud) ? (aud as string[]) : [];
-    const { emitted, granted } = decideMissionScope(
-      ctx,
-      audiences,
-      Array.isArray(token.rar) ? token.rar : [],
-    );
+    const carried = Array.isArray(token.rar) ? token.rar : [];
+    const { emitted, granted } = decideMissionScope(ctx, audiences, carried);
+    const unapproved = unapprovedAudienceRefusal(record, audiences, carried);
+    if (unapproved) throw new errors.InvalidTarget(unapproved);
     token.scope = emitted.length ? emitted.join(" ") : undefined;
     projectedTokens.add(token);
     responseScopes.set(token, granted.length ? granted.join(" ") : undefined);
@@ -2143,7 +2152,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
       const delegationClaims = delegationMints.get(token);
       if (delegationClaims) {
         if (!target) throw new errors.InvalidGrant("delegation mint whose grant resolves no Mission");
-        projectMissionBoundScope(_ctx, token as Parameters<typeof projectMissionBoundScope>[1]);
+        projectMissionBoundScope(_ctx, token as Parameters<typeof projectMissionBoundScope>[1], target.record);
         try {
           const gated = kernel.gateActive(target.record.id);
           const claim = gated.parent
@@ -2192,7 +2201,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // Mission whose own `grant_id` column has moved on), and an index hit
         // with no Mission at all refuses (missionForBoundGrant throws).
         const famRecord = target.record;
-        projectMissionBoundScope(_ctx, token as Parameters<typeof projectMissionBoundScope>[1]);
+        projectMissionBoundScope(_ctx, token as Parameters<typeof projectMissionBoundScope>[1], famRecord);
         try {
           // gateActive, never gateDerivation: the SINGLE count of a family (or
           // of the Mission's original issuance) was spent once at issuance
@@ -2216,7 +2225,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
         }
       }
       const record = target.record;
-      projectMissionBoundScope(_ctx, token as Parameters<typeof projectMissionBoundScope>[1]);
+      projectMissionBoundScope(_ctx, token as Parameters<typeof projectMissionBoundScope>[1], record);
       try {
         // @spec control-plane#serialization — THE UNCOUPLED COUNTER. This hook
         // is synchronous and runs inside oidc-provider's own token `save()`,
