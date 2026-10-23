@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `f1acfdfc`
+Every statement here is true of the reference implementation at `ee2d7086`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -328,10 +328,12 @@ contract alone, unchanged. By party:
   assertion's `aud` the MAS's issuer identifier as its sole value, as at
   Mission Status (D685, D690); an `aud` naming the endpoint is refused
   `invalid_client`. `client_assertion_type` and `client_assertion` travel
-  as JSON members. Its visibility set is the Mission's
-  client and the clients enrolled for the Mission's enforcement scope, with
-  one `not_found` outside it; it rate-limits per caller. It mints only for
-  an `active` Mission, an `audience` enrolled for that scope, and an active
+  as JSON members. Its visibility set is the Mission's client and the
+  clients enrolled, in either role, for the Mission's enforcement scope,
+  with one `not_found` outside it; it rate-limits per caller. It mints only
+  for an `active` Mission, an `audience` enrolled in the PDP role for that
+  scope (`joinEnrollment`, each enrollee holding the PEP role, the PDP role
+  or both; #1591, D708), and an active
   acting token with one `cnf` confirmation whose joins hold, else
   `join_failed`. It reads the Mission again after the token check and
   after signing, so a Mission revoked, suspended or expired, an
@@ -372,15 +374,17 @@ contract alone, unchanged. By party:
   the MAS's own actor records. Witnesses:
   `services/authorization-server/test/join-assertion-endpoint.test.ts` and
   `demo/test/mas-pilot-join-assertion.test.ts`.
-- **The PEP** (MAS §join-authzen): it requests the assertion itself, the
-  draft's "The PEP, or the client acting for it", in the `access_token`
-  form, for the credential the gateway authenticated
+- **The PEP** (MAS §join-authzen): it requests the assertion itself, as
+  the draft assigns (a client or delegate calls only as the PEP it hosts,
+  and no carriage from a client to a separate PEP is defined), in the
+  `access_token` form, for the credential the gateway authenticated
   (`RequestSignals.accessToken`, set on a MAS-governed route only;
   `joinAssertionClient`, `services/mcp-payments/src/join-assertion-client.ts`).
   The acting client needs no MAS registration, and the digest and
   thumbprint it reports come from the credential it verified. The pilot's
   PEP and PDP are one enforcement point, so the PEP authenticates as the
-  PDP's enrolled client (`separated_mas.pdp_client_id`). The client builds
+  client `separated_mas.pdp_client_id`, which the shipped
+  `separated_mas.enrollment` holds in both roles, PEP and PDP. The client builds
   its own client assertion, with the MAS's issuer identifier as its sole
   `aud`. An assertion it obtains rides
   `context.mission_join` with `token_sha256` and `token_jkt`, the key the
@@ -427,6 +431,8 @@ Decision Evidence:
   bound to the same key; the MAS's assertion re-signed with another key's
   thumbprint, and expired; and one with `alg` `none`);
 - `… > denies a joined read that carries no assertion where the configuration requires one, though the mapping join alone would admit it`;
+- `… > takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none`
+  (at the endpoint, `join-assertion-endpoint.test.ts` `Join Assertion enrollment roles …`, and at Status, `status-join-disclosure.test.ts` `Join Disclosure takes the PDP role …`);
 - `… > the MAS mints nothing for a token it cannot establish or that does not join: a digest it cannot resolve, a token for another resource, an unmapped or other subject, a delegate it holds no record of or holds too deep`;
 - `the Join Assertion path is declared, and runs only where it can (#1454) > …`, `the separated MAS pilot refuses a declared Join Assertion path it cannot run (#1454) > …`, and the launcher's (walkthrough §7).
 
@@ -519,8 +525,9 @@ separated configuration (§11) composes the pilot on them.
 
 **Join Disclosure on Mission Status** (MAS §join-disclosure). The reference
 authorization server's Status operation discloses `mission.subject` (`iss`,
-`sub`) and `mission.client_id` only to a caller that its `enrolledJoinPdps`
-option enrolls for the requested `audience` (`buildAuthorizationServer`;
+`sub`) and `mission.client_id` only to a caller that its `joinEnrollment`
+option enrolls in the PDP role for the requested `audience` (an enrollee
+holding the PEP role alone reads neither; #1591, D708) (`buildAuthorizationServer`;
 `joinDisclosureFor` in
 `services/authorization-server/src/adapters/provider.ts`, `joinDisclosure` in
 `MissionKernel.observeInCallerTx`). Enrollment is keyed by the authenticated
@@ -589,7 +596,7 @@ the Mission issuer.
 | Property | How |
 |---|---|
 | Source | The MAS's Mission Status, read by §10's `MissionStatusResolver` as the client `separated_mas.pdp_client_id`, whose signing key is generated where the PDP runs; the MAS registers its public half with `mission_status` only (`MAS_PILOT_STATUS_CLIENTS`). The resolver is configured from what the MAS publishes over HTTP: its metadata (`issuer`, `jwks_uri`, `mission_status_endpoint`, `mission_max_stale_seconds`) and its status-response key; a MAS advertising no `mission_status_endpoint` is refused. |
-| Disclosure | `separated_mas.enrolled_pdps` is the MAS-held enrollment (`enrolledJoinPdps`). A PDP it does not enroll reads no `subject` or `client_id`, and its join denies `mission_binding_failed` (`resolveBaselineJoin`; `MissionView.subject` and `client_id` are optional). |
+| Disclosure | `separated_mas.enrollment` is the MAS-held enrollment (`joinEnrollment`), each enrollee with its roles (`pep`, `pdp` or both). A PDP it does not enroll in the PDP role reads no `subject` or `client_id`, and its join denies `mission_binding_failed` (`resolveBaselineJoin`; `MissionView.subject` and `client_id` are optional). |
 | Placement | `pdp` (`separated_mas.state_source.placement`; the loader refuses any other). The PEP sends no `mission_state_observation`. |
 | The PDP's read | Every decision reads its own (`ownReadDecide`): within the action class's staleness window (`maxAgeSeconds`), and from the MAS now (`fresh: true`) for a commit-phase decision. `stateObservedAt` is the response's signed `iat`, never the time of the fetch or of a cache hit; `stateFreshUntil` is its signed `fresh_until`, which caps the permit through the `signed_state_fresh_until` ceiling (`services/pdp/src/own-read-ceiling.ts`). A read that establishes nothing gives the decision no state, so it denies `stale_state` (authzen#pdp-request rule 1). The non-commit read answers from the resolver's cache the PEP's read filled, under its own window. |
 | The PEP's read | One per enforcement, awaited at its start (`PepDeps.viewSource`, `statusViewSource`). A Mission the MAS does not hold or show refuses `unknown_mission`; every other failure, including the MAS refusing the PDP's credential, refuses `state_unavailable` (authzen#failure-condition-coverage, "Mission state not establishable at the PEP"); both on a signed Refusal Record before any decision. The PEP's synchronous reads (`loadView`) answer from the resolver's cache within its bounds (`peek`). With a remote source, a list read whose view lapses before re-verification is suppressed `target_drift`, recording no digest it could not observe; `toolsList` lists nothing for a credential with no view, as before (`McpPaymentsServer.toolsList` stays synchronous). |
