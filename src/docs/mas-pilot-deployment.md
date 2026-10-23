@@ -331,13 +331,18 @@ contract alone, unchanged. By party:
   one `not_found` outside it; it rate-limits per caller. It mints only for
   an `active` Mission, an `audience` enrolled for that scope, and an active
   acting token with one `cnf` confirmation whose joins hold, else
-  `join_failed`. The artifact is `typ` `mission-join+jwt` under the Status
+  `join_failed`. It reads the Mission again after the token check and
+  after signing, so a Mission revoked, suspended or expired, an
+  `authority_hash` changed, or an `audience` withdrawn while either is
+  awaited gets `join_failed`, with nothing returned, cached or recorded.
+  The artifact is `typ` `mission-join+jwt` under the Status
   key and `ES256`, carrying `mission` (`id`, `issuer`, `authority_hash`),
   `token` (`sha256` and `jkt` or `x5t#S256`), `join`, `aud`,
   `mapping_version` and an `exp` capped by the token's. It caches on
   (`issuer`, `mission_id`), the token digest and the `audience`, rechecking
   before it serves, and records each minting as a join evidence event, in
-  process memory. How the acting token is established and how the joins
+  process memory only (retention, follow-up: #1560). How the acting token
+  is established and how the joins
   are evaluated are the deployment's hook. The pilot's is
   `pilotJoinAssertions` (`demo/src/mas-pilot/mas-join-assertions.ts`), which
   `mas-serve.ts` supplies where the configuration declares the path and

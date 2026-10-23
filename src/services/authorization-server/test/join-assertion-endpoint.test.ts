@@ -36,6 +36,8 @@ import {
   buildAuthorizationServer,
   JOIN_ASSERTION_ENDPOINT_PATH,
   type JoinAssertionDeployment,
+  JoinAssertionService,
+  type MissionKernel,
   type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
@@ -89,9 +91,9 @@ let pep: LifecycleTestClient;
 let stranger: LifecycleTestClient;
 let approvals = 0;
 
-function approve(): MissionRecord {
+function approve(kernel: MissionKernel = as.kernel): MissionRecord {
   approvals += 1;
-  return as.kernel.approve({
+  return kernel.approve({
     intent: validateMissionIntent(
       JSON.stringify({ goal: "Read Acme invoices", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
     ),
@@ -471,3 +473,218 @@ describe("Join Assertion cache (@spec authority-server#join-assertion-request, #
   });
 });
 
+
+/**
+ * #1454 review: the service run directly, so a test can hold it at an await
+ * and change the Mission there. `hooks.establish` holds the token check and
+ * `hooks.sign` the signing, each on a gate the test releases; `hooks.join`
+ * runs inside the join evaluation (after the token check, before signing);
+ * `hooks.hash` stands in for a Mission whose `authority_hash` changed.
+ */
+interface Hooks {
+  establish?: () => Promise<void>;
+  join?: () => void;
+  sign?: () => Promise<void>;
+  hash?: () => string | undefined;
+}
+
+function heldService(kernel: MissionKernel, hooks: Hooks, enrolled: (clientId: string) => readonly string[] = () => [CANONICAL_RESOURCE]) {
+  const inner = deployment();
+  const held = {
+    currentRecord: (id: string) => {
+      const record = kernel.currentRecord(id);
+      const hash = hooks.hash?.();
+      return record && hash !== undefined ? { ...record, authority_hash: hash } : record;
+    },
+    get: (id: string) => kernel.get(id),
+    nowDate: () => kernel.nowDate(),
+    signJoinAssertion: async (...args: Parameters<MissionKernel["signJoinAssertion"]>) => {
+      await hooks.sign?.();
+      return kernel.signJoinAssertion(...args);
+    },
+  } as unknown as MissionKernel;
+  return new JoinAssertionService({
+    issuer: ISSUER,
+    kernel: held,
+    enrolledScopes: enrolled,
+    authenticate: async () => ({ ok: true, clientId: pep.clientId }),
+    deployment: {
+      ...inner,
+      establishActingToken: async (form) => {
+        await hooks.establish?.();
+        return inner.establishActingToken(form);
+      },
+      evaluateJoin: (token, mission) => {
+        hooks.join?.();
+        return inner.evaluateJoin(token, mission);
+      },
+    },
+  });
+}
+
+/** A point the service blocks at: the test awaits `reached`, acts, then releases it. */
+interface Gate {
+  reached: Promise<void>;
+  release: () => void;
+  wait: () => Promise<void>;
+}
+
+function gate(): Gate {
+  let arrive = () => {};
+  let release = () => {};
+  const reached = new Promise<void>((resolve) => {
+    arrive = resolve;
+  });
+  const opened = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return {
+    reached,
+    release: () => release(),
+    wait: async () => {
+      arrive();
+      await opened;
+    },
+  };
+}
+
+const mintBody = (missionId: string, accessToken: string) =>
+  JSON.stringify({ mission_id: missionId, audience: pdp.clientId, access_token: accessToken });
+
+/** One request; where `held` is given, the Mission changes while the service waits at its gate. */
+async function mintWith(service: JoinAssertionService, missionId: string, accessToken: string, held?: { gate: Gate; change: () => void }) {
+  const pending = service.handle(mintBody(missionId, accessToken), "application/json", "");
+  if (held) {
+    await held.gate.reached;
+    held.change();
+    held.gate.release();
+  }
+  return pending;
+}
+
+async function expectRefused(service: JoinAssertionService, missionId: string, accessToken: string, label: string, held?: { gate: Gate; change: () => void }) {
+  const answer = await mintWith(service, missionId, accessToken, held);
+  expect(answer.status, `${label}: ${JSON.stringify(answer.body)}`).toBe(403);
+  expect(answer.body.error, label).toBe("join_failed");
+  expect("assertion" in answer.body, label).toBe(false);
+  expect(service.events(), label).toHaveLength(0);
+}
+
+/** The Mission changes three ways: revoked, suspended, and expired on a kernel whose clock the test moves. */
+let clockOffsetMs = 0;
+let clocked: BuiltAs;
+const FAR_TOKEN_EXP = Math.floor(Date.parse("2030-01-01T00:00:00Z") / 1000);
+const changes: Array<[string, () => { kernel: MissionKernel; record: MissionRecord; change: () => void }]> = [
+  [
+    "revoked",
+    () => {
+      const record = approve();
+      return { kernel: as.kernel, record, change: () => as.kernel.transition(record.id, "revoke") };
+    },
+  ],
+  [
+    "suspended",
+    () => {
+      const record = approve();
+      return { kernel: as.kernel, record, change: () => as.kernel.transition(record.id, "suspend") };
+    },
+  ],
+  [
+    "expired",
+    () => {
+      clockOffsetMs = 0;
+      const record = approve(clocked.kernel);
+      return {
+        kernel: clocked.kernel,
+        record,
+        change: () => {
+          clockOffsetMs = Date.parse("2027-06-01T00:00:00Z") - Date.now();
+        },
+      };
+    },
+  ],
+];
+
+describe("Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review)", () => {
+  beforeAll(async () => {
+    // Its own kernel under the same issuer (it serves nothing), so its clock can move alone.
+    clocked = await buildAuthorizationServer({ issuer: ISSUER, now: () => new Date(Date.now() + clockOffsetMs) });
+  });
+
+  it("refuses join_failed, returning and recording nothing, a Mission revoked, suspended or expired while its acting token is being established", async () => {
+    for (const [label, setup] of changes) {
+      const { kernel, record, change } = setup();
+      const g = gate();
+      await expectRefused(heldService(kernel, { establish: g.wait }), record.id, actingToken({ exp: FAR_TOKEN_EXP }), label, { gate: g, change });
+    }
+  });
+
+  it("refuses join_failed a Mission revoked, suspended or expired after the token check and before signing", async () => {
+    for (const [label, setup] of changes) {
+      const { kernel, record, change } = setup();
+      await expectRefused(heldService(kernel, { join: change }), record.id, actingToken({ exp: FAR_TOKEN_EXP }), label);
+    }
+  });
+
+  it("refuses join_failed a Mission revoked, suspended or expired while the assertion is signed, and caches nothing it refused", async () => {
+    for (const [label, setup] of changes) {
+      const { kernel, record, change } = setup();
+      const g = gate();
+      await expectRefused(heldService(kernel, { sign: g.wait }), record.id, actingToken({ exp: FAR_TOKEN_EXP }), label, { gate: g, change });
+    }
+    // A refused assertion is not cached: resumed, the same request mints anew.
+    const record = approve();
+    const token = actingToken();
+    const hooks: Hooks = {};
+    const service = heldService(as.kernel, hooks);
+    const g = gate();
+    hooks.sign = g.wait;
+    await expectRefused(service, record.id, token, "suspended while signing", { gate: g, change: () => as.kernel.transition(record.id, "suspend") });
+    delete hooks.sign;
+    as.kernel.transition(record.id, "resume");
+    const again = await mintWith(service, record.id, token);
+    expect(again.status, JSON.stringify(again.body)).toBe(200);
+    expect(service.events()).toHaveLength(1);
+  });
+
+  it("does not serve a cached assertion for a Mission revoked while the next request's token is being established", async () => {
+    const record = approve();
+    const token = actingToken();
+    const hooks: Hooks = {};
+    const service = heldService(as.kernel, hooks);
+    const first = await mintWith(service, record.id, token);
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    const g = gate();
+    hooks.establish = g.wait;
+    const second = await mintWith(service, record.id, token, { gate: g, change: () => as.kernel.transition(record.id, "revoke") });
+    expect(second.status, JSON.stringify(second.body)).toBe(403);
+    expect(second.body.error).toBe("join_failed");
+    expect("assertion" in second.body).toBe(false);
+    expect(service.events()).toHaveLength(1);
+  });
+
+  it("refuses join_failed when the Mission's authority_hash changes, or its audience is withdrawn, during the token check or the signing", async () => {
+    for (const point of ["establish", "sign"] as const) {
+      const hashed = approve();
+      let hash: string | undefined;
+      const hashGate = gate();
+      await expectRefused(heldService(as.kernel, { [point]: hashGate.wait, hash: () => hash }), hashed.id, actingToken(), `authority_hash changed at ${point}`, {
+        gate: hashGate,
+        change: () => {
+          hash = "sha-256:changed";
+        },
+      });
+
+      const withdrawnFrom = approve();
+      let withdrawn = false;
+      const enrolled = (clientId: string) => (withdrawn && clientId === pdp.clientId ? [] : [CANONICAL_RESOURCE]);
+      const withdrawGate = gate();
+      await expectRefused(heldService(as.kernel, { [point]: withdrawGate.wait }, enrolled), withdrawnFrom.id, actingToken(), `audience withdrawn at ${point}`, {
+        gate: withdrawGate,
+        change: () => {
+          withdrawn = true;
+        },
+      });
+    }
+  });
+});

@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "016f333588f6946c085b9cb856fb115f139cf053",
-    "content_sha256": "c05c497da3a6cb57d1b5996704c26e60e930a02f707820a5d892e5ce732adf1d"
+    "revision": "8a16c95a59e44459ba9c065b172e657cecf0ca5b",
+    "content_sha256": "84d5037f19a6c9e46f01910ad3edc3dad9e8c7bbd43fe89deb99bf166b543ce5"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "24fc25962caf421d01e5df49f2916f2b7270e2b7",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
-    "content_sha256": "e758acf47c3dd2043c6db6ff53ede2cb108950287315b0d289f54e444b193780"
+    "revision": "8a16c95a59e44459ba9c065b172e657cecf0ca5b",
+    "content_sha256": "7b5f76eb4de93469d688e8d5420ad6f9fecdcd8f9a95234ec3dc0b4ae760b3ae"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -83,8 +83,8 @@
     "content_sha256": "44d6ef289a0c6cbdff9af48520ae48056a55052f037bdfe5dd16938ec88460d6"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
-    "content_sha256": "7b5f80c6b895dabfb51d4cc680d44137098ec8236fd034a9265d56ed10767b38"
+    "revision": "c8b592b01f938c0d6c2064aadcb0598bb652872c",
+    "content_sha256": "efeddee766f86da59e237d7a7e1abb9f1684b09064a2843389d590f95e769c53"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
@@ -9124,7 +9124,7 @@
    "surface": "decision-request",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a Mission-joining PDP's decision-time join of an ordinary credential to a Mission (the Mission Authority Server's Mission Join, {{I-D.draft-mcguinness-mission-authority-server}}) creates no grant binding: the joined OAuth grant remains unbound, the join's outcome is not persisted as this section's binding, and the same credential may join a different Mission on a later request without rebinding anything"
+    "normative": "a Mission-joining PDP's decision-time join of an ordinary credential to a Mission (the Mission Authority Server's Mission Join, {{I-D.draft-mcguinness-mission-authority-server}}) creates no grant binding: the joined OAuth grant remains unbound, the join's outcome is not persisted as this section's binding, and the same credential may join a different Mission on a later request without rebinding anything ({{I-D.draft-mcguinness-mission-authority-server}}, Section \"Mission Join\")"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -11101,6 +11101,76 @@
     }
    ],
    "notes": "#869 (D449): proven by disabling the code it covers. Every clause is witnessed at a redemption: the source grant or family's validity (an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses; requiring the row alone fails that witness), the Mission's state, the designation's own expiry, the delegation policy (a delegate whose AS-asserted profile is withdrawn after the designation is refused; skipping the redemption's eligibility gate fails it), the Mission's current authority (a containment after the designation narrows the result, or refuses when nothing is left; skipping the projection through current authority fails it), and a separate count per redemption, none for a refusal (#869 acceptance review). #1275: the delegation-authorization policy is also witnessed changing between a designation and its redemption (the redemption is refused; skipping the gate at redemption, or caching the policy decision, fails that witness)."
+  },
+  {
+   "id": "core.delegation.authority-narrows-from-designation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "The delegated token's `authorization_details` MUST be a subset ({{subset}}) of the designation's authority, hence of the delegating token's and of the Mission Authority Set",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegated token issued by redeeming a designation carries no authority beyond the designation's: when the designation was derived from a credential narrower than its Mission, the delegated token does not regain the authority the credential omitted"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > a credential narrower than its Mission: neither the designation nor the delegated token regains the omitted action",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D-2 of the OAuth binding layering plan. Exercised: the delegated token does not regain authority the delegating credential omitted, and narrowing the redemption from the Mission's full Authority Set instead (a mutation) fails the witness: the delegated token regains payments:invoice.list. Not exercised: authority the designation omitted although the delegating credential carried it. In the reference AS a designation carries the presented authority narrowed only by delegate eligibility, which the redemption re-applies, so the two differ only when eligibility widens between designation and redemption, and no test constructs that case."
+  },
+  {
+   "id": "core.delegation.delegate-own-key",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "The delegated token MUST be sender-constrained ({{token-claims}}) to the **delegate's own** key: its `cnf` is the delegate's DPoP or mTLS key, not the delegating party's, and the delegate proves possession of that key in the Token Exchange",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the delegated token's confirmation key is the key the delegate proved at the Token Exchange; a redemption proven under the delegating party's key is refused and issues no token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a redemption proven under the designator's key is refused: the delegate's key must be its own",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a redemption whose DPoP proof presents the delegate's key but is signed by another key is refused invalid_dpop_proof, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D-2 of the OAuth binding layering plan: each clause is proven by disabling the code it covers. Binding the delegated token to the delegating party's key fails the first witness (cnf.jkt no longer matches the delegate's key). Removing the refusal of a proof under the delegating party's key fails the second (200 instead of 400). Taking the thumbprint from the unverified proof header instead of verifying the DPoP signature fails the third (200 with a token instead of 400 invalid_dpop_proof), while the first two still pass, which is why the third was added on review of #1557. The reference AS sender-constrains by DPoP only; mTLS is the clause's alternative mechanism, not a second obligation."
   },
   {
    "id": "core.delegation-constraints.designation-adds-no-delegate",
@@ -17080,7 +17150,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#705 (D359). The reference implementation has no Management bulk endpoint."
+   "notes": "#705 (D359). The reference implementation has no Management bulk endpoint. #705 closed under D675: this witness is deferred, not passed; it is tracked here until the reference implementation builds the surface."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
@@ -37449,8 +37519,8 @@
   {
    "id": "issuance-grant.effective-set-projection.claim-gate",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "effective-set-projection",
-   "text": "A consuming AS that cannot perform this projection MUST NOT claim containment- or discharge-aware issuance.",
+   "anchor": "no-state-integration",
+   "text": "A consuming AS that cannot perform the projection of {{effective-set-projection}} MUST NOT claim containment- or discharge-aware issuance.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -37471,8 +37541,8 @@
   {
    "id": "issuance-grant.effective-set-projection.atomic-consumption",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "effective-set-projection",
-   "text": "the record itself is written atomically with successful issuance, after the state gate and this projection",
+   "anchor": "single-use",
+   "text": "the record itself is written atomically with successful issuance, after the Mission-state check and the projection of {{effective-set-projection}} where they apply",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37600,9 +37670,9 @@
    "id": "issuance-grant.effective-set-projection.equivalent-source-properties",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "An equivalent source MUST be authenticated, MUST be audience-scoped to the resources this AS serves, MUST carry the Mission's current `authorization_details` and a monotonic state `version`, and MUST answer within a staleness bound the deployment publishes",
+   "text": "The consuming AS MUST NOT rely on an equivalent source unless it is authenticated, is audience-scoped to the resources this AS serves, carries the Mission's current `authorization_details` and a monotonic state `version`, and answers within a staleness bound the deployment publishes",
    "role": "AS",
-   "strength": "MUST",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
     "capability": "issuance-grant.state-integration"
@@ -37798,8 +37868,8 @@
   {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "grant",
-   "text": "When it is present, the consuming AS MUST require proof of possession of that key at redemption",
+   "anchor": "grant-validation",
+   "text": "whenever `cnf` is present, the request proves possession of that key, with a DPoP proof",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -52860,6 +52930,293 @@
    "notes": "#1436 item 7: the stricter value, which the reference already takes (the minimum of the default ceiling, the class ceiling and the exception). Mutation: ignoring the class ceiling when an exception applies."
   },
   {
+   "id": "approval-governance.recency.classify-whole-mission",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "At evaluation, the issuer MUST classify the committed Mission's consequence classes from the derived Authority Set and from any consumption bound the Mission Intent carries",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the issuer classifies the committed Mission's whole derived Authority Set and any Intent consumption bound, so an unclassified action or a high-risk class the Mission carries governs the evaluation",
+    "local": "Witnessed for the derived Authority Set: a governed activation refuses an action the root does not classify and holds a high-risk class to its exception, while a Mission without the class activates under the default ceiling; a recorded ceiling drawdown's gate classifies the whole successor and falls back on a kept high-risk action. The consumption-bound source has no witness: the reference's closed Intent admits no consumption-bound member (intent.ts TOP_LEVEL), so no Mission here can carry one."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an action the root does not classify instead of treating it as low-risk",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a high-risk class only under a committed, class-named exception, whose age then binds",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends a successor that keeps approved high-risk authority to a fresh approval, though Progressive would activate it",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Rows the recency-evaluation section (#1522 review follow-up). The same consumption-bound gap is recorded on approval-governance.governed-policy.check-recency-high-risk and approval-governance.recency.high-risk-standing-consent-no-record. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.strictest-across-classes",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "The issuer MUST select, across every class either source carries, the strictest maximum age that applies, accounting for any declared exception",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for a Mission carrying several high-risk classes, the smallest maximum age any of them admits binds the policy approval, whichever class declares it",
+    "local": "Witnessed on a governed activation carrying two high-risk classes (irreversible_action and external_commitment) with exceptions of 600 and 300 seconds, and the mirror case: each activates at 299 seconds and is refused at 301. The consumption-bound source is classify-whole-mission's gap."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > holds a Mission carrying two high-risk classes to the strictest of their maximum ages, whichever class declares it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a high-risk class only under a committed, class-named exception, whose age then binds",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Mutations on applicableRecencyMaxAge: keeping only the first class's bound, and keeping only the last class's, each fail the two-class witness alone. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.age-at-commitment-instant",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "MUST measure the assertion's age as `evaluation.evaluated_at` minus `authority.approved_at`, using the atomic-commitment instant",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy approval's age is the Mission's creation instant minus its approved_at: an approval exactly at the ceiling at the creation instant activates, one past it is refused, and the record's evaluated_at is the creation instant",
+    "local": "Witnessed on governed activation: at a 3600-second ceiling an approval activates at exactly 3600 seconds and is refused at 3601, nothing committed (also over the wire); under a clock that moves on every read, an approval exactly at the ceiling at the creation instant activates, with created_at minus approved_at equal to the ceiling and evaluated_at equal to created_at, and one a millisecond later, within the ceiling when the request starts but past it at the creation instant, is refused with no Mission and no record; a committed record's assertion decided_at and evaluated_at are the Mission's created_at. A recorded ceiling drawdown's gate falls back on a stale consent; it is passed the successor's created_at as the decision instant, which no drawdown test distinguishes from an earlier instant, and the re-check binds it."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > measures an approval's age at the atomic-commitment instant, the Mission's creation, not at the request's start or a later clock read",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a bounded Mission and commits a signed Approval Governance Record with it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends an unclassified action, a stale consent, an ineligible deciding policy or consent to a fresh approval, nothing written",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Mutations: reading the clock again for the age check, and measuring the age at the request's start, each fail the instant witness alone (owner review of #1546 at c2f8cac0: the request-start mutation had passed every cited test). The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.order-within-skew",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "MUST enforce `authority.approved_at` <= `decided_at` <= `evaluation.evaluated_at`, subject to the declared clock-skew allowance",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approved_at later than the evaluation instant beyond the clock-skew allowance is refused and creates no Mission; one within the allowance activates; decided_at never follows evaluated_at",
+    "local": "Witnessed on governed activation: an approval 61 seconds after the evaluation instant under a 60-second skew is refused with nothing committed, and one 59 seconds after activates (also over the wire). decided_at <= evaluated_at holds as equality: the issuer decides at the creation instant, and the committed record's decided_at and evaluated_at are both the Mission's created_at. For recorded ceiling drawdowns the gate's ordering clause is witnessed at function level (a decision 61 seconds before the consent falls back), and the record commit gate refuses a decided_at other than evaluated_at."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a bounded Mission and commits a signed Approval Governance Record with it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > verifies the consent's commitment to the exact drawdown policy version, and its principal's eligibility as the consenting approval enforced it",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the ceiling-drawdown record commit gate (@spec approval-governance#accountable-assertion, approval-governance#assertion-authority) > admits the one contributing policy assertion, and refuses another principal, policy, instant, or contributing set",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "The drawdown witness calls the gate as a function; the commit path cannot produce a decision before its consent. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.not-after-issuer-clock",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "MUST reject the assertion if `authority.approved_at` or `decided_at` is later than the issuer's own clock at evaluation, beyond that allowance",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy assertion whose approved_at or decided_at is later than the issuer's clock at evaluation, beyond the allowance, is refused",
+    "local": "Witnessed for approved_at: the evaluation instant is the issuer's own clock at the commit, so the order-within-skew witness (an approval 61 seconds in the future refused, 59 seconds admitted) is this check. The decided_at half has no witness: the issuer writes decided_at from its own clock at the commit, so no later decided_at can reach the evaluation."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "The decided_at half needs an assertion the issuer did not decide itself, which the reference does not produce. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.failed-assertion-not-counted",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "the issuer MUST NOT count it toward the evaluation, and by {{atomic-commitment}} the Mission MUST NOT be created `active` on an evaluation that depended on it",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy assertion too old or out of order is not counted, and no Mission is created active on an evaluation that needed it",
+    "local": "Witnessed for the no-activation half: a stale or misordered approval refuses the governed activation with no Mission and no record committed (also over the wire), and a stale consent sends a recorded drawdown to a fresh approval with nothing written. The not-counted half alone has no witness: every reference evaluation counts exactly one policy assertion, so dropping it always ends the evaluation."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an approval older than the strictest applicable ceiling, and one later than the evaluation instant beyond the skew",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "the eligibility gate over the whole successor (@spec approval-governance#recency-high-risk, approval-governance#recency-evaluation, D626 Q8) > sends an unclassified action, a stale consent, an ineligible deciding policy or consent to a fresh approval, nothing written",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Not counting a failing assertion while others still satisfy the rule needs an evaluation that counts more than one policy assertion (#1470 Q2: no multi-decider rule built solely for coverage). The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
+   "id": "approval-governance.recency.evaluated-at-not-future",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "text": "the evaluation MUST NOT be treated as complete, and by {{atomic-commitment}} the Mission MUST NOT be created `active` on it",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an evaluation whose evaluated_at is later than the issuer's clock beyond the allowance is not complete, and no Mission is created active on it",
+    "local": "No witness: the issuer writes evaluated_at from its own clock at the commit, so no reference evaluation can carry a later one. The Relying Auditor re-check binds evaluated_at to the Mission's creation instead."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Unreachable in the reference as built: it needs an evaluation produced apart from the commit. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+  },
+  {
    "id": "approval-governance.recency.high-risk-standing-consent-no-record",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "recency-high-risk",
@@ -58387,7 +58744,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "no assertion is minted for a Mission that is not active",
-    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a revoked Mission gets join_failed and no assertion, on a fresh request and on one a cached assertion matches"
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a revoked Mission gets join_failed and no assertion, on a fresh request and on one a cached assertion matches; and a Mission revoked, suspended or expired while the acting token is established, after the token check, or while the assertion is signed, gets join_failed with nothing returned, cached or recorded (the Mission is read again after the token check and after signing)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -58403,9 +58760,27 @@
      "name": "Join Assertion cache (@spec authority-server#join-assertion-request, #1454) > rechecks before serving a cached assertion: a caller outside the visibility set, a revoked Mission and an inactive token are refused, and a changed mapping mints anew",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed, returning and recording nothing, a Mission revoked, suspended or expired while its acting token is being established",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed a Mission revoked, suspended or expired after the token check and before signing",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed a Mission revoked, suspended or expired while the assertion is signed, and caches nothing it refused",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the state check."
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the state check. The re-reads (#1454 review) are proved by defects that drop the re-read before signing, drop it after signing, drop its state check, read the stale record, read without materializing expiry, and cache or record before the re-read after signing."
   },
   {
    "id": "mas.join-assertion.malformed-request",
@@ -58702,7 +59077,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a request whose audience names no PDP enrolled for the Mission is refused join_failed, and no assertion is minted",
-    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a request whose audience is enrolled for another scope only, or for nothing, gets join_failed and no assertion. The Mission's enforcement scope is the set of enrolled scopes some entry of its Authority Set overlaps, under the matcher Mission Status scopes entries with (entryOverlapsResource)"
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: a request whose audience is enrolled for another scope only, or for nothing, gets join_failed and no assertion. The Mission's enforcement scope is the set of enrolled scopes some entry of its Authority Set overlaps, under the matcher Mission Status scopes entries with (entryOverlapsResource); an audience withdrawn while the token is established or the assertion is signed gets join_failed"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -58712,9 +59087,15 @@
      "name": "Join Assertion endpoint outcomes (@spec authority-server#join-assertion-request, authority-server#submission-errors, #1454) > refuses join_failed (HTTP 403), minting nothing: a revoked Mission, an audience not enrolled, an inactive or expired token, one with no cnf, a mismatched thumbprint, a token that does not join",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > refuses join_failed when the Mission's authority_hash changes, or its audience is withdrawn, during the token check or the signing",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the audience check."
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that drops the audience check. Also proved by a defect that drops the audience from the re-read (#1454 review)."
   },
   {
    "id": "mas.join-assertion.aud-claim",
@@ -58834,7 +59215,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a caller outside the visibility set, or a request failing a minting check, is refused even when a cached assertion matches",
-    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: with a matching cached assertion, a caller outside the visibility set gets not_found, an inactive token and a revoked Mission get join_failed, and a changed join (a new mapping version) mints anew rather than serving the cache"
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts), witnessed through a deployment double for the acting token and the join: with a matching cached assertion, a caller outside the visibility set gets not_found, an inactive token and a revoked Mission get join_failed, and a changed join (a new mapping version) mints anew rather than serving the cache; a cached assertion is not served for a Mission revoked while the next request's token is established"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -58844,9 +59225,15 @@
      "name": "Join Assertion cache (@spec authority-server#join-assertion-request, #1454) > rechecks before serving a cached assertion: a caller outside the visibility set, a revoked Mission and an inactive token are refused, and a changed mapping mints anew",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion minting re-reads the Mission after every await (@spec authority-server#join-assertion-request, #1454 review) > does not serve a cached assertion for a Mission revoked while the next request's token is being established",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that serves the cache before the checks."
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that serves the cache before the checks. Also proved by the defect that drops the re-read before signing (#1454 review)."
   },
   {
    "id": "mas.submission.unsupported-media-type",
@@ -62217,6 +62604,27 @@
    "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
   },
   {
+   "id": "mandate.claims.approver-from-consent-principal",
+   "spec": "draft-mcguinness-mission-mandate.md",
+   "anchor": "claims",
+   "text": "REQUIRED. An object with `iss` and `sub`, the Mission record's `approval_basis.consent_principal`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a minted Mandate's `approver` claim is the Mission record's `approval_basis.consent_principal` (`iss` and `sub`), so the claim is unchanged from the value the v1 approval-context commitment uses and its digest is equivalent"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#705 acceptance item 13, the Mandate half (the OAuth binding's half, its digest-equivalence witness, is cited on its own row, D613). No Mandate minting code exists in the reference implementation. #705 closed under D675: this witness is deferred, not passed; it is tracked here until the reference implementation builds the surface."
+  },
+  {
    "id": "mandate.minting.termination-at-issuance",
    "spec": "draft-mcguinness-mission-mandate.md",
    "anchor": "minting",
@@ -62235,7 +62643,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#705 (D359). No Mandate minting code exists in the reference implementation."
+   "notes": "#705 (D359). No Mandate minting code exists in the reference implementation. #705 closed under D675: this witness is deferred, not passed; it is tracked here until the reference implementation builds the surface."
   },
   {
    "id": "device-authorization.discovery.explicit-support-before-sending",
