@@ -43,8 +43,8 @@
     "content_sha256": "c3ecaf45e6e17579e7374b0e733c7d4de7d58cbacdfecddfe37c3568eb74138a"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
-    "content_sha256": "fa83d94eb5521d5662b31710abcd3d4c9c60cfa39c6b9391ea3072c17fbd2225"
+    "revision": "3a857d7464a9a158a6994a4bb5417e8a6694ab09",
+    "content_sha256": "ad693045d450b97201cc096e34891d91987e13d74623d5c318d950bfeeab5a89"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "213893760b7c447ff475d568bc8a54be8a85176b",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
-    "content_sha256": "339c6e233e26e8920573096fe463dc51903cf5a136de15ee79c899c354529a9b"
+    "revision": "63a744561acf66fb2dc397ab69f190ac3f46945b",
+    "content_sha256": "f296e4b63bf026532fd4c56130f7a37535962da4de837bcffd2949c82417782b"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -111,8 +111,8 @@
     "content_sha256": "74d6ce91fa5bf904e532dfae6ead1982c0a17325fd90b491e1ef51e19a891741"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
-    "content_sha256": "607c3661d7e078651a9590775bd5f714a311a997bb3c01cf9822b56430fba262"
+    "revision": "c8eae0680f33d532b24db43e4b4b782586fe23f3",
+    "content_sha256": "d6688982eb8b956a4af4c2c62f6a8fb49a517a2b585beec700a0dc662347263f"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
@@ -306,6 +306,7 @@
    "expansion.interactive-completion",
    "expansion.related-to-correlation",
    "continuation.async-transport",
+   "continuation.cross-domain-transport",
    "aauth.supervision-server",
    "aauth.supervision-proof",
    "aauth.reference-projection",
@@ -8690,9 +8691,27 @@
      "name": "mission record expiry ceiling (@spec mission#mission-record) > insertRecord refuses a record whose expires_at is not later than created_at",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a requested expiry that passes while the decision commits gets its mapped refusal, not a request to review it again",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "a pushed request that no longer validates is refused, never a 500 (@spec mission#approval-event, mission#error-mapping, #1610) > a decision after the request's expires_at passed completes the request invalid_request and creates nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "a device decision on a request that no longer validates (@spec mission#approval-event, mission#error-mapping, #1610) > a decision after the request's expires_at passed denies the session, never a 500",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
-   "notes": "insertRecord, the single Mission-record creation funnel, checks created_at < expires_at inside the creation transaction, so every creating surface inherits it. Endpoint arm: a deferred expansion whose approved horizon has passed by completion creates no successor and fails with the profile's denial semantics."
+   "notes": "insertRecord, the single Mission-record creation funnel, checks created_at < expires_at inside the creation transaction, so every creating surface inherits it. Endpoint arm: a deferred expansion whose approved horizon has passed by completion creates no successor and fails with the profile's denial semantics. Direct-approval arm (#1610): a requested ceiling that passed before the decision completes the authorization request invalid_request (a device session is denied), and one that passes during the commit is refused by the commit's own check; neither creates a Mission or grant."
   },
   {
    "id": "core.approval-event.record-code-atomicity",
@@ -9517,6 +9536,85 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding-related",
+   "text": "Any grant binding or derived token they carry is their own under the same rules, not an extension of the origin Mission's binding.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "expansion.adjudication",
+     "expansion.interactive-completion",
+     "progressive.ceiling-drawdown",
+     "child-delegation.policy-drawdown",
+     "child-delegation.direct-approval",
+     "child-delegation.carryover"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "level": "endpoint",
+   "id": "core.grant-binding.new-missions-isolated",
+   "facet": "derived-token-isolation",
+   "observation": {
+    "normative": "a token issued to a successor or Child Mission identifies that Mission, and the AS's records for it are its own: distinct from the origin's, with the origin's still resolving to the origin"
+   },
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #child-client-identity) > happy path: child redeems its assertion -> 200 DPoP-bound child token carrying the child mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a widening request defers (authorization_pending + deferral_code); after async approval a poll (no subject_token) mints the successor and supersedes the predecessor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1590 (D709). Witnessed for the deferred expansion poll, the in-ceiling drawdown and synchronous policy-drawdown child creation. Not witnessed: interactive expansion, which the reference does not implement, and direct-basis children, which the reference creates only as carryover replacements, redeemed through the same first-bind path but not covered by these witnesses. The gate omits mas.expansion-child-creation: a Mission Authority Server issues no token on that surface. The witnesses assert isolation of the AS's internal grant records, which support issuance and lookup and are not a protocol grant lineage (D709). Mutation: binding the origin's grant to the new Mission at its first mint, with grant lookup returning the newest Mission so the reuse is silent, fails each witness at its grant-differs assertion; the other 170 tests in the three files pass. The protocol facet is core.grant-binding.new-missions-own-binding."
+  },
+  {
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding-related",
+   "text": "Any grant binding or derived token they carry is their own under the same rules, not an extension of the origin Mission's binding.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "expansion.adjudication",
+     "expansion.interactive-completion",
+     "progressive.ceiling-drawdown",
+     "child-delegation.policy-drawdown",
+     "child-delegation.direct-approval",
+     "child-delegation.carryover"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "level": "endpoint",
+   "id": "core.grant-binding.new-missions-own-binding",
+   "facet": "protocol-grant-binding",
+   "observation": {
+    "normative": "any protocol grant lineage a successor or Child Mission carries, such as an interactive completion's authorization code or a refresh-token family, resolves to that Mission and never to the origin's"
+   },
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1590 (D709). No reference path gives a successor or Child Mission a protocol grant lineage: there is no interactive completion, and no successor or child path issues a refresh token. The isolation facet is core.grant-binding.new-missions-isolated."
   },
   {
    "id": "core.grant-binding.runtime-join-not-persistent-binding",
@@ -45723,6 +45821,186 @@
    "notes": "#1195 (D387, D390). On a self-dispatched instance the async exchange's handle-audience check is the only guard against the instance token: self-exchange rule 1 and possession both hold. Mutation proof: disabling that check opens a family from the instance token, failing the direct-async witness on status."
   },
   {
+   "id": "continuation.transports.reference-resolves-to-anchor",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transports",
+   "text": "Each transport MUST identify the accepted hop through a reference that resolves to the Mission's rooting anchor.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every continued grant is issued against a reference that resolves to exactly the Mission's rooting anchor; a reference that resolves to no anchor, or to another Mission's, continues nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1588 (D709). Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names. No witness yet."
+  },
+  {
+   "id": "continuation.transports.reference-possession-not-evidence",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transports",
+   "text": "Possession of that reference alone MUST NOT be treated as evidence that the Mission's work remains authorized.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented reference whose Mission is no longer active, or whose re-derivation fails, yields no continued grant, however valid the reference itself"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b2) a Mission whose authority is fully contained -> invalid_target (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b4) a revoked Mission whose hop the store has not yet ended -> invalid_continuation at the gate, not unauthorized_client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1588 (D709). Existing gate witnesses, also cited by continuation.ica-transport.refusal-codes and status.conformance.revoke-only-class. Witnessed: a still-valid Identity Continuation Assertion presented for a suspended or revoked Mission, or for one whose authority is fully contained, is refused and nothing is issued; a delegated family refresh token that worked before the Mission's revocation is refused invalid_grant, issuing and saving nothing. Not witnessed: a failed re-derivation on the async transport, and the cross-domain transport. Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names."
+  },
+  {
+   "id": "continuation.invariant.possession-not-evidence",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "invariant",
+   "text": "possession of a continuation handle, a refresh token, or any other transport artifact MUST NOT be treated as evidence that the work is still authorized",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a transport artifact presented for a Mission that is no longer active or no longer authorizes the requested authority yields no grant"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b0) consumption is atomic with issuance (#617 review 1): a redemption refused at the Mission gate leaves the ICA UNCONSUMED; the SAME assertion redeems once the gate reopens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b2) a Mission whose authority is fully contained -> invalid_target (ICA -02 5.5.6)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (b4) a revoked Mission whose hop the store has not yet ended -> invalid_continuation at the gate, not unauthorized_client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: revocation by a party holding no token (@spec status#conformance, mission#revocation, #1182) > a security tool holding none of the Mission's tokens revokes it, and the refresh, the family refresh and a new exchange then refuse, issuing nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1588 (D709). Existing gate witnesses, also cited by continuation.ica-transport.refusal-codes and status.conformance.revoke-only-class. Witnessed: a still-valid Identity Continuation Assertion presented for a suspended or revoked Mission, or for one whose authority is fully contained, is refused and nothing is issued; a delegated family refresh token that worked before the Mission's revocation is refused invalid_grant, issuing and saving nothing. Not witnessed: a failed re-derivation on the async transport, and the cross-domain transport. Issuer facet of the invariant; the relying-party facet is continuation.invariant.relying-party-no-artifact-decision. Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names."
+  },
+  {
+   "id": "continuation.invariant.derivation-at-issuance",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "invariant",
+   "text": "Authorization is established only by deriving a subset of the Mission's Authority Set under a live state check ({{authorization-continuity}}) at each issuance.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each continued grant's authority is a subset of the Mission's Authority Set derived under a state check atomic with that issuance"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1588 (D709). Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names. No witness yet."
+  },
+  {
+   "id": "continuation.invariant.relying-party-no-artifact-decision",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "invariant",
+   "text": "A relying party MUST NOT make an authorization decision from the mere existence or contents of a continuation artifact.",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "continuation.ica-transport",
+     "continuation.async-transport",
+     "continuation.cross-domain-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a relying party presented with a continuation artifact but no Mission-bound credential valid for the request refuses it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1588 (D709). Gated on the three Continuation transport capabilities. continuation.cross-domain-transport means a deployment adopts cross-domain projection under this profile, not ordinary projection support, which cross-domain.projection names. No witness yet. Relying-party facet of the invariant; the issuer facet is continuation.invariant.possession-not-evidence."
+  },
+  {
    "id": "resource-access.type.prefix-query-fragment-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-access-type",
@@ -49159,9 +49437,21 @@
      "name": "PAR intake validates a proposed reference against the shipped configuration (@spec resource-access#resource-contract, #249) > admits a proposal carrying the configured current reference",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "a proposed contract no longer current after the push is refused, never a 500 (@spec resource-access#resource-contract, mission#error-mapping, #1610) > at the render: 400 invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "a proposed contract no longer current after the push is refused, never a 500 (@spec resource-access#resource-contract, mission#error-mapping, #1610) > at the decision: the request completes invalid_authorization_details and no Mission is created",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn. A reference current at the push that configuration no longer names as current is refused the same way at the approval render and decision (#1610)."
   },
   {
    "id": "resource-access.resource-contract.no-new-approval-non-current",
@@ -49189,6 +49479,12 @@
      "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > a value whose mapping names a contract version that is not current is refused at the approval: invalid_authorization_details, and no Mission (@spec resource-access#resource-contract)",
      "level": "endpoint",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "a proposed contract no longer current after the push is refused, never a 500 (@spec resource-access#resource-contract, mission#error-mapping, #1610) > at the decision: the request completes invalid_authorization_details and no Mission is created",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ],
    "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1)."
@@ -59459,9 +59755,16 @@
     "normative": "the child-creation exchange binds no grant lineage to the Child Mission; any lineage the Child Mission carries comes from the child actor's redemption of the child-bound grant, and no step extends the parent's grant"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1557 cold readers' follow-up. The reference AS binds no grant at child creation, issues no refresh token at the child actor's JWT-bearer redemption, and never reuses the parent's grant for the child's tokens; it implements only synchronous creation. No test asserts that separation."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "PR4b: child redeems the child-bound grant AS ITSELF at /token (@spec #child-client-identity) > happy path: child redeems its assertion -> 200 DPoP-bound child token carrying the child mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1557 cold readers' follow-up; #1590 (D709). Witnessed: the Child Mission has no bound record after the parent's exchange, and after the child actor's redemption its record is its own, distinct from the parent's, with the parent's still resolving to the parent and the token identifying the child. The witnesses assert isolation of the AS's internal grant records, which support issuance and lookup and are not a protocol grant lineage (D709). Not witnessed: a protocol lineage (the redemption issues no refresh token) and deferred or interactive creation (the reference implements only synchronous creation). Mutation: binding the origin's grant to the new Mission at its first mint, with grant lookup returning the newest Mission so the reuse is silent, fails each witness at its grant-differs assertion; the other 170 tests in the three files pass."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
@@ -64210,9 +64513,22 @@
     "normative": "any grant lineage a successor carries is its own: the authorization code an interactive completion redeems and any refresh-token family it emits, or a refresh-token family a deferred or drawdown response emits; a deferred completion or synchronous drawdown returning only an access token establishes no grant binding, while an interactive completion's authorization code is a binding whether or not its redemption emits a refresh token, and no completion extends the predecessor's grant"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1557 cold readers' follow-up. The reference AS issues no refresh token on any successor path and implements no interactive completion, so its successors carry derived tokens only; it never reuses the predecessor's grant for a successor's tokens. No test asserts that separation."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a widening request defers (authorization_pending + deferral_code); after async approval a poll (no subject_token) mints the successor and supersedes the predecessor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1557 cold readers' follow-up; #1590 (D709). Witnessed: on the deferred poll and the in-ceiling drawdown the successor's records are its own, distinct from the predecessor's, each still resolving to its own Mission, and the issued token identifies the successor. The witnesses assert isolation of the AS's internal grant records, which support issuance and lookup and are not a protocol grant lineage (D709). Not witnessed: the interactive completion's authorization code and any refresh-token family (the reference implements no interactive completion and issues no refresh token on these paths), and the clause that an access-token-only completion establishes no grant binding. Mutation: binding the origin's grant to the new Mission at its first mint, with grant lookup returning the newest Mission so the reuse is silent, fails each witness at its grant-differs assertion; the other 170 tests in the three files pass."
   },
   {
    "id": "expansion.successor-expiry.completion-codes",

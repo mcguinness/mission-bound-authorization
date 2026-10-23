@@ -13,7 +13,7 @@ import type { Server } from "node:http";
 import { authorityHash, type JsonValue, type ResourceContractRef } from "@mission/core";
 import { DERIVATION_POLICY, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
@@ -80,7 +80,8 @@ async function token(params: Record<string, string>, keys: Keys): Promise<{ stat
   return { status: res.status, body: (await res.json()) as Json };
 }
 
-async function approve(proposal: AuthorityEntry[]): Promise<URL> {
+/** A pushed request for this proposal, taken to its approval interaction, with its user agent's cookies. */
+async function openInteraction(proposal: AuthorityEntry[]) {
   const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER))).toString("base64url");
   const par = await fetch(`${ISSUER}/request`, {
     method: "POST",
@@ -118,22 +119,31 @@ async function approve(proposal: AuthorityEntry[]): Promise<URL> {
   );
   keep(res);
   const uid = (res.headers.get("location") ?? "").split("/interaction/")[1] as string;
+  /** Follow a decision's redirects to the client's redirect URI. */
+  const follow = async (decided: Response): Promise<URL> => {
+    keep(decided);
+    let location = decided.headers.get("location") ?? "";
+    while (location.startsWith(ISSUER)) {
+      const r = await fetch(location, { redirect: "manual", headers: { cookie: cookie() } });
+      keep(r);
+      location = r.headers.get("location") ?? "";
+    }
+    return new URL(location);
+  };
+  return { uid, cookie, follow };
+}
+
+async function approve(proposal: AuthorityEntry[]): Promise<URL> {
+  const { uid, cookie, follow } = await openInteraction(proposal);
   const decideHeaders = { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() };
   const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
-  res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+  const res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
     headers: decideHeaders,
     body: JSON.stringify({ decision: "approve", render_revision }),
   });
-  keep(res);
-  let location = res.headers.get("location") ?? "";
-  while (location.startsWith(ISSUER)) {
-    res = await fetch(location, { redirect: "manual", headers: { cookie: cookie() } });
-    keep(res);
-    location = res.headers.get("location") ?? "";
-  }
-  return new URL(location);
+  return follow(res);
 }
 
 async function issue(proposal: AuthorityEntry[]): Promise<{ at: string; rt: string; keys: Keys; missionId: string }> {
@@ -252,5 +262,48 @@ describe("the resource contract reference survives every issuance path exactly (
     const res = await exchange(unpinned.at, unpinned.keys, read(SHIPPED));
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_authorization_details");
+  });
+});
+
+describe("a proposed contract no longer current after the push is refused, never a 500 (@spec resource-access#resource-contract, mission#error-mapping, #1610)", () => {
+  /** This AS's configuration, with no contract current for any entry any more. */
+  const retired = () => {
+    const configured = as.kernel.resourceContracts();
+    return vi
+      .spyOn(as.kernel, "resourceContracts")
+      .mockReturnValue(Object.assign(Object.create(configured), { isCurrentFor: () => false }));
+  };
+
+  it("at the render: 400 invalid_authorization_details", async () => {
+    const { uid, cookie } = await openInteraction(read(SHIPPED));
+    const spy = retired();
+    try {
+      const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { ...trustedApprovalHeaders(), cookie: cookie() } });
+      expect(page.status).toBe(400);
+      expect(((await page.json()) as Json).error).toBe("invalid_authorization_details");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("at the decision: the request completes invalid_authorization_details and no Mission is created", async () => {
+    const { uid, cookie, follow } = await openInteraction(read(SHIPPED));
+    const decideHeaders = { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() };
+    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
+    const spy = retired();
+    let decided: Response;
+    try {
+      decided = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+        method: "POST",
+        redirect: "manual",
+        headers: decideHeaders,
+        body: JSON.stringify({ decision: "approve", render_revision }),
+      });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(decided.status).toBe(303);
+    expect((await follow(decided)).searchParams.get("error")).toBe("invalid_authorization_details");
+    expect(as.kernel.findByApprovalEvent(`apev_${uid}`)).toBeUndefined();
   });
 });

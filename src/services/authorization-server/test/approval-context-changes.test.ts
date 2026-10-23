@@ -528,3 +528,33 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     expect((await decide(flow.uid, forAlice, approve(revision))).status).toBe(303);
   });
 });
+
+describe("a pushed request that no longer validates is refused, never a 500 (@spec mission#approval-event, mission#error-mapping, #1610)", () => {
+  /** An Intent whose own expires_at is 100 seconds after t0. */
+  const expiringAt = (t0: number) => ({ ...INTENT, expires_at: new Date(t0 + 100_000).toISOString().replace(/\.\d{3}Z$/, "Z") });
+
+  it("a render after the request's expires_at passed refuses invalid_request", async () => {
+    const t0 = Math.floor(Date.now() / 1000) * 1000;
+    const flow = await open(expiringAt(t0));
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    clockAt(t0 + 101_000);
+    const page = await render(flow.uid, headers);
+    expect(page.status, page.html).toBe(400);
+    expect((JSON.parse(page.html) as { error?: string }).error).toBe("invalid_request");
+    expect(page.revision).toBeNull();
+  });
+
+  it("a decision after the request's expires_at passed completes the request invalid_request and creates nothing", async () => {
+    const t0 = Math.floor(Date.now() / 1000) * 1000;
+    const flow = await open(expiringAt(t0));
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    clockAt(t0);
+    const { revision } = await render(flow.uid, headers);
+    clockAt(t0 + 101_000);
+    const decided = await decide(flow.uid, headers, approve(revision));
+    expect(decided.status, JSON.stringify(decided.json)).toBe(303);
+    const resumed = await fetch(decided.location as string, { redirect: "manual", headers: { cookie: flow.cookie } });
+    expect(new URL(resumed.headers.get("location") as string).searchParams.get("error")).toBe("invalid_request");
+    await expectNothingCreated(flow.uid);
+  });
+});
