@@ -1581,6 +1581,9 @@ describe("the discharge operation on the lifecycle endpoint", () => {
       { condition_digest: `sha-256:${"+".repeat(43)}` }, // base64, not base64url
       { observed_at: "Aug 20, 2026" }, // Date.parse-friendly, not RFC 3339
       { observed_at: "2026-08-20" }, // bare date, not RFC 3339 date-time
+      // No offset, so not RFC 3339, yet inside the clock window: only the
+      // syntax check refuses it.
+      { observed_at: as.kernel.nowDate().toISOString().slice(0, 19) },
       { nonce: null }, // JSON null must be malformed-nonce, not a crash
       { nonce: "n".repeat(256) }, // exceeds the documented 255-char bound
     ];

@@ -4291,8 +4291,12 @@ The following subsections define the record's members.
 : REQUIRED. A string. A unique identifier of the approval event, used
   as the approval idempotency key: a retried or duplicate delivery of
   the same approval decision (a replayed callback, a double-submitted
-  consent form) MUST NOT create a second Mission, and the AS
-  deduplicates on this identifier.
+  consent form, a retried standing-consent activation) MUST NOT create
+  a second Mission, and the AS deduplicates on this identifier. The
+  identifier names the approval event that creates this Mission
+  ({{approval-event}}); under a standing-consent basis
+  ({{standing-consent-bases}}), it identifies this instance's creation,
+  not the earlier standing approval.
 
 `created_at`:
 : REQUIRED. A string. RFC 3339 timestamp of creation.
@@ -7207,6 +7211,10 @@ Cross-Domain:
   Mechanisms names the Token Exchanges its later items cover, and the
   Namespace Taxonomy lists the `approval_basis.type` values as
   specification-defined, which Standing-Consent Bases cites.
+- Editorial, no requirement change: the `approval_event_id` definition
+  names the approval event that creates the Mission and states that,
+  under a standing-consent basis, it identifies the instance's
+  creation, not the earlier standing approval.
 
 -01
 

@@ -20,7 +20,7 @@
  *    output feeds the standard parameter with no re-wrapping.
  */
 
-import { browserApprovalHeaders, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { browserApprovalHeaders, floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { computeAnchor, PROPOSED_AUTHORITY_TYP, proposalHash } from "@mission/core";
@@ -629,11 +629,13 @@ describe("end-to-end issuance under the new carriage", () => {
     expect(html).toContain("Proposed authority (submitted, untrusted)");
     expect(html).toContain("Derived authority (what approval grants)");
 
+    const decideHeaders = { ...floorApprovalHeaders(SESSIONS, uid, cookieHeader()), "content-type": "application/json" };
+    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...floorApprovalHeaders(SESSIONS, uid, cookieHeader()), "content-type": "application/json" },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: decideHeaders,
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     storeCookies(res);
     location = res.headers.get("location") as string;
@@ -812,6 +814,8 @@ describe("derivation refusal at the authorization decision (@spec mission#error-
     let location = res.headers.get("location") as string;
     const uid = location.split("/interaction/")[1] as string;
 
+    // A request that derives nothing renders no approval page (#1446), so the
+    // decision names no rendering: derivation refuses it before any is consulted.
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
@@ -918,11 +922,13 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
       },
       cookieHeader(),
     );
+    const decideHeaders = { ...approval, "content-type": "application/json" };
+    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...approval, "content-type": "application/json" },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: decideHeaders,
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     storeCookies(res);
     location = res.headers.get("location") as string;
@@ -1083,11 +1089,13 @@ describe("authority source on the approval surface (@spec mission#authority-sour
   // The Subject is established by the AS from the pushed login_hint; only the
   // resolving Approver is a fixture input.
   async function decideAt(uid: string, approver: string): Promise<URL> {
+    const decideHeaders = { ...trustedApprovalHeaders(approver), "content-type": "application/json", cookie: cookieHeader() };
+    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
     let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: { ...trustedApprovalHeaders(approver), "content-type": "application/json", cookie: cookieHeader() },
-      body: JSON.stringify({ decision: "approve" }),
+      headers: decideHeaders,
+      body: JSON.stringify({ decision: "approve", render_revision }),
     });
     storeCookies(res);
     let location = res.headers.get("location") as string;

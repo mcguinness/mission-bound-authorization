@@ -38,7 +38,7 @@ import { CONTAINMENT_POLICY, DERIVATION_POLICY, DEV_SERVICE_TOKEN } from "@missi
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const PORT = 14940;
 const ISSUER = `http://localhost:${PORT}`;
@@ -139,11 +139,16 @@ async function approve(proposal: AuthorityEntry[], targets: string[]): Promise<U
   );
   keep(res);
   const uid = (res.headers.get("location") ?? "").split("/interaction/")[1] as string;
+  const decideHeaders = { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() };
+  // The decision names the page rendered to the Approver (#1446). A proposal
+  // that derives nothing renders no page, and the decision refuses it at
+  // derivation, before any rendering is consulted.
+  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders).catch(() => undefined);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookie() },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   keep(res);
   let location = res.headers.get("location") ?? "";

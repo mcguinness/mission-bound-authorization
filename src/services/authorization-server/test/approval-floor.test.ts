@@ -28,7 +28,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, recheckApprovalGovernanceRecord } from "../src/index.js";
 import { evaluateApprovalFloor } from "../src/kernel/approval-floor.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
-import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const PORT = 14791;
 const OVERRIDE_PORT = 14792;
@@ -241,11 +241,13 @@ async function authorize(
             ...trustedApprovalHeaders(args.approval.headless.sub, { approver_acr: args.approval.headless.acr }, args.approval.headless.subject),
             cookie: cookieOf(jar),
           };
+    // The Approver reviews the page in this session; the decision names that rendering (#1446).
+    const render_revision = await renderedRevision(s.issuer, uid, headers);
     res = await fetch(`${s.issuer}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ decision: "approve", ...(args.ceiling ?? {}) }),
+      body: JSON.stringify({ decision: "approve", render_revision, ...(args.ceiling ?? {}) }),
     });
     expect(res.status, await res.clone().text()).toBe(303);
     keep(jar, res);

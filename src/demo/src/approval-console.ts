@@ -1,5 +1,5 @@
 /** Trusted exhibit/console driver. Never imported by the agent OAuth helper. */
-import { APPROVAL_SUBJECT_HEADER, type ApprovalSessionStore } from "@mission/authorization-server";
+import { APPROVAL_SUBJECT_HEADER, type ApprovalSessionStore, RENDER_REVISION_HEADER } from "@mission/authorization-server";
 import type { ApproverAccount } from "./approver-idp.js";
 import { jarClosures, redeemMissionApproval, submitMissionApproval, type CookieJar, type IssueOpts, type SubmittedApproval } from "./oauth-client.js";
 
@@ -125,6 +125,26 @@ export async function logInUpstream(
 }
 
 /**
+ * @spec mission#approval-context-changes (#1446, D583): the response header
+ * carrying the revision of an approval page the AS rendered to an
+ * authenticated principal.
+ */
+export const APPROVAL_RENDER_REVISION_HEADER = RENDER_REVISION_HEADER;
+
+/**
+ * Render an interaction's approval page to the principal `headers`
+ * authenticate (an approval session, or the trusted approval service with
+ * the Subject it names), as the Approver reviews it before deciding, and
+ * return the rendering's revision, which an approval names. Undefined where
+ * the AS rendered none for that principal; the decision is then refused.
+ */
+export async function renderApproval(asUrl: string, uid: string, headers: Record<string, string>): Promise<string | undefined> {
+  const page = await fetch(`${asUrl}/interaction/${uid}`, { redirect: "manual", headers });
+  await page.text();
+  return page.headers.get(APPROVAL_RENDER_REVISION_HEADER) ?? undefined;
+}
+
+/**
  * The trusted console resolves an approval. `subject` is the Subject the
  * console selects for an approval on another principal's behalf (#826): the
  * demo's approver Bob approves for Alice; `null` is a self-approval. The
@@ -149,10 +169,13 @@ export async function resolveMissionApproval(asUrl: string, approver: ApproverCr
     const interaction = cookieHeader();
     identity = { cookie: interaction ? `${interaction}; ${login.cookie}` : login.cookie, "x-csrf-token": login.csrf };
   }
+  // An approval names the page rendered to this same principal (#1446), so
+  // the console renders it first; a denial needs no rendering.
+  const render_revision = decision === "approve" ? await renderApproval(asUrl, pending.uid, identity) : undefined;
   let res = await fetch(`${asUrl}/interaction/${pending.uid}/decide`, {
     method: "POST", redirect: "manual",
     headers: { "content-type": "application/json", ...identity },
-    body: JSON.stringify({ decision }),
+    body: JSON.stringify({ decision, ...(render_revision ? { render_revision } : {}) }),
   });
   if (res.status >= 400) throw new Error(`approval resolution refused: ${res.status}`);
   storeCookies(res);
