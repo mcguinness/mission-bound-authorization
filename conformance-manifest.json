@@ -2097,8 +2097,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Mission Status request repeating a client authentication parameter is refused as an authentication failure (invalid_client for private-key-JWT), whatever its other members, never authenticated by either occurrence",
-    "local": "the authentication parameters the reference reads are client_assertion, client_assertion_type, client_id and client_secret (authenticateLifecycleForm); a repeated one has no value kept, so no occurrence can authenticate"
+    "normative": "a Mission Status request repeating a client authentication parameter fails authentication and receives the outcome assigned by Authentication Failures, whatever its other members, never authenticated by either occurrence",
+    "local": "the authentication parameters the reference reads are client_assertion, client_assertion_type, client_id and client_secret (authenticateLifecycleForm); a repeated one has no value kept, so no occurrence can authenticate The reference's Mission Status endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -2116,7 +2116,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint."
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local."
   },
   {
    "id": "status.read.repeated-parameter-malformed",
@@ -13602,8 +13602,8 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a lifecycle request for a base operation is refused at the first failing step of authentication, request syntax and served operation, authorization, deduplication, expected_version and the transition rules: a body that cannot be parsed is refused invalid_request whatever credential it presents; a request whose body parses and fails authentication, a repeated client authentication parameter included, is refused invalid_client whatever its operation, members or Mission; a malformed request, one repeating any other parameter included, or an unserved operation is refused invalid_request alike for a known and an unknown Mission; a caller not authorized for the Mission gets the not-found response, never a replay, stale_version or conflict; an authorized retransmit replays before expected_version and the transition rules apply; and a stale expected_version is refused before the transition rule",
-    "local": "The reference treats a non-form media type, a body over 64 KiB and a malformed form encoding as a body that cannot be parsed (readLifecycleForm). Refusals decided before deduplication are delivered without retention, so they never finalize a committed claim made under the same request digest. The past-deadline check of a schedule runs after deduplication, so an identical retry arriving after its deadline replays."
+    "normative": "a lifecycle request for a base operation is refused at the first failing step of authentication, request syntax and served operation, authorization, deduplication, expected_version and the transition rules: a body that cannot be parsed is refused invalid_request whatever credential it presents; a request whose body parses and fails authentication, a repeated client authentication parameter included, receives the outcome assigned by Authentication Failures whatever its operation, members or Mission; a malformed request, one repeating any other parameter included, or an unserved operation is refused invalid_request alike for a known and an unknown Mission; a caller not authorized for the Mission gets the not-found response, never a replay, stale_version or conflict; an authorized retransmit replays before expected_version and the transition rules apply; and a stale expected_version is refused before the transition rule",
+    "local": "The reference treats a non-form media type, a body over 64 KiB and a malformed form encoding as a body that cannot be parsed (readLifecycleForm). Refusals decided before deduplication are delivered without retention, so they never finalize a committed claim made under the same request digest. The past-deadline check of a schedule runs after deduplication, so an identical retry arriving after its deadline replays. The reference's Lifecycle endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -13663,7 +13663,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 finding 3 (D649). Proved by validating the operation and members before authentication, and by looking the Mission up before it (the authentication-order test fails), by looking the Mission up before the syntax checks (the extension-guard and revoke-only ordering tests fail), by letting a retained row skip authorization (both processing-order retransmit tests fail), and by retaining the not-found refusal decided before deduplication (the lost-bytes test fails). The deduplication and expected_version precedences keep the witnesses of status.discharge.nonce-replay and status.lifecycle.stale-version-precedence. The discharge operation is status.discharge.processing-order. #1535 Item C (D704, D708): the parse-before-authentication exception and the repeated-parameter order are normative in step 1 and step 2, rowed separately."
+   "notes": "#1535 finding 3 (D649). Proved by validating the operation and members before authentication, and by looking the Mission up before it (the authentication-order test fails), by looking the Mission up before the syntax checks (the extension-guard and revoke-only ordering tests fail), by letting a retained row skip authorization (both processing-order retransmit tests fail), and by retaining the not-found refusal decided before deduplication (the lost-bytes test fails). The deduplication and expected_version precedences keep the witnesses of status.discharge.nonce-replay and status.lifecycle.stale-version-precedence. The discharge operation is status.discharge.processing-order. #1535 Item C (D704, D708): the parse-before-authentication exception and the repeated-parameter order are normative in step 1 and step 2, rowed separately. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local."
   },
   {
    "id": "status.lifecycle.unparseable-body-refused",
@@ -13716,8 +13716,8 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a lifecycle request repeating a client authentication parameter is refused invalid_client, whatever its operation and members, never authenticated by either occurrence, and changes nothing",
-    "local": "the authentication parameters the reference reads are client_assertion, client_assertion_type, client_id and client_secret (authenticateLifecycleForm); a repeated one has no value kept, so no occurrence can authenticate"
+    "normative": "a lifecycle request repeating a client authentication parameter fails authentication and receives the outcome assigned by Authentication Failures, whatever its operation and members, never authenticated by either occurrence, and changes nothing",
+    "local": "the authentication parameters the reference reads are client_assertion, client_assertion_type, client_id and client_secret (authenticateLifecycleForm); a repeated one has no value kept, so no occurrence can authenticate The reference's Lifecycle endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -13735,7 +13735,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint."
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local."
   },
   {
    "id": "status.lifecycle.repeated-parameter-malformed",
@@ -13752,8 +13752,8 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an authenticated lifecycle request repeating any other parameter, an optional one included, is refused invalid_request and changes nothing; one that does not authenticate is refused invalid_client",
-    "local": "after successful authentication any repeated parameter is refused invalid_request with the request's nonce echoed when a single well-formed one was sent; a repeated nonce is never echoed"
+    "normative": "an authenticated lifecycle request repeating any other parameter, an optional one included, is refused invalid_request and changes nothing; one that does not authenticate receives the outcome assigned by Authentication Failures",
+    "local": "after successful authentication any repeated parameter is refused invalid_request with the request's nonce echoed when a single well-formed one was sent; a repeated nonce is never echoed The reference's Lifecycle endpoint accepts private-key-JWT client authentication only, so there every authentication failure, a repeated client authentication parameter included, is HTTP 400 invalid_client with no challenge."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -13771,7 +13771,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint."
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local."
   },
   {
    "id": "status.discharge.processing-order",
