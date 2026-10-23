@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-23T16:20:12Z
-Source repository commit: 26936743d81d8e15c9b3231b905569170481b5a6
+Generated: 2026-10-23T17:02:02Z
+Source repository commit: 3411e61fe42d671eb2e0a976e41220b3481e0c85
 Member count: 7
 
 Reading order:
@@ -9588,6 +9588,17 @@ Table of Contents
    The adjudication.governance_record member (Section 14) marks an
    approval such a record backs, and Appendix C shows how each scenario
    assigns the three approval_basis roles.
+
+   The Approval Governance Record is signed by the Mission Issuer and
+   names the Mission's approval event and its Intent and Authority Set
+   commitments.  The issuer retains it, and this document defines no
+   surface that discloses it.  An artifact that refers to it does so by
+   its record digest, as Consent Evidence's approval_governance_digest
+   and audit transparency registration do
+   ([I-D.draft-mcguinness-mission-audit]).  The record binds a
+   governance evaluation to the Mission's approval event.  It does not,
+   by itself, establish a separate business decision for each subsequent
+   action.
 
 7.  Mission Lifecycle
 

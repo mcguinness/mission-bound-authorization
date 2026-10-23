@@ -2054,6 +2054,17 @@ Table of Contents
    approval such a record backs, and Appendix C shows how each scenario
    assigns the three approval_basis roles.
 
+   The Approval Governance Record is signed by the Mission Issuer and
+   names the Mission's approval event and its Intent and Authority Set
+   commitments.  The issuer retains it, and this document defines no
+   surface that discloses it.  An artifact that refers to it does so by
+   its record digest, as Consent Evidence's approval_governance_digest
+   and audit transparency registration do
+   ([I-D.draft-mcguinness-mission-audit]).  The record binds a
+   governance evaluation to the Mission's approval event.  It does not,
+   by itself, establish a separate business decision for each subsequent
+   action.
+
 7.  Mission Lifecycle
 
    A Mission is in one of two states:
