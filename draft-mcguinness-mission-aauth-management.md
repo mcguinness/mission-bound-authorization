@@ -1056,6 +1056,9 @@ effectively access (Section 7.1.1 of
 {{I-D.draft-hardt-oauth-aauth-protocol}}), so a live Person Token is
 part of the residual.  Network partitions and
 Resource policy therefore create an unavoidable residual window.
+Architecture states the limits of a non-active state across the
+family ({{I-D.draft-mcguinness-mission-architecture}}, Section "What
+a Non-Active State Establishes").
 
 The PS can provide a time bound only for the Tracked Credentials whose
 expiry it knows.  The conservative tracked bound is the latest `exp`
