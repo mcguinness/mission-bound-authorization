@@ -553,11 +553,6 @@ describe("portable approval-binding check (@spec approval-governance#portable-bi
     });
   });
 
-  it("fails when the record names a Mission Issuer other than the expected one whose key material authenticated it", () => {
-    const misnamed = resigned({ mission: { ...record.mission, issuer: AS2 } });
-    expect(portable(misnamed, referenceOf(misnamed))).toMatchObject(failure);
-  });
-
   it("case 12: fails when the reference is a Mandate whose iss differs from its mission.issuer", () => {
     expect(portable(record, { ...referenceOf(record), kind: "mandate", iss: AS2 })).toMatchObject(failure);
     expect(portable(record, { ...referenceOf(record), kind: "mandate" })).toMatchObject(failure);
@@ -577,14 +572,73 @@ describe("portable approval-binding check (@spec approval-governance#portable-bi
     // Both carry the same unrecognized prefix: never compared as if it were sha-256.
     const unrecognized = resigned({ mission: { ...record.mission, intent_hash: SHA512_ANCHOR } });
     expect(portable(unrecognized, referenceOf(unrecognized))).toMatchObject(failure);
+    // An unrecognized prefix over a digest of sha-256's length.
+    const sha3 = `sha3-256:${createHash("sha3-256").update("intent", "utf8").digest("base64url")}`;
+    const sha3Record = resigned({ mission: { ...record.mission, intent_hash: sha3 } });
+    expect(portable(sha3Record, referenceOf(sha3Record))).toMatchObject(failure);
     // The record's own value, where the reference does not disclose it.
     const { intent_hash: _i, ...withoutIntent } = referenceOf(unrecognized);
     expect(portable(unrecognized, withoutIntent)).toMatchObject(failure);
   });
 
-  it("reports a disclosed mismatch as a failure even when another required value is undisclosed", () => {
+  it("case 15: fails when the record carries a malformed commitment and the reference carries none", () => {
+    const r = resigned({ approval_context_commitment: "not-a-digest" });
+    expect(portable(r, referenceOf(r))).toMatchObject(failure);
+  });
+
+  it("case 16: fails when the reference carries a malformed commitment and the record carries none", () => {
+    expect(portable(record, { ...referenceOf(record), approval_context_commitment: "not-a-digest" })).toMatchObject(
+      failure,
+    );
+    expect(portable(record, { ...referenceOf(record), approval_context_commitment: null })).toMatchObject(failure);
+  });
+
+  it("case 17: fails when both intent_hash values are equal but noncanonical, decoding with nonzero padding bits", () => {
+    const noncanonical = `sha-256:${"A".repeat(42)}B`;
+    // It decodes to a 32-byte digest, but that digest re-encodes to other text.
+    const text = noncanonical.slice("sha-256:".length);
+    expect(Buffer.from(text, "base64url")).toHaveLength(32);
+    expect(Buffer.from(text, "base64url").toString("base64url")).not.toBe(text);
+    const r = resigned({ mission: { ...record.mission, intent_hash: noncanonical } });
+    expect(portable(r, referenceOf(r))).toMatchObject(failure);
+  });
+
+  it("case 18: fails when the record names another Mission Issuer, though it verifies under the expected issuer's key", () => {
+    const misnamed = resigned({ mission: { ...record.mission, issuer: AS2 } });
+    expect(() => verifyApprovalGovernanceRecord(misnamed, { resolveKey, mission: { ...mission, issuer: AS2 } })).not.toThrow();
+    expect(portable(misnamed, referenceOf(misnamed))).toMatchObject(failure);
+  });
+
+  it("case 19: fails, not insufficient evidence, when a disclosed value mismatches or is malformed and approval_event_id is undisclosed", () => {
     const { approval_event_id: _a, ...rest } = referenceOf(record);
-    expect(portable(record, { ...rest, intent_hash: anchorOf("another intent") })).toMatchObject(failure);
+    expect(portable(record, { ...rest, authority_hash: anchorOf("another set") })).toMatchObject(failure);
+    expect(portable(record, { ...rest, intent_hash: SHA512_ANCHOR })).toMatchObject(failure);
+  });
+
+  it("applies the canonical encoded form to every anchor and disclosed commitment: a wrong-length digest or noncanonical text fails even where both artifacts agree", () => {
+    const short = `sha-256:${Buffer.alloc(16, 7).toString("base64url")}`;
+    const long = `sha-256:${Buffer.alloc(33, 7).toString("base64url")}`;
+    const noncanonical = `sha-256:${"A".repeat(42)}B`;
+    for (const value of [short, long]) {
+      const r = resigned({ mission: { ...record.mission, intent_hash: value } });
+      expect(portable(r, referenceOf(r))).toMatchObject(failure);
+    }
+    const authority = resigned({ mission: { ...record.mission, authority_hash: noncanonical } });
+    expect(portable(authority, referenceOf(authority))).toMatchObject(failure);
+    for (const value of [short, noncanonical]) {
+      const both = resigned({ approval_context_commitment: value });
+      expect(portable(both, { ...referenceOf(both), approval_context_commitment: value })).toMatchObject(failure);
+      const recordOnly = resigned({ approval_context_commitment: value });
+      expect(portable(recordOnly, referenceOf(recordOnly))).toMatchObject(failure);
+      expect(portable(record, { ...referenceOf(record), approval_context_commitment: value })).toMatchObject(failure);
+    }
+    // The canonical form of the same digest passes.
+    const canonical = `sha-256:${Buffer.from(noncanonical.slice(8), "base64url").toString("base64url")}`;
+    const ok = resigned({ approval_context_commitment: canonical });
+    expect(portable(ok, { ...referenceOf(ok), approval_context_commitment: canonical })).toMatchObject({
+      outcome: "success",
+      commitment_agreement: "established",
+    });
   });
 
   it("reports its success as the portable approval-binding check, never as verification against the Mission Record or a re-check", () => {

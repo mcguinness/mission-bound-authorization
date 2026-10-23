@@ -268,11 +268,27 @@ export interface PortableApprovalBindingResult {
   reason: string;
 }
 
-/** The integrity-anchor encoded form ({@link approvalGovernanceRecordDigest}): `sha-256:` and an unpadded base64url SHA-256. */
-const ENCODED_ANCHOR = /^sha-256:[A-Za-z0-9_-]{43}$/;
+/** The one recognized algorithm prefix of the encoded form, and its digest length in bytes. */
+const ANCHOR_PREFIX = "sha-256:";
+const SHA256_BYTES = 32;
+const BASE64URL_TEXT = /^[A-Za-z0-9_-]+$/;
 
 const isNonEmptyString = (v: unknown): boolean => typeof v === "string" && v.length > 0;
-const isEncodedAnchor = (v: unknown): boolean => typeof v === "string" && ENCODED_ANCHOR.test(v);
+
+/**
+ * @spec approval-governance#portable-binding: a compared value is well-formed
+ * only in the canonical encoded form: the recognized `sha-256:` prefix, then
+ * the unpadded base64url encoding of a 32-byte digest whose text re-encodes to
+ * exactly the same characters. A value with nonzero padding bits decodes but
+ * does not re-encode to itself, so it is malformed.
+ */
+const isEncodedAnchor = (v: unknown): boolean => {
+  if (typeof v !== "string" || !v.startsWith(ANCHOR_PREFIX)) return false;
+  const text = v.slice(ANCHOR_PREFIX.length);
+  if (!BASE64URL_TEXT.test(text)) return false;
+  const digest = Buffer.from(text, "base64url");
+  return digest.length === SHA256_BYTES && digest.toString("base64url") === text;
+};
 
 /** The values step 2 requires, and the form each must take. */
 const PORTABLE_BINDING_MEMBERS = [
@@ -291,18 +307,21 @@ type PortableBindingMember = (typeof PORTABLE_BINDING_MEMBERS)[number][0];
  * re-check, and replaces neither.
  *
  * 1. The record authenticates by steps 1 to 4 of the envelope, with its key
- *    resolved only from `expectedIssuer`'s trusted key material, and names
- *    that issuer as its Mission Issuer (the envelope is signed by the Mission
- *    Issuer). The reference was authenticated by the caller.
+ *    resolved only from `expectedIssuer`'s trusted key material, and its
+ *    `mission.issuer` is that expected issuer. The reference was
+ *    authenticated by the caller.
  * 2. The reference discloses `approval_event_id`, `issuer`, `intent_hash` and
  *    `authority_hash`, each equal to the record's `approval_event_id` or the
  *    record's `mission` member of that name. A Mandate's `iss` equals its
  *    `mission.issuer`.
- * 3. Where both carry `approval_context_commitment`, the two are equal; where
- *    one or neither does, commitment agreement is not established.
+ * 3. Each `approval_context_commitment` an artifact carries is well-formed,
+ *    whether or not the other carries one; where both carry it, the two are
+ *    equal; where one or neither does, commitment agreement is not
+ *    established.
  *
- * Failure: an authentication failure, a malformed required value (such as an
- * anchor with an unrecognized algorithm prefix), or a mismatch. Insufficient
+ * Failure: an authentication failure, a malformed required value or disclosed
+ * commitment (an anchor or commitment not in the canonical encoded form,
+ * {@link isEncodedAnchor}), or a mismatch. Insufficient
  * evidence: an absent record or reference, or a required value the reference
  * does not disclose. A failure the supplied evidence shows takes precedence
  * over insufficient evidence, so a disclosed value that mismatches is a
@@ -330,6 +349,10 @@ export function checkPortableApprovalBinding(input: {
       const v = reference[name];
       if (v !== undefined && !wellFormed(v)) return failure(`the reference's ${name} is malformed`);
     }
+    // Step 3: a disclosed commitment is well-formed on its own.
+    if (reference.approval_context_commitment !== undefined && !isEncodedAnchor(reference.approval_context_commitment)) {
+      return failure("the reference's approval_context_commitment is malformed");
+    }
   }
 
   let bound: Record<PortableBindingMember, unknown> | undefined;
@@ -353,6 +376,10 @@ export function checkPortableApprovalBinding(input: {
     if (bound.issuer !== expectedIssuer.issuer) {
       return failure("the record names a Mission Issuer other than the expected one");
     }
+    // Step 3: a recorded commitment is well-formed on its own.
+    if (record.approval_context_commitment !== undefined && !isEncodedAnchor(record.approval_context_commitment)) {
+      return failure("the record's approval_context_commitment is malformed");
+    }
   }
 
   if (reference === undefined) return result("insufficient_evidence", "no Mission reference is supplied");
@@ -366,14 +393,11 @@ export function checkPortableApprovalBinding(input: {
     else if (v !== bound[name]) return failure(`the reference's ${name} does not match the record's`);
   }
 
-  // Step 3: the Approval Context Commitment.
+  // Step 3: the Approval Context Commitment, each already well-formed.
   let agreement: "established" | "not_established" = "not_established";
   const recorded = record.approval_context_commitment;
   const referenced = reference.approval_context_commitment;
   if (recorded !== undefined && referenced !== undefined) {
-    if (!isEncodedAnchor(recorded) || !isEncodedAnchor(referenced)) {
-      return failure("an approval_context_commitment is malformed");
-    }
     if (recorded !== referenced) return failure("the approval_context_commitment values differ");
     agreement = "established";
   }
