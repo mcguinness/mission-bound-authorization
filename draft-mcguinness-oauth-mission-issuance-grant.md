@@ -1056,7 +1056,10 @@ IANA is requested to register one media type per {{RFC6838}}.
 - Subtype name: mission-issuance-grant+jwt
 - Required parameters: none
 - Optional parameters: none
-- Encoding considerations: binary; JWS Compact Serialization
+- Encoding considerations: binary; a Mission Issuance Grant is a JWT;
+  JWT values are encoded as a series of base64url-encoded values (some
+  of which may be the empty string) separated by period ('.')
+  characters
 - Security considerations: see {{security-considerations}}
 - Interoperability considerations: see this document
 - Published specification: this document
@@ -1077,9 +1080,11 @@ IANA is requested to register the following in the "Mission
 Authority Server Metadata" registry established by
 {{I-D.draft-mcguinness-mission-authority-server}}:
 
-- Member Name: `mission_issuance_grant_endpoint`
+- Metadata Name: `mission_issuance_grant_endpoint`
+- Metadata Description: URL of the MAS's Mission Issuance Grant
+  endpoint
 - Change Controller: IETF
-- Reference: {{metadata}} of this document
+- Specification Document(s): {{metadata}} of this document
 
 ## OAuth Authorization Request Parameter Registration
 
