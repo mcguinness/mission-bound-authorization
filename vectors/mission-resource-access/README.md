@@ -24,7 +24,7 @@ A consumer declares the capabilities it implements. It runs a case when it imple
 
 A refusal of unsupported input is itself a case, with `refusal.unsupported-input`. Every such case names in `unless` the capability whose absence it tests, so a consumer that supports the input never runs a case expecting it to be refused. A case expecting the supported behavior requires that capability instead.
 
-A consumer compares `outcome` always, and `error` and `entries` where a case gives them. `reason` is explanatory and never compared. Inputs are JSON values; an entry is a `mission_resource_access` object, given without its `type` member where the check does not read it.
+A consumer compares `outcome` always, and `error` and `entries` where a case gives them. `reason` is explanatory and never compared. Inputs are JSON values; an entry is a `mission_resource_access` object. `subset`, `derive` and `entry-validation` read its `type`, so their entries carry it and one without it is malformed input; `resource-match` and `target-resolution` read only the members they name, and give an entry without `type`.
 
 ## Checks
 
