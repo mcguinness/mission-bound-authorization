@@ -780,7 +780,7 @@ visible still receives `not_found`.
 | `invalid_client` | 400 | submission, join assertion | Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted, as Mission Status defines. |
 | `unauthorized` | 401 | submission, join assertion | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted; the response carries the challenges Mission Status defines. |
 | `invalid_join_request` | 400 | join assertion | The request body is not a JSON object carrying `mission_id`, a string `audience`, and exactly one token form ({{join-assertion-request}}). |
-| `join_failed` | 403 | join assertion | The referenced Mission is not `active`, the `audience` names no enrolled PDP, or the acting token is inactive, carries no `cnf` confirmation, or does not join the referenced Mission ({{join-assertion-request}}). |
+| `join_failed` | 403 | join assertion | The referenced Mission is not `active`, the `audience` names no enrollee holding the PDP role, or the acting token is inactive, carries no `cnf` confirmation, or does not join the referenced Mission ({{join-assertion-request}}). |
 | `not_found` | 404 | submission, join assertion | A referenced submission or Mission does not exist or is not visible to the caller. |
 | `conflict` | 409 | submission (expansion, child creation) | A resolved predecessor or parent whose state or serialization refuses the operation ({{native-carriage}}). |
 | `rate_limited` | 429 | submission, join assertion | Caller is rate-limited. |
@@ -911,23 +911,25 @@ which the Mission Status profile lets a companion add
 `client_id`:
 : A string. The Mission's `client_id` ({{mission-submission}}).
 
-When the authenticated caller is a PDP enrolled for the Mission's
-enforcement scope, the MAS MUST include `subject` and `client_id`, and
-MUST disclose each `authorization_details` entry in the response with
-its `delegation` member as recorded. For any other caller, the MAS
-MUST NOT include `subject` or `client_id`. These members describe the
-Mission; the response envelope's `sub` still identifies the
-requesting caller. The PDP reads them from the Mission Status response
-it resolves (rule 2 of {{join-rules}}). A PEP does not copy them into
-`context.mission`, whose `subject` member the AuthZEN profile populates
-only from a verified token or delegation chain
+When the authenticated caller is enrolled for the Mission's
+enforcement scope in the PDP role, the MAS MUST include `subject` and
+`client_id`, and MUST disclose each `authorization_details` entry in
+the response with its `delegation` member as recorded. For any other
+caller, the MAS MUST NOT include `subject` or `client_id`. These
+members describe the Mission; the response envelope's `sub` still
+identifies the requesting caller. The PDP reads them from the Mission
+Status response it resolves (rule 2 of {{join-rules}}). A PEP does not
+copy them into `context.mission`, whose `subject` member the AuthZEN
+profile populates only from a verified token or delegation chain
 ({{I-D.draft-mcguinness-mission-authzen}}).
 
 The PEPs and PDPs enrolled for a Mission's enforcement scope are
-deployment configuration that the MAS holds. This document defines no
-enrollment protocol: the MAS authenticates the caller and checks it
-against that configuration. The same set bounds visibility at the
-join-assertion endpoint and the `audience` it accepts
+deployment configuration that the MAS holds, and the configuration
+records each enrollee's role: PEP, PDP, or both. This document defines
+no enrollment protocol: the MAS authenticates the caller and checks it
+against that configuration. Join Disclosure and a Join Assertion's
+`audience` take an enrollee holding the PDP role; visibility at the
+join-assertion endpoint takes an enrollee of either role
 ({{join-assertion-request}}).
 
 # Mission Join {#mission-join}
@@ -1547,8 +1549,10 @@ distinct from the acting `access_token` that the request body carries
 
 ## Assertion Request {#join-assertion-request}
 
-The PEP, or the client acting for it, sends a POST request whose body
-is a JSON object with the following members:
+The PEP requests a Join Assertion. A client or delegate calls this
+endpoint only as the PEP it hosts, and this document defines no
+carriage of an assertion from a client to a separate PEP. The request
+is a POST whose body is a JSON object with the following members:
 
 `mission_id`:
 : REQUIRED. A string. The Mission the join is asserted against; its
@@ -1557,8 +1561,8 @@ is a JSON object with the following members:
 `audience`:
 : REQUIRED. A string. The consuming PDP the assertion is minted for,
   as the enrollment configuration of {{join-disclosure}} identifies
-  it. The MAS MUST NOT mint for an `audience` that names no PDP
-  enrolled for the Mission's enforcement scope.
+  it. The MAS MUST NOT mint for an `audience` that names no enrollee
+  holding the PDP role for the Mission's enforcement scope.
 
 `access_token`:
 : A string. The acting access token. REQUIRED unless the digest pair
@@ -1629,7 +1633,8 @@ It responds in the error format of {{submission-errors}}, as follows:
   returns the `not_found` error code, preserving the anti-oracle
   property.
 - If the Mission is visible but not `active`, the `audience` names no
-  PDP enrolled for the Mission's enforcement scope, the acting token
+  enrollee holding the PDP role for the Mission's enforcement scope,
+  the acting token
   is inactive or carries no `cnf` confirmation, or the acting token
   does not join, the MAS rejects the request with HTTP 403 and the
   `join_failed` error code.
@@ -1639,6 +1644,7 @@ Visibility on this endpoint is bounded: a Mission is visible to its
 for the Mission's enforcement scope. Any other caller MUST receive
 `not_found`, so the `join_failed` (403) and `not_found` (404) split
 never acts as a mapping oracle for callers outside that set.
+Visibility alone does not establish a caller's role.
 
 An assertion's lifetime is capped by the acting token's, so with
 short token lifetimes, minting is on the token-rotation path: each
@@ -2674,6 +2680,9 @@ A **Mission-joining PEP**:
   request from it ({{join-scope}}), validating the presenter's
   Instance Context where the mapping contract requires an
   instance-bound join ({{join-instance}});
+- where the deployment uses Join Assertions, obtains one for the
+  credential it authenticated and carries it in `context.mission_join`
+  ({{join-authzen}});
 - where a propagated reference is used, parses it under the rules for
   its HTTP ({{mission-reference-field}}) or MCP ({{mcp-reference}})
   carriage and surfaces a reference conflict with
@@ -3110,8 +3119,9 @@ profile's rules, and treat submission, status, and lifecycle logs as
 PII sinks.
 
 The join disclosure ({{join-disclosure}}) reveals a Mission's Subject
-and client only to the PDPs enrolled for its enforcement scope. A
-deployment enrolls only the PDPs that enforce that scope.
+and client only to enrollees holding the PDP role for its enforcement
+scope. A deployment enrolls only the PEPs and PDPs that enforce that
+scope.
 
 Retention is anchored on the OAuth binding's audit horizon. A MAS
 retains records at least that long and SHOULD NOT retain them
@@ -3459,6 +3469,16 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Join Assertion roles (#1591, D708). The PEP requests a Join
+  Assertion; a client or delegate calls the endpoint only as the PEP it
+  hosts, and no carriage of an assertion from a client to a separate
+  PEP is defined. The enrollment configuration records each enrollee's
+  role as PEP, PDP, or both: Join Disclosure and a Join Assertion's
+  `audience` take an enrollee holding the PDP role, and join-assertion
+  visibility takes either role. A Mission-joining PEP that uses Join
+  Assertions obtains one for the credential it authenticated and
+  carries it in `context.mission_join`.
 
 - A client assertion's `aud` at the mission submission and
   join-assertion endpoints is the MAS's issuer identifier as its sole

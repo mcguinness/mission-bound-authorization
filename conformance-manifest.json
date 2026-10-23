@@ -59900,7 +59900,7 @@
    "id": "mas.join-disclosure.members",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-disclosure",
-   "text": "When the authenticated caller is a PDP enrolled for the Mission's enforcement scope, the MAS MUST include `subject` and `client_id`, and MUST disclose each `authorization_details` entry in the response with its `delegation` member as recorded",
+   "text": "When the authenticated caller is enrolled for the Mission's enforcement scope in the PDP role, the MAS MUST include `subject` and `client_id`, and MUST disclose each `authorization_details` entry in the response with its `delegation` member as recorded",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
@@ -60775,7 +60775,7 @@
    "id": "mas.join-assertion.audience-enrolled",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-assertion-request",
-   "text": "The MAS MUST NOT mint for an `audience` that names no PDP enrolled for the Mission's enforcement scope",
+   "text": "The MAS MUST NOT mint for an `audience` that names no enrollee holding the PDP role for the Mission's enforcement scope",
    "role": "Controller",
    "strength": "MUST NOT",
    "applicability": {
