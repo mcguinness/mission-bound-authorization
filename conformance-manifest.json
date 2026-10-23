@@ -58327,7 +58327,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by defects that accept both token forms and that accept the digest without a thumbprint."
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by defects that accept both token forms and that drop the exactly-one-thumbprint check."
   },
   {
    "id": "mas.join-assertion.join-failed-outcomes",
@@ -58462,7 +58462,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that signs with an unlisted algorithm."
+   "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that advertises a list without the algorithm the MAS signs with."
   },
   {
    "id": "mas.join-assertion.pdp-rejects-unlisted-alg",
