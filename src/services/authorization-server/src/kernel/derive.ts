@@ -9,6 +9,7 @@
  */
 
 import {
+  actionFamilyRefusal,
   canonicalize,
   capabilitySourceIdentity,
   compareAmounts,
@@ -24,6 +25,7 @@ import {
   resourceWithin,
   sameResourceContract,
   SUPPORTED_CONSTRAINT_KEYS,
+  unsupportedActionFamily,
   unsupportedDelegationMember,
   unsupportedEntryMember,
 } from "@mission/core";
@@ -150,6 +152,13 @@ function assertNoRefusedMembers(entries: readonly AuthorityEntry[]): void {
         "invalid_authorization_details",
         `authorization_details entry carries ${delegationMember}, which is not a supported delegation member; refusing rather than carrying it unchanged`,
       );
+    }
+    // @spec resource-access#subset (#1377, D538, D684): an action family is
+    // unsupported input, in the ceiling or the proposal: derivation compares
+    // actions literally and implements none of the family clauses.
+    const family = unsupportedActionFamily(entry);
+    if (family !== undefined) {
+      throw new IntentError("invalid_authorization_details", actionFamilyRefusal(family));
     }
   }
 }
@@ -961,6 +970,10 @@ function intersectForProjection(
   // without `delegation`.
   if (unsupportedDelegationMember(candidate) !== undefined) return null;
   if (unsupportedDelegationMember(effective) !== undefined) return null;
+  // @spec resource-access#subset (#1377, D538): likewise an action family on
+  // either side, which the literal action intersection below cannot narrow.
+  if (unsupportedActionFamily(candidate) !== undefined) return null;
+  if (unsupportedActionFamily(effective) !== undefined) return null;
   // @spec resource-access#subset step 4 (#249, D553): "A carries
   // `resource_contract` exactly when B does": a pairing whose sides differ in
   // the reference, or where one side has none, yields no fragment, since no
