@@ -85,6 +85,7 @@ informative:
     date: 2026
   RFC8628:
   RFC8725:
+  I-D.draft-ietf-oauth-rfc7523bis:
 
   I-D.draft-mcguinness-oauth-mission-containment:
     title: "Mission Containment for OAuth 2.0"
@@ -311,8 +312,11 @@ Claims:
   ({{trust}}).
 
 `aud`:
-: REQUIRED. The consuming AS's issuer identifier
-  ({{grant-validation}}).
+: REQUIRED. The consuming AS's issuer identifier {{RFC8414}}, as a
+  single string ({{grant-validation}}). This restricts
+  {{Section 3 of RFC7523}}, under which a token endpoint URL can also
+  identify the AS; Section 4 of {{I-D.draft-ietf-oauth-rfc7523bis}}
+  keeps both forms for authorization grants.
 
 `iat`, `exp`:
 : REQUIRED. `exp` MUST NOT be more than 300 seconds after `iat`.
@@ -452,7 +456,9 @@ TLS, authenticated as {{minting-rules}} requires:
 
 `audience`:
 : REQUIRED. A string. The issuer identifier of the consuming AS the
-  grant is for, which becomes the grant's `aud` ({{trust}}).
+  grant is for. The MAS compares it literally with the issuer
+  identifiers its configuration names and sets the grant's `aud` to
+  the matching identifier ({{trust}}).
 
 `authorization_details`:
 : OPTIONAL. An array. A narrower subset the requester asks the grant
@@ -638,7 +644,10 @@ any check fails:
 2. the signature, under a `kid` resolving in the published key
    material of an `iss` its local policy trusts for issuance joins;
    and the `mission` claim's `issuer` equals `iss`;
-3. `aud` names this AS; `exp` is no more than 300 seconds after
+3. `aud` is a single string identical to this AS's issuer
+   identifier, compared as a literal string with no normalization, so
+   an array, a token endpoint URL, or another alias fails; `exp` is no
+   more than 300 seconds after
    `iat`, compared exactly; `iat` is not after the current time and
    `exp` is after it, with the clock-skew leeway of
    {{Section 4.1.4 of RFC7519}} applied to these two comparisons with
