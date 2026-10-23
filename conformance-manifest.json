@@ -45704,6 +45704,152 @@
    "notes": "#1374. Proven by disabling the code it covers: capping the Mission delegation depth at 1 fails the depth-2 witness; replacing the onward act with the current actor alone fails the attribution witness."
   },
   {
+   "id": "continuation.ica-transport.id-jag-identifies-mission",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "each onward ID-JAG MUST identify the originating Mission by carrying its `mission` claim",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the root and every onward ID-JAG carry the `mission` claim with the originating Mission's `id` and `issuer`"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > happy path: mints a Mission-rooted ID-JAG with a fresh handle, deterministic sub, collapsed act, and carried envelope"
+    }
+   ],
+   "notes": "#1589 (D726, Q6). Witnessed: an onward ID-JAG's `mission.id` is the Mission. Not witnessed: its `mission.issuer`, and the root ID-JAG, which this reference does not mint on this path."
+  },
+  {
+   "id": "continuation.ica-transport.local-token-preserves-mission",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "Resource Authorization Server's local access token issued on such an ID-JAG MUST preserve that `mission` reference.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource Authorization Server's local access token issued on a root or onward ID-JAG carries the same `mission` `id` and `issuer`"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token"
+    }
+   ],
+   "notes": "#1589 (D726, Q6). Witnessed: the reference Resource AS's local token from an onward ID-JAG keeps `mission.id` and `mission.issuer`. Not witnessed: a local token issued on a root ID-JAG."
+  },
+  {
+   "id": "continuation.ica-transport.hop-record-not-lineage",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "The IdP's hop record is continuation state, not an additional grant lineage",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an IdP that records a continuation hop creates no grant lineage the Mission resolves through; continuing derives under the Mission's existing anchor"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1589 (D726, Q5). No witness yet."
+  },
+  {
+   "id": "continuation.ica-transport.ras-association-not-binding",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "A Resource Authorization Server's association of a continuation handle with the authorization state it establishes is not by itself a Mission grant binding; a redeemable grant lineage that server establishes and maps to the Mission is one.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource AS's handle association alone is not treated as a Mission grant binding, while a redeemable lineage it maps to the Mission resolves to that Mission under the grant-binding rules"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1589 (D726, Q6). No witness yet: the reference Resource AS establishes no redeemable lineage."
+  },
+  {
+   "id": "continuation.ica-transport.ras-refresh-family-binding",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "refresh-token family one creates by exception is a destination-side Mission grant binding, under the Mission's authority, state, expiry and termination rules",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a refresh-token family a Resource AS issues on a continuation is gated by the Mission's state, clamped to its expiry, held within its authority and ended by its termination"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1589 (D726, Q7). No witness: the reference Resource AS issues no refresh token, following the base profile's recommendation."
+  },
+  {
+   "id": "continuation.ica-transport.root-exchange-coincides",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "where they coincide, both profiles' restrictions apply",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an exchange that is both the root exchange and a cross-domain projection meets the restrictions of both profiles"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1589 (D726, Q8). No witness yet."
+  },
+  {
    "id": "continuation.async-transport.handle-audience",
    "spec": "draft-mcguinness-oauth-mission-continuation.md",
    "anchor": "transport-async",

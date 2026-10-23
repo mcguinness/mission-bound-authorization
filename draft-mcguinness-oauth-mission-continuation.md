@@ -371,6 +371,30 @@ subset of that Mission's Authority Set, state-gated, and lifetime-clamped
 per {{authorization-continuity}}; and the ID-JAG MUST be bound
 ({{RFC9449}}) to the acting identity's key.
 
+The root ID-JAG ({{Section 5.1.1 of I-D.draft-mcguinness-oauth-id-continuation-assertion}})
+and each onward ID-JAG MUST identify the originating Mission by
+carrying its `mission` claim ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission Claim") with that Mission's `id` and `issuer`. A
+Resource Authorization Server's local access token issued on such an
+ID-JAG MUST preserve that `mission` reference.
+
+The IdP's hop record is continuation state, not an additional grant
+lineage ({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding the
+Mission to the Grant"). A Resource Authorization Server's association
+of a continuation handle with the authorization state it establishes is
+not by itself a Mission grant binding; a redeemable grant lineage that
+server establishes and maps to the Mission is one. The base ID-JAG
+profile recommends against a Resource Authorization Server issuing a
+refresh token ({{Section 6 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}); a
+refresh-token family one creates by exception is a destination-side
+Mission grant binding, under the Mission's authority, state, expiry and
+termination rules ({{authorization-continuity}}).
+
+The root exchange can coincide with a cross-domain projection exchange
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) where both
+profiles' conditions hold. The two are not the same exchange in
+general, and where they coincide, both profiles' restrictions apply.
+
 The IdP authorizes each continuation under the chain authorization
 recorded at the root exchange and current policy, and that draft leaves
 whether a requested action serves the authorized work to deployment
@@ -660,6 +684,14 @@ constrains their use and introduces none of its own.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Identity Continuation Transport requires the root and onward
+  ID-JAGs to identify the originating Mission through the `mission`
+  claim, and a Resource Authorization Server's local access token to
+  preserve it. It also places the hop record, a Resource Authorization
+  Server's handle association and any refresh family against grant
+  bindings, and says when the root exchange coincides with cross-domain
+  projection (#1589, D726).
 
 - Continuation Transports requires each transport to identify the
   accepted hop through a reference that resolves to the Mission's
