@@ -64,12 +64,18 @@ interface Case {
   check: string;
   requires: string[];
   unless?: string[];
+  input: unknown;
+  expected: { outcome: string };
 }
 
 const read = <T>(path: string): T => JSON.parse(readFileSync(path, "utf8")) as T;
 const subset = read<SubsetFile>(join(SUBSET_DIR, "supported-subset.json"));
 const contract = read<ContractFile>(join(SUBSET_DIR, subset.contract.file));
 const sorted = (values: Iterable<string>) => [...values].sort();
+const readCases = () =>
+  readdirSync(CASES_DIR)
+    .filter((f) => f.endsWith(".json"))
+    .flatMap((f) => read<{ cases: Case[] }>(join(CASES_DIR, f)).cases);
 
 /** The key names in the draft's "Initial Mission Common Constraints registry" table. */
 function initialRegistryKeys(): string[] {
@@ -83,6 +89,37 @@ function initialRegistryKeys(): string[] {
 /** Whether a consumer implementing `implemented` runs `c` (the case README's applicability rule). */
 const applies = (c: Case, implemented: ReadonlySet<string>) =>
   c.requires.every((cap) => implemented.has(cap)) && !(c.unless ?? []).some((cap) => implemented.has(cap));
+
+/** The outcomes that refuse the input rather than decide it. */
+const REFUSALS = new Set(["refuse", "refuse-issuance", "refuse-resolution"]);
+
+/** Every Authority Set entry anywhere in a case's input. */
+function* entriesIn(value: unknown): Generator<Record<string, unknown>> {
+  if (Array.isArray(value)) {
+    for (const v of value) yield* entriesIn(v);
+  } else if (value !== null && typeof value === "object") {
+    const o = value as Record<string, unknown>;
+    if ("resource" in o && "actions" in o) yield o;
+    for (const v of Object.values(o)) yield* entriesIn(v);
+  }
+}
+
+/** The input outside the subset an entry carries: a member, a match mode, an action family or a constraint key. */
+function outsideSubset(entry: Record<string, unknown>): string[] {
+  const found = Object.keys(entry)
+    .filter((m) => !subset.members.includes(m))
+    .map((m) => `member ${m}`);
+  if (entry.resource_match !== undefined && !subset.resource_match.includes(entry.resource_match as string)) {
+    found.push(`resource_match ${String(entry.resource_match)}`);
+  }
+  if (Array.isArray(entry.actions)) {
+    for (const a of entry.actions) if (typeof a === "string" && a.endsWith(".*")) found.push(`action family ${a}`);
+  }
+  if (entry.constraints !== null && typeof entry.constraints === "object") {
+    for (const k of Object.keys(entry.constraints)) if (!(k in subset.constraints)) found.push(`constraint ${k}`);
+  }
+  return found;
+}
 
 describe("the supported-subset fixture freezes the payments contract and the initial subset (@spec resource-access#resource-contract, #249, D676)", () => {
   it("freezes the contract version the payments resource declares as current: the same reference and document, under a digest that commits the document", () => {
@@ -144,12 +181,20 @@ describe("the supported-subset fixture freezes the payments contract and the ini
     for (const cap of subset.capabilities) expect(IMPLEMENTED.has(cap), `${cap} is implemented here`).toBe(true);
   });
 
+  it("selects no case that expects input outside the subset handled: such input appears only in a refusal", () => {
+    const capabilities = new Set(subset.capabilities);
+    const selected = readCases().filter((c) => applies(c, capabilities));
+    expect(selected.length).toBeGreaterThan(0);
+    for (const c of selected) {
+      if (REFUSALS.has(c.expected.outcome)) continue;
+      const outside = [...entriesIn(c.input)].flatMap(outsideSubset);
+      expect(outside, `${c.id} expects ${c.expected.outcome}`).toEqual([]);
+    }
+  });
+
   it("selects expected-outcome cases this implementation runs, except a refusal of input the subset excludes and this implementation supports", () => {
     const capabilities = new Set(subset.capabilities);
-    const cases = readdirSync(CASES_DIR)
-      .filter((f) => f.endsWith(".json"))
-      .flatMap((f) => read<{ cases: Case[] }>(join(CASES_DIR, f)).cases);
-    const selected = cases.filter((c) => applies(c, capabilities));
+    const selected = readCases().filter((c) => applies(c, capabilities));
     expect(selected.length).toBeGreaterThan(0);
     for (const c of selected) {
       expect(EXECUTABLE_CHECKS.has(c.check), `${c.id}: an executor for ${c.check}`).toBe(true);

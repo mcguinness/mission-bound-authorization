@@ -72,7 +72,7 @@
     "resource_match": [
       "prefix"
     ],
-    "action_families": "An action value ending in .* is outside the subset. D538 routes it to refusal before approval or transformation; the reference implementation admits it today and compares it literally, never expanding it (#1377).",
+    "action_families": "An action value ending in .* is outside the subset: a subset consumer refuses it as unsupported input before approval or transformation (D538). The reference implementation admits one today and compares it literally, never expanding it; its refusal is #1377's.",
     "members": [
       "delegation",
       "capability_sources"

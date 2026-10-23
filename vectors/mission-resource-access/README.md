@@ -31,7 +31,7 @@ A refusal of unsupported input is itself a case, with `refusal.unsupported-input
 - `subset.exact-resource`: the subset relation over `exact` resources.
 - `action-families`: `.*` action families.
 - `constraint.<name>`: one `constraints` key, a Common Constraint or a deployment-defined key (for example `constraint.max_amount`).
-- `member.<name>`: one optional entry member: `resource_contract` (Resource Contracts), or a member another specification defines for this type.
+- `member.<name>`: one optional entry member: `resource_contract` (Resource Contracts), `delegation` (Delegate Eligibility), or a member another specification defines for this type. A case expecting the member handled rather than refused requires it.
 - `refusal.unsupported-input`: refusal of input the implementation does not support (prefix input, an unsupported constraint, an incomparable value).
 - `refusal.locations`: refusal of an entry carrying `locations`.
 - `rs.enforcement`, `rs.alternative-grants`, `rs.member-roles`: resource-server enforcement behaviors.

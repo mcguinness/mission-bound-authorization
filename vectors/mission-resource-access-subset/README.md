@@ -30,11 +30,15 @@ Both files are frozen. A changed contract is a new contract version with its own
 
 Registry membership and implementation support are separate. All nine initial Common Constraints are in the subset. The reference implementation also supports `terminal_when`, which Discharge registers, and `vendors`, which the payments deployment defines without registering it. Both stay outside the subset, so subset evidence covers Resource Access semantics only.
 
-Input outside the subset is unsupported input: a `prefix` entry, an entry member outside `members`, and a constraint key outside `constraints`. An authorization server refuses it before approval or transformation and never drops it to manufacture a subset (D152, D538), and a resource server treats an entry carrying it as providing no authority (Resource Access, Resource Server Enforcement). `locations` is refused by name. The outcome a subset consumer gives an action-family value is #819's to fix with a case: D538 routes it to refusal, and the reference implementation admits one today and compares it literally, never expanding it (#1377).
+Input outside the subset is unsupported input: a `prefix` entry, an action family, an entry member outside `members`, and a constraint key outside `constraints`. An authorization server refuses it before approval or transformation and never drops it to manufacture a subset (D152, D538), and a resource server treats an entry carrying it as providing no authority (Resource Access, Resource Server Enforcement). `locations` is refused by name. The reference implementation admits an action-family value today and compares it literally, never expanding it; its refusal is #1377's, and the case that witnesses a subset consumer's refusal is #819's.
+
+The constraint set and the action-family refusal are the owner's ruling (2026-10-22).
 
 ## Running the cases under the subset
 
 A consumer declares `capabilities` and runs the files in `vectors/mission-resource-access/` as that README describes: a case runs when the consumer implements every capability in `requires` and none in `unless`. Under the subset that includes the refusals of `prefix` input, which the reference implementation skips because it implements `prefix`.
+
+Input outside the subset appears in a case the subset selects only when the case expects it refused. A case expecting such input handled requires the capability for it (for example `member.delegation` or `resource-match.prefix`), so a subset consumer never runs it. The reference implementation's test checks this for every case the subset selects.
 
 `member.resource_contract` selects the cases about the `resource_contract` member: exact preservation under the subset rule, and refusal of a stripped or substituted reference. No case carries it yet. #819 adds those cases against the frozen contract, with the rest of the interoperable vector package and an independently authored second consumer (D676).
 

@@ -43,6 +43,10 @@ export const IMPLEMENTED: ReadonlySet<string> = new Set([
   // #249 (D553, D605): the `resource_contract` member, admitted with its shape and
   // preserved exactly by subset step 4. No case requires it yet; #819 adds them (D676).
   "member.resource_contract",
+  // The `delegation` member: validated, compared and carried at intake and derivation.
+  // A case expecting it handled, not refused, requires this, so the initial subset,
+  // which leaves `delegation` out, never runs one (#1555 review).
+  "member.delegation",
 ]);
 
 /** The declared capability vocabulary (README.md). */
