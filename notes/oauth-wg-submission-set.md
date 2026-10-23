@@ -14,7 +14,7 @@ only publication surface the family maintains:
 | Product | Composition |
 |---|---|
 | Initial WG conversation | The OAuth Mission core and, separately, the Mission Resource Access RAR profile (this document) |
-| Normative dependency closure | Whatever each selected specification actually imports; direct references are inventoried below, while the transitive closure remains unverified |
+| Normative dependency closure | Whatever each selected specification actually imports; direct references are inventoried below, and the transitive Internet-Draft closure is verified at the cited revisions |
 | Implementation reader bundle | `notes/oauth-mission-baseline-bundle-preview.md`, a separate publication artifact |
 
 The reader-bundle preview constrains nothing here: it is an implementation
@@ -57,6 +57,10 @@ state. Computed at main commit `a9e35e79064409136f438b6495f110c68f67b059`
 
 A later change to either file does not retroactively change this record;
 it would need a fresh binding.
+
+The verified Internet-Draft closure is computed from published texts
+instead: the core's `-01` and each archived draft, checked 2026-10-23.
+Its roots are the three drafts this commit cites.
 
 This binding replaces the first one, at `c41a39844fc1bedf04470f6c88ed5d9c06bd7fb1`
 (2026-08-25, the merge of PR #727; that record is in this file's git
@@ -181,31 +185,109 @@ publication until the referenced draft is also ready, and the RFC
 Editor then publishes the documents together; the queue state is
 "Reference Not Received".
 
-Those drafts have normative references of their own. A planning
-inventory of that wider set lives with the layering plan (unmerged
-notes branch `worktree-notes+oauth-binding-layering-plan`, PLAN.md
-Appendix E):
-- It traverses each draft's latest revision, not the revisions actually
-  cited.
-- It lists 16 distinct draft names reachable from the three above,
-  including `draft-ietf-tls-rfc8446bis`, already published as
-  [RFC 9846](https://datatracker.ietf.org/doc/rfc9846/). Within that
-  inventory, 15 nodes remain unpublished drafts:
-  - 12 through the Actor Profile: itself and 11 it pulls in, including
-    an expired individual draft;
+Those drafts have normative references of their own.
+
+### Verified closure (cited revisions)
+
+The closure of those three drafts was verified on 2026-10-23 (#1568),
+from each draft's own text at the revision its citer names.
+
+Method, so a future audit can re-run and diff:
+- Start from the three drafts at the revisions the published core `-01`
+  cites (its Section 24.1). The source at the bound commit cites them
+  unversioned, and each of those revisions is its draft's current one
+  (the Internet-Draft dependencies table above), so the roots are the
+  bound commit's.
+- For each node, read the Normative References section of
+  `https://www.ietf.org/archive/id/<name>-<rev>.txt`.
+- Record every Internet-Draft entry with the revision it names. An entry
+  that names no revision resolves to the revision current when the citer
+  was published (the datatracker's `rev_history`).
+- Recurse breadth-first at the cited revisions. A draft published as an
+  RFC stops its branch.
+- Stream comes from `https://datatracker.ietf.org/doc/<name>/doc.json`.
+  State comes from the states listed by
+  `https://datatracker.ietf.org/api/v1/doc/document/<name>/`: the WG
+  state, the RFC Editor state once in the RFC Editor queue, or active or
+  expired for an individual draft. State and expiry are the draft's
+  current revision's, not the cited revision's; the State cell names the
+  current revision where it differs. A draft in the RFC Editor queue
+  shows no expiry.
+
+| Draft at cited revision | Depth | Reached through | Stream | State | Normative Internet-Draft references (as cited) | Source section |
+|---|---|---|---|---|---|---|
+| `draft-ietf-oauth-rar-metadata-remediation-00` | 0 | rar-metadata-remediation | IETF, oauth WG | WG Document, expires 2027-02-24 | none | Section 10 |
+| `draft-mcguinness-oauth-actor-profile-01` | 0 | Actor Profile | individual | active, expires 2027-04-12 | `draft-ietf-oauth-transaction-tokens-11`; `draft-ietf-wimse-workload-creds-02`; `draft-ietf-wimse-wpt-02`; `draft-mora-oauth-entity-profiles-01`; `draft-ietf-oauth-identity-assertion-authz-grant-04` | Section 16.1 |
+| `draft-mcguinness-oauth-client-instance-id-00` | 0 | client-instance-id | individual | active, expires 2027-04-01 | `draft-ietf-oauth-attestation-based-client-auth-11` | Section 12.1 |
+| `draft-ietf-oauth-attestation-based-client-auth-11` | 1 | client-instance-id | IETF, oauth WG | WG Consensus: Waiting for Write-Up, current `-12`, expires 2027-04-16 | none | Section 16.1 |
+| `draft-ietf-oauth-identity-assertion-authz-grant-04` | 1 | Actor Profile | IETF, oauth WG | WG Document, expires 2026-11-22 | `draft-ietf-oauth-identity-chaining-12`; `draft-ietf-oauth-rfc7523bis-11`; `draft-parecki-oauth-jwt-dpop-grant-01` | Section 11.1 |
+| `draft-ietf-oauth-transaction-tokens-11` | 1 | Actor Profile | IETF, oauth WG | WG Consensus: Waiting for Write-Up, expires 2027-01-31 | `draft-ietf-oauth-identity-chaining-17` | Section 17.1 |
+| `draft-ietf-wimse-workload-creds-02` | 1 | Actor Profile | IETF, wimse WG | WG Document, expires 2027-01-03 | `draft-ietf-wimse-mutual-tls-01`; `draft-ietf-wimse-identifier-02` | Section 12.1 |
+| `draft-ietf-wimse-wpt-02` | 1 | Actor Profile | IETF, wimse WG | WG Document, expires 2027-02-28 | `draft-ietf-wimse-arch-08`; `draft-ietf-wimse-workload-creds-02` | Section 5.1 |
+| `draft-mora-oauth-entity-profiles-01` | 1 | Actor Profile | individual | active, current `-02`, expires 2027-04-19 | `draft-ietf-oauth-transaction-tokens` unversioned (resolved to `-08`) | Section 15.1 |
+| `draft-ietf-oauth-identity-chaining-12` | 2 | Actor Profile | IETF, oauth WG | RFC Editor queue (In Progress), current `-17` | none | Section 7.1 |
+| `draft-ietf-oauth-identity-chaining-17` | 2 | Actor Profile | IETF, oauth WG | RFC Editor queue (In Progress) | none | Section 7 |
+| `draft-ietf-oauth-rfc7523bis-11` | 2 | Actor Profile | IETF, oauth WG | RFC Editor queue (Blocked) | none | Section 9.1 |
+| `draft-ietf-oauth-transaction-tokens-08` | 2 | Actor Profile | IETF, oauth WG | WG Consensus: Waiting for Write-Up, current `-11`, expires 2027-01-31 | none | Section 17.1 |
+| `draft-ietf-wimse-arch-08` | 2 | Actor Profile | IETF, wimse WG | WG Document, expires 2027-01-07 | `draft-ietf-wimse-identifier-03` | Section 6.1 |
+| `draft-ietf-wimse-identifier-02` | 2 | Actor Profile | IETF, wimse WG | WG Document, current `-03`, expires 2027-01-07 | `draft-ietf-wimse-workload-creds-00` | Section 9.1 |
+| `draft-ietf-wimse-mutual-tls-01` | 2 | Actor Profile | IETF, wimse WG | WG Document, current `-02`, expires 2027-01-07 | `draft-ietf-wimse-workload-creds-00`; `draft-ietf-tls-rfc8446bis-14` | Section 6.1 |
+| `draft-parecki-oauth-jwt-dpop-grant-01` | 2 | Actor Profile | individual | expired 2026-08-03 | `draft-ietf-oauth-rfc7523bis-05` | Section 7 |
+| `draft-ietf-oauth-rfc7523bis-05` | 3 | Actor Profile | IETF, oauth WG | RFC Editor queue (Blocked), current `-11` | none | Section 8.1 |
+| `draft-ietf-tls-rfc8446bis-14` | 3 | Actor Profile | IETF, tls WG | published as RFC 9846 | none | n/a (RFC) |
+| `draft-ietf-wimse-identifier-03` | 3 | Actor Profile | IETF, wimse WG | WG Document, expires 2027-01-07 | `draft-ietf-wimse-workload-creds-02` | Section 9.1 |
+| `draft-ietf-wimse-workload-creds-00` | 3 | Actor Profile | IETF, wimse WG | WG Document, current `-02`, expires 2027-01-03 | none | Section 8.1 |
+
+Totals:
+- **16 distinct drafts,** at 21 cited revisions. Five drafts are cited at
+  two revisions:
+  - Transaction Tokens `-11` and `-08`;
+  - workload-creds `-02` and `-00`;
+  - identity-chaining `-17` and `-12`;
+  - wimse-identifier `-02` and `-03`;
+  - rfc7523bis `-11` and `-05`.
+- **15 unpublished:** `draft-ietf-tls-rfc8446bis` is published as RFC 9846.
+- **By root:**
+  - 13 through the Actor Profile: itself and 12 it pulls in, one of them
+    the RFC;
   - 2 through client-instance-id;
   - 1 through rar-metadata-remediation, which cites none.
-- These counts describe the existing planning inventory after separating
-  its published node; they do not establish a verified transitive closure.
-- Some of its edges come from the datatracker's heuristic References
-  tab.
+- **Four are individual drafts:** client-instance-id, the Actor Profile,
+  Entity Profiles, and `draft-parecki-oauth-jwt-dpop-grant`, which is
+  expired and is reached only through ID-JAG.
+- **Two are in the RFC Editor queue:** identity-chaining (In Progress)
+  and rfc7523bis (Blocked).
 
-The property this binding can state: every normative reference is a
-published RFC, a fixed-edition external standard, the in-family core,
-or one of the three Internet-Drafts above. It is not yet a verified
-closure. A verified closure needs each node at the revision its citer
-names, with a source section for every edge. Until then, use the
-inventory for planning, not as a publication-date claim.
+Compared with the latest-revision planning inventory this replaces
+(PLAN.md Appendix E, on the unmerged notes branch
+`worktree-notes+oauth-binding-layering-plan`):
+- The drafts and the edges between them are the same: 16 names, and
+  each draft cites the same drafts by name.
+- Every edge is read from the citer's text. The inventory took the
+  edges of nine rows from the datatracker's heuristic References tab or
+  from a model summary.
+- The revisions differ. The inventory read one revision per draft,
+  mostly the latest. Five drafts are cited at two revisions (above).
+  Three are cited only at an earlier revision than the inventory read:
+  attestation-based-client-auth `-11` (inventory `-12`), Entity Profiles
+  `-01` (`-02`) and wimse-mutual-tls `-01` (`-02`). Entity Profiles
+  `-01` cites Transaction Tokens unversioned, which resolves to `-08`.
+- The inventory's two cycles, workload-creds with wimse-identifier and
+  workload-creds with wimse-mutual-tls, do not close at the cited
+  revisions. workload-creds `-02` cites wimse-identifier `-02` and
+  wimse-mutual-tls `-01`; both cite workload-creds `-00`, which cites no
+  draft.
+
+What this establishes:
+- **Publication coupling.** Through this closure, the core's RFC
+  publication waits on 15 unpublished drafts, four of them individual
+  drafts and one of those expired (RFC 7322 Section 4.8.6). The Actor
+  Profile and the drafts it pulls in are 13 of the 16, and 12 of the 15
+  unpublished.
+- **The closure property of this binding.** Every normative reference is
+  a published RFC, a fixed-edition external standard, the in-family
+  core, or one of the three Internet-Drafts above. The table is the
+  verified closure of those three at the cited revisions.
 
 ## What the submission set omits, and why
 
