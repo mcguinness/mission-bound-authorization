@@ -22,7 +22,15 @@
  * is a browser Approver's `mfa` login inside the floor's age bound (#1255).
  */
 
-import { browserApprovalHeaders, FIXTURE_BROWSER_LOGIN, FIXTURE_LOGIN_TIME, floorApprovalHeaders, renderedRevision } from "./approval-fixture.js";
+import {
+  browserApprovalHeaders,
+  FIXTURE_BROWSER_LOGIN,
+  FIXTURE_LOGIN_TIME,
+  floorApprovalHeaders,
+  renderedRevision,
+  TEST_APPROVAL_PRINCIPALS,
+  trustedApprovalHeaders,
+} from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { APPROVAL_FLOOR, CANONICAL_RESOURCE, DERIVATION_POLICY, loadProgressiveProfile, PROGRESSIVE_PROFILE } from "@mission/demo-data";
@@ -426,6 +434,9 @@ beforeAll(async () => {
     onLifecycleCommit: (c) => commits.push(c),
     testClients,
     progressive: PROGRESSIVE,
+    // A trusted headless approval service may decide an expansion deferral (#1558).
+    allowHeadlessAdjudication: true,
+    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
   });
   asOff = await buildAuthorizationServer({
     issuer: OFF_ISSUER,
@@ -2165,6 +2176,19 @@ describe("the expansion deferral's approval page (@spec expansion#completion-mod
     expect(items(html, "review-escalations")[0]).toContain("external_communication");
     expect(items(html, "review-refusals")[0]).toBe("Refused as out of ceiling: none");
     expect(successor.ceiling_consented_at).not.toBe(since);
+  });
+
+  it("a trusted headless approval service renders the page and approves under its own principal", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    const code = await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]);
+    const service = trustedApprovalHeaders("bob", { approver_acr: "mfa" }, "alice");
+    const shown = await fetch(`${ISSUER}/expansions/deferrals/${code}`, { headers: service });
+    expect(shown.status, await shown.clone().text()).toBe(200);
+    const decided = await decide(code, service, { decision: "approve", render_revision: shown.headers.get("x-approval-render-revision") });
+    expect(decided.status, JSON.stringify(decided.json)).toBe(200);
+    const polled = await poll(code);
+    expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+    expect(get(polled.body.mission_id as string).approval_basis.consent_principal).toEqual({ iss: ISSUER, sub: "bob" });
   });
 
   it("shows the deployment's out_of_ceiling refusals since the latest ceiling consent", async () => {
