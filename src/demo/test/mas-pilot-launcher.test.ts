@@ -20,8 +20,10 @@ import { join } from "node:path";
 import { Fga } from "@mission/pdp";
 import { decodeJwt, decodeProtectedHeader, generateKeyPair, SignJWT } from "jose";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
+import { loadMasPilotConfig, type MasPilotConfig, relocateMissionIssuer } from "../src/mas-pilot/config.js";
 import { launchMasPilot, type MasPilotLaunch, masPilotLaunchOptions, type MasPilotTopology, spawnMasProcess } from "../src/mas-pilot/launcher.js";
+import { newStatusClientKey, parseStatusClients } from "../src/mas-pilot/mas-as.js";
+import { composeSeparatedMasPilot } from "../src/mas-pilot/separated.js";
 import { estateToken, handshakeStatus, OPENFGA, openfgaReachable, relocateEstate } from "./mas-pilot-support.js";
 
 const d = (await openfgaReachable()) ? describe : describe.skip;
@@ -216,13 +218,14 @@ d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
 
   it("attaches to a MAS already running (MAS_PILOT_MAS_URL), approves at its own console, permits, refuses after a revocation, and leaves the MAS running on shutdown", async () => {
     const configPath = configFile(14869, 14868);
-    const pdpToken = crypto.randomUUID();
+    // The PDP's key, generated where the PDP runs: the MAS gets the public half (#1407).
+    const pdp = await newStatusClientKey(loadMasPilotConfig().separated_mas.pdp_client_id);
     const masBearer = crypto.randomUUID();
     const env: NodeJS.ProcessEnv = { ...process.env, NODE_OPTIONS: "" };
     Object.assign(env, {
       MAS_PILOT_CONFIG: configPath,
       MISSION_EPHEMERAL_KEYS: "1",
-      MAS_PILOT_PDP_TOKEN: pdpToken,
+      MAS_PILOT_STATUS_CLIENTS: JSON.stringify([pdp.registration]),
       MAS_PILOT_OPERATOR_TOKEN: masBearer,
       MAS_PILOT_OPERATOR_CONSOLE_PORT: "0",
     });
@@ -244,7 +247,7 @@ d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
             MAS_PILOT_CONFIG: configPath,
             MAS_PILOT_DEVELOPMENT_STORE: "1",
             MAS_PILOT_MAS_URL: "http://127.0.0.1:14868",
-            MAS_PILOT_PDP_TOKEN: pdpToken,
+            MAS_PILOT_PDP_KEY: JSON.stringify(pdp.privateJwk),
           },
           "separated",
         ),
@@ -328,7 +331,8 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
   it("refuses a running MAS that is unreachable or answers under another issuer, and a MAS process that fails to start, without opening the Resource-policy store", async () => {
     const bootstrap = vi.spyOn(Fga, "bootstrap").mockRejectedValue(new Error("OpenFGA was reached"));
     const attach = vi.spyOn(Fga, "attach").mockRejectedValue(new Error("OpenFGA was reached"));
-    const env = { MAS_PILOT_CONFIG: configFile(14862, 14863), MAS_PILOT_DEVELOPMENT_STORE: "1", MAS_PILOT_PDP_TOKEN: "pdp" };
+    const pdpKey = JSON.stringify((await newStatusClientKey("mas-pilot-pdp")).privateJwk);
+    const env = { MAS_PILOT_CONFIG: configFile(14862, 14863), MAS_PILOT_DEVELOPMENT_STORE: "1", MAS_PILOT_PDP_KEY: pdpKey };
     await expect(launchMasPilot(masPilotLaunchOptions({ ...env, MAS_PILOT_MAS_URL: "http://127.0.0.1:1" }, "separated"))).rejects.toThrow(
       /is unreachable/,
     );
@@ -368,11 +372,65 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
     for (const url of ["http://127.0.0.1:14862", "http://127.0.0.1:14863"]) expect(await refusesConnection(url), url).toBe(true);
   }, 60_000);
 
-  it("refuses a running MAS's address in process, and one of the address and the PDP credential without the other", () => {
+  it("refuses a running MAS's address in process, and one of the address and the PDP credential without the other", async () => {
     const env = { ...keys, MAS_PILOT_CONFIG: configFile(14862, 14863), MAS_PILOT_DEVELOPMENT_STORE: "1" };
-    expect(() => masPilotLaunchOptions({ ...env, MAS_PILOT_MAS_URL: "http://127.0.0.1:1", MAS_PILOT_PDP_TOKEN: "p" }, "in-process")).toThrow(
+    const pdpKey = JSON.stringify((await newStatusClientKey("mas-pilot-pdp")).privateJwk);
+    expect(() => masPilotLaunchOptions({ ...env, MAS_PILOT_MAS_URL: "http://127.0.0.1:1", MAS_PILOT_PDP_KEY: pdpKey }, "in-process")).toThrow(
       /separated topology only/,
     );
     expect(() => masPilotLaunchOptions({ ...env, MAS_PILOT_MAS_URL: "http://127.0.0.1:1" }, "separated")).toThrow(/set both MAS_PILOT_MAS_URL/);
+  });
+
+  it("the separated composition refuses a MAS advertising no mission_status_endpoint, and a PDP key that is not a private JWK, before reaching OpenFGA (#1407)", async () => {
+    const bootstrap = vi.spyOn(Fga, "bootstrap").mockRejectedValue(new Error("OpenFGA was reached"));
+    let advertised: Record<string, unknown> = {};
+    const mas: Server = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(advertised));
+    });
+    await new Promise<void>((resolve) => mas.listen(0, "127.0.0.1", resolve));
+    try {
+      const url = `http://127.0.0.1:${(mas.address() as AddressInfo).port}`;
+      const config = relocateMissionIssuer(loadMasPilotConfig(), url);
+      const { privateJwk } = await newStatusClientKey(config.separated_mas.pdp_client_id);
+      const options = {
+        openfga: { apiUrl: "http://unused.test", presharedKey: "unused" },
+        resourcePolicyStore: { bootstrap: "development" } as const,
+        config,
+      };
+      advertised = { issuer: url, jwks_uri: `${url}/jwks`, mission_max_stale_seconds: 300 };
+      await expect(composeSeparatedMasPilot({ ...options, mas: { url, pdpKey: privateJwk } })).rejects.toThrow(
+        /advertises no mission_status_endpoint/,
+      );
+      advertised = { ...advertised, mission_status_endpoint: `${url}/mission/status` };
+      const { d: _d, ...publicHalf } = privateJwk;
+      await expect(composeSeparatedMasPilot({ ...options, mas: { url, pdpKey: publicHalf } })).rejects.toThrow(
+        /not a private JWK with a kid/,
+      );
+    } finally {
+      mas.closeAllConnections();
+      await new Promise<void>((resolve) => mas.close(() => resolve()));
+    }
+    expect(bootstrap).not.toHaveBeenCalled();
+  });
+
+  it("the MAS process refuses a Status client registration it cannot use (#1407)", async () => {
+    const { registration } = await newStatusClientKey("mas-pilot-pdp");
+    for (const bad of [undefined, "", "not json", "[]", "{}", JSON.stringify([{ client_id: "mas-pilot-pdp" }]), JSON.stringify([{ jwks: registration.jwks }])]) {
+      expect(() => parseStatusClients(bad), String(bad)).toThrow(/MAS_PILOT_STATUS_CLIENTS/);
+    }
+    expect(parseStatusClients(JSON.stringify([registration]))).toEqual([registration]);
+  });
+
+  it("refuses a PDP key that is not a private JWK with a kid (#1407)", async () => {
+    const env = { ...keys, MAS_PILOT_CONFIG: configFile(14862, 14863), MAS_PILOT_DEVELOPMENT_STORE: "1", MAS_PILOT_MAS_URL: "http://127.0.0.1:1" };
+    const { privateJwk, registration } = await newStatusClientKey("mas-pilot-pdp");
+    const { kid: _kid, ...unnamed } = privateJwk;
+    for (const bad of ["not json", "null", JSON.stringify(registration.jwks.keys[0]), JSON.stringify(unnamed)]) {
+      expect(() => masPilotLaunchOptions({ ...env, MAS_PILOT_PDP_KEY: bad }, "separated"), bad.slice(0, 20)).toThrow(
+        /MAS_PILOT_PDP_KEY is not a private JWK with a kid/,
+      );
+    }
+    expect(masPilotLaunchOptions({ ...env, MAS_PILOT_PDP_KEY: JSON.stringify(privateJwk) }, "separated").mas?.pdpKey).toEqual(privateJwk);
   });
 });

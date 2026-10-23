@@ -335,6 +335,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-control-plane:
+    title: "Mission Control-Plane Consistency"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-control-plane.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-harness:
     title: "Mission-Aware Agent Harnesses"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-harness.html
@@ -1980,12 +1988,13 @@ Authorization bases:
   that companion profiles use to define others:
 
   - `template`: a dispatch drawing on a ceiling the human consented
-    to once.
+    to once ({{I-D.draft-mcguinness-oauth-mission-template}}).
   - `policy_drawdown`: a child instance a policy adjudicates within a
-    bound the parent's human already consented to.
+    bound the parent's human already consented to
+    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
   - `ceiling_drawdown`: a successor a policy adjudicates within an
     authority ceiling the Approver consented to at the initial
-    approval.
+    approval ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
   - `governed_policy`: an agent's own proposal a policy adjudicates
     under a policy version a human approved
     ({{I-D.draft-mcguinness-mission-approval-governance}}).
@@ -3292,7 +3301,7 @@ Notes:
 5. Under the MAS as estate control plane, a consuming AS either has a
    Mission-state integration or has none
    ({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, Section
-   "Effective Authority Set Projection"). One that has it projects
+   "Redemption"). One that has it projects
    every redemption and refresh through the Mission's current
    Effective Authority Set, so its issuance excludes contained
    authority within its published staleness bound. A lifecycle-state
@@ -3329,6 +3338,50 @@ ungated standalone-MAS path, for instance, runs to the resource's own
 bound, if any (note 2), or to none, not to a token lifetime. What
 changes row to row is which gate, if any, reaches a class before its
 own bound, and how tight that bound is.
+
+## What a Non-Active State Establishes {#non-active-state}
+
+A Mission's state reports whether the Mission permits new
+authorization. A non-active state, `suspended` or `terminated` for any
+reason, carries four limits, each set by the documents that enforce
+it:
+
+1. It stops new authorization at every enforcement point that consults
+   Mission state, within the deployment's advertised staleness bound
+   or, when none is advertised, within the bound of the credential,
+   session or cached observation that point relies on, if any
+   ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Revocation
+   Propagation"; {{I-D.draft-mcguinness-mission-runtime}}, Section
+   "Mission State and Freshness").
+2. Conflicting observations are reconciled under the version and
+   freshness rules, never by choosing the more permissive surface: a
+   legitimate higher-version `resume` is accepted, since state names
+   are not ordered by severity
+   ({{I-D.draft-mcguinness-mission-control-plane}}). While a conflict
+   remains unresolved, the safer state governs: an orchestrator uses
+   it until it reconciles
+   ({{I-D.draft-mcguinness-mission-orchestration}}, Section "Trigger
+   Sources"), and PEP-supplied state is a floor for the PDP
+   ({{I-D.draft-mcguinness-mission-authzen}}, Section "PDP-side
+   consistency checks").
+3. It does not establish that accepted or in-flight work has stopped,
+   or that completed effects are undone. Those are outcomes, which
+   evidence establishes: a step whose outcome is not known stays
+   `unknown` ({{I-D.draft-mcguinness-mission-orchestration}}, Section
+   "In-Flight Requests"), and runtime evidence reconciles each executed
+   effect with its action ({{I-D.draft-mcguinness-mission-runtime}},
+   Section "Runtime Enforcement Evidence"). The OAuth binding states
+   that revoking a Mission does not undo completed actions
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Missions, Plans,
+   and Execution"), and AAuth Management bounds the AAuth residual
+   window ({{I-D.draft-mcguinness-mission-aauth-management}}, Section
+   "Honest Residual Bounds").
+4. A route that does not consult Mission state is outside these limits.
+   It runs to its binding's credential, session or resource-local
+   bound, if any: an ungated route can have no bound, and reminting
+   from an earlier observation sums the residuals
+   ({{I-D.draft-mcguinness-mission-runtime}}, Section "Mission State and
+   Freshness"; {{validity-model}}; {{kill-switch-composition}}).
 
 ## Prevention, Detection, and Residue {#prevention-detection}
 
@@ -4327,6 +4380,10 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Authorization bases entry cites the companion profile that
+  defines each standing-consent basis; the OAuth binding points here
+  for the list. No requirement changed.
 
 - The integrity-anchor description says the anchors do not cover the
   approval basis, and names Mission Audit Transparency's

@@ -960,10 +960,11 @@ describe("signed status (@spec status#mission-status-response)", () => {
 });
 
 describe("signed status freshness cap (@spec status#mission-status-caching)", () => {
-  // "When the AS advertises `mission_max_stale_seconds` ({{as-metadata}}), it
-  // MUST NOT set `mission.fresh_until` later than the response `iat` plus
-  // that value." The cap is enforced inside `signedStatus`, so it holds for
-  // every caller, not only the HTTP surfaces that pass a lifetime.
+  // "The AS MUST NOT set `mission.fresh_until` later than the response's
+  // `exp`, nor, when it advertises `mission_max_stale_seconds`
+  // ({{as-metadata}}), later than the response's `iat` plus that value." The
+  // cap is enforced inside `signedStatus`, so it holds for every caller, not
+  // only the HTTP surfaces that pass a lifetime.
   const ceiling = Number(MISSION_MAX_STALE_SECONDS);
   const claims = async (freshnessSeconds?: number) => {
     const r = approve(intent(), 40 + (freshnessSeconds ?? 0));
@@ -993,5 +994,12 @@ describe("signed status freshness cap (@spec status#mission-status-caching)", ()
     const { iat, exp, freshUntil } = await claims(ceiling * 10 + 600);
     expect(exp).toBe(iat + ceiling);
     expect(freshUntil).toBe((iat + ceiling) * 1000);
+  });
+
+  it("never publishes fresh_until later than the response's own exp, at any requested lifetime (#1535)", async () => {
+    for (const requested of [undefined, 1, Math.max(1, Math.floor(ceiling / 10)), ceiling, ceiling * 10 + 600]) {
+      const { exp, freshUntil } = await claims(requested);
+      expect(freshUntil, `requested ${requested}`).toBeLessThanOrEqual(exp * 1000);
+    }
   });
 });

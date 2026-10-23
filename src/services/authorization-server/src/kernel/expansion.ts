@@ -87,6 +87,8 @@ export interface ExpansionInput {
    * successor.
    */
   resourceDeclarationDigest?: string;
+  /** @spec discovery#adjudication (#1469 stage 4): the encounter this approval resolves, recorded on the successor. */
+  encounterId?: string;
 }
 
 /**
@@ -255,7 +257,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     predecessor: input.predecessorId,
     // @spec progressive#ceiling-reconsent (#1413): a chain's ceiling members
     // carry to a human-approved successor unchanged, or as re-consented.
-    ...successorCeilingMembers(predecessor, input.ceilingReconsent, input.resourceDeclarationDigest),
+    ...successorCeilingMembers(predecessor, input.ceilingReconsent, input.resourceDeclarationDigest, input.encounterId),
   };
   kernel.insertRecord(record, undefined, { source: resolvedSource });
 

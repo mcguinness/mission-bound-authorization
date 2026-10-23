@@ -297,6 +297,29 @@ export function gateErrorToMissionError(
   }
 }
 
+/**
+ * @spec mission#issuance-gating (#250): the release fence's Mission check.
+ * The AS answers a derivation when it decides to release the result, so a
+ * token whose Mission ended after the save-time gate is refused here, at the
+ * last synchronous point before the response leaves. Only an ended Mission
+ * refuses: `terminated` by any cause, its own expiry or an ancestor's
+ * termination included, as {@link MissionKernel.observedRecord} observes it.
+ * A suspension committed after the gate still releases. The check is a read
+ * and commits nothing, not even an expiry it observes.
+ *
+ * A refusal here leaves the derivation the gate counted spent. Whether such a
+ * refusal returns the count is #935's, and nothing here returns it.
+ */
+export function releaseFenceRefusal(kernel: MissionKernel, missionId: string): GateError | undefined {
+  const observed = kernel.observedRecord(missionId);
+  if (!observed) return new GateError("mission_not_active", `mission ${missionId} does not resolve at release`);
+  if (observed.state !== "terminated") return undefined;
+  return new GateError(
+    observed.termination?.reason === "expired" ? "mission_expired" : "mission_not_active",
+    `mission ${missionId} ended (${observed.termination?.reason ?? "terminated"}) before its token was released`,
+  );
+}
+
 /** Map an intake {@link IntentError} onto its OAuth error class. */
 export function intentErrorToOidc(e: IntentError): Error {
   switch (e.code) {
@@ -388,6 +411,7 @@ import {
   DISCHARGE_RECEIPT_MEDIA_TYPE,
   DischargeConflictError,
   DischargeNotFoundError,
+  type DischargeRequest,
   type DischargeTargetForm,
   EVIDENCE_REF_MAX_CHARS,
 } from "../kernel/discharge.js";
@@ -443,6 +467,8 @@ import {
   LIFECYCLE_ENDPOINT_PATH,
   parseTransitionMembers,
   readLifecycleForm,
+  STATUS_ENDPOINT_AUTH_METHODS,
+  STATUS_ENDPOINT_PATH,
   wellFormedNonce,
 } from "./lifecycle-endpoint.js";
 import { DISPATCH_HANDOFF_TYP, handleDispatchHandoffRedemption } from "./dispatch-handoff.js";
@@ -452,6 +478,7 @@ import {
   type ContinuationReplay,
   handleTokenExchangeGrant,
   pollDeferredExpansion,
+  refuseContinuationGate,
   type SubjectResolver,
   TOKEN_EXCHANGE_GRANT_TYPE,
   verifyTokenEndpointDpop,
@@ -574,6 +601,60 @@ const LIFECYCLE_CLIENT_GRANTS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * @spec status#lifecycle-authorization (#1535): the operations
+ * `mission_lifecycle` governs, which a lifecycle client's policy may name.
+ */
+const LIFECYCLE_GRANT_OPERATIONS: ReadonlySet<string> = new Set(["revoke", "suspend", "resume", "complete", "contain"]);
+
+/**
+ * @spec status#lifecycle-authorization (#1535): the Missions a lifecycle
+ * client may act on. A Mission is within the scope when it matches every
+ * member present.
+ */
+export interface LifecycleMissionScope {
+  /**
+   * The Mission's Subject. An entry naming `iss` alone covers every Subject
+   * that issuer asserts, the tenant boundary the Mission record carries; one
+   * naming `sub` as well covers that Subject only.
+   */
+  subjects?: ReadonlyArray<{ iss: string; sub?: string }>;
+  /** The Mission's requesting client (`client_id`). */
+  clients?: readonly string[];
+}
+
+/**
+ * @spec status#lifecycle-authorization (#1535): a lifecycle client's grants
+ * with the deployment's policy for them: the operations it may request and
+ * the Missions it may act on. Each member present narrows what
+ * `mission_lifecycle` authorizes; an absent one leaves that grant reaching
+ * every operation it governs on every Mission, as a bare grant list does.
+ */
+export interface LifecycleClientPolicy {
+  grants: readonly string[];
+  /** Among `revoke`, `suspend`, `resume`, `complete` and `contain`. */
+  operations?: readonly string[];
+  missions?: LifecycleMissionScope;
+}
+
+/** A client's lifecycle grants: the grant list alone, or with the deployment's policy for it. */
+export type LifecycleClientGrants = readonly string[] | LifecycleClientPolicy;
+
+/** The grant list of a client's lifecycle grants, read at the time of the request. */
+function lifecycleGrantList(entry: LifecycleClientGrants | undefined): readonly string[] {
+  if (entry === undefined) return [];
+  return "grants" in entry ? entry.grants : entry;
+}
+
+/** @spec status#lifecycle-authorization (#1535): whether a Mission lies within a client's Mission scope. */
+function withinLifecycleMissionScope(scope: LifecycleMissionScope | undefined, record: MissionRecord): boolean {
+  if (scope?.subjects !== undefined) {
+    const { iss, sub } = record.subject;
+    if (!scope.subjects.some((s) => s.iss === iss && (s.sub === undefined || s.sub === sub))) return false;
+  }
+  return scope?.clients === undefined || scope.clients.includes(record.client_id);
+}
+
+/**
  * A registered service-token caller of the AS's operational surfaces: the
  * principal identity the AS records and checks discharge authority against, and
  * the scopes the token carries. This is the minimal stand-in for the profile's
@@ -613,8 +694,10 @@ export interface AdapterOptions {
   /**
    * @spec authority-server#join-disclosure (#818): the PDPs enrolled for each
    * enforcement scope, the deployment configuration the MAS holds, keyed by
-   * the service principal's `principal_id`, each naming the enforcement
-   * scopes (the Status request's `audience`) it is enrolled for. A Status
+   * the authenticated caller's identifier (the Status response's `sub`): a
+   * client's `client_id` at the Mission Status endpoint (#1407), or a service
+   * principal's `principal_id` at the development route, each naming the
+   * enforcement scopes (the Status request's `audience`) it is enrolled for. A Status
    * response to an enrolled principal for one of its scopes discloses the
    * Mission's `subject` and `client_id`; every other response omits both.
    * Absent (the default), no caller is enrolled.
@@ -625,11 +708,15 @@ export interface AdapterOptions {
    * to a client that authenticates to the Mission Lifecycle endpoint by
    * private-key JWT, keyed by `client_id`: `mission_lifecycle` for `revoke`,
    * `suspend`, `resume` and `complete`, `mission_discharge` for `discharge`,
-   * and `mission_status` deciding a forwarded discharge's response. Absent (the
+   * and `mission_status` deciding a forwarded discharge's response and
+   * authorizing a read at the Mission Status endpoint, which authenticates
+   * its clients the same way (#1407). Absent (the
    * default), no client holds any, and every authenticated client is refused
-   * as an unknown Mission.
+   * as an unknown Mission. A client's entry may instead carry its grants with
+   * the deployment's policy for them ({@link LifecycleClientPolicy}): the
+   * operations and the Missions `mission_lifecycle` reaches for that client.
    */
-  lifecycleClientGrants?: Record<string, readonly string[]>;
+  lifecycleClientGrants?: Record<string, LifecycleClientGrants>;
   /**
    * @spec status#lifecycle-authorization: require the distinct
    * {@link MISSION_RESUME_SCOPE} grant, beside `mission_lifecycle`, for a
@@ -921,6 +1008,9 @@ interface KoaCtx {
   get: (name: string) => string;
 }
 
+/** A response the release fence inspects: the token route's carries `oidc`, the transaction endpoint's does not. */
+type ReleaseCtx = KoaCtx & { oidc?: KoaContextWithOIDC["oidc"] };
+
 /**
  * @spec issuance-grant#effective-set-projection (#617 review 1) — the
  * token-endpoint refusal for the TRANSIENT authority-source class: the OAuth
@@ -976,11 +1066,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // @spec RFC 9449 — proof-jti replay protection for the manual DPoP blocks.
   opts.dpopProofReplay ??= newDpopProofReplay();
   // @spec status#lifecycle-authorization: a lifecycle grant names one of the
-  // endpoint's authorizations; anything else is a configuration error.
-  for (const [clientId, grants] of Object.entries(opts.lifecycleClientGrants ?? {})) {
-    for (const grant of grants) {
+  // endpoint's authorizations, and a policy's operation one that
+  // `mission_lifecycle` governs; anything else is a configuration error.
+  for (const [clientId, entry] of Object.entries(opts.lifecycleClientGrants ?? {})) {
+    for (const grant of lifecycleGrantList(entry)) {
       if (!LIFECYCLE_CLIENT_GRANTS.has(grant)) {
         throw new Error(`lifecycleClientGrants: ${clientId} names unknown grant ${grant}`);
+      }
+    }
+    for (const operation of "grants" in entry ? (entry.operations ?? []) : []) {
+      if (!LIFECYCLE_GRANT_OPERATIONS.has(operation)) {
+        throw new Error(`lifecycleClientGrants: ${clientId} names unknown operation ${operation}`);
       }
     }
   }
@@ -2340,6 +2436,104 @@ export function buildProvider(opts: AdapterOptions): Provider {
     },
   );
 
+  /**
+   * @spec mission#issuance-gating (#250): the Missions a response releases a
+   * token for. The released `access_token`'s own `mission` claim names one
+   * when it is a JWS this AS signed; a claim naming another
+   * issuer is that issuer's to gate (the cross-org chain exchange), and a
+   * value that is not a JWS names none. On the token route, the grant the
+   * minted AccessToken rides names one too, resolved as the save-time gate
+   * resolves it.
+   */
+  function releasedMissions(ctx: ReleaseCtx, accessToken: string): Set<string> {
+    const ids = new Set<string>();
+    let claim: { id?: unknown; issuer?: unknown } | undefined;
+    try {
+      claim = decodeJwt(accessToken).mission as typeof claim;
+    } catch {
+      claim = undefined;
+    }
+    if (claim && typeof claim === "object" && typeof claim.id === "string") {
+      if (claim.issuer === undefined || claim.issuer === opts.issuer) ids.add(claim.id);
+    }
+    const grantId = (ctx.oidc?.entities as { AccessToken?: { grantId?: string } } | undefined)?.AccessToken?.grantId;
+    if (grantId) {
+      const target = missionGateTarget(grantId);
+      if (target) ids.add(target.record.id);
+    }
+    return ids;
+  }
+
+  /**
+   * @spec mission#issuance-gating (#250): the release fence's decision for one
+   * response; registered below. Synchronous: nothing is awaited between the
+   * Mission read and the return. A refusal replaces the whole body, so no
+   * token member survives it, and it is the refusal the save-time gate gives
+   * on the same request: `invalid_grant` with `mission_error`,
+   * `invalid_request` on a Token Exchange (D369), the ICA continuation
+   * exchange's own code, and on the transaction endpoint that endpoint's
+   * `access_denied`. A Mission that cannot be resolved at release is not
+   * released either.
+   */
+  function fenceRelease(ctx: ReleaseCtx): void {
+    if (ctx.status !== 200) return;
+    const body = ctx.body as Record<string, unknown> | undefined;
+    if (!body || typeof body !== "object" || typeof body.access_token !== "string") return;
+    let refused: { missionId: string; refusal: GateError } | undefined;
+    try {
+      for (const missionId of releasedMissions(ctx, body.access_token)) {
+        const refusal = releaseFenceRefusal(kernel, missionId);
+        if (refusal) {
+          refused = { missionId, refusal };
+          break;
+        }
+      }
+    } catch (e) {
+      const known = e instanceof errors.OIDCProviderError ? e : undefined;
+      ctx.status = known?.statusCode ?? 500;
+      ctx.body = known
+        ? { error: known.error, ...(known.error_description !== undefined ? { error_description: known.error_description } : {}) }
+        : { error: "server_error", error_description: "the token's Mission could not be read at release" };
+      ctx.set("cache-control", "no-store");
+      return;
+    }
+    if (!refused) return;
+    const { missionId, refusal } = refused;
+    if (ctx.oidc?.route !== "token") {
+      // The transaction endpoint's own refusal for a Mission that is not active.
+      ctx.status = 400;
+      ctx.body = { error: "access_denied", error_description: refusal.message };
+    } else if (isTokenExchangeRequest(ctx) && body.issued_token_type === ID_JAG_TOKEN_TYPE) {
+      // @spec id-continuation-assertion: ICA -02 5.5.6's codes, as at the gate.
+      refuseContinuationGate(ctx as unknown as KoaContextWithOIDC, refusal.reason, kernel.observedRecord(missionId));
+    } else {
+      const err = missionGateRefusal(refusal, missionId, ctx) as MissionGrantError | MissionExchangeError;
+      ctx.status = err.statusCode;
+      ctx.body = {
+        error: err.error,
+        ...(err.error_description !== undefined ? { error_description: err.error_description } : {}),
+        ...(err.missionError ? { mission_error: err.missionError } : {}),
+      };
+    }
+    ctx.set("cache-control", "no-store");
+  }
+
+  // @spec mission#issuance-gating (#250): THE RELEASE FENCE, the AS's final
+  // decision to release a token. It must stay the first `provider.use` here.
+  // Provider#use splices each middleware ahead of the route dispatcher in
+  // registration order, so the first registered is the outermost: its code
+  // after `next()` runs after every other wrapper's, the request-path drain's
+  // `await` included, and nothing in the AS awaits after it before Koa's
+  // `respond` writes the body. A revocation that commits before this point is
+  // refused here; one that commits after it is acknowledged after the token
+  // was answered. It covers every 200 that releases an `access_token` naming
+  // a Mission this AS issues: every grant on the token route and the
+  // transaction endpoint, a stored result served again included.
+  provider.use(async (ctx, next) => {
+    await next();
+    fenceRelease(ctx);
+  });
+
   // @spec device-authorization#request (#1202): the device authorization
   // intake, before the provider parses the request (Provider#use splices it
   // ahead of the route dispatcher).
@@ -3371,17 +3565,6 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     (enrolledJoinPdps[principal.principal_id] ?? []).includes(audience);
 
   /**
-   * @spec status#lifecycle-authorization: the authorization this deployment
-   * requires for a direct `resume`, in ONE place: a direct `resume` and a
-   * `suspend` whose `on_expiry` is `resume` both call it, so scheduling a
-   * resume never needs less than resuming does. `mission_lifecycle`, and,
-   * where the deployment sets `distinctResumeGrant`, `mission_resume` too.
-   */
-  const mayResume = (principal: ServiceTokenPrincipal): boolean =>
-    principal.scopes.includes(MISSION_LIFECYCLE_SCOPE) &&
-    (opts.distinctResumeGrant !== true || principal.scopes.includes(MISSION_RESUME_SCOPE));
-
-  /**
    * @spec discharge#condition-selectors — add `discharge_selectors` to an ACTIVE
    * introspection `mission` projection, for exactly the `authorization_details`
    * this response returns to this caller, and only where this deployment
@@ -3414,10 +3597,32 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
    * none unless the deployment registers them. Null-prototype for the reason
    * the service-token registry is.
    */
-  const lifecycleClientGrants: Record<string, readonly string[]> = Object.assign(
-    Object.create(null) as Record<string, readonly string[]>,
+  const lifecycleClientGrants: Record<string, LifecycleClientGrants> = Object.assign(
+    Object.create(null) as Record<string, LifecycleClientGrants>,
     opts.lifecycleClientGrants ?? {},
   );
+
+  /**
+   * @spec status#lifecycle-authorization (#1535): the authorization this
+   * deployment requires for one `mission_lifecycle` operation on one Mission,
+   * in ONE place: a direct operation and a `suspend` whose `on_expiry`
+   * schedules it both call it, so scheduling a `resume` or a `revoke` never
+   * needs less than performing it does. `mission_lifecycle`; for `resume`,
+   * where the deployment sets `distinctResumeGrant`, `mission_resume` too;
+   * and, where the deployment binds a policy to the acting party, the
+   * operation among its `operations` and the Mission within its `missions`.
+   * Without such a policy the grant reaches every Mission.
+   */
+  const mayPerform = (principal: ServiceTokenPrincipal, operation: string, record: MissionRecord): boolean => {
+    if (!principal.scopes.includes(MISSION_LIFECYCLE_SCOPE)) return false;
+    if (operation === "resume" && opts.distinctResumeGrant === true && !principal.scopes.includes(MISSION_RESUME_SCOPE)) {
+      return false;
+    }
+    const entry = lifecycleClientGrants[principal.principal_id];
+    if (entry === undefined || !("grants" in entry)) return true;
+    if (entry.operations !== undefined && !entry.operations.includes(operation)) return false;
+    return withinLifecycleMissionScope(entry.missions, record);
+  };
 
   /**
    * @spec status#mission-lifecycle-endpoint, status#as-metadata: the endpoint
@@ -3697,6 +3902,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...optional("audience", statusAudience),
           ...optional("nonce", statusNonce),
           requester: principal.principal_id,
+          // @spec status#mission-status-response check 6 (#1407): `sub` is the caller.
+          caller: principal.principal_id,
           // @spec authority-server#join-disclosure (#818): set only for an
           // enrolled PDP's own enforcement scope; every other request leaves
           // the option out, so its response is unchanged.
@@ -3717,6 +3924,92 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           error_description: "Mission reference is not found or not visible.",
           ...(statusNonce ? { nonce: statusNonce } : {}),
         };
+      }
+      return;
+    }
+
+    // --- Mission Status endpoint (@spec status#mission-status-request,
+    // status#mission-status-authentication) (#1407) ---
+    // The advertised `mission_status_endpoint`: a form body carrying
+    // `mission_id`, `audience` and `nonce`, the caller authenticated by
+    // private-key JWT as at the Lifecycle endpoint and authorized by the
+    // `mission_status` grant the deployment binds to that client. The
+    // `GET /missions/{id}/status` route above is a development convenience
+    // over the service-token stand-in, not advertised.
+    if (ctx.path === STATUS_ENDPOINT_PATH && ctx.method === "POST" && enabled("status")) {
+      const refuse = (status: number, error: string, description: string, nonce: string | undefined) => {
+        ctx.status = status;
+        ctx.set("cache-control", "no-store");
+        ctx.body = { error, error_description: description, ...(nonce ? { nonce } : {}) };
+      };
+      const form = await readLifecycleForm(ctx.req, ctx.get("content-type") ?? "");
+      if (!form.ok) {
+        refuse(400, "invalid_request", form.description, form.nonce);
+        return;
+      }
+      const echo = wellFormedNonce(form.params.nonce);
+      // @spec status#mission-status-auth-failures: a failed private-key-JWT
+      // authentication, or no credential (this endpoint accepts no
+      // access-token scheme), is HTTP 400 `invalid_client` with no challenge,
+      // decided before any Mission is read.
+      const auth = await authenticateLifecycleClient(
+        {
+          issuer: opts.issuer,
+          clients: opts.clients,
+          replay: opts.dpopProofReplay as DpopProofReplay,
+          now: () => kernel.nowDate(),
+        },
+        form.params,
+        ctx.get("authorization") ?? "",
+      );
+      if (!auth.ok) {
+        if (auth.retryAfterS !== undefined) {
+          ctx.set("Retry-After", String(auth.retryAfterS));
+          refuse(503, "unavailable", auth.description, echo);
+        } else {
+          refuse(400, "invalid_client", auth.description, echo);
+        }
+        return;
+      }
+      // @spec status#mission-status-request, status#mission-status-errors: the
+      // members: `nonce` REQUIRED and well formed (a malformed one is refused
+      // and never echoed), `mission_id` REQUIRED, `audience` non-empty when sent.
+      if (echo === undefined) {
+        refuse(400, "invalid_request", "nonce is required: a string of 1 to 255 characters", undefined);
+        return;
+      }
+      const missionId = form.params.mission_id;
+      if (!missionId) {
+        refuse(400, "invalid_request", "mission_id is required", echo);
+        return;
+      }
+      const audience = form.params.audience;
+      if (audience === "") {
+        refuse(400, "invalid_request", "audience, when sent, names an audience", echo);
+        return;
+      }
+      const principal: ServiceTokenPrincipal = {
+        principal_id: auth.clientId,
+        scopes: [...lifecycleGrantList(lifecycleClientGrants[auth.clientId])],
+      };
+      try {
+        // A client without the read grant gets the same not-found body as an
+        // unknown reference (@spec status#mission-status-anti-oracle).
+        if (!mayReadStatus(principal)) throw new Error("status read not authorized");
+        const jws = await kernel.signedStatus(missionId, {
+          ...optional("audience", audience),
+          nonce: echo,
+          requester: principal.principal_id,
+          // @spec status#mission-status-response check 6: `sub` is the client.
+          caller: principal.principal_id,
+          ...(joinDisclosureFor(principal, audience) ? { joinDisclosure: true } : {}),
+        });
+        ctx.status = 200;
+        ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
+        ctx.set("cache-control", "no-store");
+        ctx.body = jws;
+      } catch {
+        refuse(404, "not_found", "Mission reference is not found or not visible.", echo);
       }
       return;
     }
@@ -3809,7 +4102,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         return;
       }
       lifecycleCall = {
-        principal: { principal_id: auth.clientId, scopes: [...(lifecycleClientGrants[auth.clientId] ?? [])] },
+        principal: { principal_id: auth.clientId, scopes: [...lifecycleGrantList(lifecycleClientGrants[auth.clientId])] },
         missionId: form.params.mission_id ? form.params.mission_id : undefined,
         body: form.params,
         digest: requestMembersDigest(form.params),
@@ -3901,12 +4194,24 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
        * collapses to. `error_description` is diagnostic and identical across the
        * cases; `nonce` is echoed whenever the request carried a well-formed one.
        */
-      const sendNotFound = (): void =>
-        sendJson(404, {
-          error: "not_found",
-          error_description: "Mission reference is not found or not visible.",
-          ...(nonce ? { nonce } : {}),
-        });
+      const notFound = (): Record<string, unknown> => ({
+        error: "not_found",
+        error_description: "Mission reference is not found or not visible.",
+        ...(nonce ? { nonce } : {}),
+      });
+      const sendNotFound = (): void => sendJson(404, notFound());
+      /**
+       * @spec status#lifecycle-processing (#1535): the refusals decided BEFORE
+       * deduplication (request syntax, the served operation, authorization)
+       * carry the same bodies, and are delivered WITHOUT retention. Such a
+       * request never reached deduplication, so its refusal is not the
+       * nonce's response: retained, it would finalize a committed claim made
+       * under the same request digest by an exchange that had passed
+       * authorization, replacing a committed success with this refusal.
+       */
+      const refuseNotFound = (): void => deliver(404, notFound());
+      const refuseInvalidRequest = (description: string): void =>
+        deliver(400, { error: "invalid_request", error_description: description, nonce });
       const sendInvalidRequest = (description: string, echoNonce = true): void =>
         sendJson(400, {
           error: "invalid_request",
@@ -3945,11 +4250,151 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           error_description: "The authorization server cannot serve this request now.",
           nonce,
         });
+      // @spec status#lifecycle-processing (#1535): the request syntax and the
+      // operation, then its authorization, all BEFORE deduplication, so a
+      // caller not authorized for the Mission receives the not-found response,
+      // never a replay, `stale_version` or `conflict`. Nothing here retains.
+      //
+      // @spec status#mission-lifecycle-endpoint ("Operations"): an operation this
+      // deployment does not serve, one it does not recognize (an absent value or
+      // an unadopted extension) or one its capability controls disabled
+      // (adapters/capabilities.ts), is refused `invalid_request` before any
+      // Mission is looked up, so the refusal names the deployment, never the
+      // Mission.
+      const operation = String(body.operation);
+      const operationCapability = Object.hasOwn(LIFECYCLE_OPERATION_CAPABILITY, operation)
+        ? LIFECYCLE_OPERATION_CAPABILITY[operation]
+        : undefined;
+      if (operationCapability === undefined) {
+        refuseInvalidRequest(`operation ${operation} is not supported`);
+        return;
+      }
+      if (!enabled(operationCapability)) {
+        refuseInvalidRequest(`operation ${operation} is not enabled on this deployment`);
+        return;
+      }
+      // @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency:
+      // the members every operation shares, parsed ONCE, before dispatch, so
+      // an extension never silently drops the stale-version guard or a
+      // schedule (adapters/lifecycle-endpoint.ts).
+      const members = parseTransitionMembers(operation, body);
+      if (!members.ok) {
+        refuseInvalidRequest(members.description);
+        return;
+      }
+      const { expectedVersion, schedule } = members.value;
+      // Mission Containment: `contain` carries `{ event, remove }`, JSON
+      // values; on the form-encoded endpoint each arrives JSON-encoded.
+      let containment:
+        | {
+            event: { type: string; source: string; observed_at: string; event_id: string };
+            remove: ContainmentSelector[];
+          }
+        | undefined;
+      if (operation === "contain") {
+        const event = jsonMember(body.event) as
+          | { type?: unknown; source?: unknown; observed_at?: unknown; event_id?: unknown }
+          | undefined;
+        const remove = jsonMember(body.remove);
+        if (
+          !event ||
+          typeof event.type !== "string" ||
+          typeof event.source !== "string" ||
+          typeof event.observed_at !== "string" ||
+          typeof event.event_id !== "string" ||
+          !Array.isArray(remove) ||
+          remove.length === 0
+        ) {
+          refuseInvalidRequest("contain requires event {type, source, observed_at, event_id} and a non-empty remove[]");
+          return;
+        }
+        // @spec containment#selector-matching (#1463): each removal is a
+        // selector the matcher can decide (`exact` by default, `prefix` by
+        // declaration); one it cannot would contain nothing, so the request
+        // is refused before anything commits.
+        try {
+          assertContainmentSelectors(remove);
+        } catch (e) {
+          if (!(e instanceof ContainmentSelectorError)) throw e;
+          refuseInvalidRequest(`contain ${e.message}`);
+          return;
+        }
+        containment = {
+          event: { type: event.type, source: event.source, observed_at: event.observed_at, event_id: event.event_id },
+          remove: remove as ContainmentSelector[],
+        };
+      }
+      // A schedule this deployment has not adopted is refused, never
+      // accepted without effect.
+      if (schedule && opts.suspensionSchedules !== true) {
+        refuseInvalidRequest("suspend_until and on_expiry are not supported by this deployment");
+        return;
+      }
+      // @spec discharge#discharge-operation: the discharge's own members are
+      // request syntax too, validated before its authorization.
+      let discharge: DischargeRequest | undefined;
+      if (operation === "discharge") {
+        const parsed = parseDischargeMembers(body);
+        if (!parsed.ok) {
+          refuseInvalidRequest(parsed.description);
+          return;
+        }
+        // The AUTHENTICATED discharge authority, never a request-supplied value.
+        discharge = { ...parsed.value, authority: principal.principal_id };
+      }
+      if (discharge !== undefined) {
+        // @spec discharge#discharge-authority, discharge#discharge-anti-oracle:
+        // the DISTINCT grant, then the whole not-found collapse (selector
+        // existence, condition membership, the discharge authority mapping),
+        // all before deduplication and read-only. A caller holding only
+        // `mission_lifecycle` (or acting as the Subject, Approver, or an
+        // administrator), and one outside the target's mapping, are refused
+        // with the same indistinguishable not-found body every unauthorized
+        // reference gets. A failed read is `unavailable`.
+        if (!principal.scopes.includes(MISSION_DISCHARGE_SCOPE)) {
+          refuseNotFound();
+          return;
+        }
+        try {
+          kernel.authorizeDischarge(missionId, discharge);
+        } catch (e) {
+          if (e instanceof DischargeNotFoundError) refuseNotFound();
+          else sendUnavailable();
+          return;
+        }
+      } else {
+        // @spec status#lifecycle-authorization (#1535), status#mission-status-errors:
+        // every other operation is authorized for its acting party, the
+        // operation and the Mission it names, together with any transition a
+        // `suspend` schedules: a `suspend` whose `on_expiry` is `resume` or
+        // `revoke` needs the authorization a direct operation of that kind
+        // needs, whether it arms a schedule or replaces one on a Mission
+        // another party suspended. The Mission is read once, without the
+        // expiry clock, since authorization reads only its immutable
+        // identity, and an unknown Mission and every refusal take this one
+        // path and body, never a 403. A failed read is `unavailable`.
+        let record: MissionRecord | undefined;
+        try {
+          record = kernel.get(missionId);
+        } catch {
+          sendUnavailable();
+          return;
+        }
+        if (
+          record === undefined ||
+          !mayPerform(principal, operation, record) ||
+          (schedule !== undefined && !mayPerform(principal, schedule.onExpiry, record))
+        ) {
+          refuseNotFound();
+          return;
+        }
+      }
       // @spec status#idempotency, control-plane#serialization — the
-      // retransmission rule, evaluated FIRST and BEFORE ANY STATE-DEPENDENT
-      // CHECK: it governs the HTTP exchange, so a request that already
-      // succeeded replays its success even after the Mission moved on. The
-      // `expected_version` precondition sits strictly AFTER this lookup.
+      // retransmission rule, evaluated after authorization and BEFORE ANY
+      // STATE-DEPENDENT CHECK: it governs the HTTP exchange, so a request that
+      // already succeeded replays its success even after the Mission moved
+      // on. The `expected_version` precondition sits strictly AFTER this
+      // lookup.
       try {
         const stored = lifecycleResponses.find(nonceKey);
         // ONE clock, the nonce window: both halves of the rule run on it. A
@@ -4001,44 +4446,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         sendUnavailable();
         return;
       }
-      // @spec status#mission-lifecycle-endpoint ("Operations"): an operation this
-      // deployment does not serve, one it does not recognize (an absent value or
-      // an unadopted extension) or one its capability controls disabled
-      // (adapters/capabilities.ts), is refused `invalid_request` before any
-      // Mission is looked up, so the refusal names the deployment, never the
-      // Mission.
-      const operation = String(body.operation);
-      const operationCapability = Object.hasOwn(LIFECYCLE_OPERATION_CAPABILITY, operation)
-        ? LIFECYCLE_OPERATION_CAPABILITY[operation]
-        : undefined;
-      if (operationCapability === undefined) {
-        sendInvalidRequest(`operation ${operation} is not supported`);
-        return;
-      }
-      if (!enabled(operationCapability)) {
-        sendInvalidRequest(`operation ${operation} is not enabled on this deployment`);
-        return;
-      }
-      // @spec status#mission-lifecycle-endpoint ("Operations"), status#idempotency:
-      // the members every operation shares, parsed ONCE, after the retained-nonce
-      // recovery above and before dispatch, so an extension never silently
-      // drops the stale-version guard or a schedule (adapters/lifecycle-endpoint.ts).
-      const members = parseTransitionMembers(operation, body);
-      if (!members.ok) {
-        sendInvalidRequest(members.description);
-        return;
-      }
-      const { expectedVersion } = members.value;
       // @spec discharge#discharge-operation, discharge#discharge-commit ("States")
       // — the fifth operation: it changes no
       // Mission state, so it is handled entirely outside the state machine
       // below, under its own DISTINCT authority.
-      if (body.operation === "discharge") {
+      if (discharge !== undefined) {
         await handleDischarge({
           kernel,
           principal,
           missionId,
-          body,
+          request: discharge,
           nonce,
           mayReadStatus,
           // @spec control-plane#serialization — the discharge latch, the nonce
@@ -4060,61 +4477,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         }).catch(sendUnavailable);
         return;
       }
-      // @spec status#mission-status-errors — every other operation is a
-      // Mission-state transition and requires the lifecycle grant; an
-      // authenticated caller without it is refused with the endpoint's
-      // not-found shape (the profile's Authorization section), never a 403.
-      if (!principal.scopes.includes(MISSION_LIFECYCLE_SCOPE)) {
-        sendNotFound();
-        return;
-      }
       try {
         // Mission Containment: a metadata-only commit (state unchanged, version
-        // incremented) carrying `{ event, remove }`. Mirrors the other
-        // operations' response shape plus containment_version; a terminal-state
-        // contain maps to 409 through the shared LifecycleConflictError catch.
-        if (body.operation === "contain") {
-          // JSON values; on the form-encoded endpoint each arrives JSON-encoded.
-          const event = jsonMember(body.event) as
-            | { type?: unknown; source?: unknown; observed_at?: unknown; event_id?: unknown }
-            | undefined;
-          const remove = jsonMember(body.remove);
-          if (
-            !event ||
-            typeof event.type !== "string" ||
-            typeof event.source !== "string" ||
-            typeof event.observed_at !== "string" ||
-            typeof event.event_id !== "string" ||
-            !Array.isArray(remove) ||
-            remove.length === 0
-          ) {
-            sendInvalidRequest(
-              "contain requires event {type, source, observed_at, event_id} and a non-empty remove[]",
-            );
-            return;
-          }
-          // @spec containment#selector-matching (#1463): each removal is a
-          // selector the matcher can decide (`exact` by default, `prefix` by
-          // declaration); one it cannot would contain nothing, so the request
-          // is refused before anything commits.
-          try {
-            assertContainmentSelectors(remove);
-          } catch (e) {
-            if (!(e instanceof ContainmentSelectorError)) throw e;
-            sendInvalidRequest(`contain ${e.message}`);
-            return;
-          }
+        // incremented) carrying `{ event, remove }`, parsed above. Mirrors the
+        // other operations' response shape plus containment_version; a
+        // terminal-state contain maps to 409 through the shared
+        // LifecycleConflictError catch.
+        if (containment !== undefined) {
           // @spec control-plane#serialization — the containment commit, the
           // nonce claim and the committed outcome are ONE transaction, so a
           // committed narrowing always leaves a replayable record behind.
-          // The narrowed members are captured before the closure: a closure
-          // does not carry the control-flow narrowing the checks above proved.
-          const containEvent = {
-            type: event.type,
-            source: event.source,
-            observed_at: event.observed_at,
-            event_id: event.event_id,
-          };
+          const { event: containEvent, remove } = containment;
           // @spec control-plane#serialization — the expiry clock OUTSIDE the
           // operation's transaction, for the same reason the derivation gate
           // keeps it outside the counter's: `contain` is refused from a
@@ -4126,7 +4499,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             // transaction, before the narrowing commits (kernel.contain).
             const { record, evidence } = kernel.contain(missionId, {
               event: containEvent,
-              remove: remove as ContainmentSelector[],
+              remove,
               ...(expectedVersion !== undefined ? { expectedVersion } : {}),
             });
             const outcome = {
@@ -4149,29 +4522,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           sendJson(200, contained.outcome);
           return;
         }
-        const lifecycleOperation = body.operation as LifecycleOperation;
-        // The members were parsed once, before dispatch.
-        const { schedule } = members.value;
-        // A schedule this deployment has not adopted is refused, never
-        // accepted without effect.
-        if (schedule && opts.suspensionSchedules !== true) {
-          sendInvalidRequest("suspend_until and on_expiry are not supported by this deployment");
-          return;
-        }
+        const lifecycleOperation = operation as LifecycleOperation;
         // A deadline already passed sets no deadline to wait for: refused as
-        // a request this deployment cannot honor, before any Mission is read.
+        // a request this deployment cannot honor. It is checked after
+        // deduplication, so an identical retry arriving after its deadline
+        // still replays the original response.
         if (schedule && Date.parse(schedule.suspendUntil) <= kernel.nowDate().getTime()) {
           sendInvalidRequest("suspend_until must lie in the future");
-          return;
-        }
-        // @spec status#lifecycle-authorization: a `suspend` whose `on_expiry`
-        // is `resume` schedules a later resume, so it needs the authorization a
-        // direct `resume` needs, checked before any change and refused as an
-        // unauthorized request, whether it would arm a schedule or replace one
-        // on a Mission another party suspended. `on_expiry` `revoke` needs
-        // only the authorization for `suspend`, checked above.
-        if ((lifecycleOperation === "resume" || schedule?.onExpiry === "resume") && !mayResume(principal)) {
-          sendNotFound();
           return;
         }
         // @spec control-plane#serialization — the expiry clock runs FIRST, in
@@ -5089,6 +5446,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec status#as-metadata, status#mission-lifecycle-endpoint: the
       // Lifecycle endpoint, the methods it accepts and, for private_key_jwt,
       // the client-assertion algorithms, wherever it is served.
+      // @spec status#as-metadata, status#mission-status (#1407): the Mission
+      // Status endpoint, the methods it accepts and, for private_key_jwt, the
+      // client-assertion algorithms, wherever the Status operation is served.
+      if (enabled("status")) {
+        meta.mission_status_endpoint = `${opts.issuer}${STATUS_ENDPOINT_PATH}`;
+        meta.mission_status_endpoint_auth_methods_supported = [...STATUS_ENDPOINT_AUTH_METHODS];
+        meta.mission_status_endpoint_auth_signing_alg_values_supported = [...LIFECYCLE_CLIENT_ASSERTION_ALGS];
+      }
       if (lifecycleServed) {
         meta.mission_lifecycle_endpoint = `${opts.issuer}${LIFECYCLE_ENDPOINT_PATH}`;
         meta.mission_lifecycle_endpoint_auth_methods_supported = [...LIFECYCLE_ENDPOINT_AUTH_METHODS];
@@ -6458,7 +6823,8 @@ async function handleDischarge(input: {
   kernel: MissionKernel;
   principal: ServiceTokenPrincipal;
   missionId: string;
-  body: Record<string, unknown>;
+  /** The request's members, validated by {@link parseDischargeMembers}, with the authenticated authority. */
+  request: DischargeRequest;
   nonce?: string;
   /**
    * @spec status#mission-status-authentication — the Mission Status operation's
@@ -6477,95 +6843,29 @@ async function handleDischarge(input: {
   sendNotFound: () => void;
   sendInvalidRequest: (description: string, echoNonce?: boolean) => void;
 }): Promise<void> {
-  const { kernel, principal, missionId, body, nonce } = input;
+  const { kernel, principal, missionId, nonce } = input;
   // @spec discharge#discharge-operation — `nonce` is REQUIRED, and a request whose
   // nonce is absent or malformed is refused with NO nonce echoed.
   if (nonce === undefined) {
     input.sendInvalidRequest("discharge requires a well-formed nonce", false);
     return;
   }
-  // @spec discharge#discharge-authority — the DISTINCT grant, checked before any
-  // selector work. A caller holding only `mission_lifecycle` (or acting as the
-  // Subject, Approver, or an administrator) is refused with the same
-  // indistinguishable not-found body every unauthorized reference gets.
-  if (!principal.scopes.includes(MISSION_DISCHARGE_SCOPE)) {
-    input.sendNotFound();
+  // @spec discharge#discharge-authority, status#lifecycle-processing (#1535):
+  // the Lifecycle engine validated the members, checked the DISTINCT grant and
+  // authorized the target (kernel.authorizeDischarge) before deduplication;
+  // kernel.discharge repeats the target checks inside its transaction.
+  const { request } = input;
+  // @spec discharge#discharge-operation ("observed_at"), status#idempotency:
+  // the reasonable clock bounds depend on elapsed time, so they are checked
+  // only here, for a request that passed authorization and deduplication and
+  // is processed fresh: an authorized retransmit replays its original
+  // response however far its `observed_at` has since aged.
+  if (
+    request.observed_at !== undefined &&
+    Math.abs(Date.parse(request.observed_at) - kernel.nowDate().getTime()) > OBSERVED_AT_SKEW_MS
+  ) {
+    input.sendInvalidRequest("observed_at must lie within reasonable clock bounds");
     return;
-  }
-  const entryDigestValue = body.entry_digest;
-  const conditionDigestValue = body.condition_digest;
-  const selectorValue = body.condition_selector;
-  const eventType = body.event_type;
-  const eventId = body.event_id;
-  // @spec discharge#discharge-operation — the target is named in EXACTLY ONE of
-  // two forms: a condition selector, or the digest pair. Both, or neither, is
-  // refused `invalid_request`.
-  const hasSelector = selectorValue !== undefined;
-  const hasDigests = entryDigestValue !== undefined || conditionDigestValue !== undefined;
-  if (hasSelector === hasDigests) {
-    input.sendInvalidRequest(
-      "discharge names its target by condition_selector or by entry_digest and condition_digest, exactly one",
-    );
-    return;
-  }
-  let target: DischargeTargetForm;
-  if (hasSelector) {
-    if (typeof selectorValue !== "string" || !CONDITION_SELECTOR_RE.test(selectorValue)) {
-      input.sendInvalidRequest("condition_selector must be 1*128 ALPHA / DIGIT / '-' / '_'");
-      return;
-    }
-    target = { condition_selector: selectorValue };
-  } else {
-    if (!isFamilyDigest(entryDigestValue)) {
-      input.sendInvalidRequest("entry_digest must be a sha-256: prefixed digest");
-      return;
-    }
-    if (!isFamilyDigest(conditionDigestValue)) {
-      input.sendInvalidRequest("condition_digest must be a sha-256: prefixed digest");
-      return;
-    }
-    target = { entry_digest: entryDigestValue, condition_digest: conditionDigestValue };
-  }
-  if (typeof eventType !== "string" || eventType.length === 0) {
-    input.sendInvalidRequest("event_type must be a non-empty string");
-    return;
-  }
-  if (typeof eventId !== "string" || !DISCHARGE_EVENT_ID_RE.test(eventId)) {
-    input.sendInvalidRequest("event_id must be 1*128 ALPHA / DIGIT / '-' / '_' / ':' / '.'");
-    return;
-  }
-  // `reason` belongs to the state-changing operations; discharge records its own
-  // request members in audit, so carrying it is an invalid member combination.
-  if (body.reason !== undefined) {
-    input.sendInvalidRequest("reason is not used by discharge");
-    return;
-  }
-  const evidenceRef = body.evidence_ref;
-  if (evidenceRef !== undefined) {
-    if (typeof evidenceRef !== "string" || evidenceRef.length > EVIDENCE_REF_MAX_CHARS) {
-      input.sendInvalidRequest(`evidence_ref must be a URI of at most ${EVIDENCE_REF_MAX_CHARS} characters`);
-      return;
-    }
-    try {
-      new URL(evidenceRef);
-    } catch {
-      input.sendInvalidRequest("evidence_ref must be a URI");
-      return;
-    }
-  }
-  const evidenceDigest = body.evidence_digest;
-  if (evidenceDigest !== undefined && !isFamilyDigest(evidenceDigest)) {
-    input.sendInvalidRequest("evidence_digest must be a sha-256: prefixed digest");
-    return;
-  }
-  const observedAt = body.observed_at;
-  if (observedAt !== undefined) {
-    const parsed =
-      typeof observedAt === "string" && RFC3339_RE.test(observedAt) ? Date.parse(observedAt) : Number.NaN;
-    if (Number.isNaN(parsed) || Math.abs(parsed - kernel.nowDate().getTime()) > OBSERVED_AT_SKEW_MS) {
-      input.sendInvalidRequest("observed_at must be an RFC 3339 date-time within reasonable clock bounds");
-      return;
-    }
   }
   // @spec control-plane#serialization — the expiry clock OUTSIDE the operation's
   // transaction (#844), as the lifecycle and `contain` handlers keep it: a
@@ -6592,16 +6892,7 @@ async function handleDischarge(input: {
     // one unit; the signature is the only work left outside, and it adds no
     // recency of its own.
     const signable = withTransaction(kernel.db, () => {
-      const { record: described, result } = kernel.discharge(missionId, {
-        // The AUTHENTICATED discharge authority, never a request-supplied value.
-        authority: principal.principal_id,
-        ...target,
-        event_type: eventType,
-        event_id: eventId,
-        ...(typeof evidenceRef === "string" ? { evidence_ref: evidenceRef } : {}),
-        ...(typeof evidenceDigest === "string" ? { evidence_digest: evidenceDigest } : {}),
-        ...(typeof observedAt === "string" ? { observed_at: observedAt } : {}),
-      });
+      const { record: described, result } = kernel.discharge(missionId, request);
       // @spec discharge#discharge-carryover ("Response") — a forwarded discharge
       // answers a caller NOT authorized for the Mission Status operation with a
       // Discharge Receipt naming only what it targeted.
@@ -6659,6 +6950,99 @@ async function handleDischarge(input: {
     }
     throw e;
   }
+}
+
+/**
+ * @spec discharge#discharge-operation, status#lifecycle-processing (#1535): the
+ * discharge's own request members, validated as request syntax before the
+ * Lifecycle engine authorizes or deduplicates the request. Nothing here reads
+ * the Mission or the clock: `observed_at`'s clock bounds depend on elapsed
+ * time, not on the request alone, so handleDischarge checks them for a
+ * request processed fresh. The value lacks only the authenticated authority.
+ */
+function parseDischargeMembers(
+  body: Record<string, unknown>,
+):
+  | { ok: true; value: DischargeTargetForm & Omit<DischargeRequest, "authority" | keyof DischargeTargetForm> }
+  | { ok: false; description: string } {
+  const entryDigestValue = body.entry_digest;
+  const conditionDigestValue = body.condition_digest;
+  const selectorValue = body.condition_selector;
+  const eventType = body.event_type;
+  const eventId = body.event_id;
+  // @spec discharge#discharge-operation: the target is named in EXACTLY ONE of
+  // two forms: a condition selector, or the digest pair. Both, or neither, is
+  // refused `invalid_request`.
+  const hasSelector = selectorValue !== undefined;
+  const hasDigests = entryDigestValue !== undefined || conditionDigestValue !== undefined;
+  if (hasSelector === hasDigests) {
+    return {
+      ok: false,
+      description: "discharge names its target by condition_selector or by entry_digest and condition_digest, exactly one",
+    };
+  }
+  let target: DischargeTargetForm;
+  if (hasSelector) {
+    if (typeof selectorValue !== "string" || !CONDITION_SELECTOR_RE.test(selectorValue)) {
+      return { ok: false, description: "condition_selector must be 1*128 ALPHA / DIGIT / '-' / '_'" };
+    }
+    target = { condition_selector: selectorValue };
+  } else {
+    if (!isFamilyDigest(entryDigestValue)) {
+      return { ok: false, description: "entry_digest must be a sha-256: prefixed digest" };
+    }
+    if (!isFamilyDigest(conditionDigestValue)) {
+      return { ok: false, description: "condition_digest must be a sha-256: prefixed digest" };
+    }
+    target = { entry_digest: entryDigestValue, condition_digest: conditionDigestValue };
+  }
+  if (typeof eventType !== "string" || eventType.length === 0) {
+    return { ok: false, description: "event_type must be a non-empty string" };
+  }
+  if (typeof eventId !== "string" || !DISCHARGE_EVENT_ID_RE.test(eventId)) {
+    return { ok: false, description: "event_id must be 1*128 ALPHA / DIGIT / '-' / '_' / ':' / '.'" };
+  }
+  // `reason` belongs to the state-changing operations; discharge records its own
+  // request members in audit, so carrying it is an invalid member combination.
+  if (body.reason !== undefined) {
+    return { ok: false, description: "reason is not used by discharge" };
+  }
+  const evidenceRef = body.evidence_ref;
+  if (evidenceRef !== undefined) {
+    if (typeof evidenceRef !== "string" || evidenceRef.length > EVIDENCE_REF_MAX_CHARS) {
+      return {
+        ok: false,
+        description: `evidence_ref must be a URI of at most ${EVIDENCE_REF_MAX_CHARS} characters`,
+      };
+    }
+    try {
+      new URL(evidenceRef);
+    } catch {
+      return { ok: false, description: "evidence_ref must be a URI" };
+    }
+  }
+  const evidenceDigest = body.evidence_digest;
+  if (evidenceDigest !== undefined && !isFamilyDigest(evidenceDigest)) {
+    return { ok: false, description: "evidence_digest must be a sha-256: prefixed digest" };
+  }
+  const observedAt = body.observed_at;
+  if (
+    observedAt !== undefined &&
+    (typeof observedAt !== "string" || !RFC3339_RE.test(observedAt) || Number.isNaN(Date.parse(observedAt)))
+  ) {
+    return { ok: false, description: "observed_at must be an RFC 3339 date-time" };
+  }
+  return {
+    ok: true,
+    value: {
+      ...target,
+      event_type: eventType,
+      event_id: eventId,
+      ...(typeof evidenceRef === "string" ? { evidence_ref: evidenceRef } : {}),
+      ...(typeof evidenceDigest === "string" ? { evidence_digest: evidenceDigest } : {}),
+      ...(typeof observedAt === "string" ? { observed_at: observedAt } : {}),
+    },
+  };
 }
 
 /**

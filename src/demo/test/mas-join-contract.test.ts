@@ -89,7 +89,7 @@ describe("every join-enabling deployment declares the mapping contract its joins
     };
     await expect(composeMasPilot(pilotOptions)).rejects.toThrow(/declares no usable mapping contract/);
     await expect(
-      composeSeparatedMasPilot({ ...pilotOptions, mas: { url: "http://127.0.0.1:1", pdpToken: "unused" } }),
+      composeSeparatedMasPilot({ ...pilotOptions, mas: { url: "http://127.0.0.1:1", pdpKey: {} } }),
     ).rejects.toThrow(/declares no usable mapping contract/);
     expect(bootstrap).not.toHaveBeenCalled();
     expect(attach).not.toHaveBeenCalled();

@@ -6,34 +6,42 @@
  * server double: every answer the double can give that must not establish
  * Mission state is a typed failure, and nothing is cached from it. The double
  * signs with its own keys and publishes them beside a key it uses for
- * something else, the way an issuer's `jwks_uri` does.
+ * something else, the way an issuer's `jwks_uri` does. It serves the
+ * profile's form POST at one endpoint (#1407).
  */
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { type CryptoKey, exportJWK, generateKeyPair, SignJWT } from "jose";
+import { type CryptoKey, createLocalJWKSet, decodeProtectedHeader, exportJWK, generateKeyPair, jwtVerify, SignJWT } from "jose";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   declaredStatusKeys,
   MissionStatusResolver,
   type MissionStatusResolverOptions,
   type MissionStatusResolution,
+  privateKeyJwtClient,
   type ResolveOptions,
 } from "../src/mission-status-resolver.js";
 
 const ISSUER = "https://mas.pilot.example";
 const AUDIENCE = "https://payments.example/api";
 const MISSION = "msn_resolver_double_0001";
-const TOKEN = "pdp-status-token";
+/** The PDP's client identifier at the Status endpoint, and the `sub` a response to it carries. */
+const CLIENT_ID = "pdp-status-client";
+const CLIENT_KID = "pdp-status-client-key";
+const ENDPOINT_PATH = "/mission/status";
 const STATUS_KID = "mas-status";
 const TOKEN_KID = "mas-token";
 
-type Handler = (req: IncomingMessage, res: ServerResponse, query: URLSearchParams) => void | Promise<void>;
+/** `form`: the request's form body, the profile's request members. */
+type Handler = (req: IncomingMessage, res: ServerResponse, form: URLSearchParams) => void | Promise<void>;
 
 let server: Server;
 let base: string;
 let handler: Handler;
-const requests: Array<{ path: string; query: URLSearchParams; token: string | undefined }> = [];
+const requests: Array<{ method: string; path: string; search: string; contentType: string; form: URLSearchParams }> = [];
+let clientKey: CryptoKey;
+let clientPublic: Record<string, unknown>;
 
 let statusKey: CryptoKey;
 let tokenKey: CryptoKey;
@@ -51,6 +59,9 @@ beforeAll(async () => {
   statusKey = status.privateKey;
   tokenKey = token.privateKey;
   strangerKey = stranger.privateKey;
+  const client = await generateKeyPair("ES256", { extractable: true });
+  clientKey = client.privateKey;
+  clientPublic = { ...(await exportJWK(client.publicKey)), kid: CLIENT_KID, alg: "ES256" };
   published = {
     keys: [
       { ...(await exportJWK(status.publicKey)), kid: STATUS_KID, alg: "ES256" },
@@ -59,8 +70,19 @@ beforeAll(async () => {
   };
   server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://double");
-    requests.push({ path: url.pathname, query: url.searchParams, token: req.headers["x-service-token"] as string | undefined });
-    void handler(req, res, url.searchParams);
+    const chunks: Buffer[] = [];
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", () => {
+      const form = new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
+      requests.push({
+        method: req.method ?? "",
+        path: url.pathname,
+        search: url.search,
+        contentType: req.headers["content-type"] ?? "",
+        form,
+      });
+      void handler(req, res, form);
+    });
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -84,7 +106,7 @@ function payload(nonce: string | null): Record<string, unknown> {
   return {
     iss: ISSUER,
     aud: AUDIENCE,
-    sub: "ap-agent",
+    sub: CLIENT_ID,
     iat,
     exp: iat + 60,
     ...(nonce !== null ? { nonce } : {}),
@@ -113,6 +135,13 @@ function payload(nonce: string | null): Record<string, unknown> {
 
 const mission = (p: Record<string, unknown>) => p.mission as Record<string, unknown>;
 
+/** A signed lifetime: `iat` and `exp`, and `fresh_until` at `exp`, as the reference issuer stamps one. */
+const lifetime = (p: Record<string, unknown>, iat: number, exp: number) => {
+  p.iat = iat;
+  p.exp = exp;
+  mission(p).fresh_until = new Date(exp * 1000).toISOString();
+};
+
 async function sign(
   claims: Record<string, unknown>,
   opts: { key?: CryptoKey; kid?: string; typ?: string } = {},
@@ -139,10 +168,10 @@ function respond(
 function resolver(extra: Partial<MissionStatusResolverOptions> = {}): MissionStatusResolver {
   return new MissionStatusResolver({
     issuer: ISSUER,
-    statusUrl: (id) => `${base}/missions/${id}/status`,
+    statusEndpoint: `${base}${ENDPOINT_PATH}`,
     audience: AUDIENCE,
     keys: declaredStatusKeys(published as never, [STATUS_KID]),
-    serviceToken: TOKEN,
+    client: privateKeyJwtClient({ clientId: CLIENT_ID, issuer: ISSUER, privateKey: clientKey, kid: CLIENT_KID }),
     maxStaleSeconds: 300,
     timeoutMs: 1000,
     maxResponseBytes: 16 * 1024,
@@ -173,7 +202,7 @@ async function expectRefusedUncached(
 }
 
 describe("MissionStatusResolver: a verified answer (@spec authority-server#mission-join rule 2)", () => {
-  it("reads the Mission at the issuer's Status operation as an authenticated, audience-scoped, nonce-bound request and builds the view", async () => {
+  it("reads the Mission at the issuer's Status endpoint as the profile's form POST, authenticated by private-key JWT, audience-scoped and nonce-bound, and builds the view", async () => {
     const r = resolver();
     const resolved = await r.resolve(ref);
     expect(resolved.ok).toBe(true);
@@ -200,10 +229,25 @@ describe("MissionStatusResolver: a verified answer (@spec authority-server#missi
       }),
     ]);
     const [request] = requests;
-    expect(request?.path).toBe(`/missions/${MISSION}/status`);
-    expect(request?.token).toBe(TOKEN);
-    expect(request?.query.get("audience")).toBe(AUDIENCE);
-    expect(request?.query.get("nonce")).toMatch(/^[0-9a-f-]{36}$/);
+    expect(request).toMatchObject({ method: "POST", path: ENDPOINT_PATH, search: "", contentType: "application/x-www-form-urlencoded" });
+    expect(request?.form.get("mission_id")).toBe(MISSION);
+    expect(request?.form.get("audience")).toBe(AUDIENCE);
+    expect(request?.form.get("nonce")).toMatch(/^[0-9a-f-]{36}$/);
+    expect(request?.form.get("client_assertion_type")).toBe("urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
+    // @spec status#mission-status-authentication: the assertion names the
+    // client, is audienced to the issuer identifier alone, and is typed.
+    const assertion = request?.form.get("client_assertion") ?? "";
+    expect(decodeProtectedHeader(assertion).typ).toBe("client-authentication+jwt");
+    const { payload: claims } = await jwtVerify(assertion, createLocalJWKSet({ keys: [clientPublic as never] }), {
+      issuer: CLIENT_ID,
+      subject: CLIENT_ID,
+      audience: ISSUER,
+      requiredClaims: ["exp", "jti"],
+    });
+    expect(claims.aud).toBe(ISSUER);
+    // A fresh assertion per read.
+    await r.resolve(ref, { fresh: true });
+    expect(requests[1]?.form.get("client_assertion")).not.toBe(assertion);
   });
 
   it("reads a response with no Join Disclosure as a view with neither subject nor client_id", async () => {
@@ -224,15 +268,12 @@ describe("MissionStatusResolver: a verified answer (@spec authority-server#missi
     expect(requests.length).toBe(0);
   });
 
-  it("never lets a reference's identifier steer the request to another path at the issuer", async () => {
-    // A slash travels encoded, inside the one Mission segment, and the
-    // answer for that identifier is refused like any other Mission's.
+  it("never lets a reference's identifier steer the request to another path at the issuer: it travels as the form's mission_id", async () => {
+    // The answer for that identifier is refused like any other Mission's.
     expect(await resolver().resolve({ id: "../admin/keys", issuer: ISSUER })).toMatchObject({ ok: false, reason: "unverifiable" });
-    expect(requests.map((q) => q.path)).toEqual(["/missions/..%2Fadmin%2Fkeys/status"]);
-    // A dot segment, which encoding leaves as it is, is never requested.
-    for (const id of ["..", ".", ""]) {
-      expect(await resolver().resolve({ id, issuer: ISSUER }), JSON.stringify(id)).toMatchObject({ ok: false, reason: "not_found" });
-    }
+    expect(requests.map((q) => [q.path, q.search, q.form.get("mission_id")])).toEqual([[ENDPOINT_PATH, "", "../admin/keys"]]);
+    // An empty identifier names no Mission and is never requested.
+    expect(await resolver().resolve({ id: "", issuer: ISSUER })).toMatchObject({ ok: false, reason: "not_found" });
     expect(requests.length).toBe(1);
   });
 });
@@ -245,11 +286,11 @@ describe("MissionStatusResolver: a response that does not verify establishes not
     await expectRefusedUncached(resolver(), "unverifiable");
   });
 
-  it("refuses a response whose mission names another issuer", async () => {
+  it("refuses a response whose mission.issuer is not its iss (consumer check 4, #1535)", async () => {
     handler = respond((p) => {
       mission(p).issuer = "https://impostor.example";
     });
-    await expectRefusedUncached(resolver(), "unverifiable");
+    await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
   });
 
   it("refuses a response signed by a key that is not the declared one under the declared kid", async () => {
@@ -290,6 +331,13 @@ describe("MissionStatusResolver: a response that does not verify establishes not
     await expectRefusedUncached(resolver(), "unverifiable");
   });
 
+  it("refuses a response signed for another caller: its sub is not this PDP's client identifier (consumer check 6)", async () => {
+    handler = respond((p) => {
+      p.sub = "ap-agent";
+    });
+    await expectRefusedUncached(resolver(), "unverifiable", "sub");
+  });
+
   it("refuses a response that does not echo this request's nonce", async () => {
     handler = respond((p) => {
       p.nonce = "an-earlier-request";
@@ -298,24 +346,38 @@ describe("MissionStatusResolver: a response that does not verify establishes not
   });
 
   it("refuses a response that has expired", async () => {
-    handler = respond((p) => {
-      p.iat = nowS() - 600;
-      p.exp = nowS() - 300;
-    });
+    handler = respond((p) => lifetime(p, nowS() - 600, nowS() - 300));
     await expectRefusedUncached(resolver(), "unverifiable");
   });
 
-  it("allows no more clock skew than the issuer's mission_max_stale_seconds", async () => {
+  it("allows no more receipt-time clock skew than the issuer's mission_max_stale_seconds", async () => {
     // Expired 20 seconds ago: inside the profile's 30-second allowance, past
     // a 10-second advertised maximum staleness.
-    const expired = (p: Record<string, unknown>) => {
-      p.iat = nowS() - 80;
-      p.exp = nowS() - 20;
-    };
-    handler = respond(expired);
-    expect(await resolver().resolve(ref)).toMatchObject({ ok: true });
-    handler = respond(expired);
-    await expectRefusedUncached(resolver({ maxStaleSeconds: 10 }), "unverifiable");
+    handler = respond((p) => lifetime(p, nowS() - 80, nowS() - 20));
+    await expectRefusedUncached(resolver({ maxStaleSeconds: 10 }), "unverifiable", "signature or claims");
+  });
+
+  it("refuses a response whose signed fresh_until is later than its exp (consumer check 10, #1535)", async () => {
+    // Both still ahead: only the ordering of the two refuses it.
+    handler = respond((p) => {
+      lifetime(p, nowS(), nowS() + 60);
+      mission(p).fresh_until = new Date((nowS() + 80) * 1000).toISOString();
+    });
+    await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
+  });
+
+  it("refuses an active response that carries no mission.expires_at: its Mission expiry could not be enforced (#1535)", async () => {
+    handler = respond((p) => {
+      delete mission(p).expires_at;
+    });
+    await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
+  });
+
+  it("refuses a response whose mission.expires_at does not parse (#1535)", async () => {
+    handler = respond((p) => {
+      mission(p).expires_at = "next year";
+    });
+    await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
   });
 
   it("refuses a response that carries no signed fresh_until", async () => {
@@ -391,6 +453,9 @@ describe("MissionStatusResolver: an answer that does not arrive establishes noth
       [401, "unauthorized"],
       [403, "unauthorized"],
       [404, "not_found"],
+      // @spec status#mission-status-failures (#1535): rate_limited, like
+      // unavailable, is a transient failure that establishes nothing.
+      [429, "unavailable"],
       [500, "unavailable"],
       [503, "unavailable"],
     ] as const) {
@@ -400,17 +465,29 @@ describe("MissionStatusResolver: an answer that does not arrive establishes noth
       };
       await expectRefusedUncached(resolver(), reason, `status ${code}`);
     }
+    // @spec status#mission-status-auth-failures: a refused client
+    // authentication is 400 invalid_client; any other 400 is no answer.
+    for (const [error, reason, detail] of [
+      ["invalid_client", "unauthorized", "invalid_client"],
+      ["invalid_request", "unavailable", "status 400 invalid_request"],
+    ] as const) {
+      handler = (_req, res) => {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error, error_description: "refused" }));
+      };
+      await expectRefusedUncached(resolver(), reason, detail);
+    }
   });
 
   it("never follows a redirect, even to an answer that would verify", async () => {
     handler = (req, res, query) => {
       if (req.url?.startsWith("/elsewhere")) return respond()(req, res, query);
-      res.writeHead(302, { location: `/elsewhere/missions/${MISSION}/status?${query.toString()}` });
+      res.writeHead(307, { location: `/elsewhere${ENDPOINT_PATH}` });
       res.end();
     };
     const refused = await resolver().resolve(ref);
-    expect(refused).toMatchObject({ ok: false, reason: "unavailable", detail: "status 302" });
-    expect(requests.map((q) => q.path)).toEqual([`/missions/${MISSION}/status`]);
+    expect(refused).toMatchObject({ ok: false, reason: "unavailable", detail: "status 307" });
+    expect(requests.map((q) => q.path)).toEqual([ENDPOINT_PATH]);
   });
 
   it("stops reading a body over the cap, its length declared or streamed", async () => {
@@ -455,9 +532,119 @@ describe("MissionStatusResolver: an answer that does not arrive establishes noth
     expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "fetched" });
   });
 
+  it("gives up at the deadline on a signer that stalls, before any request starts (#1492 review)", async () => {
+    const signing = privateKeyJwtClient({ clientId: CLIENT_ID, issuer: ISSUER, privateKey: clientKey, kid: CLIENT_KID });
+    const before = requests.length;
+    const stalled = resolver({ timeoutMs: 20, client: { clientId: CLIENT_ID, assertion: () => new Promise<string>(() => {}) } });
+    // A read still pending after a second is the defect: race it, so it fails as an assertion.
+    const refused = await Promise.race([
+      stalled.resolve(ref),
+      new Promise<string>((settle) => setTimeout(() => settle("still pending after 1000 ms"), 1000)),
+    ]);
+    expect(refused).toMatchObject({ ok: false, reason: "unavailable", detail: "timeout" });
+    expect(requests.length).toBe(before);
+    // The same resolver with a signer that answers reads normally: the refusal cached nothing.
+    handler = respond();
+    const working = resolver({ client: signing });
+    expect(await working.resolve(ref)).toMatchObject({ ok: true, source: "fetched" });
+  });
+
+  it("drops a signature that arrives after the deadline: it never starts a request (#1492 review)", async () => {
+    const signing = privateKeyJwtClient({ clientId: CLIENT_ID, issuer: ISSUER, privateKey: clientKey, kid: CLIENT_KID });
+    const before = requests.length;
+    let signedLate = false;
+    const late = resolver({
+      timeoutMs: 20,
+      client: {
+        clientId: CLIENT_ID,
+        assertion: () =>
+          new Promise<string>((resolve) =>
+            setTimeout(() => {
+              signedLate = true;
+              void signing.assertion().then(resolve);
+            }, 150),
+          ),
+      },
+    });
+    const started = Date.now();
+    expect(await late.resolve(ref)).toMatchObject({ ok: false, reason: "unavailable", detail: "timeout" });
+    // Refused at the deadline, not when the signature arrives (150 ms).
+    expect(Date.now() - started).toBeLessThan(120);
+    expect(signedLate).toBe(false);
+    await new Promise((settle) => setTimeout(settle, 400));
+    expect(signedLate).toBe(true);
+    expect(requests.length).toBe(before);
+  });
+
+  it("holds signing and the request to one deadline together, never a fresh one after signing (#1492 review)", async () => {
+    const signing = privateKeyJwtClient({ clientId: CLIENT_ID, issuer: ISSUER, privateKey: clientKey, kid: CLIENT_KID });
+    const answer = respond();
+    handler = (req, res, query) => {
+      setTimeout(() => {
+        if (!res.destroyed) void answer(req, res, query);
+      }, 200);
+    };
+    // Signing takes 200 ms of a 300 ms deadline and the answer 200 ms more: past the deadline in total.
+    const r = resolver({
+      timeoutMs: 300,
+      client: {
+        clientId: CLIENT_ID,
+        assertion: () => new Promise<string>((resolve) => setTimeout(() => void signing.assertion().then(resolve), 200)),
+      },
+    });
+    expect(await r.resolve(ref)).toMatchObject({ ok: false, reason: "unavailable", detail: "timeout" });
+  });
+
   it("reports a source that does not answer at all as unavailable", async () => {
-    const r = resolver({ statusUrl: () => "http://127.0.0.1:1/missions/x/status" });
+    const r = resolver({ statusEndpoint: "http://127.0.0.1:1/mission/status" });
     expect(await r.resolve(ref)).toMatchObject({ ok: false, reason: "unavailable", detail: "transport" });
+  });
+});
+
+describe("MissionStatusResolver: a failed read never refreshes or extends a held answer (@spec status#mission-status-failures, #1535)", () => {
+  /** The issuer answering `code`, or dropping the connection for `transport`. */
+  const failing =
+    (cause: number | "transport"): Handler =>
+    (req, res) => {
+      if (cause === "transport") {
+        req.socket.destroy();
+        return;
+      }
+      res.writeHead(cause, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: cause === 429 ? "rate_limited" : "unavailable" }));
+    };
+
+  it("leaves a held answer usable until its original reliance bound through a rate-limited, unavailable or unreachable source, never past it, and never reads the failure as termination", async () => {
+    for (const cause of [429, 503, "transport"] as const) {
+      requests.length = 0;
+      const t0 = clockMs;
+      handler = respond((p) => lifetime(p, nowS(), nowS() + 20));
+      const r = resolver();
+      expect(await r.resolve(ref), String(cause)).toMatchObject({ ok: true, source: "fetched", relianceBoundMs: t0 + 20_000 });
+
+      // A read that must reach the source now fails: it establishes nothing.
+      handler = failing(cause);
+      clockMs = t0 + 5_000;
+      expect(await r.resolve(ref, { fresh: true }), String(cause)).toMatchObject({ ok: false, reason: "unavailable" });
+
+      // The held answer is unchanged: still `active`, still bounded where it was.
+      clockMs = t0 + 10_000;
+      expect(await r.resolve(ref), String(cause)).toMatchObject({
+        ok: true,
+        source: "cached",
+        view: { state: "active", version: 3 },
+        observedAtMs: t0,
+        relianceBoundMs: t0 + 20_000,
+      });
+
+      // At its original bound it is relied on no longer, and the failing
+      // source puts nothing in its place.
+      clockMs = t0 + 20_000;
+      expect(r.peek(ref), String(cause)).toBeUndefined();
+      expect(await r.resolve(ref), String(cause)).toMatchObject({ ok: false, reason: "unavailable" });
+      expect(requests.length, String(cause)).toBe(3);
+      clockMs = Math.floor(Date.now() / 1000) * 1000;
+    }
   });
 });
 
@@ -465,8 +652,7 @@ describe("MissionStatusResolver: an observation read now is held to the same rel
   /** A verified response observed `seconds` ago, its `exp` and `fresh_until` still ahead. */
   const observedAgo = (seconds: number, version = 3) =>
     respond((p) => {
-      p.iat = nowS() - seconds;
-      p.exp = nowS() + 40;
+      lifetime(p, nowS() - seconds, nowS() + 40);
       mission(p).version = version;
     });
 
@@ -504,6 +690,14 @@ describe("MissionStatusResolver: an observation read now is held to the same rel
     expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "cached", view: { version: 3 } });
     expect(requests.length).toBe(before + 1);
   });
+
+  it("accepts a response up to 30 seconds past its exp at receipt, and relies on it for nothing: no skew allowance extends exp (#1535)", async () => {
+    // Check 9's receipt allowance admits it (not `unverifiable`); its
+    // reliance bound has passed all the same. The profile's allowance on
+    // `fresh_until` alone, were it taken, would still end at `exp`.
+    handler = respond((p) => lifetime(p, nowS() - 80, nowS() - 20));
+    await expectRefusedUncached(resolver(), "stale");
+  });
 });
 
 describe("MissionStatusResolver: the cache never outlives a signed bound (@spec status#mission-status-caching)", () => {
@@ -537,6 +731,47 @@ describe("MissionStatusResolver: the cache never outlives a signed bound (@spec 
     expect(await r.resolve(ref, { maxAgeSeconds: 5 })).toMatchObject({ ok: true, source: "fetched" });
   });
 
+  it("never relies on a reported active state at or after the Mission's expires_at, though fresh_until and exp are later, with no skew allowance (#1535)", async () => {
+    const t0 = clockMs;
+    const expiresAt = new Date(t0 + 10_000).toISOString();
+    handler = respond((p) => {
+      mission(p).expires_at = expiresAt;
+    });
+    const r = resolver();
+    expect(await r.resolve(ref)).toMatchObject({
+      ok: true,
+      source: "fetched",
+      view: { state: "active" },
+      freshUntilMs: t0 + 60_000,
+      relianceBoundMs: t0 + 10_000,
+    });
+    clockMs = t0 + 9_000;
+    expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "cached" });
+    // At expires_at: the held answer is no longer relied on, and a read now
+    // that still reports `active` under the same expiry is refused.
+    clockMs = t0 + 10_000;
+    expect(r.peek(ref)).toBeUndefined();
+    expect(await r.resolve(ref)).toMatchObject({ ok: false, reason: "stale", detail: "expires_at passed" });
+    expect(requests.length).toBe(2);
+  });
+
+  it("relies on a suspended response past the Mission's expires_at only until its own reliance bound (#1535)", async () => {
+    const t0 = clockMs;
+    handler = respond((p) => {
+      mission(p).state = "suspended";
+      mission(p).expires_at = new Date(t0 + 10_000).toISOString();
+      mission(p).fresh_until = new Date((nowS() + 20) * 1000).toISOString();
+    });
+    const r = resolver();
+    expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "fetched", relianceBoundMs: t0 + 20_000 });
+    clockMs = t0 + 15_000;
+    expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "cached", view: { state: "suspended" } });
+    clockMs = t0 + 20_000;
+    expect(r.peek(ref)).toBeUndefined();
+    expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "fetched" });
+    expect(requests.length).toBe(2);
+  });
+
   it("reads the source on every fresh request, whatever the cache holds", async () => {
     const r = resolver();
     await r.resolve(ref);
@@ -552,8 +787,7 @@ describe("MissionStatusResolver: the cache never outlives a signed bound (@spec 
       if (n === 1) {
         // The first read is observed earlier and answered last.
         const older = respond((p) => {
-          p.iat = nowS() - 5;
-          p.exp = nowS() + 55;
+          lifetime(p, nowS() - 5, nowS() + 55);
           mission(p).version = 1;
         });
         setTimeout(() => void older(req, res, query), 300);
@@ -596,7 +830,13 @@ describe("MissionStatusResolver: a synchronous peek answers only from a read sti
 
 describe("MissionStatusResolver: configuration", () => {
   it("refuses a configuration with no bound or no credential", () => {
-    for (const extra of [{ maxStaleSeconds: 0 }, { timeoutMs: Number.NaN }, { maxResponseBytes: -1 }, { serviceToken: "" }]) {
+    for (const extra of [
+      { maxStaleSeconds: 0 },
+      { timeoutMs: Number.NaN },
+      { maxResponseBytes: -1 },
+      { client: { clientId: "", assertion: async () => "" } },
+      { statusEndpoint: "not a url" },
+    ]) {
       expect(() => resolver(extra), JSON.stringify(extra)).toThrow(/MissionStatusResolver/);
     }
   });

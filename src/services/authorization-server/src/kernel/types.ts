@@ -797,6 +797,8 @@ export interface MissionRecord {
    * members; on that successor only.
    */
   resource_declaration_digest?: string;
+  /** @spec discovery#adjudication (#1469 stage 4): the encounter this successor's human approval resolved. */
+  encounter_id?: string;
 }
 
 /**

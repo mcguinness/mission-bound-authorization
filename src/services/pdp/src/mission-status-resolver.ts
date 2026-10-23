@@ -16,28 +16,33 @@
  *   its own read needs: the request's `nonce` echoed, an `iat` not in the
  *   future and a `fresh_until` not already passed, a recognized `state`, and
  *   the members the view is built from.
- * - Not checked: the envelope `sub`. Status consumer check 6 has it name the
- *   requesting client, but the reference authorization server signs the
- *   Mission's own client there; requiring check 6 would refuse every response
- *   that server serves, so the resolver relies on `aud`, `nonce` and the
- *   authenticated request instead, and the divergence is reported for a ruling.
- * - Authenticated. The request carries this PDP's service credential with the
- *   `mission_status` grant, as the reference authorization server's Status
- *   route requires (`x-service-token`); that route is a `GET` with the
- *   Mission in the path and `audience` and `nonce` as query parameters.
+ * - The envelope `sub` is this PDP's own client identifier (consumer check
+ *   6): a response signed for another caller is refused (#1407).
+ * - The profile's request. An HTTPS POST to the issuer's advertised
+ *   `mission_status_endpoint` with an `application/x-www-form-urlencoded`
+ *   body carrying `mission_id`, `audience` (this PDP's enforcement scope) and
+ *   a fresh `nonce`, the PDP authenticated by private-key JWT (RFC 7523) as a
+ *   client holding the `mission_status` grant: a fresh client assertion per
+ *   read, `aud` the issuer identifier ({@link privateKeyJwtClient}). The
+ *   Mission identifier travels in the body, never in the URL.
  * - Bounded. One deadline covers connecting, the headers and the body; the
  *   body is read through a byte cap, and a redirect is never followed, so the
- *   credential never leaves for another origin.
+ *   client assertion never leaves for another origin.
  * - Fail closed. Every failure is a typed result, never a throw, and never
  *   cached: no negative entry outlives the request that met it.
  * - Relied on only within the signed bounds. Every observation `resolve`
  *   returns, read now or reused from the cache, is within each bound at that
- *   instant: before its signed `fresh_until`, within `iat` plus the issuer's
- *   advertised `mission_max_stale_seconds`, and within the caller's own
- *   `maxAgeSeconds` (its action class's staleness window), with no skew
- *   allowance on the old side ({@link MissionStatusResolver.boundPassed}).
- *   An observation read now that is already past one is refused `stale` and
- *   not cached. The cache is keyed on the Mission under this resolver's one
+ *   instant: its reliance bound (before its signed `fresh_until` and `exp`,
+ *   within `iat` plus the issuer's advertised `mission_max_stale_seconds`,
+ *   and, for `active`, before the Mission's `expires_at`), and within the
+ *   caller's own `maxAgeSeconds` (its action class's staleness window), with
+ *   no skew allowance on any of them
+ *   ({@link MissionStatusResolver.boundPassed}). An observation read now that
+ *   is already past one is refused `stale` and not cached.
+ * - A failed read changes nothing held. A failure, transient or not, never
+ *   refreshes, extends or replaces a cached answer: one still within its
+ *   bounds keeps serving non-fresh reads until its original bound, and none
+ *   serves past it. The cache is keyed on the Mission under this resolver's one
  *   issuer and enforcement scope; `fresh: true` bypasses it and reads the
  *   source now. An older observation never replaces a newer one.
  *
@@ -52,8 +57,8 @@
  * then carries neither.
  */
 
-import { randomUUID } from "node:crypto";
-import { createLocalJWKSet, type JSONWebKeySet, type JWTVerifyGetKey } from "jose";
+import { type KeyObject, randomUUID } from "node:crypto";
+import { createLocalJWKSet, type JSONWebKeySet, type JWTVerifyGetKey, SignJWT } from "jose";
 import { deriveJoinDelegation, type KernelDelegationPolicy } from "./mas-join.js";
 import type { AuthorityEntry, MissionView } from "./policy-view.js";
 import { verifyMissionStatusResponse } from "./state-observation.js";
@@ -81,20 +86,33 @@ export interface ResolvedMission {
   observedAtMs: number;
   /** The signed `mission.fresh_until`, epoch milliseconds. */
   freshUntilMs: number;
+  /**
+   * @spec status#mission-status-caching: the end of reliance on this
+   * observation, epoch milliseconds: the earliest of its signed
+   * `fresh_until`, its `exp`, its `iat` plus the issuer's advertised
+   * `mission_max_stale_seconds` and, for `active`, the Mission's
+   * `expires_at`. A permit relying on it ends no later.
+   */
+  relianceBoundMs: number;
   /** Whether this answer was read from the source for this call, or reused from the cache. */
   source: "fetched" | "cached";
 }
 
 /**
  * Why no state was established. `unavailable`: no usable answer arrived (a
- * transport failure, the deadline, a body over the cap, a redirect, or a
- * status other than 200, 401, 403 and 404). `unauthorized`: the issuer
- * refused this PDP's credential (401 or 403). `not_found`: the issuer's
+ * transport failure, the deadline, a body over the cap, a redirect, a status
+ * other than 200, 400, 401, 403 and 404, or a 400 other than
+ * `invalid_client`). `unauthorized`: the issuer refused this PDP's client
+ * authentication (400 `invalid_client`, or 401 or 403). `not_found`: the issuer's
  * anti-oracle not-found, or a reference naming another issuer.
  * `unverifiable`: a response arrived and did not verify or did not carry a
  * usable view. `stale`: a response verified, but the observation it carries
- * is already past a reliance bound (its signed `fresh_until`,
- * `mission_max_stale_seconds`, or the caller's `maxAgeSeconds`).
+ * is already past a reliance bound (its signed `fresh_until` or `exp`,
+ * `mission_max_stale_seconds`, the Mission's `expires_at` for `active`, or
+ * the caller's `maxAgeSeconds`).
+ *
+ * @spec status#mission-status-failures: none of these is evidence that the
+ * Mission terminated; each only leaves the decision without state.
  */
 export type MissionStatusFailure = "unavailable" | "unauthorized" | "not_found" | "unverifiable" | "stale";
 
@@ -110,17 +128,14 @@ export type MissionStatusResolution = ResolvedMission | UnresolvedMission;
 export interface MissionStatusResolverOptions {
   /** The Mission issuer this resolver reads: the only `issuer` a reference resolves under, and the expected `iss`. */
   issuer: string;
-  /**
-   * The Status operation's URL for one Mission, given the Mission identifier
-   * already percent-encoded as one path segment.
-   */
-  statusUrl: (encodedMissionId: string) => string;
+  /** The issuer's advertised `mission_status_endpoint`. */
+  statusEndpoint: string;
   /** This PDP's enforcement scope: the request's `audience` and the response's expected `aud`. */
   audience: string;
   /** The issuer's published status-response keys, restricted to the declared ones ({@link declaredStatusKeys}). */
   keys: JWTVerifyGetKey;
-  /** This PDP's credential at the Status operation, holding the `mission_status` grant. */
-  serviceToken: string;
+  /** This PDP's client authentication at the Status endpoint, as a client holding the `mission_status` grant. */
+  client: StatusClientCredential;
   /** The issuer's advertised `mission_max_stale_seconds`. */
   maxStaleSeconds: number;
   /** The deadline for one read, connection to last body byte, milliseconds. */
@@ -147,6 +162,50 @@ export interface ResolveOptions {
  */
 export function declaredStatusKeys(jwks: JSONWebKeySet, kids: readonly string[]): JWTVerifyGetKey {
   return createLocalJWKSet({ keys: jwks.keys.filter((k) => typeof k.kid === "string" && kids.includes(k.kid)) });
+}
+
+/**
+ * @spec status#mission-status-authentication: a client of the Mission Status
+ * endpoint that authenticates by private-key JWT (RFC 7523).
+ */
+export interface StatusClientCredential {
+  /** The client identifier: the assertion's `iss` and `sub`, and the `sub` a response to it carries. */
+  clientId: string;
+  /** A fresh client assertion for one request. */
+  assertion: () => Promise<string>;
+}
+
+const CLIENT_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+
+/**
+ * @spec status#mission-status-authentication: a private-key-JWT client: each
+ * assertion has `iss` and `sub` the client identifier, `aud` the issuer
+ * identifier as its sole value, a fresh `jti`, an `exp` a minute away, and
+ * the JWS `typ` `client-authentication+jwt`, the explicit type the client
+ * SHOULD set.
+ */
+export function privateKeyJwtClient(opts: {
+  clientId: string;
+  issuer: string;
+  privateKey: CryptoKey | KeyObject | Uint8Array;
+  kid: string;
+  alg?: string;
+  now?: () => Date;
+}): StatusClientCredential {
+  return {
+    clientId: opts.clientId,
+    assertion: async () => {
+      const iat = Math.floor((opts.now?.() ?? new Date()).getTime() / 1000);
+      return new SignJWT({ jti: randomUUID() })
+        .setProtectedHeader({ alg: opts.alg ?? "ES256", kid: opts.kid, typ: "client-authentication+jwt" })
+        .setIssuer(opts.clientId)
+        .setSubject(opts.clientId)
+        .setAudience(opts.issuer)
+        .setIssuedAt(iat)
+        .setExpirationTime(iat + 60)
+        .sign(opts.privateKey);
+    },
+  };
 }
 
 const fail = (reason: MissionStatusFailure, detail: string): UnresolvedMission => ({ ok: false, reason, detail });
@@ -242,7 +301,48 @@ async function readCapped(res: Response, max: number): Promise<string | undefine
   return new TextDecoder().decode(Buffer.concat(chunks));
 }
 
-type CachedMission = Omit<ResolvedMission, "source">;
+/**
+ * `p`'s value, unless `signal` aborts first: then it rejects at once, and a
+ * value `p` yields later is dropped (#1492 review).
+ */
+function untilAborted<T>(p: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) {
+    p.catch(() => {});
+    return Promise.reject(signal.reason);
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    p.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (err: unknown) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(err);
+      },
+    );
+  });
+}
+
+/** A verified observation as the cache holds it: the resolution, and the signed bounds it is held to. */
+type CachedMission = Omit<ResolvedMission, "source"> & {
+  /** The signed `exp`, epoch milliseconds. */
+  expMs: number;
+  /** For `active`, the Mission's signed `expires_at`, epoch milliseconds. */
+  activeUntilMs?: number;
+};
+
+/** The caller's view of a held observation: the resolution members only. */
+const resolution = (c: CachedMission, source: ResolvedMission["source"]): ResolvedMission => ({
+  ok: true,
+  view: c.view,
+  observedAtMs: c.observedAtMs,
+  freshUntilMs: c.freshUntilMs,
+  relianceBoundMs: c.relianceBoundMs,
+  source,
+});
 
 /**
  * A resolver for one Mission issuer and one enforcement scope. Construct one
@@ -262,11 +362,14 @@ export class MissionStatusResolver {
     ] as const) {
       if (!Number.isFinite(value) || value <= 0) throw new Error(`MissionStatusResolver: ${name} must be a positive number`);
     }
-    if (!opts.serviceToken) throw new Error("MissionStatusResolver: a service credential is required");
+    if (!opts.client?.clientId) throw new Error("MissionStatusResolver: a client credential is required");
+    if (!URL.canParse(opts.statusEndpoint)) throw new Error("MissionStatusResolver: statusEndpoint must be a URL");
     this.now = opts.now ?? (() => new Date());
     this.http = opts.fetch ?? fetch;
-    // @spec status#mission-status-caching: the tolerance "MUST NOT exceed the
-    // AS's advertised `mission_max_stale_seconds`".
+    // @spec status#mission-status-response check 9: up to 30 seconds of
+    // clock skew on `iat` and `exp` at receipt, which decides acceptance
+    // only, never reliance (status#mission-status-caching). Capped locally
+    // at the issuer's advertised `mission_max_stale_seconds` as well.
     this.toleranceSeconds = Math.min(MISSION_STATUS_SKEW_SECONDS, opts.maxStaleSeconds);
   }
 
@@ -281,7 +384,7 @@ export class MissionStatusResolver {
     if (ref.issuer !== this.opts.issuer) return undefined;
     const cached = this.cache.get(ref.id);
     if (cached === undefined || this.boundPassed(cached, maxAgeSeconds) !== undefined) return undefined;
-    return { ...cached, source: "cached" };
+    return resolution(cached, "cached");
   }
 
   /**
@@ -290,15 +393,17 @@ export class MissionStatusResolver {
    */
   async resolve(ref: { id: string; issuer: string }, options: ResolveOptions = {}): Promise<MissionStatusResolution> {
     if (ref.issuer !== this.opts.issuer) return fail("not_found", "reference names another issuer");
-    // Percent-encoding leaves a dot segment as it is, and a URL resolves it.
-    if (ref.id === "" || ref.id === "." || ref.id === "..") return fail("not_found", "reference names no Mission");
+    if (ref.id === "") return fail("not_found", "reference names no Mission");
     if (options.fresh !== true) {
       const cached = this.cache.get(ref.id);
       if (cached !== undefined && this.boundPassed(cached, options.maxAgeSeconds) === undefined) {
-        return { ...cached, source: "cached" };
+        return resolution(cached, "cached");
       }
     }
     const read = await this.read(ref.id);
+    // @spec status#mission-status-failures: a failed read establishes nothing
+    // and touches nothing held; a cached answer stays within its original
+    // bound, never refreshed or extended by the attempt.
     if (!read.ok) return read;
     // An answer read now is held to the same bounds as one reused from the
     // cache: a verified but already-old observation is relied on for nothing,
@@ -315,24 +420,29 @@ export class MissionStatusResolver {
     ) {
       this.cache.set(ref.id, read);
     }
-    return { ...read, source: "fetched" };
+    return resolution(read, "fetched");
   }
 
   /**
    * The ONE place the reliance bounds live, for an observation read now and
    * one reused from the cache alike: the first bound it has passed at this
-   * instant, or `undefined` while it is within all of them. Before its
-   * signed `fresh_until` (@spec status#mission-status-caching "Hard stop",
-   * no skew allowance for any state); no older than `iat` plus the issuer's
-   * `mission_max_stale_seconds`; and no older than the caller's
-   * `maxAgeSeconds` where it gives one. No skew allowance on the old side,
-   * as the decision point's own window check (`ageMs > enforceableWindowMs`)
-   * allows none; an `iat` slightly in the future, accepted at verification,
-   * is younger than every bound.
+   * instant, or `undefined` while it is within all of them. Its reliance
+   * bound (@spec status#mission-status-caching "Reliance bound"): before its
+   * signed `fresh_until` and its `exp`, never relied on as `active` at or
+   * after the Mission's `expires_at`, and no older than `iat` plus the
+   * issuer's `mission_max_stale_seconds`; and no older than the caller's
+   * `maxAgeSeconds` where it gives one. No skew allowance on any bound: the
+   * profile's allowance is a MAY on `fresh_until` alone and never extends
+   * `exp`, `expires_at` or the ceiling, and the decision point's own window
+   * check (`ageMs > enforceableWindowMs`) allows none either; an `iat`
+   * slightly in the future, accepted at verification, is younger than every
+   * bound.
    */
   private boundPassed(entry: CachedMission, maxAgeSeconds: number | undefined): string | undefined {
     const nowMs = this.now().getTime();
     if (nowMs >= entry.freshUntilMs) return "fresh_until passed";
+    if (nowMs >= entry.expMs) return "exp passed";
+    if (entry.activeUntilMs !== undefined && nowMs >= entry.activeUntilMs) return "expires_at passed";
     if (nowMs > entry.observedAtMs + this.opts.maxStaleSeconds * 1000) return "older than mission_max_stale_seconds";
     if (maxAgeSeconds !== undefined && !(nowMs <= entry.observedAtMs + maxAgeSeconds * 1000)) {
       return "older than maxAgeSeconds";
@@ -346,18 +456,39 @@ export class MissionStatusResolver {
     const signal = AbortSignal.timeout(this.opts.timeoutMs);
     let jws: string | undefined;
     try {
-      // The identifier reaches the URL as one percent-encoded path segment,
-      // so a reference the PEP carried cannot steer this credential to
+      // @spec status#mission-status-request: the form body; the identifier a
+      // PEP carried is a member value, so it cannot steer the request to
       // another path at the issuer.
-      const url = new URL(this.opts.statusUrl(encodeURIComponent(missionId)));
-      url.searchParams.set("audience", this.opts.audience);
-      url.searchParams.set("nonce", nonce);
-      const res = await this.http(url, {
-        method: "GET",
-        headers: { "x-service-token": this.opts.serviceToken, accept: "application/mission-status-response+jwt" },
+      const body = new URLSearchParams({
+        mission_id: missionId,
+        audience: this.opts.audience,
+        nonce,
+        client_assertion_type: CLIENT_ASSERTION_TYPE,
+        // The one deadline covers signing too (#1492 review): a signer that
+        // stalls past it fails the read `timeout`, and a signature that
+        // arrives late is dropped, so it can never start a request.
+        client_assertion: await untilAborted(this.opts.client.assertion(), signal),
+      });
+      const res = await this.http(this.opts.statusEndpoint, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/mission-status-response+jwt" },
+        body: body.toString(),
         redirect: "manual",
         signal,
       });
+      if (res.status === 400) {
+        // @spec status#mission-status-auth-failures: a refused client
+        // authentication is a 400 `invalid_client`; any other 400 is no answer.
+        const text = await readCapped(res, 4096);
+        let error: unknown;
+        try {
+          error = text === undefined ? undefined : (JSON.parse(text) as { error?: unknown }).error;
+        } catch {
+          error = undefined;
+        }
+        if (error === "invalid_client") return fail("unauthorized", "invalid_client");
+        return fail("unavailable", `status 400 ${String(error)}`);
+      }
       if (res.status !== 200) {
         await res.body?.cancel();
         if (res.status === 401 || res.status === 403) return fail("unauthorized", `status ${res.status}`);
@@ -379,9 +510,12 @@ export class MissionStatusResolver {
       this.toleranceSeconds,
     );
     if (verified === undefined) return fail("unverifiable", "signature or claims");
-    const { payload, mission, freshUntilMs } = verified;
-    // @spec status#mission-status-response consumer check 7: the response
-    // answers THIS request, never a replayed earlier one.
+    const { payload, mission, freshUntilMs, expMs, activeUntilMs } = verified;
+    // @spec status#mission-status-response consumer check 6 (#1407): the
+    // response was signed for this client, not for another caller.
+    if (payload.sub !== this.opts.client.clientId) return fail("unverifiable", "sub");
+    // Consumer check 7: the response answers THIS request, never a replayed
+    // earlier one.
     if (payload.nonce !== nonce) return fail("unverifiable", "nonce");
     // Check 9's other half: an observation dated in the future is not one the
     // issuer has made yet. `iat` is present and numeric: the verifier
@@ -390,6 +524,15 @@ export class MissionStatusResolver {
     if (iatMs - now.getTime() > this.toleranceSeconds * 1000) return fail("unverifiable", "iat");
     const view = viewOf(missionId, this.opts.issuer, mission, payload.authorization_details);
     if (typeof view === "string") return fail("unverifiable", view);
-    return { ok: true, view, observedAtMs: iatMs, freshUntilMs };
+    const relianceBoundMs = Math.min(verified.relianceBoundMs, iatMs + this.opts.maxStaleSeconds * 1000);
+    return {
+      ok: true,
+      view,
+      observedAtMs: iatMs,
+      freshUntilMs,
+      relianceBoundMs,
+      expMs,
+      ...(activeUntilMs !== undefined ? { activeUntilMs } : {}),
+    };
   }
 }

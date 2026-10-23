@@ -44,7 +44,7 @@ export type ProviderCapability =
   | "lifecycle-revoke"
   /** The lifecycle `suspend`, `resume` and `complete` operations. */
   | "lifecycle-extended"
-  /** The signed Mission Status operation (`GET /missions/{id}/status`). */
+  /** The signed Mission Status operation: the advertised `POST /mission/status` and the development `GET /missions/{id}/status`. */
   | "status"
   /** The Mission Status List fetch (`GET /statuslist/{id}`). */
   | "status-list"

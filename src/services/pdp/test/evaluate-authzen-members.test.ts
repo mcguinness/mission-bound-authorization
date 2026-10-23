@@ -209,11 +209,21 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
       mission?: Record<string, unknown>;
       /** Sign with no `iat`, or no `exp`, claim at all. */
       omit?: "iat" | "exp";
+      /** The envelope `sub`: the caller the response was signed for; `null` for none. */
+      sub?: string | null;
     };
     const signStatus = (s: Signing) => {
       const jwt = new SignJWT({
-        sub: "ap-agent",
-        mission: { id: "msn_1004", issuer: "https://as.test", state: "active", version: 3, fresh_until: freshUntil, ...s.mission },
+        ...(s.sub === null ? {} : { sub: s.sub ?? "pep-status-client" }),
+        mission: {
+          id: "msn_1004",
+          issuer: "https://as.test",
+          state: "active",
+          version: 3,
+          expires_at: "2027-06-01T00:00:00Z",
+          fresh_until: freshUntil,
+          ...s.mission,
+        },
       })
         .setProtectedHeader({ alg: "ES256", kid: s.kid ?? "status-1004", typ: s.typ ?? "mission-status-response+jwt" })
         .setIssuer(s.iss ?? "https://as.test")
@@ -242,6 +252,24 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
       expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
     });
 
+    // @spec status#mission-status-response check 6 (#1407): the envelope
+    // `sub` names the client that requested the response, here the PEP.
+    // Checks 6 and 7 are the requester's: the PEP makes them when it obtains
+    // the response, and the PDP, which did not request it, cannot check the
+    // nonce either. The PDP relies on what binds the snapshot to its decision:
+    // the declared source's signature, the issuer, the enforcement scope as
+    // `aud`, the Mission, `state`, `version` and the signed times.
+    it("an assertion verifies whichever caller its envelope sub names, or none: sub binds the response to the PEP that requested it, not to the PDP", async () => {
+      const { privateKey, keys } = await statusKeys();
+      for (const sub of ["another-pep", "ap-agent", null] as const) {
+        const dec = await evaluate(
+          observedRequest({ actionClass: "irreversible_action", observation: withAssertion(await signStatus({ privateKey, sub })) }),
+          options({ stateSourcePlacement: "pep" as const, stateAssertionKeys: keys }),
+        );
+        expect(dec.decision, `${String(sub)}: ${JSON.stringify(dec.context)}`).toBe(true);
+      }
+    });
+
     it("an assertion the PDP cannot verify, or one that does not match the observation, denies stale_state", async () => {
       const { privateKey, keys } = await statusKeys();
       const stranger = await statusKeys();
@@ -268,6 +296,9 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
         ["a version other than the observation's", withAssertion(await signStatus({ privateKey, mission: { version: 2 } })), true],
         ["an issuance other than mission_status_issued_at", withAssertion(good, { mission_status_issued_at: new Date((issued - 1) * 1000).toISOString() }), true],
         ["an expiry later than its fresh_until", withAssertion(good, { mission_status_expires_at: new Date(NOW.getTime() + 61_000).toISOString() }), true],
+        // @spec status#mission-status-response consumer checks 4 and 10 (#1535).
+        ["a mission.issuer other than its iss", withAssertion(await signStatus({ privateKey, mission: { issuer: "https://other-as.test" } })), true],
+        ["a signed fresh_until later than its exp", withAssertion(await signStatus({ privateKey, exp: issued + 40 })), true],
       ];
       for (const [label, observation, keyed] of cases) {
         for (const actionClass of ["consequential_write", "irreversible_action"]) {
@@ -338,6 +369,55 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
         );
         expect(dec.decision, actionClass).toBe(false);
         expect(dec.context.denial_reason, actionClass).toBe("stale_state");
+      }
+    });
+
+    // @spec status#mission-status-caching (#1535): a consumer "MUST NOT rely
+    // on a reported `active` state at or after `mission.expires_at`", however
+    // far its `fresh_until` and `exp` run.
+    it("a verified assertion reporting active is relied on only before the Mission's expires_at: it caps the permit there, and once reached denies stale_state (#1535)", async () => {
+      const { privateKey, keys } = await statusKeys();
+      const expiresAt = new Date(NOW.getTime() + 5_000);
+      const capped = await signStatus({ privateKey, mission: { expires_at: expiresAt.toISOString() } });
+      const reached = await signStatus({ privateKey, mission: { expires_at: NOW.toISOString() } });
+      for (const actionClass of ["irreversible_action", "consequential_write"]) {
+        const dec = await evaluate(
+          observedRequest({ actionClass, observation: observed({ version: 3, assertion: capped }) }),
+          options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+        );
+        expect(dec.decision, `${actionClass}: ${JSON.stringify(dec.context)}`).toBe(true);
+        const validUntil = (dec.context.conditions as { valid_until: string }).valid_until;
+        expect(Date.parse(validUntil), `${actionClass}: ${validUntil}`).toBeLessThanOrEqual(expiresAt.getTime());
+        const denied = await evaluate(
+          observedRequest({ actionClass, observation: observed({ version: 3, assertion: reached }) }),
+          options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+        );
+        expect(denied.decision, actionClass).toBe(false);
+        expect(denied.context.denial_reason, actionClass).toBe("stale_state");
+      }
+    });
+
+    // @spec status#mission-status-response: `expires_at` is REQUIRED. A
+    // response without it carries no Mission expiry to enforce, so it does
+    // not verify, rather than being relied on as though the Mission never
+    // expired.
+    it("an assertion signed without mission.expires_at denies stale_state, where the same assertion with it permits (#1535)", async () => {
+      const { privateKey, keys } = await statusKeys();
+      // An undefined member is dropped when the payload is serialized.
+      const missing = await signStatus({ privateKey, mission: { expires_at: undefined } });
+      const present = await signStatus({ privateKey });
+      for (const actionClass of ["irreversible_action", "consequential_write"]) {
+        const denied = await evaluate(
+          observedRequest({ actionClass, observation: observed({ version: 3, assertion: missing }) }),
+          options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+        );
+        expect(denied.decision, actionClass).toBe(false);
+        expect(denied.context.denial_reason, actionClass).toBe("stale_state");
+        const permitted = await evaluate(
+          observedRequest({ actionClass, observation: observed({ version: 3, assertion: present }) }),
+          options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+        );
+        expect(permitted.decision, `${actionClass}: ${JSON.stringify(permitted.context)}`).toBe(true);
       }
     });
   });

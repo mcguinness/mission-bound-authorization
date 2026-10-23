@@ -94,28 +94,53 @@ export function parseStateObservation(value: unknown): ParsedStateObservation | 
 /** @spec status#mission-status-response: the signed Status envelope's `typ`. */
 const MISSION_STATUS_RESPONSE_TYP = "mission-status-response+jwt";
 
-/** A Mission Status Response that verified: its claims, its `mission` object, and the signed `mission.fresh_until`. */
+/** A Mission Status Response that verified: its claims, its `mission` object, and the signed bounds on relying on it. */
 export interface VerifiedMissionStatus {
   payload: JWTPayload;
   mission: Record<string, unknown>;
   /** The signed `mission.fresh_until`, epoch milliseconds. */
   freshUntilMs: number;
+  /** The signed `exp`, epoch milliseconds. */
+  expMs: number;
+  /** For a reported `active` state, the signed `mission.expires_at`, epoch milliseconds; absent for any other state. */
+  activeUntilMs?: number;
+  /**
+   * The response's own reliance bound, epoch milliseconds: the earliest of
+   * `mission.fresh_until`, `exp` and, for a reported `active` state,
+   * `mission.expires_at`. The advertised `mission_max_stale_seconds` ceiling
+   * is the caller's to add: it is issuer metadata, not a response member.
+   */
+  relianceBoundMs: number;
 }
 
 /**
- * @spec status#mission-status-response (consumer checks 1, 3, 4, 5, 8 and the
- * `exp` half of 9): the ONE verifier of a signed Mission Status Response,
- * shared by the PEP-carried `assertion` ({@link verifyStateAssertion}) and the
- * PDP's own read of the declared state source (`mission-status-resolver.ts`),
- * so the two never disagree about what verifies.
+ * @spec status#mission-status-response (consumer checks 1, 3, 4, 5, 8, 10 and
+ * the `exp` half of 9), status#mission-status-caching (the reliance bound):
+ * the ONE verifier of a signed Mission Status Response, shared by the
+ * PEP-carried `assertion` ({@link verifyStateAssertion}) and the PDP's own
+ * read of the declared state source (`mission-status-resolver.ts`), so the
+ * two never disagree about what verifies or how long it is relied on.
  *
  * Verified means: a JWS of the Status media type, signed by one of `keys`,
  * issued by `expected.issuer`, audienced to `expected.audience` (the
  * enforcement scope), carrying `iat` and `exp` and not expired, its `mission` object naming
- * `expected.missionId` under that same issuer, and carrying a signed
- * `mission.fresh_until`. `keys` are the declared state source's published
- * status-response keys; absent, nothing can be verified. Each caller adds the
- * checks its own input needs; this function adds none of theirs.
+ * `expected.missionId` under that same issuer (check 4: `mission.issuer`
+ * equals `iss`), and carrying a signed `mission.fresh_until` no later than
+ * `exp` (check 10), and a signed `mission.expires_at` that parses.
+ * `keys` are the declared state source's published status-response keys;
+ * absent, nothing can be verified. Each caller adds the checks its own input
+ * needs; this function adds none of theirs.
+ *
+ * Checks 6 (`sub` is the requesting client) and 7 (`nonce`) are the
+ * requester's, so they are not here (#1407). The PDP's own read requested its
+ * response and makes both (`mission-status-resolver.ts`). A PEP-carried
+ * `assertion` was requested by the PEP, which makes them when it obtains it;
+ * the PDP did not request it and cannot check its nonce, so it does not check
+ * its `sub` either, and relies on what binds the snapshot to its decision.
+ *
+ * `clockToleranceSeconds` is check 9's receipt-time allowance on `exp`: it
+ * decides whether the response is accepted, never how long it is relied on.
+ * The returned reliance bound carries no allowance.
  */
 export async function verifyMissionStatusResponse(
   jws: string,
@@ -144,7 +169,19 @@ export async function verifyMissionStatusResponse(
     // the PDP could rely on, so it does not verify.
     const freshUntilMs = rfc3339Ms(m.fresh_until);
     if (freshUntilMs === undefined) return undefined;
-    return { payload, mission: m, freshUntilMs };
+    // Consumer check 10: the signed state ceiling never outlives the signed
+    // response that carries it. `exp` is present and numeric: jose required it.
+    const expMs = (payload.exp as number) * 1000;
+    if (freshUntilMs > expMs) return undefined;
+    // @spec status#mission-status-response `expires_at` (REQUIRED),
+    // status#mission-status-caching: a consumer "MUST NOT rely on a reported
+    // `active` state at or after `mission.expires_at`". One that is absent or
+    // does not parse leaves that bound unknowable, so it does not verify.
+    const expiresAtMs = rfc3339Ms(m.expires_at);
+    if (expiresAtMs === undefined) return undefined;
+    const activeUntilMs = m.state === "active" ? expiresAtMs : undefined;
+    const relianceBoundMs = Math.min(freshUntilMs, expMs, activeUntilMs ?? Number.POSITIVE_INFINITY);
+    return { payload, mission: m, freshUntilMs, expMs, ...(activeUntilMs !== undefined ? { activeUntilMs } : {}), relianceBoundMs };
   } catch {
     return undefined;
   }
@@ -164,7 +201,9 @@ export async function verifyMissionStatusResponse(
  * `mission_status_expires_at` ("its `mission.fresh_until`, never its `exp`,
  * or an earlier end deployment policy sets").
  *
- * Returns the signed `fresh_until` (epoch milliseconds) when verified, and
+ * Returns the response's signed reliance bound (epoch milliseconds: the
+ * earliest of its `fresh_until`, its `exp` and, for `active`, the Mission's
+ * `expires_at`, @spec status#mission-status-caching) when verified, and
  * `undefined` otherwise. The caller enforces it whether or not the
  * observation repeats it (#1049 review P2-a): `mission_status_expires_at` is
  * OPTIONAL in `fresh` mode, and omitting the repeat must never discard the
@@ -179,7 +218,7 @@ export async function verifyStateAssertion(
 ): Promise<number | undefined> {
   const verified = await verifyMissionStatusResponse(observation.assertion, expected, keys, now, clockToleranceSeconds);
   if (verified === undefined) return undefined;
-  const { payload, mission: m, freshUntilMs } = verified;
+  const { payload, mission: m, freshUntilMs, relianceBoundMs } = verified;
   if (m.state !== observation.state) return undefined;
   if (observation.version !== undefined && m.version !== observation.version) return undefined;
   if (
@@ -191,5 +230,5 @@ export async function verifyStateAssertion(
   // A repeated expiry later than the signed one is a mismatch, as for state
   // and version; an earlier one is a deployment-policy end and stands.
   if (observation.expiresAtMs !== undefined && observation.expiresAtMs > freshUntilMs) return undefined;
-  return freshUntilMs;
+  return relianceBoundMs;
 }

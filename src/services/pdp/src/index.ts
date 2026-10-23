@@ -78,8 +78,10 @@ export {
   type MissionStatusResolution,
   MissionStatusResolver,
   type MissionStatusResolverOptions,
+  privateKeyJwtClient,
   type ResolvedMission,
   type ResolveOptions,
+  type StatusClientCredential,
   type StatusMissionView,
   type UnresolvedMission,
 } from "./mission-status-resolver.js";

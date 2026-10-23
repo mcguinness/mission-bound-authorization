@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `356deb64`
+Every statement here is true of the reference implementation at `56c86f92`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -398,16 +398,20 @@ separated configuration (§11) composes the pilot on them.
 
 **Join Disclosure on Mission Status** (MAS §join-disclosure). The reference
 authorization server's Status operation discloses `mission.subject` (`iss`,
-`sub`) and `mission.client_id` only to a service principal that its
-`enrolledJoinPdps` option enrolls for the requested `audience`
-(`buildAuthorizationServer`; `joinDisclosureFor` in
+`sub`) and `mission.client_id` only to a caller that its `enrolledJoinPdps`
+option enrolls for the requested `audience` (`buildAuthorizationServer`;
+`joinDisclosureFor` in
 `services/authorization-server/src/adapters/provider.ts`, `joinDisclosure` in
-`MissionKernel.observeInCallerTx`). Audience-scoped entries carry their
-recorded `delegation` for every caller, as before. Every other response is
-unchanged:
+`MissionKernel.observeInCallerTx`). Enrollment is keyed by the authenticated
+caller: a client's `client_id` at the advertised Mission Status endpoint
+(#1407), or a service principal at the development `GET` route. Every
+response's envelope `sub` is that caller, so no other caller reads the
+Mission's client in `mission` or in `sub`. Audience-scoped entries carry
+their recorded `delegation` for every caller, as before:
 `Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > discloses subject, client_id and each entry's recorded delegation to a PDP enrolled for the requested enforcement scope`,
 `Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > includes neither member for any other caller: a principal enrolled for nothing, the enrolled PDP for another scope or for no scope, an inherited-name principal`,
-`Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > serves a caller not enrolled the response the kernel's default observation signs, byte for byte`.
+`Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > serves a caller not enrolled the observation the kernel signs for that caller without Join Disclosure, byte for byte`,
+`Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > binds sub to each caller: two clients read their own identifiers, and the Mission's client reaches only the client enrolled for Join Disclosure`.
 
 **The PDP's remote Mission Status resolver** (MAS §join-rules rule 2):
 `MissionStatusResolver` (`services/pdp/src/mission-status-resolver.ts`), one
@@ -417,9 +421,9 @@ store.
 | Property | How |
 |---|---|
 | One verifier | `verifyMissionStatusResponse` (`services/pdp/src/state-observation.ts`), the function `verifyStateAssertion` also runs: the Status `typ`, a declared key, `iss`, `aud` equal to the enforcement scope, `exp` and `iat` both required (a response without either does not verify, on this path and the PEP-carried assertion's), not expired, the requested Mission under that issuer, a signed `fresh_until`. |
-| Its own checks | The request's `nonce` echoed; `iat` not in the future; `state` one of `active`, `suspended`, `terminated`; `version`, `authority_hash`, `subject`, `client_id` and each entry (with its `delegation`) well formed. A reference naming another issuer is never read; the identifier travels as one percent-encoded path segment, and a dot segment is never requested. |
+| Its own checks | The envelope `sub` is its own client identifier (consumer check 6); the request's `nonce` echoed; `iat` not in the future; `state` one of `active`, `suspended`, `terminated`; `version`, `authority_hash`, `subject`, `client_id` and each entry (with its `delegation`) well formed. A reference naming another issuer is never read; the identifier travels as the form's `mission_id`, never in the URL. |
 | Keys | The issuer's published JWKS, restricted to the declared status `kid`s (`declaredStatusKeys`): a key published for another purpose verifies nothing. |
-| Authentication | This PDP's service credential holding `mission_status`, in `x-service-token`, as the reference Status route requires. |
+| Request and authentication | The profile's form `POST` (`mission_id`, `audience`, `nonce`) to the issuer's advertised `mission_status_endpoint`, as a client holding `mission_status` that authenticates by private-key JWT, a fresh assertion per read (`privateKeyJwtClient`); a 400 `invalid_client` is `unauthorized` (#1407). |
 | Bounds | One deadline covers connecting, the headers and the body; the body is counted against a byte cap as it arrives; a redirect is never followed. |
 | Fail closed | A typed failure (`unavailable`, `unauthorized`, `not_found`, `unverifiable`, `stale`), never thrown and never cached. |
 | Reliance bounds | Every observation the resolver returns, read now (a `fresh: true` read included) or reused from the cache, is before its signed `fresh_until`, within `iat` plus the issuer's `mission_max_stale_seconds`, and within the caller's `maxAgeSeconds`, with no skew allowance on the old side. One function holds the three bounds for both paths (`boundPassed`); an observation read now that has passed one verified but is refused `stale`, and is not cached. |
@@ -438,21 +442,14 @@ revocation seen at once on a fresh read and after the signed bound on a
 cached one, the server stopped and restarted, a source slower than the
 deadline).
 
-Gaps, both owned by #1407 (Status read conformance):
-
-- **The envelope `sub`.** The reference signs the Mission's `client_id` (or
-  a Lifecycle request's acting party) as `sub` for every caller. MAS
-  §join-disclosure says the envelope `sub` identifies the requesting caller,
-  and Status consumer check 6 has the consumer require that. A caller not
-  enrolled therefore still learns the Mission's `client_id` from `sub`, so
-  `mas.join-disclosure.not-to-others` stays `partial`. The resolver does not
-  check `sub`.
-- **The request shape.** The reference Status operation is
-  `GET /missions/{id}/status` with `audience` and `nonce` as query
-  parameters and the `x-service-token` stand-in, and its metadata advertises
-  no `mission_status_endpoint`; the Status profile defines a form `POST` at
-  that endpoint. The resolver takes the operation's URL as configuration
-  (`statusUrl`).
+#1407 brought the Status read to the profile: the reference serves the form
+`POST` at the advertised `mission_status_endpoint` with private-key-JWT client
+authentication, signs every Status read's envelope `sub` as its authenticated
+caller, and the resolver uses that endpoint and refuses another caller's
+`sub`
+(`services/authorization-server/test/status-endpoint.test.ts`). A
+PEP-carried `assertion`'s `sub` is not checked by the PDP: checks 6 and 7 are
+the requester's, made by the PEP that obtained it.
 
 ## 11. The separated configuration
 
@@ -470,7 +467,7 @@ the Mission issuer.
 
 | Property | How |
 |---|---|
-| Source | The MAS's Mission Status, read by §10's `MissionStatusResolver` as `separated_mas.pdp_principal_id`, whose credential is generated at each boot and registered at the MAS with `mission_status` only. The resolver is configured from what the MAS publishes over HTTP: its metadata (`issuer`, `jwks_uri`, `mission_max_stale_seconds`) and its status-response key. |
+| Source | The MAS's Mission Status, read by §10's `MissionStatusResolver` as the client `separated_mas.pdp_client_id`, whose signing key is generated where the PDP runs; the MAS registers its public half with `mission_status` only (`MAS_PILOT_STATUS_CLIENTS`). The resolver is configured from what the MAS publishes over HTTP: its metadata (`issuer`, `jwks_uri`, `mission_status_endpoint`, `mission_max_stale_seconds`) and its status-response key; a MAS advertising no `mission_status_endpoint` is refused. |
 | Disclosure | `separated_mas.enrolled_pdps` is the MAS-held enrollment (`enrolledJoinPdps`). A PDP it does not enroll reads no `subject` or `client_id`, and its join denies `mission_binding_failed` (`resolveBaselineJoin`; `MissionView.subject` and `client_id` are optional). |
 | Placement | `pdp` (`separated_mas.state_source.placement`; the loader refuses any other). The PEP sends no `mission_state_observation`. |
 | The PDP's read | Every decision reads its own (`ownReadDecide`): within the action class's staleness window (`maxAgeSeconds`), and from the MAS now (`fresh: true`) for a commit-phase decision. `stateObservedAt` is the response's signed `iat`, never the time of the fetch or of a cache hit; `stateFreshUntil` is its signed `fresh_until`, which caps the permit through the `signed_state_fresh_until` ceiling (`services/pdp/src/own-read-ceiling.ts`). A read that establishes nothing gives the decision no state, so it denies `stale_state` (authzen#pdp-request rule 1). The non-commit read answers from the resolver's cache the PEP's read filled, under its own window. |
@@ -537,7 +534,6 @@ Gaps:
 - **Keys are read once, at composition.** A MAS restarted with new keys
   verifies nothing until the pilot is composed again: every read refuses
   `state_unavailable`. Key rotation is not handled.
-- **#1407** still owns the Status envelope `sub` and the request shape (§10).
 
 ## 12. Remaining slices
 
@@ -560,9 +556,10 @@ Gaps:
    one without it refuses to start. The
    `mas.enterprise`, `mas.join-assertion` and `mas.hc.mission-bound-instance-check`
    rows and `mas.mapping-contract.enterprise-publishes` stay `todo`, owned by
-   #1454. `mas.join-disclosure.members` is `tested` and
-   `mas.join-disclosure.not-to-others` `partial` (the envelope `sub`, #1407),
-   both at the Controller role on §10's Join Disclosure tests. Join rule 2's
+   #1454. `mas.join-disclosure.members` and
+   `mas.join-disclosure.not-to-others` are `tested` (the latter since the
+   envelope `sub` names each caller, #1407), both at the Controller role on
+   §10's Join Disclosure tests. Join rule 2's
    two rows (`mas.baseline-join.resolve-at-mas`,
    `mas.baseline-join.mas-state-source`) are `tested` on §11's witnesses at
    the PDP role, and rule 7 (`mas.baseline-join.authority-from-mission`) cites

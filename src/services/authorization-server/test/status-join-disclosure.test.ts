@@ -8,7 +8,10 @@
  * recorded `delegation`; every other caller reads neither member, and its
  * response is the one the operation served before enrollment existed.
  * Enrollment is the AS's `enrolledJoinPdps` configuration, keyed by the
- * authenticated service principal and the requested `audience`.
+ * authenticated caller and the requested `audience`; here the caller is a
+ * service principal at the development GET route (the advertised endpoint's
+ * client-keyed enrollment: `status-endpoint.test.ts`). Every response's `sub`
+ * names its own caller (#1407).
  */
 
 import type { Server } from "node:http";
@@ -108,10 +111,12 @@ describe("Join Disclosure on Mission Status (@spec authority-server#join-disclos
     for (const entry of payload.authorization_details) expect(entry.delegation).toEqual(recorded);
 
     // The two members are the whole difference from a response to any other
-    // caller for the same scope at the same instant.
+    // caller for the same scope at the same instant, beside the envelope
+    // `sub`, which names each caller (#1407).
+    expect((payload as { sub?: string }).sub).toBe(PDP);
     const other = await status(record.id, READER_TOKEN, CANONICAL_RESOURCE);
     const { subject: _subject, client_id: _clientId, ...rest } = payload.mission;
-    expect({ ...payload, mission: rest }).toEqual(decodeJwt(other.jws));
+    expect({ ...payload, mission: rest, sub: READER }).toEqual(decodeJwt(other.jws));
   });
 
   it("includes neither member for any other caller: a principal enrolled for nothing, the enrolled PDP for another scope or for no scope, an inherited-name principal", async () => {
@@ -132,13 +137,14 @@ describe("Join Disclosure on Mission Status (@spec authority-server#join-disclos
     }
   });
 
-  it("serves a caller not enrolled the response the kernel's default observation signs, byte for byte", async () => {
+  it("serves a caller not enrolled the observation the kernel signs for that caller without Join Disclosure, byte for byte", async () => {
     const record = approve();
     const served = await status(record.id, READER_TOKEN, CANONICAL_RESOURCE);
     expect(served.code).toBe(200);
     // ES256 signatures differ per signing; the signing input (protected
-    // header and payload) is what the response asserts.
-    const unchanged = await as.kernel.signedStatus(record.id, { audience: CANONICAL_RESOURCE, requester: READER });
+    // header and payload) is what the response asserts. The caller is the
+    // envelope `sub` (#1407); nothing else is added for a caller not enrolled.
+    const unchanged = await as.kernel.signedStatus(record.id, { audience: CANONICAL_RESOURCE, requester: READER, caller: READER });
     expect(served.jws.split(".").slice(0, 2)).toEqual(unchanged.split(".").slice(0, 2));
     expect(decodeProtectedHeader(served.jws).typ).toBe("mission-status-response+jwt");
   });
