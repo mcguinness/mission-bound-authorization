@@ -674,6 +674,7 @@ describe("policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion)",
     // @spec mission#grant-binding-related (#1590): the successor's internal grant is its own,
     // distinct from the predecessor's, and each still resolves to its own Mission. These witness
     // isolation of the AS's records, not a protocol lineage: the response carries only an access token.
+    expect((body as { refresh_token?: string }).refresh_token).toBeUndefined();
     const predGrant = predecessor.grant_id as string;
     const successorGrant = successor.grant_id as string;
     expect(predGrant).toBeTruthy();

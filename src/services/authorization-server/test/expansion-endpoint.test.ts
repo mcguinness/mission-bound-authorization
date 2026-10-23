@@ -673,6 +673,7 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     // @spec mission#grant-binding-related (#1590): the successor's internal grant is its own,
     // distinct from the predecessor's, and each still resolves to its own Mission. These witness
     // isolation of the AS's records, not a protocol lineage: the poll returns only an access token.
+    expect((pb as { refresh_token?: string }).refresh_token).toBeUndefined();
     const successorGrant = as.kernel.get(successorId)?.grant_id as string;
     expect(predGrant).toBeTruthy();
     expect(successorGrant).toBeTruthy();
