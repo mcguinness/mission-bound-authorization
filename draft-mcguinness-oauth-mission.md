@@ -1990,7 +1990,7 @@ The subject-representation discipline is the same in every source:
 
 ## Approver Authentication Strength {#approval-authentication}
 
-A deployment publishes a statement declaring the minimum
+A deployment MUST publish a statement declaring the minimum
 approval-authentication strength (the approval-authentication floor)
 it enforces for Missions whose derived Authority Set carries high-risk
 authority, and the deployment scope it applies to. High-risk
@@ -3234,9 +3234,11 @@ one of three cases, with different obligations:
   state ({{introspected-consumption}}).
 
 An AS MAY support OAuth 2.0 Token Introspection {{RFC7662}} for
-Mission-bound access tokens. When it does, the response for such a token
-carries, in addition to the standard members, a `mission` member: a JSON
-object with the following members:
+Mission-bound access tokens. When it does, an `active: true` response
+for such a token, to a caller authorized to receive Mission data
+({{caller-authorization-and-minimization}}), MUST carry, in addition
+to the standard members, a `mission` member: a JSON object with the
+following members:
 
 - `id` and `issuer`: as in the `mission` claim ({{mission-claim}}).
 - `state`: the Mission's current lifecycle state (string). Its value
