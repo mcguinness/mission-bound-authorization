@@ -75,7 +75,7 @@ beforeAll(async () => {
     now: clock,
     testClients: [pdp.metadata, reader.metadata],
     lifecycleClientGrants: { [pdp.clientId]: [MISSION_STATUS_SCOPE], [reader.clientId]: [MISSION_STATUS_SCOPE] },
-    enrolledJoinPdps: { [pdp.clientId]: [CANONICAL_RESOURCE] },
+    joinEnrollment: { [pdp.clientId]: { roles: ["pdp"], enforcementScopes: [CANONICAL_RESOURCE] } },
   });
   await listen();
   // What the PDP is configured from is what the server publishes.
