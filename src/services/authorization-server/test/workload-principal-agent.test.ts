@@ -45,6 +45,8 @@ const SUBAGENT = "subagent-invoice-extractor";
 const APPROVAL_ONLY_TOKEN = Object.keys(TEST_APPROVAL_PRINCIPALS)[0] as string;
 /** The administrator's operational credential, holding the lifecycle grant. */
 const LIFECYCLE_TOKEN = "test-only-lifecycle-admin-1194";
+/** The workload principal's own credential: the Mission's Subject, holding no lifecycle grant. */
+const SUBJECT_TOKEN = "test-only-workload-subject-1503";
 
 const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
 const SCHEDULE = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:payment.schedule"] }];
@@ -61,6 +63,7 @@ beforeAll(async () => {
     serviceTokenPrincipals: {
       ...TEST_APPROVAL_PRINCIPALS,
       [LIFECYCLE_TOKEN]: { principal_id: "svc:lifecycle-admin", scopes: [MISSION_LIFECYCLE_SCOPE] },
+      [SUBJECT_TOKEN]: { principal_id: WORKLOAD, scopes: [] },
     },
   });
   server = as.provider.listen(PORT);
@@ -352,6 +355,20 @@ describe("an agent acting for its own workload principal (@spec mission#authorit
     const unknown = await lifecycle("msn_no_such_mission_1194", { operation: "revoke", nonce }, LIFECYCLE_TOKEN);
     expect(unknown.status).toBe(404);
     expect(refusedBody).toEqual(await unknown.json());
+    expect(as.kernel.get(missionId)?.state).toBe("active");
+  });
+
+  it("step 7a (no role entitlement): the Mission's Subject, authenticated as itself, and its Approver, carried by the approval service, are each refused revoke without the deployment's lifecycle authorization, and the Mission stays active", async () => {
+    // @spec mission#revocation (#1503 finding 14): the Subject and the Approver
+    // are parties the deployment's policy can authorize; neither role alone does.
+    const record = as.kernel.get(missionId);
+    expect(record?.subject.sub).toBe(WORKLOAD);
+    expect(Object.values(TEST_APPROVAL_PRINCIPALS)[0]?.approver?.sub).toBe(record?.approval_basis.consent_principal.sub);
+    for (const caller of [SUBJECT_TOKEN, APPROVAL_ONLY_TOKEN]) {
+      const refused = await lifecycle(missionId, { operation: "revoke" }, caller);
+      expect(refused.status, caller).toBe(404);
+      expect(((await refused.json()) as Record<string, unknown>).error, caller).toBe("not_found");
+    }
     expect(as.kernel.get(missionId)?.state).toBe("active");
   });
 
