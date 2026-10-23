@@ -665,13 +665,12 @@ A consuming AS with a Mission-state integration MUST, at redemption
 and at every refresh, resolve the Mission's current state and
 Effective Authority Set through the Mission Status operation
 ({{I-D.draft-mcguinness-oauth-mission-status}}) or an equivalent
-authority source, and refuse when the Mission is not established
-`active`. An equivalent source MUST be authenticated, MUST be
-audience-scoped to the resources this AS serves, MUST carry the
-Mission's current `authorization_details` and a monotonic state
-`version`, and MUST answer within a staleness bound the deployment
-publishes
-({{conformance}}).
+state source, and refuse when the Mission is not established
+`active`. The consuming AS MUST NOT rely on an equivalent source
+unless it is authenticated, is audience-scoped to the resources this
+AS serves, carries the Mission's current `authorization_details` and
+a monotonic state `version`, and answers within a staleness bound
+the deployment publishes ({{conformance}}).
 
 Through the Mission Status operation, the consuming AS resolves
 authority per resource, not for an audience of its own. For each
