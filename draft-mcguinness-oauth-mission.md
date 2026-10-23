@@ -5412,26 +5412,13 @@ The aggregate surface that a Mission's descendants can reach (the
 product of delegation depth, the number of trust domains projected into,
 and the number of child generations, each bounded independently) can
 therefore exceed what a single approval appears to bound at consent
-time.
-
-Child Delegation's `max_children` and `max_child_depth` limit the
-descendant Missions live at once, not those created over the root's
-lifetime: a child that terminates frees its slot
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}};
-{{I-D.draft-mcguinness-oauth-mission-derivation-limits}} works an
-example).
-
-Cross-domain projection composes separately: a projected grant preserves
-the Mission's lineage rather than rooting a new one, and the Resource
-AS's local issuance under it is bounded by that grant's own lifetime and
-local policy.
-
-At the consent surface, a deployment can disclose the subtree's
-figures, not only the immediate Mission's, as distinct values rather
-than one composed total
+time. {{I-D.draft-mcguinness-mission-security-model}} analyzes this
+composition, including why per-Mission child limits do not add up to a
+lifetime total, and the child-delegation profile states how an
+approval renders the subtree's figures
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Where a
-single approval's apparent bound must hold in practice, it can impose
-a global cap out of band.
+single approval's apparent bound must hold in practice, a deployment
+can impose a global cap out of band.
 
 Bounding aggregate consumption (calls, spend, or activity over the life
 of a Mission and its descendants) is the metering profile's role
