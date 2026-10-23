@@ -2296,8 +2296,9 @@ Request Object <span>[<a href="#RFC9101" class="cite xref">RFC9101</a>]</span> p
 <code>invalid_request</code> error code (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-4.1.2.1" class="relref">Section 4.1.2.1</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>), an
 authorization request that carries the parameter any other way,
 including in a Request Object passed to the authorization endpoint
-outside PAR. Direct redemption at the token endpoint (<a href="#redemption" class="auto internal xref">Section 6</a>)
-is unaffected.<a href="#section-7-2" class="pilcrow">¶</a></p>
+outside PAR. The front channel then carries only <code>client_id</code> and the
+<code>request_uri</code>. Direct redemption at the token endpoint
+(<a href="#redemption" class="auto internal xref">Section 6</a>) is unaffected.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <p id="section-7-3">The AS applies the grant validation of <a href="#grant-validation" class="auto internal xref">Section 6.1</a> at the PAR
 endpoint and treats the grant as the authorization already obtained.
 It <span class="bcp14">MUST NOT</span> re-prompt for consent; at most it renders the Mission
@@ -2335,9 +2336,12 @@ flow.<a href="#section-7-6" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-8-1">The MAS <span class="bcp14">MUST</span> record each minting with the Mission record: the <code>jti</code>,
 audience, requested and granted entries, any <code>cnf</code>, and time. The
-consuming AS records <code>authority_hash</code> with each issuance under a
-grant, beside the Mission reference the grant carries. Together the
-records attribute what was approved to the MAS and what was issued to
+consuming AS records each issuance under a grant with the grant's
+<code>jti</code>, Mission reference, and <code>authority_hash</code>. Only the <code>jti</code>
+identifies the minting: several grants can share a Mission and an
+<code>authority_hash</code>, and the single-use record (<a href="#single-use" class="auto internal xref">Section 6.5</a>) expires
+with the grant's acceptance window. Together the records attribute
+what was approved to the MAS and what was issued to
 each consuming AS.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">A deployment <span class="bcp14">SHOULD</span> reconcile MAS minting records against
 consuming-AS redemption records. A deployment <span class="bcp14">SHOULD</span> treat a
@@ -2501,9 +2505,14 @@ redeemed within its 300 seconds at a consuming AS without a
 Mission-state integration. The residual there is the grant's
 remaining lifetime and clock-skew leeway (<a href="#grant-validation" class="auto internal xref">Section 6.1</a>), plus
 the issued token's lifetime, plus that of each further exchange that
-checks no Mission state, capped by <code>expires_at</code>; under the PAR
-carriage, the authorization code's lifetime adds to that sum. Hence
-the short-lifetime recommendation (<a href="#token-issuance" class="auto internal xref">Section 6.2</a>). In either mode,
+checks no Mission state, capped by <code>expires_at</code>. Under the PAR
+carriage the grant is consumed at PAR validation, and the sum then
+runs through the pending authorization request, bounded by the
+<code>request_uri</code> lifetime (<span><a href="https://rfc-editor.org/rfc/rfc9126#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>) and any
+resource-owner interaction timeout, and through the authorization
+code's lifetime, before the issued token's; <code>expires_at</code> still caps
+it. Hence the short-lifetime recommendation (<a href="#token-issuance" class="auto internal xref">Section 6.2</a>). In
+either mode,
 issued access tokens run to their own expiry. With a Mission-state
 integration, an outstanding refresh token is refused at its next
 use, and a refresh re-projects through the Effective Authority Set

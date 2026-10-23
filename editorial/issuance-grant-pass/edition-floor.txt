@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-23T00:49:58Z
-Source repository commit: 0990be2cf4eac909e61db60778ceb6ca2194a521
+Generated: 2026-10-23T03:39:47Z
+Source repository commit: e78f91b48ba40496b8e9e358b09f4d6992eb22c3
 Member count: 7
 
 Reading order:
@@ -3693,17 +3693,17 @@ Table of Contents
    5.  Under the MAS as estate control plane, a consuming AS either has
        a Mission-state integration or has none
        ([I-D.draft-mcguinness-oauth-mission-issuance-grant],
-       Section "Effective Authority Set Projection").  One that has it
-       projects every redemption and refresh through the Mission's
-       current Effective Authority Set, so its issuance excludes
-       contained authority within its published staleness bound.  A
-       lifecycle-state check alone, under which a contained Mission
-       still reads active, is not such an integration.  One that has
-       none checks no Mission state at redemption, issues no refresh
-       tokens, and relies on the Mission Issuer's minting gate, so a
-       grant minted before the transition can still redeem within its
-       300-second lifetime, and the token it yields then runs to its own
-       exp: the residual is the two summed (Section 10.4).
+       Section "Redemption").  One that has it projects every redemption
+       and refresh through the Mission's current Effective Authority
+       Set, so its issuance excludes contained authority within its
+       published staleness bound.  A lifecycle-state check alone, under
+       which a contained Mission still reads active, is not such an
+       integration.  One that has none checks no Mission state at
+       redemption, issues no refresh tokens, and relies on the Mission
+       Issuer's minting gate, so a grant minted before the transition
+       can still redeem within its 300-second lifetime, and the token it
+       yields then runs to its own exp: the residual is the two summed
+       (Section 10.4).
 
    6.  Under the OAuth binding with offline attenuation, a consumer
        accepts a chain only under runtime enforcement, with a fresh

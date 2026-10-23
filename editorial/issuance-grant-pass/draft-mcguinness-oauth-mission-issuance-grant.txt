@@ -838,7 +838,8 @@ Table of Contents
    invalid_request error code (Section 4.1.2.1 of [RFC6749]), an
    authorization request that carries the parameter any other way,
    including in a Request Object passed to the authorization endpoint
-   outside PAR.  Direct redemption at the token endpoint (Section 6) is
+   outside PAR.  The front channel then carries only client_id and the
+   request_uri.  Direct redemption at the token endpoint (Section 6) is
    unaffected.
 
    The AS applies the grant validation of Section 6.1 at the PAR
@@ -876,10 +877,12 @@ Table of Contents
 
    The MAS MUST record each minting with the Mission record: the jti,
    audience, requested and granted entries, any cnf, and time.  The
-   consuming AS records authority_hash with each issuance under a grant,
-   beside the Mission reference the grant carries.  Together the records
-   attribute what was approved to the MAS and what was issued to each
-   consuming AS.
+   consuming AS records each issuance under a grant with the grant's
+   jti, Mission reference, and authority_hash.  Only the jti identifies
+   the minting: several grants can share a Mission and an
+   authority_hash, and the single-use record (Section 6.5) expires with
+   the grant's acceptance window.  Together the records attribute what
+   was approved to the MAS and what was issued to each consuming AS.
 
    A deployment SHOULD reconcile MAS minting records against consuming-
    AS redemption records.  A deployment SHOULD treat a redemption with
@@ -1013,10 +1016,14 @@ Table of Contents
    integration.  The residual there is the grant's remaining lifetime
    and clock-skew leeway (Section 6.1), plus the issued token's
    lifetime, plus that of each further exchange that checks no Mission
-   state, capped by expires_at; under the PAR carriage, the
-   authorization code's lifetime adds to that sum.  Hence the short-
-   lifetime recommendation (Section 6.2).  In either mode, issued access
-   tokens run to their own expiry.  With a Mission-state integration, an
+   state, capped by expires_at.  Under the PAR carriage the grant is
+   consumed at PAR validation, and the sum then runs through the pending
+   authorization request, bounded by the request_uri lifetime
+   (Section 2.2 of [RFC9126]) and any resource-owner interaction
+   timeout, and through the authorization code's lifetime, before the
+   issued token's; expires_at still caps it.  Hence the short-lifetime
+   recommendation (Section 6.2).  In either mode, issued access tokens
+   run to their own expiry.  With a Mission-state integration, an
    outstanding refresh token is refused at its next use, and a refresh
    re-projects through the Effective Authority Set (Section 6.3), so a
    Mission contained or discharged between issuance and refresh does not
