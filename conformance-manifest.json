@@ -37610,15 +37610,15 @@
    ]
   },
   {
-   "id": "issuance-grant.effective-set-projection.causal-containment-attribution",
-   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "effective-set-projection",
-   "text": "a collapse from any other cause MUST NOT be reported as containment merely because Containment is composed",
+   "id": "containment.denial-reason.causal-attribution",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "denial-reason",
+   "text": "a refusal from any other cause MUST NOT carry it merely because Containment is composed",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
-    "capability": "issuance-grant.state-integration"
+    "capability": "containment.narrowing"
    },
    "profiles": [],
    "surface": "derivation",
@@ -37642,7 +37642,8 @@
      "level": "unit",
      "surface": "derivation"
     }
-   ]
+   ],
+   "notes": "Rehomed from issuance-grant.effective-set-projection.causal-containment-attribution (D685 Q7) with its role, strength, observation, coverage and witnesses. The gate moves from issuance-grant.state-integration, the host section of the old text, to containment.narrowing, the rule's own condition (Containment is composed)."
   },
   {
    "id": "issuance-grant.effective-set-projection.request-fault-errors",

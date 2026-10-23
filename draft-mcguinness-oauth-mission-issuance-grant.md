@@ -885,11 +885,9 @@ precedes scope projection above: an AS that models authority as
 
 An empty intersection is refused by its cause. If items 1 to 3
 already intersect to nothing, the authorization itself is exhausted
-and the AS refuses with `invalid_grant` ({{redemption-errors}}). The
-refusal MAY carry the `authority_contained` value in the
-`mission_denial_reason` member where Containment causally removed the
-authority, and a collapse from any other cause MUST NOT be reported
-as containment merely because Containment is composed
+and the AS refuses with `invalid_grant` ({{redemption-errors}}).
+Where Containment is composed, whether the refusal carries its
+`authority_contained` reason is Containment's rule
 ({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The
 authority_contained Denial Reason"). Where that authorization
 survives but a narrowing the client requested exceeds it, the
