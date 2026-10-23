@@ -620,6 +620,7 @@ describe("expansion: verified facts persist across the deferred window (@spec mi
 describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window)", () => {
   it("a widening request defers (authorization_pending + deferral_code); after async approval a poll (no subject_token) mints the successor and supersedes the predecessor", async () => {
     const pred = await issuePredecessor(["payments:invoice.read"]);
+    const predGrant = as.kernel.get(pred.missionId)?.grant_id as string;
     const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
       "payments:invoice.read",
       "payments:remittance.send",
@@ -668,6 +669,18 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     // successor's identifier and its committed effective expiry, verbatim.
     expect(pb.mission_id).toBe(successorId);
     expect(pb.mission_expires_at).toBe(as.kernel.get(successorId)?.expires_at);
+
+    // @spec mission#grant-binding-related (#1590): the successor's internal grant is its own,
+    // distinct from the predecessor's, and each still resolves to its own Mission. These witness
+    // isolation of the AS's records, not a protocol lineage: the poll returns only an access token.
+    const successorGrant = as.kernel.get(successorId)?.grant_id as string;
+    expect(predGrant).toBeTruthy();
+    expect(successorGrant).toBeTruthy();
+    expect(successorGrant).not.toBe(predGrant);
+    expect(as.kernel.get(pred.missionId)?.grant_id).toBe(predGrant);
+    expect(as.kernel.findByGrant(predGrant)?.id).toBe(pred.missionId);
+    expect(as.kernel.findByGrant(successorGrant)?.id).toBe(successorId);
+    expect(as.kernel.missionBoundGrants.resolve(successorGrant)?.missionId).toBe(successorId);
   });
 
   it("@spec expansion#successor-expiry: the successor is never later than the predecessor absent a recorded extension", async () => {
