@@ -9,7 +9,8 @@
  *
  * - Caller authentication. Private-key JWT, the Mission Status endpoint's
  *   authenticator (`authenticateLifecycleClient`, #1407), with the
- *   assertion's `aud` naming this endpoint, as §join-assertion requires.
+ *   assertion's `aud` the MAS issuer identifier as its sole value, as
+ *   §join-assertion requires.
  *   The request body is JSON, so `client_assertion_type` and
  *   `client_assertion` travel as top-level JSON members; the draft names no
  *   carriage for a JSON body (a reported gap).
@@ -196,7 +197,7 @@ export interface JoinAssertionServiceDeps {
   deployment: JoinAssertionDeployment;
   /** The enforcement scopes enrolled for a client (`enrolledJoinPdps`). */
   enrolledScopes: (clientId: string) => readonly string[];
-  /** The Mission Status endpoint's client authentication, its assertion `aud` this endpoint. */
+  /** The Mission Status endpoint's client authentication, its assertion `aud` the MAS issuer identifier as its sole value. */
   authenticate: (params: Record<string, string>, authorization: string) => Promise<{ ok: true; clientId: string } | { ok: false; description: string; retryAfterS?: number }>;
 }
 

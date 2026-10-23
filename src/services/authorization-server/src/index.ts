@@ -59,7 +59,7 @@ export {
   type ApproverLoginOptions,
 } from "./adapters/approver-login.js";
 import { type DpopProofReplay, newDpopProofReplay } from "./adapters/dpop-replay.js";
-import { type JoinAssertionDeployment, JOIN_ASSERTION_ENDPOINT_PATH, JoinAssertionService } from "./adapters/join-assertion.js";
+import { type JoinAssertionDeployment, JoinAssertionService } from "./adapters/join-assertion.js";
 import { authenticateLifecycleClient } from "./adapters/lifecycle-endpoint.js";
 import {
   buildProvider,
@@ -1748,8 +1748,7 @@ export async function buildAuthorizationServer(opts: {
   const dpopProofReplay = opts.dpopProofReplay ?? newDpopProofReplay();
   // @spec authority-server#join-assertion (#1454): the MAS's Join Assertion
   // endpoint, its callers authenticated as at Mission Status, with the
-  // assertion's `aud` this endpoint.
-  const joinAssertionEndpoint = `${opts.issuer}${JOIN_ASSERTION_ENDPOINT_PATH}`;
+  // assertion's `aud` the MAS issuer identifier as its sole value (D685, D690).
   const joinAssertionService = opts.joinAssertions
     ? new JoinAssertionService({
         issuer: opts.issuer,
@@ -1759,7 +1758,7 @@ export async function buildAuthorizationServer(opts: {
           opts.enrolledJoinPdps && Object.hasOwn(opts.enrolledJoinPdps, clientId) ? (opts.enrolledJoinPdps[clientId] ?? []) : [],
         authenticate: (params, authorization) =>
           authenticateLifecycleClient(
-            { issuer: opts.issuer, clients: clientRegistrations, replay: dpopProofReplay, now: () => kernel.nowDate(), audience: joinAssertionEndpoint },
+            { issuer: opts.issuer, clients: clientRegistrations, replay: dpopProofReplay, now: () => kernel.nowDate() },
             params,
             authorization,
           ),

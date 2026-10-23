@@ -723,7 +723,10 @@ additionally carry `authority_contained` in the shared
 `mission_denial_reason` member the expansion profile registers
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}); this document
 requests that value's registration in the Mission Denial Reasons
-registry that member carries ({{iana}}).
+registry that member carries ({{iana}}). A token endpoint's refusal
+carries `authority_contained` only where Containment causally removed
+the requested authority; a refusal from any other cause MUST NOT
+carry it merely because Containment is composed.
 A runtime enforcement deployment separately carries it as a
 denial-reason identifier alongside the classification set of
 {{I-D.draft-mcguinness-mission-authzen}}, a distinct
@@ -1226,6 +1229,12 @@ This document registers two media types per {{RFC6838}}.
 
 \[\[ To be removed from the final specification ]]
 
+- The authority_contained Denial Reason ({{denial-reason}}) now holds
+  the causal-attribution rule that the Mission Issuance Grant profile
+  stated: a token endpoint's refusal carries `authority_contained`
+  only where Containment causally removed the requested authority,
+  and a refusal from any other cause must not carry it merely because
+  Containment is composed.
 - Selector Matching ({{selector-matching}}): a contained-capability
   entry is a selector with `resource_match`, `exact` by default and
   `prefix` by declaration. It applies to every approved entry whose

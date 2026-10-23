@@ -122,13 +122,6 @@ export interface LifecycleClientAuthenticationDeps {
   /** The AS's single-use `jti` cache; an assertion's jti is held under `ca:`. */
   replay: DpopProofReplay;
   now: () => Date;
-  /**
-   * The sole `aud` the assertion must carry: the issuer identifier (the
-   * default), as at the Mission Status and Lifecycle endpoints, or an
-   * endpoint whose profile has the assertion name the endpoint itself, as
-   * the MAS's join-assertion endpoint does (#1454).
-   */
-  audience?: string;
 }
 
 /**
@@ -209,8 +202,8 @@ export async function authenticateLifecycleClient(
   }
   const aud = payload.aud;
   const soleAudience = Array.isArray(aud) ? (aud.length === 1 ? aud[0] : undefined) : aud;
-  if (soleAudience !== (deps.audience ?? deps.issuer)) {
-    return fail(`client_assertion aud must be ${deps.audience ? "this endpoint" : "the issuer identifier"} as its sole value`);
+  if (soleAudience !== deps.issuer) {
+    return fail("client_assertion aud must be the issuer identifier as its sole value");
   }
   if (typeof payload.exp !== "number" || payload.exp * 1000 > now.getTime() + DPOP_PROOF_REPLAY_WINDOW_S * 1000) {
     return fail(`client_assertion exp must lie within ${DPOP_PROOF_REPLAY_WINDOW_S} seconds`);
