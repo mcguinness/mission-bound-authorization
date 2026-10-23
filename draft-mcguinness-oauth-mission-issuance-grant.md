@@ -420,10 +420,17 @@ entry's audience relevance, subset relation, and transformations
 follow its type's specification and the transformation capabilities
 each party declares for that type, through the carriers that section
 lists, deployment documentation among them. A consuming AS
-serves an entry that, under its type, is relevant to an audience for
-which that AS issues tokens. For example, a `mission_resource_access`
-entry ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) is
-relevant to the audience its `resource` member names.
+serves an entry that is relevant to an audience for which that AS
+issues tokens. An entry's audiences come from its type's
+specification and the deployment's trusted configuration relating
+entries to audiences, not from its operation target: the issuance
+profile keeps an entry's `resource`, a token request's `resource`
+parameter, and a token's `aud` distinct
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Audience and Token
+Response"). For example, a `mission_resource_access` entry
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}) whose
+`resource` is `https://api.example.com/orders/123` can belong to the
+audience `https://api.example.com`.
 
 Omitting a whole entry always yields a subset. Narrowing within an
 entry, or projecting it to `scope`, needs the corresponding declared
@@ -855,10 +862,11 @@ a new request does not refuse the redemption or refresh
 
 Through the Mission Status operation, the consuming AS resolves
 authority per entry audience, not for an audience of its own. For
-each distinct audience the grant's entries are relevant to
-({{entry-types}}; on refresh, the family ceiling's entries), it sends
-one request whose `audience` is that value, unchanged (for a
-`mission_resource_access` entry, its `resource` value); the Mission
+each distinct audience the grant's entries are relevant to (on
+refresh, the family ceiling's entries), resolved as {{entry-types}}
+describes, it sends one request whose `audience` is that audience
+identifier; it sends an entry's `resource` value as the `audience`
+only where that resolution establishes the two are equal. The Mission
 Issuer authorizes each audience separately
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Request").
 The consuming AS validates each response against the audience it
@@ -1416,8 +1424,10 @@ Server Metadata" registry {{RFC8414}}:
   defined, and the ceiling is persisted at every issuance. A Status
   not-found refusal carries no `mission_error`, and reliance on a
   cached Status response is bounded, a held response that still meets
-  those bounds survives a transient failure, and an entry relevant to
-  several audiences survives only where all of them admit it. The
+  those bounds survives a transient failure, Status requests name each
+  entry's resolved audience rather than its `resource`, and an entry
+  relevant to several audiences survives only where all of them admit
+  it. The
   grant endpoint publishes Protected Resource Metadata with its DPoP
   algorithms, accepts `client_id` for mutual TLS, and verifies any
   DPoP proof presented; DPoP error codes are the same at the grant

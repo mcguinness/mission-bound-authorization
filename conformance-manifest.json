@@ -38618,6 +38618,28 @@
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q16); todo until that path exists."
   },
   {
+   "id": "issuance-grant.mission-state-source.audience-resolution",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-state-source",
+   "text": "it sends an entry's `resource` value as the `audience` only where that resolution establishes the two are equal",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each Mission Status request names the audience the type and the deployment's trusted configuration resolve for the entries it covers; an entry whose resource is https://api.example.com/orders/123 under audience https://api.example.com is resolved by a request for https://api.example.com, never by sending the order URL as the audience"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the #1569 review of the D685 rulings; todo until that path exists."
+  },
+  {
    "id": "issuance-grant.grant.cnf-possession",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "grant-validation",
