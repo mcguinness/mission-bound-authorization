@@ -931,6 +931,9 @@ Mission-derived `authorization_details`, so it cannot identify its
 Mission. The PEP names the Mission explicitly, and the PDP joins the
 credential to it before evaluating the action. When no cryptographic
 binding exists, a permit "under this Mission" rests on the join.
+Because the Mission is named per request, the same credential can be
+joined to different Missions across separate requests where its
+subject and client are eligible for more than one.
 
 This section defines the baseline mapping join. The Mission Join
 Assertion ({{join-assertion}}) builds on it. The Enterprise profile

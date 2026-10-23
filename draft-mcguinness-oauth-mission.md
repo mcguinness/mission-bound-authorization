@@ -2353,9 +2353,7 @@ A grant binding is also distinct from a decision-time runtime join, such
 as the Mission Join of
 {{I-D.draft-mcguinness-mission-authority-server}}, in which a policy
 decision point joins an ordinary OAuth credential to a Mission per
-request. The same credential can be joined to different Missions across
-separate requests where its subject and client are eligible for more
-than one.
+request.
 
 Such a join is not a Mission grant binding: it does not make the joined
 OAuth grant Mission-bound, and it rests on its own authenticated inputs
