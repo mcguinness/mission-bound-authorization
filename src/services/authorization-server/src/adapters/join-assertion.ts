@@ -32,6 +32,14 @@
  *   `disposition`, `depth` for a delegate), `aud` the consuming PDP,
  *   `mapping_version` where the deployment's mapping contract names one, and
  *   an `exp` never past the acting token's.
+ * - Re-read after every await (#1454 review). The acting token is
+ *   established, and the assertion signed, over awaits during which the
+ *   Mission can change. After the token check and join evaluation, and again
+ *   after signing, the Mission is read again with its expiry materialized: one
+ *   no longer `active`, one whose `authority_hash` changed since the first
+ *   read, or an audience no longer enrolled for it refuses `join_failed`, and
+ *   nothing is returned, cached or recorded. A cached assertion is served only
+ *   after the first of these re-reads.
  * - Cache. Keyed on (`issuer`, `mission_id`), the token digest and the
  *   `audience`. A cached assertion is served only after the caller and every
  *   minting check pass again, and only while the join it carries is the join
@@ -213,6 +221,24 @@ export class JoinAssertionService {
     return scopes.length > 0 && record.authority_set.some((e) => scopes.some((s) => entryOverlapsResource(e, s)));
   }
 
+  /**
+   * @spec authority-server#join-assertion-request (#1454 review): "The MAS
+   * mints an assertion only for a Mission in the `active` state", so the
+   * Mission is read again, its expiry materialized, after each await that
+   * follows the first read. A Mission no longer `active`, one whose
+   * `authority_hash` changed since `first`, or an `audience` no longer
+   * enrolled for it refuses `join_failed`.
+   */
+  private recheck(first: MissionRecord, audience: string): JoinAssertionAnswer | undefined {
+    const current = this.deps.kernel.currentRecord(first.id);
+    if (!current || current.state !== "active") return err(403, "join_failed", "the Mission is not active");
+    if (current.authority_hash !== first.authority_hash) return err(403, "join_failed", "the Mission's authority changed");
+    if (!this.enrolledFor(audience, current)) {
+      return err(403, "join_failed", "the audience names no PDP enrolled for the Mission's enforcement scope");
+    }
+    return undefined;
+  }
+
   /** One request: the raw body as the route read it, and the request's `Authorization` header. */
   async handle(raw: string, contentType: string, authorization: string): Promise<JoinAssertionAnswer> {
     if ((contentType.split(";")[0] ?? "").trim().toLowerCase() !== "application/json") {
@@ -280,6 +306,10 @@ export class JoinAssertionService {
     }
     const join = this.deps.deployment.evaluateJoin(token, record);
     if (!join) return err(403, "join_failed", "the acting token does not join the Mission");
+    // The Mission may have changed while the token was established: read it
+    // again before serving a cached assertion or signing a new one.
+    const beforeSigning = this.recheck(record, request.audience);
+    if (beforeSigning) return beforeSigning;
 
     // @spec authority-server#join-assertion-request: "The cache key is the
     // qualified Mission reference (`issuer`, `mission_id`), the token digest,
@@ -307,6 +337,10 @@ export class JoinAssertionService {
       ...(join.mappingVersion !== undefined ? { mapping_version: join.mappingVersion } : {}),
     };
     const jws = await this.deps.kernel.signJoinAssertion(claims, { audience: request.audience, iat: nowS, exp });
+    // And again after signing: an assertion refused here is neither cached
+    // nor recorded as a join evidence event.
+    const afterSigning = this.recheck(record, request.audience);
+    if (afterSigning) return afterSigning;
     this.cache.set(key, { jws, exp, join });
     this.minted.push({
       mission: { issuer: record.issuer, id: record.id },
