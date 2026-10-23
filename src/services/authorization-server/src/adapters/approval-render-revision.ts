@@ -74,6 +74,18 @@ export function approvalContext(input: {
   return { context, commitment: digest(context) };
 }
 
+/**
+ * The anchor over a prepared candidate's complete entries, capability bindings
+ * and assembled contracts included, so the candidate a commit records can be
+ * checked against the one prepared before the last asynchronous step.
+ */
+export function candidateHash(issuer: string, entries: readonly AuthorityEntry[]): string {
+  return authorityHash(issuer, entries as unknown as JsonValue[]);
+}
+
+/** The response header that carries a rendering's revision to a headless approval service. */
+export const RENDER_REVISION_HEADER = "x-approval-render-revision";
+
 /** The parts of two contexts that differ, for the refusal's explanation and for tests. */
 export function changedParts(rendered: ApprovalContext, current: ApprovalContext): (keyof ApprovalContext)[] {
   return (Object.keys(current) as (keyof ApprovalContext)[]).filter((k) => digest(rendered[k] ?? null) !== digest(current[k] ?? null));
