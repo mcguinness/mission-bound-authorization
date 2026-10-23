@@ -289,6 +289,20 @@ describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)
     }
   });
 
+  // @spec resource-access#subset (#1377, D538, D684): likewise a signed grant
+  // whose entry names an action family, which the local ceiling's literal
+  // action comparison does not implement.
+  it("a signed grant whose entry names an action family is refused, minting no local token (#1377)", async () => {
+    const server = await ras();
+    const family = { ...delegated, actions: [...delegated.actions, "invoices.*"] };
+    for (const authority of [[family], [DEFAULT_CEILING[1], family]]) {
+      await expect(server.redeem(await mintGrant({ authorizationDetails: authority }), clientJkt)).rejects.toMatchObject({
+        code: "invalid_grant",
+        message: "local policy check failed",
+      });
+    }
+  });
+
   it("a grant without locations, or carrying capability_sources, still mints", async () => {
     const bindings = delegated.actions.map(action => ({ action, tool_id: action, source_uri: "https://catalog.test", source_digest: "sha-256:" + Buffer.alloc(32).toString("base64url"), operation_ref: action }));
     const server = await ras();

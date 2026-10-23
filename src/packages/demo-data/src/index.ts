@@ -27,6 +27,7 @@ import {
   resourceMatchViolation,
   type ScopeProjectionMapping,
   ScopeProjectionMappingError,
+  unsupportedActionFamily,
   unsupportedDelegationMember,
   unsupportedEntryMember,
 } from "@mission/core";
@@ -1107,6 +1108,15 @@ function rejectRefusedMember(file: string, e: Record<string, unknown>, ctx: stri
     throw new ConfigError(
       file,
       `${ctx} carries ${delegationMember}, which is not a supported delegation member`,
+    );
+  }
+  // @spec resource-access#subset (#1377, D538, D684): likewise an action
+  // family, unsupported input named here rather than left to isAuthorityEntry.
+  const family = unsupportedActionFamily(e);
+  if (family !== undefined) {
+    throw new ConfigError(
+      file,
+      `${ctx} carries the action family ${family}, which this authorization server does not support`,
     );
   }
 }

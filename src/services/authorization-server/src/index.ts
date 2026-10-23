@@ -328,6 +328,8 @@ export {
   presentedChildActorPermitted,
 } from "./kernel/child-actor-eligibility.js";
 export {
+  ACTION_IDENTIFIER,
+  ACTION_VALUE,
   authorizationDetailsTypesMetadata,
   AUTHORIZATION_DETAILS_TYPES_METADATA,
   MISSION_RESOURCE_ACCESS_SCHEMA,

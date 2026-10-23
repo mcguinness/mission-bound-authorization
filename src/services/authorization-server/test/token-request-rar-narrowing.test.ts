@@ -343,6 +343,21 @@ describe("a refresh request's authorization_details beyond the grant is refused 
     expectIssued(await refresh(m.refreshToken, m.keys, [entry([READ])]), [READ]);
   });
 
+  // @spec resource-access#subset (#1377, D538, D684): a requested entry naming
+  // an action family is unsupported input, refused before rotation, never
+  // compared literally against the grant or issued.
+  it("an entry naming an action family is refused invalid_authorization_details saving no refresh token, and the same token still refreshes (#1377)", async () => {
+    const m = await issue();
+    pastSeventyPercent();
+    const refused = await countingRefreshSaves(() => refresh(m.refreshToken, m.keys, [entry(["payments:invoice.*"])]));
+    expectRefused(refused.result, "invalid_authorization_details");
+    expect(refused.result.body.error_description).toBe(
+      "payments:invoice.* is an action family, which this authorization server does not support; refusing it as unsupported input",
+    );
+    expect(refused.saved).toBe(0);
+    expectIssued(await refresh(m.refreshToken, m.keys, [entry([READ])]), [READ]);
+  });
+
   it("an async-delegation family, which rotates on every refresh: a schema-invalid or excess request is refused saving nothing, and the same token still refreshes", async () => {
     const m = await issue();
     const familyToken = await family(m.accessToken, m.keys);

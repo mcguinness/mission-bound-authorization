@@ -149,6 +149,29 @@ export function unsupportedEntryMember(entry: unknown): string | undefined {
 }
 
 /**
+ * @spec resource-access#subset, resource-access#resource-access-type (#1377,
+ * D538, D684): this implementation compares action values literally and
+ * implements none of the subset rule's action-family clauses, nor a family's
+ * consent rendering or breadth handling, so an action family (an identifier
+ * followed by `.*`) is unsupported input: refused before approval or
+ * transformation, never admitted as an opaque string. The first family
+ * `entry`'s `actions` carries, or undefined. This is the SINGLE declaration
+ * every boundary that consults {@link unsupportedEntryMember} also consults,
+ * each mapping a hit to its own error.
+ */
+export function unsupportedActionFamily(entry: unknown): string | undefined {
+  if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return undefined;
+  const actions = (entry as { actions?: unknown }).actions;
+  if (!Array.isArray(actions)) return undefined;
+  return actions.find((a): a is string => typeof a === "string" && a.endsWith(".*"));
+}
+
+/** The `error_description` a protocol boundary answers for an action family. */
+export function actionFamilyRefusal(family: string): string {
+  return `${family} is an action family, which this authorization server does not support; refusing it as unsupported input`;
+}
+
+/**
  * @spec resource-access#resource-access-type (D634): the `delegation` members
  * this authorization server supports. Resource Access defines `max_depth` and
  * `allowed_delegates`; Child Delegation, which this implementation
@@ -284,6 +307,8 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   if (refusedEntryMember(value) !== undefined) return false;
   if (unsupportedEntryMember(value) !== undefined) return false;
+  // @spec resource-access#subset (#1377, D538): an action family is unsupported input.
+  if (unsupportedActionFamily(value) !== undefined) return false;
   const e = value as Record<string, unknown>;
   const strings = (v: unknown): v is string[] =>
     Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.length > 0);
@@ -539,6 +564,16 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   if (
     unsupportedDelegationMember(candidate) !== undefined ||
     unsupportedDelegationMember(granted) !== undefined
+  ) {
+    return false;
+  }
+  // @spec resource-access#subset (#1377, D538, D684): an action family is
+  // refused on either side and even byte-identical, as an unsupported
+  // `delegation` member is: this implementation implements none of the
+  // family clauses, so it neither narrows nor carries one.
+  if (
+    unsupportedActionFamily(candidate) !== undefined ||
+    unsupportedActionFamily(granted) !== undefined
   ) {
     return false;
   }
