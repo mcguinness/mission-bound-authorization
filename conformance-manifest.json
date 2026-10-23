@@ -139,8 +139,8 @@
     "content_sha256": "3c1d883d71a887cc0643d40a023ecea1b16e272778ce9851353a3b6807b14927"
    },
    "draft-mcguinness-mission-mandate.md": {
-    "revision": "b37b5d37d2a8b43a8efcb02ff66713814e98291c",
-    "content_sha256": "d05b02b6664c2acfdd532b8bcbebf19af04ccbb55d5146149226bb8932b0be18"
+    "revision": "75b38619250295f84e2a1fb5277b5bfd3ae3eb7e",
+    "content_sha256": "61b1e27b9925e99586a57b23e299a7d5080c8b6fe10e67bd920c0e1b933ecf3e"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
     "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
@@ -59860,7 +59860,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1377 (D538, D684). A facet of core.subset.unrecognized-member-refused quoting the same clause; the clause is the posture, the ruling is what makes a family unsupported here. One declaration (unsupportedActionFamily in @mission/core) backs every boundary that consults unsupportedEntryMember: the shared validator (refusedMemberViolation, so PAR, device submission and the requested-authority intakes), isAuthorityEntry (the config loaders, the RAS and foreign grants), isSubsetEntry, derivation, projection and template consent; the published schema's actions pattern admits identifiers only. Proved by disabling each call site alone, each caught by its own witnesses: the shared validator (the validator, PAR and refresh witnesses), isAuthorityEntry (the RAS witness and the mission-core helper tests), isSubsetEntry (the mission-core subset test), derivation's check (the three derivation tests), the projection guard (the two projection tests), template consent, the config loader check (the four loader tests) and the schema pattern. Not cited, since their error or level differs from this row: the config loaders (a native configuration error naming the entry and the family) and the template admin plane (invalid_request), witnessed in action-family-refused.test.ts and template-dispatch-endpoint.test.ts. Positive controls: identifiers are still admitted, derived and projected. No vector case: a subset consumer's refusal case is #819's."
+   "notes": "#1377 (D538, D684). A facet of core.subset.unrecognized-member-refused quoting the same clause; the clause is the posture, the ruling is what makes a family unsupported here. One declaration (unsupportedActionFamily in @mission/core) backs every boundary that consults unsupportedEntryMember: the shared validator (refusedMemberViolation, so PAR, device submission and the requested-authority intakes), isAuthorityEntry (the config loaders, the RAS and foreign grants), isSubsetEntry, derivation, projection and template consent; the published schema's actions pattern admits identifiers only. Proved by disabling each call site alone, each caught by its own witnesses: the shared validator (the validator, PAR and refresh witnesses), isAuthorityEntry (the RAS witness and the mission-core helper tests), isSubsetEntry (the mission-core subset test), derivation's check (the three derivation tests), the projection guard (the two projection tests), template consent, the config loader check (the four loader tests) and the schema pattern. Not cited, since their error or level differs from this row: the config loaders (a native configuration error naming the entry and the family) and the template admin plane (invalid_request), witnessed in action-family-refused.test.ts and template-dispatch-endpoint.test.ts. Positive controls: identifiers are still admitted, derived and projected. Cases ev-fam-01 (entry-validation) and der-fam-01 (derive, the same family in the ceiling and the proposal, which a literal comparison would derive) run in the reference reader and are proved by disabling the family check (#819)."
   },
   {
    "id": "core.self-exchange.result-subset",
@@ -64690,6 +64690,111 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#705 acceptance item 13, the Mandate half (the OAuth binding's half, its digest-equivalence witness, is cited on its own row, D613). No Mandate minting code exists in the reference implementation. #705 closed under D675: this witness is deferred, not passed; it is tracked here until the reference implementation builds the surface."
+  },
+  {
+   "spec": "draft-mcguinness-mission-mandate.md",
+   "profiles": [],
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "id": "mandate.claims.approval-governance-digest-requires-event",
+   "anchor": "claims",
+   "text": "A Mandate that carries it MUST also carry `approval_event_id`",
+   "role": "AS",
+   "strength": "MUST",
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mandate carrying `approval_governance_digest` also carries `approval_event_id`"
+   },
+   "notes": "#1573 (D691, D692, D696). todo: the reference implementation has no Mandate minting or verification code; the Approval Governance side of the binding check is implemented (#1572)."
+  },
+  {
+   "spec": "draft-mcguinness-mission-mandate.md",
+   "profiles": [],
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "id": "mandate.claims.approval-governance-digest-only-when-backed",
+   "anchor": "claims",
+   "text": "the issuer MUST NOT include it unless such a record backs the approval event",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`approval_governance_digest` appears only on a Mandate whose Mission's approval event an Approval Governance Record backs"
+   },
+   "notes": "#1573 (D691, D692, D696). todo: the reference implementation has no Mandate minting or verification code; the Approval Governance side of the binding check is implemented (#1572)."
+  },
+  {
+   "spec": "draft-mcguinness-mission-mandate.md",
+   "profiles": [],
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "id": "mandate.minting.claim-source",
+   "anchor": "minting",
+   "text": "Each claim MUST be populated from the Mission record's committed members, except `approval_governance_digest`, which is the record digest of the committed Approval Governance Record that backs the Mission's approval event.",
+   "role": "AS",
+   "strength": "MUST",
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Mandate claim equals the Mission record's committed member it names, except `approval_governance_digest`, which equals the record digest of the committed Approval Governance Record for the approval event"
+   },
+   "notes": "#1573 (D691, D692, D696). todo: the reference implementation has no Mandate minting or verification code; the Approval Governance side of the binding check is implemented (#1572). The claim-source rule and its Conformance restatement were amended for this one claim."
+  },
+  {
+   "spec": "draft-mcguinness-mission-mandate.md",
+   "profiles": [],
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "id": "mandate.verification.approval-governance-binding",
+   "anchor": "verification",
+   "text": "Where `approval_governance_digest` ({{claims}}) is present and a verifier relies on an Approval Governance Record presented with this Mandate, it MUST run the portable approval-binding check with this Mandate as the Mission reference ({{I-D.draft-mcguinness-mission-approval-governance}}, Section \"Portable Approval-Binding Check\"), MUST recompute the record digest over the presented record, and MUST NOT rely on the record unless the check succeeds and the recomputed digest equals `approval_governance_digest`.",
+   "role": "verifier",
+   "strength": "MUST",
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a verifier relies on a presented record only when the portable approval-binding check succeeds with this Mandate as the reference and the recomputed record digest equals `approval_governance_digest`; a correct digest of a record for another approval event or Mission, or a different record for the same event, is not relied on"
+   },
+   "notes": "#1573 (D691, D692, D696). todo: the reference implementation has no Mandate minting or verification code; the Approval Governance side of the binding check is implemented (#1572). A Mandate carrying the digest without `approval_event_id` is invalid at step 2, not insufficient evidence (mandate.verification.digest-requires-event)."
+  },
+  {
+   "id": "mandate.verification.digest-requires-event",
+   "spec": "draft-mcguinness-mission-mandate.md",
+   "anchor": "verification",
+   "text": "Confirm every REQUIRED claim of {{claims}} is present and well-formed, and that a Mandate carrying `approval_governance_digest` also carries `approval_event_id`, whether or not a record is presented.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mandate carrying `approval_governance_digest` without `approval_event_id` is rejected as invalid at the structure step, whether or not a record is presented; `approval_event_id` is never selectively disclosable, so its absence is malformation, not withheld evidence"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1573, #1579 review (D696). todo: the reference implementation has no Mandate verification code. The row quotes step 2 of the verification steps the section's \"A Mandate Verifier MUST perform these steps\" governs."
   },
   {
    "id": "mandate.minting.termination-at-issuance",

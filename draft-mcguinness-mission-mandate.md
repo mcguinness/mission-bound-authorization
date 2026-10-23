@@ -402,6 +402,17 @@ The protected header MUST carry:
   fields. It carries no authority and is never an enforcement input
   ({{verification}}).
 
+`approval_governance_digest`:
+: OPTIONAL. A string. The record digest of the Approval Governance
+  Record that backs the Mission's approval event, in the encoded form
+  that profile fixes
+  ({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+  "Envelope and Verification"). It pins the exact record bytes a
+  verifier may later be shown; it carries no authority and is never
+  an enforcement input ({{verification}}). A Mandate that carries it
+  MUST also carry `approval_event_id`, and the issuer MUST NOT include
+  it unless such a record backs the approval event.
+
 `authority_set`:
 : OPTIONAL. An array. The full consented Authority Set, exactly as
   recorded on the Mission record, preserving array order (the order is
@@ -486,7 +497,10 @@ check.
 The Mission Issuer MAY mint a Mandate at any time within the Mission's
 audit horizon, including after the Mission terminates.
 Each claim MUST be populated from the Mission record's committed
-members. `state_at_issuance` MUST equal the Mission's lifecycle state
+members, except `approval_governance_digest`, which is the record
+digest of the committed Approval Governance Record that backs the
+Mission's approval event. `state_at_issuance` MUST equal the Mission's
+lifecycle state
 at `iat`. When that state is `terminated`, `termination_at_issuance`
 MUST equal the Mission's `termination` at `iat`. The issuer MUST NOT
 mint a Mandate whose facts diverge from the record.
@@ -740,7 +754,9 @@ Mandate:
    form, then applying {{RFC9901}} processing). Reject any other
    value.
 2. **Structure.** Confirm every REQUIRED claim of {{claims}} is
-   present and well-formed.
+   present and well-formed, and that a Mandate carrying
+   `approval_governance_digest` also carries `approval_event_id`,
+   whether or not a record is presented.
 3. **Signature.** Resolve the REQUIRED `kid` in the Mission Issuer's
    published key material ({{mission-substrate}}) and verify the JWS
    signature. Confirm `mission.issuer` equals `iss`. Where the issuer
@@ -801,6 +817,53 @@ this Mandate to another authenticated artifact disclosing the same
 commitment, and proves nothing further about the approval beyond what
 this Mandate's own signature already authenticates. Its absence is
 never a verification failure.
+
+Where `approval_governance_digest` ({{claims}}) is present and a
+verifier relies on an Approval Governance Record presented with this
+Mandate, it MUST run the portable approval-binding check with this
+Mandate as the Mission reference
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Portable Approval-Binding Check"), MUST recompute the record digest
+over the presented record, and MUST NOT rely on the record unless the
+check succeeds and the recomputed digest equals
+`approval_governance_digest`. A matching digest alone is not a
+binding: a correct digest of a record for another approval event or
+another Mission still fails the check. Where no record is presented,
+the Mandate's own verification is unaffected, but the Mandate cannot
+satisfy a relying party's requirement for governance evidence. The
+claim's absence is never a verification failure.
+
+A Mandate that pins a record carries, beside its other claims:
+
+~~~ json
+{
+  "approval_event_id": "ape_hON9D0svLKQAMyy-uug",
+  "approval_governance_digest":
+    "sha-256:j6eaQoHcHpH-fntRE1DkZgCDjBZZLxXrCwpHfTWCWnQ"
+}
+~~~
+
+Here the digest stands for the record digest of the Approval
+Governance Record example, whose envelope that example abbreviates.
+The following cases start from such a Mandate and a presented record
+whose portable approval-binding check would otherwise succeed:
+
+| Case | Presented record | Result |
+|---|---|---|
+| 1 | The pinned record | Relied on |
+| 2 | Another record for the same approval event | Not relied on: digest mismatch |
+| 3 | The pinned record, naming another approval event | Not relied on: binding fails |
+| 4 | The pinned record, naming another Mission's anchors | Not relied on: binding fails |
+| 5 | None | Mandate verified; no governance evidence |
+| 6 | The pinned record, with the Mandate omitting `approval_event_id` | Mandate invalid: step 2 |
+{: title="Approval Governance digest cases"}
+
+Cases 3 and 4 arise only from an issuer that minted an inconsistent
+Mandate; the binding check, not the digest, detects them. Case 6 is a
+malformed Mandate, not withheld evidence: `approval_event_id` is never
+selectively disclosable ({{selective-disclosure}}), so its absence
+beside `approval_governance_digest` fails step 2 even when no record
+is presented.
 
 Where the deployment runs the audit transparency profile, a verifier
 MAY additionally confirm an audit-registration Receipt
@@ -1006,7 +1069,8 @@ A **Mandate Issuer** MUST:
 
 - be the Mission `issuer` and set `iss` to it;
 - mint only over an existing Mission record, populating every claim
-  from its committed members ({{minting}});
+  from its committed members, and `approval_governance_digest` from
+  the committed Approval Governance Record ({{minting}});
 - set `state_at_issuance` to the Mission's lifecycle state at `iat`
   and, when that state is `terminated`, `termination_at_issuance` to
   the Mission's `termination` at `iat`;
