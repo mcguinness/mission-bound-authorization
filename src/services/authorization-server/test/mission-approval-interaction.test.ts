@@ -27,7 +27,7 @@ import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
-import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14848;
@@ -159,13 +159,25 @@ async function walk(url: string, jar: Jar): Promise<Outcome> {
 const authorizeThrough = (requestUri: string, jar: Jar) =>
   walk(`${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri: requestUri })}`, jar);
 
-/** The approval surface decides the interaction (Alice in the browser unless given), then the resume runs to the client's redirect. */
-async function approve(uid: string, jar: Jar, approver = ALICE as { sub: string; acr?: string; subject?: string }): Promise<Outcome> {
+/**
+ * The approval surface decides the interaction (Alice in the browser unless
+ * given), then the resume runs to the client's redirect. The decision names
+ * the page rendered to the Approver's session (#1446) unless `render` is
+ * false, for an interaction no approval page renders.
+ */
+async function approve(
+  uid: string,
+  jar: Jar,
+  approver = ALICE as { sub: string; acr?: string; subject?: string },
+  render = true,
+): Promise<Outcome> {
+  const decideHeaders = { ...browserApprovalHeaders(SESSIONS, uid, approver, cookieOf(jar)), "content-type": "application/json" };
+  const render_revision = render ? await renderedRevision(ISSUER, uid, decideHeaders) : undefined;
   let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...browserApprovalHeaders(SESSIONS, uid, approver, cookieOf(jar)), "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve" }),
+    headers: decideHeaders,
+    body: JSON.stringify({ decision: "approve", render_revision }),
   });
   expect(res.status, await res.clone().text()).toBeLessThan(400);
   keep(jar, res);
@@ -514,6 +526,8 @@ describe("a request carrying no mission_intent never reuses a Mission-bound gran
     const earlier = await afterFirstApproval();
     const opened = await authorize(await push(undefined), earlier.jar);
     expect(opened.uid, JSON.stringify(opened)).toBeTruthy();
-    await expectRefusedWithoutEffect(async () => approve(opened.uid as string, earlier.jar), { error: "access_denied" }, earlier);
+    // Rendering an ordinary request's interaction finishes it refused, so the
+    // decision is posted unrendered: it is refused before any rendering is consulted.
+    await expectRefusedWithoutEffect(async () => approve(opened.uid as string, earlier.jar, ALICE, false), { error: "access_denied" }, earlier);
   });
 });
