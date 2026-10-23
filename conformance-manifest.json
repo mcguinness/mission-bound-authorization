@@ -43,8 +43,8 @@
     "content_sha256": "c3ecaf45e6e17579e7374b0e733c7d4de7d58cbacdfecddfe37c3568eb74138a"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "b447449fc2c0ffaf525b10a8df1a79f113ad538a",
-    "content_sha256": "400730f815ea0afc7516cd0d0f8eca5ca03d30b8c527549e897169c6293f024e"
+    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
+    "content_sha256": "fa83d94eb5521d5662b31710abcd3d4c9c60cfa39c6b9391ea3072c17fbd2225"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "213893760b7c447ff475d568bc8a54be8a85176b",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "3c0faa8d6c03ef1a54c118f37813b46673d343ed",
-    "content_sha256": "968044588af00e1d08c5fe60cac5266269e1707767a1f7ce85181550e1758b0a"
+    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
+    "content_sha256": "339c6e233e26e8920573096fe463dc51903cf5a136de15ee79c899c354529a9b"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
@@ -107,12 +107,12 @@
     "content_sha256": "8d6e1fc8d592bc6bf512865fea875b50c02cbf58de81835ec55e40ab8766d31e"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
-    "content_sha256": "4c24262bd4ab09784922ab543c24d97cfb849c9a5845c70a664ef39d906803b3"
+    "revision": "7199d23e51d257369b3a89ea2eed4e8cd6f541a2",
+    "content_sha256": "74d6ce91fa5bf904e532dfae6ead1982c0a17325fd90b491e1ef51e19a891741"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "8f9b783163e04478c9cdd318d790c878e9c34f6e",
-    "content_sha256": "9ecc46c99dbe7e2cbc4283b7be29fd55bd31445ec793fecddac509eeed3b9f05"
+    "revision": "70941a400d28fbaa4e1f4cdfd48ffcfec109fdfa",
+    "content_sha256": "607c3661d7e078651a9590775bd5f714a311a997bb3c01cf9822b56430fba262"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
@@ -45237,7 +45237,7 @@
    "id": "continuation.async-transport.handle-request",
    "spec": "draft-mcguinness-oauth-mission-continuation.md",
    "anchor": "transport-async",
-   "text": "An agent obtains its handle with a Token Exchange that presents its own Mission access token, proves possession of that token's key, and names its own `client_id` as `audience`.",
+   "text": "An agent obtains its delegation handle with a Token Exchange that presents its own Mission access token, proves possession of that token's key, and names its own `client_id` as `audience`.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -45297,7 +45297,7 @@
    "id": "continuation.async-transport.handle-key-and-authority",
    "spec": "draft-mcguinness-oauth-mission-continuation.md",
    "anchor": "transport-async",
-   "text": "The handle keeps that key and carries the presented token's authority narrowed by the Mission's current effective authority.",
+   "text": "The delegation handle keeps that key and carries the presented token's authority narrowed by the Mission's current effective authority.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -45338,7 +45338,7 @@
    "id": "continuation.async-transport.self-dispatch-handle",
    "spec": "draft-mcguinness-oauth-mission-continuation.md",
    "anchor": "transport-async",
-   "text": "unless it is also the Dispatcher (the same authenticated client), which obtains its handle through this exchange from the instance's access token.",
+   "text": "unless it is also the Dispatcher (the same authenticated client), which obtains its delegation handle through this exchange from the instance's access token.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -58505,6 +58505,27 @@
    "notes": "#1304 (D486). Proven by disabling the code it covers (each mutation restored byte for byte): backfilling the replacement with list origins, and rendering the prospective replacement parent with list origins, each fail a witness here."
   },
   {
+   "id": "child-delegation.completion.child-grant-binding-at-redemption",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "completion",
+   "text": "Whatever the mode, any grant binding the Child Mission carries comes from the child actor's redemption of that grant, not from the parent's exchange, and is the child's own, never an extension of the parent's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the child-creation exchange binds no grant lineage to the Child Mission; any lineage the Child Mission carries comes from the child actor's redemption of the child-bound grant, and no step extends the parent's grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1557 cold readers' follow-up. The reference AS binds no grant at child creation, issues no refresh token at the child actor's JWT-bearer redemption, and never reuses the parent's grant for the child's tokens; it implements only synchronous creation. No test asserts that separation."
+  },
+  {
    "id": "child-delegation.carryover.expansion-disclosure",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "predecessor-children",
@@ -62843,6 +62864,32 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1177. Accepted as todo by D591: a client-role row, and no reference client implements expansion."
+  },
+  {
+   "id": "expansion.completion.successor-grant-binding-own",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "Whatever the mode, any grant binding the successor carries is its own, never an extension of the predecessor's: in an interactive completion, the authorization code the client redeems and any refresh-token family that redemption emits; otherwise, a refresh-token family the completing response emits, if any. A deferred completion or synchronous drawdown that returns only an access token establishes no grant binding",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "expansion.adjudication",
+     "expansion.interactive-completion",
+     "progressive.ceiling-drawdown"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "any grant lineage a successor carries is its own: the authorization code an interactive completion redeems and any refresh-token family it emits, or a refresh-token family a deferred or drawdown response emits; a deferred completion or synchronous drawdown returning only an access token establishes no grant binding, while an interactive completion's authorization code is a binding whether or not its redemption emits a refresh token, and no completion extends the predecessor's grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1557 cold readers' follow-up. The reference AS issues no refresh token on any successor path and implements no interactive completion, so its successors carry derived tokens only; it never reuses the predecessor's grant for a successor's tokens. No test asserts that separation."
   },
   {
    "id": "expansion.successor-expiry.completion-codes",
