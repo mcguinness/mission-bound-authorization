@@ -6469,7 +6469,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a decision whose context changed since the rendering it names, before the decision or while it commits, or that names no rendering, a superseded one, or one made to another principal, creates no Mission, grant or code; only a fresh decision on the context rendered again creates one",
-    "local": "Consent is the decision on the latest rendering made to the deciding principal: a browser approval session, or a headless approval service with the Approver and Subject it names. A change answers 409 approval_context_changed (a form post: 303 back to the page), found before any write; a context that no longer admits approval takes its mapped refusal instead, and a committed decision's retry recovers it."
+    "local": "Consent is the decision on the latest rendering made to the deciding principal: a browser approval session, or a headless approval service with the Approver and Subject it names. A change answers 409 approval_context_changed (a form post: 303 back to the page), found before any write; a decision whose re-check fails retires only its own rendering; a context that no longer admits approval takes its mapped refusal instead, and a committed decision's retry recovers it."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -6507,6 +6507,18 @@
     {
      "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
      "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a change while the decision commits (during the grant save) creates no Mission and leaves no grant",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision held in its grant save never writes over or destroys the grant a newer decision commits",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision that fails its commit re-check retires only its own rendering: a newer one still approves",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     },
@@ -6636,15 +6648,33 @@
    "surface": "authorization-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a change to an input of the effective expires_at between rendering and decision is detected, and no Mission is created from the old decision",
-    "local": "The reference compares the inputs, not the computed instant, which moves with the clock: the requested expires_at is in intent_hash, and max_mission_lifetime_s is in the derivation policy's content commitment."
+    "normative": "an effective expires_at that changed between rendering and decision, by an input or by the passage of time, is detected and no Mission is created from the old decision; a Mission created records the effective expires_at its rendering showed",
+    "local": "The rendering commits the effective expires_at it shows (the page displays it). The decision commits exactly that instant while the current inputs admit it (later than now, no later than the expiry they establish now), so a lifetime measured from a later decision never moves it. A rendered expiry that has passed, or that a shorter lifetime bound narrows, asks for a fresh decision; where no expiry later than now remains, the commit's mapped refusal (invalid_request) applies instead."
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
-     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a policy edit that leaves every anchor equal still changes the context: the lifetime bound behind the effective expires_at",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a shorter lifetime bound changes the effective expires_at: nothing is created",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > the Mission commits the effective expires_at its rendering showed: a lifetime measured from a later decision never moves it",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a rendering whose effective expires_at has passed asks for a fresh decision, which commits the expiry rendered again",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a requested expiry that passes while the decision commits gets its mapped refusal, not a request to review it again",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     },
@@ -6687,7 +6717,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
-     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a policy edit that leaves every anchor equal still changes the context: the lifetime bound behind the effective expires_at",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a policy edit that leaves every anchor and the effective expires_at equal still changes the context: a lifetime bound past the requested expiry",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     },
@@ -8667,7 +8697,7 @@
    "assertion": "concurrency",
    "observation": {
     "normative": "the Mission Record is created active atomically with the approval decision and the issuance of the authorization code",
-    "local": "decide() prepares the approval (every refusal before any write, except the progressive ceiling consent the commit establishes at its creation instant, which leaves an inert grant), saves the provider grant under an identity derived from the interaction, then commits the record already bound to it (kernel.approve with grantId; bindGrant is compare-and-set). A failure before the commit leaves no Mission, only an inert grant a retry overwrites; a repeated or concurrent decision recovers the one grant and binding. oidc-provider issues the code on the later resume request, so a committed active, grant-bound Mission can precede code creation."
+    "local": "decide() prepares the approval (every refusal before any write, except the progressive ceiling consent the commit establishes at its creation instant, which leaves an inert grant), saves the provider grant under an identity derived from the interaction, then commits the record already bound to it (kernel.approve with grantId; bindGrant is compare-and-set). A failure before the commit leaves no Mission, only an inert grant a retry overwrites; a repeated or concurrent decision recovers the one grant and binding. The commits on one approval event run one at a time, cleanup included (in-process, under the single-process fence), so a decision resuming after asynchronous work recovers a commit made meanwhile and never writes over or destroys its grant (#1446). oidc-provider issues the code on the later resume request, so a committed active, grant-bound Mission can precede code creation."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -8723,6 +8753,18 @@
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
      "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > the commit revalidates the prepared authority source: a source withdrawn during the grant save refuses access_denied and creates no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision held in its grant save never writes over or destroys the grant a newer decision commits",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a second decision on the same rendering waits for the first and recovers its commit",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
