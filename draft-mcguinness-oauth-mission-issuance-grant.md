@@ -1016,9 +1016,14 @@ redeemed within its 300 seconds at a consuming AS without a
 Mission-state integration. The residual there is the grant's
 remaining lifetime and clock-skew leeway ({{grant-validation}}), plus
 the issued token's lifetime, plus that of each further exchange that
-checks no Mission state, capped by `expires_at`; under the PAR
-carriage, the authorization code's lifetime adds to that sum. Hence
-the short-lifetime recommendation ({{token-issuance}}). In either mode,
+checks no Mission state, capped by `expires_at`. Under the PAR
+carriage the grant is consumed at PAR validation, and the sum then
+runs through the pending authorization request, bounded by the
+`request_uri` lifetime ({{Section 2.2 of RFC9126}}) and any
+resource-owner interaction timeout, and through the authorization
+code's lifetime, before the issued token's; `expires_at` still caps
+it. Hence the short-lifetime recommendation ({{token-issuance}}). In
+either mode,
 issued access tokens run to their own expiry. With a Mission-state
 integration, an outstanding refresh token is refused at its next
 use, and a refresh re-projects through the Effective Authority Set
