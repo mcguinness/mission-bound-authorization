@@ -277,6 +277,25 @@ describe("decimal values at PAR (@spec resource-access#decimal-values)", () => {
   });
 });
 
+// @spec mission#submission-processing, resource-access#initial-common-constraints:
+// an entry that "fails its type's definition or a schema advertised for it" is
+// refused `invalid_authorization_details`. The amount object has exactly the
+// members `amount` and `currency` (the schema's `additionalProperties: false`).
+describe("the max_amount object at PAR (@spec resource-access#initial-common-constraints, #1596)", () => {
+  it("refuses a max_amount carrying a member beside amount and currency, creating no Mission", async () => {
+    for (const extra of [{ extra: true }, { amount_minor: "100" }, { currency_numeric: "840" }]) {
+      await expectRefused(
+        entry({ constraints: { max_amount: { amount: "100.00", currency: "USD", ...extra } } }),
+        /constraints\.max_amount carries .* which is not a member of the amount object/,
+      );
+    }
+  });
+
+  it("accepts a max_amount carrying exactly amount and currency (positive control)", async () => {
+    await expectAccepted(entry({ constraints: { max_amount: { amount: "100.00", currency: "USD" } } }));
+  });
+});
+
 describe("max_depth 0 and an empty allowed_delegates (@spec resource-access#entry-validation, #1376)", () => {
   const ISS = "https://as.entry-validation.test";
   const ERP = "https://erp.example.com";

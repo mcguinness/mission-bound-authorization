@@ -1187,6 +1187,89 @@
         "#819",
         "D684"
       ]
+    },
+    {
+      "id": "ev-type-01",
+      "description": "An entry without a type",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "every authorization details object names its type, so an entry without one is refused at intake",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-type-02",
+      "description": "An entry whose type is not a string",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": 42,
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a type is a string naming an authorization details type; any other value is refused at intake",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
+    },
+    {
+      "id": "ev-amt-11",
+      "description": "A max_amount carrying a member beside amount and currency",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.max_amount"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "USD",
+              "extra": true
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the amount object has exactly the members amount and currency; any other member is malformed input, never ignored, refused at submission",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1596",
+        "D727"
+      ]
     }
   ]
 }
