@@ -68,6 +68,8 @@ interface GrantOverrides {
   missionId?: string | null; // null = omit entirely, "" = present but empty (malformed)
   missionAuthorityHash?: string | null; // null = omit entirely, "" = present but empty (malformed)
   identityContinuationHandle?: string;
+  /** The Mission's `expires_at`; a continuation grant carries one by default, null omits it. */
+  missionExpiresAt?: string | null;
   exp?: number; // absolute epoch seconds
   /** The delegated set the grant carries; defaults to one covered entry. */
   authorizationDetails?: unknown;
@@ -85,6 +87,9 @@ async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
   if (overrides.missionAuthorityHash !== null) mission.authority_hash = overrides.missionAuthorityHash ?? "sha-256:test";
   if (overrides.missionSubject !== null) {
     mission.subject = overrides.missionSubject ?? { iss: IDP_ISS, sub: IDP_SUB };
+  }
+  if (overrides.missionExpiresAt !== null && (overrides.missionExpiresAt !== undefined || overrides.identityContinuationHandle !== undefined)) {
+    mission.expires_at = overrides.missionExpiresAt ?? new Date(Date.now() + 86_400_000).toISOString();
   }
   const payload: Record<string, unknown> = {
     mission,
@@ -691,6 +696,43 @@ describe("RAS continuation carve-out (@spec id-continuation-assertion)", () => {
     const server = await ras({ mapping: basePolicy([]) });
     const grant = await mintGrant({ sub: "", identityContinuationHandle: "handle-4" });
     await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+});
+
+describe("RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589)", () => {
+  it("denies invalid_grant for a continuation grant whose mission claim lacks expires_at", async () => {
+    const server = await ras({ mapping: basePolicy([]) });
+    const grant = await mintGrant({ sub: "acct_noexpiry", identityContinuationHandle: "handle-exp-1", missionExpiresAt: null });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({
+      code: "invalid_grant",
+      message: "continuation grant mission claim missing or malformed expires_at",
+    });
+  });
+
+  it("denies invalid_grant for a continuation grant whose mission.expires_at is not a date-time", async () => {
+    const server = await ras({ mapping: basePolicy([]) });
+    const grant = await mintGrant({ sub: "acct_badexpiry", identityContinuationHandle: "handle-exp-2", missionExpiresAt: "not-a-date" });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({
+      code: "invalid_grant",
+      message: "continuation grant mission claim missing or malformed expires_at",
+    });
+  });
+
+  it("preserves the Mission's expires_at on the local token it mints from a continuation grant", async () => {
+    const server = await ras({ mapping: basePolicy([]) });
+    const expiresAt = "2027-01-01T00:00:00Z";
+    const grant = await mintGrant({ sub: "acct_keepexpiry", identityContinuationHandle: "handle-exp-3", missionExpiresAt: expiresAt });
+    const { access_token } = await server.redeem(grant, clientJkt);
+    const claims = JSON.parse(Buffer.from(access_token.split(".")[1] as string, "base64url").toString());
+    expect(claims.mission.expires_at).toBe(expiresAt);
+  });
+
+  it("still redeems a base cross-domain grant that carries no expires_at", async () => {
+    const server = await ras();
+    const grant = await mintGrant();
+    const { access_token } = await server.redeem(grant, clientJkt);
+    const claims = JSON.parse(Buffer.from(access_token.split(".")[1] as string, "base64url").toString());
+    expect(claims.mission.expires_at).toBeUndefined();
   });
 });
 

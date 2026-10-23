@@ -9508,7 +9508,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an access-token-only Token Exchange derivation from a Mission-bound `subject_token` (delegation, {{delegation}}, or self-exchange down-scoping, {{self-exchange}}) creates no new grant binding; the issued token is a derived token whose `mission` claim identifies the one Mission its subject_token resolved to. Only a Token Exchange that establishes reusable authorization state (a new refresh-token family, for example the continuation profile's delegation-family-creating exchange, {{I-D.draft-mcguinness-oauth-mission-continuation}}) creates a new grant binding, rooted in that same Mission"
+    "normative": "an access-token-only Token Exchange derivation from a Mission-bound `subject_token` (delegation, {{delegation}}, or self-exchange down-scoping, {{self-exchange}}) creates no new grant binding; the issued token is a derived token whose `mission` claim identifies the one Mission its subject_token resolved to. Only a Token Exchange that establishes a redeemable grant lineage (a new refresh-token family, for example the continuation profile's delegation-family-creating exchange, {{I-D.draft-mcguinness-oauth-mission-continuation}}) creates a new grant binding, rooted in that same Mission"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -45718,7 +45718,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the root and every onward ID-JAG carry the `mission` claim with the originating Mission's `id` and `issuer`"
+    "normative": "the root and every onward ID-JAG carry the `mission` claim with the originating Mission's `id`, `issuer` and `expires_at`"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -45730,13 +45730,13 @@
      "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > happy path: mints a Mission-rooted ID-JAG with a fresh handle, deterministic sub, collapsed act, and carried envelope"
     }
    ],
-   "notes": "#1589 (D726, Q6). Witnessed: an onward ID-JAG's `mission.id` is the Mission. Not witnessed: its `mission.issuer`, and the root ID-JAG, which this reference does not mint on this path."
+   "notes": "#1589 (D726, Q6; the #1617 owner review added `expires_at`). Witnessed: an onward ID-JAG's `mission.id`, `mission.issuer` and `mission.expires_at` match the Mission. Not witnessed: the root ID-JAG, which this reference does not mint on this path. Mutation: removing the mint's `expires_at` fails the happy path at its `expires_at` assertion."
   },
   {
    "id": "continuation.ica-transport.local-token-preserves-mission",
    "spec": "draft-mcguinness-oauth-mission-continuation.md",
    "anchor": "transport-ica",
-   "text": "Resource Authorization Server's local access token issued on such an ID-JAG MUST preserve that `mission` reference.",
+   "text": "local access token issued on such an ID-JAG MUST preserve that `mission` reference",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -45747,7 +45747,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Resource Authorization Server's local access token issued on a root or onward ID-JAG carries the same `mission` `id` and `issuer`"
+    "normative": "a Resource Authorization Server's local access token issued on a root or onward ID-JAG carries the same `mission` `id`, `issuer` and `expires_at`"
    },
    "level": "cross-component",
    "coverage": "partial",
@@ -45757,9 +45757,107 @@
      "level": "cross-component",
      "surface": "token-endpoint",
      "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > preserves the Mission's expires_at on the local token it mints from a continuation grant"
     }
    ],
-   "notes": "#1589 (D726, Q6). Witnessed: the reference Resource AS's local token from an onward ID-JAG keeps `mission.id` and `mission.issuer`. Not witnessed: a local token issued on a root ID-JAG."
+   "notes": "#1589 (D726, Q6; the #1617 owner review added `expires_at`). Witnessed: the reference Resource AS's local token from an onward ID-JAG keeps `mission.id`, `mission.issuer` and `mission.expires_at`, end to end and in its unit test. Not witnessed: a local token issued on a root ID-JAG."
+  },
+  {
+   "id": "continuation.ica-transport.ras-refuses-missing-expiry",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "A Resource Authorization Server MUST refuse with `invalid_grant` to redeem such an ID-JAG whose `mission` claim lacks `expires_at`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a continuation ID-JAG whose `mission` claim lacks `expires_at`, or carries one that is not a date-time, is refused `invalid_grant` and yields no local token, while a cross-domain grant without it still redeems"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > denies invalid_grant for a continuation grant whose mission claim lacks expires_at"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > denies invalid_grant for a continuation grant whose mission.expires_at is not a date-time"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > still redeems a base cross-domain grant that carries no expires_at"
+    }
+   ],
+   "notes": "#1589 (the #1617 owner review). The reference Resource AS checks it before the one-time jti is consumed. Mutation: removing the check fails both refusal tests. A cross-domain grant carries no `expires_at`, an inconsistency the cross-domain draft keeps separately; the check applies to continuation ID-JAGs only."
+  },
+  {
+   "id": "continuation.ica-transport.further-issuance-keeps-expiry",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "a local token from which further credentials are issued MUST carry its `expires_at`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource Authorization Server's local token from which further credentials are issued carries the Mission's `expires_at`"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > preserves the Mission's expires_at on the local token it mints from a continuation grant"
+    }
+   ],
+   "notes": "#1589 (the #1617 owner review). Witnessed: the reference Resource AS's local token keeps `expires_at`. Not witnessed: further issuance from it, which the reference Resource AS does not perform."
+  },
+  {
+   "id": "continuation.ica-transport.refresh-family-lifetime",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "The ID-JAG's own expiry bounds only its redemption, not that family's lifetime, which the Mission's `expires_at` bounds.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a refresh-token family a Resource AS issues on a continuation lasts no longer than the Mission's `expires_at`, whatever the ID-JAG's own expiry"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1589 (the #1617 owner review). No witness: the reference Resource AS issues no refresh token."
   },
   {
    "id": "continuation.ica-transport.hop-record-not-lineage",

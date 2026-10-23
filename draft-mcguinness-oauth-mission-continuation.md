@@ -375,9 +375,13 @@ The root ID-JAG
 ({{Section 5.1.1 of I-D.draft-mcguinness-oauth-id-continuation-assertion}})
 and each onward ID-JAG MUST identify the originating Mission by
 carrying its `mission` claim ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Mission Claim") with that Mission's `id` and `issuer`. A
-Resource Authorization Server's local access token issued on such an
-ID-JAG MUST preserve that `mission` reference.
+Section "Mission Claim") with that Mission's `id`, `issuer` and
+`expires_at`. A Resource Authorization Server MUST refuse with
+`invalid_grant` to redeem such an ID-JAG whose `mission` claim lacks
+`expires_at`. A Resource Authorization Server's local access token
+issued on such an ID-JAG MUST preserve that `mission` reference, and a
+local token from which further credentials are issued MUST carry its
+`expires_at`.
 
 The IdP's hop record is continuation state, not an additional grant
 lineage ({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding the
@@ -391,7 +395,9 @@ Authorization Server issuing a refresh token
 refresh-token family such a server creates by exception is a
 destination-side
 Mission grant binding, under the Mission's authority, state, expiry and
-termination rules ({{authorization-continuity}}).
+termination rules ({{authorization-continuity}}). The ID-JAG's own
+expiry bounds only its redemption, not that family's lifetime, which the
+Mission's `expires_at` bounds.
 
 The root exchange can coincide with a cross-domain projection exchange
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) where both
@@ -690,7 +696,8 @@ constrains their use and introduces none of its own.
 
 - The Identity Continuation Transport requires the root and onward
   ID-JAGs to identify the originating Mission through the `mission`
-  claim, and a Resource Authorization Server's local access token to
+  claim, `expires_at` included, refuses a redemption without it, and
+  requires a Resource Authorization Server's local access token to
   preserve it. It also places the hop record, a Resource Authorization
   Server's handle association and any refresh family against grant
   bindings, and says when the root exchange coincides with cross-domain
