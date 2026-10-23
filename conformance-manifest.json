@@ -59957,7 +59957,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an assertion signed with none or an unlisted alg is rejected",
-    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion whose alg the PDP's list does not name (the pilot's list is the MAS's advertised mission_status_signing_alg_values_supported) is denied, and one with alg none is denied even with none listed; in the pilot, an unsecured assertion"
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: an assertion whose alg the PDP's list does not name (the pilot's list is the MAS's advertised mission_status_signing_alg_values_supported) is denied, and one with alg none is denied even with none listed; in the pilot, an unsecured assertion; the pilot PDP's accepted set is its declared allowlist (join_assertion.pdp_algorithms) intersected with the MAS's advertised mission_status_signing_alg_values_supported, never none, and an empty intersection refuses at composition"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -59969,13 +59969,31 @@
      "surface": "decision-request"
     },
     {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "the PDP's own Join Assertion algorithm allowlist (@spec authority-server#join-assertion-pdp, #1454 review) > denies an assertion correctly signed with an algorithm the MAS advertises but the PDP's allowlist excludes, under a key that suits it",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "the PDP's own Join Assertion algorithm allowlist (@spec authority-server#join-assertion-pdp, #1454 review) > never accepts none, whatever either side lists, and refuses an allowlist that meets nothing the MAS advertises",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
      "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
      "name": "the separated MAS pilot's Join Assertion path (#1454) > denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot refuses a declared Join Assertion path it cannot run (#1454) > refuses to compose without the MAS's introspection client secret, and the MAS process refuses a secret its configuration does not declare",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect that drops the algorithm list. jose refuses alg none under a key whatever the list says, so no defect in this code admits it."
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect that drops the algorithm list. jose refuses alg none under a key whatever the list says, so no defect in this code admits it. #1454 review 2: the PDP's own allowlist is proved by defects that use the advertised list in place of the intersection (an advertised but excluded ES256, under a key that suits it, permits), admit none, skip the empty-intersection refusal, and wire the pilot with the advertised list (the composition refusal test fails)."
   },
   {
    "id": "mas.mapping-contract.floor-documented",
@@ -60246,7 +60264,7 @@
    "text": "Where the AS offers token introspection {{RFC7662}}, the MAS introspects the token under introspection credentials it holds there.",
    "observation": {
     "normative": "where the estate offers introspection, the MAS establishes the acting token from the introspection answer under its own introspection credentials, JWT or opaque, not from the token's own claims",
-    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only an error of exactly unsupported_token_type permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, 5xx, another error code, a malformed answer) fails closed as unavailable with no local fallback"
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only the estate's own contract, an HTTP 400 whose JSON error is exactly unsupported_token_type (which RFC 7662 does not define), permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, a redirect, a 401, 403, 429 or 5xx whatever its body says, a 400 with another error, a malformed answer) fails closed as unavailable with no local fallback"
    },
    "coverage": "tested",
    "tests": [
@@ -60288,7 +60306,7 @@
    "text": "A token the AS reports inactive fails the request.",
    "observation": {
     "normative": "an acting token the estate's introspection reports inactive yields no assertion, even a JWT that would validate locally",
-    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only an error of exactly unsupported_token_type permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, 5xx, another error code, a malformed answer) fails closed as unavailable with no local fallback"
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only the estate's own contract, an HTTP 400 whose JSON error is exactly unsupported_token_type (which RFC 7662 does not define), permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, a redirect, a 401, 403, 429 or 5xx whatever its body says, a 400 with another error, a malformed answer) fails closed as unavailable with no local fallback"
    },
    "coverage": "tested",
    "tests": [
@@ -60324,7 +60342,7 @@
    "text": "Where the AS offers no third-party introspection but issues JWT access tokens, the MAS MAY instead validate the token locally under the semantics of {{RFC9068}}, resolving the AS's signing keys from its published metadata and taking the subject and client from the validated claims.",
    "observation": {
     "normative": "where the estate offers no introspection for a JWT, the MAS validates it locally under the estate's published keys and takes the subject and client from the validated claims",
-    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only an error of exactly unsupported_token_type permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, 5xx, another error code, a malformed answer) fails closed as unavailable with no local fallback; the live estate answers unsupported_token_type for its JWTs, so the separated pilot takes this branch"
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only the estate's own contract, an HTTP 400 whose JSON error is exactly unsupported_token_type (which RFC 7662 does not define), permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, a redirect, a 401, 403, 429 or 5xx whatever its body says, a 400 with another error, a malformed answer) fails closed as unavailable with no local fallback; the live estate answers unsupported_token_type for its JWTs, so the separated pilot takes this branch"
    },
    "coverage": "tested",
    "tests": [
@@ -60339,9 +60357,21 @@
      "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-introspection.test.ts",
+     "name": "token introspection: the estate's unsupported-token-type answer (#1454 review) > names an unsupported token type only for an HTTP 400 whose error is exactly unsupported_token_type",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-introspection.test.ts",
+     "name": "token introspection: the estate's unsupported-token-type answer (#1454 review) > is unavailable, not an unsupported token type, for any other status carrying that error, another 400 error, or a redirect to that answer",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1454 review (D681): unsupported_token_type for that token type is read as the estate offering no introspection for it. Proved by refusing on unsupported_token_type (the local-validation and live pilot tests fail) and by validating locally on another error code (the unavailable test fails)."
+   "notes": "#1454 review (D681): unsupported_token_type for that token type is read as the estate offering no introspection for it. Proved by refusing on unsupported_token_type (the local-validation and live pilot tests fail) and by validating locally on another error code (the unavailable test fails). #1454 review 2: the fallback is taken only on the estate's exact HTTP 400 answer; proved by defects that drop the 400 check (the 401 and 503 cases fail, in the adapter and the deployment tests), follow redirects, and accept any error on a 400."
   },
   {
    "spec": "draft-mcguinness-mission-authority-server.md",
@@ -60360,7 +60390,7 @@
    "text": "A token that fails signature, `exp`, or `aud` validation fails the request.",
    "observation": {
     "normative": "a locally validated JWT that fails signature, exp or aud validation yields no assertion",
-    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only an error of exactly unsupported_token_type permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, 5xx, another error code, a malformed answer) fails closed as unavailable with no local fallback"
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only the estate's own contract, an HTTP 400 whose JSON error is exactly unsupported_token_type (which RFC 7662 does not define), permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, a redirect, a 401, 403, 429 or 5xx whatever its body says, a 400 with another error, a malformed answer) fails closed as unavailable with no local fallback"
    },
    "coverage": "partial",
    "tests": [
@@ -60390,7 +60420,7 @@
    "text": "An opaque token that no introspection surface will resolve cannot be verified, and the request fails.",
    "observation": {
     "normative": "an opaque acting token the estate's introspection will not resolve yields no assertion; it is never validated locally",
-    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only an error of exactly unsupported_token_type permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, 5xx, another error code, a malformed answer) fails closed as unavailable with no local fallback"
+    "local": "the pilot MAS's acting-token establishment (src/demo/src/mas-pilot/mas-join-assertions.ts) over #1400's introspection adapter, against a stub estate and, end to end, the live estate of the separated pilot. Defined for the owner's confirmation (#1454, D681): every acting token is introspected first; only the estate's own contract, an HTTP 400 whose JSON error is exactly unsupported_token_type (which RFC 7662 does not define), permits local RFC 9068 validation of a JWT; an unavailable introspection service (transport failure, timeout, a redirect, a 401, 403, 429 or 5xx whatever its body says, a 400 with another error, a malformed answer) fails closed as unavailable with no local fallback"
    },
    "coverage": "tested",
    "tests": [
