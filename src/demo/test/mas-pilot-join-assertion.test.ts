@@ -77,6 +77,8 @@ let pilot: SeparatedMasPilot;
 let pdpKey: JWK;
 let statusKey: CryptoKey;
 let statusKid: string;
+/** The MAS's introspection client secret at the estate, generated for this file. */
+let joinSecret: string;
 const requests: EvaluationRequest[] = [];
 /** What the PEP's source returned for each request, after any substitution. */
 const obtained: Array<string | undefined> = [];
@@ -100,6 +102,7 @@ beforeAll(async () => {
   // The MAS's introspection client secret, generated here and given to both
   // the MAS and the estate the pilot starts.
   const joinIntrospectionSecret = crypto.randomUUID();
+  joinSecret = joinIntrospectionSecret;
   mas = await startMasProcess({ configPath, statusClients: [pdp.registration], keyRing, joinIntrospectionSecret });
   pilot = await composeSeparatedMasPilot({
     openfga: OPENFGA,
@@ -206,6 +209,17 @@ async function tokenFor(clientId: string, account: string, scope: string, resour
 
 const read = (credential: Credential, missionId: string) => call(pilot, credential, missionId, "get_invoice", { invoice_id: "inv-1" });
 
+/** The live estate's own introspection answer for `token`, asked as the MAS's introspection client. */
+async function estateIntrospection(token: string): Promise<{ status: number; body: Record<string, unknown> }> {
+  const basic = Buffer.from(`${encodeURIComponent("mas-join-introspector")}:${encodeURIComponent(joinSecret)}`).toString("base64");
+  const res = await fetch(pilot.estate.introspectionEndpoint, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded", authorization: `Basic ${basic}` },
+    body: new URLSearchParams({ token, token_type_hint: "access_token" }).toString(),
+  });
+  return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+}
+
 d("the separated MAS pilot's Join Assertion path (#1454)", () => {
   it("joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it", async () => {
     substitute = undefined;
@@ -217,6 +231,12 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
       ["estate-opaque-bot-4e2", "opaque"],
     ] as const) {
       const credential = await estateToken(pilot, clientId, "u-1001", "invoices.read");
+      // The MAS introspects first: the estate answers unsupported_token_type
+      // for its JWTs, which the MAS then validates locally, and introspects
+      // its opaque tokens.
+      const introspection = await estateIntrospection(credential.token);
+      if (format === "jwt") expect(introspection.body, format).toMatchObject({ error: "unsupported_token_type" });
+      else expect(introspection.body, format).toMatchObject({ active: true });
       const res = await read(credential, missionId);
       expect(res.ok, `${format}: ${JSON.stringify(res)}`).toBe(true);
       const missionJoin = requests.at(-1)?.context.mission_join as Record<string, unknown>;

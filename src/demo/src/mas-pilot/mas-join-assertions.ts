@@ -5,14 +5,26 @@
  * credential and evaluates its join, for the reference authorization server's
  * Join Assertion endpoint. The MAS calls the estate; it never changes it.
  *
- * - A JWT access token is validated locally under RFC 9068: signed under a key
- *   the estate publishes at its metadata's `jwks_uri` (fetched when first
- *   needed, so the MAS may start before the estate), issued by the estate,
- *   `typ` `at+jwt`, unexpired, and audienced to an enrolled enforcement scope.
- * - An opaque token is introspected at the estate (RFC 7662) as the MAS's own
- *   introspection client (`join_assertion.introspection_client_id`), through
- *   the same adapter the gateway uses (#1400), with the same audience rule.
+ * - Every acting token, JWT or opaque, is introspected first at the estate
+ *   (RFC 7662) as the MAS's own introspection client
+ *   (`join_assertion.introspection_client_id`), through the adapter the
+ *   gateway uses (#1400): "Where the AS offers token introspection, the MAS
+ *   introspects the token". An answer that the token is inactive refuses it,
+ *   and nothing checks it locally after that. An estate that cannot be asked
+ *   (no answer, a timeout, a server error, a malformed answer, any other
+ *   error) is `unavailable`, with no local fallback.
+ * - The estate's `unsupported_token_type` error, read exactly, means it offers
+ *   no introspection for that token's type (the reference estate answers so
+ *   for its JWTs). Then, the draft's other branch: the token is validated
+ *   locally under RFC 9068, signed under a key the estate publishes at its
+ *   metadata's `jwks_uri` (fetched when first needed, so the MAS may start
+ *   before the estate), issued by the estate, `typ` `at+jwt` and unexpired.
+ *   An opaque token fails that validation: nothing resolves it.
+ * - Either way the token must be audienced to an enrolled enforcement scope.
  * - A digest-only request is refused: the estate resolves no token by digest.
+ *
+ * Defined for the owner's confirmation (#1454 review): introspection first,
+ * and `unsupported_token_type` as the one answer that is not a refusal.
  * - The join is evaluated under the pilot's mapping contract, which supplies
  *   `mapping_version`: the subject and client the contract maps the token's
  *   to, against the Mission's own; a delegate under the contract's delegate
@@ -20,7 +32,13 @@
  */
 
 import type { ActingToken, ActingTokenResult, JoinAssertionDeployment, JoinEvaluation } from "@mission/authorization-server";
-import { type ActorRecords, IntrospectionUnavailableError, TokenIntrospector } from "@mission/mcp-payments";
+import {
+  type ActorRecords,
+  type IntrospectedToken,
+  IntrospectionTokenTypeUnsupportedError,
+  IntrospectionUnavailableError,
+  TokenIntrospector,
+} from "@mission/mcp-payments";
 import { createRemoteJWKSet, type JWTVerifyGetKey, jwtVerify } from "jose";
 import type { MasPilotConfig } from "./config.js";
 import { MappingContractCache } from "./mapping-contract.js";
@@ -34,8 +52,6 @@ export interface PilotJoinAssertionOptions {
 }
 
 type MissionRecordLike = Parameters<JoinAssertionDeployment["evaluateJoin"]>[1];
-
-const isCompactJws = (token: string): boolean => token.split(".").length === 3;
 
 /** The pilot's Join Assertion deployment, for `config.join_assertion`. */
 export function pilotJoinAssertions(config: MasPilotConfig, opts: PilotJoinAssertionOptions): JoinAssertionDeployment {
@@ -83,32 +99,49 @@ export function pilotJoinAssertions(config: MasPilotConfig, opts: PilotJoinAsser
       return { ok: false, reason: "unavailable" };
     }
     try {
-      let token: ActingToken;
-      if (isCompactJws(form.accessToken)) {
-        const { payload } = await jwtVerify(form.accessToken, surfaces.keys, {
-          issuer: estate,
-          typ: "at+jwt",
-          currentDate: now(),
-          requiredClaims: ["exp", "sub", "client_id"],
-        });
-        const aud = typeof payload.aud === "string" ? [payload.aud] : (payload.aud ?? []);
-        if (!aud.some((a) => scopes.has(a))) return { ok: false, reason: "inactive" };
-        const jkt = (payload.cnf as { jkt?: unknown } | undefined)?.jkt;
-        token = {
+      let introspected: IntrospectedToken;
+      try {
+        introspected = await surfaces.introspector.introspect(form.accessToken);
+      } catch (e) {
+        // The one answer that is not a refusal: no introspection for this
+        // token's type, so the token is validated locally.
+        if (e instanceof IntrospectionTokenTypeUnsupportedError) return await validateLocally(form.accessToken, surfaces.keys);
+        throw e;
+      }
+      if (!introspected.aud.some((a) => scopes.has(a))) return { ok: false, reason: "inactive" };
+      return {
+        ok: true,
+        token: { issuer: estate, subject: introspected.sub, clientId: introspected.clientId, cnf: { jkt: introspected.cnfJkt }, exp: introspected.exp },
+      };
+    } catch (e) {
+      return { ok: false, reason: e instanceof IntrospectionUnavailableError ? "unavailable" : "inactive" };
+    }
+  };
+
+  /** RFC 9068 validation under the estate's published keys, where the estate offers no introspection for the token. */
+  const validateLocally = async (accessToken: string, keys: JWTVerifyGetKey): Promise<ActingTokenResult> => {
+    try {
+      const { payload } = await jwtVerify(accessToken, keys, {
+        issuer: estate,
+        typ: "at+jwt",
+        currentDate: now(),
+        requiredClaims: ["exp", "sub", "client_id"],
+      });
+      const aud = typeof payload.aud === "string" ? [payload.aud] : (payload.aud ?? []);
+      if (!aud.some((a) => scopes.has(a))) return { ok: false, reason: "inactive" };
+      const jkt = (payload.cnf as { jkt?: unknown } | undefined)?.jkt;
+      return {
+        ok: true,
+        token: {
           issuer: estate,
           subject: payload.sub as string,
           clientId: payload.client_id as string,
           ...(typeof jkt === "string" ? { cnf: { jkt } } : {}),
           exp: payload.exp as number,
-        };
-      } else {
-        const introspected = await surfaces.introspector.introspect(form.accessToken);
-        if (!introspected.aud.some((a) => scopes.has(a))) return { ok: false, reason: "inactive" };
-        token = { issuer: estate, subject: introspected.sub, clientId: introspected.clientId, cnf: { jkt: introspected.cnfJkt }, exp: introspected.exp };
-      }
-      return { ok: true, token };
-    } catch (e) {
-      return { ok: false, reason: e instanceof IntrospectionUnavailableError ? "unavailable" : "inactive" };
+        },
+      };
+    } catch {
+      return { ok: false, reason: "inactive" };
     }
   };
 

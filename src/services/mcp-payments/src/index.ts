@@ -254,6 +254,7 @@ export {
 export {
   type IntrospectedToken,
   type IntrospectionSettings,
+  IntrospectionTokenTypeUnsupportedError,
   IntrospectionUnavailableError,
   TokenInactiveError,
   TokenIntrospector,

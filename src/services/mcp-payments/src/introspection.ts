@@ -67,6 +67,20 @@ export class IntrospectionUnavailableError extends Error {
   }
 }
 
+/**
+ * @spec authority-server#join-assertion-request (#1454 review): the estate
+ * answered with the RFC 7662 / RFC 6749 error `unsupported_token_type`, read
+ * from the response's `error` member exactly: it offers no introspection for
+ * this token's type. A subclass of the unavailable error, so a caller that
+ * does not tell them apart (the gateway) still answers 503.
+ */
+export class IntrospectionTokenTypeUnsupportedError extends IntrospectionUnavailableError {
+  constructor() {
+    super("unsupported_token_type");
+    this.name = "IntrospectionTokenTypeUnsupportedError";
+  }
+}
+
 /** The estate answered and the token is not usable here: the route refuses with 401. */
 export class TokenInactiveError extends Error {
   constructor(why: string) {
@@ -136,9 +150,15 @@ export class TokenIntrospector {
         body: new URLSearchParams({ token: accessToken, token_type_hint: "access_token" }).toString(),
         signal: AbortSignal.timeout(this.settings.timeoutMs),
       });
-      if (res.status !== 200) throw new Error(`status ${res.status}`);
+      if (res.status !== 200) {
+        const answer: unknown = await res.json().catch(() => undefined);
+        const error = answer !== null && typeof answer === "object" ? (answer as { error?: unknown }).error : undefined;
+        if (error === "unsupported_token_type") throw new IntrospectionTokenTypeUnsupportedError();
+        throw new Error(`status ${res.status}`);
+      }
       body = await res.json();
     } catch (e) {
+      if (e instanceof IntrospectionTokenTypeUnsupportedError) throw e;
       throw new IntrospectionUnavailableError(e instanceof Error ? e.message : String(e));
     }
     if (body === null || typeof body !== "object" || Array.isArray(body)) {
