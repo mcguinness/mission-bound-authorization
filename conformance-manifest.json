@@ -252,6 +252,7 @@
    "runtime.discovered-catalog",
    "runtime.resource-contract",
    "resource-access.resource-contract",
+   "resource-access.action-families",
    "runtime.materialized-policy-view",
    "containment.narrowing",
    "cross-domain.origin-principal",
@@ -50597,7 +50598,8 @@
    "role": "RS",
    "strength": "SHOULD",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "resource-access.action-families"
    },
    "profiles": [
     "issuance",
@@ -50611,7 +50613,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1376. Guidance to the resource's documented namespace. The reference resources define no action families, so no test observes it. The residual is stated in Security Considerations (Action Family Growth)."
+   "notes": "#1376. Guidance to the resource's documented namespace. The reference resources define no action families, so no test observes it. The residual is stated in Security Considerations (Action Family Growth). Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to a resource server that documents and supports action families, whatever its authorization server does; an authorization server's refusal of family input does not exempt it. The reference resources define no families, so the row is not applicable to them. Coverage stays todo until positively witnessed."
   },
   {
    "id": "resource-access.type.action-family-new-namespace",
@@ -50621,7 +50623,8 @@
    "role": "RS",
    "strength": "SHOULD",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "resource-access.action-families"
    },
    "profiles": [
     "issuance",
@@ -50635,7 +50638,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1376. Guidance to the resource's documented namespace; a departure is recorded, not failed. The reference resources define no action families. A binding compatibility rule for families is out of scope here (#249)."
+   "notes": "#1376. Guidance to the resource's documented namespace; a departure is recorded, not failed. The reference resources define no action families. A binding compatibility rule for families is out of scope here (#249). Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to a resource server that documents and supports action families, whatever its authorization server does; an authorization server's refusal of family input does not exempt it. The reference resources define no families, so the row is not applicable to them. Coverage stays todo until positively witnessed."
   },
   {
    "id": "resource-access.type.action-family-consent-rendering",
@@ -50645,7 +50648,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "resource-access.action-families"
    },
    "profiles": [
     "issuance",
@@ -50660,7 +50664,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "In the draft since its first version (#637); the MUST was reshaped by #1258 item 12 and the #1260 review and reworded by #1520, and no row was added at any of those changes. Before #1377 the reference admitted a family at PAR intake and compared actions literally, so a family reached the approval page only under a ceiling listing the same string, where the derived entry rendered as JSON with the family verbatim. Since #1377 it refuses family input, recorded under observation.local. Coverage stays todo: a refusal observes no rendering (D444). Making the row not applicable to an implementation that refuses families needs an action-families capability gate, a model change proposed on #1377."
+   "notes": "In the draft since its first version (#637); the MUST was reshaped by #1258 item 12 and the #1260 review and reworded by #1520, and no row was added at any of those changes. Before #1377 the reference admitted a family at PAR intake and compared actions literally, so a family reached the approval page only under a ceiling listing the same string, where the derived entry rendered as JSON with the family verbatim. Since #1377 it refuses family input, recorded under observation.local. Coverage stays todo: a refusal observes no rendering (D444). Making the row not applicable to an implementation that refuses families needs an action-families capability gate, a model change proposed on #1377. Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to an authorization server that admits action families. One that consistently refuses family input, as the reference does since #1576, has no family rendering obligation, and the row is not applicable to it; refusal tests make the row neither tested nor evidence of narrowing support. Coverage stays todo until positively witnessed."
   },
   {
    "id": "resource-access.type.action-family-derivation-high-risk",
@@ -50670,7 +50674,8 @@
    "role": "AS",
    "strength": "SHOULD",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "resource-access.action-families"
    },
    "profiles": [
     "issuance",
@@ -50685,7 +50690,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "In the draft since its first version (#637), with no row until now. Before #1377 derivation compared actions literally and applied no breadth or risk classification to an action value. Since #1377 the reference refuses family input, recorded under observation.local. A departure is recorded, not failed. Coverage stays todo: a refusal observes no breadth handling (D444). Making the row not applicable to an implementation that refuses families needs an action-families capability gate, a model change proposed on #1377."
+   "notes": "In the draft since its first version (#637), with no row until now. Before #1377 derivation compared actions literally and applied no breadth or risk classification to an action value. Since #1377 the reference refuses family input, recorded under observation.local. A departure is recorded, not failed. Coverage stays todo: a refusal observes no breadth handling (D444). Making the row not applicable to an implementation that refuses families needs an action-families capability gate, a model change proposed on #1377. Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to an authorization server that admits action families. One that consistently refuses family input, as the reference does since #1576, has no family derivation obligation, and the row is not applicable to it; refusal tests make the row neither tested nor evidence of narrowing support. Coverage stays todo until positively witnessed."
   },
   {
    "id": "resource-access.type.emit-enforced-constraint-keys",
