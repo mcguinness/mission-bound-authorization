@@ -521,7 +521,7 @@
     },
     {
       "id": "der-fam-01",
-      "description": "A proposal names an action family on a consumer that does not implement action families",
+      "description": "A ceiling and a proposal name the same action family, on a consumer that does not implement action families",
       "role": "authorization-server",
       "requires": [
         "refusal.unsupported-input"
@@ -536,7 +536,7 @@
             "type": "mission_resource_access",
             "resource": "https://api.example/orders",
             "actions": [
-              "invoices.read"
+              "invoices.*"
             ]
           }
         ],
@@ -552,7 +552,7 @@
       },
       "expected": {
         "outcome": "refuse",
-        "reason": "an action family is unsupported input where the family clauses are not implemented (D684)",
+        "reason": "an action family is unsupported input where the family clauses are not implemented (D684); a consumer comparing it as a literal string would derive it, which is the behavior this case refuses",
         "error": "invalid_authorization_details"
       },
       "refs": [
