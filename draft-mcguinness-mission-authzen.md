@@ -97,7 +97,6 @@ normative:
       -
         org: OpenID Foundation
     date: 2026
-  I-D.draft-ietf-oauth-rar-metadata-remediation:
   ARAP:
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
     title: "AuthZEN Access Request and Approval Profile - Draft 1"
@@ -114,6 +113,7 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-ietf-oauth-rar-metadata-remediation:
   RFC9457:
   RFC9470:
   I-D.draft-mcguinness-mission-runtime-oauth:
