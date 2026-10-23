@@ -793,8 +793,8 @@ Whatever the mode, any grant binding the successor carries is its own,
 never an extension of the predecessor's: in an interactive completion,
 the authorization code the client redeems and any refresh-token family
 that redemption emits; otherwise, a refresh-token family the completing
-response emits, if any. A completion that returns only an access token
-leaves the successor with derived tokens and no grant binding
+response emits, if any. A deferred completion or synchronous drawdown
+that returns only an access token establishes no grant binding
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Grant Bindings and
 Related Mechanisms").
 
@@ -2466,9 +2466,9 @@ approved, not the predecessor's authority plus a delta.
 \[\[ To be removed from the final specification ]]
 
 - Completion Modes says where any grant binding a successor carries
-  comes from in each mode, and that a completion returning only an
-  access token leaves the successor no grant binding. No requirement
-  changed.
+  comes from in each mode, and that a deferred completion or
+  synchronous drawdown returning only an access token establishes none.
+  No requirement changed.
 
 - A failed check 3 where the token-exchange response completes an
   expansion answers `invalid_request`, as Section 2.2.2 of RFC 8693

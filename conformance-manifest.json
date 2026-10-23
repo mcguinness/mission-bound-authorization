@@ -62168,7 +62168,7 @@
    "id": "expansion.completion.successor-grant-binding-own",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "completion-modes",
-   "text": "Whatever the mode, any grant binding the successor carries is its own, never an extension of the predecessor's: in an interactive completion, the authorization code the client redeems and any refresh-token family that redemption emits; otherwise, a refresh-token family the completing response emits, if any. A completion that returns only an access token leaves the successor with derived tokens and no grant binding",
+   "text": "Whatever the mode, any grant binding the successor carries is its own, never an extension of the predecessor's: in an interactive completion, the authorization code the client redeems and any refresh-token family that redemption emits; otherwise, a refresh-token family the completing response emits, if any. A deferred completion or synchronous drawdown that returns only an access token establishes no grant binding",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -62183,7 +62183,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "any grant lineage a successor carries is its own: the authorization code an interactive completion redeems and any refresh-token family it emits, or a refresh-token family a deferred or drawdown response emits; a completion returning only an access token creates no grant binding, and no completion extends the predecessor's grant"
+    "normative": "any grant lineage a successor carries is its own: the authorization code an interactive completion redeems and any refresh-token family it emits, or a refresh-token family a deferred or drawdown response emits; a deferred completion or synchronous drawdown returning only an access token establishes no grant binding, while an interactive completion's authorization code is a binding whether or not its redemption emits a refresh token, and no completion extends the predecessor's grant"
    },
    "level": "endpoint",
    "coverage": "todo",
