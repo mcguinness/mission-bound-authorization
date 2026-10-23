@@ -10918,9 +10918,15 @@
      "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh refused for an audience the mapping gained after approval spends no rotating refresh token: it still refreshes for the original approved audience (#1604 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7 (D620). The reference declares no transformation capability for any type (src/docs/resource-access-transformation-capabilities.md), so the rule applies to every entry. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time."
+   "notes": "#1503 finding 7 (D620). The reference declares no transformation capability for any type (src/docs/resource-access-transformation-capabilities.md), so the rule applies to every entry. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea."
   },
   {
    "id": "core.other-types.entry-audience-trusted-mapping",
@@ -10988,9 +10994,15 @@
      "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh refused for an audience the mapping gained after approval spends no rotating refresh token: it still refreshes for the original approved audience (#1604 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7 (D620). Proved by deciding from the mapping current at issuance instead of the retained association, by retaining nothing at creation, and by not reading the retained association back from the store: the witnesses failed each time. The template dispatch witness in scope-projection.test.ts also recovers an instance created while the target was unmapped and finds it still refused once the mapping names the target."
+   "notes": "#1503 finding 7 (D620). Proved by deciding from the mapping current at issuance instead of the retained association, by retaining nothing at creation, and by not reading the retained association back from the store: the witnesses failed each time. The template dispatch witness in scope-projection.test.ts also recovers an instance created while the target was unmapped and finds it still refused once the mapping names the target. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea."
   },
   {
    "id": "core.other-types.original-audience-refusal",
@@ -11026,9 +11038,15 @@
      "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh refused for an audience the mapping gained after approval spends no rotating refresh token: it still refreshes for the original approved audience (#1604 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7 (D620). Proved by skipping the issuance check: both witnesses issued a token."
+   "notes": "#1503 finding 7 (D620). Proved by skipping the issuance check: both witnesses issued a token. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea."
   },
   {
    "id": "core.delegation-constraints.depth-from-accounting",
@@ -59579,9 +59597,15 @@
      "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh refused for an audience the mapping gained after approval spends no rotating refresh token: it still refreshes for the original approved audience (#1604 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7 (D620). Proved by skipping the issuance check: both witnesses issued a token."
+   "notes": "#1503 finding 7 (D620). Proved by skipping the issuance check: both witnesses issued a token. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea."
   },
   {
    "id": "core.remediation-grains.refresh-within-grant-and-authority",
