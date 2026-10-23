@@ -38,6 +38,7 @@ import {
   type EntitlementResolver,
   idempotencyScopeDigest,
   isActionPhase,
+  isCurrencyCode,
   isIdempotencyKey,
   isValidAmount,
   MISSION_ORIGIN_SUBJECT_TYP,
@@ -2047,9 +2048,12 @@ async function evaluateInner(
     // @spec mission#max-amount — exact decimal-value comparison at the
     // enforcement point, never IEEE-754 float; an absent amount or a
     // malformed amount on either side fails closed (denied), never
-    // silently permitted.
+    // silently permitted. @spec resource-access#initial-common-constraints
+    // (#1595, D727): a malformed cap currency is a key the PDP cannot
+    // enforce, even when the input's currency is spelled the same.
     if (
       !amt ||
+      !isCurrencyCode(cap.currency) ||
       amt.currency !== cap.currency ||
       !isValidAmount(amt.amount) ||
       !isValidAmount(cap.amount) ||
