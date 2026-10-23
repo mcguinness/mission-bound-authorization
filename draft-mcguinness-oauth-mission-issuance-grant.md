@@ -284,26 +284,21 @@ MAS, and a consuming AS:
 
 Trust is pre-established and bilateral. A consuming AS accepts
 grants only from Mission Issuers its local policy names, resolving
-their signing keys through the MAS's published key material (its
-discovery `jwks_uri`,
-{{I-D.draft-mcguinness-mission-authority-server}}); a MAS mints
-grants only for authorization servers named as audiences by
-deployment configuration. Subject and client correspondence between
-the Mission record and the consuming AS's accounts is governed by
-the deployment's mapping policy; where the Enterprise Mission
-Authority Profile is claimed, its mapping contract governs
+their signing keys from the MAS's `jwks_uri`
+({{I-D.draft-mcguinness-mission-authority-server}}); a MAS mints
+grants only for authorization servers its configuration names as
+audiences. The deployment's mapping policy governs how the Subject
+and client in the Mission record correspond to the consuming AS's
+accounts; where the Enterprise Mission Authority Profile is claimed,
+the Enterprise Mapping Contract governs
 ({{I-D.draft-mcguinness-mission-authority-server}}). The resources
 the MAS scopes a consuming AS's grants to ({{minting-rules}}) are the
 audiences it authorizes that AS to request from Mission Status
 ({{mission-state-source}}).
 
-The duties divide as follows. The MAS holds the approval event,
-the record and its anchors, the lifecycle, and grant minting. The
-consuming AS holds client authentication, token minting bounded by
-the grant, refresh, and its ordinary token-plane obligations. An
-auditor attributes what was approved to the MAS record and what was
-issued to the consuming AS's log, joined by the Mission reference
-the grant carries.
+The MAS holds the approval event, the record and its anchors, the
+lifecycle, and grant minting. The consuming AS holds client
+authentication, token issuance bounded by the grant, and refresh.
 
 # The Mission Issuance Grant {#grant}
 
