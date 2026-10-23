@@ -53428,7 +53428,7 @@
     "local": "a non-success result carries no commitment_agreement"
    },
    "level": "unit",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
@@ -53503,7 +53503,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. The authentication failures witnessed are the record's; the reference's own authentication is the caller's (the expected-issuer-trust row is partial for it). Mutations, each alone, turn a failure or insufficient-evidence case into a reported success or the wrong outcome, and each is caught: skipping the record's authentication (cases 10, 11), the expected-issuer naming (misnamed-record test), the Mandate iss rule (case 12), the reference's or the record's malformed-value check (case 14 each), each anchor comparison (cases 5 to 8), the undisclosed-value rule (case 9), the commitment equality or form check (case 4); reporting an absent record or reference as failure (case 13); stating a commitment agreement on a non-success result (cases 4 to 8, 10 to 12, 14 and the misnamed-record test)."
+   "notes": "#1572 (D696): checkPortableApprovalBinding, beside verifyApprovalGovernanceRecord, whose envelope steps 1 to 4 it reuses unchanged, exercised on the vectors of portable-binding-vectors over a record committed under governed_policy. The authentication failures witnessed are the record's; the reference's own authentication is the caller's (the expected-issuer-trust row is partial for it). Mutations, each alone, turn a failure or insufficient-evidence case into a reported success or the wrong outcome, and each is caught: skipping the record's authentication (cases 10, 11), the expected-issuer naming (misnamed-record test), the Mandate iss rule (case 12), the reference's or the record's malformed-value check (case 14 each), each anchor comparison (cases 5 to 8), the undisclosed-value rule (case 9), the commitment equality or form check (case 4); reporting an absent record or reference as failure (case 13); stating a commitment agreement on a non-success result (cases 4 to 8, 10 to 12, 14 and the misnamed-record test). Partial under the every-clause rule: the authentication-failure clause is witnessed for the record only; a reference that fails its own authentication is the caller's to refuse, since the reference implementation has no Mandate verifier."
   },
   {
    "id": "approval-governance.governed-policy.agr-every-activation",
