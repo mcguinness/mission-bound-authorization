@@ -11,13 +11,13 @@
 
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { IntrospectionUnavailableError, TokenInactiveError, TokenIntrospector } from "../src/index.js";
+import { IntrospectionTokenTypeUnsupportedError, IntrospectionUnavailableError, TokenInactiveError, TokenIntrospector } from "../src/index.js";
 
 const ESTATE = "https://estate.test";
 const AUD = "http://localhost:4403/mcp";
 
 /** What the endpoint answers next, and what it saw. */
-let answer: { status: number; body: string; delayMs?: number };
+let answer: { status: number; body: string; delayMs?: number; location?: string };
 /** Runs while a call is in flight, before the endpoint answers. */
 let onRequest: (() => void) | undefined;
 const seen: { authorization?: string; body: string }[] = [];
@@ -74,9 +74,16 @@ beforeAll(async () => {
     const body = await read(req);
     seen.push({ ...(req.headers.authorization ? { authorization: req.headers.authorization } : {}), body });
     onRequest?.();
-    const { status, body: out, delayMs } = answer;
+    // Where a redirect points: the estate's unsupported-type answer, so a
+    // client that followed redirects would read it.
+    if (req.url === "/elsewhere") {
+      res.writeHead(400, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "unsupported_token_type" }));
+      return;
+    }
+    const { status, body: out, delayMs, location } = answer;
     if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
-    res.writeHead(status, { "content-type": "application/json" });
+    res.writeHead(status, { "content-type": "application/json", ...(location ? { location } : {}) });
     res.end(out);
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
@@ -142,6 +149,33 @@ describe("token introspection: fail-closed refusals (RFC 7662, #818 slice 3)", (
     for (const over of [{ token_type: "refresh_token" }, { exp: nowS() - 1 }, { sub: undefined }, { client_id: "" }, { aud: undefined }]) {
       answer = { status: 200, body: active(over) };
       await expect(introspector().introspect("t"), JSON.stringify(over)).rejects.toBeInstanceOf(TokenInactiveError);
+    }
+  });
+});
+
+describe("token introspection: the estate's unsupported-token-type answer (#1454 review)", () => {
+  const unsupported = JSON.stringify({ error: "unsupported_token_type", error_description: "structured tokens cannot be introspected" });
+
+  it("names an unsupported token type only for an HTTP 400 whose error is exactly unsupported_token_type", async () => {
+    answer = { status: 400, body: unsupported };
+    await expect(introspector().introspect("jwt")).rejects.toBeInstanceOf(IntrospectionTokenTypeUnsupportedError);
+  });
+
+  it("is unavailable, not an unsupported token type, for any other status carrying that error, another 400 error, or a redirect to that answer", async () => {
+    const cases: Array<[string, typeof answer]> = [
+      ["401", { status: 401, body: unsupported }],
+      ["403", { status: 403, body: unsupported }],
+      ["429", { status: 429, body: unsupported }],
+      ["500", { status: 500, body: unsupported }],
+      ["503", { status: 503, body: unsupported }],
+      ["a 400 with another error", { status: 400, body: JSON.stringify({ error: "invalid_request" }) }],
+      ["a 302 to the 400 answer", { status: 302, body: "{}", location: endpoint.replace("/introspect", "/elsewhere") }],
+    ];
+    for (const [label, next] of cases) {
+      answer = next;
+      const refused = await introspector().introspect("jwt").catch((e: unknown) => e);
+      expect(refused, label).toBeInstanceOf(IntrospectionUnavailableError);
+      expect(refused, label).not.toBeInstanceOf(IntrospectionTokenTypeUnsupportedError);
     }
   });
 });

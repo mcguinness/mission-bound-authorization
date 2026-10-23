@@ -95,6 +95,8 @@ import type { PendingOperation } from "./txn-store.js";
 import { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 import { admitArguments } from "./intake.js";
 import { absenceMeansNeverGranted, type MissionViewSource, prepareRequestView, viewMissRefusal } from "./view-source.js";
+import { accessTokenHash } from "./dpop.js";
+import type { JoinAssertionSource } from "./join-assertion-client.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 
@@ -990,6 +992,15 @@ export interface PepDeps {
      * is denied rather than evaluated under the join.
      */
     missionBoundOnlyClasses?: ReadonlySet<string>;
+    /**
+     * @spec authority-server#join-assertion-request, authority-server#join-authzen
+     * (#1454): where this PEP obtains a Mission Join Assertion for the
+     * credential it authenticated (`RequestSignals.accessToken`). One it
+     * obtains rides `context.mission_join` with the credential's digest and
+     * the thumbprint of the key its proof of possession verified against.
+     * None obtained, none is carried. Absent: no assertion is requested.
+     */
+    assertionSource?: JoinAssertionSource;
   };
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
@@ -1070,6 +1081,13 @@ export interface RequestSignals {
    * carriage denies where governance requires a reference.
    */
   missionReference?: PropagatedMissionReference;
+  /**
+   * @spec authority-server#join-assertion-request (#1454): the access token
+   * the transport authenticated, carried on a MAS-governed route only, so the
+   * PEP can request a Join Assertion for it and report its digest. Never
+   * placed on a decision request or in evidence.
+   */
+  accessToken?: string;
 }
 
 export interface ActionApprovalInput {
@@ -1840,6 +1858,9 @@ export class Pep {
     // case, where no delegate policy is consulted at all).
     let isBaselineJoin = false;
     let delegateDepth: number | undefined;
+    // @spec authority-server#join-authzen (#1454): a Join Assertion this PEP
+    // obtained, with the token binding it reports beside it.
+    let joinAssertion: { assertion: string; token_sha256: string; token_jkt: string } | undefined;
     // @spec authority-server#mapping-contract (#818): the one contract
     // snapshot this joined request applies, forwarded to the PDP below.
     let joinMapping: JoinMappingContract | undefined;
@@ -1979,6 +2000,18 @@ export class Pep {
               depthClientId,
               loaded.view.client_id,
             );
+      // @spec authority-server#join-assertion-request, #join-authzen (#1454):
+      // this PEP requests the assertion for the credential it authenticated.
+      // The digest is that credential's, and the thumbprint is the key the
+      // transport verified the request's DPoP proof against (`cnfJkt`).
+      const accessToken = signals?.accessToken;
+      const source = this.deps.masJoin.assertionSource;
+      if (source !== undefined && accessToken !== undefined) {
+        const assertion = await source.obtain({ mission: missionAnchor, accessToken });
+        if (assertion !== undefined) {
+          joinAssertion = { assertion, token_sha256: accessTokenHash(accessToken), token_jkt: token.cnfJkt };
+        }
+      }
     }
 
     // @spec authzen#context-audience-freshness: where the declared placement
@@ -2415,7 +2448,7 @@ export class Pep {
         // authenticated subject/context.actor.client_id, rather than
         // trusting a pre-narrowed view the PEP resolved outside the PDP.
         ...(isBaselineJoin
-          ? { mission_join: { ...(delegateDepth !== undefined ? { delegate_depth: delegateDepth } : {}) } }
+          ? { mission_join: { ...(delegateDepth !== undefined ? { delegate_depth: delegateDepth } : {}), ...joinAssertion } }
           : {}),
       } as EvaluationRequest["context"],
     };
