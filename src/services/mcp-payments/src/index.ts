@@ -258,3 +258,4 @@ export {
   TokenInactiveError,
   TokenIntrospector,
 } from "./introspection.js";
+export { joinAssertionClient, type JoinAssertionClientOptions, type JoinAssertionSource } from "./join-assertion-client.js";
