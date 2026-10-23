@@ -1191,6 +1191,9 @@ its lifecycle stay at the Mission Authority Server.<a href="#section-abstract-1"
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
                 <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-the-mission-claim" class="internal xref">The <code>mission</code> Claim</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-entry-types" class="internal xref">Entry Types</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
@@ -1404,6 +1407,23 @@ Effective Authority Set at redemption and at every refresh
 applies <a href="#effective-set-projection" class="auto internal xref">Section 6.3</a>, or has none and issues no
 refresh tokens under a grant (<a href="#no-state-integration" class="auto internal xref">Section 6.4</a>).<a href="#section-2-3.8.1" class="pilcrow">¶</a></p>
 </dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.9">Refresh family:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.10">
+          <p id="section-2-3.10.1">The refresh tokens descended from one redemption of a grant (under
+the authorization code flow carriage, one code exchange), including
+every rotation, and the authorization they carry.<a href="#section-2-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-3.11">Family ceiling:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-3.12">
+          <p id="section-2-3.12.1">The remaining authority a consuming AS persists for a refresh
+family (<a href="#refresh" class="auto internal xref">Section 6.3.4</a>): after each successful issuance, the surviving
+authority of that issuance (items 1 to 3 of <a href="#issued-authority" class="auto internal xref">Section 6.3.2</a>). A
+narrowing the client requests at the token endpoint does not reduce
+it, and it is not the contents of the last access token issued for
+one audience.<a href="#section-2-3.12.1" class="pilcrow">¶</a></p>
+</dd>
       <dd class="break"></dd>
 </dl>
 </section>
@@ -1428,7 +1448,7 @@ MAS, and a consuming AS:<a href="#section-3.1-1" class="pilcrow">¶</a></p>
     |&lt;-- (B) grant -----------|                              |
     |                         |                              |
     |-- (C) token request with the grant -------------------&gt;|
-    |                         |&lt;-- (D) Status, per resource -|
+    |                         |&lt;-- (D) Status, per audience -|
     |                         |--- state and Effective -----&gt;|
     |                         |    Authority Set             |
     |&lt;-- (E) access token (and refresh token) ---------------|
@@ -1446,8 +1466,8 @@ MAS, and a consuming AS:<a href="#section-3.1-1" class="pilcrow">¶</a></p>
     endpoint as a JWT authorization grant (<a href="#redemption" class="auto internal xref">Section 6</a>).<a href="#section-3.1-5" class="pilcrow">¶</a></p>
 <p id="section-3.1-6">(D) A consuming AS with a Mission-state integration resolves the
     Mission's current state and Effective Authority Set, with one
-    Mission Status request per resource the grant names
-    (<a href="#effective-set-projection" class="auto internal xref">Section 6.3</a>).<a href="#section-3.1-6" class="pilcrow">¶</a></p>
+    Mission Status request per audience the grant's entries are
+    relevant to (<a href="#effective-set-projection" class="auto internal xref">Section 6.3</a>).<a href="#section-3.1-6" class="pilcrow">¶</a></p>
 <p id="section-3.1-7">(E) The consuming AS issues Mission-bound tokens within the grant's
     authority and that set (<a href="#token-issuance" class="auto internal xref">Section 6.2</a>).<a href="#section-3.1-7" class="pilcrow">¶</a></p>
 <p id="section-3.1-8">(F) Each refresh repeats (D) before (E). A consuming AS without a
@@ -1465,14 +1485,16 @@ grants only from Mission Issuers its local policy names, resolving
 their signing keys from the MAS's <code>jwks_uri</code>
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>); a MAS mints
 grants only for authorization servers its configuration names as
-audiences. The deployment's mapping policy governs how the Subject
-and client in the Mission record correspond to the consuming AS's
+audiences. The deployment's mapping policy governs how a grant's
+(<code>iss</code>, <code>sub</code>) pair and <code>client_id</code> correspond to the consuming AS's
 accounts; where the Enterprise Mission Authority Profile is claimed,
 the Enterprise Mapping Contract governs
-(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). The resources
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). The audiences
 the MAS scopes a consuming AS's grants to (<a href="#minting-rules" class="auto internal xref">Section 5.2</a>) are the
 audiences it authorizes that AS to request from Mission Status
-(<a href="#mission-state-source" class="auto internal xref">Section 6.3.1</a>).<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+(<a href="#mission-state-source" class="auto internal xref">Section 6.3.1</a>). The issuance join is the same-estate case:
+a deployment does not use it across domains, where cross-domain
+projection applies instead (<a href="#relationships" class="auto internal xref">Section 10</a>).<a href="#section-3.2-1" class="pilcrow">¶</a></p>
 <p id="section-3.2-2">The MAS holds the approval event, the record and its anchors, the
 lifecycle, and grant minting. The consuming AS holds client
 authentication, token issuance bounded by the grant, and refresh.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
@@ -1501,16 +1523,21 @@ published key material.<a href="#section-4-1" class="pilcrow">¶</a></p>
 <dt id="section-4-3.3">
 <code>sub</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-3.4">
-          <p id="section-4-3.4.1"><span class="bcp14">REQUIRED</span>. The Mission's recorded Subject identifier
-(<code>subject.sub</code>), interpreted at the consuming AS under the
-deployment's mapping policy (<a href="#trust" class="auto internal xref">Section 3.2</a>).<a href="#section-4-3.4.1" class="pilcrow">¶</a></p>
+          <p id="section-4-3.4.1"><span class="bcp14">REQUIRED</span>. The Mission's Subject as a MAS-local identifier, which the
+MAS maps from the recorded (<code>subject.iss</code>, <code>subject.sub</code>) pair
+before minting (<a href="#minting-rules" class="auto internal xref">Section 5.2</a>). The consuming AS interprets the
+(<code>iss</code>, <code>sub</code>) pair under the deployment's mapping policy
+(<a href="#trust" class="auto internal xref">Section 3.2</a>).<a href="#section-4-3.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-3.5">
 <code>aud</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-3.6">
-          <p id="section-4-3.6.1"><span class="bcp14">REQUIRED</span>. The consuming AS's issuer identifier
-(<a href="#grant-validation" class="auto internal xref">Section 6.1</a>).<a href="#section-4-3.6.1" class="pilcrow">¶</a></p>
+          <p id="section-4-3.6.1"><span class="bcp14">REQUIRED</span>. The consuming AS's issuer identifier <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, as a
+single string (<a href="#grant-validation" class="auto internal xref">Section 6.1</a>). This restricts
+<span><a href="https://rfc-editor.org/rfc/rfc7523#section-3" class="relref">Section 3</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>, under which a token endpoint URL can also
+identify the AS; Section 4 of <span>[<a href="#I-D.draft-ietf-oauth-rfc7523bis" class="cite xref">I-D.draft-ietf-oauth-rfc7523bis</a>]</span>
+keeps both forms for authorization grants.<a href="#section-4-3.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-3.7">
@@ -1544,12 +1571,10 @@ members <a href="#mission-claim" class="auto internal xref">Section 4.1</a> requ
 <dt id="section-4-3.15">
 <code>authorization_details</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-4-3.16">
-          <p id="section-4-3.16.1"><span class="bcp14">REQUIRED</span>. Authorization details <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> of the
-<code>mission_resource_access</code> type
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) that the
-consuming AS issues against: a subset of the Mission's Effective
-Authority Set, scoped to the resources this AS serves
-(<a href="#minting-rules" class="auto internal xref">Section 5.2</a>).<a href="#section-4-3.16.1" class="pilcrow">¶</a></p>
+          <p id="section-4-3.16.1"><span class="bcp14">REQUIRED</span>. Authorization details <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> that the consuming AS
+issues against, of the types <a href="#entry-types" class="auto internal xref">Section 4.2</a> admits: a subset of the
+Mission's Effective Authority Set, limited to the entries this AS
+serves (<a href="#minting-rules" class="auto internal xref">Section 5.2</a>).<a href="#section-4-3.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-4-3.17">
@@ -1566,8 +1591,12 @@ as <a href="#minting-rules" class="auto internal xref">Section 5.2</a> requires,
 </dl>
 <p id="section-4-4">The following is an example of a decoded grant payload for the
 Mission of the examples in
-<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>; its entry is a
-subset of that Mission's invoice-read entry:<a href="#section-4-4" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>. Its entry is a
+subset of that Mission's invoice-read entry, and its <code>sub</code> is the
+recorded <code>subject.sub</code> copied verbatim, which <a href="#minting-rules" class="auto internal xref">Section 5.2</a>
+permits where it collides with no other principal's <code>sub</code>. The request
+example of <a href="#minting-request" class="auto internal xref">Section 5.1</a> presents a DPoP proof, so the grant's
+<code>cnf</code> carries that key:<a href="#section-4-4" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-4-5">
 <pre>
 {
@@ -1578,6 +1607,7 @@ subset of that Mission's invoice-read entry:<a href="#section-4-4" class="pilcro
   "exp": 1793606580,
   "jti": "mig_7Kq2Rv9Lp4xW1nT8",
   "client_id": "s6BhdRkqt3",
+  "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://mas.example.com",
@@ -1625,6 +1655,63 @@ records it with each issuance (<a href="#records" class="auto internal xref">Sec
         </ul>
 </section>
 </div>
+<div id="entry-types">
+<section id="section-4.2">
+        <h3 id="name-entry-types">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-entry-types" class="section-name selfRef">Entry Types</a>
+        </h3>
+<p id="section-4.2-1">A grant's <code>authorization_details</code> can carry entries of any type that
+both the MAS and the consuming AS support
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Authorization
+Details Types"; the MAS's supported types are those its deployment
+documentation names); this profile requires no particular type. Each
+entry's audience relevance, subset relation, and transformations
+follow its type's specification and the transformation capabilities
+each party declares for that type, through the carriers that section
+lists, deployment documentation among them. A consuming AS
+serves an entry that is relevant to an audience for which that AS
+issues tokens. An entry's audiences come from its type's
+specification and the deployment's trusted configuration relating
+entries to audiences, not from its operation target: the issuance
+profile keeps an entry's <code>resource</code>, a token request's <code>resource</code>
+parameter, and a token's <code>aud</code> distinct
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Audience and Token
+Response"). For example, a <code>mission_resource_access</code> entry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) whose
+<code>resource</code> is <code>https://api.example.com/orders/123</code> can belong to the
+audience <code>https://api.example.com</code>.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">Omitting a whole entry always yields a subset. Narrowing within an
+entry, or projecting it to <code>scope</code>, needs the corresponding declared
+capability, and neither party performs a transformation it has not
+declared for the entry's type. An operation this document calls for
+that a party cannot perform fails closed:<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.2-3.1">
+            <p id="section-4.2-3.1.1">The MAS <span class="bcp14">MUST</span> refuse, with <code>invalid_authorization_details</code>
+(<a href="#minting-errors" class="auto internal xref">Section 5.4</a>), a grant request whose requested narrowing it
+cannot perform.<a href="#section-4.2-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-3.2">
+            <p id="section-4.2-3.2.1">The consuming AS <span class="bcp14">MUST</span> refuse, with <code>invalid_grant</code>, a grant that
+carries an entry of a type it does not support
+(<a href="#grant-validation" class="auto internal xref">Section 6.1</a>).<a href="#section-4.2-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-3.3">
+            <p id="section-4.2-3.3.1">The consuming AS <span class="bcp14">MUST NOT</span> issue an entry it cannot narrow except
+unchanged, where the current Effective Authority Set and its own
+policy each contain an entry equal to it under the subset rule;
+otherwise it omits the entry (<a href="#issued-authority" class="auto internal xref">Section 6.3.2</a>).<a href="#section-4.2-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.2-3.4">
+            <p id="section-4.2-3.4.1">The consuming AS <span class="bcp14">MUST</span> refuse a requested narrowing it cannot
+perform with <code>invalid_authorization_details</code>. It refuses a <code>scope</code>
+projection it cannot perform as the issuance profile maps that
+failure (<code>invalid_target</code>, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Error and Challenge Mapping").<a href="#section-4.2-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
 </section>
 </div>
 <div id="minting">
@@ -1640,8 +1727,16 @@ metadata (<a href="#metadata" class="auto internal xref">Section 9</a>).<a href=
         <h3 id="name-grant-request">
 <a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-grant-request" class="section-name selfRef">Grant Request</a>
         </h3>
-<p id="section-5.1-1">The requester POSTs an <code>application/json</code> object to the endpoint over
-TLS, authenticated as <a href="#minting-rules" class="auto internal xref">Section 5.2</a> requires:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-1">The requester sends an HTTP POST request with an <code>application/json</code>
+body to the endpoint, which has the TLS and client-authentication
+requirements of the MAS's Mission submission endpoint
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>, Section "Mission
+Submission") with this endpoint in its place: an access token's
+audience names this endpoint, and the MAS publishes Protected
+Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> for it, naming its resource, required
+scope, accepted sender constraints, and DPoP algorithms
+(<code>dpop_signing_alg_values_supported</code>). The MAS ignores body members
+it does not recognize. The body carries:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-5.1-2">
           <dt id="section-5.1-2.1">
 <code>mission_id</code>:</dt>
@@ -1654,7 +1749,9 @@ TLS, authenticated as <a href="#minting-rules" class="auto internal xref">Sectio
 <code>audience</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.1-2.4">
             <p id="section-5.1-2.4.1"><span class="bcp14">REQUIRED</span>. A string. The issuer identifier of the consuming AS the
-grant is for, which becomes the grant's <code>aud</code> (<a href="#trust" class="auto internal xref">Section 3.2</a>).<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
+grant is for. The MAS compares it literally with the issuer
+identifiers its configuration names and sets the grant's <code>aud</code> to
+the matching identifier (<a href="#trust" class="auto internal xref">Section 3.2</a>).<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.1-2.5">
@@ -1666,15 +1763,58 @@ omitted, the MAS scopes the grant to the entries the named audience
 serves (<a href="#minting-rules" class="auto internal xref">Section 5.2</a>); if it is present, it <span class="bcp14">MUST NOT</span> widen
 beyond that scope.<a href="#section-5.1-2.6.1" class="pilcrow">¶</a></p>
 </dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-2.7">
+<code>client_id</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-2.8">
+            <p id="section-5.1-2.8.1">CONDITIONAL. A string, <span class="bcp14">REQUIRED</span> with mutual-TLS client
+authentication, as Mission Status requires for that mechanism
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Authentication").<a href="#section-5.1-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-2.9">
+<code>client_assertion_type</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-2.10">
+            <p id="section-5.1-2.10.1">CONDITIONAL. A string, present exactly when the requester
+authenticates with a private-key JWT: the value
+<code>urn:ietf:params:oauth:client-assertion-type:jwt-bearer</code>
+(<span><a href="https://rfc-editor.org/rfc/rfc7523#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>).<a href="#section-5.1-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-2.11">
+<code>client_assertion</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-2.12">
+            <p id="section-5.1-2.12.1">CONDITIONAL. A string, present exactly when <code>client_assertion_type</code>
+is: the client-authentication JWT. These two members carry as JSON
+strings the values <span><a href="https://rfc-editor.org/rfc/rfc7523#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> defines as form
+parameters, and the MAS processes them as Mission Status's
+private-key-JWT mechanism requires
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Authentication"), with the MAS's issuer identifier as the
+assertion's sole <code>aud</code>.<a href="#section-5.1-2.12.1" class="pilcrow">¶</a></p>
+</dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-5.1-3">The following is an example of a grant request:<a href="#section-5.1-3" class="pilcrow">¶</a></p>
-<div class="lang-http-message sourcecode" id="section-5.1-4">
+<p id="section-5.1-3">A requester obtains a key-bound grant by presenting a sender
+constraint on the request: a DPoP proof (<span><a href="https://rfc-editor.org/rfc/rfc9449#section-4" class="relref">Section 4</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) in
+the <code>DPoP</code> header field, with <code>htm</code> <code>POST</code>, <code>htu</code> the endpoint URL,
+and <code>ath</code> only where a DPoP-bound access token authenticates the
+request, which the MAS checks as <span><a href="https://rfc-editor.org/rfc/rfc9449#section-4.3" class="relref">Section 4.3</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> requires;
+or the client certificate of a mutual-TLS connection <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>.
+Neither is client authentication by itself. The MAS <span class="bcp14">MUST</span> verify any
+DPoP proof presented with the request and refuses a request whose
+proof fails (<a href="#minting-errors" class="auto internal xref">Section 5.4</a>). A client that does not want its
+connection certificate bound presents a DPoP proof, which takes
+precedence (<a href="#minting-rules" class="auto internal xref">Section 5.2</a>).<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-4">The following is an example of a grant request that authenticates
+with a private-key JWT in the body and presents a DPoP proof for key
+binding:<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="section-5.1-5">
 <pre>
 POST /mas/mission/issuance-grant HTTP/1.1
 Host: mas.example.com
 Content-Type: application/json
-Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 {
@@ -1690,9 +1830,12 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
         "resource_issued_before": "2026-09-30T23:59:59Z"
       }
     }
-  ]
+  ],
+  "client_assertion_type":
+    "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+  "client_assertion": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjE2In0..."
 }
-</pre><a href="#section-5.1-4" class="pilcrow">¶</a>
+</pre><a href="#section-5.1-5" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -1707,7 +1850,9 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
             <p id="section-5.2-2.1.1"><strong>Requester.</strong> The MAS authenticates the requester as its Mission
 submission endpoint does
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>, Section
-"Mission Submission"). The requester <span class="bcp14">MUST</span> be the Mission's
+"Mission Submission"), with the client assertion carried in the
+JSON body where it uses private-key JWT (<a href="#minting-request" class="auto internal xref">Section 5.1</a>). The
+requester <span class="bcp14">MUST</span> be the Mission's
 recorded client. Any other caller, including a delegate or
 enforcement point that the Mission Join Assertion endpoint admits,
 receives <code>not_found</code> (<a href="#minting-errors" class="auto internal xref">Section 5.4</a>).<a href="#section-5.2-2.1.1" class="pilcrow">¶</a></p>
@@ -1737,18 +1882,37 @@ Where the Mission's established <code>derivation_limit</code> is set, the MAS
 at a consuming AS are not counted.<a href="#section-5.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-5.2-2.5">
-            <p id="section-5.2-2.5.1"><strong>Key binding.</strong> When the MAS includes <code>cnf</code>, it <span class="bcp14">MUST</span> take the key
-from a sender constraint it verified on the grant request: the
-public key of the request's DPoP proof, as <code>jkt</code>, or the
-certificate of the mutual-TLS connection, as <code>x5t#S256</code>, whether
-or not that certificate also authenticated the client. The MAS
-<span class="bcp14">MUST NOT</span> derive <code>cnf</code> solely from client-assertion authentication:
+            <p id="section-5.2-2.5.1"><strong>Key binding.</strong> When the MAS verified a sender constraint on the
+grant request (<a href="#minting-request" class="auto internal xref">Section 5.1</a>), it <span class="bcp14">MUST</span> include <code>cnf</code> with that
+key: the public key of the request's DPoP proof, as <code>jkt</code>, or,
+where the request carries no DPoP proof, the certificate of the
+mutual-TLS connection, as <code>x5t#S256</code>, whether or not that
+certificate also authenticated the client. When the MAS includes
+<code>cnf</code>, it <span class="bcp14">MUST</span> take the key from a sender constraint it verified on
+the grant request. The MAS <span class="bcp14">MUST NOT</span> derive <code>cnf</code> solely from
+client-assertion authentication:
 a client assertion authenticates the client, and DPoP is not client
 authentication (<span><a href="https://rfc-editor.org/rfc/rfc9449#section-3" class="relref">Section 3</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>), so the binding comes
 only from a sender constraint verified independently on the
 request, even where its key is the one the assertion used. A
 request with no verified sender constraint yields a grant without
 <code>cnf</code>, which a public client cannot redeem (<a href="#redemption" class="auto internal xref">Section 6</a>).<a href="#section-5.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-5.2-2.6">
+            <p id="section-5.2-2.6.1"><strong>Subject.</strong> The MAS <span class="bcp14">MUST</span> derive the grant's <code>sub</code> from the
+Mission's recorded (<code>subject.iss</code>, <code>subject.sub</code>) pair by an
+injective mapping established before it mints, as the issuance
+profile requires of an AS for an external Subject
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Subject
+Establishment"). Two home issuers can both name a principal
+<code>alice</code>, and the mapping keeps them apart. The mapping is stable:
+every grant for one Subject carries the same <code>sub</code>. Copying
+<code>subject.sub</code> verbatim is valid only where it collides with no
+other principal's <code>sub</code> at this MAS. Every Mission has a Subject, a
+service-owned or
+organizational Mission included
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Authority
+Sources").<a href="#section-5.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 </section>
@@ -1799,7 +1963,10 @@ Cache-Control: no-store
         </h3>
 <p id="section-5.4-1">A failure returns the MAS error object
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>, Section "Error
-Responses"). This endpoint uses:<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+Responses") with one of the following <code>error</code> codes, which this
+document defines for this endpoint. A 401 response carries the
+<code>WWW-Authenticate</code> challenges that section defines for the MAS's
+endpoints, naming this endpoint's Protected Resource Metadata.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
           <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -1815,14 +1982,29 @@ Responses"). This endpoint uses:<a href="#section-5.4-1" class="pilcrow">¶</a><
                 <code>invalid_request</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">400</td>
-              <td class="text-left" rowspan="1" colspan="1">Missing or malformed <code>mission_id</code> or <code>audience</code>, or an unparseable body</td>
+              <td class="text-left" rowspan="1" colspan="1">A missing or malformed member, or an unparseable body</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>invalid_client</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">400</td>
+              <td class="text-left" rowspan="1" colspan="1">Direct client authentication (mutual TLS or private-key JWT) failed, only one of <code>client_assertion_type</code> and <code>client_assertion</code> is present, or no credential was presented where no access-token scheme is accepted</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>invalid_dpop_proof</code>, <code>use_dpop_nonce</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">400</td>
+              <td class="text-left" rowspan="1" colspan="1">A DPoP proof presented for key binding (<a href="#minting-request" class="auto internal xref">Section 5.1</a>), with no DPoP-bound access token authenticating the request, fails the checks of <span><a href="https://rfc-editor.org/rfc/rfc9449#section-4.3" class="relref">Section 4.3</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, carries <code>ath</code>, or lacks a nonce the MAS requires (<span><a href="https://rfc-editor.org/rfc/rfc9449#section-8" class="relref">Section 8</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>); a proof that constrains an authenticating access token fails as <code>unauthorized</code>
+</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>unauthorized</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">401</td>
-              <td class="text-left" rowspan="1" colspan="1">Request not authenticated</td>
+              <td class="text-left" rowspan="1" colspan="1">Access-token authentication failed, or no credential was presented where an access-token scheme is accepted</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -1852,7 +2034,7 @@ Responses"). This endpoint uses:<a href="#section-5.4-1" class="pilcrow">¶</a><
                 <code>invalid_authorization_details</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">400</td>
-              <td class="text-left" rowspan="1" colspan="1">The request is wider than the Effective Authority Set or the audience's scope</td>
+              <td class="text-left" rowspan="1" colspan="1">The request is wider than the Effective Authority Set or the audience's scope, or asks for a narrowing the MAS cannot perform (<a href="#entry-types" class="auto internal xref">Section 4.2</a>)</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -1860,6 +2042,20 @@ Responses"). This endpoint uses:<a href="#section-5.4-1" class="pilcrow">¶</a><
 </td>
               <td class="text-left" rowspan="1" colspan="1">409</td>
               <td class="text-left" rowspan="1" colspan="1">The Mission's <code>derivation_limit</code> is reached</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>rate_limited</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">429</td>
+              <td class="text-left" rowspan="1" colspan="1">The requester is rate-limited</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>unavailable</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">503</td>
+              <td class="text-left" rowspan="1" colspan="1">The MAS temporarily cannot serve the request</td>
             </tr>
           </tbody>
         </table>
@@ -1886,13 +2082,15 @@ fresh grant under that Mission cures it.<a href="#section-5.4-3" class="pilcrow"
 <p id="section-6-1">The client presents the grant to the consuming AS's token endpoint
 as a JWT authorization grant <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>. The following example shows
 a confidential client that authenticates with a JWT
-(<span><a href="https://rfc-editor.org/rfc/rfc7523#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>); line breaks are for display purposes
-only:<a href="#section-6-1" class="pilcrow">¶</a></p>
+(<span><a href="https://rfc-editor.org/rfc/rfc7523#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>) and proves possession of the grant's
+<code>cnf</code> key with a DPoP proof (<span><a href="https://rfc-editor.org/rfc/rfc9449#section-5" class="relref">Section 5</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>); line breaks
+are for display purposes only:<a href="#section-6-1" class="pilcrow">¶</a></p>
 <div class="lang-http-message sourcecode" id="section-6-2">
 <pre>
 POST /token HTTP/1.1
 Host: as.example.com
 Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
 &amp;assertion=eyJ0eXAiOiJtaXNzaW9uLWlzc3VhbmNlLWdyYW50K2p3dCIs...
@@ -1928,27 +2126,43 @@ material of an <code>iss</code> its local policy trusts for issuance joins;
 and the <code>mission</code> claim's <code>issuer</code> equals <code>iss</code>;<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.1-2.3">
-            <p id="section-6.1-2.3.1"><code>aud</code> names this AS; <code>exp</code> is no more than 300 seconds after
+            <p id="section-6.1-2.3.1">the <code>mission</code> claim carries <code>id</code>, a string in the Mission
+Identifier character set (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Mission Identifier Format"); <code>expires_at</code>, an RFC 3339
+date-time <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> later than the current time; and
+<code>authority_hash</code>, in
+the form of the issuance profile's Section "Integrity Anchors",
+which the consuming AS does not recompute;<a href="#section-6.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-6.1-2.4">
+            <p id="section-6.1-2.4.1"><code>aud</code> is a single string identical to this AS's issuer
+identifier, compared as a literal string with no normalization, so
+an array, a token endpoint URL, or another alias fails; <code>exp</code> is no
+more than 300 seconds after
 <code>iat</code>, compared exactly; <code>iat</code> is not after the current time and
 <code>exp</code> is after it, with the clock-skew leeway of
 <span><a href="https://rfc-editor.org/rfc/rfc7519#section-4.1.4" class="relref">Section 4.1.4</a> of [<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> applied to these two comparisons with
 the current time only; and the <code>jti</code> has not been seen, a seen
 <code>jti</code> being retained until <code>exp</code> plus that leeway passes
-(<a href="#single-use" class="auto internal xref">Section 6.5</a>);<a href="#section-6.1-2.3.1" class="pilcrow">¶</a></p>
+(<a href="#single-use" class="auto internal xref">Section 6.5</a>);<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-6.1-2.4">
-            <p id="section-6.1-2.4.1">the client is the grant's <code>client_id</code> (<a href="#redemption" class="auto internal xref">Section 6</a>): the
+          <li id="section-6.1-2.5">
+            <p id="section-6.1-2.5.1">the client is the grant's <code>client_id</code> (<a href="#redemption" class="auto internal xref">Section 6</a>): the
 authenticated client equals it, or, for a public client, the grant
 carries <code>cnf</code>; and whenever <code>cnf</code> is present, the request proves
 possession of that key, with a DPoP proof
 (<span><a href="https://rfc-editor.org/rfc/rfc9449#section-4.3" class="relref">Section 4.3</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) whose public key has the <code>jkt</code>
 thumbprint or a client certificate on the TLS connection whose
-SHA-256 thumbprint matches the <code>x5t#S256</code> value;<a href="#section-6.1-2.4.1" class="pilcrow">¶</a></p>
+SHA-256 thumbprint matches the <code>x5t#S256</code> value, and presents no
+DPoP proof for any other key (at the PAR endpoint, no <code>dpop_jkt</code>
+other than the <code>jkt</code> value); a client certificate that only
+authenticates the client does not conflict with a <code>jkt</code> value;<a href="#section-6.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-6.1-2.5">
-            <p id="section-6.1-2.5.1"><code>sub</code> maps to a local account under the deployment's mapping
-policy (<a href="#trust" class="auto internal xref">Section 3.2</a>), and the grant's <code>authorization_details</code>
-map to resources this AS serves.<a href="#section-6.1-2.5.1" class="pilcrow">¶</a></p>
+          <li id="section-6.1-2.6">
+            <p id="section-6.1-2.6.1">the (<code>iss</code>, <code>sub</code>) pair maps to a local account under the
+deployment's mapping policy (<a href="#trust" class="auto internal xref">Section 3.2</a>), and every entry of the grant's
+<code>authorization_details</code> is of a type this AS supports and is one it
+serves (<a href="#entry-types" class="auto internal xref">Section 4.2</a>).<a href="#section-6.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 </section>
@@ -1998,13 +2212,26 @@ liveness bound, so access tokens issued under a grant <span class="bcp14">SHOULD
 short-lived (<a href="#security-considerations" class="auto internal xref">Section 12</a>).<a href="#section-6.2-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.2-2.6">
-            <p id="section-6.2-2.6.1"><strong>Effective Authority Set projection.</strong> A consuming AS with a
-Mission-state integration also applies <a href="#effective-set-projection" class="auto internal xref">Section 6.3</a>.<a href="#section-6.2-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-6.2-2.6.1"><strong>Key binding.</strong> When the grant carries <code>cnf</code>, the consuming AS <span class="bcp14">MUST</span>
+bind every access token it issues under the grant, at redemption, at
+code exchange under the PAR carriage, and at each refresh, to that
+confirmation value: as a DPoP-bound access token with <code>token_type</code>
+              <code>DPoP</code> (<span><a href="https://rfc-editor.org/rfc/rfc9449#section-5" class="relref">Section 5</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) for <code>jkt</code>, or as a
+certificate-bound access token (<span><a href="https://rfc-editor.org/rfc/rfc8705#section-3" class="relref">Section 3</a> of [<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) for
+<code>x5t#S256</code>. It <span class="bcp14">MUST NOT</span> issue such a token as a bearer token or bind
+it to any other key. Refresh tokens follow the issuance profile's
+rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Refresh
+Tokens"), and every refresh still proves possession of the grant's
+<code>cnf</code> key (<a href="#refresh" class="auto internal xref">Section 6.3.4</a>).<a href="#section-6.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.2-2.7">
-            <p id="section-6.2-2.7.1"><strong>No re-approval.</strong> The approval event already occurred at the
+            <p id="section-6.2-2.7.1"><strong>Effective Authority Set projection.</strong> A consuming AS with a
+Mission-state integration also applies <a href="#effective-set-projection" class="auto internal xref">Section 6.3</a>.<a href="#section-6.2-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.2-2.8">
+            <p id="section-6.2-2.8.1"><strong>No re-approval.</strong> The approval event already occurred at the
 Mission Issuer. The consuming AS <span class="bcp14">MUST NOT</span> prompt the Subject or
-any user for consent at redemption.<a href="#section-6.2-2.7.1" class="pilcrow">¶</a></p>
+any user for consent at redemption.<a href="#section-6.2-2.8.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-6.2-3">The following is an example of a successful token response:<a href="#section-6.2-3" class="pilcrow">¶</a></p>
@@ -2016,7 +2243,7 @@ Cache-Control: no-store
 
 {
   "access_token": "eyJ0eXAiOiJhdCtqd3QiLCJhbGciOiJFUzI1NiJ9...",
-  "token_type": "Bearer",
+  "token_type": "DPoP",
   "expires_in": 300,
   "authorization_details": [
     {
@@ -2054,16 +2281,39 @@ Effective Authority Set through the Mission Status operation
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) or an equivalent
 state source, and refuse when the Mission is not established
 <code>active</code>. The consuming AS <span class="bcp14">MUST NOT</span> rely on an equivalent source
-unless it is authenticated, is audience-scoped to the resources this
-AS serves, carries the Mission's current <code>authorization_details</code> and
+unless it is authenticated, is audience-scoped to the entries this AS
+serves, carries the Mission's current <code>authorization_details</code> and
 a monotonic state <code>version</code>, and answers within a staleness bound
 the deployment publishes (<a href="#conformance" class="auto internal xref">Section 11</a>).<a href="#section-6.3.1-1" class="pilcrow">¶</a></p>
-<p id="section-6.3.1-2">Through the Mission Status operation, the consuming AS resolves
-authority per resource, not for an audience of its own. For each
-distinct <code>resource</code> value among the grant's <code>mission_resource_access</code>
-entries (on refresh, among the refresh family's ceiling), it sends one
-request whose <code>audience</code> is that <code>resource</code> value, unchanged; the
-Mission Issuer authorizes each audience separately
+<p id="section-6.3.1-2">The consuming AS <span class="bcp14">MUST NOT</span> rely on a response it validated earlier,
+at a later redemption or refresh, unless all of the following hold:<a href="#section-6.3.1-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.3.1-3.1">
+              <p id="section-6.3.1-3.1.1">it is within its reliance bound
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Caching")
+and within the staleness bound the deployment publishes, measured
+from the response's <code>iat</code>, whichever ends first;<a href="#section-6.3.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.3.1-3.2">
+              <p id="section-6.3.1-3.2.1">it is for the same Mission (<code>mission.issuer</code> and <code>mission.id</code>) and
+the same requested audience; and<a href="#section-6.3.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6.3.1-3.3">
+              <p id="section-6.3.1-3.3.1">its <code>version</code> is not below the version the AS has retained for the
+Mission.<a href="#section-6.3.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-6.3.1-4">Where a held response meets these conditions, a transient failure of
+a new request does not refuse the redemption or refresh
+(<a href="#transient-failure" class="auto internal xref">Section 6.3.3</a>).<a href="#section-6.3.1-4" class="pilcrow">¶</a></p>
+<p id="section-6.3.1-5">Through the Mission Status operation, the consuming AS resolves
+authority per entry audience, not for an audience of its own. For
+each distinct audience the grant's entries are relevant to (on
+refresh, the family ceiling's entries), resolved as <a href="#entry-types" class="auto internal xref">Section 4.2</a>
+describes, it sends one request whose <code>audience</code> is that audience
+identifier; it sends an entry's <code>resource</code> value as the <code>audience</code>
+only where that resolution establishes the two are equal. The Mission
+Issuer authorizes each audience separately
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Request").
 The consuming AS validates each response against the audience it
 requested, and <span class="bcp14">MUST</span> combine only responses whose <code>mission.issuer</code>,
@@ -2074,17 +2324,23 @@ one resolution differ in version, the AS re-queries each audience
 whose response is below the highest version collected, without using
 a cached response, up to a bound the deployment configures. Once all
 responses report one version, the AS combines them and retains that
-version. If it still cannot obtain responses at one version within
+version; an entry relevant to several audiences survives only where
+every one of their responses admits it. If it still cannot obtain
+responses at one version within
 the bound, the state source has failed (<a href="#transient-failure" class="auto internal xref">Section 6.3.3</a>). A
-not-found response for an
-audience the grant names means the Mission is not established
-<code>active</code>, and the AS refuses with <code>invalid_grant</code>.<a href="#section-6.3.1-2" class="pilcrow">¶</a></p>
-<p id="section-6.3.1-3">Lifecycle state alone, such as an <code>active</code> state or a Status List
+not-found response for an audience the grant's entries are relevant
+to means the Mission is not established <code>active</code>: the AS refuses
+with <code>invalid_grant</code> and carries no <code>mission_error</code> value, since a
+not-found response establishes only that the AS cannot proceed, not
+that the Mission terminated
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Failed
+Status Checks").<a href="#section-6.3.1-5" class="pilcrow">¶</a></p>
+<p id="section-6.3.1-6">Lifecycle state alone, such as an <code>active</code> state or a Status List
 VALID bit, is not enough from any source, and a source that reports
 only lifecycle state is not a Mission-state integration: containment
 and discharge narrow an active Mission without changing its
 lifecycle state, and a Status List bit carries no
-<code>authorization_details</code>.<a href="#section-6.3.1-3" class="pilcrow">¶</a></p>
+<code>authorization_details</code>.<a href="#section-6.3.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="issued-authority">
@@ -2096,8 +2352,8 @@ lifecycle state, and a Status List bit carries no
 intersection of:<a href="#section-6.3.2-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-6.3.2-2">
 <li id="section-6.3.2-2.1">
-              <p id="section-6.3.2-2.1.1">the grant's <code>authorization_details</code>, or on refresh the refresh
-family's own ceiling (<a href="#refresh" class="auto internal xref">Section 6.3.4</a>);<a href="#section-6.3.2-2.1.1" class="pilcrow">¶</a></p>
+              <p id="section-6.3.2-2.1.1">the grant's <code>authorization_details</code>, or on refresh the family
+ceiling (<a href="#refresh" class="auto internal xref">Section 6.3.4</a>);<a href="#section-6.3.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li id="section-6.3.2-2.2">
               <p id="section-6.3.2-2.2.1">the current Effective Authority Set;<a href="#section-6.3.2-2.2.1" class="pilcrow">¶</a></p>
@@ -2110,23 +2366,23 @@ family's own ceiling (<a href="#refresh" class="auto internal xref">Section 6.3.
               <p id="section-6.3.2-2.4.1">any narrower authority the client requests at the token endpoint.<a href="#section-6.3.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
           </ol>
-<p id="section-6.3.2-3">A partial intersection issues only the remainder. This
-projection precedes scope projection above: an AS that models
-authority as <code>scope</code> maps the narrowed remainder, never the grant's
-original set.<a href="#section-6.3.2-3" class="pilcrow">¶</a></p>
+<p id="section-6.3.2-3">Items 1 to 3 give the surviving authority. Without a narrowing
+requested at the token endpoint (item 4), the AS issues the surviving
+authority, which can be less than the grant's. This projection
+precedes scope projection above: an AS that models authority as
+<code>scope</code> maps the narrowed remainder, never the grant's original set.<a href="#section-6.3.2-3" class="pilcrow">¶</a></p>
 <p id="section-6.3.2-4">An empty intersection is refused by its cause. If items 1 to 3
 already intersect to nothing, the authorization itself is exhausted
-and the AS refuses with <code>invalid_grant</code> (<a href="#redemption-errors" class="auto internal xref">Section 6.6</a>). The
-refusal <span class="bcp14">MAY</span> carry the <code>authority_contained</code> value in the
-<code>mission_denial_reason</code> member where Containment causally removed the
-authority, and a collapse from any other cause <span class="bcp14">MUST NOT</span> be reported
-as containment merely because Containment is composed
+and the AS refuses with <code>invalid_grant</code> (<a href="#redemption-errors" class="auto internal xref">Section 6.6</a>).
+Where Containment is composed, whether the refusal carries its
+<code>authority_contained</code> reason is Containment's rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section "The
 authority_contained Denial Reason"). Where that authorization
-survives and only the narrowing the client requested fails to
-intersect it, the request is at fault: the refusal is <code>invalid_scope</code>
-where the request carried <code>scope</code>, or <code>invalid_authorization_details</code>
-            <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> where it carried <code>authorization_details</code>.<a href="#section-6.3.2-4" class="pilcrow">¶</a></p>
+survives but a narrowing the client requested exceeds it, the
+request is at fault: the refusal is <code>invalid_scope</code> where the request
+carried <code>scope</code>, or <code>invalid_authorization_details</code> <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> where
+it carried <code>authorization_details</code>. The AS <span class="bcp14">MUST NOT</span> truncate such a
+request to the surviving authority.<a href="#section-6.3.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transient-failure">
@@ -2141,9 +2397,11 @@ machine-readable shape: this profile defines a token-endpoint use of
 the OAuth <code>temporarily_unavailable</code> error code <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>
 (<a href="#oauth-error-registration" class="auto internal xref">Section 14.4</a>), carried with HTTP status 503. The
 response <span class="bcp14">MAY</span> carry <code>Retry-After</code> per the deployment's declared
-state-recovery policy. For a per-resource resolution, the version
+state-recovery policy. A held response that meets the conditions of
+<a href="#mission-state-source" class="auto internal xref">Section 6.3.1</a> still satisfies the check, and the failure
+then refuses nothing. For a per-audience resolution, the version
 already observed is the one the AS retained before the resolution
-began (<a href="#mission-state-source" class="auto internal xref">Section 6.3.1</a>). The consuming AS leaves its stored
+began (<a href="#mission-state-source" class="auto internal xref">Section 6.3.1</a>). The consuming AS leaves the family
 ceiling unchanged. On the refresh path a transient source failure
 <span class="bcp14">MUST NOT</span> consume or rotate the presented refresh token, so the
 client retries with the credential it already holds. <code>invalid_grant</code>
@@ -2155,11 +2413,21 @@ stays for the permanent failures (<a href="#redemption-errors" class="auto inter
           <h4 id="name-refresh">
 <a href="#section-6.3.4" class="section-number selfRef">6.3.4. </a><a href="#name-refresh" class="section-name selfRef">Refresh</a>
           </h4>
-<p id="section-6.3.4-1">A refresh family's issued authority <span class="bcp14">MUST NOT</span> widen across refreshes
-within the same Mission: the consuming AS atomically narrows its own
-stored ceiling on every refresh, or retains the highest Mission state
-<code>version</code> it has observed and rejects a source reporting a lower one
-as a rollback.<a href="#section-6.3.4-1" class="pilcrow">¶</a></p>
+<p id="section-6.3.4-1">A refresh family's ceiling <span class="bcp14">MUST NOT</span> widen across refreshes within
+the same Mission, and no token issued in the family exceeds it. The
+consuming AS <span class="bcp14">MUST</span> persist the narrowed family ceiling atomically with
+each successful issuance, and applies
+the rollback test of <a href="#mission-state-source" class="auto internal xref">Section 6.3.1</a> as well: detecting a
+rollback does not replace the persisted ceiling. A refresh that fails
+leaves the family ceiling and the presented refresh token unchanged.
+Concurrent refreshes in one family <span class="bcp14">MUST NOT</span> restore authority that an
+earlier successful issuance in that family removed.<a href="#section-6.3.4-1" class="pilcrow">¶</a></p>
+<p id="section-6.3.4-2">Where the grant carried <code>cnf</code>, each refresh request <span class="bcp14">MUST</span> prove
+possession of that key: a DPoP proof whose public key has the <code>jkt</code>
+thumbprint, or a TLS client certificate whose SHA-256 thumbprint is
+the <code>x5t#S256</code> value, and present no DPoP proof for any other key. The
+consuming AS refuses a refresh request that does not as
+<a href="#redemption-errors" class="auto internal xref">Section 6.6</a> specifies.<a href="#section-6.3.4-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2203,8 +2471,16 @@ code flow carriage, PAR validation is the consuming step instead
 <p id="section-6.6-1">The consuming AS responds to a failed redemption or refresh with an
 error response as defined in <span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>. A grant that
 fails any check of <a href="#grant-validation" class="auto internal xref">Section 6.1</a> is refused with the
-<code>invalid_grant</code> error code (<span><a href="https://rfc-editor.org/rfc/rfc7523#section-3.1" class="relref">Section 3.1</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), and failed
-client authentication with <code>invalid_client</code>. The other refusals are:<a href="#section-6.6-1" class="pilcrow">¶</a></p>
+<code>invalid_grant</code> error code (<span><a href="https://rfc-editor.org/rfc/rfc7523#section-3.1" class="relref">Section 3.1</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), except as the
+next sentence says of DPoP proofs, and failed client authentication
+with <code>invalid_client</code>. At the PAR endpoint, at redemption, at code
+exchange, and at refresh alike, a DPoP proof that fails the checks of
+<span><a href="https://rfc-editor.org/rfc/rfc9449#section-4.3" class="relref">Section 4.3</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> is refused with <code>invalid_dpop_proof</code>, or
+with <code>use_dpop_nonce</code> where the AS requires a nonce
+(<span><a href="https://rfc-editor.org/rfc/rfc9449#section-8" class="relref">Section 8</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>). When the grant carries <code>cnf</code>, a request
+that proves no key, proves a key other than the <code>cnf</code> key, or
+presents a DPoP proof for another key is refused with
+<code>invalid_grant</code>. The other refusals are:<a href="#section-6.6-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
           <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
@@ -2228,13 +2504,13 @@ client authentication with <code>invalid_client</code>. The other refusals are:<
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">The requested <code>scope</code> does not intersect the surviving authority</td>
+              <td class="text-left" rowspan="1" colspan="1">The requested <code>scope</code> exceeds the surviving authority</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>invalid_scope</code>
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">The requested <code>authorization_details</code> does not intersect the surviving authority</td>
+              <td class="text-left" rowspan="1" colspan="1">The requested <code>authorization_details</code> exceeds the surviving authority</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>invalid_authorization_details</code>
 </td>
@@ -2259,7 +2535,7 @@ the client can narrow and re-send under the same grant.<a href="#section-6.6-4.1
 cured by a fresh one (<a href="#minting" class="auto internal xref">Section 5</a>). The other grant validation failures (an
 untrusted issuer, a wrong audience, an unmappable subject or
 authority) are configuration faults that a fresh grant does not
-cure.<a href="#section-6.6-4.2.1" class="pilcrow">¶</a></p>
+cure, and so is a refusal after a Status not-found response.<a href="#section-6.6-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.6-4.3">
             <p id="section-6.6-4.3.1"><strong>Wait.</strong> A <code>suspended</code> Mission refuses until a <code>resume</code> returns it
@@ -2267,12 +2543,14 @@ to <code>active</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-stat
 grant then cures the refusal.<a href="#section-6.6-4.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.6-4.4">
-            <p id="section-6.6-4.4.1"><strong>Stop.</strong> A <code>terminated</code> Mission refuses for good: neither a retry
-nor a fresh grant cures the refusal.<a href="#section-6.6-4.4.1" class="pilcrow">¶</a></p>
+            <p id="section-6.6-4.4.1"><strong>Stop.</strong> A <code>terminated</code> Mission, or one whose <code>expires_at</code> has
+passed, refuses for good: neither a retry nor a fresh grant cures
+the refusal.<a href="#section-6.6-4.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-6.6-5">The AS <span class="bcp14">SHOULD</span> include the issuance profile's <code>mission_error</code> member
-when it refuses because the Mission is not <code>active</code>, so the client can
+when Mission state reports that the Mission is not <code>active</code>, so the
+client can
 tell Wait from Stop: <code>suspended</code> for Wait, and for Stop <code>revoked</code>,
 <code>expired</code>, or <code>superseded</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
 Section "Issuance Gating") or <code>completed</code>
@@ -2300,7 +2578,9 @@ outside PAR. The front channel then carries only <code>client_id</code> and the
 <code>request_uri</code>. Direct redemption at the token endpoint
 (<a href="#redemption" class="auto internal xref">Section 6</a>) is unaffected.<a href="#section-7-2" class="pilcrow">¶</a></p>
 <p id="section-7-3">The AS applies the grant validation of <a href="#grant-validation" class="auto internal xref">Section 6.1</a> at the PAR
-endpoint and treats the grant as the authorization already obtained.
+endpoint, refusing a grant that fails it with the <code>invalid_grant</code>
+error code, which <span><a href="https://rfc-editor.org/rfc/rfc9126#section-2.3" class="relref">Section 2.3</a> of [<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> permits there, and
+treats the grant as the authorization already obtained.
 It <span class="bcp14">MUST NOT</span> re-prompt for consent; at most it renders the Mission
 reference.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <p id="section-7-4">The AS consumes the grant at PAR validation: it records the <code>jti</code> as
@@ -2310,23 +2590,33 @@ request. From then on the <code>request_uri</code>, and then the authorization
 code, carry the authorization; a flow the user abandons, or the AS
 refuses, after PAR validation leaves the grant consumed, and the
 client obtains a fresh grant.<a href="#section-7-4" class="pilcrow">¶</a></p>
-<p id="section-7-5">The grant's window is not re-evaluated at code exchange, since the
+<p id="section-7-5">When the grant carries <code>cnf</code>, the authorization code inherits it. The
+token request at code exchange <span class="bcp14">MUST</span> prove possession of that key, as
+<span><a href="https://rfc-editor.org/rfc/rfc9449#section-10" class="relref">Section 10</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> binds a code to a DPoP key (for <code>jkt</code>), or
+arrive over a mutual-TLS connection with that certificate (for
+<code>x5t#S256</code>, <span><a href="https://rfc-editor.org/rfc/rfc8705#section-3" class="relref">Section 3</a> of [<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>), and present no DPoP proof for
+any other key; the AS refuses a code exchange that does not as
+<a href="#redemption-errors" class="auto internal xref">Section 6.6</a> specifies.<a href="#section-7-5" class="pilcrow">¶</a></p>
+<p id="section-7-6">The grant's window is not re-evaluated at code exchange, since the
 authorization code carries its own lifetime. The other redemption
 rules (<a href="#token-issuance" class="auto internal xref">Section 6.2</a>, <a href="#effective-set-projection" class="auto internal xref">Section 6.3</a> or
 <a href="#no-state-integration" class="auto internal xref">Section 6.4</a>, and <a href="#redemption-errors" class="auto internal xref">Section 6.6</a>) apply at the
 token request unchanged. A
 transient source failure at code exchange refuses
-<code>temporarily_unavailable</code> and <span class="bcp14">MUST NOT</span> consume the authorization code.<a href="#section-7-5" class="pilcrow">¶</a></p>
-<p id="section-7-6">This carriage serves user-delegated Missions
+<code>temporarily_unavailable</code> and <span class="bcp14">MUST NOT</span> consume the authorization code.<a href="#section-7-6" class="pilcrow">¶</a></p>
+<p id="section-7-7">This carriage serves user-delegated Missions
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Authority Sources"),
 where an authenticated resource owner exists to bind. The AS <span class="bcp14">MUST</span>
 refuse the request unless the resource owner authenticated at the
 authorization endpoint is the grant's Subject under the deployment's
 mapping policy (<a href="#trust" class="auto internal xref">Section 3.2</a>), so the grant cannot mint tokens for
-another resource owner. A grant for a service-owned or organizational
+another resource owner. It refuses with the <code>access_denied</code> error
+code (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-4.1.2.1" class="relref">Section 4.1.2.1</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>), redirecting the error to the
+client only where that section allows. A grant for a service-owned
+or organizational
 Mission has no delegating user to authenticate; it is redeemed
 directly (<a href="#redemption" class="auto internal xref">Section 6</a>), not carried through the authorization code
-flow.<a href="#section-7-6" class="pilcrow">¶</a></p>
+flow.<a href="#section-7-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="records">
@@ -2336,8 +2626,9 @@ flow.<a href="#section-7-6" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-8-1">The MAS <span class="bcp14">MUST</span> record each minting with the Mission record: the <code>jti</code>,
 audience, requested and granted entries, any <code>cnf</code>, and time. The
-consuming AS records each issuance under a grant with the grant's
-<code>jti</code>, Mission reference, and <code>authority_hash</code>. Only the <code>jti</code>
+consuming AS <span class="bcp14">MUST</span> record each issuance under a grant, each refresh
+included, with the grant's <code>jti</code>, Mission reference, and
+<code>authority_hash</code>. Only the <code>jti</code>
 identifies the minting: several grants can share a Mission and an
 <code>authority_hash</code>, and the single-use record (<a href="#single-use" class="auto internal xref">Section 6.5</a>) expires
 with the grant's acceptance window. Together the records attribute
@@ -2358,15 +2649,36 @@ within the window its statement declares.<a href="#section-8-2" class="pilcrow">
       <h2 id="name-metadata">
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-metadata" class="section-name selfRef">Metadata</a>
       </h2>
-<p id="section-9-1">A MAS that issues grants publishes the following member in its
+<p id="section-9-1">A MAS that issues grants publishes the following members in its
 metadata (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>, Section
 "Mission Authority Server Metadata"):<a href="#section-9-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-9-2">
+<span class="break"></span><dl class="dlNewline" id="section-9-2">
         <dt id="section-9-2.1">
 <code>mission_issuance_grant_endpoint</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-9-2.2">
           <p id="section-9-2.2.1"><span class="bcp14">REQUIRED</span>. A string containing the URL of the MAS's Mission Issuance
 Grant endpoint (<a href="#minting" class="auto internal xref">Section 5</a>).<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-2.3">
+<code>mission_issuance_grant_endpoint_auth_methods_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-2.4">
+          <p id="section-9-2.4.1"><span class="bcp14">REQUIRED</span>. A JSON array of strings naming the client-authentication
+methods the Mission Issuance Grant endpoint accepts, with the value
+space and meaning of
+<code>mission_submission_endpoint_auth_methods_supported</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-2.5">
+<code>mission_issuance_grant_endpoint_auth_signing_alg_values_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-2.6">
+          <p id="section-9-2.6.1"><span class="bcp14">REQUIRED</span> when
+<code>mission_issuance_grant_endpoint_auth_methods_supported</code> lists
+<code>private_key_jwt</code>. A JSON array of strings: the client-assertion
+algorithms this endpoint accepts, with the meaning of
+<code>mission_submission_endpoint_auth_signing_alg_values_supported</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-9-2.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2401,9 +2713,9 @@ the default value is <code>false</code>.<a href="#section-9-4.2.1" class="pilcro
 Cross-domain projection
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) carries a
 Mission to a Resource AS in another domain, under federation trust
-and identity chaining. The issuance join is the same-estate case,
-with bilateral, pre-configured trust (<a href="#trust" class="auto internal xref">Section 3.2</a>), and requires no
-identity chaining; a deployment does not use it across domains.<a href="#section-10-1" class="pilcrow">¶</a></p>
+and identity chaining. The issuance join is the same-estate case
+(<a href="#trust" class="auto internal xref">Section 3.2</a>), with bilateral, pre-configured trust and no identity
+chaining.<a href="#section-10-1" class="pilcrow">¶</a></p>
 <p id="section-10-2"><strong>Native Mission-aware issuance replaces this grant.</strong> An AS that
 becomes natively Mission-aware implements the issuance profile and
 mints without grants for its own resources. It consumes the record,
@@ -2433,9 +2745,12 @@ grants exactly as <a href="#grant" class="auto internal xref">Section 4</a> requ
 and <a href="#no-state-integration" class="auto internal xref">Section 6.4</a> when it has none, and records each
 issuance (<a href="#records" class="auto internal xref">Section 8</a>). The PAR carriage of <a href="#par-carriage" class="auto internal xref">Section 7</a> is
 <span class="bcp14">OPTIONAL</span>.<a href="#section-11-2" class="pilcrow">¶</a></p>
-<p id="section-11-3">A deployment claiming this profile states the following alongside its
+<p id="section-11-3">A deployment claiming this profile <span class="bcp14">MUST</span> publish a deployment
+statement declaring the following. The declarations are part of its
 Enforcement Scope Statement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>,
-Section "Enforcement Scope and Conformance"):<a href="#section-11-3" class="pilcrow">¶</a></p>
+Section "Enforcement Scope and Conformance") where it publishes one,
+and stand alone otherwise; this profile does not require Runtime. The
+statement declares:<a href="#section-11-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11-4.1">
           <p id="section-11-4.1.1">which authorization servers consume grants, and which of them have
@@ -2471,8 +2786,9 @@ carriage publishes <code>mission_issuance_grant_par_supported</code>
 join.<a href="#section-12-1" class="pilcrow">¶</a></p>
 <p id="section-12-2"><strong>Grant theft.</strong> A grant authorizes issuance, so its defenses are
 layered: a 300-second lifetime, a single-use <code>jti</code>, one audience,
-redemption bound to the Mission's <code>client_id</code>, and optional <code>cnf</code> key
-binding. A stolen grant is useless to any party that cannot also
+redemption bound to the Mission's <code>client_id</code>, and <code>cnf</code> key binding
+whenever the grant request is sender-constrained. A stolen grant is
+useless to any party that cannot also
 authenticate as the recorded client, or prove possession of the <code>cnf</code>
 key, at the named AS within that window. Deployments whose client
 credentials are weak <span class="bcp14">SHOULD</span> require <code>cnf</code> (DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mutual
@@ -2534,7 +2850,7 @@ confusion where the Subject holds accounts at both.<a href="#section-12-7" class
       <h2 id="name-privacy-considerations">
 <a href="#section-13" class="section-number selfRef">13. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-13-1">The grant carries the Mission reference, the recorded <code>sub</code> and
+<p id="section-13-1">The grant carries the Mission reference, the Subject's <code>sub</code>, the
 <code>client_id</code>, and an authority subset to the consuming AS, which may
 be operated by a different organizational unit than the MAS.
 Minimization is structural: the MAS scopes <code>authorization_details</code>
@@ -2643,6 +2959,33 @@ endpoint<a href="#section-14.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-14.2-2.4">
             <p id="section-14.2-2.4.1">Specification Document(s): <a href="#metadata" class="auto internal xref">Section 9</a> of this document<a href="#section-14.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.2-2.5">
+            <p id="section-14.2-2.5.1">Metadata Name: <code>mission_issuance_grant_endpoint_auth_methods_supported</code><a href="#section-14.2-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.2-2.6">
+            <p id="section-14.2-2.6.1">Metadata Description: Client-authentication methods the Mission
+Issuance Grant endpoint accepts<a href="#section-14.2-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.2-2.7">
+            <p id="section-14.2-2.7.1">Change Controller: IETF<a href="#section-14.2-2.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.2-2.8">
+            <p id="section-14.2-2.8.1">Specification Document(s): <a href="#metadata" class="auto internal xref">Section 9</a> of this document<a href="#section-14.2-2.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.2-2.9">
+            <p id="section-14.2-2.9.1">Metadata Name:
+<code>mission_issuance_grant_endpoint_auth_signing_alg_values_supported</code><a href="#section-14.2-2.9.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.2-2.10">
+            <p id="section-14.2-2.10.1">Metadata Description: Client-assertion signing algorithms the
+Mission Issuance Grant endpoint accepts<a href="#section-14.2-2.10.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.2-2.11">
+            <p id="section-14.2-2.11.1">Change Controller: IETF<a href="#section-14.2-2.11.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.2-2.12">
+            <p id="section-14.2-2.12.1">Specification Document(s): <a href="#metadata" class="auto internal xref">Section 9</a> of this document<a href="#section-14.2-2.12.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -2770,6 +3113,10 @@ Mission Issuance Grant parameter in Pushed Authorization Requests<a href="#secti
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC3339">[RFC3339]</dt>
+        <dd>
+<span class="refAuthor">Klyne, G.</span> and <span class="refAuthor">C. Newman</span>, <span class="refTitle">"Date and Time on the Internet: Timestamps"</span>, <span class="seriesInfo">RFC 3339</span>, <span class="seriesInfo">DOI 10.17487/RFC3339</span>, <time datetime="2002-07" class="refDate">July 2002</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc3339">https://www.rfc-editor.org/rfc/rfc3339</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC6749">[RFC6749]</dt>
         <dd>
 <span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
@@ -2823,8 +3170,12 @@ Mission Issuance Grant parameter in Pushed Authorization Requests<a href="#secti
 <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9449">[RFC9449]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Fett, D.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">D. Waite</span>, <span class="refTitle">"OAuth 2.0 Demonstrating Proof of Possession (DPoP)"</span>, <span class="seriesInfo">RFC 9449</span>, <span class="seriesInfo">DOI 10.17487/RFC9449</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9449">https://www.rfc-editor.org/rfc/rfc9449</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9728">[RFC9728]</dt>
+      <dd>
+<span class="refAuthor">Jones, M.B.</span>, <span class="refAuthor">Hunt, P.</span>, and <span class="refAuthor">A. Parecki</span>, <span class="refTitle">"OAuth 2.0 Protected Resource Metadata"</span>, <span class="seriesInfo">RFC 9728</span>, <span class="seriesInfo">DOI 10.17487/RFC9728</span>, <time datetime="2025-04" class="refDate">April 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9728">https://www.rfc-editor.org/rfc/rfc9728</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -2835,6 +3186,10 @@ Mission Issuance Grant parameter in Pushed Authorization Requests<a href="#secti
 <a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-ietf-oauth-rfc7523bis">[I-D.draft-ietf-oauth-rfc7523bis]</dt>
+        <dd>
+<span class="refAuthor">Jones, M. B.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Mortimore, C.</span>, and <span class="refAuthor">F. Skokan</span>, <span class="refTitle">"Updates to OAuth 2.0 JSON Web Token (JWT) Client Authentication and Assertion-Based Authorization Grants"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-rfc7523bis-11</span>, <time datetime="2026-04-28" class="refDate">28 April 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rfc7523bis-11">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-rfc7523bis-11</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-mandate">[I-D.draft-mcguinness-mission-mandate]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Mandate"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html</a>&gt;</span>. </dd>
@@ -2876,12 +3231,33 @@ Mission Issuance Grant parameter in Pushed Authorization Requests<a href="#secti
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Redemption Errors separates a <code>suspended</code> Mission, which a <code>resume</code>
-restores and a fresh grant then cures, from a <code>terminated</code> one,
-which neither a retry nor a fresh grant cures. The <code>mission_error</code>
-values follow the lifecycle migration and include <code>suspended</code> and
-<code>completed</code>, and <code>mission_not_active</code> at the MAS is no longer called
-an unconditional signal to stop. No requirement changes.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Normative follow-ups to the tightening pass (D685). The grant
+admits any supported authorization-details type under that type's
+semantics and fails closed on an unsupported transformation. Its
+<code>sub</code> is an injective MAS-local mapping of the recorded Subject, and
+its <code>aud</code> is the consuming AS's issuer identifier only. Grant
+Validation checks the required <code>mission</code> members. The grant
+endpoint carries client assertions in JSON, advertises its
+authentication methods, defines its own error codes, and always
+binds a verified sender constraint into <code>cnf</code>; a <code>cnf</code> grant yields
+key-bound access tokens through code exchange and refresh. A
+requested narrowing that exceeds the surviving authority is
+refused, not truncated. The refresh family and its ceiling are
+defined, and the ceiling is persisted at every issuance. A Status
+not-found refusal carries no <code>mission_error</code>, and reliance on a
+cached Status response is bounded, a held response that still meets
+those bounds survives a transient failure, Status requests name each
+entry's resolved audience rather than its <code>resource</code>, and an entry
+relevant to several audiences survives only where all of them admit
+it. The
+grant endpoint publishes Protected Resource Metadata with its DPoP
+algorithms, accepts <code>client_id</code> for mutual TLS, and verifies any
+DPoP proof presented; DPoP error codes are the same at the grant
+endpoint, the PAR endpoint, redemption, code exchange and refresh.
+PAR errors are named, the consuming AS's issuance record is a
+requirement, the causal-attribution rule for <code>authority_contained</code>
+moves to Containment, the scope statement moves to Trust, and a
+deployment statement is required.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
           <p id="appendix-A-2.2.1">Tightened throughout with no requirement change. Each rule has one
@@ -2901,6 +3277,14 @@ The equivalent-source properties bind the consuming AS. The Mission
 Authority Server Metadata registration uses that registry's
 template fields. The Substrate, Architecture, and Consent Evidence
 references are removed.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Redemption Errors separates a <code>suspended</code> Mission, which a <code>resume</code>
+restores and a fresh grant then cures, from a <code>terminated</code> one,
+which neither a retry nor a fresh grant cures. The <code>mission_error</code>
+values follow the lifecycle migration and include <code>suspended</code> and
+<code>completed</code>, and <code>mission_not_active</code> at the MAS is no longer called
+an unconditional signal to stop. No requirement changes.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
