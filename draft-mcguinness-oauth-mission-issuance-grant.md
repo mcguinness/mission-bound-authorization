@@ -841,8 +841,8 @@ at a later redemption or refresh, unless all of the following hold:
 
 - it is within its reliance bound
   ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Caching")
-  and within the staleness bound the deployment publishes, whichever
-  ends first;
+  and within the staleness bound the deployment publishes, measured
+  from the response's `iat`, whichever ends first;
 - it is for the same Mission (`mission.issuer` and `mission.id`) and
   the same requested audience; and
 - its `version` is not below the version the AS has retained for the
@@ -928,7 +928,9 @@ machine-readable shape: this profile defines a token-endpoint use of
 the OAuth `temporarily_unavailable` error code {{RFC6749}}
 ({{oauth-error-registration}}), carried with HTTP status 503. The
 response MAY carry `Retry-After` per the deployment's declared
-state-recovery policy. For a per-audience resolution, the version
+state-recovery policy. A held response that meets the conditions of
+{{mission-state-source}} still satisfies the check, and the failure
+then refuses nothing. For a per-audience resolution, the version
 already observed is the one the AS retained before the resolution
 began ({{mission-state-source}}). The consuming AS leaves the family
 ceiling unchanged. On the refresh path a transient source failure
