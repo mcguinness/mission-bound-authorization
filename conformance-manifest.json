@@ -37433,7 +37433,7 @@
    "id": "issuance-grant.effective-set-projection.fail-closed-source",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "A source that is unavailable, fails verification, or reports a state\n`version` older than one already observed for this Mission is a\ntransient failure, never authority exhaustion, and is refused in a\nmachine-readable shape: this profile defines a token-endpoint use of\nthe OAuth `temporarily_unavailable` error code",
+   "text": "A source that is unavailable or rate-limited (Mission Status's `unavailable` or `rate_limited`), fails verification, or reports a state `version` older than one already observed for this Mission is a transient failure, never authority exhaustion, and is refused in a machine-readable shape: this profile defines a token-endpoint use of the OAuth `temporarily_unavailable` error code",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37444,7 +37444,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an Effective Authority Set source that is unavailable, unverifiable, or reports a rolled-back state version is refused with the OAuth temporarily_unavailable error code and HTTP status 503 (machine-readable, not an error_description to parse), optionally carrying Retry-After, and is never treated as authority exhaustion nor reported as invalid_grant",
+    "normative": "an Effective Authority Set source that is unavailable or rate-limited (Mission Status unavailable or rate_limited), unverifiable, or reports a rolled-back state version is refused with the OAuth temporarily_unavailable error code and HTTP status 503 (machine-readable, not an error_description to parse), optionally carrying Retry-After under the deployment's state-recovery policy, and is never treated as authority exhaustion nor reported as invalid_grant",
     "local": "the authority source is an injectable seam (AdapterOptions.authoritySource over kernel/derive.ts's EffectiveAuthoritySource); a source raising SourceUnavailableError maps to temporarily_unavailable/503 with Retry-After (provider.ts sourceUnavailableError plus the header middleware, continuation-grant.ts txError for the custom grants). The tests drive an injected failing source, which is the only way to reach the class here: the local kernel is the authoritative record and can be neither unreachable nor unverifiable to itself, and the rolled-back-version trigger has no external replica to roll back, so the discrimination BETWEEN the three triggers is the source's own duty and stays unobserved"
    },
    "level": "endpoint",
