@@ -2348,13 +2348,6 @@ The grant binding relates to other mechanisms as follows:
   own under the same rules, not an extension of the origin Mission's
   binding. They relate to their origin only by lineage (the
   child's `parent` member, the successor's `predecessor` member).
-- **Continuation handles.** A continuation handle and a
-  refresh-token family
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}) are
-  credential machinery rooted in one Mission, not the Mission
-  itself: they confer no authority of their own, and a live
-  derivation re-resolves the reference they carry against the
-  Mission's current state.
 
 A grant binding is also distinct from a decision-time runtime join, such
 as the Mission Join of
