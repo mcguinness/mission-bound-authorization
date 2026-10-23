@@ -2,9 +2,9 @@ name: impl-ci
 on:
   push:
     branches: [main]
-    paths: ['src/**', '.github/workflows/impl-ci.yml']
+    paths: ['src/**', 'vectors/**', 'draft-mcguinness-oauth-mission-resource-access.md', '.github/workflows/impl-ci.yml']
   pull_request:
-    paths: ['src/**', '.github/workflows/impl-ci.yml']
+    paths: ['src/**', 'vectors/**', 'draft-mcguinness-oauth-mission-resource-access.md', '.github/workflows/impl-ci.yml']
 jobs:
   test:
     runs-on: ubuntu-latest

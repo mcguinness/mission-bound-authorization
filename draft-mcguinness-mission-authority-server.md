@@ -465,9 +465,11 @@ served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
 recommendations of {{RFC9325}}. The endpoint MUST authenticate the
 client using the authentication mechanisms of the Mission Status
 endpoint ({{I-D.draft-mcguinness-oauth-mission-status}}): mTLS client
-authentication, a DPoP- or mTLS-bound access token, or private-key JWT,
-with a token's audience and a client assertion's `aud` naming this
-endpoint. The MAS advertises the accepted methods in the
+authentication, a DPoP- or mTLS-bound access token, or private-key JWT.
+An access token's audience names this endpoint, and a client
+assertion's `aud` is the MAS's issuer identifier as its sole value,
+the client-authentication audience Mission Status requires. The MAS
+advertises the accepted methods in the
 `mission_submission_endpoint_auth_methods_supported` metadata member
 ({{discovery}}).
 
@@ -738,11 +740,12 @@ nothing, and no MAS surface derives authority from possession of it.
 
 ## Error Responses {#submission-errors}
 
-On a hard failure, the MAS returns the matching HTTP status with a
-JSON object body:
+On a hard failure, an endpoint this document defines returns the
+matching HTTP status with a JSON object body:
 
 `error`:
-: REQUIRED. A string. A code from the table below.
+: REQUIRED. A string. A code from the table below, or, at an endpoint
+  a companion profile defines, a code that profile defines.
 
 `error_description`:
 : OPTIONAL. A string. Human-readable detail.
@@ -784,9 +787,13 @@ visible still receives `not_found`.
 | `unavailable` | 503 | submission, join assertion | MAS temporarily cannot serve the request. |
 {: title="MAS error codes"}
 
-A companion profile's machine-readable codes are carried in the
-members {{native-carriage}} names (`mission_expansion_status` and
-`mission_denial_reason`), not as additional `error` values.
+At the endpoints this document defines, a companion profile's
+machine-readable codes are carried in the members {{native-carriage}}
+names (`mission_expansion_status` and `mission_denial_reason`), not as
+additional `error` values. An endpoint a companion profile defines,
+such as the Mission Issuance Grant endpoint
+({{I-D.draft-mcguinness-oauth-mission-issuance-grant}}), returns this
+object with the codes that profile defines.
 
 These responses follow the OAuth-shaped surfaces' shared error idiom
 {{I-D.draft-mcguinness-oauth-mission-status}}: a JSON object body with
@@ -1527,8 +1534,10 @@ authentication methods and client-assertion algorithms advertised in
 `mission_submission_endpoint_auth_methods_supported` and
 `mission_submission_endpoint_auth_signing_alg_values_supported`.
 
-A client assertion's `aud` claim and a caller-authentication access
-token's audience MUST name the join-assertion endpoint.
+A caller-authentication access token's audience MUST name the
+join-assertion endpoint, and a client assertion's `aud` MUST be the
+MAS's issuer identifier as its sole value, as at the mission
+submission endpoint ({{mission-submission}}).
 
 For access-token authentication, the MAS publishes Protected Resource
 Metadata {{RFC9728}} for this endpoint, identifying its resource,
@@ -3451,6 +3460,13 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- A client assertion's `aud` at the mission submission and
+  join-assertion endpoints is the MAS's issuer identifier as its sole
+  value, the client-authentication audience Mission Status requires.
+  Error Responses' code table and its restriction on companion codes
+  apply to the endpoints this document defines; an endpoint a
+  companion defines, such as the Mission Issuance Grant endpoint,
+  uses the same error object with its own codes (D685).
 - Editorial: Mission Join states that, because the Mission is named
   per request, one credential can be joined to different Missions
   across requests; the sentence moved here from the OAuth binding's
