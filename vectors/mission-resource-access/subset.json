@@ -1413,6 +1413,46 @@
         "#1595",
         "D727"
       ]
+    },
+    {
+      "id": "sub-cur-05",
+      "description": "The candidate carries a lower-case currency and the reference carries no cap",
+      "role": "authorization-server",
+      "requires": [
+        "subset.exact-resource",
+        "constraint.max_amount"
+      ],
+      "check": "subset",
+      "input": {
+        "candidate": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "max_amount": {
+              "amount": "100.00",
+              "currency": "usd"
+            }
+          }
+        },
+        "reference": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a candidate-only cap is validated too: its malformed currency prevents the comparison, never passing as a narrowing"
+      },
+      "refs": [
+        "#1595",
+        "D727"
+      ]
     }
   ]
 }

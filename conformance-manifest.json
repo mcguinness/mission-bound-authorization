@@ -46801,7 +46801,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the authorization server compares currency values exactly: values differing in case or whitespace are never equal, a malformed value equals nothing, even itself, and no mapping folds a value's case on the way out or back",
-    "local": "isSubsetEntry refuses a malformed currency on either side before comparing; the AAT root mapping names amount_<code> only for a well-formed code and reads back only three lower-case letters; the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
+    "local": "isSubsetEntry validates every present cap on either side, whether or not the other carries one, before comparing; the AAT root mapping names amount_<code> only for a well-formed code and reads back only three lower-case letters; the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
    },
    "level": "unit",
    "coverage": "tested",
@@ -46819,6 +46819,12 @@
      "surface": "derivation"
     },
     {
+     "file": "src/packages/mission-core/test/authority-subset.test.ts",
+     "name": "a max_amount currency is exactly three upper-case ASCII letters (#1595, D727) > isSubsetEntry refuses a malformed cap on either side when the other side carries none",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
      "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapAuthorityToTools refuses a malformed currency rather than naming an argument for it",
      "level": "unit",
@@ -46831,7 +46837,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's currency check fails the byte-identical witness; letting the root mapping name any string, or folding the read-back suffix to upper case, fails its attenuation witness."
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's check of every present cap, made before any comparison, fails the byte-identical and the uncapped-side witnesses (#1595 review: a candidate-only usd cap against an uncapped reference had passed); letting the root mapping name any string, or folding the read-back suffix to upper case, fails its attenuation witness."
   },
   {
    "id": "resource-access.common-constraints.max-amount-currency-unassigned-admitted",
@@ -52166,9 +52172,15 @@
      "name": "isSubsetEntry compares max_amount by exact decimal value, not IEEE-754 float > a malformed proposed max_amount refuses derivation (IntentError), never silently coerced",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-subset.test.ts",
+     "name": "a max_amount currency is exactly three upper-case ASCII letters (#1595, D727) > isSubsetEntry refuses a malformed cap on either side when the other side carries none",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "Decimal Values residue (owner's \"resolve\", 2026-10-22): the section's obligations had no rows besides the submission refusal (#1529). Proved by mutation: removing the malformed-amount checks from the subset rule (authority-subset.ts) and from derivation (derive.ts) fails both witnesses."
+   "notes": "Decimal Values residue (owner's \"resolve\", 2026-10-22): the section's obligations had no rows besides the submission refusal (#1529). Proved by mutation: removing the malformed-amount checks from the subset rule (authority-subset.ts) and from derivation (derive.ts) fails both witnesses. #1595 review: a candidate-only cap with a malformed amount, against an uncapped granted entry, had passed as a subset; isSubsetEntry now validates every present cap before comparing, witnessed by the uncapped-side test."
   },
   {
    "id": "resource-access.decimal-values.rs-malformed-unenforceable",

@@ -411,6 +411,31 @@ describe("a max_amount currency is exactly three upper-case ASCII letters (#1595
     }
   });
 
+  it("isSubsetEntry refuses a malformed cap on either side when the other side carries none", () => {
+    const uncapped = { ...entry } as AuthorityEntry;
+    const bad: [string, unknown][] = [
+      ...malformed.map(
+        (currency) =>
+          [`currency ${JSON.stringify(currency)}`, { amount: "100.00", currency }] as [
+            string,
+            unknown,
+          ],
+      ),
+      ["amount 1e3", { amount: "1e3", currency: "USD" }],
+      ["amount as a JSON number", { amount: 840, currency: "USD" }],
+      ["a member beside amount and currency", { amount: "100.00", currency: "USD", extra: true }],
+      ["null", null],
+    ];
+    for (const [label, cap] of bad) {
+      const withCap = { ...entry, constraints: { max_amount: cap } } as AuthorityEntry;
+      expect(isSubsetEntry(withCap, uncapped), `candidate ${label}`).toBe(false);
+      expect(isSubsetEntry(uncapped, withCap), `reference ${label}`).toBe(false);
+    }
+    // A well-formed candidate-only cap narrows, as before.
+    expect(isSubsetEntry(capped("USD"), uncapped)).toBe(true);
+    expect(isSubsetEntry(capped("XYZ"), uncapped)).toBe(true);
+  });
+
   it("isSubsetEntry compares well-formed codes exactly, with no case folding or conversion", () => {
     expect(isSubsetEntry(capped("XYZ"), capped("XYZ", "500.00"))).toBe(true);
     expect(isSubsetEntry(capped("XYZ"), capped("XYA", "500.00"))).toBe(false);
