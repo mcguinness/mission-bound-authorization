@@ -31,6 +31,7 @@ normative:
   RFC3339:
   RFC6838:
   RFC7519:
+  RFC7523:
   RFC7638:
   RFC8705:
   RFC7662:
@@ -475,6 +476,34 @@ advertises the accepted methods in the
 
 Client registration with a MAS is deployment-defined. The MAS records
 the client identifier it authenticates as the Mission's `client_id`.
+
+A request whose body is `application/json` carries the client
+authentication parameters of the mechanism it uses as top-level JSON
+string members, with the values Mission Status defines for them as
+form parameters ({{I-D.draft-mcguinness-oauth-mission-status}},
+Section "Authentication"): `client_id` with mTLS client
+authentication, and `client_assertion_type` and `client_assertion`
+with private-key-JWT client authentication
+({{Section 2.2 of RFC7523}}). These are request-level members, not
+members of the Mission Intent Submission envelope or the Intent. The
+MAS MUST remove them, and authenticate the request with them, before
+it validates the rest of the body, so a partial or unverifiable pair
+fails client authentication (`invalid_client`) and is never refused
+as an undefined member. They never enter the Intent, the authority
+proposal, its `proposal_hash`, the integrity anchors, or any
+submission evidence. This excludes the parameters, not the identity
+they establish: the MAS still records the client identifier it
+authenticates as the Mission's `client_id`. Every other top-level
+member is validated as {{intent-submission}} and {{native-carriage}}
+define, and an undefined one is still refused with
+`invalid_mission_intent`.
+
+After request media-type dispatch, an intent-submission or
+join-assertion request whose JSON body cannot be parsed as an object
+is refused before authentication: `invalid_mission_intent` for intent
+submission, or `invalid_join_request` for a join assertion
+({{join-assertion-request}}). Once an object is parsed,
+authentication precedes validation of its remaining members.
 
 The endpoint serves two operations, dispatched by request media type:
 
@@ -1538,6 +1567,11 @@ A caller-authentication access token's audience MUST name the
 join-assertion endpoint, and a client assertion's `aud` MUST be the
 MAS's issuer identifier as its sole value, as at the mission
 submission endpoint ({{mission-submission}}).
+
+The request body carries the client authentication parameters as at
+the mission submission endpoint ({{mission-submission}}): they are
+not members of the join request, and the request validation of
+{{join-assertion-request}} applies to the remaining members.
 
 For access-token authentication, the MAS publishes Protected Resource
 Metadata {{RFC9728}} for this endpoint, identifying its resource,
@@ -3460,6 +3494,18 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- After request media-type dispatch, an intent-submission or
+  join-assertion request whose JSON body cannot be parsed as an
+  object gets that operation's syntax error code before
+  authentication; once an object is parsed, authentication precedes
+  validation of its remaining members (#1581, following D704).
+- A JSON request body carries the client authentication parameters
+  of Mission Status's mechanisms as request-level members. The MAS
+  removes them and authenticates with them before it validates the
+  rest of the body, so they never enter the Intent or its
+  commitments, while the authenticated client is still recorded as
+  the Mission's `client_id`. The join-assertion endpoint inherits the
+  rule (#1581, D702).
 - A client assertion's `aud` at the mission submission and
   join-assertion endpoints is the MAS's issuer identifier as its sole
   value, the client-authentication audience Mission Status requires.
