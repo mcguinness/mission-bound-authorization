@@ -609,6 +609,20 @@ describe("who presents which proof (@spec mission#designation, mission#delegatio
     expect(derivations(on, missionId)).toBe(before);
   });
 
+  it("a redemption whose DPoP proof presents the delegate's key but is signed by another key is refused invalid_dpop_proof, issuing nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = (await designate(on, accessToken, SUBAGENT)).body.access_token as string;
+    const before = derivations(on, missionId);
+    // The proof's header carries the delegate's public key; the signature is another key's.
+    const stranger = await generateKeyPair("ES256", { extractable: true });
+    const forged: Keys = { publicKey: (dpop.get(SUBAGENT) as Keys).publicKey, privateKey: stranger.privateKey };
+    const res = await redeem(on, designation, SUBAGENT, forged);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_dpop_proof");
+    expect(res.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
   it("a client the designation does not name cannot redeem it", async () => {
     const { missionId, accessToken } = await baseMission(on);
     const designation = (await designate(on, accessToken, SUBAGENT)).body.access_token as string;
