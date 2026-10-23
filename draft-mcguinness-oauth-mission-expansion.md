@@ -789,6 +789,15 @@ completes synchronously in the token-exchange response, which returns
 the successor's access token. One that falls back to a fresh human
 approval completes in one of the two modes above.
 
+Whatever the mode, the successor's grant binding is the lineage of the
+first credential that completion returns: the access token the poll
+resolves to (deferred), the authorization code the client redeems
+(interactive), or the access token in the token-exchange response (an
+in-ceiling drawdown). That binding is the successor's own, never an
+extension of the predecessor's
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Grant Bindings and
+Related Mechanisms").
+
 In either mode, obtaining the fresh approval follows the issuance
 profile's approval event. The Mission Issuer:
 

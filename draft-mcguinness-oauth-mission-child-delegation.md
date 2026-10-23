@@ -673,6 +673,12 @@ Interactive:
 
 The child grant reference conveyed at completion is the child-bound JWT
 authorization grant of {{child-client-identity}}, never a child token.
+Whatever the mode, the Child Mission's grant binding is the lineage
+that the child actor's redemption of that grant establishes, not the
+parent's exchange. That binding is the child's own, never an extension
+of the parent's
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Grant Bindings and
+Related Mechanisms").
 
 ## Protocol Flow {#protocol-flow}
 

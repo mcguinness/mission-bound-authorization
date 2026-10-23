@@ -58154,6 +58154,27 @@
    "notes": "#1304 (D486). Proven by disabling the code it covers (each mutation restored byte for byte): backfilling the replacement with list origins, and rendering the prospective replacement parent with list origins, each fail a witness here."
   },
   {
+   "id": "child-delegation.completion.child-grant-binding-at-redemption",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "completion",
+   "text": "Whatever the mode, the Child Mission's grant binding is the lineage that the child actor's redemption of that grant establishes, not the parent's exchange. That binding is the child's own, never an extension of the parent's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the child-creation exchange binds no grant lineage to the Child Mission; the child actor's redemption of the child-bound grant establishes the child's own lineage, and no step extends the parent's grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1557 cold readers' follow-up. The reference AS creates the Child Mission with no grant and binds the child's own grant at the child actor's JWT-bearer redemption. No test asserts that the redemption's grant is the child's and differs from the parent's, and the reference AS implements only synchronous creation."
+  },
+  {
    "id": "child-delegation.carryover.expansion-disclosure",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "predecessor-children",
@@ -61880,6 +61901,32 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1177. Accepted as todo by D591: a client-role row, and no reference client implements expansion."
+  },
+  {
+   "id": "expansion.completion.successor-grant-binding-own",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "Whatever the mode, the successor's grant binding is the lineage of the first credential that completion returns: the access token the poll resolves to (deferred), the authorization code the client redeems (interactive), or the access token in the token-exchange response (an in-ceiling drawdown). That binding is the successor's own, never an extension of the predecessor's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "expansion.adjudication",
+     "expansion.interactive-completion",
+     "progressive.ceiling-drawdown"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the credential an expansion's completion returns is bound to a grant lineage of the successor's own: a derivation against it resolves to the successor, and no completion extends the predecessor's grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1557 cold readers' follow-up. The reference AS creates the successor with no grant and binds a fresh grant to it at its first access-token mint, on the deferred poll and the in-ceiling drawdown alike, without reusing the predecessor's grant. No test asserts that the successor's grant differs from the predecessor's, and the reference AS implements no interactive completion."
   },
   {
    "id": "expansion.successor-expiry.completion-codes",
