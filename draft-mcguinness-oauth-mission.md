@@ -2336,13 +2336,11 @@ The grant binding relates to other mechanisms as follows:
   new grant binding, rooted in that same Mission.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
-  no destination-side grant binding. The cross-domain grant a
-  Resource AS consumes is single-use and confers no standing
-  authority in the partner domain, and the local access token it
-  mints there is a derived token: it identifies the one originating
-  Mission (`mission.id`, `mission.issuer`) but is not backed by a
-  persistent local lineage. A Resource AS that needs the projected
-  Mission again is presented a fresh cross-domain grant.
+  no destination-side grant binding. A Resource AS consumes the
+  cross-domain grant, and the local access token it mints there is a
+  derived token: it identifies the one originating Mission
+  (`mission.id`, `mission.issuer`) but is not backed by a persistent
+  local lineage.
 - **Child Missions and successors.** A Child Mission
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) and an
   expansion successor
@@ -2351,21 +2349,12 @@ The grant binding relates to other mechanisms as follows:
   own under the same rules, not an extension of the origin Mission's
   binding. They relate to their origin only by lineage (the
   child's `parent` member, the successor's `predecessor` member).
-- **Continuation handles.** A continuation handle and a
-  refresh-token family
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}) are
-  credential machinery rooted in one Mission, not the Mission
-  itself: they confer no authority of their own, and a live
-  derivation re-resolves the reference they carry against the
-  Mission's current state.
 
 A grant binding is also distinct from a decision-time runtime join, such
 as the Mission Join of
 {{I-D.draft-mcguinness-mission-authority-server}}, in which a policy
 decision point joins an ordinary OAuth credential to a Mission per
-request. The same credential can be joined to different Missions across
-separate requests where its subject and client are eligible for more
-than one.
+request.
 
 Such a join is not a Mission grant binding: it does not make the joined
 OAuth grant Mission-bound, and it rests on its own authenticated inputs
@@ -3884,24 +3873,12 @@ A companion profile can generalize approval to a named
 standing-consent basis. Under it, a template or policy activates
 Mission instances against an accountable human's earlier approval,
 with no fresh human approval per instance; each instance is still
-created at its own approval event ({{approval-event}}). The following
-`approval_basis.type` values ({{record-principal-members}}) are such
-bases:
-
-- `template` ({{I-D.draft-mcguinness-oauth-mission-template}}):
-  bounded instances of a recurring task;
-- `policy_drawdown`
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): Child
-  Missions that a parent agent requests and a policy adjudicates with
-  no human interaction, rooted in the Parent Mission's accountable
-  human;
-- `ceiling_drawdown`
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}}): successor
-  Missions within a previously approved authority ceiling as a task
-  evolves; and
-- `governed_policy`
-  ({{I-D.draft-mcguinness-mission-approval-governance}}): an agent's
-  own proposals, decided by a policy version that a human approved.
+created at its own approval event ({{approval-event}}). The companion
+profile defines the basis's `approval_basis.type` value
+({{record-principal-members}});
+{{I-D.draft-mcguinness-mission-architecture}} (Section "Mission
+Invariants") lists the standing-consent bases that companion profiles
+define.
 
 For a standing-consent `type`, `activation` takes the shape that its
 companion profile defines, and `activation_actor` names a dispatching
@@ -4241,14 +4218,7 @@ The following subsections define the record's members.
   covers it
   ({{integrity-anchors}}); a profile that commits the Mission Record
   itself covers it under that profile's own anchor. Two optional
-  profiles commit it ({{consent-binding}}). Mission Audit
-  Transparency's approval-event registration
-  ({{I-D.draft-mcguinness-mission-audit}}) covers the record at
-  creation except its `state` and `termination`. Approval Governance's
-  Approval Context Commitment
-  ({{I-D.draft-mcguinness-mission-approval-governance}}) covers a
-  closed manifest of creation facts that includes `approval_basis`.
-  Its disclosure
+  profiles commit it ({{consent-binding}}). Its disclosure
   through introspection follows
   {{caller-authorization-and-minimization}}. It is not carried on the
   baseline `mission` claim ({{mission-claim}}), and it MUST NOT be
@@ -5436,26 +5406,13 @@ The aggregate surface that a Mission's descendants can reach (the
 product of delegation depth, the number of trust domains projected into,
 and the number of child generations, each bounded independently) can
 therefore exceed what a single approval appears to bound at consent
-time.
-
-Child Delegation's `max_children` and `max_child_depth` limit the
-descendant Missions live at once, not those created over the root's
-lifetime: a child that terminates frees its slot
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}};
-{{I-D.draft-mcguinness-oauth-mission-derivation-limits}} works an
-example).
-
-Cross-domain projection composes separately: a projected grant preserves
-the Mission's lineage rather than rooting a new one, and the Resource
-AS's local issuance under it is bounded by that grant's own lifetime and
-local policy.
-
-At the consent surface, a deployment can disclose the subtree's
-figures, not only the immediate Mission's, as distinct values rather
-than one composed total
+time. {{I-D.draft-mcguinness-mission-security-model}} analyzes this
+composition, including why per-Mission child limits do not add up to a
+lifetime total, and the child-delegation profile states how an
+approval renders the subtree's figures
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Where a
-single approval's apparent bound must hold in practice, it can impose
-a global cap out of band.
+single approval's apparent bound must hold in practice, a deployment
+can impose a global cap out of band.
 
 Bounding aggregate consumption (calls, spend, or activity over the life
 of a Mission and its descendants) is the metering profile's role
@@ -5464,22 +5421,15 @@ of a Mission and its descendants) is the metering profile's role
 ### Authority Materialized Before Containment {#the-containment-materialized-capability-residual}
 
 Where a deployment runs the Mission Containment profile
-({{I-D.draft-mcguinness-oauth-mission-containment}}), containment
-narrows the authority available from an entry for later derivations;
-the approved Authority Set and its commitments remain unchanged.
-Containment also propagates to Child Missions justified by that entry.
-
-Containment does not reach authority materialized before the
-containment transition. A cross-domain grant already redeemed at a
-Resource AS ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or
-an offline attenuation root already minted and attenuating outside the
-issuer's reach, operates for its own remaining lifetime, the same
-residual bound that revocation carries ({{revocation}}).
-
-Where containment needs to take effect quickly against
-already-materialized authority, short cross-domain grant and offline
-attenuation root lifetimes keep that residual window to one the next
-lease or re-mint closes.
+({{I-D.draft-mcguinness-oauth-mission-containment}}), a contain
+transition does not reach authority materialized before it, such as a
+cross-domain grant already redeemed at a Resource AS or an offline
+attenuation root already minted. That authority operates for its own
+remaining lifetime, the same residual bound that revocation carries
+({{revocation}}); the containment profile states the residual and how
+short lifetimes bound it
+({{I-D.draft-mcguinness-oauth-mission-containment}}, Section "The
+Materialized-Capability Residual").
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -7227,6 +7177,14 @@ Cross-Domain:
   a `scope`-only target, through that target's trusted scope-projection
   mapping, which also relates a requested value back to authority
   (Derivation Modes, Scope Projection).
+- Editorial, no requirement change: Standing-Consent Bases points to
+  the Architecture for the companion-defined bases instead of listing
+  them; Grant Bindings and Related Mechanisms, Composition and the
+  Effective Ceiling, Authority Materialized Before Containment, and the
+  `approval_basis` definition no longer restate what the companions
+  specify; the sentence on joining one credential to different Missions
+  across requests moves to the Mission Authority Server's Mission
+  Join.
 
 -01
 
