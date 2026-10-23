@@ -14,7 +14,7 @@ only publication surface the family maintains:
 | Product | Composition |
 |---|---|
 | Initial WG conversation | The OAuth Mission core and, separately, the Mission Resource Access RAR profile (this document) |
-| Normative dependency closure | Whatever each selected specification actually imports (computed below) |
+| Normative dependency closure | Whatever each selected specification actually imports; direct references are inventoried below, while the transitive closure remains unverified |
 | Implementation reader bundle | `notes/oauth-mission-baseline-bundle-preview.md`, a separate publication artifact |
 
 The reader-bundle preview constrains nothing here: it is an implementation
@@ -36,71 +36,80 @@ The profile's split out of the core executed first: issue #637, merged as
 PR #718. The submission set therefore names two documents that already
 exist as an actual split in the tree, not a relocation still pending.
 
+Both are on the datatracker:
+- the core as `-01`, published 2026-10-21 (D644);
+- the profile as `-00`, published 2026-10-22 (D646).
+
+The profile was published alone, with its companion references made
+informative and its own invariants stated in the profile (D645).
+
 ## Record binding
 
-The composition, the dependency closure, and the category verification
+The composition, the direct-reference inventory, and the category verification
 below are all bound to one commit, not asserted as a standing current
-state. Computed at main commit `c41a39844fc1bedf04470f6c88ed5d9c06bd7fb1`
-(2026-08-25, the merge of PR #727):
+state. Computed at main commit `a9e35e79064409136f438b6495f110c68f67b059`
+(2026-10-23):
 
 | Member | Commit | Content SHA-256 |
 |---|---|---|
-| `draft-mcguinness-oauth-mission.md` | `c41a39844fc1bedf04470f6c88ed5d9c06bd7fb1` | `8fb582dc630c9cc7edc8989187d1e5f56cd28489445d1ec3e4dd1595b505619b` |
-| `draft-mcguinness-oauth-mission-resource-access.md` | `c41a39844fc1bedf04470f6c88ed5d9c06bd7fb1` | `6d42f9224efa92e2133c4028af083b703c0b1f19cd080bfad083bc567880c3b1` |
+| `draft-mcguinness-oauth-mission.md` | `a9e35e79064409136f438b6495f110c68f67b059` | `7b5f76eb4de93469d688e8d5420ad6f9fecdcd8f9a95234ec3dc0b4ae760b3ae` |
+| `draft-mcguinness-oauth-mission-resource-access.md` | `a9e35e79064409136f438b6495f110c68f67b059` | `52dcce6f6f809438190f6b8685a9c24cf0d4f261f13f04f63f078d4ca8e44a54` |
 
 A later change to either file does not retroactively change this record;
 it would need a fresh binding.
 
-**The binding above is out of date (noted 2026-10-22).** Since the
-bound commit, the OAuth binding's `normative:` block has gained three
-external Internet-Drafts:
+This binding replaces the first one, at `c41a39844fc1bedf04470f6c88ed5d9c06bd7fb1`
+(2026-08-25, the merge of PR #727; that record is in this file's git
+history). The first binding's closure property ("None is a
+work-in-progress external Internet-Draft") no longer holds. Since then
+the core's `normative:` block has gained three external Internet-Drafts:
 - `draft-mcguinness-oauth-client-instance-id`, by `45221526` (#851,
-  D159, 2026-09-28);
+  D159);
 - `draft-ietf-oauth-rar-metadata-remediation`, by `2e7c08608` (#1503
   finding 9, D620);
 - `draft-mcguinness-oauth-actor-profile`, by `e6f6c911a` (D625).
 
-All three are normative references of the published binding `-01`
-(D644). `DEPENDENCIES.md` lists
-rar-metadata-remediation among the external normative references; it
-skips `draft-mcguinness-*` references by prefix. The closure property
-below, "None is a work-in-progress external Internet-Draft", holds at
-the bound commit but not for the current drafts. Use this record for a
-working-group conversation only after a fresh binding recomputes the
-closure.
-
-## Normative dependency closure
+## Direct normative references and dependency planning
 
 Extracted from each draft's front matter `normative:` block at the bound
-commit, cross-checked against `DEPENDENCIES.md`'s generated
-external-normative-ids block (no entry there for either
-`oauth-mission` or `oauth-mission-resource-access`, confirming neither
-draft normatively cites a work-in-progress external Internet-Draft).
+commit.
+
+Cross-checked against `DEPENDENCIES.md`'s generated external-normative-ids
+block:
+- That block lists `draft-ietf-oauth-rar-metadata-remediation` for
+  `oauth-mission`, and nothing for `oauth-mission-resource-access`.
+- The generator skips `draft-mcguinness-*` references by prefix, so the
+  core's two individual-draft references are listed below from the front
+  matter, not from that block.
 
 Publication venue and standards maturity are different axes: an
 Internet-Draft citing a reference does not inherit that reference's own
 RFC category, and a Standards Track submission's normative references
-are not all required to themselves be Standards Track. The table below
-records each reference's actual category and, for every
+are not all required to themselves be Standards Track.
+
+The table below records each RFC's actual category and, for every
 non-Standards-Track entry, whether it already carries precedent in the
-IETF downref registry. Method, so a future audit can re-run and diff:
-category is each RFC's `std_level` field from the datatracker document
-API (`datatracker.ietf.org/api/v1/doc/document/?name=rfcNNNN`); downref
-presence is a lookup of the RFC number in the registry table at
-`datatracker.ietf.org/doc/downref/`. Both checked live on 2026-08-25.
-"Cited by" marks which of the two submission-set members references it;
-every entry below is cited at least by the core, and 9 RFCs plus
-ISO 4217 are also cited by the resource-access profile.
+IETF downref registry.
+
+Method, so a future audit can re-run and diff:
+- Category is each RFC's `std_level` field from the datatracker
+  document API (`datatracker.ietf.org/api/v1/doc/document/?name=rfcNNNN`).
+- Downref presence is a lookup of the RFC number in the "Referenced RFC"
+  column of the registry table at `datatracker.ietf.org/doc/downref/`.
+- Both were checked live on 2026-10-23.
+- "Cited by" marks which of the two submission-set members references the
+  RFC.
 
 | Reference | Category | Cited by | Downref registry |
 |---|---|---|---|
 | RFC 3339 | Proposed Standard | core, resource-access | not applicable (Standards Track) |
-| RFC 3986 | Internet Standard | core, resource-access | not applicable (Standards Track) |
+| RFC 3986 | Internet Standard | resource-access | not applicable (Standards Track) |
 | RFC 4648 | Proposed Standard | core | not applicable (Standards Track) |
 | RFC 5646 | BCP | core | not in registry |
+| RFC 5890 | Proposed Standard | resource-access | not applicable (Standards Track) |
 | RFC 6234 | Informational | core | in registry |
 | RFC 6749 | Proposed Standard | core | not applicable (Standards Track) |
-| RFC 6750 | Proposed Standard | core, resource-access | not applicable (Standards Track) |
+| RFC 6750 | Proposed Standard | core | not applicable (Standards Track) |
 | RFC 6920 | Proposed Standard | core | not applicable (Standards Track) |
 | RFC 7493 | Proposed Standard | core | not applicable (Standards Track) |
 | RFC 7519 | Proposed Standard | core | not applicable (Standards Track) |
@@ -111,10 +120,11 @@ ISO 4217 are also cited by the resource-access profile.
 | RFC 8414 | Proposed Standard | core | not applicable (Standards Track) |
 | RFC 8693 | Proposed Standard | core, resource-access | not applicable (Standards Track) |
 | RFC 8705 | Proposed Standard | core | not applicable (Standards Track) |
-| RFC 8707 | Proposed Standard | core, resource-access | not applicable (Standards Track) |
+| RFC 8707 | Proposed Standard | core | not applicable (Standards Track) |
 | RFC 8785 | Informational | core, resource-access | not in registry |
 | RFC 9068 | Proposed Standard | core | not applicable (Standards Track) |
 | RFC 9101 | Proposed Standard | core | not applicable (Standards Track) |
+| RFC 9110 | Internet Standard | resource-access | not applicable (Standards Track) |
 | RFC 9126 | Proposed Standard | core | not applicable (Standards Track) |
 | RFC 9207 | Proposed Standard | core | not applicable (Standards Track) |
 | RFC 9396 | Proposed Standard | core, resource-access | not applicable (Standards Track) |
@@ -122,43 +132,80 @@ ISO 4217 are also cited by the resource-access profile.
 | RFC 9470 | Proposed Standard | core | not applicable (Standards Track) |
 | RFC 9700 | BCP | core | not in registry |
 | RFC 9728 | Proposed Standard | core, resource-access | not applicable (Standards Track) |
-| ISO 4217:2015 | External SDO standard | core, resource-access | not applicable (non-IETF) |
+| OpenID Connect Core 1.0 (errata set 2, 2023) | External standard (OpenID Foundation) | core | not applicable (non-IETF) |
+| ISO 4217:2015 | External SDO standard | resource-access | not applicable (non-IETF) |
 
-Category counts across the 28 RFCs: 22 Proposed Standard, 2 Internet
+Category counts across the 30 RFCs: 23 Proposed Standard, 3 Internet
 Standard, 2 BCP (RFC 5646, RFC 9700), 2 Informational (RFC 6234,
-RFC 8785). Plus ISO 4217:2015, an external-SDO reference outside the
-IETF's own category scheme entirely.
+RFC 8785). Plus two non-IETF standards with fixed editions: OpenID
+Connect Core 1.0 incorporating errata set 2 (the core, since #1503
+finding 9) and ISO 4217:2015 (resource-access).
 
-Resource-access's normative set (9 RFCs, ISO 4217, and one
-Internet-Draft: the core itself) is a strict subset of the table above
-plus the in-family core reference; it introduces no reference the table
-does not already carry.
+Resource-access's normative set is 9 RFCs, ISO 4217, and one
+Internet-Draft: the core itself. It is no longer a subset of the core's
+set. It adds RFC 3986, RFC 5890, RFC 9110 and ISO 4217, which the core
+does not cite normatively.
 
-Downref handling a Standards Track submission would need to address:
-RFC 8785 (JSON Canonicalization Scheme), an Informational normative
-reference, carries no entry in the IETF downref registry as fetched on
-2026-08-25, so a Standards Track submission citing it normatively would
-raise the downref during IETF Last Call with no established precedent to
-point to. RFC 6234, also Informational, does already carry a registry
-entry (approved precedent for a different document's normative
-citation); that does not exempt a new citing document from Last Call
-review, but it is precedent a reviewer can be pointed to. Neither BCP
-reference (RFC 5646, RFC 9700) appears in the registry, consistent with
-BCP normally not requiring downref handling from a Standards Track
-citer. ISO 4217:2015 is an external-SDO normative reference outside the
-IETF's downref process altogether; RFC 2026 permits a normative
-reference to an external standard given a stable citation, which a fixed
-edition (2015) provides.
+Downref handling a Standards Track submission would need to address is
+unchanged from the first binding:
+- RFC 8785 (JSON Canonicalization Scheme) is an Informational normative
+  reference with no entry in the downref registry, so a Standards Track
+  submission citing it normatively raises the downref during IETF Last
+  Call with no established precedent.
+- RFC 6234, also Informational, carries a registry entry. That does not
+  exempt a new citing document from Last Call review, but it is precedent
+  a reviewer can be pointed to.
+- Neither BCP reference (RFC 5646, RFC 9700) appears in the registry,
+  consistent with BCP normally not requiring downref handling from a
+  Standards Track citer.
+- OpenID Connect Core and ISO 4217:2015 are external-standard normative
+  references outside the IETF's downref process. RFC 2026 permits a
+  normative reference to an external standard given a stable citation,
+  which a fixed edition provides.
 
-This live verification confirms, without exception, the two specific
-claims raised in review: RFC 6234 is in the downref registry and
-RFC 8785 is not. Checking the remaining 26 references found none of them
-present in the registry either.
+### Internet-Draft dependencies
 
-The property that survives this correction: every reference in the
-closure is either a published RFC (of whatever category) or a finalized
-external standard with a stable citation. None is a work-in-progress
-external Internet-Draft.
+The core cites three external Internet-Drafts normatively.
+Resource-access cites none beyond the core. Datatracker states, checked
+live on 2026-10-23:
+
+| Internet-Draft | Revision | Stream | State | Cited from (core) |
+|---|---|---|---|---|
+| `draft-mcguinness-oauth-client-instance-id` | `-00` | individual | I-D Exists, expires 2027-04-01 | Instance Context in Delegated Tokens; the error-table note; an appendix future-work example |
+| `draft-mcguinness-oauth-actor-profile` | `-01` | individual | I-D Exists, expires 2027-04-12 | Delegation Within a Mission; Delegated Exchange; Instance Context in Delegated Tokens; Scope and Future Work |
+| `draft-ietf-oauth-rar-metadata-remediation` | `-00` | IETF, oauth WG | WG Document, expires 2027-02-24 | Denial Responses; Remediation Grains; Authorization Server Metadata |
+
+A normative reference to an Internet-Draft does not block submission,
+adoption or last call. Per RFC 7322 Section 4.8.6, it holds the RFC's
+publication until the referenced draft is also ready, and the RFC
+Editor then publishes the documents together; the queue state is
+"Reference Not Received".
+
+Those drafts have normative references of their own. A planning
+inventory of that wider set lives with the layering plan (unmerged
+notes branch `worktree-notes+oauth-binding-layering-plan`, PLAN.md
+Appendix E):
+- It traverses each draft's latest revision, not the revisions actually
+  cited.
+- It lists 16 distinct draft names reachable from the three above,
+  including `draft-ietf-tls-rfc8446bis`, already published as
+  [RFC 9846](https://datatracker.ietf.org/doc/rfc9846/). Within that
+  inventory, 15 nodes remain unpublished drafts:
+  - 12 through the Actor Profile: itself and 11 it pulls in, including
+    an expired individual draft;
+  - 2 through client-instance-id;
+  - 1 through rar-metadata-remediation, which cites none.
+- These counts describe the existing planning inventory after separating
+  its published node; they do not establish a verified transitive closure.
+- Some of its edges come from the datatracker's heuristic References
+  tab.
+
+The property this binding can state: every normative reference is a
+published RFC, a fixed-edition external standard, the in-family core,
+or one of the three Internet-Drafts above. It is not yet a verified
+closure. A verified closure needs each node at the revision its citer
+names, with a source section for every edge. Until then, use the
+inventory for planning, not as a publication-date claim.
 
 ## What the submission set omits, and why
 
@@ -171,28 +218,33 @@ candidate gate's attestation in the 2026-08-25 completeness audit
 merged as PR #727). It is a Standards-Track candidate in-repository, and
 it is omitted from this proposed submission set.
 
-Two preconditions gate a separate substrate submission. The first,
-removing the substrate's normative OAuth dependency (#708), is resolved
-in tree at commit `30982cda740aa761272d847e476d9a77a1ee9726` (PR #717):
-the substrate's normative references are now crypto and canonicalization
-RFCs only (RFC 4648, RFC 6234, RFC 6920, RFC 7493, RFC 8785), and its
-references to the OAuth core and the Mission Authority Server are
-informative. The second, independent non-OAuth implementation feedback,
-is outstanding: the substrate audit report records the caveat plainly,
-"all implementation evidence is OAuth-shaped, no non-OAuth binding
-evidence exists yet" (first recorded during the PR #727 review).
+Two preconditions gate a separate substrate submission:
+- **Remove the substrate's normative OAuth dependency (#708).** Resolved
+  in tree at commit `30982cda740aa761272d847e476d9a77a1ee9726` (PR #717).
+  The substrate's normative references are crypto and canonicalization
+  RFCs only (RFC 4648, RFC 6234, RFC 6920, RFC 7493, RFC 8785), and its
+  references to the OAuth core and the Mission Authority Server are
+  informative. This holds at the bound commit.
+- **Independent non-OAuth implementation feedback.** Outstanding. The
+  substrate audit report records the caveat plainly: "all
+  implementation evidence is OAuth-shaped, no non-OAuth binding evidence
+  exists yet" (first recorded during the PR #727 review).
 
 The omission is a decision under the family's internal readiness gate,
-not an RFC-category judgment. The two-implementations bar is an Internet
-Standard advancement criterion (RFC 6410 Section 2), not a Proposed
-Standard entry gate (RFC 2026 Section 4.1.1). Publishing the substrate
-Informational while an AAuth binding normatively depends on it and
-remains Standards Track would manufacture a downref (RFC 8067).
+not an RFC-category judgment:
+- The two-implementations bar is an Internet Standard advancement
+  criterion (RFC 6410 Section 2), not a Proposed Standard entry gate
+  (RFC 2026 Section 4.1.1).
+- Publishing the substrate as Informational while the AAuth binding
+  normatively depends on it and remains Standards Track would
+  manufacture a downref (RFC 8067). The AAuth binding still cites the
+  substrate normatively at the bound commit.
 
 ### Architecture
 
-`draft-mcguinness-mission-architecture` is informational context for the
-WG conversation, not a submission-set member.
+`draft-mcguinness-mission-architecture` (category `info`) is
+informational context for the WG conversation, not a submission-set
+member.
 
 ### MAS
 
@@ -200,34 +252,39 @@ WG conversation, not a submission-set member.
 normative standalone-controller protocol binding over the OAuth Mission
 data model: a peer deployment topology, not an independent substrate
 model, since it normatively imports the OAuth Mission record and issuance
-profile. Bindings, including MAS, are not submission-set members.
+profile (at the bound commit its normative references still include the
+core). Bindings, including MAS, are not submission-set members.
 
 ### Everything else
 
 Companions, overlays, and the remaining bindings follow later, each per
 its own maturity. `candidate-gate.json` (check (z) in
 `scripts/generate-drafts-index.mjs`) is the promotion mechanism toward
-`spec_maturity: candidate`. The current per-document gap lists live in
-the dated audit records: `notes/audits/2026-08-25-substrate-completeness-audit.md`,
-`notes/audits/2026-08-25-core-completeness-audit.md`, and
-`notes/audits/2026-08-25-resource-access-completeness-audit.md`. PR #727
-is the review venue those records were reached under, not the tracker
-for their content.
+`spec_maturity: candidate`.
 
 ## Maturity disclosure
 
 Both submission-set members carry `spec_maturity: experimental` under
-the family's candidate gate. The 2026-08-25 audit wave found the core
-failing criterion 1 (61 conformance rows against approximately 322
-BCP-14 keyword hits, with several named Conformance sections rowless;
-full gap list in `notes/audits/2026-08-25-core-completeness-audit.md`)
-and the resource-access profile failing the same criterion (13 rows, all
-`todo`, with the Subset Rule algebra and the Common Constraints registry
-uninventoried; full gap list in
-`notes/audits/2026-08-25-resource-access-completeness-audit.md`).
+the family's candidate gate, and neither has an entry in
+`candidate-gate.json` at the bound commit. Ledger coverage at the bound
+commit (`conformance-manifest.json`):
+
+| Member | Rows | Tested | Partial | Todo |
+|---|---|---|---|---|
+| core | 184 | 116 | 25 | 43 |
+| resource-access | 149 | 110 | 27 | 12 |
+
+The core's body carries 261 BCP 14 keywords.
+
+The 2026-08-25 audit records are historical: they found 61 core rows
+and 13 resource-access rows, all `todo`. They remain the method of
+record for a candidate attestation:
+- `notes/audits/2026-08-25-core-completeness-audit.md`;
+- `notes/audits/2026-08-25-resource-access-completeness-audit.md`.
+
+A candidate attestation needs a fresh audit against the gate's criteria,
+not these counts.
 
 This proposal leads with the WG conversation regardless: the candidate
 gate is an internal completeness bar the family holds itself to, not a
-submission prerequisite the IETF imposes. The dated audit records are
-the work queue toward candidate, not a blocker to opening the
-conversation this document proposes.
+submission prerequisite the IETF imposes.

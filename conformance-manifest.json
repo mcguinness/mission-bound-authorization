@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "8a16c95a59e44459ba9c065b172e657cecf0ca5b",
-    "content_sha256": "84d5037f19a6c9e46f01910ad3edc3dad9e8c7bbd43fe89deb99bf166b543ce5"
+    "revision": "814a3b44db05cc3aefb8cad9b8e8c28540cda0f9",
+    "content_sha256": "b807285532ec41b0d20d66ba61b8c55644d366ab97c0ccac4212ca3cff28d33d"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "24fc25962caf421d01e5df49f2916f2b7270e2b7",
@@ -83,8 +83,8 @@
     "content_sha256": "44d6ef289a0c6cbdff9af48520ae48056a55052f037bdfe5dd16938ec88460d6"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "c8b592b01f938c0d6c2064aadcb0598bb652872c",
-    "content_sha256": "efeddee766f86da59e237d7a7e1abb9f1684b09064a2843389d590f95e769c53"
+    "revision": "661cf9c52706f6056e3f287cbe389049ca4fce64",
+    "content_sha256": "d97c7c81b9bf1b0f6991ac4868c0b4cff93750f67f5e4ebbd76a38ecb2091aac"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
@@ -155,8 +155,8 @@
     "content_sha256": "c7b1f59acd41bc0698559c4b9123aa7283d7599e73d635bc61b0fde0c1725e87"
    },
    "draft-mcguinness-oauth-mission-containment.md": {
-    "revision": "2d2661e6dec64f5f9b19dd98aa3a53a88d2f86c8",
-    "content_sha256": "fc7d4be6f965ba06cf03eec757cb44bcf9325d15d6879242cd2a623c0e0093ec"
+    "revision": "d4d2699d92097451df10fe7be7d1b507c43fc2bf",
+    "content_sha256": "437ffcf048e52ad43a7c044adb6a46af60a4c9f76faf6142da3794b6456844f6"
    }
   }
  },
@@ -37469,7 +37469,7 @@
    "id": "issuance-grant.effective-set-projection.no-re-widening",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "A refresh family's issued authority MUST NOT widen across refreshes within the same Mission: the consuming AS atomically narrows its own stored ceiling on every refresh, or retains the highest Mission state `version` it has observed and rejects a source reporting a lower one as a rollback.",
+   "text": "A refresh family's ceiling MUST NOT widen across refreshes within the same Mission",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -37610,15 +37610,15 @@
    ]
   },
   {
-   "id": "issuance-grant.effective-set-projection.causal-containment-attribution",
-   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
-   "anchor": "effective-set-projection",
-   "text": "a collapse from any other cause MUST NOT be reported as containment merely because Containment is composed",
+   "id": "containment.denial-reason.causal-attribution",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "denial-reason",
+   "text": "a refusal from any other cause MUST NOT carry it merely because Containment is composed",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
-    "capability": "issuance-grant.state-integration"
+    "capability": "containment.narrowing"
    },
    "profiles": [],
    "surface": "derivation",
@@ -37642,13 +37642,14 @@
      "level": "unit",
      "surface": "derivation"
     }
-   ]
+   ],
+   "notes": "Rehomed from issuance-grant.effective-set-projection.causal-containment-attribution (D685 Q7) with its role, strength, observation, coverage and witnesses. The gate moves from issuance-grant.state-integration, the host section of the old text, to containment.narrowing, the rule's own condition (Containment is composed)."
   },
   {
    "id": "issuance-grant.effective-set-projection.request-fault-errors",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "Where that authorization survives and only the narrowing the client requested fails to intersect it, the request is at fault: the refusal is `invalid_scope` where the request carried `scope`, or `invalid_authorization_details`",
+   "text": "Where that authorization survives but a narrowing the client requested exceeds it, the request is at fault: the refusal is `invalid_scope` where the request carried `scope`, or `invalid_authorization_details`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37670,7 +37671,7 @@
    "id": "issuance-grant.effective-set-projection.equivalent-source-properties",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "The consuming AS MUST NOT rely on an equivalent source unless it is authenticated, is audience-scoped to the resources this AS serves, carries the Mission's current `authorization_details` and a monotonic state `version`, and answers within a staleness bound the deployment publishes",
+   "text": "The consuming AS MUST NOT rely on an equivalent source unless it is authenticated, is audience-scoped to the entries this AS serves, carries the Mission's current `authorization_details` and a monotonic state `version`, and answers within a staleness bound the deployment publishes",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -37864,6 +37865,779 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.refresh.ceiling-persisted",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "refresh",
+   "text": "The consuming AS MUST persist the narrowed family ceiling atomically with each successful issuance",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "after each successful issuance in a refresh family, the persisted family ceiling equals the narrowed authority that issuance used, written atomically with it, so a later refresh starts from it and never from the grant or an earlier ceiling"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q10); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.refresh.failed-unchanged",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "refresh",
+   "text": "A refresh that fails leaves the family ceiling and the presented refresh token unchanged.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a refused refresh, whatever the cause, leaves the family ceiling and the presented refresh token as they were"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q10); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.refresh.concurrent-no-restore",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "refresh",
+   "text": "Concurrent refreshes in one family MUST NOT restore authority that an earlier successful issuance in that family removed.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "when refreshes in one family race, no issued token carries authority that an earlier successful issuance in that family removed from the family ceiling"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q10); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.entry-types.mas-unsupported-narrowing",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "entry-types",
+   "text": "The MAS MUST refuse, with `invalid_authorization_details` ({{minting-errors}}), a grant request whose requested narrowing it cannot perform.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request asking the MAS to narrow an entry of a type for which the MAS declares no narrowing capability is refused invalid_authorization_details, and no grant is minted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q6); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.entry-types.unsupported-type",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "entry-types",
+   "text": "The consuming AS MUST refuse, with `invalid_grant`, a grant that carries an entry of a type it does not support",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant carrying an entry of an authorization_details type the consuming AS does not support is refused invalid_grant, and nothing is issued"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q6); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.entry-types.no-undeclared-narrowing",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "entry-types",
+   "text": "The consuming AS MUST NOT issue an entry it cannot narrow except unchanged, where the current Effective Authority Set and its own policy each contain an entry equal to it under the subset rule; otherwise it omits the entry",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry of a type the consuming AS cannot narrow is issued only unchanged and only where the current Effective Authority Set and the AS policy each admit it whole; otherwise it is absent from the issued authority"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q6); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.entry-types.unsupported-request",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "entry-types",
+   "text": "The consuming AS MUST refuse a requested narrowing it cannot perform with `invalid_authorization_details`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request asking to narrow an entry of a type for which the consuming AS declares no narrowing capability is refused invalid_authorization_details; an impossible scope projection is refused invalid_target under the OAuth binding mapping"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q6); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-rules.subject-injective",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "The MAS MUST derive the grant's `sub` from the Mission's recorded (`subject.iss`, `subject.sub`) pair by an injective mapping established before it mints",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "grants for Missions whose recorded Subjects differ in subject.iss or subject.sub never carry the same sub, every grant for one Subject carries the same sub, and a verbatim subject.sub appears only where no other principal's sub at the MAS equals it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q13); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.subject-pair",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "the (`iss`, `sub`) pair maps to a local account under the deployment's mapping policy",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the consuming AS maps the grant's (iss, sub) pair, never sub alone, to a local account; a pair with no mapping is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q13); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.audience-issuer-only",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "`aud` is a single string identical to this AS's issuer identifier, compared as a literal string with no normalization",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant whose aud is an array, the token endpoint URL, any other alias, or a value equal to the issuer identifier only after normalization is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q11); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.mission-members",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "the `mission` claim carries `id`, a string in the Mission Identifier character set",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant whose mission claim lacks id, expires_at or authority_hash, carries one in a form other than its definition (an id outside the Mission Identifier syntax, an expires_at that is not an RFC 3339 date-time or is not later than now, an authority_hash outside the sha-256 anchor form), or whose issuer differs from iss, is refused invalid_grant; authority_hash is not recomputed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q4); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-request.dpop-verified",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-request",
+   "text": "The MAS MUST verify any DPoP proof presented with the request",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request carrying a DPoP proof that fails the checks of Section 4.3 of RFC 9449 is refused, and no grant is minted, with or without cnf"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q2); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-request.protected-resource-metadata",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-request",
+   "text": "the MAS publishes Protected Resource Metadata {{RFC9728}} for it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a MAS serving the grant endpoint with access-token authentication publishes RFC 9728 metadata for that endpoint naming its resource, required scope, accepted sender constraints and dpop_signing_alg_values_supported"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q2); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-rules.cnf-required",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-rules",
+   "text": "When the MAS verified a sender constraint on the grant request ({{minting-request}}), it MUST include `cnf` with that key",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a grant minted for a request carrying a verified DPoP proof carries cnf.jkt with that proof key's thumbprint; one for a request on a mutual-TLS connection with no DPoP proof carries cnf.x5t#S256 with that certificate's thumbprint; a request authenticated only by a client assertion yields no cnf"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q2); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-request.json-client-assertion",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-request",
+   "text": "the MAS processes them as Mission Status's private-key-JWT mechanism requires",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request whose JSON client_assertion fails Mission Status's private-key-JWT checks, including an aud other than the MAS issuer identifier as its sole value, is refused invalid_client and no grant is minted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q2); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.metadata.auth-methods",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "metadata",
+   "text": "`mission_issuance_grant_endpoint_auth_methods_supported`: : REQUIRED. A JSON array of strings naming the client-authentication methods",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a MAS publishing mission_issuance_grant_endpoint also publishes mission_issuance_grant_endpoint_auth_methods_supported, and mission_issuance_grant_endpoint_auth_signing_alg_values_supported whenever that list names private_key_jwt"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q2); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-errors.client-auth-failure",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-errors",
+   "text": "| `invalid_client` | 400 | Direct client authentication (mutual TLS or private-key JWT) failed",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request whose mutual-TLS or private-key-JWT client authentication fails, or that presents no credential where no access-token scheme is accepted, gets HTTP 400 invalid_client with no WWW-Authenticate challenge, and no grant is minted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q1); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.minting-errors.access-token-challenge",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "minting-errors",
+   "text": "A 401 response carries the `WWW-Authenticate` challenges that section defines for the MAS's endpoints",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant request whose access-token authentication fails gets HTTP 401 unauthorized carrying the challenges MAS defines, naming this endpoint's Protected Resource Metadata"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q1); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.token-issuance.key-bound",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "token-issuance",
+   "text": "When the grant carries `cnf`, the consuming AS MUST bind every access token it issues under the grant, at redemption, at code exchange under the PAR carriage, and at each refresh, to that confirmation value",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every access token issued under a cnf grant (redemption, PAR code exchange, each refresh) carries the grant's confirmation value: cnf.jkt with token_type DPoP for a jkt grant, cnf.x5t#S256 for an x5t#S256 grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.token-issuance.no-bearer-fallback",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "token-issuance",
+   "text": "It MUST NOT issue such a token as a bearer token or bind it to any other key.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "no access token issued under a cnf grant is a bearer token or bound to a key other than the grant's"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.grant-validation.no-other-key",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "grant-validation",
+   "text": "presents no DPoP proof for any other key",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a redemption under a cnf grant that also presents a DPoP proof for another key, or a pushed authorization request with a dpop_jkt other than the grant's jkt, is refused invalid_grant"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.redemption-errors.dpop-codes",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "redemption-errors",
+   "text": "a DPoP proof that fails the checks of {{Section 4.3 of RFC9449}} is refused with `invalid_dpop_proof`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at the PAR endpoint, redemption, code exchange and refresh, a DPoP proof failing RFC 9449 Section 4.3 gets invalid_dpop_proof (use_dpop_nonce where a nonce is required); when the grant carries cnf, a request proving no key, another key, or presenting a DPoP proof for another key gets invalid_grant, and a grant without cnf needs no proof of possession"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.par-carriage.code-inherits-cnf",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "par-carriage",
+   "text": "The token request at code exchange MUST prove possession of that key",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a code exchange for a code issued under a cnf grant that proves no key, or another one, is refused invalid_grant, and nothing is issued"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.refresh.possession",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "refresh",
+   "text": "Where the grant carried `cnf`, each refresh request MUST prove possession of that key",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refresh in a family whose grant carried cnf that proves no key, or another one, is refused invalid_grant; a DPoP proof failing RFC 9449 Section 4.3 is refused invalid_dpop_proof"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q3); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.issued-authority.no-truncation",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "issued-authority",
+   "text": "The AS MUST NOT truncate such a request to the surviving authority.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request whose requested narrowing exceeds the surviving authority (items 1 to 3) is refused invalid_authorization_details or invalid_scope; no token carrying a truncated subset of the request is issued",
+    "local": "the native reference AS refuses a Token Exchange (asyncDelegate) that opens a family naming a capability containment removed, with invalid_authorization_details rather than issuing the remainder; it is a Mission Issuer, not a consuming AS. Refresh, the scope-request case and the consuming-AS redemption path stay unwitnessed"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > contain, then open a family naming the contained capability: refused invalid_authorization_details as exceeding the Mission authority, though the presented token carries it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Partial on the #963 precedent of citing native-AS projection tests for these rows (D685 Q5): the cited test, also the error-mapping witness of the OAuth binding, opens a family by Token Exchange naming a contained capability; no refresh is exercised. No consuming-AS redemption path exists in src."
+  },
+  {
+   "id": "issuance-grant.mission-state-source.not-found-no-mission-error",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-state-source",
+   "text": "the AS refuses with `invalid_grant` and carries no `mission_error` value",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a redemption or refresh refused because Mission Status answered not-found for an audience the grant names gets invalid_grant with no mission_error member"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q8); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.mission-state-source.cached-reliance",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-state-source",
+   "text": "The consuming AS MUST NOT rely on a response it validated earlier, at a later redemption or refresh, unless all of the following hold",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a redemption or refresh decided on a held Status response uses it only within the earlier of its reliance bound and the deployment's staleness bound, for the same mission.issuer, mission.id and audience, and only when its version is not below the retained version; otherwise the AS queries afresh"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q9); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.par-carriage.invalid-grant-at-par",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "par-carriage",
+   "text": "refusing a grant that fails it with the `invalid_grant` error code",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a pushed authorization request carrying a grant that fails Grant Validation gets an error response with invalid_grant, and no request_uri is issued"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q12); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.par-carriage.wrong-owner-access-denied",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "par-carriage",
+   "text": "It refuses with the `access_denied` error code",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the resource owner authenticated at the authorization endpoint is not the grant's Subject under the mapping policy, the authorization request ends in access_denied and no code is issued"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q12); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.records.mas-minting",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "records",
+   "text": "The MAS MUST record each minting with the Mission record",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every minted grant has a record with the Mission record carrying its jti, audience, requested and granted entries, any cnf, and the minting time"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q14); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.records.consuming-as",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "records",
+   "text": "consuming AS MUST record each issuance under a grant, each refresh included, with the grant's `jti`, Mission reference, and `authority_hash`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every issuance under a grant, each refresh included, has a consuming-AS record naming the grant's jti, the Mission reference and authority_hash"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q14); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.records.reconcile",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "records",
+   "text": "A deployment SHOULD reconcile MAS minting records against consuming-AS redemption records.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the deployment reconciles MAS minting records against consuming-AS redemption records by jti, or its statement says it does not"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q14); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.records.unmatched-event",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "records",
+   "text": "A deployment SHOULD treat a redemption with no matching minting record as a security event.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a redemption record with no matching minting record raises a security event"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q14); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.records.enterprise-window",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "records",
+   "text": "MUST reconcile within the window its statement declares",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "under the Enterprise Mission Authority Profile, every redemption record is reconciled against minting records within the window the deployment statement declares"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q14); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.conformance.deployment-statement",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "conformance",
+   "text": "A deployment claiming this profile MUST publish a deployment statement declaring the following.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment claiming this profile publishes a statement naming the consuming authorization servers, which have a Mission-state integration, each one's staleness and re-query bounds, any containment- or discharge-aware claim, and its reconciliation posture"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q16); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.mission-state-source.audience-resolution",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "mission-state-source",
+   "text": "it sends an entry's `resource` value as the `audience` only where that resolution establishes the two are equal",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each Mission Status request names the audience the type and the deployment's trusted configuration resolve for the entries it covers; an entry whose resource is https://api.example.com/orders/123 under audience https://api.example.com is resolved by a request for https://api.example.com, never by sending the order URL as the audience"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the #1569 review of the D685 rulings; todo until that path exists."
   },
   {
    "id": "issuance-grant.grant.cnf-possession",
@@ -59316,6 +60090,49 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The reference stack has no MAS submission or join-assertion endpoint. Todo until a MAS service exists (#972 item 18)."
+  },
+  {
+   "id": "mas.submission.assertion-audience",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "a client assertion's `aud` is the MAS's issuer identifier as its sole value",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mission submission authenticated by a private-key-JWT client assertion is accepted only when the assertion's aud is the MAS issuer identifier as its sole value; an assertion audienced to the submission endpoint URL, or carrying any other or additional audience, is refused invalid_client"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the #1569 review of the D685 rulings (Q2 detail): the client assertion's aud is the MAS issuer identifier as its sole value, as Mission Status requires. The reference serves no mission submission endpoint; the join-assertion endpoint in open #1554 still checks the endpoint audience, so its witness lands once #1554 adopts the issuer audience. todo until then."
+  },
+  {
+   "id": "mas.join-assertion.assertion-audience",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion",
+   "text": "a client assertion's `aud` MUST be the MAS's issuer identifier as its sole value",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a join-assertion request authenticated by a private-key-JWT client assertion is accepted only when the assertion's aud is the MAS issuer identifier as its sole value; an assertion audienced to the join-assertion endpoint URL, or carrying any other or additional audience, is refused invalid_client and no assertion is minted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the #1569 review of the D685 rulings (Q2 detail): the client assertion's aud is the MAS issuer identifier as its sole value, as Mission Status requires. The reference serves no mission submission endpoint; the join-assertion endpoint in open #1554 still checks the endpoint audience, so its witness lands once #1554 adopts the issuer audience. todo until then."
   },
   {
    "id": "mas.errors.invalid-client",

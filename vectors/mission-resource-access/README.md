@@ -2,7 +2,7 @@
 
 These files define, as data, the expected outcomes for `mission_resource_access` semantics settled in #1258 (D444, D446, D447, D452). They are specification cases. A case passing in one implementation is evidence for that implementation only; it is not a claim that every implementation conforms.
 
-The files are independently consumable: a consumer needs only JSON, not this repository's implementation. #819's independent second consumer is expected to reuse them.
+The files are independently consumable: a consumer needs only JSON, not this repository's implementation. #819's independent second consumer is expected to reuse them. The capability set of the initial interoperable subset, and the contract it is frozen against, are in `vectors/mission-resource-access-subset/` (#249, D676).
 
 ## Format
 
@@ -31,7 +31,7 @@ A refusal of unsupported input is itself a case, with `refusal.unsupported-input
 - `subset.exact-resource`: the subset relation over `exact` resources.
 - `action-families`: `.*` action families.
 - `constraint.<name>`: one `constraints` key, a Common Constraint or a deployment-defined key (for example `constraint.max_amount`).
-- `member.<name>`: one entry member another specification defines for this type.
+- `member.<name>`: one optional entry member: `resource_contract` (Resource Contracts), `delegation` (Delegate Eligibility), or a member another specification defines for this type. A case expecting the member handled rather than refused requires it.
 - `refusal.unsupported-input`: refusal of input the implementation does not support (prefix input, an unsupported constraint, an incomparable value).
 - `refusal.locations`: refusal of an entry carrying `locations`.
 - `rs.enforcement`, `rs.alternative-grants`, `rs.member-roles`: resource-server enforcement behaviors.
