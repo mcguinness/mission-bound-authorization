@@ -754,7 +754,9 @@ Mandate:
    form, then applying {{RFC9901}} processing). Reject any other
    value.
 2. **Structure.** Confirm every REQUIRED claim of {{claims}} is
-   present and well-formed.
+   present and well-formed, and that a Mandate carrying
+   `approval_governance_digest` also carries `approval_event_id`,
+   whether or not a record is presented.
 3. **Signature.** Resolve the REQUIRED `kid` in the Mission Issuer's
    published key material ({{mission-substrate}}) and verify the JWS
    signature. Confirm `mission.issuer` equals `iss`. Where the issuer
@@ -853,11 +855,15 @@ whose portable approval-binding check would otherwise succeed:
 | 3 | The pinned record, naming another approval event | Not relied on: binding fails |
 | 4 | The pinned record, naming another Mission's anchors | Not relied on: binding fails |
 | 5 | None | Mandate verified; no governance evidence |
-| 6 | The pinned record, with the Mandate omitting `approval_event_id` | Not relied on: insufficient evidence |
+| 6 | The pinned record, with the Mandate omitting `approval_event_id` | Mandate invalid: step 2 |
 {: title="Approval Governance digest cases"}
 
 Cases 3 and 4 arise only from an issuer that minted an inconsistent
-Mandate; the binding check, not the digest, detects them.
+Mandate; the binding check, not the digest, detects them. Case 6 is a
+malformed Mandate, not withheld evidence: `approval_event_id` is never
+selectively disclosable ({{selective-disclosure}}), so its absence
+beside `approval_governance_digest` fails step 2 even when no record
+is presented.
 
 Where the deployment runs the audit transparency profile, a verifier
 MAY additionally confirm an audit-registration Receipt
