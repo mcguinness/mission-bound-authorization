@@ -37469,7 +37469,7 @@
    "id": "issuance-grant.effective-set-projection.no-re-widening",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "effective-set-projection",
-   "text": "A refresh family's issued authority MUST NOT widen across refreshes within the same Mission: the consuming AS atomically narrows its own stored ceiling on every refresh, or retains the highest Mission state `version` it has observed and rejects a source reporting a lower one as a rollback.",
+   "text": "A refresh family's ceiling MUST NOT widen across refreshes within the same Mission",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -37864,6 +37864,72 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added by the #963 editorial review for a requirement that review introduced or made explicit; todo until a redemption path exists."
+  },
+  {
+   "id": "issuance-grant.refresh.ceiling-persisted",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "refresh",
+   "text": "The consuming AS MUST persist the narrowed family ceiling atomically with each successful issuance",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "after each successful issuance in a refresh family, the persisted family ceiling equals the narrowed authority that issuance used, written atomically with it, so a later refresh starts from it and never from the grant or an earlier ceiling"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q10); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.refresh.failed-unchanged",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "refresh",
+   "text": "A refresh that fails leaves the family ceiling and the presented refresh token unchanged.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a refused refresh, whatever the cause, leaves the family ceiling and the presented refresh token as they were"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q10); todo until that path exists."
+  },
+  {
+   "id": "issuance-grant.refresh.concurrent-no-restore",
+   "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
+   "anchor": "refresh",
+   "text": "Concurrent refreshes in one family MUST NOT restore authority that an earlier successful issuance in that family removed.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "issuance-grant.state-integration"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "when refreshes in one family race, no issued token carries authority that an earlier successful issuance in that family removed from the family ceiling"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q10); todo until that path exists."
   },
   {
    "id": "issuance-grant.grant.cnf-possession",

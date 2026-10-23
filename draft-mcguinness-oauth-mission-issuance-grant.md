@@ -212,6 +212,19 @@ Mission-state integration:
   applies {{effective-set-projection}}, or has none and issues no
   refresh tokens under a grant ({{no-state-integration}}).
 
+Refresh family:
+: The refresh tokens descended from one redemption of a grant (under
+  the authorization code flow carriage, one code exchange), including
+  every rotation, and the authorization they carry.
+
+Family ceiling:
+: The remaining authority a consuming AS persists for a refresh
+  family ({{refresh}}): after each successful issuance, the surviving
+  authority of that issuance (items 1 to 3 of {{issued-authority}}). A
+  narrowing the client requests at the token endpoint does not reduce
+  it, and it is not the contents of the last access token issued for
+  one audience.
+
 # The Issuance Join {#issuance-join}
 
 ## Protocol Flow {#protocol-flow}
@@ -675,7 +688,7 @@ the deployment publishes ({{conformance}}).
 Through the Mission Status operation, the consuming AS resolves
 authority per resource, not for an audience of its own. For each
 distinct `resource` value among the grant's `mission_resource_access`
-entries (on refresh, among the refresh family's ceiling), it sends one
+entries (on refresh, among the family ceiling's entries), it sends one
 request whose `audience` is that `resource` value, unchanged; the
 Mission Issuer authorizes each audience separately
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Request").
@@ -706,8 +719,8 @@ lifecycle state, and a Status List bit carries no
 Where the Mission is `active`, the consuming AS issues the
 intersection of:
 
-1. the grant's `authorization_details`, or on refresh the refresh
-   family's own ceiling ({{refresh}});
+1. the grant's `authorization_details`, or on refresh the family
+   ceiling ({{refresh}});
 2. the current Effective Authority Set;
 3. the consuming AS's own policy, which narrows only
    ({{token-issuance}}); and
@@ -743,7 +756,7 @@ the OAuth `temporarily_unavailable` error code {{RFC6749}}
 response MAY carry `Retry-After` per the deployment's declared
 state-recovery policy. For a per-resource resolution, the version
 already observed is the one the AS retained before the resolution
-began ({{mission-state-source}}). The consuming AS leaves its stored
+began ({{mission-state-source}}). The consuming AS leaves the family
 ceiling unchanged. On the refresh path a transient source failure
 MUST NOT consume or rotate the presented refresh token, so the
 client retries with the credential it already holds. `invalid_grant`
@@ -751,11 +764,15 @@ stays for the permanent failures ({{redemption-errors}}).
 
 ### Refresh {#refresh}
 
-A refresh family's issued authority MUST NOT widen across refreshes
-within the same Mission: the consuming AS atomically narrows its own
-stored ceiling on every refresh, or retains the highest Mission state
-`version` it has observed and rejects a source reporting a lower one
-as a rollback.
+A refresh family's ceiling MUST NOT widen across refreshes within
+the same Mission, and no token issued in the family exceeds it. The
+consuming AS MUST persist the narrowed family ceiling atomically with
+each successful issuance, and applies
+the rollback test of {{mission-state-source}} as well: detecting a
+rollback does not replace the persisted ceiling. A refresh that fails
+leaves the family ceiling and the presented refresh token unchanged.
+Concurrent refreshes in one family MUST NOT restore authority that an
+earlier successful issuance in that family removed.
 
 ## Without a Mission-State Integration {#no-state-integration}
 
