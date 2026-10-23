@@ -619,7 +619,7 @@ server enforces the `authorization_details` statelessly and can check
 the `mission` claim ({{rs-enforcement}}), with no callback to the AS
 required.
 
-(5) An authorized revocation ({{revocation}}), or `expires_at`
+(5) A revocation ({{revocation}}), or `expires_at`
 passing, moves the Mission
 to `terminated`, with reason `revoked` or `expired`, after which the
 AS refuses further issuance and refresh. A deployment can also treat
@@ -1262,7 +1262,8 @@ Processing is governed by the following rules:
 
 - **Reject, do not ignore.** An entry that is not a JSON object, or
   that lacks `type`, is structurally invalid and refused with the
-  `invalid_request` error code. The AS MUST refuse an entry whose
+  `invalid_request` error code at step 1 of the processing order
+  ({{submission-processing}}). The AS MUST refuse an entry whose
   `type` it does not support, and an entry that fails its type's
   validation or verification, with the `invalid_mission_intent_evidence`
   error code ({{oauth-extensions-error-registration}}). A
@@ -1296,8 +1297,10 @@ and is complete before the approval rendering
 ({{derivation-modes}}); step 8 belongs to the approval event, and
 step 9 to activation.
 
-1. Parse the Submission envelope and enforce both closed top levels
-   ({{submission-via-par}}).
+1. Parse the Submission envelope, enforce both closed top levels and
+   the size bounds ({{submission-via-par}}), and check that each
+   `evidence` entry is a JSON object with a `type` member
+   ({{intent-submission-evidence}}).
 2. Validate the `intent` object against the Mission Intent member
    definitions ({{mission-intent}}).
 3. Validate any authority proposal: refuse an entry of a type the AS
@@ -1315,9 +1318,8 @@ step 9 to activation.
    missing required type
    ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
    "Required Evidence Is Resolved Before Derivation").
-6. Apply the evidence dispatch and refusal rules, verifying every
-   presented entry under its type's rules
-   ({{intent-submission-evidence}}).
+6. Dispatch each presented entry on its `type`, and validate and
+   verify it under that type's rules ({{intent-submission-evidence}}).
 7. Apply admission policy and derive the Authority Set independently
    ({{authorization-derivation}}), including the `target_resources`
    membership of each entry that carries a `resource` member
@@ -1339,9 +1341,11 @@ the error of the earliest failing step in this order. For example:
   type is refused at step 3, with `invalid_authorization_details`;
 - a proposed entry outside `target_resources` together with a
   presented evidence entry that fails verification is refused at
-  step 3, with `invalid_request`; and
+  step 3, with `invalid_request`;
 - an `intent` object that fails validation together with a malformed
-  proposal is refused at step 2, with `invalid_request`.
+  proposal is refused at step 2, with `invalid_request`; and
+- a structurally invalid evidence entry together with a malformed
+  proposal is refused at step 1, with `invalid_request`.
 
 The material verified provenance of step 8 is part of the approval
 surface. Where a deployment commits the rendered approval surface,
@@ -1990,7 +1994,7 @@ The subject-representation discipline is the same in every source:
 
 ## Approver Authentication Strength {#approval-authentication}
 
-A deployment publishes a statement declaring the minimum
+A deployment MUST publish a statement declaring the minimum
 approval-authentication strength (the approval-authentication floor)
 it enforces for Missions whose derived Authority Set carries high-risk
 authority, and the deployment scope it applies to. High-risk
@@ -2099,8 +2103,8 @@ A Mission is in one of two states:
 - `active`: the only state in which the AS derives tokens.
 - `terminated`: a terminal state; the Mission has ended. Its
   `termination` member ({{termination}}) gives the reason: `revoked`
-  when the Subject, Approver, or policy terminated it, or `expired` when
-  its `expires_at` passed.
+  when it was revoked ({{revocation}}), or `expired` when its
+  `expires_at` passed.
 
 The transitions are:
 
@@ -2194,11 +2198,15 @@ before reading it this way.
 
 ## Revocation {#revocation}
 
-A Mission is revoked when the AS receives an authorized revocation
-for it. A deployment MUST provide an authenticated means for the
-Subject, the Approver, or an administrator to revoke a Mission by
-`mission_id`, independent of possession of any token (so a Mission
-can be stopped even when no refresh token is held).
+A Mission is revoked when the AS receives a revocation for it from a
+party the deployment's policy authorizes to revoke it, or when that
+policy itself terminates the Mission; either way, its termination
+reason is `revoked`. The Subject, the Approver, and an administrator
+are parties that policy can authorize; none is authorized by its role
+alone. A deployment MUST provide an authenticated means, independent
+of possession of any token, by which a party its policy authorizes
+revokes a Mission by `mission_id` (so a Mission can be stopped even
+when no refresh token is held).
 
 The wire shape of that operation is out of scope for this document. A
 deployment-defined authenticated surface satisfies this requirement;
@@ -2980,10 +2988,23 @@ A resource server can also:
 
 ## Mission-Unaware Resource Servers {#rs-mission-unaware}
 
-A deployment MUST NOT route a delegated Mission-bound token to a
-Mission-unaware resource server, or to logging or audit
-infrastructure, that authorizes or logs the caller on `client_id`
-without processing the `act` chain.
+Two parties keep a delegated Mission-bound token, one carrying an
+`act` claim, from consumers that do not process the `act` chain:
+
+- **The AS, at issuance.** The AS MUST refuse, with `invalid_target`
+  ({{error-mapping}}), a request for a delegated Mission-bound token
+  whose audience it has not established as a Mission-aware Resource
+  Server ({{rs-requirements}}) that also processes the `act` chain,
+  authorizing and logging the caller from the chain rather than from
+  `client_id` alone. That the audience parses `act` does not
+  establish this.
+- **The deployment, after issuance.** A deployment MUST NOT route a
+  delegated Mission-bound token to a Mission-unaware resource server,
+  or to logging or audit infrastructure, that authorizes or logs the
+  caller on `client_id` without processing the `act` chain. The AS
+  cannot verify where a token travels beyond its audience or which
+  pipelines log its use, so that routing and logging remain the
+  deployment's.
 
 A Mission-unaware {{RFC9068}} resource server reads `client_id` as
 the immediate client, which is accurate for that single token. It
@@ -2997,6 +3018,8 @@ A resource that requires Mission-bound tokens can advertise that
 through the `mission_bound_authorization_required` protected resource
 metadata member ({{protected-resource-metadata}}); a resource server
 that serves such a resource is, by that requirement, Mission-aware.
+That requirement does not by itself establish that the resource
+server processes the `act` chain.
 
 A Mission-unaware resource server that authorizes only from `scope`
 operates within the Mission only to the extent the AS established a
@@ -3184,7 +3207,7 @@ exchange rows of the third table.
 |---|---|
 | PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
 | Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
-| Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or, where the AS applies {{rs-enforcement}}'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
+| Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or the AS has not established a delegated Mission-bound token's audience as a Mission-aware Resource Server that also processes the `act` chain ({{rs-mission-unaware}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}) |
@@ -3193,7 +3216,7 @@ exchange rows of the third table.
 
 | Surface / failing input | Base OAuth error and optional detail |
 |---|---|
-| PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value) ({{submission-via-par}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
+| PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value), including a structurally invalid evidence entry ({{submission-via-par}}, {{intent-submission-evidence}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) ({{authority-proposal}}) | `invalid_authorization_details` ({{Section 5 of RFC9396}}). Detail: RAR-defined detail |
 | PAR: a proposed entry, valid for its type, whose `resource` is not among the Intent's `target_resources` ({{authority-proposal}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | PAR or authorization request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
@@ -3248,9 +3271,11 @@ one of three cases, with different obligations:
   state ({{introspected-consumption}}).
 
 An AS MAY support OAuth 2.0 Token Introspection {{RFC7662}} for
-Mission-bound access tokens. When it does, the response for such a token
-carries, in addition to the standard members, a `mission` member: a JSON
-object with the following members:
+Mission-bound access tokens. When it does, an `active: true` response
+for such a token, to a caller authorized to receive Mission data
+({{caller-authorization-and-minimization}}), MUST carry, in addition
+to the standard members, a `mission` member: a JSON object with the
+following members:
 
 - `id` and `issuer`: as in the `mission` claim ({{mission-claim}}).
 - `state`: the Mission's current lifecycle state (string). Its value
@@ -3625,6 +3650,10 @@ subject to all of the following:
   in the previous actor's `act` member. Each actor object carries the
   members that profile defines (for example, `sub`, `iss`, and the
   `sub_profile` actor-type classification, such as `ai_agent`).
+- **The audience processes the chain.** The AS issues the delegated
+  token only for an audience it has established as a Mission-aware
+  Resource Server that also processes the `act` chain, and refuses
+  any other with `invalid_target` ({{rs-mission-unaware}}).
 - **Authority only narrows.** The delegated token's
   `authorization_details` MUST be a subset ({{subset}}) of the
   designation's authority, hence of the delegating token's and of the
@@ -4941,9 +4970,10 @@ issuance surfaces:
 - gating of issuance on Mission state ({{issuance-gating}}).
 
 An AS can conform as a Mission Issuer without supporting any Intent
-Submission Evidence type. Such an AS refuses every presented entry as an
-unsupported type under the dispatch and refusal rules
-({{intent-submission-evidence}}), with the
+Submission Evidence type. Such an AS refuses every presented entry
+under the dispatch and refusal rules ({{intent-submission-evidence}}):
+a structurally invalid entry with the `invalid_request` error code, and
+any other entry, as an unsupported type, with the
 `invalid_mission_intent_evidence` error code. It need not implement the
 evidence framework of
 {{I-D.draft-mcguinness-oauth-mission-submission-evidence}} for this
@@ -5829,7 +5859,7 @@ This document seeds the registry with the reasons it defines:
 
 | Value | Semantics | Members | Change Controller | Reference |
 |---|---|---|---|---|
-| `revoked` | The Subject, Approver, or policy terminated the Mission. | none | IETF | this document, {{termination}} |
+| `revoked` | An authorized party revoked the Mission, or the deployment's policy terminated it ({{revocation}}). | none | IETF | this document, {{termination}} |
 | `expired` | The Mission's `expires_at` passed; `terminated_at` equals it. | none | IETF | this document, {{termination}} |
 {: title="Mission Termination Reasons registry: initial contents"}
 
