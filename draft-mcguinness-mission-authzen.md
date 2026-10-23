@@ -1137,14 +1137,15 @@ approval failing any of these checks does not satisfy the denial.
 Where a resource contract applies to the action
 ({{context-resource-contract}}), the approval binds its reference
 through the approved Resource, which ARAP requires the approval record
-or its binding material to contain ({{ARAP}}, Section 12.3.1). The
+or its binding material to contain or let the PDP determine ({{ARAP}},
+Section "Completion Semantics"). The
 Mission checks then also establish that the approved Resource's
 `properties.resource_contract` equals the request's, member for member.
 An approval given under one reference does not cover an action under
 another, even when both references resolve: the PDP MUST deny that
 re-evaluation with ARAP's `out_of_scope`, which ARAP defines for a
 valid approval whose scope the current evaluation falls outside
-({{ARAP}}, Section 8.2).
+({{ARAP}}, Section "Completion Semantics").
 
 The
 PDP MUST record the presented approval `id` in Decision Evidence. The
