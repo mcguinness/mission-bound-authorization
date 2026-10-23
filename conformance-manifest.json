@@ -11229,9 +11229,21 @@
      "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > RFC 7009 revocation of the family's refresh token refuses new designations and pending redemptions and inactivates the delegated token",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "each redemption validates the grant state backing the designated credential (@spec mission#delegated-exchange, mission#grant-binding-related, #1503 finding 11) > a handle minted at any depth of consecutive self-exchanges stays designatable, and still falls with the approval grant (#1601 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "each redemption validates the grant state backing the designated credential (@spec mission#delegated-exchange, mission#grant-binding-related, #1503 finding 11) > a backing chain that revisits a grant is corrupt state and fails closed (#1601 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 11 (D620). Each witness is proven by its own mutant. isGrantLive ignoring the backing grant, or the handle mint recording none, fails the self-exchange witness (200 instead of 400). The delegated exchange settling under a fresh Mission-bound grant instead of the designation's fails the depth-2 witness (200 instead of 400). Skipping the redemption's grant check fails all five cited tests. With the status and error assertions removed, the zero-count assertion alone fails under each mutant (the self-exchange witness counts 2 more, the depth-2 witness 1 more)."
+   "notes": "#1503 finding 11 (D620). Each witness is proven by its own mutant. isGrantLive ignoring the backing grant, or the handle mint recording none, fails the self-exchange witness (200 instead of 400). The delegated exchange settling under a fresh Mission-bound grant instead of the designation's fails the depth-2 witness (200 instead of 400). Skipping the redemption's grant check fails all five cited tests. With the status and error assertions removed, the zero-count assertion alone fails under each mutant (the self-exchange witness counts 2 more, the depth-2 witness 1 more). On owner review of #1601 at 6f106618 (P2): isGrantLive stopped after eight backing hops while the issuer kept minting handles, so the ninth consecutive self-exchange minted a handle no designation could use. The walk now follows a chain of any depth (each link is a counted derivation) and fails closed only on a revisited grant; the depth witness fails on 6f106618, and removing the cycle guard leaves the cycle witness unable to complete."
   },
   {
    "id": "core.delegation.authority-narrows-from-designation",
