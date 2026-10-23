@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-23T22:13:25Z
-Source repository commit: 7059febbfbef67c9072e4e8d002e4e92a5e0594c
+Generated: 2026-10-23T22:58:16Z
+Source repository commit: 8b781d4c0a4ed944b133fa42921a163929b213a7
 Member count: 9
 
 Reading order:
@@ -9510,7 +9510,7 @@ Table of Contents
 
 6.8.  Approver Authentication Strength
 
-   A deployment publishes a statement declaring the minimum approval-
+   A deployment MUST publish a statement declaring the minimum approval-
    authentication strength (the approval-authentication floor) it
    enforces for Missions whose derived Authority Set carries high-risk
    authority, and the deployment scope it applies to.  High-risk
@@ -10954,9 +10954,10 @@ Table of Contents
       grant state (Section 11.4).
 
    An AS MAY support OAuth 2.0 Token Introspection [RFC7662] for
-   Mission-bound access tokens.  When it does, the response for such a
-   token carries, in addition to the standard members, a mission member:
-   a JSON object with the following members:
+   Mission-bound access tokens.  When it does, an active: true response
+   for such a token, to a caller authorized to receive Mission data
+   (Section 11.1), MUST carry, in addition to the standard members, a
+   mission member: a JSON object with the following members:
 
    *  id and issuer: as in the mission claim (Section 8.8).
 
@@ -16328,11 +16329,16 @@ Table of Contents
    it at the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax (Section 3.1).  A malformed request
-       is refused invalid_request.
+       is refused invalid_request; a request that includes a parameter
+       more than once is malformed, as at the token endpoint
+       (Section 3.2 of [RFC6749]).
 
    3.  Authorize the request: the caller's read authorization, the
        Mission the mission_id names, and any requested audience
@@ -17055,12 +17061,17 @@ Table of Contents
    the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax and the operation (Section 5.1).  A
        malformed request, or an operation the AS does not serve, is
-       refused invalid_request.
+       refused invalid_request; a request that includes a parameter more
+       than once is malformed, as at the token endpoint (Section 3.2 of
+       [RFC6749]).
 
    3.  Authorize the request.  For a base operation this is the
        lifecycle authorization of Section 5.4 for the acting party, the

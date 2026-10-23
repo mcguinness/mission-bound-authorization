@@ -3880,7 +3880,7 @@ Agent, and delegates are carried in the <code>act</code> chain
         <h3 id="name-approver-authentication-str">
 <a href="#section-6.8" class="section-number selfRef">6.8. </a><a href="#name-approver-authentication-str" class="section-name selfRef">Approver Authentication Strength</a>
         </h3>
-<p id="section-6.8-1">A deployment publishes a statement declaring the minimum
+<p id="section-6.8-1">A deployment <span class="bcp14">MUST</span> publish a statement declaring the minimum
 approval-authentication strength (the approval-authentication floor)
 it enforces for Missions whose derived Authority Set carries high-risk
 authority, and the deployment scope it applies to. High-risk
@@ -5543,9 +5543,11 @@ state (<a href="#introspected-consumption" class="auto internal xref">Section 11
 </li>
       </ul>
 <p id="section-11-3">An AS <span class="bcp14">MAY</span> support OAuth 2.0 Token Introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> for
-Mission-bound access tokens. When it does, the response for such a token
-carries, in addition to the standard members, a <code>mission</code> member: a JSON
-object with the following members:<a href="#section-11-3" class="pilcrow">¶</a></p>
+Mission-bound access tokens. When it does, an <code>active: true</code> response
+for such a token, to a caller authorized to receive Mission data
+(<a href="#caller-authorization-and-minimization" class="auto internal xref">Section 11.1</a>), <span class="bcp14">MUST</span> carry, in addition
+to the standard members, a <code>mission</code> member: a JSON object with the
+following members:<a href="#section-11-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11-4.1">
           <p id="section-11-4.1.1"><code>id</code> and <code>issuer</code>: as in the <code>mission</code> claim (<a href="#mission-claim" class="auto internal xref">Section 8.8</a>).<a href="#section-11-4.1.1" class="pilcrow">¶</a></p>
