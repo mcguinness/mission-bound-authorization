@@ -862,50 +862,40 @@ Request Object {{RFC9101}} pushed there. It MUST reject, with the
 `invalid_request` error code ({{Section 4.1.2.1 of RFC6749}}), an
 authorization request that carries the parameter any other way,
 including in a Request Object passed to the authorization endpoint
-outside PAR. The front channel then carries only `client_id` and the
-`request_uri` ({{Section 4 of RFC9126}}).
-This restriction concerns the authorization-request parameter; direct
-redemption at the token endpoint ({{redemption}}) is unaffected.
+outside PAR. Direct redemption at the token endpoint ({{redemption}})
+is unaffected.
 
 The AS applies the grant validation of {{grant-validation}} at the PAR
 endpoint and treats the grant as the authorization already obtained.
 It MUST NOT re-prompt for consent; at most it renders the Mission
 reference.
 
-The AS consumes the grant at PAR validation: the 300-second `exp`,
-`iat`, and `aud` checks and the single-use `jti` check are evaluated
-there, and the `jti` is recorded as seen at that point, so the grant
-cannot be replayed into a second authorization request. Recording
-there is the atomic issuance step of {{single-use}} under this
-carriage: from that point the `request_uri`, and then the
-authorization code, carry the authorization. A flow the user abandons,
-or the AS refuses, after PAR validation therefore leaves the grant
-consumed, and the client obtains a fresh grant.
+The AS consumes the grant at PAR validation: it records the `jti` as
+seen there, the atomic issuance step of {{single-use}} under this
+carriage, so the grant cannot be replayed into a second authorization
+request. From then on the `request_uri`, and then the authorization
+code, carry the authorization; a flow the user abandons, or the AS
+refuses, after PAR validation leaves the grant consumed, and the
+client obtains a fresh grant.
 
-The grant's window is not re-evaluated at code exchange; the issued
-authorization code carries its own lifetime from there. All
-remaining redemption rules (subset, lifetime, Effective Authority Set
-projection, no re-approval, and the error mapping of
-{{redemption-errors}}) apply at the token request unchanged. A
+The grant's window is not re-evaluated at code exchange, since the
+authorization code carries its own lifetime. The other redemption
+rules ({{token-issuance}}, {{effective-set-projection}} or
+{{no-state-integration}}, and {{redemption-errors}}) apply at the
+token request unchanged. A
 transient source failure at code exchange refuses
-`temporarily_unavailable` and MUST NOT consume the authorization code,
-so the exchange stays retryable within the code's own lifetime.
+`temporarily_unavailable` and MUST NOT consume the authorization code.
 
 This carriage serves user-delegated Missions
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority Sources"),
 where an authenticated resource owner exists to bind. The AS MUST
-bind the resource owner
-authenticated at the authorization endpoint to the grant's `sub`: it
-proceeds only where the authenticated user is the grant's Subject
-under the deployment's mapping policy ({{trust}}). The AS
-MUST refuse when a different user authenticates, so the grant cannot
-mint tokens for the wrong resource owner.
-
-For a service-owned or organizational Mission there is no delegating
-user to authenticate; such a grant is redeemed directly
-({{redemption}}), not carried through the authorization code flow.
-The client MUST still be the grant's `client_id`
-({{grant-validation}}).
+refuse the request unless the resource owner authenticated at the
+authorization endpoint is the grant's Subject under the deployment's
+mapping policy ({{trust}}), so the grant cannot mint tokens for
+another resource owner. A grant for a service-owned or organizational
+Mission has no delegating user to authenticate; it is redeemed
+directly ({{redemption}}), not carried through the authorization code
+flow.
 
 # Metadata {#metadata}
 
