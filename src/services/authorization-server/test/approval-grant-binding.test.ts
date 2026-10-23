@@ -210,8 +210,10 @@ const until = async (done: () => boolean) => {
 describe("the approval decision's order of writes (@spec mission#approval-event, #916, D415)", () => {
   it("an overlapping approval retry cannot bypass the derivation limit: the binding never moves, and the first approval grant keeps counting", async () => {
     const flow = await open({ requested_derivation_limit: 1 });
-    // Hold the first decision at its grant save until the second decision has
-    // completed, been redeemed and been refused at the limit.
+    // The commits on one approval event run one at a time (#1446), so the
+    // overlapping retry recovers the first decision's commit. Hold it at its
+    // grant save until the first decision has been redeemed and refused at the
+    // limit.
     let release!: () => void;
     const gate = new Promise<void>((r) => {
       release = r;
@@ -220,13 +222,13 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     let saves = 0;
     vi.spyOn(as.provider.Grant.prototype, "save").mockImplementation(async function (this: object, ...args: unknown[]) {
       saves += 1;
-      if (saves === 1) await gate;
+      if (saves === 2) await gate;
       return (save as (...a: unknown[]) => Promise<string>).apply(this, args);
     });
-    const held = flow.decide();
-    await until(() => saves >= 1);
     const first = await flow.decide();
     expect(first.status).toBe(303);
+    const held = flow.decide();
+    await until(() => saves >= 2);
     const { missionId, refreshToken, keys } = await flow.redeem(await flow.finish(first));
     expect(as.kernel.get(missionId)?.derivation_count).toBe(1);
     const refused = await token({ grant_type: "refresh_token", refresh_token: refreshToken }, keys);
@@ -384,20 +386,48 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     // Bob's decision for Alice reserves the interaction, then waits at its grant save.
     const bob = flow.decide();
     await until(() => accounts.length >= 1);
-    // Alice deciding for herself meanwhile is refused before any grant save.
-    const alice = await flow.decide(trustedApprovalHeaders("alice", {}, null));
-    expect(alice.status).toBe(403);
-    expect(((await alice.json()) as { error?: string }).error).toBe("approval_forbidden");
+    // Alice deciding for herself meanwhile waits for Bob's commit (#1446), and
+    // is refused before any grant save.
+    const alice = flow.decide(trustedApprovalHeaders("alice", {}, null));
+    await new Promise((r) => setTimeout(r, 50));
     expect(accounts).toEqual(["bob"]);
     release();
     const decided = await bob;
     expect(decided.status).toBe(303);
+    const refused = await alice;
+    expect(refused.status).toBe(403);
+    expect(((await refused.json()) as { error?: string }).error).toBe("approval_forbidden");
+    expect(accounts).toEqual(["bob"]);
     const { missionId } = await flow.redeem(await flow.finish(decided));
     const record = as.kernel.get(missionId);
     expect(record?.approval_basis.consent_principal?.sub).toBe("bob");
     expect(record?.subject.sub).toBe("alice");
     const grant = (await as.provider.Grant.find(record?.grant_id as string)) as unknown as { accountId?: string };
     expect(grant.accountId).toBe("bob");
+  });
+
+  it("a reservation outlives a failed commit: a decision by another principal is refused before saving a grant", async () => {
+    const flow = await open();
+    const save = as.provider.Grant.prototype.save;
+    const accounts: string[] = [];
+    vi.spyOn(as.provider.Grant.prototype, "save").mockImplementation(async function (this: { accountId?: string }, ...args: unknown[]) {
+      accounts.push(this.accountId as string);
+      return (save as (...a: unknown[]) => Promise<string>).apply(this, args);
+    });
+    vi.spyOn(as.kernel, "approve").mockImplementationOnce(() => {
+      throw new Error("injected record-commit failure");
+    });
+    const failed = await flow.decide();
+    expect(failed.status).toBe(500);
+    expect(as.kernel.findByApprovalEvent(flow.approvalEventId)).toBeUndefined();
+    // Bob's reservation stands: Alice deciding for herself is refused before any grant save.
+    const alice = await flow.decide(trustedApprovalHeaders("alice", {}, null));
+    expect(alice.status).toBe(403);
+    const body = (await alice.json()) as { error?: string; error_description?: string };
+    expect(body.error).toBe("approval_forbidden");
+    expect(body.error_description).toMatch(/reserved/);
+    expect(accounts).toEqual(["bob"]);
+    expect((await flow.decide()).status).toBe(303);
   });
 
   it("the commit revalidates the prepared authority source: a source withdrawn during the grant save refuses access_denied and creates no Mission", async () => {
