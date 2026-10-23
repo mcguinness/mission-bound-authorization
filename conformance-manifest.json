@@ -9124,7 +9124,7 @@
    "surface": "decision-request",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a Mission-joining PDP's decision-time join of an ordinary credential to a Mission (the Mission Authority Server's Mission Join, {{I-D.draft-mcguinness-mission-authority-server}}) creates no grant binding: the joined OAuth grant remains unbound, the join's outcome is not persisted as this section's binding, and the same credential may join a different Mission on a later request without rebinding anything"
+    "normative": "a Mission-joining PDP's decision-time join of an ordinary credential to a Mission (the Mission Authority Server's Mission Join, {{I-D.draft-mcguinness-mission-authority-server}}) creates no grant binding: the joined OAuth grant remains unbound, the join's outcome is not persisted as this section's binding, and the same credential may join a different Mission on a later request without rebinding anything ({{I-D.draft-mcguinness-mission-authority-server}}, Section \"Mission Join\")"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -11120,7 +11120,7 @@
     "normative": "a delegated token issued by redeeming a designation carries no authority beyond the designation's: when the designation was derived from a credential narrower than its Mission, the delegated token does not regain the authority the credential omitted"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
@@ -11129,7 +11129,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "D-2 of the OAuth binding layering plan: proven by disabling the code it covers. Narrowing the redemption from the Mission's full Authority Set instead of the designation's authority fails the witness: the delegated token regains payments:invoice.list. The witness exercises a designation derived from a credential narrower than its Mission, the case where the designation's authority and the Mission Authority Set differ."
+   "notes": "D-2 of the OAuth binding layering plan. Exercised: the delegated token does not regain authority the delegating credential omitted, and narrowing the redemption from the Mission's full Authority Set instead (a mutation) fails the witness: the delegated token regains payments:invoice.list. Not exercised: authority the designation omitted although the delegating credential carried it. In the reference AS a designation carries the presented authority narrowed only by delegate eligibility, which the redemption re-applies, so the two differ only when eligibility widens between designation and redemption, and no test constructs that case."
   },
   {
    "id": "core.delegation.delegate-own-key",
