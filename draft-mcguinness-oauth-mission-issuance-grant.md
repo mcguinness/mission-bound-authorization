@@ -709,34 +709,29 @@ authority per resource, not for an audience of its own. For each
 distinct `resource` value among the grant's `mission_resource_access`
 entries (on refresh, among the refresh family's ceiling), it sends one
 request whose `audience` is that `resource` value, unchanged; the
-Mission Issuer authorizes it separately for each audience it requests
+Mission Issuer authorizes each audience separately
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Request").
 The consuming AS validates each response against the audience it
 requested, and MUST combine only responses whose `mission.issuer`,
-`mission.id`, and `mission.version` are identical. The rollback test
-compares each response with the version the AS retained for the
-Mission before this resolution began: a response below that retained
-version is a rollback ({{transient-failure}}). Versions collected
-within the resolution may differ from one another. The AS re-queries
-each audience whose response is below the highest version collected,
-without using a cached response, up to a bound the deployment
-configures, and never accepts a version below the retained one. Once
-all responses report one version, the AS combines them and retains
-that version. If it still cannot obtain responses at one version
-within the bound, the state source has failed
-({{transient-failure}}): the AS refuses with
-`temporarily_unavailable`, and the presented grant, refresh token, or
-authorization code stays unconsumed ({{single-use}},
-{{par-carriage}}). A not-found response for an audience the grant
-names means the Mission is not established `active`, and the AS
-refuses with `invalid_grant`. Each response is authenticated, scoped
-to the requested audience, and carries current
-`authorization_details` and the Mission's state `version`.
+`mission.id`, and `mission.version` are identical. A response below
+the version the AS retained for the Mission before this resolution
+began is a rollback ({{transient-failure}}). Where responses within
+one resolution differ in version, the AS re-queries each audience
+whose response is below the highest version collected, without using
+a cached response, up to a bound the deployment configures. Once all
+responses report one version, the AS combines them and retains that
+version. If it still cannot obtain responses at one version within
+the bound, the state source has failed ({{transient-failure}}). A
+not-found response for an
+audience the grant names means the Mission is not established
+`active`, and the AS refuses with `invalid_grant`.
 
 Lifecycle state alone, such as an `active` state or a Status List
-VALID bit, is not enough from any source: containment and discharge
-narrow an active Mission without changing its lifecycle state, and a
-Status List bit carries no `authorization_details`.
+VALID bit, is not enough from any source, and a source that reports
+only lifecycle state is not a Mission-state integration: containment
+and discharge narrow an active Mission without changing its
+lifecycle state, and a Status List bit carries no
+`authorization_details`.
 
 ### Issued Authority {#issued-authority}
 
@@ -746,8 +741,8 @@ intersection of:
 1. the grant's `authorization_details`, or on refresh the refresh
    family's own ceiling ({{refresh}});
 2. the current Effective Authority Set;
-3. the consuming AS's own policy, which narrows only, per the subset
-   rule above; and
+3. the consuming AS's own policy, which narrows only
+   ({{token-issuance}}); and
 4. any narrower authority the client requests at the token endpoint.
 
 A partial intersection issues only the remainder. This
@@ -777,16 +772,12 @@ transient failure, never authority exhaustion, and is refused in a
 machine-readable shape: this profile defines a token-endpoint use of
 the OAuth `temporarily_unavailable` error code {{RFC6749}}
 ({{oauth-error-registration}}), carried with HTTP status 503. The
-response MAY carry `Retry-After` per the
-deployment's declared state-recovery policy. For a per-resource
-resolution, the version already observed is the one the AS retained
-before the resolution began; versions collected within it are
-reconciled as {{mission-state-source}} describes, and responses that
-cannot be brought to one version are the same transient failure.
-The consuming AS leaves its stored ceiling unchanged. `invalid_grant`
-stays for the permanent classes: an invalid, expired, or replayed
-grant, a Mission that is not established `active`, and a genuinely
-empty current intersection.
+response MAY carry `Retry-After` per the deployment's declared
+state-recovery policy. For a per-resource resolution, the version
+already observed is the one the AS retained before the resolution
+began ({{mission-state-source}}). The consuming AS leaves its stored
+ceiling unchanged. `invalid_grant` stays for the permanent failures
+({{redemption-errors}}).
 
 ### Single Use {#single-use}
 
@@ -814,11 +805,9 @@ as a rollback.
 
 A consuming AS without a Mission-state integration MUST NOT issue
 refresh tokens under a grant, and relies instead on the grant's
-`active`-at-minting gate and the short access-token lifetime above. A
-source that reports lifecycle state alone is not a Mission-state
-integration under this profile ({{mission-state-source}}). A consuming
-AS that cannot perform this projection MUST NOT claim containment- or
-discharge-aware issuance.
+`active`-at-minting gate and the short access-token lifetime
+({{token-issuance}}). A consuming AS that cannot perform this
+projection MUST NOT claim containment- or discharge-aware issuance.
 
 ## Redemption Errors {#redemption-errors}
 
