@@ -164,8 +164,8 @@ token happens to embed. Mission-Bound Authorization
 ({{I-D.draft-mcguinness-oauth-mission}}) answers the second: the Mission
 is the approved, constrained, state-gated, revocable record of the work.
 
-This document is the binding between the two, plus the evidence that
-ties each continued action back to the Mission. It is transport-agnostic:
+This document connects the two, and adds the evidence that ties each
+continued action back to the Mission. It is transport-agnostic:
 it defines what a Mission requires of any identity-continuity transport,
 and it profiles the three transports above. It defines no new token type,
 grant type, or endpoint of its own; it constrains how the transports'
@@ -174,7 +174,7 @@ family is the Continue verb of the architecture
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
 This document is optional and experimental: adopt it for evaluation,
-not as a stable interface. It is a layered binding between the
+not as a stable interface. It is a profile layered between the
 issuance profile and an identity-continuity transport, not a change
 to either. A deployment that implements
 {{I-D.draft-mcguinness-oauth-mission}} and never continues a Mission
@@ -215,7 +215,9 @@ Accepted Hop:
 
 Continuation Handle:
 : An opaque reference that names an accepted hop. A continuation handle is
-  not a credential (see {{invariant}}).
+  not a credential (see {{invariant}}). It differs from the async
+  delegation transport's delegation handle ({{transport-async}}), an
+  access token that carries authority.
 
 Rooting Anchor:
 : The record binding a continuation to exactly one Mission. A rooting
@@ -439,17 +441,18 @@ including a Mission access token audienced to a resource, and MUST
 require proof of possession of the `subject_token`'s own confirmation
 key; client authentication never satisfies that sender constraint.
 
-An agent obtains its handle with a Token Exchange that presents its own
+An agent obtains its delegation handle with a Token Exchange that
+presents its own
 Mission access token, proves possession of that token's key, and names
-its own `client_id` as `audience`. The handle keeps that key and
+its own `client_id` as `audience`. The delegation handle keeps that key and
 carries the presented token's authority narrowed by the Mission's
 current effective authority. The exchange is a no-actor self-exchange
 under the issuance profile's Self-Exchange Down-Scoping rules
 ({{I-D.draft-mcguinness-oauth-mission}}). A dispatched Mission's
 selected Agent instead redeems the Template profile's Dispatch Handoff
-for its handle ({{I-D.draft-mcguinness-oauth-mission-template}}),
+for its delegation handle ({{I-D.draft-mcguinness-oauth-mission-template}}),
 unless it is also the Dispatcher (the same authenticated client),
-which obtains its handle through this exchange from the instance's
+which obtains its delegation handle through this exchange from the instance's
 access token.
 
 This is the "scheduled continuation roots in durable
@@ -572,12 +575,15 @@ with every requesting-party token re-passing fresh assessment.
 
 # Security Considerations {#security}
 
-Handle theft yields no authority. Because a continuation handle grants
+Continuation handle theft yields no authority. Because a continuation handle grants
 nothing ({{invariant}}), an attacker who steals one cannot obtain a
 continued grant without also satisfying the transport's identity
 re-establishment and key confirmation and passing the Mission's live state
-gate. This is the property that makes conveying a handle through an
-intermediary safe: the intermediary gains no ability to act.
+gate. This is the property that makes conveying a continuation handle
+through an intermediary safe: the intermediary gains no ability to act.
+A delegation handle does carry authority, and its sender constraint
+({{transport-async}}) withholds that authority from a holder without
+the acting client's key.
 
 Revocation latency for a continuation is bounded by the shorter of the
 continued credential's remaining lifetime and the transport's re-issuance
@@ -586,7 +592,7 @@ interval, and never exceeds the Mission's expiry
 continuation immediately but does not shorten a credential already issued;
 deployments requiring tighter bounds choose shorter transport lifetimes.
 
-Replay is a transport concern the Mission binding does not relax: the
+Replay is a transport concern this profile does not relax: the
 Identity Continuation Assertion is single-use, keyed on `(iss, jti)`
 ({{Section 5.5.7 of I-D.draft-mcguinness-oauth-id-continuation-assertion}}),
 and an async

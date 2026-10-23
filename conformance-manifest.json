@@ -44888,7 +44888,7 @@
    "id": "continuation.async-transport.handle-request",
    "spec": "draft-mcguinness-oauth-mission-continuation.md",
    "anchor": "transport-async",
-   "text": "An agent obtains its handle with a Token Exchange that presents its own Mission access token, proves possession of that token's key, and names its own `client_id` as `audience`.",
+   "text": "An agent obtains its delegation handle with a Token Exchange that presents its own Mission access token, proves possession of that token's key, and names its own `client_id` as `audience`.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -44948,7 +44948,7 @@
    "id": "continuation.async-transport.handle-key-and-authority",
    "spec": "draft-mcguinness-oauth-mission-continuation.md",
    "anchor": "transport-async",
-   "text": "The handle keeps that key and carries the presented token's authority narrowed by the Mission's current effective authority.",
+   "text": "The delegation handle keeps that key and carries the presented token's authority narrowed by the Mission's current effective authority.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -44989,7 +44989,7 @@
    "id": "continuation.async-transport.self-dispatch-handle",
    "spec": "draft-mcguinness-oauth-mission-continuation.md",
    "anchor": "transport-async",
-   "text": "unless it is also the Dispatcher (the same authenticated client), which obtains its handle through this exchange from the instance's access token.",
+   "text": "unless it is also the Dispatcher (the same authenticated client), which obtains its delegation handle through this exchange from the instance's access token.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
