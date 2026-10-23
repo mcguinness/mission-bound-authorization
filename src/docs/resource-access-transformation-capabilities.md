@@ -49,8 +49,8 @@ Why nothing is declared:
 
 - **`narrowing`** claims the subset rule "over every member this document
   specifies" and the Common Constraint intersection rules. The reference
-  compares action families as literal strings (§2.1) and delegate matchers
-  structurally (§2.4), so it does not implement the
+  implements none of the action-family clauses, refusing family input (§2.1),
+  and compares delegate matchers structurally (§2.4), so it does not implement the
   whole relation. D444: "refusing unsupported input
   does not establish the `narrowing` capability". The nine Common Constraint
   comparisons (§2.2) are necessary evidence, not the whole claim.
@@ -74,14 +74,15 @@ Resource Access § Subset Rule, steps 1 and 2.
 | `exact` A under `prefix` B; `prefix` A under `prefix` B; `prefix` A under `exact` B | implemented through the shared matcher: an `exact` A within `prefix` B's base, a `prefix` A's base within B's, never a `prefix` A under an `exact` B. Configured `prefix` ceilings load beside containment rules: containment applies a removal to every approved entry whose resource set overlaps it (#1463) | `resourceWithin` over `prefixAdmits` (`packages/mission-core/src/authority-subset.ts`, `operation-target.ts`); `derivedResource` (`derive.ts`); `ceilingResourceMatch` (`packages/demo-data/src/index.ts`); `selectorOverlapsEntry` (`packages/mission-core/src/containment-selector.ts`) | cases sub-res-04 to sub-res-08; `prefix-ceiling-endpoint.test.ts` (derivation under a configured `prefix` ceiling beside the shipped containment rules, a `prefix` request refused against an `exact` grant, and a containment selector reaching an entry approved beneath the ceiling); `resource-match-unsupported.test.ts` "loads prefix ceiling entries in policy.json, governed-policy.json and authority-sources.json beside the configured containment rules (@spec containment#selector-matching, #1463)" |
 | The authorization server compares with the resource server's matcher | implemented for `exact`: both compare the decoded strings literally (`matchResource`, `packages/mission-core/src/operation-target.ts`) | as above | none; row `resource-access.subset.same-matcher` is `todo` |
 | An action is within an equal action | implemented: literal membership | `isSubsetEntry`; `intersect` and `intersectForProjection` (`derive.ts`) | `token-request-rar-narrowing.test.ts` "an action outside the grant is refused invalid_authorization_details, saving no refresh token, and the same token still refreshes" |
-| A literal action within a family; a family within a family | not implemented: a family value is admitted as an opaque string (intake checks only for a non-empty array of strings) and compared literally, so `invoices.read` is not within `invoices.*` | as above | none; case sub-act-01 skips (`action-families`) |
-| A family is never within a literal action | implemented, as a consequence of literal comparison | as above | none |
+| A literal action within a family; a family within a family | not implemented: an action family is unsupported input, refused before approval or transformation at every boundary that admits an entry (#1377, D538, D684), so no comparison ever sees one | `unsupportedActionFamily` (`packages/mission-core/src/authority-subset.ts`), consulted wherever `unsupportedEntryMember` is: `refusedMemberViolation` (`authorization-details-metadata.ts`), `isAuthorityEntry`, `isSubsetEntry`, derivation and projection (`derive.ts`), template consent (`template.ts`) and the config loaders (`packages/demo-data/src/index.ts`) | `action-family-refused.test.ts`; `entry-validation.test.ts` "refuses an action family the grammar admits as unsupported input, not as a grammar violation, creating no Mission (#1377)"; the refresh-narrowing, template-consent and RAS witnesses; case sub-act-01 skips (`action-families`) |
+| A family is never within a literal action | not reached: a family is refused before any comparison (#1377) | as above | as above |
 
-No enforcement point expands a family. The decision point, the payments
-resource and the SaaS resource match an operation's action by literal
-membership (`services/pdp/src/evaluate.ts`, `services/mcp-payments/src/pep.ts`,
-`services/mcp-saas/src/index.ts`), so a family value never authorizes more
-than its literal spelling.
+No enforcement point expands a family, and the authorization server admits
+none (#1377). The decision point, the payments resource and the SaaS
+resource match an operation's action by literal membership
+(`services/pdp/src/evaluate.ts`, `services/mcp-payments/src/pep.ts`,
+`services/mcp-saas/src/index.ts`), so a family value presented to them
+anyway never authorizes more than its literal spelling.
 
 ### 2.2 Common Constraints
 
@@ -208,8 +209,8 @@ initial Common Constraints, `vendors` and `terminal_when`, and the
 `delegation` rules of §2.4, with one limitation: delegate and child-actor
 matchers are compared by `(sub, sub_profile)` identity, not by the actors
 they permit, so a candidate list narrower by containment is refused (§2.4).
-Outside that domain, action families are admitted and
-compared literally, and an unknown top-level member is refused.
+Outside that domain, an action family and an unknown top-level member are
+refused as unsupported input.
 
 D414 selects the same shape for #819's first interoperable subset:
 "exact-resource matching, explicit actions and agreed typed constraints",
@@ -223,7 +224,8 @@ D414, made through a reviewable specification and declaration change. No
 declaration is published yet. Before one is made:
 
 - unsupported input, including action families (§2.1) and unknown top-level
-  members (§2.3), is refused consistently before approval or transformation;
+  members (§2.3), is refused consistently before approval or transformation
+  (done: #1421 for members, #1377 for families);
 - this inventory is kept correct as that handling changes;
 - each claimed transformation has its own evidence; and
 - the declaration states its domain: `exact` resources, literal actions, the

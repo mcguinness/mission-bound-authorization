@@ -62,6 +62,7 @@ export type {
   TerminalWhenCondition,
 } from "./authority-entry.js";
 export {
+  actionFamilyRefusal,
   conditionCanonicalBytes,
   conditionsNoBroader,
   DELEGATE_MATCHER_MEMBERS,
@@ -80,6 +81,7 @@ export {
   SUPPORTED_CONSTRAINT_KEYS,
   SUPPORTED_DELEGATION_MEMBERS,
   SUPPORTED_ENTRY_MEMBERS,
+  unsupportedActionFamily,
   unsupportedDelegationMember,
   unsupportedEntryMember,
   withoutCapabilitySources,

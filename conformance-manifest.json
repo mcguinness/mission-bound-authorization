@@ -49599,7 +49599,7 @@
      "surface": "par"
     }
    ],
-   "notes": "#1258 item 11; enforced by #1376: validateMissionResourceAccessSchema matches each value against ACTION_VALUE (an identifier, or an identifier followed by .*), anchored and without the m flag, and the published schema carries the same items pattern. The witness puts the offending character first, inside and last (a leading or trailing space, a trailing newline, a slash, a non-ASCII letter, a family marker mid-value). Proved by mutation: a check that admits every string fails the witness."
+   "notes": "#1258 item 11; enforced by #1376: validateMissionResourceAccessSchema matches each value against ACTION_VALUE (an identifier, or an identifier followed by .*), anchored and without the m flag. The published schema's items pattern is the identifier-only ACTION_IDENTIFIER, since the reference refuses an action family as unsupported input (#1377). The witness puts the offending character first, inside and last (a leading or trailing space, a trailing newline, a slash, a non-ASCII letter, a family marker mid-value). Proved by mutation: a check that admits every string fails the witness."
   },
   {
    "id": "resource-access.type.action-family-contract",
@@ -49666,12 +49666,13 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a consent rendering of an entry whose actions carry an action family presents the family as every action under its name, not as one action"
+    "normative": "a consent rendering of an entry whose actions carry an action family presents the family as every action under its name, not as one action",
+    "local": "the reference refuses action-family input before approval or transformation (#1377, D538, D684): witnessed at PAR, refresh narrowing, derivation, projection, template consent, the config loaders and the RAS, and through the same shared validator (refusedMemberViolation) at device submission and the other requested-authority exchanges, so no approval page it renders presents a family"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "In the draft since its first version (#637); the MUST was reshaped by #1258 item 12 and the #1260 review and reworded by #1520, and no row was added at any of those changes. Reference: PAR intake admits a family (ACTION_VALUE, kernel/authorization-details-metadata.ts), and derivation compares actions literally, so a family reaches the approval page only under a ceiling listing the same family string; the shipped policy lists none, so a proposed family is refused at derivation before any rendering, and no test has observed one rendered. Where one does reach the page, the derived entry is shown as JSON (adapters/provider.ts, the derived-authority block) with the family as its verbatim string, not as every action under its name. Owned by #1377, which decides whether the reference refuses family input before approval (D538, D684) and records that under observation.local, or renders families as the clause requires."
+   "notes": "In the draft since its first version (#637); the MUST was reshaped by #1258 item 12 and the #1260 review and reworded by #1520, and no row was added at any of those changes. Before #1377 the reference admitted a family at PAR intake and compared actions literally, so a family reached the approval page only under a ceiling listing the same string, where the derived entry rendered as JSON with the family verbatim. Since #1377 it refuses family input, recorded under observation.local. Coverage stays todo: a refusal observes no rendering (D444). Making the row not applicable to an implementation that refuses families needs an action-families capability gate, a model change proposed on #1377."
   },
   {
    "id": "resource-access.type.action-family-derivation-high-risk",
@@ -49690,12 +49691,13 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an authorization server deriving an entry whose actions carry an action family treats it as high-risk breadth, for example with a stronger approval, an explicit breadth disclosure, or refusal"
+    "normative": "an authorization server deriving an entry whose actions carry an action family treats it as high-risk breadth, for example with a stronger approval, an explicit breadth disclosure, or refusal",
+    "local": "the reference refuses action-family input before approval or transformation (#1377, D538, D684): witnessed at PAR, refresh narrowing, derivation, projection, template consent, the config loaders and the RAS, and through the same shared validator (refusedMemberViolation) at device submission and the other requested-authority exchanges, so it never derives a family"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "In the draft since its first version (#637), with no row until now. Reference: derivation compares actions literally and applies no breadth or risk classification to an action value. The approval-authentication floor looks up the literal action (kernel/approval-floor.ts), so a family is refused there as unclassified at the decision, after the approver has seen the page; HIGH_RISK_CLASSES (kernel/drawdown-approval-record.ts) is keyed on runtime action classes, not identifiers; and the write-bearing check is literal, so the distinct-approver rule does not reach a family. A departure is recorded, not failed. Owned by #1377, with resource-access.type.action-family-consent-rendering."
+   "notes": "In the draft since its first version (#637), with no row until now. Before #1377 derivation compared actions literally and applied no breadth or risk classification to an action value. Since #1377 the reference refuses family input, recorded under observation.local. A departure is recorded, not failed. Coverage stays todo: a refusal observes no breadth handling (D444). Making the row not applicable to an implementation that refuses families needs an action-families capability gate, a model change proposed on #1377."
   },
   {
    "id": "resource-access.type.emit-enforced-constraint-keys",
@@ -50369,8 +50371,8 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a proposed entry with an empty actions array, or with an actions value outside the action grammar, is refused invalid_authorization_details, creating no Mission; identifiers and a family the grammar admits are accepted",
-    "local": "the reference AS checks the grammar at proposal intake only; configuration load and derivation do not re-check it"
+    "normative": "a proposed entry with an empty actions array, or with an actions value outside the action grammar, is refused invalid_authorization_details, creating no Mission; identifiers the grammar admits are accepted",
+    "local": "the reference AS checks the grammar at proposal intake only; configuration load and derivation do not re-check it. An action family, which the grammar admits, is refused separately as unsupported input (#1377, D538, D684), so the grammar check is witnessed apart from that refusal"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -50389,12 +50391,12 @@
     },
     {
      "file": "src/services/authorization-server/test/entry-validation.test.ts",
-     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > accepts action identifiers and an action family the grammar admits (positive control)",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > accepts action identifiers the grammar admits (positive control)",
      "level": "endpoint",
      "surface": "par"
     }
    ],
-   "notes": "#1376. The non-empty check predates it; the grammar check is new (ACTION_VALUE in validateMissionResourceAccessSchema, mirrored as the published schema's items pattern). The provider's RFC 9396 common-field check refuses an empty-string action before it. Proved by mutation, each alone: dropping the length check admits [] (the empty-array witness fails); a grammar check that admits every string admits each malformed value (the grammar witness fails). Cases ev-act-01 to ev-act-07 run (entry-validation); ev-act-08 (a family) is skipped, since this reader does not declare action-families."
+   "notes": "#1376. The non-empty check predates it; the grammar check is new (ACTION_VALUE in validateMissionResourceAccessSchema; since #1377 the published schema's items pattern is the identifier-only ACTION_IDENTIFIER). The provider's RFC 9396 common-field check refuses an empty-string action before it. Proved by mutation, each alone: dropping the length check admits [] (the empty-array witness fails); a grammar check that admits every string admits each malformed value (the grammar witness fails). Cases ev-act-01 to ev-act-07 run (entry-validation); ev-act-08 (a family) is skipped, since this reader does not declare action-families. #1377: the family positive control became a refusal witness (\"refuses an action family the grammar admits as unsupported input, not as a grammar violation\"), which asserts that ACTION_VALUE still admits the family, so the grammar check passes it and the support check refuses it."
   },
   {
    "id": "resource-access.entry-validation.max-depth-non-negative-integer",
@@ -59463,6 +59465,86 @@
     }
    ],
    "notes": "#1399 (D538). One shared set (SUPPORTED_ENTRY_MEMBERS and unsupportedEntryMember in @mission/core, beside REFUSED_ENTRY_MEMBERS) backs every boundary that admits or rebuilds a mission_resource_access entry: the published schema (top level closed), the proposal validator and the requested-authority intakes (refusedMemberViolation), direct derivation, template consent, the config loaders, isAuthorityEntry (foreign grants), projection and isSubsetEntry. The ceiling side of an exchange that issues requested entries unprojected (the ICA continuation, the deferral initiation) rests on isSubsetEntry: a comparison involving an unsupported member is refused unless the two entries are byte-identical under the canonical form, which keeps the Subset Rule's equal-entry clause, since an identical candidate carries the member unchanged. The approved set is rebuilt member by member, so no intake produces that state; the ceiling witnesses write it into the stored record. The ICA witnesses and the stored-record helper are ported from a parallel build of #1399 (68d7d7b7). Proved by disabling each guard alone, each caught only by its own witnesses: the request-side validator branch (the PAR, device, refresh, deferral, handoff, async and ICA candidate tests fail; with it disabled the handoff and async exchanges are still refused by projection's drop, on the subset message, so those two catch it by the message), derivation's check (the three derivation tests), each projection guard (one test each), isAuthorityEntry (the RAS test and the mission-core helper tests), template consent, the config loader check, the closed schema, the capability_sources type check, and the isSubsetEntry guard (the ICA ceiling witness, the deferral initiation's ceiling witness and the helper test). The deferral initiation answers that ceiling case invalid_request, its error for any excess, so its witness (dtr-endpoint.test.ts) is not cited. Not cited, since their error or level differs from this row: the config loaders (a native configuration error naming the entry and the member) and the template admin plane (invalid_request), witnessed in unknown-entry-member.test.ts and template-dispatch-endpoint.test.ts. Positive controls: resource_match exact and capability_sources are still admitted and derived, and the same requests without the member are issued. Resource Access's entry-validation list names no top-level-member rule, so the row quotes the OAuth binding's Subset Rule posture. No vector case."
+  },
+  {
+   "id": "core.subset.action-family-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "subset",
+   "text": "Where the comparison relation cannot decide (an unrecognized member, an incomparable value), the posture is conservative refusal",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry the authorization server's comparison relation cannot decide is refused, never admitted and compared as something else",
+    "local": "the reference implements none of Resource Access's Subset Rule action-family clauses (step 2), so under D538 and D684 it treats an action family as unsupported input: PAR refuses invalid_authorization_details before any request_uri or Mission; refresh narrowing refuses before rotation, saving no refresh token; direct derivation refuses over the ceiling and the proposal; projection drops the pairing, even byte-identical; the subset relation refuses any comparison involving one, even byte-identical; and the RAS refuses a signed grant whose entry names one with invalid_grant, minting no local token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses an action family the grammar admits as unsupported input, not as a grammar violation, creating no Mission (#1377)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an entry naming an action family is refused invalid_authorization_details saving no refresh token, and the same token still refreshes (#1377)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/action-family-refused.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an action family in the ceiling or the proposal (#1377) > refuses a ceiling entry carrying an action family, wherever it sits",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/action-family-refused.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an action family in the ceiling or the proposal (#1377) > refuses a ceiling entry carrying an action family that no submitted proposal entry shares a resource with",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/action-family-refused.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an action family in the ceiling or the proposal (#1377) > refuses a submitted proposal entry carrying an action family, wherever it sits",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/action-family-refused.test.ts",
+     "name": "projection drops a pairing that carries an action family (#1377) > a candidate carrying an action family projects to nothing, even byte-identical to the effective entry",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/action-family-refused.test.ts",
+     "name": "projection drops a pairing that carries an action family (#1377) > an effective entry carrying an action family projects nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-subset.test.ts",
+     "name": "an action family is unsupported input (@spec resource-access#subset, #1377, D538) > isSubsetEntry refuses a comparison involving an action family on either side, even a byte-identical pair",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a signed grant whose entry names an action family is refused, minting no local token (#1377)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D538, D684). A facet of core.subset.unrecognized-member-refused quoting the same clause; the clause is the posture, the ruling is what makes a family unsupported here. One declaration (unsupportedActionFamily in @mission/core) backs every boundary that consults unsupportedEntryMember: the shared validator (refusedMemberViolation, so PAR, device submission and the requested-authority intakes), isAuthorityEntry (the config loaders, the RAS and foreign grants), isSubsetEntry, derivation, projection and template consent; the published schema's actions pattern admits identifiers only. Proved by disabling each call site alone, each caught by its own witnesses: the shared validator (the validator, PAR and refresh witnesses), isAuthorityEntry (the RAS witness and the mission-core helper tests), isSubsetEntry (the mission-core subset test), derivation's check (the three derivation tests), the projection guard (the two projection tests), template consent, the config loader check (the four loader tests) and the schema pattern. Not cited, since their error or level differs from this row: the config loaders (a native configuration error naming the entry and the family) and the template admin plane (invalid_request), witnessed in action-family-refused.test.ts and template-dispatch-endpoint.test.ts. Positive controls: identifiers are still admitted, derived and projected. No vector case: a subset consumer's refusal case is #819's."
   },
   {
    "id": "core.self-exchange.result-subset",
