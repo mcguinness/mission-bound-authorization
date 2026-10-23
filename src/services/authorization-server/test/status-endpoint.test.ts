@@ -225,7 +225,7 @@ describe("Mission Status endpoint errors (@spec status#mission-status-auth-failu
       await fetch(ENDPOINT, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: `mission_id=${record.id}&mission_id=${UNKNOWN}&nonce=${n}`,
+        body: `mission_id=${record.id}&mission_id=${UNKNOWN}&nonce=${n}&${new URLSearchParams(await auth()).toString()}`,
       }),
     );
     const cases: Array<[string, LifecycleAnswer, string | undefined]> = [
@@ -342,6 +342,130 @@ describe("Mission Status endpoint errors (@spec status#mission-status-auth-failu
       expect(answer.cacheControl).toBe("no-store");
     }
     expect(ungrantedAnswer.text).toBe(unknownAnswer.text);
+  });
+});
+
+/** POST a raw form to the Status endpoint, which may repeat a parameter. */
+async function postPairs(pairs: Array<[string, string]>): Promise<LifecycleAnswer> {
+  const res = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(pairs).toString(),
+  });
+  return readAnswer(res);
+}
+
+describe("Mission Status endpoint parsing and repeated parameters (@spec status#mission-status-processing, #1535 D704, D708)", () => {
+  it("refuses a body it cannot parse as a form invalid_request before authentication, with or without a credential, echoing no nonce", async () => {
+    const record = approve();
+    const n = nonce();
+    const json = await readAnswer(
+      await fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mission_id: record.id, nonce: n }),
+      }),
+    );
+    const textPlain = await readAnswer(
+      await fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: new URLSearchParams({
+          mission_id: record.id,
+          nonce: n,
+          client_assertion_type: CLIENT_ASSERTION_TYPE,
+          client_assertion: await lifecycleClientAssertion(ISSUER, reader),
+        }).toString(),
+      }),
+    );
+    for (const [label, answer] of [["JSON, no credential", json], ["text/plain, a valid assertion", textPlain]] as const) {
+      expect(answer.status, label).toBe(400);
+      expect(answer.json?.error, label).toBe("invalid_request");
+      expect(answer.json?.nonce, label).toBeUndefined();
+    }
+  });
+
+  it("fails authentication on a repeated client authentication parameter, invalid_client, and verifies no occurrence", async () => {
+    const record = approve();
+    const n = nonce();
+    const members: Array<[string, string]> = [
+      ["mission_id", record.id],
+      ["nonce", n],
+    ];
+    const first = await lifecycleClientAssertion(ISSUER, reader);
+    const second = await lifecycleClientAssertion(ISSUER, reader);
+    const cases: Array<[string, Array<[string, string]>]> = [
+      ["two valid assertions", [["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", first], ["client_assertion", second]]],
+      ["one assertion twice", [["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", first], ["client_assertion", first]]],
+      ["client_assertion_type twice", [["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", first]]],
+      ["client_id twice", [["client_id", reader.clientId], ["client_id", reader.clientId], ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", first]]],
+    ];
+    for (const [label, credential] of cases) {
+      const answer = await postPairs([...members, ...credential]);
+      expect(answer.status, label).toBe(400);
+      expect(answer.json?.error, label).toBe("invalid_client");
+      expect(answer.json?.nonce, label).toBe(n);
+    }
+    // No occurrence was tried: the assertion's single-use jti was never
+    // admitted, so it still authenticates a request that sends it once.
+    const once = await read(reader, { mission_id: record.id, nonce: n }, first);
+    expect(once.status, once.text).toBe(200);
+  });
+
+  it("authenticates before refusing a repeated request parameter: invalid_client without a valid credential, invalid_request with one", async () => {
+    const record = approve();
+    const n = nonce();
+    const credential = async (): Promise<Array<[string, string]>> => [
+      ["client_assertion_type", CLIENT_ASSERTION_TYPE],
+      ["client_assertion", await lifecycleClientAssertion(ISSUER, reader)],
+    ];
+    const unauthenticated: Array<[string, Array<[string, string]>]> = [
+      ["a repeated mission_id, no credential", [["mission_id", record.id], ["mission_id", UNKNOWN], ["nonce", n]]],
+      [
+        "a repeated audience, an assertion that is not a JWT",
+        [
+          ["mission_id", record.id],
+          ["audience", CANONICAL_RESOURCE],
+          ["audience", CANONICAL_RESOURCE],
+          ["nonce", n],
+          ["client_assertion_type", CLIENT_ASSERTION_TYPE],
+          ["client_assertion", "not-a-jwt"],
+        ],
+      ],
+      [
+        "a repeated audience and a repeated assertion",
+        [
+          ["mission_id", record.id],
+          ["audience", CANONICAL_RESOURCE],
+          ["audience", CANONICAL_RESOURCE],
+          ["nonce", n],
+          ...(await credential()),
+          ["client_assertion", "not-a-jwt"],
+        ],
+      ],
+    ];
+    for (const [label, pairs] of unauthenticated) {
+      const answer = await postPairs(pairs);
+      expect(answer.status, label).toBe(400);
+      expect(answer.json?.error, label).toBe("invalid_client");
+    }
+    const repeatedAudience = await postPairs([
+      ["mission_id", record.id],
+      ["audience", CANONICAL_RESOURCE],
+      ["audience", CANONICAL_RESOURCE],
+      ["nonce", n],
+      ...(await credential()),
+    ]);
+    expect(repeatedAudience.status, repeatedAudience.text).toBe(400);
+    expect(repeatedAudience.json?.error).toBe("invalid_request");
+    expect(repeatedAudience.json?.nonce).toBe(n);
+    const repeatedNonce = await postPairs([["mission_id", record.id], ["nonce", n], ["nonce", n], ...(await credential())]);
+    expect(repeatedNonce.status, repeatedNonce.text).toBe(400);
+    expect(repeatedNonce.json?.error).toBe("invalid_request");
+    expect(repeatedNonce.json?.nonce).toBeUndefined();
+    // The same request with each member once is served.
+    const single = await postPairs([["mission_id", record.id], ["audience", CANONICAL_RESOURCE], ["nonce", n], ...(await credential())]);
+    expect(single.status, single.text).toBe(200);
   });
 });
 

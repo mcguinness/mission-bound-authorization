@@ -481,6 +481,7 @@ import {
   LIFECYCLE_ENDPOINT_PATH,
   parseTransitionMembers,
   readLifecycleForm,
+  repeatedParameterRefusal,
   STATUS_ENDPOINT_AUTH_METHODS,
   STATUS_ENDPOINT_PATH,
   wellFormedNonce,
@@ -4034,16 +4035,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.set("cache-control", "no-store");
         ctx.body = { error, error_description: description, ...(nonce ? { nonce } : {}) };
       };
+      // @spec status#mission-status-processing (step 1, #1535 D704): a body
+      // that cannot be parsed as a form is the one refusal before
+      // authentication; it carries no nonce to echo.
       const form = await readLifecycleForm(ctx.req, ctx.get("content-type") ?? "");
       if (!form.ok) {
-        refuse(400, "invalid_request", form.description, form.nonce);
+        refuse(400, "invalid_request", form.description, undefined);
         return;
       }
       const echo = wellFormedNonce(form.params.nonce);
       // @spec status#mission-status-auth-failures: a failed private-key-JWT
       // authentication, or no credential (this endpoint accepts no
       // access-token scheme), is HTTP 400 `invalid_client` with no challenge,
-      // decided before any Mission is read.
+      // decided before any Mission is read. A repeated client authentication
+      // parameter is such a failure (#1535 D708).
       const auth = await authenticateLifecycleClient(
         {
           issuer: opts.issuer,
@@ -4053,6 +4058,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         },
         form.params,
         ctx.get("authorization") ?? "",
+        form.repeated,
       );
       if (!auth.ok) {
         if (auth.retryAfterS !== undefined) {
@@ -4061,6 +4067,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         } else {
           refuse(400, "invalid_client", auth.description, echo);
         }
+        return;
+      }
+      // @spec status#mission-status-processing (step 2, #1535 D708): any other
+      // repeated parameter is a malformed request, refused only now that the
+      // caller has authenticated.
+      const repeatedParameter = repeatedParameterRefusal(form.repeated);
+      if (repeatedParameter !== undefined) {
+        refuse(400, "invalid_request", repeatedParameter, echo);
         return;
       }
       // @spec status#mission-status-request, status#mission-status-errors: the
@@ -4174,21 +4188,21 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec status#mission-status-errors: every refusal before the engine
       // echoes the request's `nonce` when it carried a well-formed one, and
       // none is retained: the nonce key needs an authenticated client.
+      // @spec status#lifecycle-processing (step 1, #1535 D704): a body that
+      // cannot be parsed as a form is the one refusal before authentication;
+      // it carries no nonce to echo.
       if (!form.ok) {
         ctx.status = 400;
         ctx.set("cache-control", "no-store");
-        ctx.body = {
-          error: "invalid_request",
-          error_description: form.description,
-          ...(form.nonce ? { nonce: form.nonce } : {}),
-        };
+        ctx.body = { error: "invalid_request", error_description: form.description };
         return;
       }
       const echo = wellFormedNonce(form.params.nonce);
       // @spec status#mission-status-authentication, status#mission-status-auth-failures
       // a failed private-key-JWT authentication, or no credential where no
       // access-token scheme is accepted, is HTTP 400 `invalid_client` with no
-      // challenge, decided before any Mission is read.
+      // challenge, decided before any Mission is read. A repeated client
+      // authentication parameter is such a failure (#1535 D708).
       const auth = await authenticateLifecycleClient(
         {
           issuer: opts.issuer,
@@ -4198,6 +4212,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         },
         form.params,
         ctx.get("authorization") ?? "",
+        form.repeated,
       );
       if (!auth.ok) {
         ctx.set("cache-control", "no-store");
@@ -4209,6 +4224,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ctx.status = 400;
           ctx.body = { error: "invalid_client", error_description: auth.description, ...(echo ? { nonce: echo } : {}) };
         }
+        return;
+      }
+      // @spec status#lifecycle-processing (step 2, #1535 D708): any other
+      // repeated parameter is a malformed request, refused only now that the
+      // caller has authenticated, before the Mission is read.
+      const repeatedParameter = repeatedParameterRefusal(form.repeated);
+      if (repeatedParameter !== undefined) {
+        ctx.status = 400;
+        ctx.set("cache-control", "no-store");
+        ctx.body = { error: "invalid_request", error_description: repeatedParameter, ...(echo ? { nonce: echo } : {}) };
         return;
       }
       lifecycleCall = {

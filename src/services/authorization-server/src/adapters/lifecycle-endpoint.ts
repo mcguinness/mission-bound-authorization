@@ -64,9 +64,24 @@ export const REASON_MAX_CHARS = 1024;
 const MAX_BODY_BYTES = 64 * 1024;
 
 export type LifecycleFormResult =
-  | { ok: true; params: Record<string, string> }
-  /** `nonce`: the request's well-formed nonce, for the refusal to echo. */
-  | { ok: false; description: string; nonce?: string };
+  /**
+   * `params` holds each parameter sent once; `repeated` names each parameter
+   * sent more than once, which `params` leaves out.
+   */
+  | { ok: true; params: Record<string, string>; repeated: ReadonlySet<string> }
+  | { ok: false; description: string };
+
+/**
+ * @spec status#mission-status-processing, status#lifecycle-processing (step 1,
+ * #1535 D708): the client authentication parameters. Repeating one fails
+ * authentication, whichever occurrence would have verified.
+ */
+export const CLIENT_AUTHENTICATION_PARAMETERS: readonly string[] = [
+  "client_id",
+  "client_assertion",
+  "client_assertion_type",
+  "client_secret",
+];
 
 /**
  * @spec status#idempotency: a well-formed `nonce`: a string of 1 to 255
@@ -77,11 +92,19 @@ export function wellFormedNonce(value: unknown): string | undefined {
 }
 
 /**
- * @spec status#mission-lifecycle-endpoint ("Operations"): read the body as
- * `application/x-www-form-urlencoded` and nothing else. Every member of this
- * endpoint is single-valued, so a repeated parameter is refused rather than
- * resolved: whichever occurrence the server read, another participant may
- * read the other.
+ * @spec status#mission-lifecycle-endpoint ("Operations"),
+ * status#mission-status-processing, status#lifecycle-processing (#1535 D704,
+ * D708): read the body as `application/x-www-form-urlencoded` and nothing
+ * else. A body this endpoint cannot parse as one (another media type, or
+ * larger than it reads) is the one refusal that precedes authentication.
+ *
+ * A repeated parameter is not such a body. Every parameter of these endpoints
+ * is single-valued, so a repeated one is never resolved: whichever occurrence
+ * the server read, another participant may read the other. It is named in
+ * `repeated` and left out of `params`. Authentication fails on a repeated
+ * client authentication parameter ({@link authenticateLifecycleClient}), and
+ * the endpoint refuses any other repeated parameter `invalid_request` once the
+ * caller has authenticated ({@link repeatedParameterRefusal}).
  */
 export async function readLifecycleForm(req: IncomingMessage, contentType: string): Promise<LifecycleFormResult> {
   const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
@@ -101,15 +124,24 @@ export async function readLifecycleForm(req: IncomingMessage, contentType: strin
   if (oversize) return { ok: false, description: "request body is too large" };
   const form = new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
   const params: Record<string, string> = Object.create(null) as Record<string, string>;
+  const repeated = new Set<string>();
   for (const [name, value] of form) {
-    if (Object.hasOwn(params, name)) {
-      const nonces = form.getAll("nonce");
-      const nonce = nonces.length === 1 ? wellFormedNonce(nonces[0]) : undefined;
-      return { ok: false, description: `${name} MUST NOT appear more than once`, ...(nonce ? { nonce } : {}) };
-    }
+    if (Object.hasOwn(params, name)) repeated.add(name);
     params[name] = value;
   }
-  return { ok: true, params };
+  for (const name of repeated) delete params[name];
+  return { ok: true, params, repeated };
+}
+
+/**
+ * @spec status#mission-status-processing, status#lifecycle-processing (step 2,
+ * #1535 D708): a request that repeats a request parameter is malformed. The
+ * endpoint calls this only after the caller has authenticated, so a request
+ * that also fails authentication gets its authentication failure.
+ */
+export function repeatedParameterRefusal(repeated: ReadonlySet<string>): string | undefined {
+  const name = [...repeated].sort()[0];
+  return name === undefined ? undefined : `${name} MUST NOT appear more than once`;
 }
 
 export type LifecycleClientAuthentication =
@@ -144,16 +176,20 @@ export interface LifecycleClientAuthenticationDeps {
  * purpose authenticate here.
  *
  * Plain Basic or POST client authentication, and any `Authorization` header
- * (this endpoint accepts no access-token scheme), are refused. Every failure
- * is the HTTP-layer `invalid_client` the caller maps to a 400; only a jti the
- * full replay cache could not record is retryable.
+ * (this endpoint accepts no access-token scheme), are refused. A repeated
+ * client authentication parameter fails, and no occurrence is tried (#1535
+ * D708). Every failure is the HTTP-layer `invalid_client` the caller maps to a
+ * 400; only a jti the full replay cache could not record is retryable.
  */
 export async function authenticateLifecycleClient(
   deps: LifecycleClientAuthenticationDeps,
   params: Record<string, string>,
   authorization: string,
+  repeated: ReadonlySet<string> = new Set(),
 ): Promise<LifecycleClientAuthentication> {
   const fail = (description: string): LifecycleClientAuthentication => ({ ok: false, description });
+  const repeatedCredential = CLIENT_AUTHENTICATION_PARAMETERS.find((name) => repeated.has(name));
+  if (repeatedCredential !== undefined) return fail(`${repeatedCredential} MUST NOT appear more than once`);
   if (authorization) {
     return fail("this endpoint accepts private_key_jwt client authentication only");
   }
