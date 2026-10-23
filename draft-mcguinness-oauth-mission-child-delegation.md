@@ -673,6 +673,11 @@ Interactive:
 
 The child grant reference conveyed at completion is the child-bound JWT
 authorization grant of {{child-client-identity}}, never a child token.
+Whatever the mode, any grant binding the Child Mission carries comes
+from the child actor's redemption of that grant, not from the parent's
+exchange, and is the child's own, never an extension of the parent's
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Grant Bindings and
+Related Mechanisms").
 
 ## Protocol Flow {#protocol-flow}
 
@@ -2466,6 +2471,10 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Completion says any grant binding a Child Mission carries comes from
+  the child actor's redemption of its grant, never from the parent's
+  exchange. No requirement changed.
 
 - Fan-Out Controls cites Resource Access for the `delegation` extension
   rules and drops the claim that an unrecognized member is carried
