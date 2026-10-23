@@ -46690,13 +46690,13 @@
      "file": "src/packages/mission-core/test/decimal-amount.test.ts",
      "name": "isCurrencyCode: exactly three upper-case ASCII letters (#1595, D727) > refuses any other length, a line terminator included, and any other character",
      "level": "unit",
-     "surface": "par"
+     "surface": "derivation"
     },
     {
      "file": "src/packages/mission-core/test/decimal-amount.test.ts",
      "name": "isCurrencyCode: exactly three upper-case ASCII letters (#1595, D727) > admits three upper-case ASCII letters, whether or not ISO 4217 assigns the code",
      "level": "unit",
-     "surface": "par"
+     "surface": "derivation"
     }
    ],
    "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Before it the reference admitted any non-empty currency string at PAR and in a credential. Proved by mutation: letting isCurrencyCode admit a fourth character, or lower case, fails its unit witness; admitting any string at intake fails the PAR witness and vector cases ev-cur-01 to ev-cur-09, sub-cur-01 and sub-cur-02."
