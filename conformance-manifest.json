@@ -58157,7 +58157,7 @@
    "id": "child-delegation.completion.child-grant-binding-at-redemption",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "completion",
-   "text": "Whatever the mode, the Child Mission's grant binding is the lineage that the child actor's redemption of that grant establishes, not the parent's exchange. That binding is the child's own, never an extension of the parent's",
+   "text": "Whatever the mode, any grant binding the Child Mission carries comes from the child actor's redemption of that grant, not from the parent's exchange, and is the child's own, never an extension of the parent's",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -58167,12 +58167,12 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the child-creation exchange binds no grant lineage to the Child Mission; the child actor's redemption of the child-bound grant establishes the child's own lineage, and no step extends the parent's grant"
+    "normative": "the child-creation exchange binds no grant lineage to the Child Mission; any lineage the Child Mission carries comes from the child actor's redemption of the child-bound grant, and no step extends the parent's grant"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1557 cold readers' follow-up. The reference AS creates the Child Mission with no grant and binds the child's own grant at the child actor's JWT-bearer redemption. No test asserts that the redemption's grant is the child's and differs from the parent's, and the reference AS implements only synchronous creation."
+   "notes": "#1557 cold readers' follow-up. The reference AS binds no grant at child creation, issues no refresh token at the child actor's JWT-bearer redemption, and never reuses the parent's grant for the child's tokens; it implements only synchronous creation. No test asserts that separation."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
@@ -61906,7 +61906,7 @@
    "id": "expansion.completion.successor-grant-binding-own",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "completion-modes",
-   "text": "Whatever the mode, the successor's grant binding is the lineage of the first credential that completion returns: the access token the poll resolves to (deferred), the authorization code the client redeems (interactive), or the access token in the token-exchange response (an in-ceiling drawdown). That binding is the successor's own, never an extension of the predecessor's",
+   "text": "Whatever the mode, any grant binding the successor carries is its own, never an extension of the predecessor's: in an interactive completion, the authorization code the client redeems and any refresh-token family that redemption emits; otherwise, a refresh-token family the completing response emits, if any. A completion that returns only an access token leaves the successor with derived tokens and no grant binding",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -61921,12 +61921,12 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the credential an expansion's completion returns is bound to a grant lineage of the successor's own: a derivation against it resolves to the successor, and no completion extends the predecessor's grant"
+    "normative": "any grant lineage a successor carries is its own: the authorization code an interactive completion redeems and any refresh-token family it emits, or a refresh-token family a deferred or drawdown response emits; a completion returning only an access token creates no grant binding, and no completion extends the predecessor's grant"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1557 cold readers' follow-up. The reference AS creates the successor with no grant and binds a fresh grant to it at its first access-token mint, on the deferred poll and the in-ceiling drawdown alike, without reusing the predecessor's grant. No test asserts that the successor's grant differs from the predecessor's, and the reference AS implements no interactive completion."
+   "notes": "#1557 cold readers' follow-up. The reference AS issues no refresh token on any successor path and implements no interactive completion, so its successors carry derived tokens only; it never reuses the predecessor's grant for a successor's tokens. No test asserts that separation."
   },
   {
    "id": "expansion.successor-expiry.completion-codes",
