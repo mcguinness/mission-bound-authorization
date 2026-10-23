@@ -6868,8 +6868,12 @@ policy itself does not travel.<a href="#section-14.4-1.2.1" class="pilcrow">¶</
             <p id="section-14.4-1.4.1"><span class="bcp14">REQUIRED</span>. A string. A unique identifier of the approval event, used
 as the approval idempotency key: a retried or duplicate delivery of
 the same approval decision (a replayed callback, a double-submitted
-consent form) <span class="bcp14">MUST NOT</span> create a second Mission, and the AS
-deduplicates on this identifier.<a href="#section-14.4-1.4.1" class="pilcrow">¶</a></p>
+consent form, a retried standing-consent activation) <span class="bcp14">MUST NOT</span> create
+a second Mission, and the AS deduplicates on this identifier. The
+identifier names the approval event that creates this Mission
+(<a href="#approval-event" class="auto internal xref">Section 6</a>); under a standing-consent basis
+(<a href="#standing-consent-bases" class="auto internal xref">Section 13</a>), it identifies this instance's creation,
+not the earlier standing approval.<a href="#section-14.4-1.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-14.4-1.5">
@@ -11052,6 +11056,12 @@ Join.<a href="#appendix-G-3.2.1" class="pilcrow">¶</a></p>
 Mechanisms names the Token Exchanges its later items cover, and the
 Namespace Taxonomy lists the <code>approval_basis.type</code> values as
 specification-defined, which Standing-Consent Bases cites.<a href="#appendix-G-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.4">
+          <p id="appendix-G-3.4.1">Editorial, no requirement change: the <code>approval_event_id</code> definition
+names the approval event that creates the Mission and states that,
+under a standing-consent basis, it identifies the instance's
+creation, not the earlier standing approval.<a href="#appendix-G-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-G-4">-01<a href="#appendix-G-4" class="pilcrow">¶</a></p>

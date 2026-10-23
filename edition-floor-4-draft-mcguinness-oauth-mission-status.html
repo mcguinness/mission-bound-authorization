@@ -2890,7 +2890,12 @@ parameters and HTTP headers, which a retry regenerates. The same
 <span class="bcp14">MUST</span> be refused <code>invalid_request</code> (<a href="#mission-status-errors" class="auto internal xref">Section 3.10</a>); the AS
 <span class="bcp14">MUST NOT</span> answer it with the unrelated original response. A retransmit
 whose original response was <code>rate_limited</code>, or was <code>unavailable</code> or
-another 5xx response, is processed as a new request, not replayed.<a href="#section-5.6-2" class="pilcrow">¶</a></p>
+another 5xx response, is processed as a new request, not replayed. A
+request refused before deduplication (<a href="#lifecycle-processing" class="auto internal xref">Section 5.7</a>) claims
+no <code>nonce</code>: the AS retains nothing for the refusal and leaves any
+response already retained under that <code>nonce</code> unchanged, so the rules
+above apply to a later request carrying it as though the refused
+request had never arrived.<a href="#section-5.6-2" class="pilcrow">¶</a></p>
 <p id="section-5.6-3">The window <span class="bcp14">MUST</span> be at least the validity
 span of the signed response the AS would replay (its <code>iat</code> to <code>exp</code>,
 <a href="#mission-status-response" class="auto internal xref">Section 3.5</a>), so any retransmit that could still

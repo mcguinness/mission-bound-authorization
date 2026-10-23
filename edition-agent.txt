@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-23T18:54:41Z
-Source repository commit: bdea71218de79117c9eded915983b946fb9fe5a5
+Generated: 2026-10-23T21:24:20Z
+Source repository commit: 23c9ff32853b9cc1fd367483e237cd94ab49ea52
 Member count: 9
 
 Reading order:
@@ -11983,8 +11983,12 @@ Table of Contents
    approval_event_id:  REQUIRED.  A string.  A unique identifier of the
       approval event, used as the approval idempotency key: a retried or
       duplicate delivery of the same approval decision (a replayed
-      callback, a double-submitted consent form) MUST NOT create a
-      second Mission, and the AS deduplicates on this identifier.
+      callback, a double-submitted consent form, a retried standing-
+      consent activation) MUST NOT create a second Mission, and the AS
+      deduplicates on this identifier.  The identifier names the
+      approval event that creates this Mission (Section 6); under a
+      standing-consent basis (Section 13), it identifies this instance's
+      creation, not the earlier standing approval.
 
    created_at:  REQUIRED.  A string.  RFC 3339 timestamp of creation.
 
@@ -15464,6 +15468,11 @@ Appendix G.  Document History
       the Namespace Taxonomy lists the approval_basis.type values as
       specification-defined, which Standing-Consent Bases cites.
 
+   *  Editorial, no requirement change: the approval_event_id definition
+      names the approval event that creates the Mission and states that,
+      under a standing-consent basis, it identifies the instance's
+      creation, not the earlier standing approval.
+
    -01
 
    *Breaking wire changes*
@@ -16979,7 +16988,11 @@ Table of Contents
    the AS MUST NOT answer it with the unrelated original response.  A
    retransmit whose original response was rate_limited, or was
    unavailable or another 5xx response, is processed as a new request,
-   not replayed.
+   not replayed.  A request refused before deduplication (Section 5.7)
+   claims no nonce: the AS retains nothing for the refusal and leaves
+   any response already retained under that nonce unchanged, so the
+   rules above apply to a later request carrying it as though the
+   refused request had never arrived.
 
    The window MUST be at least the validity span of the signed response
    the AS would replay (its iat to exp, Section 3.5), so any retransmit
