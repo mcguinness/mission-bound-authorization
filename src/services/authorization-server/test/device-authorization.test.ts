@@ -1029,3 +1029,45 @@ describe("Mission Device Authorization issuance (@spec device-authorization#issu
     expect(String(res.body.scope).split(" ")).toContain("openid");
   });
 });
+
+describe("a device approval rests on its rendering (@spec mission#approval-context-changes, #1446)", () => {
+  /** A decision posted as is: no rendering of its own, unlike {@link decide}. */
+  const decideAsIs = async (uid: string, headers: Record<string, string>, body: Record<string, unknown>) => {
+    const res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return { status: res.status, body: (await res.json().catch(() => ({}))) as { error?: string; changed?: string[] } };
+  };
+
+  it("a device approval with no rendering approves nothing, and the session stays pending", async () => {
+    const s = await pendingSession();
+    const decided = await decideAsIs(s.uid, s.headers, CONFIRMED);
+    expect(decided.status).toBe(409);
+    expect(decided.body.error).toBe("rendering_required");
+    expect(missionOf(s.uid)).toBeUndefined();
+    expect((await poll(PUBLIC, s.deviceCode)).body.error).toBe("authorization_pending");
+  });
+
+  it("a device approval whose context changed after its rendering creates nothing and leaves the session pending; a fresh rendering approves", async () => {
+    const s = await pendingSession();
+    const revision = await renderedRevision(ISSUER, s.uid, s.headers);
+    const before = DERIVATION_POLICY.max_mission_lifetime_s;
+    (DERIVATION_POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = 3600;
+    try {
+      const decided = await decideAsIs(s.uid, s.headers, { ...CONFIRMED, render_revision: revision });
+      expect(decided.status).toBe(409);
+      expect(decided.body.error).toBe("approval_context_changed");
+      expect(decided.body.changed).toEqual(["derivation_policy"]);
+      expect(missionOf(s.uid)).toBeUndefined();
+      expect((await poll(PUBLIC, s.deviceCode)).body.error).toBe("authorization_pending");
+      const again = await decide(s.uid, s.headers, CONFIRMED);
+      expect(again.status, again.text).toBe(200);
+      expect(missionOf(s.uid)).toBeDefined();
+    } finally {
+      (DERIVATION_POLICY as { max_mission_lifetime_s: number | null }).max_mission_lifetime_s = before;
+    }
+  });
+});
