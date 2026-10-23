@@ -475,7 +475,7 @@ import type {
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
 import { JOIN_ASSERTION_ENDPOINT_PATH, type JoinAssertionService, readJoinAssertionBody } from "./join-assertion.js";
 import {
-  authenticateLifecycleClient,
+  authenticateLifecycleForm,
   LIFECYCLE_CLIENT_ASSERTION_ALGS,
   LIFECYCLE_ENDPOINT_AUTH_METHODS,
   LIFECYCLE_ENDPOINT_PATH,
@@ -4050,24 +4050,28 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.set("cache-control", "no-store");
         ctx.body = { error, error_description: description, ...(nonce ? { nonce } : {}) };
       };
+      // @spec status#mission-status-processing step 1 (#1535 Item C, D704):
+      // a body that cannot be parsed is refused invalid_request whatever
+      // credential it carries; no nonce can be read from it.
       const form = await readLifecycleForm(ctx.req, ctx.get("content-type") ?? "");
       if (!form.ok) {
-        refuse(400, "invalid_request", form.description, form.nonce);
+        refuse(400, "invalid_request", form.description, undefined);
         return;
       }
       const echo = wellFormedNonce(form.params.nonce);
       // @spec status#mission-status-auth-failures: a failed private-key-JWT
-      // authentication, or no credential (this endpoint accepts no
-      // access-token scheme), is HTTP 400 `invalid_client` with no challenge,
-      // decided before any Mission is read.
-      const auth = await authenticateLifecycleClient(
+      // authentication, a repeated authentication parameter included (D708),
+      // or no credential (this endpoint accepts no access-token scheme), is
+      // HTTP 400 `invalid_client` with no challenge, decided before any
+      // Mission is read.
+      const auth = await authenticateLifecycleForm(
         {
           issuer: opts.issuer,
           clients: opts.clients,
           replay: opts.dpopProofReplay as DpopProofReplay,
           now: () => kernel.nowDate(),
         },
-        form.params,
+        form,
         ctx.get("authorization") ?? "",
       );
       if (!auth.ok) {
@@ -4077,6 +4081,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         } else {
           refuse(400, "invalid_client", auth.description, echo);
         }
+        return;
+      }
+      // @spec status#mission-status-processing step 2 (#1535 Item C, D708): any
+      // other repeated parameter makes the request malformed.
+      const repeatedParameter = form.repeated[0];
+      if (repeatedParameter !== undefined) {
+        refuse(400, "invalid_request", `${repeatedParameter} MUST NOT appear more than once`, echo);
         return;
       }
       // @spec status#mission-status-request, status#mission-status-errors: the
@@ -4187,32 +4198,32 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     // `mission_id`, the caller authenticated by private-key JWT.
     if (ctx.path === LIFECYCLE_ENDPOINT_PATH && ctx.method === "POST" && lifecycleServed) {
       const form = await readLifecycleForm(ctx.req, ctx.get("content-type") ?? "");
-      // @spec status#mission-status-errors: every refusal before the engine
-      // echoes the request's `nonce` when it carried a well-formed one, and
-      // none is retained: the nonce key needs an authenticated client.
+      // @spec status#lifecycle-processing step 1 (#1535 Item C, D704): a body
+      // that cannot be parsed is refused invalid_request whatever credential
+      // it carries; no nonce can be read from it, and none is retained.
       if (!form.ok) {
         ctx.status = 400;
         ctx.set("cache-control", "no-store");
-        ctx.body = {
-          error: "invalid_request",
-          error_description: form.description,
-          ...(form.nonce ? { nonce: form.nonce } : {}),
-        };
+        ctx.body = { error: "invalid_request", error_description: form.description };
         return;
       }
+      // @spec status#mission-status-errors: every refusal before the engine
+      // echoes the request's `nonce` when it carried a well-formed one, and
+      // none is retained: the nonce key needs an authenticated client.
       const echo = wellFormedNonce(form.params.nonce);
       // @spec status#mission-status-authentication, status#mission-status-auth-failures
-      // a failed private-key-JWT authentication, or no credential where no
-      // access-token scheme is accepted, is HTTP 400 `invalid_client` with no
-      // challenge, decided before any Mission is read.
-      const auth = await authenticateLifecycleClient(
+      // a failed private-key-JWT authentication, a repeated authentication
+      // parameter included (D708), or no credential where no access-token
+      // scheme is accepted, is HTTP 400 `invalid_client` with no challenge,
+      // decided before any Mission is read.
+      const auth = await authenticateLifecycleForm(
         {
           issuer: opts.issuer,
           clients: opts.clients,
           replay: opts.dpopProofReplay as DpopProofReplay,
           now: () => kernel.nowDate(),
         },
-        form.params,
+        form,
         ctx.get("authorization") ?? "",
       );
       if (!auth.ok) {
@@ -4225,6 +4236,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ctx.status = 400;
           ctx.body = { error: "invalid_client", error_description: auth.description, ...(echo ? { nonce: echo } : {}) };
         }
+        return;
+      }
+      // @spec status#lifecycle-processing step 2 (#1535 Item C, D708): any
+      // other repeated parameter makes the request malformed, refused before
+      // the engine and retained nowhere.
+      const repeatedParameter = form.repeated[0];
+      if (repeatedParameter !== undefined) {
+        ctx.status = 400;
+        ctx.set("cache-control", "no-store");
+        ctx.body = {
+          error: "invalid_request",
+          error_description: `${repeatedParameter} MUST NOT appear more than once`,
+          ...(echo ? { nonce: echo } : {}),
+        };
         return;
       }
       lifecycleCall = {
