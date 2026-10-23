@@ -397,8 +397,9 @@ describe("Mission Status parsing, repeated parameters and authentication precede
     const record = approve();
     const n = nonce();
     const members: Array<[string, string]> = [["mission_id", record.id], ["audience", CANONICAL_RESOURCE], ["nonce", n]];
+    const first = await lifecycleClientAssertion(ISSUER, reader);
     const cases: Array<[string, Array<[string, string]>]> = [
-      ["client_assertion twice", [...members, ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", await lifecycleClientAssertion(ISSUER, reader)], ["client_assertion", await lifecycleClientAssertion(ISSUER, reader)]]],
+      ["client_assertion twice", [...members, ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", first], ["client_assertion", await lifecycleClientAssertion(ISSUER, reader)]]],
       ["client_assertion_type twice", [...members, ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", await lifecycleClientAssertion(ISSUER, reader)]]],
       ["client_id twice", [...members, ["client_id", reader.clientId], ["client_id", reader.clientId], ...(await authPairs())]],
     ];
@@ -409,6 +410,10 @@ describe("Mission Status parsing, repeated parameters and authentication precede
         expect(answer.json, label).toMatchObject({ error: "invalid_client", nonce: n });
       }
     });
+    // No occurrence was used: the first assertion's single-use jti was never
+    // admitted, so it still authenticates a request that sends it once (#1613).
+    const once = await postRaw(ENDPOINT, formOf([...members, ["client_assertion_type", CLIENT_ASSERTION_TYPE], ["client_assertion", first]]));
+    expect(once.status, once.text).toBe(200);
   });
 
   it("authenticates before validating repeated request parameters: invalid_client for a bad or absent credential, invalid_request for a good one, and invalid_client when an authentication parameter repeats too", async () => {

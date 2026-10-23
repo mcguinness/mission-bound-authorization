@@ -2117,7 +2117,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local."
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local. The cited repeated-authentication test also sends the first repeated assertion once afterwards and is served, so the assertion's single-use jti was never consumed (ported from #1613): verifying the first occurrence before refusing fails it with \"client_assertion jti was already used\"."
   },
   {
    "id": "status.read.repeated-parameter-malformed",
@@ -13833,7 +13833,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local."
+   "notes": "#1535 Item C (D704, D708). Proved by defects that answer a parse failure as an authentication failure, accept another media type, skip the size cap, decode invalid UTF-8 or malformed escapes leniently, keep a repeated value, pick the first occurrence, drop the authentication-parameter check, refuse repeats before authentication, and drop the post-authentication repeat check; each fails the cited tests at this endpoint. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local. The cited repeated-authentication test also sends the first repeated assertion once afterwards and is served, so the assertion's single-use jti was never consumed (ported from #1613): verifying the first occurrence before refusing fails it with \"client_assertion jti was already used\"."
   },
   {
    "id": "status.lifecycle.repeated-parameter-malformed",
