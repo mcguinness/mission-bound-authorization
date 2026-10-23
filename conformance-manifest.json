@@ -42768,10 +42768,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "A policy-adjudicated drawdown request whose complete successor Authority Set, including authority carried forward from the predecessor, overlaps capability the predecessor contained produces no successor by policy; it falls back to a fresh human approval whose consent disclosure names the contained capability and the event class that caused its containment.",
-    "local": "The overlap test over the successor's complete Authority Set falls back to the deferred fresh approval, and the disclosure object names the contained capability and its event class. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
+    "local": "The overlap test over the successor's complete Authority Set falls back to the deferred fresh approval, and The AS's expansion deferral page (#1558) shows the authenticated Approver the contained capability with the event class that caused its containment."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -42796,9 +42796,15 @@
      "name": "review: drawdown conservative removal > drawdown cannot restore a sibling lost through a broad predecessor entry",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment. #1480 review: partial until an approval surface renders the disclosure. #1500 review: the chain's restrictions include each overlay resolved onto the member's approved entries, so a drawdown restoring an action a fine selector removed from a broad entry falls back for a sibling resource (mutation: comparing only the selectors as named fails the witness)."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment. #1480 review: partial until an approval surface renders the disclosure. #1500 review: the chain's restrictions include each overlay resolved onto the member's approved entries, so a drawdown restoring an action a fine selector removed from a broad entry falls back for a sibling resource (mutation: comparing only the selectors as named fails the witness). #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
@@ -42852,10 +42858,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "After Mission A contains capability X and an unrelated policy drawdown creates successor B with an empty overlay, a later drawdown from B whose Authority Set overlaps X is refused policy adjudication and falls back to a fresh human approval disclosing the containment of X and its cause; an unrelated approval or a ceiling review in between does not clear the restriction.",
-    "local": "Restrictions are collected from every Mission walked from the predecessor to the chain root, and the reference never clears one: witnessed through an intervening policy-adjudicated successor and through a re-consent. The disclosure object names the containment through that successor. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
+    "local": "Restrictions are collected from every Mission walked from the predecessor to the chain root, and the reference never clears one: witnessed through an intervening policy-adjudicated successor and through a re-consent. The AS's expansion deferral page (#1558) shows the containment through that successor."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -42874,9 +42880,15 @@
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no containment restriction of the chain",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1480 review: partial until an approval surface renders the disclosure."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1480 review: partial until an approval surface renders the disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.in-ceiling.discharged-overlap-falls-back",
@@ -42894,10 +42906,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "A policy-adjudicated drawdown whose complete successor Authority Set overlaps authority the predecessor discharged produces no successor by policy; it falls back to a fresh human approval naming the discharged entry and the condition that discharged it.",
-    "local": "A committed discharge latch restricts its entry's resource and actions across the chain, and the disclosure object names the discharged entry and the condition that discharged it. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
+    "local": "A committed discharge latch restricts its entry's resource and actions across the chain, and The AS's expansion deferral page (#1558) shows the authenticated Approver the discharged entry and the condition that discharged it."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -42910,9 +42922,15 @@
      "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for discharged authority names the discharged entry and the condition that discharged it, through an intervening successor",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a discharged entry with the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no condition. #1480 review: partial until an approval surface renders the disclosure."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no condition. #1480 review: partial until an approval surface renders the disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.in-ceiling.discharge-restriction-survives-intervening-successor",
@@ -42930,10 +42948,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "After Mission A discharges entry X and an unrelated policy drawdown creates successor B without X, a drawdown from B whose Authority Set overlaps X falls back to a fresh human approval disclosing the discharge; an unrelated approval or a ceiling review in between does not clear the restriction.",
-    "local": "Witnessed through an intervening policy-adjudicated successor that holds no latch and through a re-consent. The disclosure object names the discharged entry through that successor. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
+    "local": "Witnessed through an intervening policy-adjudicated successor that holds no latch and through a re-consent. The AS's expansion deferral page (#1558) shows the discharged entry through that successor."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -42952,9 +42970,15 @@
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no discharge restriction of the chain",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a discharged entry with the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1480 review: partial until an approval surface renders the disclosure."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1480 review: partial until an approval surface renders the disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.in-ceiling.synchronous-completion-commits-before-response",
@@ -44111,10 +44135,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the approval that re-consents a ceiling renders the re-consented ceiling and drawdown policy to the Approver",
-    "local": "A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed. The object carries the re-consent offer with the initial approval page's adjudication line; disclosure() retains the offer it built, and an approval re-consents only exactly that retained offer."
+    "local": "The AS's expansion deferral page (#1558) renders the re-consent offer to the authenticated Approver as the initial approval page does: the ceiling, the drawdown policy's id and version, and its adjudication line. The rendering commits the offer: a re-consent consents only exactly that offer, a decision cannot name a ceiling of its own, and an offer changed since rendering asks for a fresh decision."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -44127,9 +44151,21 @@
      "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a re-consent is bound to the offer the disclosure rendered, not to an offer computed at the approval",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows the re-consent offer as at the initial approval; a re-consent consents only that offer, never one the decision supplies",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > a re-consent is bound to the offer the page rendered: an offer changed since asks for a fresh decision on the page rendered again",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by omitting the offer, by not binding the re-consent, and by binding it to an offer computed at the approval. #1480 review: partial until an approval surface renders it. Surface moved from token-endpoint: the requirement is a disclosure."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by omitting the offer, by not binding the re-consent, and by binding it to an offer computed at the approval. #1480 review: partial until an approval surface renders it. Surface moved from token-endpoint: the requirement is a disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.ceiling-reconsent.chain-restrictions-carry",
@@ -45295,10 +45331,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "every re-consent, before the cadence expires included, renders the chain's record since the prior review, or since the initial ceiling consent for the first review",
-    "local": "The object carries the chain's record since the latest ceiling consent: policy-adjudicated drawdowns with an hourly rate, escalations, out_of_ceiling refusals, discharged entries, and the outstanding restrictions. No reference deployment runs the metering profile with Progressive, so consumption is absent. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
+    "local": "The AS's expansion deferral page (#1558) renders the chain's record since the latest ceiling consent: the policy-adjudicated drawdowns with an hourly rate, the escalations, the out_of_ceiling refusals, the discharged entries, and the outstanding containment and discharge restrictions. The rendering commits the record (its hourly rate aside), so a record changed since rendering asks for a fresh decision. No reference deployment runs the metering profile with Progressive, so consumption is absent."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -45311,9 +45347,39 @@
      "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a review's record lists the deployment's out_of_ceiling refusals since the latest ceiling consent",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows the chain's record since the latest ceiling consent: the consent instant, the drawdowns and the escalations",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows the deployment's out_of_ceiling refusals since the latest ceiling consent",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a discharged entry with the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > a review record changed since rendering approves nothing: here an escalation landing in between",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Not implemented: the reference has no ceiling review approval (#1017). D572: every re-consent is a review; the first review covers history since the initial ceiling consent. Proved by starting the record at the initial consent, by not recording refusals and by not recording fallback reasons. #1480 review: partial until an approval surface renders the disclosure."
+   "notes": "A re-consent on the AS's expansion deferral page (#1558) is the review. D572: every re-consent is a review; the first review covers history since the initial ceiling consent. Proved by starting the record at the initial consent, by not recording refusals and by not recording fallback reasons. #1480 review: partial until an approval surface renders the disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.ceiling-review.review-is-reconsent",
@@ -57803,9 +57869,15 @@
      "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses an oversized plan at intake, before any approval event names it",
      "level": "cross-component",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > the expansion approval page shows the Carryover Manifest it commits, and the decision on it carries exactly the child shown (@spec child-delegation#carryover-manifest, expansion#completion-modes, #1558)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Preparation renders the manifest and reserves the proposed successor and replacement identifiers; the approval event fills the deterministic per-child approval identifiers and commits `manifest_hash` over the JCS canonical manifest, `exclusion_policy` included. The retained manifest recomputes to its commitment, a tampered commitment refuses the whole completion, an idempotent retry re-mints no identifier, a cancelled plan's identifiers stay held, and an oversized plan is refused at intake before any approval names it."
+   "notes": "Preparation renders the manifest and reserves the proposed successor and replacement identifiers; the approval event fills the deterministic per-child approval identifiers and commits `manifest_hash` over the JCS canonical manifest, `exclusion_policy` included. The retained manifest recomputes to its commitment, a tampered commitment refuses the whole completion, an idempotent retry re-mints no identifier, a cancelled plan's identifiers stay held, and an oversized plan is refused at intake before any approval names it. #1558: the AS's expansion deferral page renders the manifest to the Approver (the exclusion policy, and each child carried with the replacement's facts or terminated with the reason), and the approval on it carries exactly the child shown."
   },
   {
    "id": "child-delegation.carryover.completion-cas",
@@ -60928,9 +61000,15 @@
      "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses a batch when a rendered child was terminated after approval rather than treating it as an acceptable exclusion",
      "level": "cross-component",
      "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > the expansion approval page shows the Carryover Manifest it commits, and the decision on it carries exactly the child shown (@spec child-delegation#carryover-manifest, expansion#completion-modes, #1558)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Both committed exclusion policies are implemented and exercised. Under all-or-nothing any relevant change, the termination or disappearance of a rendered row included, requires a fresh render and approval: an already-terminal rendered row is never an automatically acceptable exclusion. Under disclosed exclusions only a committed change class excludes, dependent descendants are excluded with their parent, and an unrendered descendant cascades and appears in the authenticated result."
+   "notes": "Both committed exclusion policies are implemented and exercised. Under all-or-nothing any relevant change, the termination or disappearance of a rendered row included, requires a fresh render and approval: an already-terminal rendered row is never an automatically acceptable exclusion. Under disclosed exclusions only a committed change class excludes, dependent descendants are excluded with their parent, and an unrendered descendant cascades and appears in the authenticated result. #1558: the AS's expansion deferral page renders the manifest to the Approver (the exclusion policy, and each child carried with the replacement's facts or terminated with the reason), and the approval on it carries exactly the child shown."
   },
   {
    "id": "child-delegation.carryover.expansion-expiry",
@@ -64529,7 +64607,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "The fresh-consent approval of an expansion restoring discharged authority authorizes that authority explicitly, and its consent disclosure names the discharged entry and the condition that discharged it.",
-    "local": "A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed. For a deferred expansion the object names each discharged entry of the chain with the condition that discharged it (witnessed through the Progressive fallback). Not witnessed: the explicit authorization of the restored authority at that approval."
+    "local": "For a deferred expansion, The AS's expansion deferral page (#1558) names each discharged entry of the chain with the condition that discharged it (witnessed through the Progressive fallback). Not witnessed: the explicit authorization of the restored authority at that approval."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -64539,9 +64617,15 @@
      "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for discharged authority names the discharged entry and the condition that discharged it, through an intervening successor",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a discharged entry with the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). The explicit authorization of restored authority is not implemented. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "expansion.reconciliation.discharge-between-adjudication-and-activation",
@@ -65648,6 +65732,197 @@
     }
    ],
    "notes": "#1557 cold readers' follow-up; #1590 (D709). Witnessed: on the deferred poll and the in-ceiling drawdown the successor's records are its own, distinct from the predecessor's, each still resolving to its own Mission, and the issued token identifies the successor. The witnesses assert isolation of the AS's internal grant records, which support issuance and lookup and are not a protocol grant lineage (D709). Not witnessed: the interactive completion's authorization code and any refresh-token family (the reference implements no interactive completion and issues no refresh token on these paths), and the clause that an access-token-only completion establishes no grant binding. Mutation: binding the origin's grant to the new Mission at its first mint, with grant lookup returning the newest Mission so the reuse is silent, fails each witness at its grant-differs assertion; the other 170 tests in the three files pass."
+  },
+  {
+   "id": "expansion.completion.approver-authenticated",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "authenticates the Approver against the published approval-authentication floor",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a fresh approval of an expansion authenticates its Approver and refuses an approval whose achieved authentication the published approval-authentication floor does not accept for the successor's authority",
+    "local": "The page renders and decides only for an authenticated Approver (a browser approval session, or a trusted headless approval service), and the decision evaluates the floor over the successor's authority with that principal's achieved acr and auth_time; a headless service is not an interactive login."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > an unauthenticated viewer sees no disclosure and cannot decide",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > the approval-authentication floor applies to the successor's authority: a login below it, or a headless service, is refused",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code})."
+  },
+  {
+   "id": "expansion.completion.fresh-consent-derived-set",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "obtains fresh consent for the derived Authority Set",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a fresh approval consents to the successor's derived Authority Set as the Approver was shown it: a derived set changed since then is not approved, and the successor is created with no other authority",
+    "local": "The page shows the successor's derived Authority Set and commits it in the rendering; the decision approves only that set, and a derived set changed since rendering asks for a fresh decision. The approval records the commitment to the set it approved, and completion, deriving it again inside its transaction, refuses a successor whose authority differs, wider or narrower, before any write."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > a derived successor set changed since rendering approves nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > completion creates the successor only with the authority approved: authority added after the approval refuses it, as does authority removed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code})."
+  },
+  {
+   "id": "expansion.completion.requested-strength",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "satisfies any requested `acr_values` or `max_age` strength",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a fresh approval of an expansion satisfies any acr_values or max_age strength the expansion requested",
+    "local": "The reference records no requested acr_values or max_age on an expansion deferral, so the page checks only the published approval-authentication floor."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code}). Not implemented: no requested strength reaches the deferral."
+  },
+  {
+   "id": "expansion.completion.renders-subject",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "renders the Subject when the Approver is not the Subject",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a fresh approval by an Approver who is not the Subject renders the Subject",
+    "local": "The page renders the Subject (the predecessor's) to every Approver; the witness is an Approver deciding for another Subject."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code})."
+  },
+  {
+   "id": "expansion.completion.disclosure-reflects-successor",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "The consent disclosure MUST reflect the successor's authority being adjudicated",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the consent disclosure of a fresh approval shows the successor's Authority Set being adjudicated",
+    "local": "The page shows the successor's derived Authority Set, with the Intent and any proposal it was derived from, and the expiry the approval commits."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code})."
+  },
+  {
+   "id": "expansion.completion.decline-untouched",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "If the Approver declines, no successor is created and the predecessor is untouched",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Approver's denial of a fresh approval creates no successor and leaves the predecessor as it was; the client's poll answers access_denied",
+    "local": "A denial on the page records the deferral denied; no successor is created, the predecessor stays active, and the poll answers access_denied."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > a denial creates no successor and leaves the Mission untouched; a deferral no longer pending is neither rendered nor decided",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code})."
   },
   {
    "id": "expansion.successor-expiry.completion-codes",
@@ -70690,10 +70965,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "A routed encounter produces an expansion proposal that carries the pinned Encountered Resource object and the declaration digest.",
-    "local": "The deferral (the expansion proposal) carries the Encountered Resource object and the declaration digest, in its encounter facts and its encounter_disclosure. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The deferral (the expansion proposal) carries the Encountered Resource object and the declaration digest, which The AS's expansion deferral page (#1558) renders with the encounter_id; the human-approved successor records the declaration digest and the encounter_id."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
@@ -70712,9 +70987,15 @@
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > shows the Encountered Resource object pinned, the declaration as the resource's claim, the taint status, the floors and the encounter_id; the decision approves that deferral, whose successor carries them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.adjudication.route-proposal-carries-identity-contextual",
@@ -70776,19 +71057,31 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "A routed encounter's disclosure shows the Approver the issuer-verified Encountered Resource object.",
-    "local": "The disclosure carries the Encountered Resource object of the Mission Issuer's own verified values, with whether it is pinned. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The AS's expansion deferral page (#1558) shows the authenticated Approver the Encountered Resource object of the Mission Issuer's own verified values, and whether its identity is pinned, with the pinning failure when it is not."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > shows the Encountered Resource object pinned, the declaration as the resource's claim, the taint status, the floors and the encounter_id; the decision approves that deferral, whose successor carries them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > an encounter whose identity could not be pinned, with no declaration, is shown as such",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.adjudication.disclosure-resource-contextual",
@@ -70828,19 +71121,31 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "A routed encounter's disclosure presents the self-declaration labelled as the resource's own claim, not as a verified fact.",
-    "local": "The disclosure presents the declaration with claimed_by_resource true and its claimed operations. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The AS's expansion deferral page (#1558) presents the declaration under the heading of the resource's claim, not verified fact, as claimed by the resource and not verified, with its digest and claimed operations, or says that the resource published none."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > shows the Encountered Resource object pinned, the declaration as the resource's claim, the taint status, the floors and the encounter_id; the decision approves that deferral, whose successor carries them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > an encounter whose identity could not be pinned, with no declaration, is shown as such",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.adjudication.disclosure-declaration-as-claim-contextual",
@@ -70880,10 +71185,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "A routed encounter's disclosure shows whether the session was tainted at adjudication.",
-    "local": "The disclosure carries a taint statement: untrusted_content_ingested, no_untrusted_content_reported (only on an explicit, trusted untainted report), or taint_state_unknown (facts stored before trusted taint among them). Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The AS's expansion deferral page (#1558) states the session's taint status: that it had ingested untrusted content, that the harness reported none (only on an explicit, trusted untainted report), or that its taint state is unknown and treated as tainted (facts stored before trusted taint among them)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
@@ -70902,9 +71207,21 @@
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > an encounter stored before trusted taint and the floors is disclosed with its taint state unknown, claiming no floors, id or pinning, never as untainted",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > shows the Encountered Resource object pinned, the declaration as the resource's claim, the taint status, the floors and the encounter_id; the decision approves that deferral, whose successor carries them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > under taint the page states that the session had ingested untrusted content; with no trustworthy report, that its taint state is unknown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.adjudication.disclosure-taint-status-contextual",
@@ -71865,19 +72182,31 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "The disclosure for a high-consequence encounter presents the declaration labelled as the resource's claim, not as a verified fact.",
-    "local": "The disclosure presents the declaration with claimed_by_resource true, its digest and its claimed operations, the same for every encounter, high-consequence or not. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The AS's expansion deferral page (#1558) presents the declaration as the resource's claim, with its digest and claimed operations, the same for every encounter, high-consequence or not (witnessed for an irreversible-action encounter)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > a high-consequence encounter's page presents the declaration as the resource's claim, not as fact",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > shows the Encountered Resource object pinned, the declaration as the resource's claim, the taint status, the floors and the encounter_id; the decision approves that deferral, whose successor carries them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.lying-resource.routed-declaration-as-claim-contextual",
@@ -72071,10 +72400,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "The disclosure for an encounter routed under taint states that the session had ingested untrusted content.",
-    "local": "The disclosure states untrusted_content_ingested when the harness reported taint, a stale tainted report included since taint persists for the session, and taint_state_unknown when no trustworthy report says either way, facts stored before trusted taint among them; only an explicit, trusted untainted report says none was reported. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The AS's expansion deferral page (#1558) states that the session had ingested untrusted content when the harness reported taint (a stale tainted report included, since taint persists for the session), and that its taint state is unknown when no trustworthy report says either way; only an explicit, trusted untainted report says none was reported."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
@@ -72087,9 +72416,15 @@
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > an encounter stored before trusted taint and the floors is disclosed with its taint state unknown, claiming no floors, id or pinning, never as untainted",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > under taint the page states that the session had ingested untrusted content; with no trustworthy report, that its taint state is unknown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.injection-discovery.disclosure-states-untrusted-content-contextual",

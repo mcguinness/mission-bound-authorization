@@ -20,6 +20,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash } from "@mission/core";
 import type Provider from "oidc-provider";
+import type { ExpiryCeilings } from "../kernel/derive.js";
 import type { MissionKernel } from "../kernel/kernel.js";
 import type { AuthorityEntry, MissionIntent } from "../kernel/types.js";
 
@@ -35,8 +36,10 @@ export interface ApprovalContext {
   activation_policies: string | null;
 }
 
-const digest = (value: unknown): string =>
+/** The sha-256 digest of a value's canonical JSON, as every context part is committed. */
+export const contentDigest = (value: unknown): string =>
   `sha-256:${createHash("sha256").update(canonicalize(value as JsonValue)).digest("base64url")}`;
+const digest = contentDigest;
 
 /**
  * The approval context for an Intent, its proposal and the Authority Set
@@ -88,9 +91,9 @@ export function approvalContext(input: {
  * a fresh decision. Where no expiry later than now remains, it is the rendered
  * one: the commit refuses that approval rather than asking for it again.
  */
-export function decisionExpiry(kernel: MissionKernel, requested: string, rendered: string): string {
+export function decisionExpiry(kernel: MissionKernel, requested: string, rendered: string, ceilings?: ExpiryCeilings): string {
   const now = kernel.nowDate();
-  const established = kernel.resolveEffectiveExpiry({ requested, createdAt: now.toISOString() });
+  const established = kernel.resolveEffectiveExpiry({ requested, createdAt: now.toISOString(), ...(ceilings ? { ceilings } : {}) });
   if (Date.parse(established) <= now.getTime()) return rendered;
   return Date.parse(rendered) > now.getTime() && Date.parse(rendered) <= Date.parse(established) ? rendered : established;
 }
@@ -108,15 +111,18 @@ export function candidateHash(issuer: string, entries: readonly AuthorityEntry[]
 export const RENDER_REVISION_HEADER = "x-approval-render-revision";
 
 /** The parts of two contexts that differ, for the refusal's explanation and for tests. */
-export function changedParts(rendered: ApprovalContext, current: ApprovalContext): (keyof ApprovalContext)[] {
-  return (Object.keys(current) as (keyof ApprovalContext)[]).filter((k) => digest(rendered[k] ?? null) !== digest(current[k] ?? null));
+export function changedParts<C extends object = ApprovalContext>(rendered: C, current: C): (keyof C)[] {
+  return (Object.keys(current) as (keyof C)[]).filter((k) => digest(rendered[k] ?? null) !== digest(current[k] ?? null));
 }
 
-/** A rendering's revision, as retained for the principal it was rendered to. */
-export interface RenderRevision {
+/**
+ * A rendering's revision, as retained for the principal it was rendered to.
+ * The context is the Mission approval's, or another surface's own (#1558).
+ */
+export interface RenderRevision<C = ApprovalContext> {
   revision: string;
   clientId: string;
-  context: ApprovalContext;
+  context: C;
   commitment: string;
   expiresAt: number;
 }
@@ -126,9 +132,9 @@ export interface RenderRevision {
  * provider, for the life of the interaction. A newer rendering to the same
  * principal supersedes the older one, whose form can no longer approve.
  */
-const revisions = new WeakMap<Provider, Map<string, Map<string, RenderRevision>>>();
+const revisions = new WeakMap<Provider, Map<string, Map<string, RenderRevision<unknown>>>>();
 
-function interactionRevisions(provider: Provider, uid: string, create: boolean): Map<string, RenderRevision> | undefined {
+function interactionRevisions(provider: Provider, uid: string, create: boolean): Map<string, RenderRevision<unknown>> | undefined {
   let byUid = revisions.get(provider);
   if (!byUid) {
     if (!create) return undefined;
@@ -149,22 +155,22 @@ function interactionRevisions(provider: Provider, uid: string, create: boolean):
 }
 
 /** Retain a new revision for this principal's rendering, superseding any earlier one; returns it. */
-export function retainRenderRevision(
+export function retainRenderRevision<C = ApprovalContext>(
   provider: Provider,
   uid: string,
   principalKey: string,
-  rendered: { clientId: string; context: ApprovalContext; commitment: string },
+  rendered: { clientId: string; context: C; commitment: string },
   exp: number | undefined,
 ): string {
   const revision = randomBytes(18).toString("base64url");
-  const held = interactionRevisions(provider, uid, true) as Map<string, RenderRevision>;
+  const held = interactionRevisions(provider, uid, true) as Map<string, RenderRevision<unknown>>;
   held.set(principalKey, { revision, ...rendered, expiresAt: (exp ?? Math.floor(Date.now() / 1000) + 600) * 1000 });
   return revision;
 }
 
 /** The current revision rendered to this principal on this interaction, if any. */
-export function currentRenderRevision(provider: Provider, uid: string, principalKey: string): RenderRevision | undefined {
-  return interactionRevisions(provider, uid, false)?.get(principalKey);
+export function currentRenderRevision<C = ApprovalContext>(provider: Provider, uid: string, principalKey: string): RenderRevision<C> | undefined {
+  return interactionRevisions(provider, uid, false)?.get(principalKey) as RenderRevision<C> | undefined;
 }
 
 /**
