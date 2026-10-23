@@ -43,7 +43,7 @@ import {
   jwtVerify,
   SignJWT,
 } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   asTokenSigningKeyPair,
   BARE_REFUSAL_MEMBERS,
@@ -101,19 +101,25 @@ async function dpopProof(htu: string, htm: string, extra: Record<string, unknown
     .sign(dpopKeys.privateKey);
 }
 
-/** POST /token with private_key_jwt + DPoP, with the mandatory dpop-nonce retry. */
-async function tokenRequest(params: Record<string, string>): Promise<Response> {
+/**
+ * POST /token with private_key_jwt + DPoP, with the mandatory dpop-nonce retry.
+ * `sentProofs`, when given, collects every DPoP proof sent.
+ */
+async function tokenRequest(params: Record<string, string>, sentProofs?: string[]): Promise<Response> {
   const htu = `${ISSUER}/token`;
-  const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
-    fetch(htu, {
+  const send = async (extra: Record<string, unknown> = {}): Promise<Response> => {
+    const proof = await dpopProof(htu, "POST", extra);
+    sentProofs?.push(proof);
+    return fetch(htu, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, "POST", extra) },
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: proof },
       body: new URLSearchParams({
         ...params,
         client_assertion: await clientAssertion(),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     });
+  };
   let res = await send();
   const nonce = res.headers.get("dpop-nonce");
   if (res.status === 400 && nonce) res = await send({ nonce });
@@ -313,6 +319,7 @@ async function createChildViaExchange(fields: {
   parent?: string;
   intent?: unknown;
   actorToken?: string;
+  sentProofs?: string[];
 }): Promise<Response> {
   const params: Record<string, string> = {
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
@@ -334,7 +341,7 @@ async function createChildViaExchange(fields: {
   };
   if (fields.parent !== undefined) params.parent = fields.parent;
   if (fields.actorToken !== undefined) params.actor_token = fields.actorToken;
-  return tokenRequest(params);
+  return tokenRequest(params, fields.sentProofs);
 }
 
 let parent: { missionId: string; refreshToken: string };
@@ -505,6 +512,47 @@ describe("child Mission creation on the AS surface (@spec child-delegation#child
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_request");
     expect(body.error_description).toContain("refresh token");
+  });
+
+  it("records a child-creation exchange without its subject_token or DPoP proof in the clear (@spec child-delegation#possession-at-rest, #1619)", async () => {
+    // Everything the exchange leaves behind: every row of every kernel table,
+    // and whatever the process writes while it runs. A Buffer column is read
+    // as text, so a credential stored as bytes is still found.
+    const kernelText = (): string =>
+      (as.kernel.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>)
+        .flatMap(({ name }) => as.kernel.db.prepare(`SELECT * FROM "${name}"`).all() as Array<Record<string, unknown>>)
+        .map((row) => Object.values(row).map((v) => (v instanceof Uint8Array ? Buffer.from(v).toString("utf8") : String(v))).join("\u0000"))
+        .join("\n");
+    const spies = [
+      ...(["log", "info", "warn", "error", "debug"] as const).map((m) => vi.spyOn(console, m)),
+      vi.spyOn(process.stdout, "write"),
+      vi.spyOn(process.stderr, "write"),
+    ];
+    const sentProofs: string[] = [];
+    let res: Response;
+    let output: string;
+    try {
+      res = await createChildViaExchange({
+        subjectToken: parent.accessToken,
+        childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+        sentProofs,
+      });
+    } finally {
+      // Read the calls before restoring: mockRestore also clears them.
+      output = spies.flatMap((spy) => spy.mock.calls.map((args) => args.map(String).join(" "))).join("\n");
+      for (const spy of spies) spy.mockRestore();
+    }
+    const body = (await res.json()) as { mission_id?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const stored = kernelText();
+    // The scan sees the exchange's own records: the Child Mission it created.
+    expect(stored).toContain(body.mission_id as string);
+    expect(sentProofs.length).toBeGreaterThan(0);
+    // Each credential whole, and its signature segment, the part that makes it one.
+    for (const secret of [parent.accessToken, ...sentProofs].flatMap((jws) => [jws, jws.split(".")[2] as string])) {
+      expect(stored.includes(secret)).toBe(false);
+      expect(output.includes(secret)).toBe(false);
+    }
   });
 
   it("refuses the retired bare-Intent mission_intent shape (the exchange carries the Submission envelope)", async () => {
