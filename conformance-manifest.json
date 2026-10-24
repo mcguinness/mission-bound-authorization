@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "f0293fb88f8590effaeaf0419963b56d6279c3f7",
-    "content_sha256": "9dd42b67971856832998a6674c405b3dd0e30fdd39164bd01dff5db74c84cea5"
+    "revision": "db2a781481ff929f57a32606a78fdea0e8b0dfc5",
+    "content_sha256": "4a59c88e64d9318bd1e1d425eda5b5042a0a52283f91f4ee1b9228d06470b6f8"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -12227,7 +12227,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "an entry of a type without a declared narrowing capability is issued only to its original approved audience and only exactly as approved, or as scope under a declared projection; audience projection to a Resource AS counts as narrowing",
-    "local": "witnessed for its audience clause: a token for an audience carries only the entries whose retained original approved audience includes it, on the code, refresh, device, Deferred Mission Approval, template dispatch and Expansion completion paths, and an audience the trusted mapping assigns the entry only after approval is refused. Two gaps keep it partial. (1) \"only exactly as approved\": the reference narrows, delegates and projects mission_resource_access entries with no declared capability (#1377, D538; row core.other-types.transformation-boundary-declared). (2) Audience projection to a Resource AS: the cross-domain projection proceeds without a declared narrowing capability and is not refused. Two mint paths have no witness with an entry approved for another audience: the child JWT-bearer redemption (a Child Mission created through the token exchange is bounded by the presented token, which already carries one audience's entries) and the delegated Token Exchange (whose entries are already limited to those overlapping the requested resource, so they differ only after a mapping change). Both filter with the same function, and the save-time check refuses, never carries, an entry the token's audience is not approved for; neither has a test that fails without its filter."
+    "local": "witnessed for its audience clause: a token for an audience carries only the entries whose retained original approved audience includes it, on every Mission-bound mint path, the delegated Token Exchange and the child redemption included, and an audience the trusted mapping assigns the entry only after approval is refused. Two gaps keep it partial. (1) \"only exactly as approved\": the reference narrows, delegates and projects mission_resource_access entries with no declared capability (#1377, D538; row core.other-types.transformation-boundary-declared). (2) Audience projection to a Resource AS: the cross-domain projection proceeds without a declared narrowing capability and is not refused."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -12290,6 +12290,18 @@
      "file": "src/services/authorization-server/test/approved-audience.test.ts",
      "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > leaves an entry approved for another audience out of the token, never carrying it along",
      "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733) > a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other",
+     "level": "endpoint",
      "surface": "token-endpoint"
     }
    ],
@@ -12389,10 +12401,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "for a type with no declared narrowing capability, a token issued for an audience carries no entry whose original approved audience excludes that audience",
-    "local": "every Mission-bound mint path limits the entries it computed to those whose retained original approved audience includes the token's audience before it builds the token, so the token, its response and its issuance record carry the same set; a save-time check refuses any token that still carries another. Two mint paths have no witness with an entry approved for another audience: the child JWT-bearer redemption (a Child Mission created through the token exchange is bounded by the presented token, which already carries one audience's entries) and the delegated Token Exchange (whose entries are already limited to those overlapping the requested resource, so they differ only after a mapping change). Both filter with the same function, and the save-time check refuses, never carries, an entry the token's audience is not approved for; neither has a test that fails without its filter."
+    "local": "every Mission-bound mint path limits the entries it computed to those whose retained original approved audience includes the token's audience before it builds the token, so the token, its response and its issuance record carry the same set; a save-time check refuses any token that still carries another. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
@@ -12435,9 +12447,27 @@
      "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > leaves an entry approved for another audience out of the token, never carrying it along",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733) > a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation issuance (@spec async-delegation) > opens a family only for a target its entries are approved for: a token for one audience opens none for another audience of the Mission, counting no derivation (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Re-quoted: the sentence that a request issuing an entry to another audience is refused became the carriage consequence; the refusals moved to Audience and Token Response (rows core.tokens.no-approved-entry-refusal, core.tokens.requested-entry-refusal, core.tokens.multi-audience-refusal). Proved by carrying every computed entry (the two-audience witnesses were refused at the save-time check), and by bypassing each path's filter: the code and refresh hook, the device redemption, the Deferred Mission Approval, template dispatch and Expansion completion mints each failed its witness."
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Re-quoted: the sentence that a request issuing an entry to another audience is refused became the carriage consequence; the refusals moved to Audience and Token Response (rows core.tokens.no-approved-entry-refusal, core.tokens.requested-entry-refusal, core.tokens.multi-audience-refusal). Proved by carrying every computed entry (the two-audience witnesses were refused at the save-time check), and by bypassing each path's filter: the code and refresh hook, the device redemption, the Deferred Mission Approval, template dispatch and Expansion completion mints each failed its witness. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
   },
   {
    "id": "core.delegation-constraints.depth-from-accounting",
@@ -62157,10 +62187,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a token issued for an audience, and its token response, carry no entry whose original approved audience excludes that audience, absent a declared narrowing capability for the entry's type",
-    "local": "the reference declares no narrowing capability, so the rule applies to every entry; each mint path limits its computed entries with one function (audienceCarriedEntries) before it builds the token, and the response echoes the limited set. Two mint paths have no witness with an entry approved for another audience: the child JWT-bearer redemption (a Child Mission created through the token exchange is bounded by the presented token, which already carries one audience's entries) and the delegated Token Exchange (whose entries are already limited to those overlapping the requested resource, so they differ only after a mapping change). Both filter with the same function, and the save-time check refuses, never carries, an entry the token's audience is not approved for; neither has a test that fails without its filter."
+    "local": "the reference declares no narrowing capability, so the rule applies to every entry; each mint path limits its computed entries with one function (audienceCarriedEntries) before it builds the token, and the response echoes the limited set. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
@@ -62203,9 +62233,27 @@
      "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > leaves an entry approved for another audience out of the token, never carrying it along",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733) > a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation issuance (@spec async-delegation) > opens a family only for a target its entries are approved for: a token for one audience opens none for another audience of the Mission, counting no derivation (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: audience-specific projection; an unrelated entry does not ride. Mutation-proved per path as for core.other-types.original-audience-refusal."
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: audience-specific projection; an unrelated entry does not ride. Mutation-proved per path as for core.other-types.original-audience-refusal. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
   },
   {
    "id": "core.tokens.multi-audience-refusal",
@@ -62461,11 +62509,17 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "an inherited entry's original approved audience changes only through a fresh approval of the entry or a transformation under a declared capability",
-    "local": "witnessed for a fresh approval: an entry an Expansion's approval adds, and a ceiling the Approver re-consents, take the mapping at that approval, while retained entries and a carried ceiling keep theirs. Gap: the reference declares no transformation capability (#1377), so the declared-transformation clause has no path to exercise"
+    "local": "witnessed for a fresh approval: an entry an Expansion's approval adds takes the association retained at the Approver's decision (a mapping change before the completing poll does not relabel it), and a ceiling the Approver re-consents takes the mapping at that decision, while retained entries and a carried ceiling keep theirs. Gap: the reference declares no transformation capability (#1377), so the declared-transformation clause has no path to exercise"
    },
    "level": "unit",
    "coverage": "partial",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion.test.ts",
+     "name": "an Expansion's added entries keep the association the mapping assigned them at the Approver's decision (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > a mapping change after the decision and before the completing poll leaves an added entry with the decision-time association",
+     "level": "unit",
+     "surface": "derivation"
+    },
     {
      "file": "src/services/authorization-server/test/expansion.test.ts",
      "name": "an Expansion successor keeps the predecessor's association for the authority it retains (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > an entry the successor retains from the predecessor keeps the predecessor's association, and only an entry the Expansion's approval adds takes the mapping at that approval",
@@ -62491,7 +62545,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 2. Proved by giving an Expansion's added entry the inherited association (it got none) and by not retaining a re-consented ceiling's association."
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 2. Proved by giving an Expansion's added entry the inherited association (it got none) and by not retaining a re-consented ceiling's association. Follow-up: the Expansion's added entries keep the association retained on the deferral at the Approver's decision; proved by reading the mapping at completion, by not retaining it at the decision, and by not handing it to completion."
   },
   {
    "id": "core.other-types.unestablished-audience-none",
