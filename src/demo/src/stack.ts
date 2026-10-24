@@ -1082,7 +1082,10 @@ export async function composeStack(opts: {
   // @spec runtime-evidence#decision-evidence-integrity (#853, D487): the
   // PEP verifies the PDP's Decision Evidence under the declared statement
   // versions, by the record's (audience, kid) pair, against exactly what the
-  // decision point publishes for the records it emits.
+  // decision point publishes for the records it emits. The executor's own
+  // key is held there too (#252): a compensation links the committed effect
+  // it offsets only after re-verifying that effect's retained Execution
+  // Evidence, and an unverifiable record links nothing.
   const evidence = new EvidenceStore(
     evidenceKeys.signing,
     buildBoundaryEvidenceKeyResolver(boundary.declaration, [
@@ -1092,6 +1095,9 @@ export async function composeStack(opts: {
         emitterId: decisionPoint.evidenceVerification.emitterId,
         role: "pdp",
       },
+      ...evidenceKeys.verification
+        .filter((k) => k.role === "executor")
+        .map((k) => ({ kid: k.kid, publicKey: k.publicKey, emitterId: k.emitterId, role: "executor" as const })),
     ]),
     evidenceRetention,
     boundaryEvidenceAuthorization(boundary),

@@ -21,6 +21,7 @@
         "payments:payment.schedule": "consequential_write",
         "payments:payment.schedule.cancel": "consequential_write",
         "payments:payment.execute": "irreversible_action",
+        "payments:payment.reverse": "irreversible_action",
         "payments:remittance.send": "external_commitment"
       }
     },

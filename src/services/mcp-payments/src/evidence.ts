@@ -760,7 +760,9 @@ function envelopeKid(envelope: EvidenceEnvelope): string {
  * PEP's enforcement scope, and `phase_invalid` (@spec
  * authzen#context-action-phase, #1629, D744), a request whose action phase is
  * outside the defined set or absent where the PDP's trusted operation
- * declaration requires one.
+ * declaration requires one, and `compensation_link_invalid` (@spec
+ * authzen#context-compensation-link, #252), a compensate-phase request with no
+ * `compensates_evaluation_id`, or any request carrying a malformed one.
  */
 export const REFUSAL_DENIAL_REASONS = Object.freeze({
   pep: Object.freeze([
@@ -784,8 +786,18 @@ export const REFUSAL_DENIAL_REASONS = Object.freeze({
     // "`phase_unavailable` (the operation is a phase of a compound action and
     // the PEP cannot establish the phase before requesting a decision)".
     "phase_unavailable",
+    // @spec runtime-evidence#pre-decision-refusal, authzen#context-compensation-link
+    // (#252): "`compensation_link_unavailable` (the operation is a compensate
+    // phase and the PEP cannot establish, from retained and verified evidence,
+    // the committed effect it offsets and that effect's Decision)".
+    "compensation_link_unavailable",
   ] as const),
-  pdp: Object.freeze(["mission_context_missing", "operation_target_invalid", "phase_invalid"] as const),
+  pdp: Object.freeze([
+    "mission_context_missing",
+    "operation_target_invalid",
+    "phase_invalid",
+    "compensation_link_invalid",
+  ] as const),
 });
 export type PepRefusalDenialReason = (typeof REFUSAL_DENIAL_REASONS.pep)[number];
 
@@ -1321,6 +1333,31 @@ export class EvidenceStore {
 
   all(): readonly Evidence[] {
     return this.records;
+  }
+
+  /**
+   * @spec runtime-evidence#decision-evidence-object `compensates_evaluation_id`
+   * (#252): "The trusted execution path MUST establish this link from
+   * retained, verified evidence of the original evaluation". Re-verify one
+   * retained Decision Evidence or Execution Evidence row under its own
+   * envelope, with this store's verification-key resolver, at the moment the
+   * row is relied on. A retained row is not trusted merely for being held: a
+   * durable backend's rows are recovered at startup without re-verification,
+   * so a row changed at rest verifies here or is not relied on.
+   *
+   * The resolver is the one {@link retainDecision} uses; it must also resolve
+   * the executor's published key for an Execution Evidence row. Absent a
+   * resolver, or a key for the row's emitter, nothing verifies: fail closed.
+   */
+  async verifyRetained(row: DecisionEvidence | ExecutionEvidence): Promise<boolean> {
+    if (!this.resolveDecisionEvidenceKey) return false;
+    const mediaType = row.kind === "decision" ? DECISION_EVIDENCE_MEDIA_TYPE : EXECUTION_EVIDENCE_MEDIA_TYPE;
+    const result = await verifyEvidenceEnvelope(
+      row.content as unknown as Parameters<typeof verifyEvidenceEnvelope>[0],
+      mediaType,
+      this.resolveDecisionEvidenceKey,
+    );
+    return result.valid;
   }
 }
 
