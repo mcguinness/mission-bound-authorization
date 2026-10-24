@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-24T00:05:49Z
-Source repository commit: a3ffaed2e6f259d460eaa881e6434f39db895fb3
+Generated: 2026-10-24T03:38:40Z
+Source repository commit: 35bb260dd91598f63fea1ea8db0a9aacb99becf3
 Member count: 7
 
 Reading order:
@@ -16599,13 +16599,13 @@ Table of Contents
 
 5.  Mission Lifecycle Endpoint
 
-   This section is OPTIONAL.  The issuance profile lets the Subject,
-   Approver, or an administrator revoke a Mission by an authenticated,
-   deployment-defined means and defers a standardized management API and
-   the richer suspend, resume, and complete operations
-   ([I-D.draft-mcguinness-oauth-mission], Sections "Revocation" and
-   "Mission Lifecycle").  This section standardizes that management
-   surface.
+   This section is OPTIONAL.  The issuance profile requires an
+   authenticated, deployment-defined means to revoke a Mission and
+   defers a standardized management API and the richer suspend, resume,
+   and complete operations ([I-D.draft-mcguinness-oauth-mission],
+   Sections "Revocation" and "Mission Lifecycle").  This section
+   standardizes that management surface; who may perform each operation
+   is governed by Section 5.4.
 
    The AS publishes its Mission Lifecycle endpoint URL in authorization
    server metadata (Section 8) as mission_lifecycle_endpoint, distinct
@@ -17563,10 +17563,11 @@ Table of Contents
    own: the endpoint authentication-method value space is a closed set
    defined inline (Section 8), and Mission Lifecycle operation values
    have no IANA registry; a companion profile registers an extension
-   operation by defining it in its own specification (Section 5).
-   suspended and completed (Section 5) are values of the issuance
-   profile's mission_error member, which has no IANA registry, so this
-   document requests no registration for them.
+   operation by defining it in its own specification (Section 5).  The
+   mission_error values suspended and completed (Section 5) need no
+   registration, because the issuance profile's mission_error member has
+   no registry of values; their registrations as a lifecycle state and a
+   termination reason are in Section 12.4.
 
    This document registers no new Well-Known URI: the metadata members
    of Section 8 are published in the OAuth Authorization Server Metadata
