@@ -812,6 +812,48 @@ describe("suspension schedule deadlines (@spec status#mission-lifecycle-endpoint
     await clock.advance(0);
     expect(stored(as.kernel, m.id).version).toBe(suspendedAt + 1);
   });
+
+  it("records a revoke schedule's deadline as its termination time, whether the timer or a later read applies it (@spec status#mission-lifecycle-endpoint, #1535 finding 11)", async () => {
+    const terminatedAt = (id: string): string | undefined => {
+      const row = as.kernel.db.prepare("SELECT termination_json FROM missions WHERE id = ?").get(id) as {
+        termination_json: string | null;
+      };
+      return row.termination_json ? (JSON.parse(row.termination_json) as { terminated_at?: string }).terminated_at : undefined;
+    };
+    const timed = approve();
+    const timedUntil = at(30);
+    expect((await op(operator, { mission_id: timed.id, operation: "suspend", suspend_until: timedUntil, on_expiry: "revoke" })).status).toBe(200);
+    await clock.advance(30_000);
+    expect(stored(as.kernel, timed.id).termination).toBe("revoked");
+    expect(terminatedAt(timed.id)).toBe(timedUntil);
+
+    const late = approve();
+    const lateUntil = at(30);
+    expect((await op(operator, { mission_id: late.id, operation: "suspend", suspend_until: lateUntil, on_expiry: "revoke" })).status).toBe(200);
+    // The timer is not delivered: a read ten minutes after the deadline applies it.
+    clock.skip(630_000);
+    expect(await status(late.id)).toMatchObject({ state: "terminated", termination: { reason: "revoked" } });
+    expect(terminatedAt(late.id)).toBe(lateUntil);
+    await clock.advance(0);
+  });
+
+  it("replays an accepted schedule's original response to an identical retransmit after its deadline, while a new request with that deadline is refused (@spec status#mission-lifecycle-endpoint, status#idempotency, #1535 finding 11)", async () => {
+    const m = approve();
+    const n = nonce();
+    const until = at(30);
+    const members = { mission_id: m.id, operation: "suspend", suspend_until: until, on_expiry: "resume", nonce: n };
+    const accepted = await op(operator, members);
+    expect(accepted.status, accepted.text).toBe(200);
+    await clock.advance(31_000);
+    expect(stored(as.kernel, m.id).state).toBe("active");
+    const retransmit = await op(operator, members);
+    expect(retransmit.status, retransmit.text).toBe(200);
+    expect(retransmit.text).toBe(accepted.text);
+    const fresh = await op(operator, { mission_id: m.id, operation: "suspend", suspend_until: until, on_expiry: "resume" });
+    expect(fresh.status, fresh.text).toBe(400);
+    expect(fresh.json?.error).toBe("invalid_request");
+    expect(stored(as.kernel, m.id).state).toBe("active");
+  });
 });
 
 describe("suspension schedule effects (@spec status#mission-lifecycle-endpoint, control-plane#fanout, #1002)", () => {
