@@ -27,6 +27,7 @@ import {
   commitCarryoverManifest,
   prepareCarryover,
 } from "./carryover.js";
+import type { AudienceReference } from "./approved-audience.js";
 import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { APPROVAL_FLOOR, type ApprovalFloorPolicy } from "@mission/demo-data";
 import { evaluateApprovalFloor } from "./approval-floor.js";
@@ -295,6 +296,34 @@ export class DeferralStore {
 // never fabricated).
 // ---------------------------------------------------------------------------
 
+/**
+ * @spec mission#transformation-capabilities (#1503 finding 7, D733): the
+ * association retained at an Expansion approval decision, read fail closed:
+ * a missing or malformed value retains none, so an entry the approval added
+ * has no audience rather than one read from the mapping current now.
+ */
+function decisionAudiencesOf(text: unknown): AudienceReference[] {
+  if (typeof text !== "string" || text === "") return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.flatMap((r: unknown) => {
+    const ref = r as { entry?: unknown; audiences?: unknown };
+    const valid =
+      ref !== null &&
+      typeof ref === "object" &&
+      ref.entry !== null &&
+      typeof ref.entry === "object" &&
+      Array.isArray(ref.audiences) &&
+      ref.audiences.every((a) => typeof a === "string");
+    return valid ? [{ entry: ref.entry as AuthorityEntry, audiences: ref.audiences as string[] }] : [];
+  });
+}
+
 const EXPANSION_SCHEMA = `
 CREATE TABLE IF NOT EXISTS expansion_deferrals (
   deferral_code TEXT PRIMARY KEY,
@@ -358,6 +387,11 @@ function migrateExpansionDeferrals(db: Database): void {
     "reconsent_offer_json",
     // @spec discovery#adjudication (#1469 stage 1): the encounter facts.
     "encounter_json",
+    // @spec mission#transformation-capabilities (#1503 finding 7, D733): the
+    // association the trusted mapping assigned the successor's entries at
+    // the Approver's decision. A deferral approved before it was retained
+    // has none, so the entries its approval adds have none (fail closed).
+    "decision_audiences_json",
   ]) {
     if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
   }
@@ -742,9 +776,17 @@ export class ExpansionDeferralStore {
       )
       .get(deferralCode) as { intent_json: string; predecessor_id: string; reconsent_offer_json: string | null } | undefined;
     let reconsent: ReconsentedCeiling | undefined;
+    let decisionAudiences: AudienceReference[] | undefined;
     if (pending) {
       const recorded = JSON.parse(pending.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
       const successor = this.kernel.derive(recorded.i, recorded.pr?.length ? recorded.pr : undefined);
+      // @spec mission#transformation-capabilities (#1503 finding 7, D733
+      // ruling 2): this decision is the fresh approval of the authority the
+      // Expansion adds, so the association the mapping assigns the
+      // successor's entries now is retained with the deferral; completion
+      // reads it, never the mapping current at the completing poll.
+      const mapped = this.kernel.mappedEntryAudiences(successor);
+      decisionAudiences = mapped ? successor.map((entry, i) => ({ entry, audiences: mapped[i] ?? [] })) : undefined;
       // @spec progressive#ceiling-reconsent (#1413): a re-consent is a
       // ceiling consent, so its entries are validated here and classified with
       // the successor's authority, as at the initial approval (#1255).
@@ -806,7 +848,7 @@ export class ExpansionDeferralStore {
     }
     this.db
       .prepare(
-        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ?, ceiling_reconsent_json = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
+        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ?, ceiling_reconsent_json = ?, decision_audiences_json = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
       )
       .run(
         JSON.stringify(approval.approver),
@@ -815,6 +857,7 @@ export class ExpansionDeferralStore {
         manifestJson,
         manifestHash,
         reconsent ? JSON.stringify(reconsent) : null,
+        decisionAudiences ? JSON.stringify(decisionAudiences) : null,
         deferralCode,
       );
   }
@@ -1310,6 +1353,10 @@ export class ExpansionDeferralStore {
         ...(row.ceiling_reconsent_json
           ? { ceilingReconsent: JSON.parse(row.ceiling_reconsent_json as string) as ReconsentedCeiling }
           : {}),
+        // @spec mission#transformation-capabilities (#1503 finding 7, D733):
+        // the association retained at the Approver's decision; none where the
+        // decision retained none.
+        decidedAudiences: decisionAudiencesOf(row.decision_audiences_json),
         // @spec progressive#audit-linkage (#1469): the digest of the declaration
         // the encounter's adjudication evaluated, on this successor.
         ...(row.encounter_json && (JSON.parse(row.encounter_json as string) as EncounterFacts).declaration_digest

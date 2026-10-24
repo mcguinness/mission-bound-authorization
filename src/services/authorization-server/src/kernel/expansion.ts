@@ -18,7 +18,7 @@ import {
   resourceWithin,
   selectorOverlapsEntry,
 } from "@mission/core";
-import { audienceReferences, derivedAudiences, derivesFrom } from "./approved-audience.js";
+import { type AudienceReference, audienceReferences, derivedAudiences, derivesFrom } from "./approved-audience.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { entriesMayOverlap } from "./derive.js";
 import { entryDigest } from "./discharge.js";
@@ -90,6 +90,15 @@ export interface ExpansionInput {
   resourceDeclarationDigest?: string;
   /** @spec discovery#adjudication (#1469 stage 4): the encounter this approval resolves, recorded on the successor. */
   encounterId?: string;
+  /**
+   * @spec mission#transformation-capabilities (#1503 finding 7, D733 ruling
+   * 2): the association the trusted mapping assigned the successor's entries
+   * at the Approver's decision, retained with a deferred approval. An entry
+   * the Expansion adds takes it, never the mapping current at completion.
+   * Absent, the approval decision is this creation, and the mapping now
+   * applies.
+   */
+  decidedAudiences?: readonly AudienceReference[];
 }
 
 /**
@@ -265,12 +274,19 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
   // (one within a predecessor entry) keeps the predecessor's retained
   // association, as its capability bindings do above: creating the successor
   // does not reset it. Only an entry this Expansion's own approval adds takes
-  // the mapping at that approval. A predecessor that retains no association
-  // leaves its retained entries with none.
+  // the mapping at that approval: as retained at the Approver's decision for
+  // a deferred approval, or now where this creation is the decision. A
+  // predecessor that retains no association leaves its retained entries with
+  // none.
   const predecessorAudiences = audienceReferences(predecessor.authority_set, predecessor.approved_audiences);
-  const fresh = kernel.mappedEntryAudiences(authoritySet);
+  const decided = input.decidedAudiences;
+  const fresh = decided ? undefined : kernel.mappedEntryAudiences(authoritySet);
   const successorAudiences = authoritySet.map((entry, i) =>
-    derivesFrom(entry, predecessorAudiences) ? derivedAudiences(entry, predecessorAudiences) : (fresh?.[i] ?? []),
+    derivesFrom(entry, predecessorAudiences)
+      ? derivedAudiences(entry, predecessorAudiences)
+      : decided
+        ? derivedAudiences(entry, decided)
+        : (fresh?.[i] ?? []),
   );
   kernel.insertRecord(record, undefined, { source: resolvedSource, audiences: { inherited: successorAudiences } });
 
