@@ -1,11 +1,12 @@
 /**
  * @spec #831 (role binding): an ID Token, the one JWT the provider signs for
- * a client here, uses the access-token key alone. The provider holds every AS
- * role's signing key and selects one by algorithm, so a client registered for
- * another role's algorithm (ES256) got an ID Token signed under the Mission
- * Status key. The ID Token algorithm is limited to the access-token key's, so
- * such a registration is refused at the client's first request, and a client
- * on the default receives an ID Token under the access-token key.
+ * a client here, uses the access-token key alone. The provider selects a key
+ * by algorithm, so while its keystore held every AS role's signing key a
+ * client registered for another role's algorithm (ES256) got an ID Token
+ * signed under the Mission Status key. The keystore now holds the
+ * access-token key alone, so such a registration is refused at the client's
+ * first request, and a client on the default receives an ID Token under the
+ * access-token key.
  */
 import { type Server } from "node:http";
 import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";

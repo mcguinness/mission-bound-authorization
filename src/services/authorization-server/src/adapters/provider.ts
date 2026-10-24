@@ -46,7 +46,6 @@ import Provider, {
   type Configuration,
   type KoaContextWithOIDC,
   type ResourceServer,
-  type SigningAlgorithmWithNone,
 } from "oidc-provider";
 import { loadReusableGrant, missionInteractionPolicy, ORDINARY_REQUEST_REFUSAL } from "./interaction-policy.js";
 import { type GovernedResourcePolicy, governedResourceRefusal, isMissionGovernedResource } from "./governed-resources.js";
@@ -1976,18 +1975,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
         : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
     // @spec mission#submission-via-par (#1503): the one Request Object
-    // signing algorithm (features.requestObjects below).
-    // @spec #831 (role binding): the provider holds every AS role's signing
-    // key and selects one by algorithm, so an ID Token in another role's
-    // algorithm would be signed under that role's key (a client registered
-    // for ES256 got an ID Token under as-status). ID Tokens are limited to the
-    // access-token key's algorithm; a registration naming another is refused.
-    // Signed userinfo, JWT introspection and JWT response modes are off, so no
-    // other client-facing JWT is signed. Every other list keeps the default.
-    enabledJWA: {
-      requestObjectSigningAlgValues: ["ES256"],
-      idTokenSigningAlgValues: accessTokenSigningAlgs(opts),
-    },
+    // signing algorithm (features.requestObjects below); every other
+    // algorithm list keeps the provider's default. The provider's keystore
+    // holds the access-token key alone (#831 role binding), so it signs no
+    // ID Token or other JWT under another role's key, and a client registered
+    // for another algorithm is refused.
+    enabledJWA: { requestObjectSigningAlgValues: ["ES256"] },
     interactions: {
       url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
       // @spec mission#approval-event (#1247), device-authorization#approval
@@ -3132,15 +3125,6 @@ export function namesRequestedRar(ctx: unknown): boolean {
   } catch {
     return false;
   }
-}
-
-/** @spec #831 (role binding): the algorithms of the access-token signing key, the one key an ID Token uses. */
-function accessTokenSigningAlgs(opts: AdapterOptions): SigningAlgorithmWithNone[] {
-  return [
-    ...new Set(
-      opts.accessTokenJwks.keys.map((k) => k.alg).filter((a): a is SigningAlgorithmWithNone => typeof a === "string" && a !== "none"),
-    ),
-  ];
 }
 
 export function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
