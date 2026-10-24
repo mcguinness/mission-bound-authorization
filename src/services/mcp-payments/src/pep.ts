@@ -1503,30 +1503,37 @@ export function buildInsufficientAuthorization(authorizationDetails: AuthorityEn
 }
 
 /**
- * @spec runtime-evidence#execution-evidence-object `obligation_outcomes`:
- * "one object per attached obligation, with `id` (REQUIRED ...), `type`
- * (REQUIRED ...)". This PEP implements no obligation type, so every attached
- * obligation is `unsupported`.
+ * @spec runtime-evidence#execution-evidence-object `obligation_outcomes`
+ * (issue #786): "One object per attached obligation, in the order the
+ * decision returned them ... `id` and `type` are each REQUIRED when the
+ * decision supplied that member as a non-empty string, and absent otherwise,
+ * never invented. An obligation lacking either is malformed, and its
+ * `outcome` is `unsupported`."
  *
- * Returns `undefined` when ANY attached obligation does not identify itself.
- * Omitting one entry would break one-outcome-per-attached-obligation while
- * still reading as a complete list, and `id`/`type` cannot be invented. That
- * case is an outstanding representation gap (issue #786): the operation is
- * still refused with zero effect, and the record carries no fabricated entry.
+ * One entry per attached obligation, positionally, so the list is complete
+ * whatever the obligations look like. `id` and `type` are copied only when
+ * the decision supplied a non-empty string; otherwise the member is omitted,
+ * never invented. This PEP implements no obligation type, so every entry is
+ * `unsupported`, a malformed one included. Only the record's representation
+ * is relaxed: a malformed obligation still makes the permit unusable.
  */
 function obligationOutcomes(
   obligations: readonly unknown[],
-): ExecutionEvidenceObject["obligation_outcomes"] | undefined {
-  const named: NonNullable<ExecutionEvidenceObject["obligation_outcomes"]> = [];
-  for (const raw of obligations) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
-    const { id, type } = raw as { id?: unknown; type?: unknown };
-    if (typeof id !== "string" || id.length === 0 || typeof type !== "string" || type.length === 0) {
-      return undefined;
-    }
-    named.push({ id, type, outcome: "unsupported", error: "no obligation type is implemented at this PEP" });
-  }
-  return named;
+): NonNullable<ExecutionEvidenceObject["obligation_outcomes"]> {
+  return obligations.map((raw) => {
+    const supplied = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as { id?: unknown; type?: unknown }) : {};
+    const id = typeof supplied.id === "string" && supplied.id.length > 0 ? supplied.id : undefined;
+    const type = typeof supplied.type === "string" && supplied.type.length > 0 ? supplied.type : undefined;
+    return {
+      ...(id !== undefined ? { id } : {}),
+      ...(type !== undefined ? { type } : {}),
+      outcome: "unsupported" as const,
+      error:
+        id !== undefined && type !== undefined
+          ? "no obligation type is implemented at this PEP"
+          : "the obligation lacks a non-empty id or type",
+    };
+  });
 }
 
 /**
@@ -2849,13 +2856,11 @@ export class Pep {
     const obligations = decision.context.obligations as unknown[] | undefined;
     if (obligations && obligations.length > 0) {
       // @spec runtime-evidence#execution-evidence-object `obligation_outcomes`
-      // ("one object per attached obligation"): the failing entries are named
-      // when every attached obligation identifies itself, and the member is
-      // omitted entirely when one does not. A partial list would read as
-      // complete, and `id`/`type` are REQUIRED and cannot be invented.
-      const outcomes = obligationOutcomes(obligations);
+      // ("one object per attached obligation, in the order the decision
+      // returned them"): every attached obligation has its entry, a malformed
+      // one included, with no `id` or `type` invented for it (#786).
       await this.suppressExecution(attempt, "obligation_unfulfilled", {
-        ...(outcomes ? { obligationOutcomes: outcomes } : {}),
+        obligationOutcomes: obligationOutcomes(Array.isArray(obligations) ? obligations : [obligations]),
       });
       return { permitted: false, refusal_reason: "unfulfillable_obligation" };
     }

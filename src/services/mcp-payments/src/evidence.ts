@@ -214,9 +214,14 @@ export interface ExecutionEvidenceObject {
   outcome: "completed" | "failed" | "suppressed";
   outcome_at: string;
   error?: string;
+  /**
+   * One entry per attached obligation, in the decision's order. `id` and
+   * `type` are present exactly when the decision supplied that member as a
+   * non-empty string, never invented (#786).
+   */
   obligation_outcomes?: Array<{
-    id: string;
-    type: string;
+    id?: string;
+    type?: string;
     outcome: "fulfilled" | "failed" | "unsupported";
     error?: string;
   }>;
