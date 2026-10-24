@@ -774,6 +774,12 @@ export interface AdapterOptions {
   clients: Record<string, unknown>[];
   jwks: { keys: Record<string, unknown>[] };
   publicJwks: { keys: Record<string, unknown>[] };
+  /**
+   * @spec #831 (role binding): the public half of the access-token signing
+   * key alone, the only key a Mission access token presented as a
+   * `subject_token` verifies under. `publicJwks` holds every AS role's key.
+   */
+  accessTokenJwks: { keys: Record<string, unknown>[] };
   /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;

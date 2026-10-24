@@ -24,6 +24,7 @@ import {
   createLocalJWKSet,
   decodeJwt,
   decodeProtectedHeader,
+  errors as joseErrors,
   type JWK,
   jwtVerify,
 } from "jose";
@@ -1098,16 +1099,13 @@ export async function handleAsyncDelegationExchange(
   if (typeof subjectToken !== "string" || !subjectToken) {
     throw new errors.InvalidRequest("subject_token (base mission access token) required");
   }
-  let baseClaims: Record<string, unknown>;
-  try {
-    const { payload } = await jwtVerify(subjectToken, createLocalJWKSet(opts.publicJwks as never), {
-      issuer: opts.issuer,
-    });
-    baseClaims = payload as Record<string, unknown>;
-  } catch {
-    txError(ctx, 400, "invalid_request", "subject_token verification failed");
+  // A Mission access token of this AS (#831): the handle is one.
+  const verifiedBase = await verifyAccessTokenSubject(opts, subjectToken);
+  if (!verifiedBase.ok) {
+    txError(ctx, 400, "invalid_request", verifiedBase.description);
     return;
   }
+  const baseClaims = verifiedBase.claims;
   const missionRef = baseClaims.mission as { id?: string } | undefined;
   const missionId = missionRef?.id;
   if (typeof missionId !== "string") {
@@ -1798,6 +1796,41 @@ export interface SubjectPossessionOptions {
   afterParse?: () => void;
 }
 
+/** The RFC 9068 access-token type this AS mints (oidc-provider's JWT format). */
+const ACCESS_TOKEN_JWT_TYP = "at+jwt";
+
+/**
+ * @spec #831 (role binding): verify `token` as a Mission access token of this
+ * AS, the only credential a Token Exchange subject resolved here may be. It
+ * verifies under the access-token signing key alone (`accessTokenJwks`, not
+ * every AS role's key in `publicJwks`) and must be typed `at+jwt`, so no other
+ * credential this AS signs under the same issuer passes: a transaction token
+ * above all, which carries a `mission` claim and a `cnf` of its own. The two
+ * checks are independent: a credential under another role's key is refused
+ * for its key whatever its type, and one under the access-token key is refused
+ * for any other type. Any other failure keeps the generic description.
+ */
+export async function verifyAccessTokenSubject(
+  opts: AdapterOptions,
+  token: string,
+): Promise<{ ok: true; claims: Record<string, unknown> } | { ok: false; description: string }> {
+  try {
+    const { payload } = await jwtVerify(token, createLocalJWKSet(opts.accessTokenJwks as never), {
+      issuer: opts.issuer,
+      typ: ACCESS_TOKEN_JWT_TYP,
+    });
+    return { ok: true, claims: payload as Record<string, unknown> };
+  } catch (e) {
+    if (e instanceof joseErrors.JWKSNoMatchingKey) {
+      return { ok: false, description: "subject_token is not signed by this AS's access-token key" };
+    }
+    if (e instanceof joseErrors.JWTClaimValidationFailed && e.claim === "typ") {
+      return { ok: false, description: `subject_token is not an access token (typ ${ACCESS_TOKEN_JWT_TYP})` };
+    }
+    return { ok: false, description: "subject_token verification failed" };
+  }
+}
+
 export async function verifySubjectPossession(
   opts: AdapterOptions,
   ctx: KoaContextWithOIDC,
@@ -1825,17 +1858,13 @@ export async function verifySubjectPossession(
     return null;
   }
   options.afterParse?.();
-  // Step 1: verify subject_token on the AS jwks.
-  let claims: Record<string, unknown>;
-  try {
-    const { payload } = await jwtVerify(subjectToken, createLocalJWKSet(opts.publicJwks as never), {
-      issuer: opts.issuer,
-    });
-    claims = payload as Record<string, unknown>;
-  } catch {
-    txError(ctx, 400, subjectError, "subject_token verification failed");
+  // Step 1: verify subject_token as a Mission access token of this AS (#831).
+  const subject = await verifyAccessTokenSubject(opts, subjectToken);
+  if (!subject.ok) {
+    txError(ctx, 400, subjectError, subject.description);
     return null;
   }
+  const claims = subject.claims;
   // Step 2: the Mission is selected BY subject_token (replaces predecessor_token/parent_token).
   const missionRef = claims.mission as { id?: string } | undefined;
   const missionId = missionRef?.id;
