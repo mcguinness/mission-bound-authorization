@@ -218,6 +218,14 @@ export interface DecisionEvidenceObject {
   hop_reference?: RuntimeHopReference;
   parameter_digest?: string;
   evaluation_request_digest?: string;
+  /**
+   * @spec runtime-evidence#decision-evidence-object `compensates_evaluation_id`,
+   * authzen#context-compensation-link (#252): CONDITIONAL, REQUIRED for a
+   * compensate-phase decision. The validated `context.compensates_evaluation_id`
+   * of the request: the `evaluation_id` of the committed effect this decision
+   * compensates. Correlation only, never authority.
+   */
+  compensates_evaluation_id?: string;
   conditions?: RuntimeConditions;
   decision: "permit" | "deny";
   denial_reason?: string;
@@ -233,6 +241,17 @@ export interface DecisionEvidenceObject {
   emitter: { id: string; role: "pdp" };
   evaluated_at: string;
   evidence_envelope: EvidenceEnvelope;
+}
+
+/**
+ * @spec authzen#response-context `evaluation_id`, authzen#context-compensation-link
+ * (#252): whether `value` is a well-formed evaluation identifier, ABNF
+ * `1*64( ALPHA / DIGIT / "-" / "_" )`. Syntax only: it says nothing about
+ * whether the identifier names an evaluation, which the PEP establishes from
+ * its own verified evidence.
+ */
+export function isEvaluationIdentifier(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(value);
 }
 
 /** At least 128 bits of entropy, ABNF `1*64( ALPHA / DIGIT / "-" / "_" )` (runtime-evidence.md, every `*_id` member). */
@@ -308,6 +327,14 @@ export interface DecisionEvidenceEmissionInput {
    * caller and re-checked here; it is never cast into the enum.
    */
   action_phase?: ActionPhase;
+  /**
+   * @spec authzen#context-compensation-link (#252): the VALIDATED
+   * `context.compensates_evaluation_id`, on a permit and on a denial alike.
+   * REQUIRED when `action_phase` is `compensate`: the emitter refuses to sign
+   * a compensate-phase record without a well-formed link rather than
+   * manufacture one. Malformed input is omitted, never signed.
+   */
+  compensates_evaluation_id?: string;
   actor?: ContextActor;
   credential?: RuntimeCredentialRef;
   principal_mapping?: RuntimePrincipalMapping;
@@ -412,6 +439,14 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
       if (input.decision === "permit" && input.conditions?.action_phase !== input.action_phase) {
         throw new Error("Decision Evidence phase binding differs from wire conditions");
       }
+      // @spec runtime-evidence#decision-evidence-object `compensates_evaluation_id`
+      // (#252): "REQUIRED for a compensate-phase decision". A compensate-phase
+      // record that cannot carry a well-formed link is never manufactured: the
+      // PDP refuses such a request before evaluation, and this guard keeps a
+      // record without the link from being signed either way.
+      if (input.action_phase === "compensate" && !isEvaluationIdentifier(input.compensates_evaluation_id)) {
+        throw new Error("Decision Evidence for a compensate-phase decision requires compensates_evaluation_id");
+      }
       if (input.decision === "permit" && classes.slice(2).includes(action_class) && input.conditions?.use_limit !== 1) {
         throw new Error("Decision Evidence high-consequence permit requires use_limit 1");
       }
@@ -463,6 +498,10 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         ...(input.principal_mapping !== undefined ? { principal_mapping: input.principal_mapping } : {}),
         ...(input.parameter_digest !== undefined ? { parameter_digest: input.parameter_digest } : {}),
         ...(evaluation_request_digest !== undefined ? { evaluation_request_digest } : {}),
+        // Only a validated identifier is recorded; malformed input is omitted.
+        ...(isEvaluationIdentifier(input.compensates_evaluation_id)
+          ? { compensates_evaluation_id: input.compensates_evaluation_id }
+          : {}),
         ...(input.conditions !== undefined ? { conditions: {
           valid_until: requiredString(input.conditions.valid_until),
           ...(input.conditions.use_limit !== undefined ? { use_limit: input.conditions.use_limit } : {}),
