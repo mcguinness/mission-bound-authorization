@@ -1705,14 +1705,28 @@ async function evaluateInner(
     requestContract !== undefined ||
     applicableEntries.some((e) => e.resource_contract !== undefined) ||
     contracts.requiresReference(operationTarget, req.action.name);
-  let entry: AuthorityEntry = matched;
+  // @spec resource-access#common-constraints, resource-access#rs-enforcement
+  // (#1375): entries are alternative grants, never conjunctive filters. Each
+  // entry-scoped check below narrows `candidates`, the applicable entries in
+  // Authority Set order; the request is refused only when none remains, with
+  // the reason of the step at which the last fell, and the entry relied on is
+  // the first that survives every check. Each entry is judged whole, so parts
+  // of several entries never combine, and a single applicable entry is judged
+  // exactly as before. Checks that do not depend on the entry run once.
+  let candidates: AuthorityEntry[] = applicableEntries;
+  const narrow = (keep: (e: AuthorityEntry) => boolean): boolean => {
+    const kept = candidates.filter(keep);
+    if (kept.length === 0) return false;
+    candidates = kept;
+    return true;
+  };
   if (contractApplies) {
     if (requestContract === undefined) return deny("resource_contract_drift");
     const resolved = contracts.resolve(requestContract, { target: operationTarget, action: req.action.name, now: now() });
     if (!resolved.ok) return deny("resource_contract_drift");
-    const contracted = applicableEntries.find((e) => sameResourceContract(e.resource_contract, requestContract));
-    if (!contracted) return deny("resource_contract_drift");
-    entry = contracted;
+    if (!narrow((e) => sameResourceContract(e.resource_contract, requestContract))) {
+      return deny("resource_contract_drift");
+    }
   }
   /** The reference the permit binds: present exactly where a contract applies. */
   const permitContract = contractApplies ? resourceContractOf(requestContract) : undefined;
@@ -1725,10 +1739,11 @@ async function evaluateInner(
   //     with no `actions` contains all the entry's actions.
   const containment = view.containment;
   if (containment) {
-    const contained = containment.contained.some(
-      (c) => c.resource === entry.resource && (c.actions === undefined || c.actions.includes(req.action.name)),
-    );
-    if (contained) {
+    const contained = (e: AuthorityEntry): boolean =>
+      containment.contained.some(
+        (c) => c.resource === e.resource && (c.actions === undefined || c.actions.includes(req.action.name)),
+      );
+    if (!narrow((e) => !contained(e))) {
       return {
         decision: false,
         context: base({
@@ -1752,8 +1767,9 @@ async function evaluateInner(
   //     "approved, trust lost", `authority_discharged` is "approved, work done".
   const dischargedDigests = view.discharged?.entry_digests;
   if (dischargedDigests?.length) {
-    const digest = committedEntryDigest(view.issuer, entry);
-    if (dischargedDigests.includes(digest)) {
+    // When every candidate is discharged, the first is reported, as one entry was.
+    const digest = committedEntryDigest(view.issuer, candidates[0] as AuthorityEntry);
+    if (!narrow((e) => !dischargedDigests.includes(committedEntryDigest(view.issuer, e)))) {
       return {
         decision: false,
         context: base({
@@ -1947,18 +1963,18 @@ async function evaluateInner(
   // @spec capability-binding#capability-verification — applicability comes
   // ONLY from recorded policy for this action. A presented member cannot opt
   // out, substitute another action's binding, or create applicability.
-  const bindings = entry.capability_sources?.filter(b => b.action === req.action.name) ?? [];
-  if (bindings.length) {
+  const capabilityVerified = (e: AuthorityEntry): boolean => {
+    const bindings = e.capability_sources?.filter(b => b.action === req.action.name) ?? [];
+    if (!bindings.length) return true;
     const presented = runtimeCapabilitySourceOf(req.context.capability_source);
     const recorded = presented && bindings.find(b => b.tool_id === presented.tool_id);
-    if (!presented || !recorded || !runtimeCapabilitySourceOf(recorded) ||
+    return !(!presented || !recorded || !runtimeCapabilitySourceOf(recorded) ||
         presented.source_digest !== recorded.source_digest ||
         presented.source_uri !== recorded.source_uri ||
         presented.operation_ref !== recorded.operation_ref ||
-        (recorded.catalog_digest !== undefined && presented.catalog_digest !== recorded.catalog_digest)) {
-      return deny("capability_drift");
-    }
-  }
+        (recorded.catalog_digest !== undefined && presented.catalog_digest !== recorded.catalog_digest));
+  };
+  if (!narrow(capabilityVerified)) return deny("capability_drift");
 
   // 5d. @spec resource-access#rs-enforcement (#1266): "MUST fail closed on any
   // `constraints` key it does not understand, or understands but cannot
@@ -1966,7 +1982,7 @@ async function evaluateInner(
   // set this PDP evaluates refuses here, never passes as though absent, so a
   // Common Constraint this deployment does not yet implement cannot reach a
   // permit unenforced.
-  if (entry.constraints && Object.keys(entry.constraints).some((k) => !SUPPORTED_CONSTRAINT_KEYS.includes(k))) {
+  if (!narrow((e) => !e.constraints || Object.keys(e.constraints).every((k) => SUPPORTED_CONSTRAINT_KEYS.includes(k)))) {
     return deny("parameter_violation", "mission");
   }
 
@@ -1984,13 +2000,11 @@ async function evaluateInner(
   // (out_of_authority, below). The contribution is recorded here, at the
   // predicate's own call site, so a declared-and-passed constraint still
   // appears in contributing_constraints and one never evaluated does not.
-  if (entry.constraints?.vendors !== undefined) {
-    contributions.add("vendors");
-    if (!vendorConstraintSatisfied(entry, vendorId)) return deny("parameter_violation", "mission");
-  }
+  if (candidates.some((e) => e.constraints?.vendors !== undefined)) contributions.add("vendors");
+  if (!narrow((e) => vendorConstraintSatisfied(e, vendorId))) return deny("parameter_violation", "mission");
   const tuples = deriveContextualTuples({
     view,
-    entry,
+    entry: candidates[0] as AuthorityEntry,
     target: {
       objectType: req.resource.type === "vendor" ? "vendor" : "invoice",
       objectId: req.resource.id,
@@ -2036,15 +2050,12 @@ async function evaluateInner(
       // for THIS member is out_of_authority. Neither classification permits
       // the whole collection because some OTHER member passes (comment
       // above: no partially-narrowed lane).
-      if (
-        entry.constraints?.vendors !== undefined &&
-        !vendorConstraintSatisfied(entry, memberVendorId)
-      ) {
+      if (!narrow((e) => vendorConstraintSatisfied(e, memberVendorId))) {
         return deny("parameter_violation", "mission");
       }
       const memberTuples = deriveContextualTuples({
         view,
-        entry,
+        entry: candidates[0] as AuthorityEntry,
         target: { objectType: "vendor", objectId: memberVendorId, vendorId: memberVendorId },
         relation: mapping.relation,
       });
@@ -2097,10 +2108,11 @@ async function evaluateInner(
   // Parameters rule names, never fall through as unenforced. Absent a bound
   // `max_amount`, `needsAmount` alone never synthesizes an amount
   // requirement that isn't there.
-  const cap = entry.constraints?.max_amount;
-  if (cap) {
-    contributions.add("max_amount");
-    const amt = req.context.amount;
+  if (candidates.some((e) => e.constraints?.max_amount)) contributions.add("max_amount");
+  const amt = req.context.amount;
+  const withinCap = (e: AuthorityEntry): boolean => {
+    const cap = e.constraints?.max_amount;
+    if (!cap) return true;
     // @spec mission#max-amount — exact decimal-value comparison at the
     // enforcement point, never IEEE-754 float; an absent amount or a
     // malformed amount on either side fails closed (denied), never
@@ -2112,12 +2124,13 @@ async function evaluateInner(
       !isCurrencyCode(cap.currency) ||
       amt.currency !== cap.currency ||
       !isValidAmount(amt.amount) ||
-      !isValidAmount(cap.amount) ||
-      compareAmounts(amt.amount, cap.amount) > 0
+      !isValidAmount(cap.amount)
     ) {
-      return deny("parameter_violation", "mission");
+      return false;
     }
-  }
+    return compareAmounts(amt.amount, cap.amount) <= 0;
+  };
+  if (!narrow(withinCap)) return deny("parameter_violation", "mission");
 
   // 7a. The implemented Common Constraints (@spec resource-access#rs-enforcement,
   // runtime#input-parameters; #1266): each key the matched entry carries is
@@ -2125,9 +2138,25 @@ async function evaluateInner(
   // gate the credential bound uses. Keyed on the constraint's own presence; an
   // absent fact or a malformed value refuses, never permits open.
   // A collection read's members are each evaluated with their own facts.
-  const commonGates = commonConstraintGatesOverMembers(entry.constraints, constraintFacts, constraintMembers);
-  for (const key of commonGates.evaluated) contributions.add(key);
-  if (!commonGates.satisfied) return deny("parameter_violation", "mission");
+  const commonSatisfied = (e: AuthorityEntry): boolean => {
+    const gates = commonConstraintGatesOverMembers(e.constraints, constraintFacts, constraintMembers);
+    for (const key of gates.evaluated) contributions.add(key);
+    return gates.satisfied;
+  };
+  if (!narrow(commonSatisfied)) return deny("parameter_violation", "mission");
+
+  /** The presented approval passes every check step 8 applies: contract, digest, age and validity bound. */
+  const approvalSatisfies = (): boolean => {
+    const appr = req.context.action_approval;
+    if (appr === undefined) return false;
+    if (!sameResourceContract(appr.resource?.properties?.resource_contract, permitContract)) return false;
+    const maxAge = (opts.maxApprovalAgeSeconds ?? 300) * 1000;
+    return (
+      appr.parameter_digest === req.context.parameter_digest &&
+      now().getTime() - Date.parse(appr.approved_at) <= maxAge &&
+      (appr.approved_until === undefined || now().getTime() <= Date.parse(appr.approved_until))
+    );
+  };
 
   // 8. Action-bound approval (@spec authzen#context-approval): when policy
   //    requires one, the presented approval MUST match the request's
@@ -2137,18 +2166,22 @@ async function evaluateInner(
   // predicate OR the matched entry's effective Common Constraint, so a
   // delegated leaf carrying `requires_action_approval: true` is gated even
   // where deployment policy alone would not gate the action.
-  const entryRequiresApproval = entry.constraints?.requires_action_approval;
   if (
-    entryRequiresApproval !== undefined ||
+    candidates.some((e) => e.constraints?.requires_action_approval !== undefined) ||
     credentialCandidates.some((c) => c.constraints?.requires_action_approval !== undefined)
   ) {
     contributions.add("requires_action_approval");
   }
-  if (
-    opts.requiresActionApproval?.(req.action.name, actionClass) ||
-    entryRequiresApproval === true ||
-    credentialRequiresApproval
-  ) {
+  const entryRequiresApproval = (e: AuthorityEntry): boolean => e.constraints?.requires_action_approval === true;
+  const policyRequiresApproval =
+    opts.requiresActionApproval?.(req.action.name, actionClass) === true || credentialRequiresApproval;
+  // @spec resource-access#initial-common-constraints (#1375): an entry carrying
+  // `requires_action_approval: true` is satisfied only by an approval that
+  // passes every check below; without one, an applicable entry that requires
+  // none still authorizes the request on its own, unless deployment policy or
+  // the credential requires an approval for the action.
+  if (!policyRequiresApproval && !approvalSatisfies()) narrow((e) => !entryRequiresApproval(e));
+  if (policyRequiresApproval || candidates.every(entryRequiresApproval)) {
     const appr = req.context.action_approval;
     // @spec authzen#context-approval, runtime#resource-contract rule 4 (#249,
     // D553): "An approval given under one reference MUST NOT satisfy the
@@ -2200,6 +2233,9 @@ async function evaluateInner(
       return { decision: false, context: ctx };
     }
   }
+
+  /** The entry the permit relies on: the first applicable entry that survived every check. */
+  const entry = candidates[0] as AuthorityEntry;
 
   // 8a. Duration lease (@spec metering#lease-renewal,
   // authzen#failure-condition-coverage, #1440, #1464): a renewal that names
