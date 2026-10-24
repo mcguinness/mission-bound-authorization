@@ -144,7 +144,18 @@ export class DeferralStore {
    * (`jkt`), which the handler re-checks on every poll (#1348); whether the
    * client may open a deferral on this Mission is the handler's check.
    */
-  open(input: { missionId: string; requested: AuthorityEntry[]; clientId: string; jkt: string }): DeferralPending {
+  open(input: {
+    missionId: string;
+    requested: AuthorityEntry[];
+    clientId: string;
+    jkt: string;
+    /**
+     * A further admission check the caller runs once the request is known to
+     * be within the active Mission, before any deferral opens; it refuses by
+     * throwing (@spec mission#token-response, #1503 finding 7, D733).
+     */
+    admit?: (mission: MissionRecord) => void;
+  }): DeferralPending {
     const mission = this.kernel.get(input.missionId);
     if (!mission || this.kernel.applyExpiry(mission).state !== "active") {
       throw new DeferralError("out_of_authority", "mission is not active");
@@ -158,6 +169,7 @@ export class DeferralStore {
         "requested authority exceeds the active Mission; use Expansion to widen",
       );
     }
+    input.admit?.(mission);
     // @spec expansion#creation-idempotency (deferred mode, shared rule) — the
     // dedup key is CLIENT-SCOPED: the same semantic request from two different
     // clients MUST open two deferrals (per-client scoping prevents cross-client
@@ -769,7 +781,11 @@ export class ExpansionDeferralStore {
           this.now().toISOString(),
           approval.approver,
         );
-        reconsent = committed;
+        // @spec mission#transformation-capabilities (D733 ruling 2): a
+        // re-consent is a fresh approval of the ceiling, so its entries take
+        // the association the mapping assigns them at this decision.
+        const ceilingAudiences = this.kernel.mappedEntryAudiences(committed.authority_ceiling);
+        reconsent = ceilingAudiences ? { ...committed, ceiling_audiences: ceilingAudiences } : committed;
       }
     }
     // @spec child-delegation#carryover-manifest — the approval event COMMITS

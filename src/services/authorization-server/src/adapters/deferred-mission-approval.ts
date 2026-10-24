@@ -61,6 +61,7 @@ import { verifyTokenEndpointDpop } from "./continuation-grant.js";
 import { refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
   type AdapterOptions,
+  audienceCarriedEntries,
   clientProposalParam,
   newResourceServer,
   resourceServerInfoFor,
@@ -561,12 +562,15 @@ async function mintMissionToken(
     info.accessTokenTTL,
     Math.max(1, Math.floor((Date.parse(record.expires_at) - Date.now()) / 1000)),
   );
+  // @spec mission#token-response (#1503 finding 7, D733 ruling 1): only the
+  // entries approved for the token's audience.
+  const carried = audienceCarriedEntries(record, [resource], effective);
   const at = new provider.AccessToken({
     accountId: record.subject.sub,
     client: ctx.oidc.client as NonNullable<typeof ctx.oidc.client>,
     grantId,
     gty: DEFERRED_GRANT_TYPE,
-    rar: effective,
+    rar: carried,
     scope: SCOPE_DECIDED_AT_SAVE,
   });
   at.resourceServer = newResourceServer(provider, resource, info);
@@ -578,7 +582,7 @@ async function mintMissionToken(
     token_type: "DPoP",
     expires_in: at.expiration,
     ...(at.scope ? { scope: at.scope } : {}),
-    authorization_details: effective,
+    authorization_details: carried,
     mission_id: record.id,
     mission_expires_at: record.expires_at,
   };

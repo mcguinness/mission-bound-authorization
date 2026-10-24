@@ -638,14 +638,17 @@ export interface MissionRecord {
    */
   child_actor_provenance?: RetainedOrigin[];
   /**
-   * @spec mission#transformation-capabilities (#1503 finding 7, D620): each
-   * approved entry's original approved audience, index-aligned with
-   * `authority_set`: the audiences the AS's trusted mapping assigned the entry
-   * when the record was created, never re-read from a later mapping. The same
+   * @spec mission#transformation-capabilities (#1503 finding 7, D620, D733):
+   * each approved entry's original approved audience, index-aligned with
+   * `authority_set`: for an entry the record's own approval event approved,
+   * the audiences the AS's trusted mapping assigned it at that event; for an
+   * entry derived from earlier authority (a parent, predecessor, template,
+   * ceiling or governed-policy consent), the association that authority
+   * retained. Never re-read from a later mapping. The same
    * authorization-server state as `eligibility_provenance`: outside every
    * integrity anchor, never on the wire, immutable after creation. Absent, or
-   * not aligned with `authority_set`, it approves no audience, so no token is
-   * issued for an audience that serves one of the record's entries.
+   * not aligned with `authority_set`, it approves no audience, so no token
+   * carries the record's entries.
    */
   approved_audiences?: string[][];
   intent_hash: string;
@@ -764,6 +767,17 @@ export interface MissionRecord {
    * never by `authority_hash`, and never carried on a token.
    */
   authority_ceiling?: AuthorityEntry[];
+  /**
+   * @spec mission#transformation-capabilities (#1503 finding 7, D733): each
+   * ceiling entry's original approved audience, index-aligned with
+   * `authority_ceiling`: the audiences the trusted mapping assigned it at the
+   * ceiling's consent, carried with the ceiling and never re-read from a
+   * later mapping, so a drawdown's entries keep it. Authorization-server
+   * state, outside `ceiling_hash` and never on the wire. Absent (a ceiling
+   * consented before it was retained) or misaligned, it associates no
+   * audience with any ceiling entry.
+   */
+  ceiling_audiences?: string[][];
   /**
    * @spec progressive#progressive-authorization: the activation policy
    * reference under which the Mission Issuer MAY adjudicate an in-ceiling

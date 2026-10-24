@@ -447,7 +447,7 @@ import {
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { IntentError } from "../kernel/intent.js";
 import { evaluateApprovalFloor } from "../kernel/approval-floor.js";
-import { unapprovedAudienceRefusal } from "../kernel/approved-audience.js";
+import { audienceProjection, audienceReferences, unapprovedCarriage } from "../kernel/approved-audience.js";
 import {
   type DischargeReceiptObservation,
   GateError,
@@ -1496,13 +1496,14 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * claim (the customizer) carries it, and the token response reports the
    * granted values (the response middleware below).
    *
-   * @spec mission#transformation-capabilities, mission#error-mapping (#1503
-   * finding 7): after the projection decides, every carried entry an audience
-   * of the token serves must come from an approved entry whose retained
-   * original approved audience includes it, or the issuance is refused
-   * `invalid_target` ({@link unapprovedAudienceRefusal}). `record` is the
-   * Mission the token is issued under; the check reads its retained
-   * audiences, never the mapping current at this issuance.
+   * @spec mission#token-response, mission#error-mapping (#1503 finding 7,
+   * D733): the fail-closed backstop of the audience-specific projection.
+   * Every mint path computes its carried entries with
+   * {@link audienceCarriedEntries} before it builds the token; a token that
+   * still carries an entry one of its audiences is not an original approved
+   * audience of is refused `invalid_target` ({@link unapprovedCarriage}),
+   * never issued. `record` is the Mission the token is issued under; the
+   * check reads its retained audiences, never the mapping current now.
    */
   function projectMissionBoundScope(
     ctx: unknown,
@@ -1525,9 +1526,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const aud = token.resourceServer?.audience;
     const audiences = typeof aud === "string" ? [aud] : Array.isArray(aud) ? (aud as string[]) : [];
     const carried = Array.isArray(token.rar) ? token.rar : [];
-    const { emitted, granted } = decideMissionScope(ctx, audiences, carried);
-    const unapproved = unapprovedAudienceRefusal(record, audiences, carried);
+    const unapproved = unapprovedCarriage(
+      audienceReferences(record.authority_set, record.approved_audiences),
+      audiences,
+      carried,
+    );
     if (unapproved) throw new errors.InvalidTarget(unapproved);
+    const { emitted, granted } = decideMissionScope(ctx, audiences, carried);
     token.scope = emitted.length ? emitted.join(" ") : undefined;
     projectedTokens.add(token);
     responseScopes.set(token, granted.length ? granted.join(" ") : undefined);
@@ -1674,15 +1679,19 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const resource =
       typeof c.oidc.params.resource === "string" ? c.oidc.params.resource : rt.resource;
     if (typeof resource !== "string") return;
-    const carried = Array.isArray(rar) ? rar : [];
-    decideMissionScope(ctx, [resource], carried);
-    // @spec mission#transformation-capabilities, mission#error-mapping
-    // (#1503 finding 7, #1604 review): the original-approved-audience refusal
-    // is decided here too, over the Mission the access token's save reads,
-    // so a refusal never spends a rotating refresh token.
+    // @spec mission#token-response, mission#error-mapping (#1503 finding 7,
+    // #1604 review, D733 ruling 3): the audience-specific projection is
+    // decided here, before consumption, by the same function and over the
+    // same Mission the access token's rar hook uses, so its refusal never
+    // spends a rotating refresh token; the scope projection then runs over
+    // the entries the token will carry.
     const target = missionGateTarget(rt.grantId);
-    const unapproved = target ? unapprovedAudienceRefusal(target.record, [resource], carried) : undefined;
-    if (unapproved) throw new errors.InvalidTarget(unapproved);
+    const carried = target
+      ? audienceCarriedEntries(target.record, [resource], Array.isArray(rar) ? rar : [], namesRequestedRar(ctx))
+      : Array.isArray(rar)
+        ? rar
+        : [];
+    decideMissionScope(ctx, [resource], carried);
   }
 
   /**
@@ -1719,6 +1728,23 @@ export function buildProvider(opts: AdapterOptions): Provider {
       throw new InvalidAuthorizationDetails("requested authorization_details are not within the authority of the grant");
     }
     return narrowed;
+  }
+
+  /**
+   * @spec mission#token-response (#1503 finding 7, D733 ruling 1): the
+   * code and refresh tokens' entries, limited to those whose original
+   * approved audience includes the token's audience
+   * ({@link audienceCarriedEntries}). `rar` is the effective set already
+   * narrowed to a requested `authorization_details`; a grant that resolves no
+   * Mission passes through.
+   */
+  function rarForAudience(ctx: unknown, resourceServer: { audience?: unknown } | undefined, rar: unknown): unknown {
+    const grantId = (ctx as { oidc: { grant?: { jti?: string } } }).oidc.grant?.jti;
+    const target = grantId ? missionGateTarget(grantId) : undefined;
+    if (!target || !Array.isArray(rar)) return rar;
+    const aud = resourceServer?.audience;
+    const audiences = typeof aud === "string" ? [aud] : Array.isArray(aud) ? (aud as string[]) : [];
+    return audienceCarriedEntries(target.record, audiences, rar, namesRequestedRar(ctx));
   }
 
   /**
@@ -1925,10 +1951,16 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // then narrow to a requested `authorization_details` (#1303).
         rarForAuthorizationCode: (ctx: { oidc: { grant?: { rar?: unknown } } }) =>
           ctx.oidc.grant?.rar as never,
-        rarForCodeResponse: (ctx: { oidc: { grant?: { jti?: string; rar?: unknown } } }) =>
-          narrowToRequestedRar(ctx, rarThroughEffectiveSet(ctx.oidc.grant)) as never,
-        rarForRefreshTokenResponse: (ctx: { oidc: { grant?: { jti?: string; rar?: unknown } } }) =>
-          narrowToRequestedRar(ctx, rarThroughEffectiveSet(ctx.oidc.grant)) as never,
+        // @spec mission#token-response (#1503 finding 7, D733 ruling 1): then
+        // limit it to the entries approved for the token's audience
+        // (oidc-provider passes the access token's resource server), so the
+        // token, the response and the issuance record carry the same set.
+        rarForCodeResponse: (ctx: { oidc: { grant?: { jti?: string; rar?: unknown } } }, resourceServer?: { audience?: unknown }) =>
+          rarForAudience(ctx, resourceServer, narrowToRequestedRar(ctx, rarThroughEffectiveSet(ctx.oidc.grant))) as never,
+        rarForRefreshTokenResponse: (
+          ctx: { oidc: { grant?: { jti?: string; rar?: unknown } } },
+          resourceServer?: { audience?: unknown },
+        ) => rarForAudience(ctx, resourceServer, narrowToRequestedRar(ctx, rarThroughEffectiveSet(ctx.oidc.grant))) as never,
         types: {
           mission_resource_access: {
             // @spec mission#authority-proposal — a client MAY submit entries of
@@ -2200,7 +2232,14 @@ export function buildProvider(opts: AdapterOptions): Provider {
         const grant = (_ctx as { oidc?: { entities?: { Grant?: { jti?: string; rar?: unknown } } } } | undefined)
           ?.oidc?.entities?.Grant;
         if (grant?.jti !== grantId) throw new errors.InvalidGrant("device code grant does not resolve");
-        minted.rar = rarThroughEffectiveSet(grant);
+        // @spec mission#token-response (#1503 finding 7, D733 ruling 1): only
+        // the entries approved for the token's audience.
+        const deviceAud = (token as { resourceServer?: { audience?: unknown } }).resourceServer?.audience;
+        minted.rar = audienceCarriedEntries(
+          target.record,
+          typeof deviceAud === "string" ? [deviceAud] : Array.isArray(deviceAud) ? (deviceAud as string[]) : [],
+          (rarThroughEffectiveSet(grant) as unknown[] | undefined) ?? [],
+        );
       }
       if (!target.counted) {
         // @spec async-delegation — per-delegation family fallback. The grant is NOT
@@ -2916,6 +2955,50 @@ export function markDelegationMint(token: object, claims: Record<string, unknown
  * scope-projection decision alone (@spec mission#scope-projection,
  * projectMissionBoundScope in buildProvider).
  */
+/**
+ * @spec mission#token-response, mission#error-mapping (#1503 finding 7, D733
+ * ruling 1): the entries a Mission-bound token issued under `record` for
+ * `audiences` carries, out of `carried`, the set its mint path computed. Only
+ * an entry whose original approved audience includes every token audience is
+ * carried; an entry approved for another audience is left out, never carried
+ * along. Refused `invalid_target` where no entry is carried, where an entry
+ * the token request explicitly names (`explicit`) is not approved for every
+ * audience, or where several audiences permit different entries
+ * ({@link audienceProjection}). Every Mission-bound mint path applies it
+ * before it builds the token, so the token, its response and its issuance
+ * record carry the same set; the save-time check is the backstop.
+ */
+export function audienceCarriedEntries(
+  record: Pick<MissionRecord, "authority_set" | "approved_audiences">,
+  audiences: readonly string[],
+  carried: readonly unknown[],
+  explicit = false,
+): AuthorityEntry[] {
+  const projected = audienceProjection(
+    audienceReferences(record.authority_set, record.approved_audiences),
+    audiences,
+    carried,
+    explicit,
+  );
+  if (projected.refusal !== undefined) throw new errors.InvalidTarget(projected.refusal);
+  return projected.issued;
+}
+
+/**
+ * Whether the token request names a non-empty `authorization_details` (RFC
+ * 9396 Section 6), so its entries are explicitly requested ones.
+ */
+export function namesRequestedRar(ctx: unknown): boolean {
+  const raw = (ctx as { oidc?: { params?: Record<string, unknown> } } | undefined)?.oidc?.params?.authorization_details;
+  if (typeof raw !== "string") return false;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
   return {
     audience: resource,
@@ -3097,13 +3180,25 @@ async function handleDeferredGrant(
     if (opts.kernel.get(intent.mission_id)?.client_id !== clientId) {
       throw new errors.InvalidRequest("mission is not active");
     }
+    const requested = intent.requested as AuthorityEntry[];
     let pending;
     try {
       pending = deferrals.open({
         missionId: intent.mission_id,
-        requested: intent.requested as AuthorityEntry[],
+        requested,
         clientId,
         jkt: verified.proof.jkt,
+        // @spec mission#token-response, mission#error-mapping (#1503 finding
+        // 7, D733 ruling 1): the deferred token is issued for the first
+        // requested entry's audience and carries exactly the requested
+        // entries, which the request names explicitly, so one whose original
+        // approved audience does not include that audience is refused
+        // invalid_target, once the request is within the Mission and before
+        // any deferral opens.
+        admit: (mission) => {
+          const first = requested[0]?.resource;
+          if (typeof first === "string") audienceCarriedEntries(mission, [first], requested, true);
+        },
       });
     } catch (e) {
       // Requested authority exceeds the active Mission (or it is not active):
@@ -3339,12 +3434,15 @@ async function handleChildJwtBearerGrant(
 
   // 8. Mint — mirror mintDeferredToken. save() fires extraTokenClaims, which gates
   //    the derivation and attaches the child `mission` claim exactly once.
+  // @spec mission#token-response (#1503 finding 7, D733 ruling 1): only the
+  // entries approved for the token's audience.
+  const carried = audienceCarriedEntries(record, [resource], effective);
   const at = new provider.AccessToken({
     accountId: record.subject.sub,
     client,
     grantId,
     gty: CHILD_JWT_BEARER_GRANT_TYPE,
-    rar: effective,
+    rar: carried,
     scope: SCOPE_DECIDED_AT_SAVE,
   });
   at.resourceServer = newResourceServer(provider, resource, info);
@@ -3360,7 +3458,7 @@ async function handleChildJwtBearerGrant(
     expires_in: at.expiration,
     // @spec mission#scope-projection — the projected value save() decided.
     ...(at.scope ? { scope: at.scope } : {}),
-    authorization_details: effective,
+    authorization_details: carried,
   };
   ctx.set("cache-control", "no-store");
 }
@@ -5222,6 +5320,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         const template = createTemplate(opts.templateStore, body as unknown as CreateTemplateInput, {
           ...kernel.authoritySourceOptions(),
           ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
+          // @spec mission#transformation-capabilities (D733): retained at consent.
+          entryAudiences: (entries) => kernel.mappedEntryAudiences(entries),
         });
         // @spec mission-template#template-consent, derivation-limits#approval-rendering
         // (#1119): the disclosure a human template-consent page would render,
@@ -5435,6 +5535,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           {
             ...kernel.authoritySourceOptions(),
             ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
+            // @spec mission#transformation-capabilities (D733): retained at consent.
+            entryAudiences: (entries) => kernel.mappedEntryAudiences(entries),
           },
         );
         templateProposals.settle(id, { state: "approved", template_id: template.id });
@@ -5911,12 +6013,15 @@ async function handleMissionDispatchGrant(
 
   // Mint — mirror mintDeferredToken. save() fires extraTokenClaims, which gates
   // the derivation and attaches the mission `mission` claim exactly once.
+  // @spec mission#token-response (#1503 finding 7, D733 ruling 1): only the
+  // entries approved for the token's audience.
+  const carried = audienceCarriedEntries(record, [resource], effective);
   const at = new provider.AccessToken({
     accountId: record.subject.sub,
     client,
     grantId,
     gty: MISSION_DISPATCH_GRANT_TYPE,
-    rar: effective,
+    rar: carried,
     scope: SCOPE_DECIDED_AT_SAVE,
   });
   at.resourceServer = newResourceServer(provider, resource, info);
@@ -5935,7 +6040,7 @@ async function handleMissionDispatchGrant(
     // @spec mission#grant-binding — the dispatched instance's COMMITTED
     // effective expiry, verbatim from the record, never recomputed here.
     mission_expires_at: record.expires_at,
-    authorization_details: effective,
+    authorization_details: carried,
   };
   ctx.set("cache-control", "no-store");
 }

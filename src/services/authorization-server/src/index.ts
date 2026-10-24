@@ -1263,9 +1263,10 @@ export async function buildAuthorizationServer(opts: {
    * Defaults to the config-shipped {@link SCOPE_PROJECTION}. Read at every
    * Mission-bound issuance, so a test that replaces an audience's entry (or
    * bumps its `version`) observes the next issuance under the new mapping.
-   * Its audiences are also read once when a Mission Record is created and
-   * retained as each entry's original approved audience (#1503 finding 7),
-   * so adding an audience later does not extend an existing Mission.
+   * Its audiences are also read at each approval or consent event and
+   * retained as each entry's original approved audience (#1503 finding 7,
+   * D733), so adding an audience later extends neither an existing Mission
+   * nor one later derived from its authority.
    */
   scopeProjection?: ScopeProjectionMapping;
   /**
@@ -1467,6 +1468,9 @@ export async function buildAuthorizationServer(opts: {
     authoritySourceCatalog: bindAuthoritySourceCatalog(AUTHORITY_SOURCES as never, opts.issuer, opts.issuer),
     capabilityResolver: trustedCapabilityResolver(),
     dispatchPolicies,
+    // @spec mission#transformation-capabilities (D733): the same trusted
+    // mapping the kernel below reads, retained at this consent.
+    entryAudiences: (entries) => entries.map((entry) => mappedAudiences(opts.scopeProjection ?? SCOPE_PROJECTION, entry)),
   });
   // @spec async-delegation — forward reference to the provider (assigned after
   // buildProvider, like statusListPublisher). Captured by the terminal subscriber in
@@ -1497,9 +1501,10 @@ export async function buildAuthorizationServer(opts: {
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
-    // @spec mission#transformation-capabilities (#1503 finding 7): the trusted
-    // entry-to-audience mapping, read live at each record's creation (the
-    // same mapping the provider reads at every issuance) and retained.
+    // @spec mission#transformation-capabilities (#1503 finding 7, D733): the
+    // trusted entry-to-audience mapping (the same mapping the provider reads
+    // at every issuance), read at each approval or consent event and
+    // retained; a derived record inherits instead.
     entryAudiences: (entry) => mappedAudiences(opts.scopeProjection ?? SCOPE_PROJECTION, entry),
     policy: (opts.derivationPolicy ?? DERIVATION_POLICY) as never,
     // @spec control-plane#deployment-declaration (D27) — in-memory by default;

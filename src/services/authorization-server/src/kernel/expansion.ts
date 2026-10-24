@@ -18,6 +18,7 @@ import {
   resourceWithin,
   selectorOverlapsEntry,
 } from "@mission/core";
+import { audienceReferences, derivedAudiences, derivesFrom } from "./approved-audience.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { entriesMayOverlap } from "./derive.js";
 import { entryDigest } from "./discharge.js";
@@ -259,7 +260,19 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     // carry to a human-approved successor unchanged, or as re-consented.
     ...successorCeilingMembers(predecessor, input.ceilingReconsent, input.resourceDeclarationDigest, input.encounterId),
   };
-  kernel.insertRecord(record, undefined, { source: resolvedSource });
+  // @spec mission#transformation-capabilities (#1503 finding 7, D733 ruling
+  // 2): an entry the successor retains from the predecessor's approved set
+  // (one within a predecessor entry) keeps the predecessor's retained
+  // association, as its capability bindings do above: creating the successor
+  // does not reset it. Only an entry this Expansion's own approval adds takes
+  // the mapping at that approval. A predecessor that retains no association
+  // leaves its retained entries with none.
+  const predecessorAudiences = audienceReferences(predecessor.authority_set, predecessor.approved_audiences);
+  const fresh = kernel.mappedEntryAudiences(authoritySet);
+  const successorAudiences = authoritySet.map((entry, i) =>
+    derivesFrom(entry, predecessorAudiences) ? derivedAudiences(entry, predecessorAudiences) : (fresh?.[i] ?? []),
+  );
+  kernel.insertRecord(record, undefined, { source: resolvedSource, audiences: { inherited: successorAudiences } });
 
   // @spec containment#restoration — the anti-laundering MUST: surface a
   // non-empty predecessor containment history at expansion consent, rather

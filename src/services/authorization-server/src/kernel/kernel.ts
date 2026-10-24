@@ -758,12 +758,13 @@ export interface KernelOptions {
    */
   authoritySourceCatalog: AuthoritySourceCatalog;
   /**
-   * @spec mission#transformation-capabilities (#1503 finding 7, D620): the
-   * AS's trusted mapping of entries to the audiences that consume them, read
-   * by the record-creation funnel and retained with the Mission as each
-   * entry's original approved audience. Deployment configuration, never taken
-   * from a request. Absent, a record retains no association and approves no
-   * audience.
+   * @spec mission#transformation-capabilities (#1503 finding 7, D620, D733):
+   * the AS's trusted mapping of entries to the audiences that consume them,
+   * read only at an approval or consent event (the record-creation funnel's
+   * `fresh` entries, a template, ceiling or governed-policy consent) and
+   * retained as each entry's original approved audience. Deployment
+   * configuration, never taken from a request. Absent, nothing retains an
+   * association, so no audience is approved for any entry.
    */
   entryAudiences?: (entry: AuthorityEntry) => readonly string[];
   /**
@@ -1690,6 +1691,11 @@ export class MissionKernel {
     const ceiling = input.ceiling
       ? consentCeiling(this.opts.issuer, this.opts.activationPolicies, input.ceiling, createdAt, input.approver)
       : undefined;
+    // @spec mission#transformation-capabilities (D733 ruling 2): the ceiling's
+    // entries keep the association the mapping assigns them at this consent,
+    // so a later drawdown draws them with it rather than with a later mapping.
+    const ceilingAudiences = ceiling ? this.mappedEntryAudiences(ceiling.authority_ceiling) : undefined;
+    if (ceiling && ceilingAudiences) ceiling.ceiling_audiences = ceilingAudiences;
     // @spec mission#approval-basis — direct: the human approval event itself
     // creates the record; consent_principal == activation_actor == approver,
     // and root_commitment is this Mission's own authority_hash.
@@ -1766,12 +1772,12 @@ export class MissionKernel {
     try {
       if (governance) {
         withTransaction(this.db, () => {
-          this.insertRecord(record, undefined, { source: resolvedSource });
+          this.insertRecord(record, undefined, { source: resolvedSource, audiences: "fresh" });
           this.directApprovalRecords.retainInCallerTx(record.id, this.opts.issuer, governance.ref, governance.rule, governance.inputs);
           this.governanceRecords.retainInCallerTx(record.id, governance.signed);
         });
       } else {
-        this.insertRecord(record, undefined, { source: resolvedSource });
+        this.insertRecord(record, undefined, { source: resolvedSource, audiences: "fresh" });
       }
     } catch (e) {
       if (e instanceof UniqueViolationError) {
@@ -1935,6 +1941,17 @@ export class MissionKernel {
        * bytes that do not reproduce the committed digest refuse the creation.
        */
       activationPolicies?: readonly EvaluatedActivationPolicy[];
+      /**
+       * @spec mission#transformation-capabilities (#1503 finding 7, D733),
+       * REQUIRED: how each entry's original approved audience is established.
+       * `fresh`: this event approves every entry, so the trusted mapping
+       * assigns it now. Otherwise the creating body hands over, index-aligned
+       * with the Authority Set, the association each entry keeps from the
+       * authority it derives from ({@link inheritedAudiences}), or the
+       * mapping now for an entry its own approval adds. Creating a record
+       * never resets an inherited association.
+       */
+      audiences: "fresh" | { inherited: readonly (readonly string[])[] };
     },
   ): void {
     // @spec control-plane#isolation — one issuer owns a kernel store.
@@ -1954,16 +1971,6 @@ export class MissionKernel {
       record.child_actor_provenance.length !== record.authority_set.length
     ) {
       throw new Error(`mission ${record.id}: child-actor provenance is not aligned with its Authority Set`);
-    }
-    // @spec mission#transformation-capabilities (#1503 finding 7): every
-    // creating body funnels through here, so each entry's original approved
-    // audience is assigned once, from the trusted mapping as it stands at
-    // creation, and retained. Issuance reads this, never the later mapping.
-    const entryAudiences = this.opts.entryAudiences;
-    if (entryAudiences) {
-      record.approved_audiences = record.authority_set.map((entry) => [...entryAudiences(entry)]);
-    } else {
-      delete record.approved_audiences;
     }
     const inheritedPin = this.inheritedPinResolver(record, options.inheritPinsFrom);
     // @spec discharge#discharge-authority — the LAST point at which a
@@ -1996,6 +2003,26 @@ export class MissionKernel {
     assertRecordedSourceResolved(record.authority_source, resolvedSource);
     this.assertAuthorityWithinSource(resolvedSource, record.authority_set);
     const binding = inherited ?? bindingOf(resolvedSource);
+    // @spec mission#transformation-capabilities (#1503 finding 7, D733): every
+    // creating body funnels through here and names how its entries' original
+    // approved audiences are established: from the trusted mapping now, for
+    // an approval event's own entries, or inherited from the authority they
+    // derive from. Retained once; issuance reads this, never a later mapping.
+    const inheritedAudiences = options.audiences === "fresh" ? undefined : options.audiences?.inherited;
+    if (
+      options.audiences !== "fresh" &&
+      (!Array.isArray(inheritedAudiences) || inheritedAudiences.length !== record.authority_set.length)
+    ) {
+      throw new Error(`mission ${record.id}: inherited audiences are not aligned with its Authority Set`);
+    }
+    const entryAudiences = this.opts.entryAudiences;
+    if (!entryAudiences) {
+      delete record.approved_audiences;
+    } else if (inheritedAudiences) {
+      record.approved_audiences = inheritedAudiences.map((audiences) => [...audiences]);
+    } else {
+      record.approved_audiences = record.authority_set.map((entry) => [...entryAudiences(entry)]);
+    }
     withTransaction(this.db, () => {
       // @spec mission#mission-record, mission#approval-event (step 4) — the
       // creation-transaction expiry invariant, checked INDEPENDENTLY of whatever
@@ -3981,6 +4008,17 @@ export class MissionKernel {
    * approved entry it was computed from. A surface deriving a new Mission
    * within this one inherits these origins ({@link inheritOrigins}).
    */
+  /**
+   * @spec mission#transformation-capabilities (#1503 finding 7, D733): the
+   * audiences the trusted mapping assigns each of `entries` now, for an
+   * approval or consent event to retain; undefined where this kernel has no
+   * mapping, so the event retains no association.
+   */
+  mappedEntryAudiences(entries: readonly AuthorityEntry[]): string[][] | undefined {
+    const entryAudiences = this.opts.entryAudiences;
+    return entryAudiences ? entries.map((entry) => [...entryAudiences(entry)]) : undefined;
+  }
+
   effectiveEntriesWithRetainedOrigin(record: MissionRecord): Array<{ entry: AuthorityEntry; origin: RetainedOrigin }> {
     const origins = retainedOrigins(record.authority_set, record.eligibility_provenance);
     return this.effectiveEntriesWithOrigin(record).map((e) => {

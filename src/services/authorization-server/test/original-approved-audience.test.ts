@@ -1,6 +1,6 @@
 /**
  * @spec mission#transformation-capabilities, mission#token-response,
- * mission#error-mapping (#1503 finding 7, D620)
+ * mission#error-mapping (#1503 finding 7, D620, D733)
  *
  * "An entry's original approved audience is the audience or audiences that
  * mapping assigned the entry when the Mission was approved. ... The AS MUST
@@ -15,6 +15,11 @@
  * the origin, which also serves the entry. The authorization request named
  * both audiences, so oidc-provider grants a token for either; only the
  * retained association decides.
+ *
+ * D733 ruling 1: a token for an audience carries only the entries whose
+ * original approved audience includes it. The second suite approves an entry
+ * for the payments audience and one for the SaaS audience, and each token
+ * carries its own audience's entry alone.
  */
 
 import type { Server } from "node:http";
@@ -35,8 +40,13 @@ const PAYMENTS = "http://localhost:4403/mcp";
 const ADDED = "http://localhost:4403/reports";
 const READ = "payments:invoice.read";
 
+/** The SaaS audience the shipped mapping names, and an entry approved for it alone. */
+const SAAS = "http://localhost:4406/mcp";
+const VENDOR_READ = "ledger:vendor.read";
+
 const ENTRY = { type: "mission_resource_access", resource: ORIGIN, resource_match: "prefix", actions: [READ] } as AuthorityEntry;
-const CEILING: AuthorityEntry[] = [ENTRY];
+const SAAS_ENTRY = { type: "mission_resource_access", resource: SAAS, actions: [VENDOR_READ] } as AuthorityEntry;
+const CEILING: AuthorityEntry[] = [ENTRY, SAAS_ENTRY];
 
 type Keys = { privateKey: CryptoKey; publicKey: CryptoKey; jwk: JWK };
 type Json = Record<string, unknown>;
@@ -82,8 +92,15 @@ async function clientAssertion(): Promise<string> {
     .sign(agentKey);
 }
 
-/** PAR naming both audiences, then Bob's browser approval for alice: the authorization code. */
-async function approve(): Promise<string> {
+/**
+ * PAR naming `resources` (both payments audiences by default), then Bob's
+ * browser approval for alice: the authorization code.
+ */
+async function approve(
+  proposal: AuthorityEntry[] = [ENTRY],
+  resources: string[] = [PAYMENTS, ADDED],
+  targets: string[] = [ORIGIN],
+): Promise<string> {
   const challenge = Buffer.from(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(PKCE_VERIFIER)),
   ).toString("base64url");
@@ -95,14 +112,13 @@ async function approve(): Promise<string> {
     code_challenge_method: "S256",
     login_hint: "alice",
     mission_intent: JSON.stringify({
-      intent: { goal: "Read invoices", target_resources: [ORIGIN], expires_at: "2099-01-01T00:00:00Z" },
+      intent: { goal: "Read invoices", target_resources: targets, expires_at: "2099-01-01T00:00:00Z" },
     }),
-    authorization_details: JSON.stringify([ENTRY]),
+    authorization_details: JSON.stringify(proposal),
     client_assertion: await clientAssertion(),
     client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
   });
-  form.append("resource", PAYMENTS);
-  form.append("resource", ADDED);
+  for (const resource of resources) form.append("resource", resource);
   const parRes = await fetch(`${ISSUER}/request`, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -148,7 +164,7 @@ async function approve(): Promise<string> {
 }
 
 /** A DPoP-bound token request, retried once with the server's nonce. */
-async function token(params: Record<string, string>, keys: Keys): Promise<TokenResponse> {
+async function token(params: Record<string, string> | URLSearchParams, keys: Keys): Promise<TokenResponse> {
   const htu = `${ISSUER}/token`;
   const send = async (extra: Json = {}) =>
     fetch(htu, {
@@ -161,11 +177,12 @@ async function token(params: Record<string, string>, keys: Keys): Promise<TokenR
           .setJti(crypto.randomUUID())
           .sign(keys.privateKey),
       },
-      body: new URLSearchParams({
-        ...params,
-        client_assertion: await clientAssertion(),
-        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-      }).toString(),
+      body: await (async () => {
+        const body = new URLSearchParams(params);
+        body.set("client_assertion", await clientAssertion());
+        body.set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
+        return body.toString();
+      })(),
     });
   let res = await send();
   const nonce = res.headers.get("dpop-nonce");
@@ -173,32 +190,48 @@ async function token(params: Record<string, string>, keys: Keys): Promise<TokenR
   return { status: res.status, body: (await res.json()) as Json };
 }
 
-function redeem(code: string, keys: Keys, resource: string): Promise<TokenResponse> {
+function redeem(code: string, keys: Keys, resource: string | string[]): Promise<TokenResponse> {
+  const params = new URLSearchParams({
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: REDIRECT_URI,
+    code_verifier: PKCE_VERIFIER,
+  });
+  for (const r of [resource].flat()) params.append("resource", r);
+  return token(params, keys);
+}
+
+function refresh(refreshToken: string, keys: Keys, resource: string, details?: AuthorityEntry[]): Promise<TokenResponse> {
   return token(
-    { grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, code_verifier: PKCE_VERIFIER, resource },
+    {
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      resource,
+      ...(details ? { authorization_details: JSON.stringify(details) } : {}),
+    },
     keys,
   );
 }
 
-function refresh(refreshToken: string, keys: Keys, resource: string): Promise<TokenResponse> {
-  return token({ grant_type: "refresh_token", refresh_token: refreshToken, resource }, keys);
-}
-
-function expectUnapproved(res: TokenResponse): void {
+function expectUnapproved(res: TokenResponse, audience = ADDED): void {
   expect(res.status, JSON.stringify(res.body)).toBe(400);
   expect(res.body.error).toBe("invalid_target");
   expect(res.body.error_description).toMatch(
-    new RegExp(`audience ${ADDED} is not an original approved audience of the entry for ${ORIGIN}`),
+    new RegExp(`audience ${audience} is not an original approved audience of any entry the token would carry`),
   );
   expect(res.body.access_token).toBeUndefined();
 }
 
-function expectIssuedFor(res: TokenResponse, audience: string): void {
+const withoutBindings = (entries: unknown): Json[] =>
+  (entries as Json[]).map(({ capability_sources: _s, ...e }) => e);
+
+/** A 200 for `audience` whose token and response both carry exactly `entries`. */
+function expectIssuedFor(res: TokenResponse, audience: string, entries: AuthorityEntry[] = [ENTRY]): void {
   expect(res.status, JSON.stringify(res.body)).toBe(200);
   const claims = decodeJwt(res.body.access_token as string);
   expect(claims.aud).toBe(audience);
-  const carried = (claims.authorization_details as Json[]).map(({ capability_sources: _s, ...e }) => e);
-  expect(carried).toEqual([ENTRY]);
+  expect(withoutBindings(claims.authorization_details)).toEqual(entries);
+  expect(withoutBindings(res.body.authorization_details)).toEqual(entries);
 }
 
 beforeAll(async () => {
@@ -214,6 +247,7 @@ beforeAll(async () => {
       classification: [
         ...APPROVAL_FLOOR.classification,
         { type: "mission_resource_access" as const, resource: ORIGIN, actions: { [READ]: "consequential_read" as const } },
+        { type: "mission_resource_access" as const, resource: SAAS, actions: { [VENDOR_READ]: "consequential_read" as const } },
       ],
     },
     authoritySources: {
@@ -278,10 +312,63 @@ describe("an entry's original approved audience is the one the trusted mapping a
     }
   });
 
-  it("before the mapping names the added audience, a token for it fails closed on the mapping, not on the retained association (boundary)", async () => {
-    const res = await redeem(await approve(), await newKeys(), ADDED);
+  it("an audience the retained association names but the mapping no longer names fails closed on the mapping: retention never extends issuance past the current mapping (boundary)", async () => {
+    let code = "";
+    await withAddedAudience(async () => {
+      code = await approve();
+    });
+    const res = await redeem(code, await newKeys(), ADDED);
     expect(res.status, JSON.stringify(res.body)).toBe(400);
     expect(res.body.error).toBe("invalid_target");
     expect(res.body.error_description).toMatch(new RegExp(`no scope-projection mapping for audience ${ADDED}`));
+  });
+
+  it("a Mission whose record retains no association fails closed: its refresh is refused invalid_target rather than read from today's mapping (D733 ruling 4)", async () => {
+    const keys = await newKeys();
+    const issued = await redeem(await approve(), keys, PAYMENTS);
+    expectIssuedFor(issued, PAYMENTS);
+    const missionId = issued.body.mission_id as string;
+    // A record stored before the association was retained: the column is empty.
+    as.kernel.db.prepare("UPDATE missions SET approved_audiences_json = NULL WHERE id = ?").run(missionId);
+    expect(as.kernel.get(missionId)?.approved_audiences).toBeUndefined();
+    expectUnapproved(await refresh(issued.body.refresh_token as string, keys, PAYMENTS), PAYMENTS);
+  });
+});
+
+describe("a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)", () => {
+  const approveBoth = () => approve([ENTRY, SAAS_ENTRY], [PAYMENTS, SAAS], [ORIGIN, SAAS]);
+
+  it("a Mission approving an entry for each of two audiences issues each audience a token carrying only its own entry: the other audience's entry does not ride", async () => {
+    const keys = await newKeys();
+    const payments = await redeem(await approveBoth(), keys, PAYMENTS);
+    expectIssuedFor(payments, PAYMENTS, [ENTRY]);
+    const saas = await refresh(payments.body.refresh_token as string, keys, SAAS);
+    expectIssuedFor(saas, SAAS, [SAAS_ENTRY]);
+  });
+
+  it("a token request that explicitly names an entry approved for another audience is refused invalid_target, issuing no token and spending no refresh token", async () => {
+    const keys = await newKeys();
+    const payments = await redeem(await approveBoth(), keys, PAYMENTS);
+    expectIssuedFor(payments, PAYMENTS, [ENTRY]);
+    const rt = payments.body.refresh_token as string;
+    const refused = await refresh(rt, keys, PAYMENTS, [SAAS_ENTRY]);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_target");
+    expect(refused.body.error_description).toMatch(
+      new RegExp(`audience ${PAYMENTS} is not an original approved audience of the requested entry for ${SAAS}`),
+    );
+    expect(refused.body.access_token).toBeUndefined();
+    expectIssuedFor(await refresh(rt, keys, PAYMENTS, [ENTRY]), PAYMENTS, [ENTRY]);
+  });
+
+  it("a token request naming both audiences is refused invalid_target, and a separate token is issued for each (multi-audience)", async () => {
+    const keys = await newKeys();
+    const combined = await redeem(await approveBoth(), keys, [PAYMENTS, SAAS]);
+    expect(combined.status, JSON.stringify(combined.body)).toBe(400);
+    expect(combined.body.error).toBe("invalid_target");
+    expect(combined.body.access_token).toBeUndefined();
+    const payments = await redeem(await approveBoth(), keys, PAYMENTS);
+    expectIssuedFor(payments, PAYMENTS, [ENTRY]);
+    expectIssuedFor(await refresh(payments.body.refresh_token as string, keys, SAAS), SAAS, [SAAS_ENTRY]);
   });
 });

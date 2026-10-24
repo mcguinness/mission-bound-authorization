@@ -565,7 +565,7 @@ describe("the token endpoint emits for an audience only constraints keys it is k
     expect(after.status, JSON.stringify(after.body)).toBe(200);
   });
 
-  it("checks an entry against the audience it is issued for: an entry for another resource rides in this token, and a token issued for that resource refuses it (boundary)", async () => {
+  it("checks an entry against the audience it is issued for: an entry for another resource does not ride in this token, and a token issued for that resource refuses it (boundary)", async () => {
     // SaaS is known to enforce only vendors; payments enforces tenant.
     const saasRead = {
       type: "mission_resource_access",
@@ -581,8 +581,12 @@ describe("the token endpoint emits for an audience only constraints keys it is k
     const keys = await newKeys();
     const payments = await redeem(forPayments.code as string, keys, PAYMENTS);
     expect(payments.status, JSON.stringify(payments.body)).toBe(200);
+    // @spec mission#token-response (#1503 finding 7, D733 ruling 1): the
+    // SaaS entry's original approved audience is SaaS, so it is left out of
+    // the payments token and its response, never carried along.
     const carried = decodeJwt(payments.body.access_token as string).authorization_details as Json[];
-    expect(carried.find((e) => e.resource === SAAS)?.constraints).toEqual(saasRead.constraints);
+    expect(carried.map((e) => e.resource)).toEqual([PAYMENTS]);
+    expect((payments.body.authorization_details as Json[]).map((e) => e.resource)).toEqual([PAYMENTS]);
 
     const forSaas = await authorize(proposal, { resource: SAAS, targetResources });
     expect(forSaas.code, JSON.stringify(forSaas)).toBeTruthy();
@@ -702,7 +706,8 @@ describe("scope projection on the dispatch and expansion-successor mints (@spec 
   it("a template dispatch to the scope-only target carries only the scope the instance's template-bounded entry proves, which the plain RS enforces, and refuses invalid_target while the target's mapping is unknown", async () => {
     const templateId = await newTemplate();
     const keys = await newKeys();
-    const dispatch = (dispatchEventId: string) =>
+    const dispatchEventId = crypto.randomUUID();
+    const dispatch = () =>
       token(
         {
           grant_type: MISSION_DISPATCH_GRANT_TYPE,
@@ -713,28 +718,22 @@ describe("scope projection on the dispatch and expansion-successor mints (@spec 
         keys,
       );
 
-    const unmapped = crypto.randomUUID();
     await withPlain(undefined, async () => {
-      const refused = await dispatch(unmapped);
+      const refused = await dispatch();
       expect(refused.status, JSON.stringify(refused.body)).toBe(400);
       expect(refused.body.error).toBe("invalid_target");
       expect(refused.body.error_description).toMatch(/no scope-projection mapping/);
       expect(refused.body.access_token).toBeUndefined();
     });
 
-    // @spec mission#transformation-capabilities (#1503 finding 7): that
-    // Dispatch created its instance while the mapping assigned the entry no
-    // audience. Recovering it once the mapping is back is still refused: a
-    // later mapping change does not redefine the original approved audience.
-    const recovered = await dispatch(unmapped);
-    expect(recovered.status, JSON.stringify(recovered.body)).toBe(400);
-    expect(recovered.body.error).toBe("invalid_target");
-    expect(recovered.body.error_description).toMatch(/is not an original approved audience/);
-
     // The template's ceiling keeps only the read action, while the policy
     // ceiling and the target's mapping also name the write action: the
     // token's scope is the projection of the derived entry alone.
-    const res = await dispatch(crypto.randomUUID());
+    // @spec mission#transformation-capabilities (#1503 finding 7, D733): the
+    // instance that refused Dispatch created while the mapping was unknown
+    // keeps the association its template retained at consent, so recovering
+    // it once the mapping is back issues for that audience.
+    const res = await dispatch();
     expect(res.status, JSON.stringify(res.body)).toBe(200);
     expect(res.body.authorization_details).toEqual([{ type: "mission_resource_access", resource: PLAIN, actions: [READ] }]);
     expect(res.body.scope).toBe("reports.read");
