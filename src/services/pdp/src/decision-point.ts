@@ -157,6 +157,14 @@ export interface DecisionPointConfig {
    * is duration-leased.
    */
   durationLeases?: DurationLeaseDomain;
+  /**
+   * @spec authzen#context-action-phase (#1629, D744): the actions this
+   * decision point's trusted operation declaration places at the phases of a
+   * compound action, bound here for the reason the contract declarations
+   * are. A request for one with no `context.action_phase` is refused before
+   * evaluation as `phase_invalid`. Absent, no action is declared phased.
+   */
+  phasedActions?: ReadonlySet<string>;
 }
 
 export interface DecisionPoint {
@@ -192,6 +200,7 @@ interface PointBindings {
   refusals: PdpRefusalRecorder | undefined;
   resourceContracts?: ResourceContractDeclarations | undefined;
   durationLeases?: DurationLeaseDomain | undefined;
+  phasedActions?: ReadonlySet<string> | undefined;
 }
 
 /**
@@ -210,7 +219,7 @@ function bindDecide(
   requester: ClaimRequester,
   consumptionStatus?: ConsumptionStatusFn,
 ): DecisionFn {
-  const { emitter, claims, resourcePolicy, refusals, resourceContracts, durationLeases } = bindings;
+  const { emitter, claims, resourcePolicy, refusals, resourceContracts, durationLeases, phasedActions } = bindings;
   return async (req, opts) => {
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
     delete forwarded.evidence;
@@ -221,12 +230,14 @@ function bindDecide(
     delete forwarded.refusals;
     delete forwarded.resourceContracts;
     delete forwarded.durationLeases;
+    delete forwarded.phasedActions;
     if (emitter) forwarded.evidence = emitter;
     if (durationLeases) forwarded.durationLeases = durationLeases;
     if (claims) forwarded.claims = claims;
     if (resourcePolicy) forwarded.resourcePolicy = resourcePolicy;
     if (refusals) forwarded.refusals = refusals;
     if (resourceContracts) forwarded.resourceContracts = resourceContracts;
+    if (phasedActions) forwarded.phasedActions = phasedActions;
     forwarded.requester = requester;
     if (consumptionStatus) forwarded.consumptionStatus = consumptionStatus;
     return evaluate(req, forwarded as EvaluateOptions);
@@ -274,6 +285,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
     refusals: config.refusals,
     resourceContracts: config.resourceContracts,
     durationLeases: config.durationLeases,
+    phasedActions: config.phasedActions,
   };
   return {
     decide: bindDecide(bindings, unboundRequester()),
@@ -332,6 +344,8 @@ export function createEphemeralDecisionPoint(options: {
   resourceContracts?: ResourceContractDeclarations;
   /** @spec metering#lease-renewal (#1440): bound exactly as in {@link createDecisionPoint}. */
   durationLeases?: DurationLeaseDomain;
+  /** @spec authzen#context-action-phase (#1629): bound exactly as in {@link createDecisionPoint}. */
+  phasedActions?: ReadonlySet<string>;
   /** @spec runtime-evidence#decision-evidence-integrity (#853, D487): see `DecisionEvidenceEmitterConfig.authorizesAudience`. */
   authorizesAudience?: (audience: string) => boolean;
 }): EphemeralDecisionPoint {
@@ -345,6 +359,7 @@ export function createEphemeralDecisionPoint(options: {
     authorizesAudience,
     resourceContracts,
     durationLeases,
+    phasedActions,
   } = options;
   const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
   const emitter = createDecisionEvidenceEmitter({
@@ -353,7 +368,7 @@ export function createEphemeralDecisionPoint(options: {
     audience,
     ...(authorizesAudience ? { authorizesAudience } : {}),
   });
-  const bindings: PointBindings = { emitter, claims, resourcePolicy, refusals, resourceContracts, durationLeases };
+  const bindings: PointBindings = { emitter, claims, resourcePolicy, refusals, resourceContracts, durationLeases, phasedActions };
   return {
     decide: bindDecide(bindings, unboundRequester()),
     decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),

@@ -37,7 +37,7 @@ import {
   TXN_AUTHORIZATION_REQUIRED,
   type TxnMissionClaim,
 } from "@mission/core";
-import { RESOURCE_CONTRACTS } from "@mission/demo-data";
+import { CATALOG_TOOL_BINDINGS, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { getTracer } from "@mission/telemetry";
 import {
   type AudienceContext,
@@ -1373,7 +1373,8 @@ export type PepRefusalDiagnostic =
   | "channel_failure"
   | "pdp_unreachable"
   | "unresolvable_recipients"
-  | "credential_boundary_changed";
+  | "credential_boundary_changed"
+  | "phase_unavailable";
 
 /**
  * @spec runtime-evidence#pre-decision-refusal (issue #786) — the deployment's
@@ -1439,6 +1440,11 @@ export const PRE_DECISION_DENIAL_REASON: Readonly<Record<PepRefusalDiagnostic, P
   // cutover fell between validation and decision). It is not validated for
   // the established boundary: a token-validation failure there.
   credential_boundary_changed: "token_invalid",
+  // @spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage
+  // (#1629, D744): the operation is a phase of a compound action and this PEP
+  // cannot establish the phase before requesting a decision. Already an
+  // enumerated value, carried unchanged.
+  phase_unavailable: "phase_unavailable",
 });
 
 /** Whether `diagnostic` is one this PEP refuses with on its Refusal Record path. */
@@ -1624,6 +1630,27 @@ export class Pep {
    */
   toolAction(tool: string): ActionMapping | undefined {
     return (this.deps.operationProfile?.() ?? TOOL_ACTIONS)[tool];
+  }
+
+  /**
+   * @spec runtime-evidence#pre-decision-refusal `phase_unavailable`,
+   * runtime#compound-actions (#1629, D744): whether `tool`'s crossing is a
+   * phase of a compound action whose phase this PEP cannot establish before
+   * requesting a decision. The crossing is a phase of a compound action where
+   * the trusted catalog places this tool at a phase, or where the Operation
+   * Profile it is performed under places another crossing of the same action
+   * at one. Only a value from the closed set on this crossing's own profile
+   * entry establishes its phase; an absent or out-of-set value does not.
+   */
+  private phaseUnavailable(tool: string, mapping: ActionMapping, profile: string | undefined): boolean {
+    if (isActionPhase(mapping.phase)) return false;
+    if (mapping.phase !== undefined) return true;
+    if (CATALOG_TOOL_BINDINGS.get(tool)?.action_phase !== undefined) return true;
+    const crossings =
+      profile === undefined || profile === PAYMENTS_PROFILE_VERSION
+        ? (this.deps.operationProfile?.() ?? TOOL_ACTIONS)
+        : (this.deps.retainedOperationProfiles?.()[profile] ?? {});
+    return Object.values(crossings).some((m) => m.action === mapping.action && m.phase !== undefined);
   }
 
   /** @spec runtime#resource-contract (#249): this resource's declared contract versions, read now. */
@@ -2063,6 +2090,16 @@ export class Pep {
     mapping = selected.mapping;
     const operationTarget = selected.target;
     const performedContract = selected.contract;
+    // @spec runtime-evidence#pre-decision-refusal `phase_unavailable`,
+    // authzen#failure-condition-coverage, runtime#compound-actions (#1629,
+    // D744): "A phase unestablishable before the decision request is instead
+    // a local configuration failure at the PEP, refused before any decision
+    // request and recorded as a Refusal Record with `phase_unavailable`". It
+    // never reaches the PDP as a phaseless request, and never becomes a PDP
+    // denial or an Execution Evidence record for a permit never obtained.
+    if (this.phaseUnavailable(tool, mapping, selected.profile)) {
+      return await this.refuse(boundary, token, "phase_unavailable", mapping.action, view);
+    }
 
     // Effective parameters from authoritative store state (D34).
     let effective: EffectiveParams | undefined;
