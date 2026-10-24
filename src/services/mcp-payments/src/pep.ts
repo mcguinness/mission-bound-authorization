@@ -2790,8 +2790,10 @@ export class Pep {
         if (effective) {
           const invoice = this.deps.payments.getInvoice(effective.invoice_id);
           const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
-          // The target is gone: no digest over "the parameters actually
-          // attempted" exists to observe. Declining is the honest answer.
+          // The target, or the routing it addresses, no longer resolves: no
+          // digest over "the parameters actually attempted" exists to
+          // observe. The observation is withheld, so the suppressed record
+          // still emits and carries no effective digest (#786).
           if (!invoice || !vendor) return undefined;
           const bound = recipientParams(effective.recipients !== undefined || this.reachesRecipients(effective.action), this.deps.payments, vendor.id);
           if (!bound) return undefined;
