@@ -1263,7 +1263,9 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 : CONDITIONAL. A string. Error identifier when `outcome` is `failed` or
   `suppressed`, from this closed set: `parameter_mismatch` (the
   executing PEP found the effective parameters differ from those the
-  permit bound), `phase_mismatch` (the permit's phase differs from the
+  permit bound; under a claimed Evaluation-Context Binding,
+  {{context-drift-classification}} names which of this and
+  `target_drift` is recorded), `phase_mismatch` (the permit's phase differs from the
   executing crossing, is missing or malformed where required, or
   cannot be established at use), `target_drift` (a declared bound
   evaluation context, or the operation target the permit was
@@ -1516,9 +1518,9 @@ moved, and keeps every digest pair the executing PEP can observe:
 | Established and unequal to the permit's condition, or the condition missing | Equal, or differing only in declared facts | `target_drift` |
 | Established under a changed descriptor, facts unchanged | Equal | `target_drift` |
 
-A parameter the descriptor does not declare as a fact is agent-supplied,
-so `parameter_mismatch` records that an agent-supplied parameter
-demonstrably changed. An unavailable context is never compared:
+A parameter the descriptor does not declare as a fact is the request's
+own, so `parameter_mismatch` records a demonstrated change to a request
+parameter, such as an agent-supplied argument. An unavailable context is never compared:
 `effective_evaluation_context_digest` is absent, and so is
 `effective_parameter_digest` where the parameters cannot be established
 ({{execution-evidence-object}}). The audit consumer reports each
