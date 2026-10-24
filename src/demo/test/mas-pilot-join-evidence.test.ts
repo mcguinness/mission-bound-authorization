@@ -200,14 +200,13 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
     });
     closers.push(() => estate.close());
 
-    const consoleToken = crypto.randomUUID();
     const options: MasProcessOptions = {
       configPath,
       statusClients: [pdp.registration],
       keyRing,
       kernelStore: join(dir, "state", "kernel.db"),
       joinIntrospectionSecret,
-      operatorConsoleToken: consoleToken,
+      operatorConsole: true,
     };
     let mas: MasProcess = await startMasProcess(options);
     closers.push(() => mas.stop());
@@ -261,14 +260,17 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
     };
     expect(claims.mapping_version).toBe("mas-pilot-identity@1");
     const path = `/missions/${missionId}/join-evidence`;
-    const before = await consoleGet(mas.consoleUrl as string, path, consoleToken);
+    const first = mas.console;
+    if (!first) throw new Error("the MAS process serves no operator console");
+    const before = await consoleGet(first.url, path, first.token);
     expect(before.body.events).toEqual([expected]);
 
     await mas.stop();
     mas = await startMasProcess(options);
-    expect(mas.consoleUrl).toBeDefined();
-    expect((await consoleGet(mas.consoleUrl as string, path)).status).toBe(401);
-    const after = await consoleGet(mas.consoleUrl as string, path, consoleToken);
+    const second = mas.console;
+    if (!second) throw new Error("the restarted MAS process serves no operator console");
+    expect((await consoleGet(second.url, path)).status).toBe(401);
+    const after = await consoleGet(second.url, path, second.token);
     expect(after.status).toBe(200);
     expect(after.body.events).toEqual([expected]);
   }, 180_000);

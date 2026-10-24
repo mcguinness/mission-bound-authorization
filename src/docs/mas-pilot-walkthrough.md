@@ -336,10 +336,29 @@ secret>`, and give the launcher the same variable.
 
 The MAS installs the mapping contract once, when it starts, under the same
 300 s bound as the gateway's (deployment §3); after that it mints nothing,
-and a read that requires an assertion is denied. The launcher records no
-delegate in either actor-record store, so no delegate joins here
-(follow-up: #1561); the
-tests show the delegate path (deployment §8).
+and a read that requires an assertion is denied.
+
+A delegate joins on the MAS's actor records, the one source of a
+delegate's standing on this path (#1561): the endpoint's visibility set
+takes its recorded delegates from them, and the assertion carries the depth
+they give. The PEP keeps none here and carries no depth of its own. Approve
+a Mission whose entry is delegable to the extractor, and record the edge at
+the MAS's console, with the `console` helper of §3, `DELEGABLE` set to the
+first answer's `mission_id`:
+
+```sh
+console -X POST "$MAS_CONSOLE/missions" \
+  -d '{"subject":"alice","label":"delegate","delegate":"subagent-invoice-extractor"}'
+console -X POST "$MAS_CONSOLE/missions/$DELEGABLE/delegates" \
+  -d '{"client_id":"subagent-invoice-extractor","delegated_by":"ap-agent"}'
+```
+
+The second answers the recorded depth (`"depth": 1`). A call (§3.3) with an
+`estate-extractor-2c1` credential is then permitted; before the edge is
+recorded, or with the extractor recorded under a relay (depth 2, past the
+contract's `max_depth`), the MAS mints nothing and the read is denied
+`mission_binding_failed`. The records live in the MAS process's memory: a
+restart loses them, and the operator records each edge again.
 
 ### 3.9 Stop it
 
@@ -403,8 +422,9 @@ The MAS process's IPC messages `approve` and `clock` are test harness
 (`demo/test/mas-process.ts`), registered only when the process has an IPC
 channel. The launcher spawns it with `stdio: ["pipe", "pipe", "pipe"]`
 and no `ipc`, so neither exists there; the stdin pipe only tells the MAS
-that the launcher has gone (§3.9). The `actor` message (#1454), a delegate
-recorded in the MAS's actor records, is test harness the same way.
+that the launcher has gone (§3.9). A delegate edge is recorded only at the
+MAS's operator console (§3.8, #1561); the process refuses any other IPC
+message.
 
 ## 5. Keys, clients and rotation
 
@@ -471,7 +491,9 @@ stops and starts". Do not rotate the MAS's keys while the pilot runs.
   wrapper; a SIGKILL of the launcher process does not orphan the MAS
   process (§3.9).
 - The Join Assertion path stops minting once the MAS's mapping contract is
-  stale, and joins no delegate (§3.8; follow-up: #1561).
+  stale (§3.8).
+- The MAS's actor records are in memory: a restart loses every recorded
+  delegate edge, though a kernel store keeps the Missions (§3.8).
 
 ## 7. Witnesses
 

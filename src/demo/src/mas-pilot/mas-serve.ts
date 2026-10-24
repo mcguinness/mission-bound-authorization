@@ -44,10 +44,16 @@
  *
  * Started with an IPC channel (the tests' `mas-process.ts`), it also takes
  * operator messages that are test harness, not a protocol surface: `approve`
- * (a Mission approved through the kernel), `clock` (an offset on the kernel
- * clock) and `actor` (a delegate recorded in this MAS's actor records). The operator launcher (`launcher.ts`) starts it with no IPC channel,
- * so neither handler is registered there: it approves through the approval
- * surface and changes state through the Lifecycle endpoint.
+ * (a Mission approved through the kernel) and `clock` (an offset on the
+ * kernel clock). The operator launcher (`launcher.ts`) starts it with no IPC
+ * channel, so neither handler is registered there: it approves through the
+ * approval surface and changes state through the Lifecycle endpoint.
+ *
+ * Its actor records (#1561) are the one source of a delegate's standing on
+ * the Join Assertion path: the endpoint's visibility set and the asserted
+ * depth both read them, and the only way to record an edge is the operator
+ * console's authenticated `POST /missions/{id}/delegates`. They are held in
+ * memory: a restart loses them, while a kernel store keeps the Missions.
  */
 
 import { mkdirSync } from "node:fs";
@@ -139,7 +145,13 @@ await new Promise<void>((resolve) => {
 });
 if (consoleToken !== undefined && consolePort !== undefined) {
   try {
-    operatorConsole = await startOperatorConsole([masConsoleRoutes(built)], { port: Number(consolePort), token: consoleToken });
+    // @spec authority-server#join-assertion-request (#1561): where this MAS
+    // runs the Join Assertion path, its console records delegate edges in the
+    // actor records that path reads.
+    operatorConsole = await startOperatorConsole(
+      [masConsoleRoutes(built, joinIntrospectionSecret !== undefined ? { actorRecords } : {})],
+      { port: Number(consolePort), token: consoleToken },
+    );
   } catch (e) {
     fail(`the operator console cannot listen: ${e instanceof Error ? e.message : String(e)}`);
   }
@@ -149,10 +161,9 @@ console.log(`mas-pilot: ready ${built.issuer}`);
 
 interface OperatorMessage {
   id: number;
-  op: "approve" | "clock" | "actor";
+  op: "approve" | "clock";
   input?: Record<string, unknown> & { intent: string };
   offsetMs?: number;
-  actor?: { mission: { id: string; issuer: string }; clientId: string; delegatedBy: string };
 }
 
 // Test harness only: registered where this process has an IPC channel.
@@ -165,9 +176,10 @@ if (process.send) {
         process.send?.({ id: msg.id, ok: true });
         return;
       }
-      if (msg.op === "actor" && msg.actor) {
-        actorRecords.record(msg.actor);
-        process.send?.({ id: msg.id, ok: true });
+      // Any other message is refused: a delegate edge in particular is
+      // recorded only at the operator console (#1561).
+      if (msg.op !== "approve") {
+        process.send?.({ id: msg.id, ok: false, error: `unknown operator message ${String(msg.op)}` });
         return;
       }
       const input = msg.input as NonNullable<OperatorMessage["input"]>;

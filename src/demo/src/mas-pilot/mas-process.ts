@@ -24,20 +24,18 @@ export interface MasProcessOptions {
   kernelStore?: string;
   /** The MAS's introspection client secret at the estate, where the configuration declares `join_assertion` (#1454). */
   joinIntrospectionSecret?: string;
-  /** Serve the operator console's MAS half on an ephemeral loopback port behind this bearer (#1560). */
-  operatorConsoleToken?: string;
+  /** Serve the MAS's operator console on an ephemeral loopback port behind a bearer generated here (#1561). */
+  operatorConsole?: boolean;
 }
 
 export interface MasProcess {
   child: ChildProcess;
-  /** The operator console's address, where `operatorConsoleToken` was given. */
-  consoleUrl?: string;
   /** Approve a Mission through the MAS's kernel (operator channel). Resolves its identifier. */
   approve: (input: Record<string, unknown> & { intent: string }) => Promise<string>;
   /** Offset the MAS's kernel clock from real time (operator channel). */
   setClockOffset: (offsetMs: number) => Promise<void>;
-  /** Record a delegate as acting under a Mission in the MAS's actor records (operator channel, #1454). */
-  recordActor: (actor: { mission: { id: string; issuer: string }; clientId: string; delegatedBy: string }) => Promise<void>;
+  /** The MAS's operator console and its bearer, where `operatorConsole` asked for one (#1561). */
+  console?: { url: string; token: string };
   /** SIGTERM, and resolve once the process has exited. */
   stop: () => Promise<void>;
   output: () => string;
@@ -56,13 +54,14 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
   ]) {
     delete env[name];
   }
+  const consoleToken = opts.operatorConsole ? crypto.randomUUID() : undefined;
   Object.assign(env, {
     MAS_PILOT_CONFIG: opts.configPath,
     MAS_PILOT_STATUS_CLIENTS: JSON.stringify(opts.statusClients),
     ...(opts.keyRing ? { MISSION_KEY_RING: opts.keyRing } : { MISSION_EPHEMERAL_KEYS: "1" }),
     ...(opts.kernelStore ? { MISSION_KERNEL_STORE: opts.kernelStore } : {}),
     ...(opts.joinIntrospectionSecret ? { MAS_PILOT_JOIN_INTROSPECTION_SECRET: opts.joinIntrospectionSecret } : {}),
-    ...(opts.operatorConsoleToken ? { MAS_PILOT_OPERATOR_TOKEN: opts.operatorConsoleToken, MAS_PILOT_OPERATOR_CONSOLE_PORT: "0" } : {}),
+    ...(consoleToken ? { MAS_PILOT_OPERATOR_TOKEN: consoleToken, MAS_PILOT_OPERATOR_CONSOLE_PORT: "0" } : {}),
   });
   const child = spawn(process.execPath, ["--import", TSX_LOADER, SERVE_ENTRY], { env, stdio: ["ignore", "pipe", "pipe", "ipc"] });
   let out = "";
@@ -102,11 +101,11 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
       child.send({ ...msg, id });
     });
 
-  // The console line comes before the ready line (`mas-serve.ts`).
   const consoleUrl = /mas-pilot: operator console (\S+)/.exec(out)?.[1];
+  if (consoleToken && !consoleUrl) throw new Error(`the MAS process printed no operator console address\n${out}`);
   return {
     child,
-    ...(consoleUrl ? { consoleUrl } : {}),
+    ...(consoleToken && consoleUrl ? { console: { url: consoleUrl, token: consoleToken } } : {}),
     approve: async (input) => {
       const reply = await ask({ op: "approve", input });
       if (!reply.ok || !reply.missionId) throw new Error(`MAS approve: ${reply.error ?? "no Mission"}`);
@@ -114,10 +113,6 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
     },
     setClockOffset: async (offsetMs) => {
       await ask({ op: "clock", offsetMs });
-    },
-    recordActor: async (actor) => {
-      const reply = await ask({ op: "actor", actor });
-      if (!reply.ok) throw new Error(`MAS actor: ${reply.error ?? "refused"}`);
     },
     stop: async () => {
       if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
