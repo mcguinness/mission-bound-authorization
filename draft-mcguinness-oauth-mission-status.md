@@ -2066,6 +2066,19 @@ Mission Termination Reasons registry
 
 \[\[ To be removed from the final specification ]]
 
+-01
+
+- A transition is durably committed before any response acknowledges
+  it, and the OAuth binding's final issuance check is not extended to
+  suspension.
+- A schedule's deadline governs later decisions, and expiry governs
+  when the first decision after the deadline comes at or after
+  `expires_at`; a revoke schedule terminates at its `suspend_until`,
+  and a past `suspend_until` is refused only on a new request.
+- An RFC 7009 revocation does not by itself revoke a Mission, and a
+  revocation that a deployment's policy couples to it commits the same
+  `revoke` transition, state version and event.
+
 -00
 
 - Initial individual draft.
