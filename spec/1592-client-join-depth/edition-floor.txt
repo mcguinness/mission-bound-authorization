@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-24T18:41:34Z
-Source repository commit: dd29ac3e736084efea8676f8fde170127e7a1948
+Generated: 2026-10-24T20:36:28Z
+Source repository commit: f0df884855d5156aeb1787e426a461f9bc15415f
 Member count: 7
 
 Reading order:
@@ -16953,6 +16953,20 @@ Table of Contents
    from the Mission's current state (Section 5.2) and never changes a
    terminated Mission.
 
+   From a current schedule's deadline, every decision treats the Mission
+   as in the state its on_expiry produces, whether or not that
+   transition is persisted, so a request the AS decides after the
+   deadline is decided against that state.  If the first decision after
+   the deadline comes at or after the Mission's expires_at, expiry
+   governs instead and the Mission is terminated with reason expired
+   (Section 5.2); a revocation committed at its deadline before
+   expires_at keeps reason revoked.  For on_expiry revoke, the
+   termination's terminated_at is the schedule's suspend_until.  A new
+   suspend whose suspend_until is not later than the time the AS
+   processes it is refused invalid_request; a retransmit of an accepted
+   request still replays its original response after the deadline passes
+   (Section 5.6).
+
 5.2.  Legal Transitions
 
    Figure 1 shows the Mission lifecycle states and the transitions this
@@ -17364,14 +17378,33 @@ Table of Contents
    response: a caller not authorized for the Mission receives the not-
    found response, never a replay, stale_version or conflict.
 
+   The AS MUST durably commit a transition, with the state version it
+   produces, before it sends any response that acknowledges it; a
+   transition whose commit fails is never answered as a success.  The
+   final issuance check of [I-D.draft-mcguinness-oauth-mission]
+   (Section "Issuance Gating"), which applies to an acknowledged
+   revocation, is not extended to suspension: a suspension refuses later
+   derivations at their gate, and a derivation already past its gate
+   when the suspension commits can complete.
+
 5.8.  Relationship to RFC 7009
 
    A Mission revocation through this endpoint cascades to credentials
    derived from the Mission per the AS's advertised revocation
    propagation (Section 6).  The AS MAY additionally revoke specific
    outstanding tokens it knows by jti, with the same effect as [RFC7009]
-   revocation of each token.  [RFC7009] alone does NOT revoke a Mission;
-   the lifecycle endpoint is the authoritative Mission state change.
+   revocation of each token.  An [RFC7009] revocation does not by itself
+   revoke a Mission; the lifecycle endpoint is the authoritative Mission
+   state change.
+
+   Where a deployment's revocation policy treats revoking a Mission's
+   refresh token as revoking the Mission
+   ([I-D.draft-mcguinness-oauth-mission], Section "Revocation"), the AS
+   MUST commit that revocation as the same revoke transition this
+   endpoint applies: decided by that policy for the revoking party and
+   the Mission, recorded with a new state version, and emitting the same
+   transition event (Section 5.6).  The coupling requires neither a
+   request to this endpoint nor an additional scope.
 
 5.9.  Deferred Lifecycle Capabilities
 
@@ -18173,6 +18206,21 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   -01
+
+   *  A transition is durably committed before any response acknowledges
+      it, and the OAuth binding's final issuance check is not extended
+      to suspension.
+
+   *  A schedule's deadline governs later decisions, and expiry governs
+      when the first decision after the deadline comes at or after
+      expires_at; a revoke schedule terminates at its suspend_until, and
+      a past suspend_until is refused only on a new request.
+
+   *  An RFC 7009 revocation does not by itself revoke a Mission, and a
+      revocation that a deployment's policy couples to it commits the
+      same revoke transition, state version and event.
 
    -00
 
