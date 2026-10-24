@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         23 October 2026
-Expires: 26 April 2027
+Intended status: Standards Track                         24 October 2026
+Expires: 27 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 
@@ -710,11 +710,16 @@ Table of Contents
    it at the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax (Section 3.1).  A malformed request
-       is refused invalid_request.
+       is refused invalid_request; a request that includes a parameter
+       more than once is malformed, as at the token endpoint
+       (Section 3.2 of [RFC6749]).
 
    3.  Authorize the request: the caller's read authorization, the
        Mission the mission_id names, and any requested audience
@@ -1370,7 +1375,11 @@ Table of Contents
    the AS MUST NOT answer it with the unrelated original response.  A
    retransmit whose original response was rate_limited, or was
    unavailable or another 5xx response, is processed as a new request,
-   not replayed.
+   not replayed.  A request refused before deduplication (Section 5.7)
+   claims no nonce: the AS retains nothing for the refusal and leaves
+   any response already retained under that nonce unchanged, so the
+   rules above apply to a later request carrying it as though the
+   refused request had never arrived.
 
    The window MUST be at least the validity span of the signed response
    the AS would replay (its iat to exp, Section 3.5), so any retransmit
@@ -1433,12 +1442,17 @@ Table of Contents
    the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax and the operation (Section 5.1).  A
        malformed request, or an operation the AS does not serve, is
-       refused invalid_request.
+       refused invalid_request; a request that includes a parameter more
+       than once is malformed, as at the token endpoint (Section 3.2 of
+       [RFC6749]).
 
    3.  Authorize the request.  For a base operation this is the
        lifecycle authorization of Section 5.4 for the acting party, the

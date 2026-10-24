@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         23 October 2026
-Expires: 26 April 2027
+Intended status: Standards Track                         24 October 2026
+Expires: 27 April 2027
 
 
                         Mission Authority Server
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 
@@ -751,8 +751,9 @@ Table of Contents
    |                                 |    |assertion  |Mission is not  |
    |                                 |    |           |active, the     |
    |                                 |    |           |audience names  |
-   |                                 |    |           |no enrolled     |
-   |                                 |    |           |PDP, or the     |
+   |                                 |    |           |no enrollee     |
+   |                                 |    |           |holding the PDP |
+   |                                 |    |           |role, or the    |
    |                                 |    |           |acting token is |
    |                                 |    |           |inactive,       |
    |                                 |    |           |carries no cnf  |
@@ -919,23 +920,26 @@ Table of Contents
 
    client_id:  A string.  The Mission's client_id (Section 3).
 
-   When the authenticated caller is a PDP enrolled for the Mission's
-   enforcement scope, the MAS MUST include subject and client_id, and
-   MUST disclose each authorization_details entry in the response with
-   its delegation member as recorded.  For any other caller, the MAS
-   MUST NOT include subject or client_id.  These members describe the
-   Mission; the response envelope's sub still identifies the requesting
-   caller.  The PDP reads them from the Mission Status response it
-   resolves (rule 2 of Section 6.1).  A PEP does not copy them into
-   context.mission, whose subject member the AuthZEN profile populates
-   only from a verified token or delegation chain
+   When the authenticated caller is enrolled for the Mission's
+   enforcement scope in the PDP role, the MAS MUST include subject and
+   client_id, and MUST disclose each authorization_details entry in the
+   response with its delegation member as recorded.  For any other
+   caller, the MAS MUST NOT include subject or client_id.  These members
+   describe the Mission; the response envelope's sub still identifies
+   the requesting caller.  The PDP reads them from the Mission Status
+   response it resolves (rule 2 of Section 6.1).  A PEP does not copy
+   them into context.mission, whose subject member the AuthZEN profile
+   populates only from a verified token or delegation chain
    ([I-D.draft-mcguinness-mission-authzen]).
 
    The PEPs and PDPs enrolled for a Mission's enforcement scope are
-   deployment configuration that the MAS holds.  This document defines
-   no enrollment protocol: the MAS authenticates the caller and checks
-   it against that configuration.  The same set bounds visibility at the
-   join-assertion endpoint and the audience it accepts (Section 8.1).
+   deployment configuration that the MAS holds, and the configuration
+   records each enrollee's role: PEP, PDP, or both.  This document
+   defines no enrollment protocol: the MAS authenticates the caller and
+   checks it against that configuration.  Join Disclosure and a Join
+   Assertion's audience take an enrollee holding the PDP role;
+   visibility at the join-assertion endpoint takes an enrollee of either
+   role (Section 8.1).
 
 6.  Mission Join
 
@@ -1556,8 +1560,11 @@ Table of Contents
 
 8.1.  Assertion Request
 
-   The PEP, or the client acting for it, sends a POST request whose body
-   is a JSON object with the following members:
+   The PEP requests a Join Assertion.  A client or delegate calls this
+   endpoint only as the PEP it hosts, and this document defines no
+   carriage of an assertion from a client to a separate PEP.  The
+   request is a POST whose body is a JSON object with the following
+   members:
 
    mission_id:  REQUIRED.  A string.  The Mission the join is asserted
       against; its issuer is the MAS.
@@ -1565,7 +1572,8 @@ Table of Contents
    audience:  REQUIRED.  A string.  The consuming PDP the assertion is
       minted for, as the enrollment configuration of Section 5.1
       identifies it.  The MAS MUST NOT mint for an audience that names
-      no PDP enrolled for the Mission's enforcement scope.
+      no enrollee holding the PDP role for the Mission's enforcement
+      scope.
 
    access_token:  A string.  The acting access token.  REQUIRED unless
       the digest pair is present.
@@ -1637,16 +1645,17 @@ Table of Contents
       property.
 
    *  If the Mission is visible but not active, the audience names no
-      PDP enrolled for the Mission's enforcement scope, the acting token
-      is inactive or carries no cnf confirmation, or the acting token
-      does not join, the MAS rejects the request with HTTP 403 and the
-      join_failed error code.
+      enrollee holding the PDP role for the Mission's enforcement scope,
+      the acting token is inactive or carries no cnf confirmation, or
+      the acting token does not join, the MAS rejects the request with
+      HTTP 403 and the join_failed error code.
 
    Visibility on this endpoint is bounded: a Mission is visible to its
    client_id, its recorded delegates, and the PEPs and PDPs enrolled for
    the Mission's enforcement scope.  Any other caller MUST receive
    not_found, so the join_failed (403) and not_found (404) split never
-   acts as a mapping oracle for callers outside that set.
+   acts as a mapping oracle for callers outside that set.  Visibility
+   alone does not establish a caller's role.
 
    An assertion's lifetime is capped by the acting token's, so with
    short token lifetimes, minting is on the token-rotation path: each
@@ -2710,6 +2719,10 @@ Table of Contents
       Context where the mapping contract requires an instance-bound join
       (Section 6.4);
 
+   *  where the deployment uses Join Assertions, obtains one for the
+      credential it authenticated and carries it in context.mission_join
+      (Section 6.5);
+
    *  where a propagated reference is used, parses it under the rules
       for its HTTP (Section 7.2) or MCP (Section 7.3) carriage and
       surfaces a reference conflict with mission_reference_conflict
@@ -3162,8 +3175,9 @@ Table of Contents
    PII sinks.
 
    The join disclosure (Section 5.1) reveals a Mission's Subject and
-   client only to the PDPs enrolled for its enforcement scope.  A
-   deployment enrolls only the PDPs that enforce that scope.
+   client only to enrollees holding the PDP role for its enforcement
+   scope.  A deployment enrolls only the PEPs and PDPs that enforce that
+   scope.
 
    Retention is anchored on the OAuth binding's audit horizon.  A MAS
    retains records at least that long and SHOULD NOT retain them
@@ -3949,6 +3963,17 @@ B.5.  Revoke
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Join Assertion roles (#1591, D708).  The PEP requests a Join
+      Assertion; a client or delegate calls the endpoint only as the PEP
+      it hosts, and no carriage of an assertion from a client to a
+      separate PEP is defined.  The enrollment configuration records
+      each enrollee's role as PEP, PDP, or both: Join Disclosure and a
+      Join Assertion's audience take an enrollee holding the PDP role,
+      and join-assertion visibility takes either role.  A Mission-
+      joining PEP that uses Join Assertions obtains one for the
+      credential it authenticated and carries it in
+      context.mission_join.
 
    *  After request media-type dispatch, an intent-submission or join-
       assertion request whose JSON body cannot be parsed as an object

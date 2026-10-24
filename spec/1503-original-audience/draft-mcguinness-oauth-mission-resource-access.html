@@ -1060,7 +1060,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 26 April 2027</td>
+<td class="center">Expires 27 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1073,12 +1073,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-resource-access-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-23" class="published">23 October 2026</time>
+<time datetime="2026-10-24" class="published">24 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-26">26 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-27">27 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1134,7 +1134,7 @@ support this type, another <code>authorization_details</code> type, or both.<a h
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 26 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 27 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1708,7 +1708,8 @@ incorrectly.<a href="#section-3.1.1-4" class="pilcrow">¶</a></p>
 <p id="section-3.1.1-5">A numeric constraint value <span class="bcp14">MUST</span> lie within the range that the JSON
 Canonicalization Scheme (JCS) <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> serializes exactly. Monetary
 amounts avoid that hazard: <code>max_amount</code> carries its <code>amount</code> as a
-decimal string, paired with an ISO 4217 <code>currency</code> code, and any other
+decimal string, paired with a three-letter <code>currency</code> code
+(<a href="#initial-common-constraints" class="auto internal xref">Section 6.1</a>), and any other
 Common Constraint for a monetary value <span class="bcp14">SHOULD</span> reuse this shape rather
 than a JSON number.<a href="#section-3.1.1-5" class="pilcrow">¶</a></p>
 </section>
@@ -2359,26 +2360,41 @@ policy decision point in the resource server.<a href="#section-6-11" class="pilc
 <li class="normal" id="section-6.1-2.2.2.1">
                 <p id="section-6.1-2.2.2.1.1">Value: an object with two members, <code>amount</code> (<span class="bcp14">REQUIRED</span>, a string
 containing a decimal number, <a href="#decimal-values" class="auto internal xref">Section 3.1.1</a>) and <code>currency</code>
-(<span class="bcp14">REQUIRED</span>, a currency code as defined in <span>[<a href="#ISO4217" class="cite xref">ISO4217</a>]</span>).<a href="#section-6.1-2.2.2.1.1" class="pilcrow">¶</a></p>
+(<span class="bcp14">REQUIRED</span>, a currency code, as the next item defines it).<a href="#section-6.1-2.2.2.1.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-6.1-2.2.2.2">
-                <p id="section-6.1-2.2.2.2.1">Subset: no broader when the <code>currency</code> values are equal and the
-candidate <code>amount</code> is less than or equal to the reference <code>amount</code>,
-compared in decimal value space; differing currencies fail the
-comparison (no conversion is defined).<a href="#section-6.1-2.2.2.2.1" class="pilcrow">¶</a></p>
+                <p id="section-6.1-2.2.2.2.1">Currency: a <code>currency</code> value is exactly three characters, each an
+upper-case ASCII letter (<code>A</code> to <code>Z</code>), the form of an ISO 4217
+alphabetic code <span>[<a href="#ISO4217" class="cite xref">ISO4217</a>]</span>. A value of any other length, one
+ending in a line terminator included, or carrying any other
+character is malformed: the authorization server <span class="bcp14">MUST</span> refuse an
+authority proposal carrying one with the
+<code>invalid_authorization_details</code> error code, and a resource server
+treats one as a <code>constraints</code> key it cannot enforce
+(<a href="#rs-enforcement" class="auto internal xref">Section 7</a>). Values are compared exactly, character for
+character, with no trimming, case folding, numeric code, or
+conversion. A well-formed value is admitted for comparison whether
+or not ISO 4217 assigns it; a resource server or deployment <span class="bcp14">MAY</span>
+refuse a currency it does not support.<a href="#section-6.1-2.2.2.2.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-6.1-2.2.2.3">
-                <p id="section-6.1-2.2.2.3.1">Intersection: when the <code>currency</code> values are equal, the value with
-the smaller <code>amount</code>; differing currencies have no intersection and
-the combination fails.<a href="#section-6.1-2.2.2.3.1" class="pilcrow">¶</a></p>
+                <p id="section-6.1-2.2.2.3.1">Subset: no broader when the <code>currency</code> values are equal and the
+candidate <code>amount</code> is less than or equal to the reference <code>amount</code>,
+compared in decimal value space; differing currencies fail the
+comparison (no conversion is defined).<a href="#section-6.1-2.2.2.3.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-6.1-2.2.2.4">
-                <p id="section-6.1-2.2.2.4.1">Input: the action's amount and its currency, as the operation
-contract identifies them.<a href="#section-6.1-2.2.2.4.1" class="pilcrow">¶</a></p>
+                <p id="section-6.1-2.2.2.4.1">Intersection: when the <code>currency</code> values are equal, the value with
+the smaller <code>amount</code>; differing currencies have no intersection and
+the combination fails.<a href="#section-6.1-2.2.2.4.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-6.1-2.2.2.5">
-                <p id="section-6.1-2.2.2.5.1">Predicate: the input currency equals <code>currency</code>, and the input
-amount is less than or equal to <code>amount</code> in decimal value space.<a href="#section-6.1-2.2.2.5.1" class="pilcrow">¶</a></p>
+                <p id="section-6.1-2.2.2.5.1">Input: the action's amount and its currency, as the operation
+contract identifies them.<a href="#section-6.1-2.2.2.5.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-6.1-2.2.2.6">
+                <p id="section-6.1-2.2.2.6.1">Predicate: the input currency equals <code>currency</code>, and the input
+amount is less than or equal to <code>amount</code> in decimal value space.<a href="#section-6.1-2.2.2.6.1" class="pilcrow">¶</a></p>
 </li>
             </ul>
 </dd>
@@ -3599,7 +3615,7 @@ Omission-Equivalent Value is <code>false</code>.<a href="#section-16.3-6" class=
               <td class="text-left" rowspan="1" colspan="1">
                 <code>max_amount</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">Object: <code>amount</code> (decimal string), <code>currency</code> (ISO 4217 code)</td>
+              <td class="text-left" rowspan="1" colspan="1">Object: <code>amount</code> (decimal string), <code>currency</code> (three upper-case ASCII letters)</td>
               <td class="text-left" rowspan="1" colspan="1">Same currency; candidate &lt;= reference</td>
               <td class="text-left" rowspan="1" colspan="1">Same currency; the smaller amount</td>
             </tr>
@@ -3881,6 +3897,11 @@ Omission-Equivalent Value is <code>false</code>.<a href="#section-16.3-6" class=
 for, so one mapping serves both projection and the OAuth binding's
 scope-keyed configured mapping, and gives the identity case for
 <code>scope</code> values that are action identifiers.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.2">
+          <p id="appendix-A-3.2.1"><code>max_amount</code>'s <code>currency</code> is exactly three upper-case ASCII letters,
+compared exactly, with no assignment-list validation; any other value
+is malformed and refused at submission.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-23T19:20:38Z
-Source repository commit: 509a92eaf9d3426865663691023257b6b5b7261d
+Generated: 2026-10-24T01:49:31Z
+Source repository commit: c61643cdf9230b2f4c731d82cb8e190627c4ae10
 Member count: 7
 
 Reading order:
@@ -28,8 +28,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           23 October 2026
-Expires: 26 April 2027
+Intended status: Informational                           24 October 2026
+Expires: 27 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -82,7 +82,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 
@@ -5948,8 +5948,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         23 October 2026
-Expires: 26 April 2027
+Intended status: Standards Track                         24 October 2026
+Expires: 27 April 2027
 
 
                      Mission Substrate Requirements
@@ -6007,7 +6007,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 
@@ -7548,8 +7548,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         23 October 2026
-Expires: 26 April 2027
+Intended status: Standards Track                         24 October 2026
+Expires: 27 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -7608,7 +7608,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 
@@ -8105,11 +8105,11 @@ Table of Contents
    server enforces the authorization_details statelessly and can check
    the mission claim (Section 9), with no callback to the AS required.
 
-   (5) An authorized revocation (Section 7.2), or expires_at passing,
-   moves the Mission to terminated, with reason revoked or expired,
-   after which the AS refuses further issuance and refresh.  A
-   deployment can also treat [RFC7009] revocation of the refresh token
-   as revoking the Mission (Section 7.2).
+   (5) A revocation (Section 7.2), or expires_at passing, moves the
+   Mission to terminated, with reason revoked or expired, after which
+   the AS refuses further issuance and refresh.  A deployment can also
+   treat [RFC7009] revocation of the refresh token as revoking the
+   Mission (Section 7.2).
 
    The end-to-end example (Appendix A) walks this flow with concrete
    messages.
@@ -8750,11 +8750,12 @@ Table of Contents
 
    *  *Reject, do not ignore.* An entry that is not a JSON object, or
       that lacks type, is structurally invalid and refused with the
-      invalid_request error code.  The AS MUST refuse an entry whose
-      type it does not support, and an entry that fails its type's
-      validation or verification, with the
-      invalid_mission_intent_evidence error code (Section 23.2).  A
-      submission is accepted only when every presented entry verifies.
+      invalid_request error code at step 1 of the processing order
+      (Section 4.5).  The AS MUST refuse an entry whose type it does not
+      support, and an entry that fails its type's validation or
+      verification, with the invalid_mission_intent_evidence error code
+      (Section 23.2).  A submission is accepted only when every
+      presented entry verifies.
 
    *  *Policy input, not authority.* A verified entry is not copied into
       the Authority Set and does not stand in for the approval event
@@ -8789,8 +8790,9 @@ Table of Contents
    and is complete before the approval rendering (Section 5.1); step 8
    belongs to the approval event, and step 9 to activation.
 
-   1.  Parse the Submission envelope and enforce both closed top levels
-       (Section 4.2).
+   1.  Parse the Submission envelope, enforce both closed top levels and
+       the size bounds (Section 4.2), and check that each evidence entry
+       is a JSON object with a type member (Section 4.4).
 
    2.  Validate the intent object against the Mission Intent member
        definitions (Section 4).
@@ -8813,8 +8815,8 @@ Table of Contents
        ([I-D.draft-mcguinness-oauth-mission-submission-evidence],
        Section "Required Evidence Is Resolved Before Derivation").
 
-   6.  Apply the evidence dispatch and refusal rules, verifying every
-       presented entry under its type's rules (Section 4.4).
+   6.  Dispatch each presented entry on its type, and validate and
+       verify it under that type's rules (Section 4.4).
 
    7.  Apply admission policy and derive the Authority Set independently
        (Section 5), including the target_resources membership of each
@@ -8839,10 +8841,13 @@ Table of Contents
 
    *  a proposed entry outside target_resources together with a
       presented evidence entry that fails verification is refused at
-      step 3, with invalid_request; and
+      step 3, with invalid_request;
 
    *  an intent object that fails validation together with a malformed
-      proposal is refused at step 2, with invalid_request.
+      proposal is refused at step 2, with invalid_request; and
+
+   *  a structurally invalid evidence entry together with a malformed
+      proposal is refused at step 1, with invalid_request.
 
    The material verified provenance of step 8 is part of the approval
    surface.  Where a deployment commits the rendered approval surface,
@@ -9118,6 +9123,17 @@ Table of Contents
    MUST retain that association with the Mission; a later change to the
    mapping does not redefine it.
 
+   A Mission created from earlier authority, such as a Child Mission
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), a successor
+   ([I-D.draft-mcguinness-oauth-mission-expansion]), or an instance of a
+   standing consent (Section 13), does not reassign the original
+   approved audience of an entry it inherits: the entry keeps that of
+   the authority it derives from.  Only a fresh approval of the entry,
+   or a transformation under a declared capability, establishes a
+   different one.  Where the AS cannot establish an entry's original
+   approved audience, the entry has none; the current mapping does not
+   stand in for it.
+
    Issuing an entry to an audience other than its original approved
    audience, including audience projection to a Resource AS
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]), counts as
@@ -9126,9 +9142,8 @@ Table of Contents
    original approved audience, or, except as scope under a declared
    projection, in any form other than exactly as approved, since it
    cannot prove that a transformed copy is still a subset of what was
-   approved.  Without narrowing, a token request that would issue an
-   entry to another audience is refused with invalid_target
-   (Section 10).
+   approved.  Without narrowing, a token for another audience does not
+   carry the entry (Section 8.4).
 
    A type that declares delegation without narrowing is delegable only
    unchanged: the AS MUST NOT include an entry of such a type in a
@@ -9519,7 +9534,7 @@ Table of Contents
 
 6.8.  Approver Authentication Strength
 
-   A deployment publishes a statement declaring the minimum approval-
+   A deployment MUST publish a statement declaring the minimum approval-
    authentication strength (the approval-authentication floor) it
    enforces for Missions whose derived Authority Set carries high-risk
    authority, and the deployment scope it applies to.  High-risk
@@ -9627,9 +9642,8 @@ Table of Contents
    *  active: the only state in which the AS derives tokens.
 
    *  terminated: a terminal state; the Mission has ended.  Its
-      termination member (Section 7.1) gives the reason: revoked when
-      the Subject, Approver, or policy terminated it, or expired when
-      its expires_at passed.
+      termination member (Section 7.1) gives the reason: revoked when it
+      was revoked (Section 7.2), or expired when its expires_at passed.
 
    The transitions are:
 
@@ -9723,11 +9737,15 @@ Table of Contents
 
 7.2.  Revocation
 
-   A Mission is revoked when the AS receives an authorized revocation
-   for it.  A deployment MUST provide an authenticated means for the
-   Subject, the Approver, or an administrator to revoke a Mission by
-   mission_id, independent of possession of any token (so a Mission can
-   be stopped even when no refresh token is held).
+   A Mission is revoked when the AS receives a revocation for it from a
+   party the deployment's policy authorizes to revoke it, or when that
+   policy itself terminates the Mission; either way, its termination
+   reason is revoked.  The Subject, the Approver, and an administrator
+   are parties that policy can authorize; none is authorized by its role
+   alone.  A deployment MUST provide an authenticated means, independent
+   of possession of any token, by which a party its policy authorizes
+   revokes a Mission by mission_id (so a Mission can be stopped even
+   when no refresh token is held).
 
    The wire shape of that operation is out of scope for this document.
    A deployment-defined authenticated surface satisfies this
@@ -9873,8 +9891,12 @@ Table of Contents
       down-scoping (Section 12.4) both work this way, and the issued
       token is a derived token (Section 8.8) whose mission claim
       identifies the one Mission its subject_token's binding resolved
-      to.  A Token Exchange that instead establishes reusable
-      authorization state, such as the continuation profile's
+      to.  Such an exchange leaves the existing grant provenance in
+      place: the issued token rests on the grant lineage its
+      subject_token was issued under, and a later redemption of a
+      designation derived from it validates that lineage's state
+      (Section 12.2).  A Token Exchange that instead establishes
+      reusable authorization state, such as the continuation profile's
       delegation-family-creating exchange
       ([I-D.draft-mcguinness-oauth-mission-continuation]), creates a new
       grant binding, rooted in that same Mission.  Three Token Exchanges
@@ -10093,6 +10115,18 @@ Table of Contents
    the token, and the AS relates an entry to them through the entry's
    original approved audience (Section 5.5.1).
 
+   A token issued for an audience carries only the entries whose
+   original approved audience includes that audience; an entry approved
+   for another audience is not carried, unless a declared narrowing
+   capability permits issuing it there.  A token whose aud names several
+   audiences is issued only where the same entries are approved for each
+   of them; where they differ, the AS refuses the request with
+   invalid_target, and the client requests a separate token for each
+   audience.  The AS also refuses with invalid_target a request whose
+   audience is approved for none of the entries the token would carry,
+   and one whose authorization_details (Section 6 of [RFC9396]) names an
+   entry not approved for its audience.
+
    The AS returns the granted authorization_details in every token
    response, including refresh and Token Exchange responses (Section 7
    of [RFC9396]).  Strengthening Section 7 of [RFC9396], the AS MUST NOT
@@ -10214,6 +10248,16 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]) specifies how
    this bound extends transitively to tokens minted in another trust
    domain.
+
+   Within that bound, a derived token's lifetime is the AS's policy,
+   which Section 8.2 recommends keeping short.  Token Exchange does not
+   tightly couple an issued token's lifetime to its subject_token's
+   (Section 2.1 of [RFC8693]): a designation's expiry (Section 12.1)
+   bounds when it can be redeemed, not the lifetime of the delegated
+   token issued from it, which can outlive both the designation and the
+   credential the designation was derived from.  Revoking the grant
+   state backing that credential still refuses every later redemption
+   (Section 12.2).
 
 8.7.  Scope Projection
 
@@ -10503,10 +10547,23 @@ Table of Contents
 
 9.2.  Mission-Unaware Resource Servers
 
-   A deployment MUST NOT route a delegated Mission-bound token to a
-   Mission-unaware resource server, or to logging or audit
-   infrastructure, that authorizes or logs the caller on client_id
-   without processing the act chain.
+   Two parties keep a delegated Mission-bound token, one carrying an act
+   claim, from consumers that do not process the act chain:
+
+   *  *The AS, at issuance.* The AS MUST refuse, with invalid_target
+      (Section 10), a request for a delegated Mission-bound token whose
+      audience it has not established as a Mission-aware Resource Server
+      (Section 9.1) that also processes the act chain, authorizing and
+      logging the caller from the chain rather than from client_id
+      alone.  That the audience parses act does not establish this.
+
+   *  *The deployment, after issuance.* A deployment MUST NOT route a
+      delegated Mission-bound token to a Mission-unaware resource
+      server, or to logging or audit infrastructure, that authorizes or
+      logs the caller on client_id without processing the act chain.
+      The AS cannot verify where a token travels beyond its audience or
+      which pipelines log its use, so that routing and logging remain
+      the deployment's.
 
    A Mission-unaware [RFC9068] resource server reads client_id as the
    immediate client, which is accurate for that single token.  It cannot
@@ -10519,7 +10576,9 @@ Table of Contents
    A resource that requires Mission-bound tokens can advertise that
    through the mission_bound_authorization_required protected resource
    metadata member (Section 18); a resource server that serves such a
-   resource is, by that requirement, Mission-aware.
+   resource is, by that requirement, Mission-aware.  That requirement
+   does not by itself establish that the resource server processes the
+   act chain.
 
    A Mission-unaware resource server that authorizes only from scope
    operates within the Mission only to the extent the AS established a
@@ -10728,12 +10787,12 @@ Table of Contents
    +=================================+=================================+
    | PAR, or a companion's token-    | invalid_mission_intent_evidence |
    | endpoint submission: a          | (Section 4.4).  Detail: safe    |
-   | presented evidence entry of     | error_description               |
-   | an unsupported type, or         |                                 |
-   | failing its type's validation   |                                 |
-   | or verification                 |                                 |
-   | (Section 4.4), or a required    |                                 |
-   | evidence type absent            |                                 |
+   | presented evidence entry of an  | error_description               |
+   | unsupported type, or failing    |                                 |
+   | its type's validation or        |                                 |
+   | verification (Section 4.4), or  |                                 |
+   | a required evidence type        |                                 |
+   | absent                          |                                 |
    +---------------------------------+---------------------------------+
    | Authorization or token          | invalid_target (Section 2 of    |
    | request: invalid, unknown, or   | [RFC8707]).  Detail: safe       |
@@ -10743,29 +10802,33 @@ Table of Contents
    | outside the Mission's           |                                 |
    | Authority Set (Section 8.4)     |                                 |
    +---------------------------------+---------------------------------+
-   | Token request: an entry would   | invalid_target (Section 2 of    |
-   | be issued to an audience        | [RFC8707]).  Detail: safe       |
-   | other than its original         | error_description               |
-   | approved audience, and the AS   |                                 |
-   | has not declared narrowing      |                                 |
-   | for its type (Section 5.5.1)    |                                 |
+   | Token request: the requested    | invalid_target (Section 2 of    |
+   | audience is approved for none   | [RFC8707]).  Detail: safe       |
+   | of the entries the token would  | error_description               |
+   | carry, the request's            |                                 |
+   | authorization_details names an  |                                 |
+   | entry not approved for its      |                                 |
+   | audience, or the audiences it   |                                 |
+   | names are approved for          |                                 |
+   | different entries               |                                 |
+   | (Section 8.4)                   |                                 |
    +---------------------------------+---------------------------------+
    | Authorization or token          | invalid_target (Section 2 of    |
    | request: the target's scope-    | [RFC8707]).  Detail: safe       |
-   | projection mapping is           | error_description               |
-   | unknown, ambiguous, or stale,   |                                 |
-   | whether or not the request      |                                 |
-   | names a scope value, or the     |                                 |
-   | target is scope-only and no     |                                 |
-   | safe projection exists for      |                                 |
-   | the applicable entries when     |                                 |
-   | the request names no scope      |                                 |
-   | value (Section 8.7); or,        |                                 |
-   | where the AS applies            |                                 |
-   | Section 9's delegated-token     |                                 |
-   | routing rule at issuance, the   |                                 |
-   | delegated token's target is     |                                 |
-   | not known to be Mission-aware   |                                 |
+   | projection mapping is unknown,  | error_description               |
+   | ambiguous, or stale, whether    |                                 |
+   | or not the request names a      |                                 |
+   | scope value, or the target is   |                                 |
+   | scope-only and no safe          |                                 |
+   | projection exists for the       |                                 |
+   | applicable entries when the     |                                 |
+   | request names no scope value    |                                 |
+   | (Section 8.7); or the AS has    |                                 |
+   | not established a delegated     |                                 |
+   | Mission-bound token's audience  |                                 |
+   | as a Mission-aware Resource     |                                 |
+   | Server that also processes the  |                                 |
+   | act chain (Section 9.2)         |                                 |
    +---------------------------------+---------------------------------+
    | Authorization or token          | invalid_scope (Section 4.1.2.1  |
    | request: an explicitly          | of [RFC6749], Section 5.2 of    |
@@ -10774,18 +10837,18 @@ Table of Contents
    | scope-projection mapping the    |                                 |
    | AS trusts (Section 8.7)         |                                 |
    +---------------------------------+---------------------------------+
-   | Profile-defined operation       | invalid_grant (Section 5.2 of   |
-   | that lets a client present a    | [RFC6749]).  Detail: safe       |
-   | Mission Identifier alongside    | error_description               |
-   | a credential (Section 8.1.1):   |                                 |
+   | Profile-defined operation that  | invalid_grant (Section 5.2 of   |
+   | lets a client present a         | [RFC6749]).  Detail: safe       |
+   | Mission Identifier alongside a  | error_description               |
+   | credential (Section 8.1.1):     |                                 |
    | the identifier does not match   |                                 |
    | the Mission the credential      |                                 |
    | resolves to                     |                                 |
    +---------------------------------+---------------------------------+
-   | Token endpoint: the Mission     | invalid_request on a Token      |
-   | is terminated (revoked,         | Exchange (Section 2.2.2 of      |
-   | expired, superseded, or         | [RFC8693]), invalid_grant       |
-   | another termination reason)     | (Section 5.2 of [RFC6749]) on   |
+   | Token endpoint: the Mission is  | invalid_request on a Token      |
+   | terminated (revoked, expired,   | Exchange (Section 2.2.2 of      |
+   | superseded, or another          | [RFC8693]), invalid_grant       |
+   | termination reason)             | (Section 5.2 of [RFC6749]) on   |
    |                                 | any other grant, or the code a  |
    |                                 | Token Exchange profile assigns  |
    |                                 | (Section 8.2).  Detail:         |
@@ -10808,7 +10871,10 @@ Table of Contents
    | PAR: malformed Submission         | invalid_request (Section 5.2  |
    | envelope or Intent (schema,       | of [RFC6749]).  Detail: safe  |
    | unknown member, invalid           | error_description             |
-   | value) (Section 4.2)              |                               |
+   | value), including a               |                               |
+   | structurally invalid evidence     |                               |
+   | entry (Section 4.2,               |                               |
+   | Section 4.4)                      |                               |
    +-----------------------------------+-------------------------------+
    | PAR or authorization:             | invalid_authorization_details |
    | malformed or unsupported          | (Section 5 of [RFC9396]).     |
@@ -10971,9 +11037,10 @@ Table of Contents
       grant state (Section 11.4).
 
    An AS MAY support OAuth 2.0 Token Introspection [RFC7662] for
-   Mission-bound access tokens.  When it does, the response for such a
-   token carries, in addition to the standard members, a mission member:
-   a JSON object with the following members:
+   Mission-bound access tokens.  When it does, an active: true response
+   for such a token, to a caller authorized to receive Mission data
+   (Section 11.1), MUST carry, in addition to the standard members, a
+   mission member: a JSON object with the following members:
 
    *  id and issuer: as in the mission claim (Section 8.8).
 
@@ -11304,7 +11371,9 @@ Table of Contents
 
    A designation names a delegate and adds none.  Whether one may be
    redeemed more than once within its lifetime is the AS's policy; each
-   redemption is a delegated exchange of its own (Section 12.2).
+   redemption is a delegated exchange of its own (Section 12.2).  Its
+   expiry bounds when it can be redeemed, not the lifetime of a
+   delegated token issued from it (Section 8.6).
 
    A designation authorizes no resource access.  A designated client's
    identifier MUST NOT be an audience that any resource server accepts
@@ -11352,6 +11421,11 @@ Table of Contents
       members that profile defines (for example, sub, iss, and the
       sub_profile actor-type classification, such as ai_agent).
 
+   *  *The audience processes the chain.* The AS issues the delegated
+      token only for an audience it has established as a Mission-aware
+      Resource Server that also processes the act chain, and refuses any
+      other with invalid_target (Section 9.2).
+
    *  *Authority only narrows.* The delegated token's
       authorization_details MUST be a subset (Section 5.4) of the
       designation's authority, hence of the delegating token's and of
@@ -11373,10 +11447,14 @@ Table of Contents
       derivation, refused unless the Mission is active (Section 8.2).
       The AS MUST evaluate every redemption of a designation afresh, as
       a derivation of its own: the credential the designation was
-      derived from, and that credential's grant, are still valid; the
-      Mission is active; and the delegation policy (Section 12.5) and
-      the Mission's current authority admit the result.  An earlier
-      redemption establishes none of these.
+      derived from, and all applicable grant state backing that
+      credential, are still valid; the Mission is active; and the
+      delegation policy (Section 12.5) and the Mission's current
+      authority admit the result.  An earlier redemption establishes
+      none of these.  The backing grant state includes the grant lineage
+      that credential was issued under, kept through any exchange that
+      established no new grant lineage (Section 8.1.2); the Mission's
+      active state never substitutes for it.
 
    The act chain nests (act.act) for as long as, and only while,
    authority continues under the same approved Mission.  A new approval
@@ -12000,8 +12078,12 @@ Table of Contents
    approval_event_id:  REQUIRED.  A string.  A unique identifier of the
       approval event, used as the approval idempotency key: a retried or
       duplicate delivery of the same approval decision (a replayed
-      callback, a double-submitted consent form) MUST NOT create a
-      second Mission, and the AS deduplicates on this identifier.
+      callback, a double-submitted consent form, a retried standing-
+      consent activation) MUST NOT create a second Mission, and the AS
+      deduplicates on this identifier.  The identifier names the
+      approval event that creates this Mission (Section 6); under a
+      standing-consent basis (Section 13), it identifies this instance's
+      creation, not the earlier standing approval.
 
    created_at:  REQUIRED.  A string.  RFC 3339 timestamp of creation.
 
@@ -12637,9 +12719,11 @@ Table of Contents
 
    An AS can conform as a Mission Issuer without supporting any Intent
    Submission Evidence type.  Such an AS refuses every presented entry
-   as an unsupported type under the dispatch and refusal rules
-   (Section 4.4), with the invalid_mission_intent_evidence error code.
-   It need not implement the evidence framework of
+   under the dispatch and refusal rules (Section 4.4): a structurally
+   invalid entry with the invalid_request error code, and any other
+   entry, as an unsupported type, with the
+   invalid_mission_intent_evidence error code.  It need not implement
+   the evidence framework of
    [I-D.draft-mcguinness-oauth-mission-submission-evidence] for this
    configuration.  The companion defines conformance for ASs supporting
    an evidence type, whether its evidence is optional or required.
@@ -13588,20 +13672,23 @@ Table of Contents
 
    This document seeds the registry with the reasons it defines:
 
-    +=========+====================+=========+============+===========+
-    | Value   | Semantics          | Members | Change     | Reference |
-    |         |                    |         | Controller |           |
-    +=========+====================+=========+============+===========+
-    | revoked | The Subject,       | none    | IETF       | this      |
-    |         | Approver, or       |         |            | document, |
-    |         | policy terminated  |         |            | Section   |
-    |         | the Mission.       |         |            | 7.1       |
-    +---------+--------------------+---------+------------+-----------+
-    | expired | The Mission's      | none    | IETF       | this      |
-    |         | expires_at passed; |         |            | document, |
-    |         | terminated_at      |         |            | Section   |
-    |         | equals it.         |         |            | 7.1       |
-    +---------+--------------------+---------+------------+-----------+
+   +=========+======================+=========+============+===========+
+   | Value   | Semantics            | Members | Change     | Reference |
+   |         |                      |         | Controller |           |
+   +=========+======================+=========+============+===========+
+   | revoked | An authorized        | none    | IETF       | this      |
+   |         | party revoked the    |         |            | document, |
+   |         | Mission, or the      |         |            | Section   |
+   |         | deployment's         |         |            | 7.1       |
+   |         | policy terminated    |         |            |           |
+   |         | it (Section 7.2).    |         |            |           |
+   +---------+----------------------+---------+------------+-----------+
+   | expired | The Mission's        | none    | IETF       | this      |
+   |         | expires_at           |         |            | document, |
+   |         | passed;              |         |            | Section   |
+   |         | terminated_at        |         |            | 7.1       |
+   |         | equals it.           |         |            |           |
+   +---------+----------------------+---------+------------+-----------+
 
       Table 10: Mission Termination Reasons registry: initial contents
 
@@ -15481,6 +15568,11 @@ Appendix G.  Document History
       the Namespace Taxonomy lists the approval_basis.type values as
       specification-defined, which Standing-Consent Bases cites.
 
+   *  Editorial, no requirement change: the approval_event_id definition
+      names the approval event that creates the Mission and states that,
+      under a standing-consent basis, it identifies the instance's
+      creation, not the earlier standing approval.
+
    -01
 
    *Breaking wire changes*
@@ -15630,8 +15722,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         23 October 2026
-Expires: 26 April 2027
+Intended status: Standards Track                         24 October 2026
+Expires: 27 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -15683,7 +15775,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 
@@ -16336,11 +16428,16 @@ Table of Contents
    it at the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax (Section 3.1).  A malformed request
-       is refused invalid_request.
+       is refused invalid_request; a request that includes a parameter
+       more than once is malformed, as at the token endpoint
+       (Section 3.2 of [RFC6749]).
 
    3.  Authorize the request: the caller's read authorization, the
        Mission the mission_id names, and any requested audience
@@ -16996,7 +17093,11 @@ Table of Contents
    the AS MUST NOT answer it with the unrelated original response.  A
    retransmit whose original response was rate_limited, or was
    unavailable or another 5xx response, is processed as a new request,
-   not replayed.
+   not replayed.  A request refused before deduplication (Section 5.7)
+   claims no nonce: the AS retains nothing for the refusal and leaves
+   any response already retained under that nonce unchanged, so the
+   rules above apply to a later request carrying it as though the
+   refused request had never arrived.
 
    The window MUST be at least the validity span of the signed response
    the AS would replay (its iat to exp, Section 3.5), so any retransmit
@@ -17059,12 +17160,17 @@ Table of Contents
    the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A failure is answered as
-       Section 3.3 assigns.
+       only as far as authentication needs.  A body that cannot be
+       parsed is refused invalid_request, whatever credential the
+       request presents; a client authentication parameter included more
+       than once fails authentication, and no occurrence of it is used.
+       Every authentication failure is answered as Section 3.3 assigns.
 
    2.  Validate the request syntax and the operation (Section 5.1).  A
        malformed request, or an operation the AS does not serve, is
-       refused invalid_request.
+       refused invalid_request; a request that includes a parameter more
+       than once is malformed, as at the token endpoint (Section 3.2 of
+       [RFC6749]).
 
    3.  Authorize the request.  For a base operation this is the
        lifecycle authorization of Section 5.4 for the acting party, the
@@ -17916,8 +18022,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         23 October 2026
-Expires: 26 April 2027
+Intended status: Standards Track                         24 October 2026
+Expires: 27 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -17976,7 +18082,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 
@@ -22908,8 +23014,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         23 October 2026
-Expires: 26 April 2027
+Intended status: Standards Track                         24 October 2026
+Expires: 27 April 2027
 
 
                         Mission Runtime Evidence
@@ -22959,7 +23065,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 
@@ -25829,8 +25935,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         23 October 2026
-Expires: 26 April 2027
+Intended status: Standards Track                         24 October 2026
+Expires: 27 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -25886,7 +25992,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 

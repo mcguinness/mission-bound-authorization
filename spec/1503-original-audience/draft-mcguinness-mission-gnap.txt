@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            23 October 2026
-Expires: 26 April 2027
+Intended status: Experimental                            24 October 2026
+Expires: 27 April 2027
 
 
 Mission-Bound Authorization for the Grant Negotiation and Authorization
@@ -66,7 +66,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 
@@ -639,13 +639,13 @@ Table of Contents
    (Section 9.2).  This binding adds to GNAP's model:
 
    *  *Revocation.* The authorization server MUST provide an
-      authenticated means for the Subject, the Approver, or an
-      administrator to revoke a Mission by mission_id, independent of
-      any token and of the grant's continuation, per the issuance
-      profile.  On revocation the authorization server finalizes the
-      grant and treats the Mission's outstanding tokens as inactive at
-      introspection; a deployment that validates structured tokens
-      without introspection needs the state surfaces below.
+      authenticated means for a party the deployment's policy authorizes
+      to revoke a Mission by mission_id, independent of any token and of
+      the grant's continuation, per the issuance profile.  On revocation
+      the authorization server finalizes the grant and treats the
+      Mission's outstanding tokens as inactive at introspection; a
+      deployment that validates structured tokens without introspection
+      needs the state surfaces below.
 
    *  *Expiry.* When the record's expires_at passes, the Mission is
       terminated with reason expired without a request.
@@ -983,7 +983,7 @@ Table of Contents
    6.  *Governance gate*: only the issuance profile's active state is
        active.  Every other or unrecognized value fails closed at
        continuation, issuance, rotation, and the introspection
-       projection.  The Subject, Approver, and administrator have an
+       projection.  A party the deployment's policy authorizes has an
        authenticated revocation path (Section 9, Section 9.1).
 
    7.  *Reliance bound*: issuance, modification, and rotation establish
