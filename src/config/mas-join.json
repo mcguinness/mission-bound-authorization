@@ -1,5 +1,6 @@
 {
   "governed_resources": ["http://localhost:4403/mcp"],
+  "join_resource": "http://localhost:4403/join",
   "delegates": {
     "subagent-invoice-extractor": { "max_depth": 1 }
   },
