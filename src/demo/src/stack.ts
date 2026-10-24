@@ -29,8 +29,9 @@ import {
   type SigningKeySource,
   startupRemediationNotices,
   validateMissionIntent,
+  withoutGovernedResource,
 } from "@mission/authorization-server";
-import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, GOVERNED_RESOURCES, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   type BoundaryEvidenceKey,
@@ -602,6 +603,15 @@ export async function composeStack(opts: {
       // this only gives the demo a plain token to present. The as-native
       // target mounts no such route and mints none (D332).
       devOrdinaryIssuance: ordinaryMinting,
+      // @spec mission#authority-proposal (#1531, D741): the dev route never
+      // mints for a Mission-governed resource, and the shipped policy
+      // classifies the payments resource governed. The MAS Join this route
+      // serves acts under an ordinary payments credential by design, so a
+      // composition that arms the route gives its AS no classification and no
+      // authenticated metadata for that resource. This does not reconcile
+      // with the payments resource's own published metadata, which declares
+      // Mission-bound-only acceptance; #1531 records the open question.
+      ...(ordinaryMinting ? { governedResources: withoutGovernedResource(GOVERNED_RESOURCES, CANONICAL_RESOURCE) } : {}),
       transactionAuthorization: {
         challengeIssuers,
         ars,

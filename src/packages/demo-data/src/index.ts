@@ -1359,6 +1359,83 @@ function loadDesignableClients(): readonly string[] {
 export const DESIGNABLE_CLIENTS: readonly string[] = loadDesignableClients();
 
 /**
+ * @spec mission#authority-proposal (#1531, D741): the two sources that make a
+ * resource Mission-governed for this AS (config/governed-resources.json).
+ * `classification` is the deployment's own classification of a resource,
+ * `governed` or `not_governed`. `authenticated_metadata` holds, per resource,
+ * the RFC 9728 protected resource metadata member this AS has authenticated
+ * (configured here; the reference fetches none). Either source declaring the
+ * requirement makes the resource governed; neither can clear the other.
+ */
+export interface GovernedResourcePolicy {
+  classification: Readonly<Record<string, "governed" | "not_governed">>;
+  authenticated_metadata: Readonly<
+    Record<string, { mission_bound_authorization_required?: boolean }>
+  >;
+}
+
+/**
+ * The strict loader: unknown members, a resource that is not an absolute
+ * URI, a classification other than `governed` or `not_governed`, and a
+ * metadata member that is not a boolean are refused.
+ */
+export function parseGovernedResources(file: string, raw: unknown): GovernedResourcePolicy {
+  const root = asObject(file, raw, "governed-resources");
+  for (const key of Object.keys(root)) {
+    if (key !== "classification" && key !== "authenticated_metadata")
+      throw new ConfigError(file, `governed-resources has unknown member ${key}`);
+  }
+  const absolute = (resource: string, ctx: string): void => {
+    if (!URL.canParse(resource))
+      throw new ConfigError(file, `${ctx} names ${resource}, which is not an absolute URI`);
+  };
+  const classification: Record<string, "governed" | "not_governed"> = {};
+  const classes = asObject(file, root.classification ?? {}, "governed-resources.classification");
+  for (const [resource, value] of Object.entries(classes)) {
+    absolute(resource, "governed-resources.classification");
+    if (value !== "governed" && value !== "not_governed")
+      throw new ConfigError(
+        file,
+        `governed-resources.classification.${resource} must be governed or not_governed`,
+      );
+    classification[resource] = value;
+  }
+  const authenticated_metadata: Record<string, { mission_bound_authorization_required?: boolean }> =
+    {};
+  const metadata = asObject(
+    file,
+    root.authenticated_metadata ?? {},
+    "governed-resources.authenticated_metadata",
+  );
+  for (const [resource, raw] of Object.entries(metadata)) {
+    absolute(resource, "governed-resources.authenticated_metadata");
+    const record = asObject(file, raw, `governed-resources.authenticated_metadata.${resource}`);
+    for (const key of Object.keys(record)) {
+      if (key !== "mission_bound_authorization_required")
+        throw new ConfigError(
+          file,
+          `governed-resources.authenticated_metadata.${resource} has unknown member ${key}`,
+        );
+    }
+    const declared = record.mission_bound_authorization_required;
+    if (declared !== undefined && typeof declared !== "boolean")
+      throw new ConfigError(
+        file,
+        `governed-resources.authenticated_metadata.${resource}.mission_bound_authorization_required must be a boolean`,
+      );
+    authenticated_metadata[resource] =
+      declared === undefined ? {} : { mission_bound_authorization_required: declared };
+  }
+  return { classification, authenticated_metadata };
+}
+
+/** The shipped governed-resource policy (@see parseGovernedResources). */
+export const GOVERNED_RESOURCES: GovernedResourcePolicy = parseGovernedResources(
+  "governed-resources.json",
+  readJson("governed-resources.json"),
+);
+
+/**
  * @spec mission-template#prohibited-class — high-consequence actions that no
  * Mission Template dispatch may confer, even within both ceilings. The demo
  * prohibits the irreversible `payments:payment.execute`. The wire PR and the

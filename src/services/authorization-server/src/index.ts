@@ -3,6 +3,8 @@
 import {
   INTROSPECTION_PRINCIPALS,
   DESIGNABLE_CLIENTS,
+  GOVERNED_RESOURCES,
+  type GovernedResourcePolicy,
   type IntrospectionPrincipal,
   ACTOR_PROFILES,
   AUTHORITY_SOURCES,
@@ -39,6 +41,11 @@ import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
 export { RENDER_REVISION_HEADER } from "./adapters/approval-render-revision.js";
+export {
+  governedResourceRefusal,
+  isMissionGovernedResource,
+  withoutGovernedResource,
+} from "./adapters/governed-resources.js";
 export {
   type ActingToken,
   type ActingTokenResult,
@@ -1196,6 +1203,19 @@ export async function buildAuthorizationServer(opts: {
    */
   devOrdinaryIssuance?: boolean;
   /**
+   * @spec mission#authority-proposal (#1531, D741): the resources this AS
+   * treats as Mission-governed, by the deployment's classification or by
+   * protected resource metadata it has authenticated. Default: the shipped
+   * `config/governed-resources.json`.
+   */
+  governedResources?: GovernedResourcePolicy;
+  /**
+   * TEST-ONLY (#1531, D741): enable the `client_credentials` grant so a test
+   * can exercise the governed-resource rule on it. The reference implements
+   * no client-credentials issuance; production callers MUST omit this.
+   */
+  testClientCredentials?: boolean;
+  /**
    * @spec discharge#discharge-authority — additional service-token principals and
    * their scopes, merged OVER the shipped dev token (which carries both
    * `mission_lifecycle` and `mission_discharge`). A test registers a
@@ -1812,6 +1832,9 @@ export async function buildAuthorizationServer(opts: {
     introspectionPrincipals: [...INTROSPECTION_PRINCIPALS, ...(opts.testIntrospectionPrincipals ?? [])],
     // @spec mission#designation (#869, D449): config/delegation.json.
     designableClients: opts.designableClients ?? DESIGNABLE_CLIENTS,
+    // @spec mission#authority-proposal (#1531, D741): config/governed-resources.json.
+    governedResources: opts.governedResources ?? GOVERNED_RESOURCES,
+    ...(opts.testClientCredentials === true ? { testClientCredentials: true } : {}),
     // @spec mission#delegation-constraints (#869): the issuance index, which
     // is also the delegation accounting, exposed on BuiltAs.
     tokenIssuanceStore,
