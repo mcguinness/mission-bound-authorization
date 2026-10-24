@@ -327,8 +327,10 @@ member of the immutable record. It counts derivations as the OAuth
 binding defines them ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Issuance Gating"): one issuance operation the issuer AS performs for
 a single request, namely the initial authorization-code exchange, a
-refresh, a Token Exchange ({{RFC8693}}), or a cross-domain grant
-issuance ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). Under
+refresh, a Token Exchange ({{RFC8693}}), a cross-domain grant
+issuance ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or the
+redemption of a profile-defined grant, such as the Template profile's
+handoff grant ({{I-D.draft-mcguinness-oauth-mission-template}}). Under
 the Mission Issuance Grant profile the list gains one entry, the
 Mission Authority Server's minting of a grant
 ({{issuance-grant-counting}}).
@@ -347,7 +349,11 @@ issuance, its redemption of the child's initial grant, is counted
 against the child's own `derivation_limit`. The successor access token
 a ceiling-drawdown response returns is one derivation, counted against
 the successor, never the predecessor
-({{I-D.draft-mcguinness-oauth-mission-progressive}}).
+({{I-D.draft-mcguinness-oauth-mission-progressive}}). The redemption
+of a Dispatch Handoff grant at the Mission Issuer is one derivation,
+counted against the template instance the grant names
+({{I-D.draft-mcguinness-oauth-mission-template}}, Section "Dispatch
+Handoff").
 
 ## Atomicity and Concurrency {#concurrency}
 
@@ -725,6 +731,13 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 \[\[ To be removed from the final specification ]]
 
 -00
+
+- Editorial, no requirement change (#1631, D751): Counting
+  Derivations follows the OAuth binding's Derivation definition, which
+  includes the redemption of a profile-defined grant, and What Counts
+  names a Dispatch Handoff grant's redemption at the Mission Issuer as
+  one derivation counted against the instance. No operation is newly
+  counted or exempt.
 
 - Editorial (#1176): examples of the canonical Mission follow one
   dated history; an example line too long for the page is folded per

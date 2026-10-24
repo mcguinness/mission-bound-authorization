@@ -773,7 +773,9 @@ Authority Set derivation:
 Derivation:
 : One issuance operation the issuer AS performs for a single request
   ({{issuance-gating}}): the initial authorization-code exchange, a
-  refresh, a Token Exchange, or a cross-domain grant issuance.
+  refresh, a Token Exchange, a cross-domain grant issuance, or the
+  redemption of a profile-defined grant, such as the Template
+  profile's handoff grant.
   Distinct from Authority Set derivation, which some section titles
   and fixed phrases, such as "derivation policy", also call
   derivation.
@@ -2307,8 +2309,9 @@ either:
 At a direct approval event the AS binds the Mission to the
 authorization code it issues, or, under a back-channel carriage
 profile, to the grant artifact that profile defines
-({{extensibility}}). The binding is server-side and is what
-"the referenced Mission" in {{issuance-gating}} refers to.
+({{extensibility}}). The binding is server-side, and it resolves the
+Mission for operations using that binding; a profile-defined grant can
+instead resolve it through its authenticated `mission` reference.
 
 An authorization request that carries no `mission_intent` proposes no
 Mission. An AS that answers such a request through consent reuse,
@@ -2485,9 +2488,11 @@ It is informational in the same way: presenting it authorizes nothing.
 
 A derivation is one issuance operation the issuer AS performs for a
 single request: the initial authorization-code exchange, a refresh, a
-Token Exchange, or a cross-domain grant issuance
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}). A companion
-profile bounds the number of derivations under a Mission
+Token Exchange, a cross-domain grant issuance
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), or the
+redemption of a profile-defined grant, such as the Template profile's
+handoff grant ({{I-D.draft-mcguinness-oauth-mission-template}}). A
+companion profile bounds the number of derivations under a Mission
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 
 A derivation passes these checks, each stated where cited:
@@ -7329,6 +7334,12 @@ Cross-Domain:
   names the approval event that creates the Mission and states that,
   under a standing-consent basis, it identifies the instance's
   creation, not the earlier standing approval.
+- Editorial, no requirement change: the Derivation definition, in
+  Terminology and Issuance Gating, includes the redemption of a
+  profile-defined grant, such as the Template profile's handoff grant;
+  a grant binding resolves the Mission for the operations using it,
+  and a profile-defined grant resolves it through its authenticated
+  `mission` reference instead (#1631, D751).
 
 -01
 
