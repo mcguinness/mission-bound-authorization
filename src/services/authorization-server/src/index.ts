@@ -688,6 +688,7 @@ export {
   createTemplate,
   dispatchFromTemplate,
   findDispatch,
+  recordDispatchDelivery,
   selectDispatchAgent,
   TemplateStore,
   TemplateError,

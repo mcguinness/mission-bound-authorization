@@ -39,7 +39,7 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
-import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
+import { commitAtNextIssue, commitDuringDrain, expectFenceRefusal } from "./release-fence.helper.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import {
   buildAuthorizationServer,
@@ -970,4 +970,150 @@ describe("the release fence on the Mission dispatch grant (@spec mission#issuanc
     expect(as.kernel.get(missionId)?.termination?.reason).toBe("revoked");
     expectFenceRefusal(res, "invalid_grant");
   });
+
+  it("a recovered delivery: a Dispatch retry whose instance is revoked while the retry's request-path drain runs is refused invalid_grant with mission_error revoked and no token member", async () => {
+    const created = await createTemplateAdmin(readOnlyTemplateBody());
+    const { template_id } = (await created.json()) as { template_id: string };
+    const evt = `evt-fence-replay-${seq++}`;
+    const first = await dispatch({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: evt });
+    const firstBody = (await first.json()) as { mission_id?: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+    const id = firstBody.mission_id as string;
+    // The retry recovers the stored token without a save, so the commit lands in the drain.
+    const committed = commitDuringDrain(as, "revoke", () => id);
+    let res: { status: number; body: Record<string, unknown> };
+    try {
+      const sent = await dispatch({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: evt });
+      res = { status: sent.status, body: (await sent.json()) as Record<string, unknown> };
+    } finally {
+      committed.disarm();
+    }
+    expect(committed.missionId()).toBe(id);
+    expect(as.kernel.get(id)?.termination?.reason).toBe("revoked");
+    expect(as.kernel.get(id)?.derivation_count).toBe(1);
+    expectFenceRefusal(res, "invalid_grant");
+  });
 });
+
+describe("a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250)", () => {
+  type TokenBody = {
+    access_token?: string;
+    token_type?: string;
+    expires_in?: number;
+    scope?: string;
+    mission_id?: string;
+    mission_expires_at?: string;
+    authorization_details?: Array<{ resource: string; actions: string[] }>;
+    error?: string;
+    mission_error?: string;
+  };
+  const send = async (templateId: string, dispatchEventId: string): Promise<{ status: number; body: TokenBody; cacheControl: string | null }> => {
+    const res = await dispatch({ templateId, intent: readOnlyIntent(), dispatchEventId });
+    return { status: res.status, body: (await res.json()) as TokenBody, cacheControl: res.headers.get("cache-control") };
+  };
+  const newTemplate = async (): Promise<string> =>
+    ((await (await createTemplateAdmin(readOnlyTemplateBody())).json()) as { template_id: string }).template_id;
+  /** The access tokens the provider saves while `fn` runs. */
+  const issuedDuring = async <T>(fn: () => Promise<T>): Promise<[T, number]> => {
+    let issued = 0;
+    const listener = (): void => {
+      issued++;
+    };
+    as.provider.on("access_token.issued", listener);
+    try {
+      return [await fn(), issued];
+    } finally {
+      as.provider.removeListener("access_token.issued", listener);
+    }
+  };
+  /** A first Dispatch under a fresh template and event id, delivered and counted once. */
+  const dispatched = async (): Promise<{ templateId: string; evt: string; id: string; first: TokenBody }> => {
+    const templateId = await newTemplate();
+    const evt = `evt-recover-${seq++}`;
+    const first = await send(templateId, evt);
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    const id = first.body.mission_id as string;
+    expect(as.kernel.get(id)?.derivation_count).toBe(1);
+    return { templateId, evt, id, first: first.body };
+  };
+
+  it("a lost-response retry while the delivered token is valid returns that same token, saving no token and counting nothing", async () => {
+    const { templateId, evt, id, first } = await dispatched();
+    const missions = as.kernel.allMissions().length;
+
+    const [retry, issued] = await issuedDuring(() => send(templateId, evt));
+    expect(retry.status, JSON.stringify(retry.body)).toBe(200);
+    expect(retry.body.access_token).toBe(first.access_token);
+    expect(issued).toBe(0);
+    expect(as.kernel.get(id)?.derivation_count).toBe(1);
+    expect(as.kernel.allMissions().length).toBe(missions);
+    expect(retry.body.token_type).toBe("DPoP");
+    expect(retry.cacheControl).toContain("no-store");
+    expect(retry.body.mission_id).toBe(id);
+    expect(retry.body.mission_expires_at).toBe(first.mission_expires_at);
+    expect(retry.body.authorization_details).toEqual(first.authorization_details);
+    expect(retry.body.scope).toBe(first.scope);
+    expect(retry.body.expires_in).toBeGreaterThan(0);
+    expect(retry.body.expires_in).toBeLessThanOrEqual(first.expires_in as number);
+  });
+
+  it("a retry after the delivered token expired mints a fresh token for the same instance, counted once as a delivery and never as a second Dispatch; a further retry recovers the fresh token", async () => {
+    const { templateId, evt, id, first } = await dispatched();
+    const recorded = as.creationIdempotency.find("ap-agent", evt);
+    expect(recorded?.delivery?.access_token).toBe(first.access_token);
+    // The delivered token lapses.
+    as.creationIdempotency.recordDelivery("ap-agent", evt, { ...recorded?.delivery, exp: Math.floor(Date.now() / 1000) - 1 });
+    const missions = as.kernel.allMissions().length;
+
+    const [retry, issued] = await issuedDuring(() => send(templateId, evt));
+    expect(retry.status, JSON.stringify(retry.body)).toBe(200);
+    expect(retry.body.mission_id).toBe(id);
+    expect(retry.body.access_token).toBeTruthy();
+    expect(retry.body.access_token).not.toBe(first.access_token);
+    expect(issued).toBe(1);
+    expect(as.kernel.get(id)?.derivation_count).toBe(2);
+    expect(as.kernel.allMissions().length).toBe(missions);
+
+    const again = await send(templateId, evt);
+    expect(again.status, JSON.stringify(again.body)).toBe(200);
+    expect(again.body.access_token).toBe(retry.body.access_token);
+    expect(as.kernel.get(id)?.derivation_count).toBe(2);
+  });
+
+  it.each([
+    ["suspended", "suspend", "suspended"],
+    ["revoked", "revoke", "revoked"],
+  ] as const)("a retry against an instance %s after its Dispatch is refused by the instance's own gate: invalid_grant, no token, nothing counted", async (_label, op, missionError) => {
+    const { templateId, evt, id } = await dispatched();
+    as.kernel.transition(id, op);
+
+    const [retry, issued] = await issuedDuring(() => send(templateId, evt));
+    expect(retry.status, JSON.stringify(retry.body)).toBe(400);
+    expect(retry.body.error).toBe("invalid_grant");
+    expect(retry.body.mission_error).toBe(missionError);
+    expect(retry.body.access_token).toBeUndefined();
+    expect(issued).toBe(0);
+    expect(as.kernel.get(id)?.derivation_count).toBe(1);
+  });
+
+  it("a retry after containment narrowed the instance mints a token carrying only the narrowed authority, never the delivered one", async () => {
+    const { templateId, evt, id, first } = await dispatched();
+    const entry = first.authorization_details?.find((e) => e.actions.length > 1);
+    expect(entry, JSON.stringify(first.authorization_details)).toBeDefined();
+    const removed = entry?.actions[0] as string;
+    as.kernel.contain(id, {
+      event: { type: "tainted_read", source: "https://siem.example/detections", observed_at: "2026-07-02T00:00:00Z", event_id: `taint-dispatch-${seq++}` },
+      remove: [{ resource: entry?.resource as string, actions: [removed] }],
+    });
+
+    const [retry, issued] = await issuedDuring(() => send(templateId, evt));
+    expect(retry.status, JSON.stringify(retry.body)).toBe(200);
+    expect(retry.body.access_token).not.toBe(first.access_token);
+    expect(issued).toBe(1);
+    expect(as.kernel.get(id)?.derivation_count).toBe(2);
+    const carried = decodeJwt(retry.body.access_token as string).authorization_details as Array<{ actions: string[] }>;
+    expect(carried.flatMap((e) => e.actions)).not.toContain(removed);
+    expect(retry.body.authorization_details?.flatMap((e) => e.actions)).not.toContain(removed);
+  });
+});
+
