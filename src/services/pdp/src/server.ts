@@ -169,6 +169,14 @@ export interface PdpRemoteServerConfig {
    */
   durationLeases?: DurationLeaseDomain;
   /**
+   * @spec authzen#context-action-phase (#1629, D744): the actions this PDP's
+   * trusted operation declaration places at the phases of a compound action,
+   * bound on this side of the network hop exactly as `claims` is: a request
+   * option naming another is stripped. A request for one with no
+   * `context.action_phase` is refused before evaluation as `phase_invalid`.
+   */
+  phasedActions?: ReadonlySet<string>;
+  /**
    * The settlement and reconciliation channel for one authenticated
    * requester. Defaults to one over {@link PdpRemoteServerConfig.claims}.
    */
@@ -418,7 +426,9 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     // deployment's statement.
     delete opts.resourceContracts;
     delete opts.durationLeases;
+    delete opts.phasedActions;
     if (config.evidence) opts.evidence = config.evidence;
+    if (config.phasedActions) opts.phasedActions = config.phasedActions;
     if (config.durationLeases) opts.durationLeases = config.durationLeases;
     if (config.refusals) opts.refusals = config.refusals;
     if (config.claims) opts.claims = config.claims;
@@ -430,9 +440,9 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     try {
       decision = await evaluateImpl(evalRequest, opts);
     } catch (e) {
-      // @spec authzen#pdp-request consistency check 11 (#1276, D457): a
-      // request refused before evaluation (already recorded) gets a refusal,
-      // never a signed decision.
+      // @spec authzen#pdp-request consistency check 11 (#1276, D457),
+      // authzen#context-action-phase (#1629): a request refused before
+      // evaluation (already recorded) gets a refusal, never a signed decision.
       if (e instanceof DecisionRequestRefused) {
         res.writeHead(400, { "content-type": "application/json" });
         res.end(JSON.stringify({ error: "decision_request_refused", reason: e.denial_reason }));

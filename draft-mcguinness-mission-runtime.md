@@ -3454,7 +3454,7 @@ that statement.
 
 # Deployment Considerations {#runtime-deployment}
 
-Three properties govern how this profile scales.
+The following properties govern how this profile scales.
 
 **Token lifetime trades against the enforcement layer.** The
 issuance profile recommends short-lived tokens because, in an
@@ -3470,54 +3470,88 @@ belongs in the Enforcement Scope Statement: what stops a revoked
 Mission, at what latency, is a fact that statement already declares
 ({{runtime-conformance}}).
 
-**The consistency unit is the Mission.** Every strongly consistent
-requirement this profile and its companions impose, the atomic
-`active` check, single-use decision identifiers, and the consumption
-counters and exclusivity latches of the metering companion
-({{I-D.draft-mcguinness-mission-metering}}), is scoped to one
-Mission. A multi-node PDP therefore shards its state by the Mission
-Identifier with no cross-shard coordination; only a
-deployment-configured aggregate bound crosses that partition and is
-provisioned as its own consistency domain. Fail-closed applies per
-action class ({{failure-modes}}): a PDP outage stops consequential
-work and nothing else.
-
-**Decision latency is budgeted by class.** The synchronous cost of
-this profile is confined to the actions whose consequences warrant
-it. Classification ({{classification}}) is the first lever: only
-consequential actions need a permit, and only the high-consequence
-classes must hold a synchronous gate. For the rest of the governed
-surface the common-case decision is local: a PDP embedded in or
-colocated with its PEP evaluates against a materialized policy view
-({{policy-view}}) whose network cost is paid once per freshness
-window, not per action; a permit's validity window covers the
-follow-through of one normalized action ({{parameter-binding}}); the
-decision API's batch evaluation amortizes fan-out ({{authzen}}); and
+**Decision latency is budgeted by class.** Classification
+({{classification}}) is the first lever: only consequential actions
+need a permit. An action in a gated class waits for its gate's
+decision whatever its class. Whether that decision needs a remote
+round trip depends on where the state it consults is held, not on the
+class alone. For most of the governed surface
+the common-case decision is local: a PDP embedded in or colocated with
+its PEP evaluates against a materialized policy view ({{policy-view}})
+whose network cost is paid once per freshness window, not per action;
+a permit's validity window covers the follow-through of one normalized
+action ({{parameter-binding}}); the decision API's batch evaluation
+amortizes fan-out while still deciding each action ({{authzen}}); and
 metering leases amortize the metered classes
-({{I-D.draft-mcguinness-mission-metering}}). Offline attenuation
-({{I-D.draft-mcguinness-oauth-mission-attenuation}}) removes the
-issuer from sub-agent fan-out entirely; its Experimental status
-tracks the maturity of its substrate, not a judgment that localized
-offline validation is optional at machine speed. A deployment for
-which a synchronous gate on a low-consequence class is too expensive
-reclassifies deliberately and records the choice in its Enforcement
-Scope Statement, rather than weakening the gate on the classes that
-matter.
+({{I-D.draft-mcguinness-mission-metering}}). A decision that consults
+shared state waits on the domain that preserves it, which is remote
+only where the deployment places it away from the deciding component
+(below).
+Offline attenuation ({{I-D.draft-mcguinness-oauth-mission-attenuation}})
+removes the issuer from sub-agent fan-out entirely; its Experimental
+status tracks the maturity of its substrate, not a judgment that
+localized offline validation is optional at machine speed. A
+deployment for which a gate on a low-consequence class is too
+expensive reclassifies deliberately and records the choice in its
+Enforcement Scope Statement, rather than weakening the gate on the
+classes that matter.
 
-**Locality ends where the Mission's shared state begins.** The
-single-use identifier store and idempotency match
-({{parameter-binding}}), the metering counters and exclusivity latch
-({{I-D.draft-mcguinness-mission-metering}}), and the per-Mission
-evidence sequence ({{I-D.draft-mcguinness-mission-runtime-evidence}}) are
-strongly consistent state scoped to one Mission. An embedded PDP
-evaluating an action that consults any of them pays the round trip
-to the Mission's consistency domain wherever the decision runs, so
-the materialized view localizes only the actions that touch none of
-them; for the high-consequence classes, whose permits are single-use,
-the Mission's domain, not PDP placement, sets the latency floor. A
-deployment prices this deliberately: colocate a Mission's domain
-with the PEPs that act under it, or accept the hop for the classes
+**The Mission is the partition key, not the only consistency
+domain.** Most strongly consistent state this profile and its
+companions require is scoped to one Mission: the atomic `active`
+check, single-use decision identifiers, and Mission-keyed consumption
+counters. A multi-node PDP can therefore shard that state by the
+Mission Identifier. Some invariants span Missions, and others are
+narrower than one; each is enforced in the domain the table below
+names, and sharding by Mission does not partition it. Fail-closed
+applies per action class ({{failure-modes}}): a PDP outage stops
+consequential work and nothing else.
+
+**Locality depends on where shared state is held.** Each shared
+invariant is preserved by a domain, and a decision that consults the
+invariant depends on that domain:
+
+| Invariant | Domain that preserves it | Existing disclosure |
+|---|---|---|
+| A single-use decision identifier is consumed once | the enforcement scope's consumed-identifier store, shared or partitioned so it is linearizable across every PEP replica of the scope | none |
+| An idempotency key yields one execution | the Exact claim domain: a single serializing PDP, a shared linearizable store, or claim domains structurally exact by construction | Enforcement Scope Statement: the Exact claim domain per mediated action class or idempotency scope, and the idempotency horizon for the high-consequence classes |
+| A consumption bound holds: exactly under the Exact profile, or within the published overshoot and staleness under Bounded consistency | Exact: one serializing PDP, a shared linearizable counter, or per-PDP sub-budgets that sum to the cap; Bounded consistency: replicas that converge within the published bound | Enforcement Scope Statement: the enforcement profile per counter. Under Bounded consistency, also the maximum overshoot and staleness, published per bound class |
+| An exclusivity group is never latched to both sides | one Exact latch domain spanning every Mission bound to the group | Enforcement Scope Statement: the latch domain |
+| Gaps in an evidence stream are detectable | the emitter's own sequence, held by the emitter and any replica acting as it; no decision-time barrier | none |
+
+The rows follow {{single-use-identifiers}}, {{idempotency}}, the
+metering companion, whose counters can be keyed across Missions (a
+lineage, Subject, or client budget) and whose exclusivity groups span
+every bound Mission ({{I-D.draft-mcguinness-mission-metering}}), and
+the per-emitter sequence of {{record-integrity}}.
+
+Network latency follows placement and coordination strategy, not the
+invariant. A decision stays local when the domain for each invariant it
+consults is local to the deciding component: a single serializing
+owner colocated with it, a claim domain partitioned to the PEPs that
+contend for it, or a sub-budget the PDP spends locally. It pays a round
+trip only to a domain held elsewhere. Evidence sequencing is the
+emitter's own and adds no wait to the decision. For the high-consequence
+classes, whose permits are single-use and whose keys are claimed, the
+placement of those domains, not of the PDP alone, sets the latency
+floor. A deployment prices this deliberately: it places each domain
+with the PEPs that contend for it, or accepts the hop for the classes
 that require it.
+
+**A revocation bound limits duration, not consequence.** The arithmetic
+of {{state-freshness}} bounds how long after a revocation new effect can
+begin. It does not bound how much effect occurs in that interval. That
+depends on how fast and how widely the deployment admits actions (its
+admission rate, bursts, and concurrency), on the actions already in
+flight when the revocation commits, each of which may run to its
+execution bound, on the consumption bounds still unspent under the
+metering companion's accounting, and on each action's own constraints,
+such as a per-entry amount limit. Lower decision latency can admit more
+work within the same interval when decision latency limits throughput.
+These inputs do not combine into one universal formula. A deployment
+that wants its residual exposure to be reviewable states them beside its
+revocation latency, as the illustrative Deployment Profile shapes of
+{{I-D.draft-mcguinness-mission-architecture}} do.
 
 # Operational Considerations {#runtime-operational}
 
@@ -4095,6 +4129,17 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Deployment Considerations: a gated action waits for its gate in
+  every class; whether the decision waits on the network depends on
+  where the state it consults is held. The Mission is the partition
+  key, not the only consistency domain: a table names the domain that
+  preserves each shared invariant (single-use identifiers, the Exact
+  idempotency claim, metering counters under either enforcement
+  profile, exclusivity groups spanning Missions, and the per-emitter
+  evidence sequence) and the disclosures already required for each. A
+  revocation bound limits duration, not consequence (informative). No
+  requirement changed.
 
 - Idempotency: a duration-lease renewal's completed claim returns the
   renewal's permit to a retransmission while that permit is valid

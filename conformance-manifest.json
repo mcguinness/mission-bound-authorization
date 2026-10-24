@@ -11,20 +11,20 @@
     "content_sha256": "913731cbed17daa0f4c243f23ee1c072c5f162dec33655cb60285db7925b10ef"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "6ac103f49e64c76e64122b32cc4f2903ebdf7f31",
-    "content_sha256": "94dfbb581bb1bfe68c6e1c1b1bda464310c85810d66a69cffb0a17c6540f3393"
+    "revision": "c4cc5c57d4c8eb004a7fa1b19cc17e4122553684",
+    "content_sha256": "3436a62e45903dd2ce5ebcd988fd3342c8b1911cec42636cd7329ec7bc14652b"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
     "content_sha256": "e0466f26a42dc89f7f1637996066ed8de81addad3a6190db9b7f814e21525036"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "8d60794eb32a6435d7140512bc30ca2585d8f5b9",
-    "content_sha256": "065c797c3074eb766497180cf700fc267ecd227b45a399c1ad47330a226a7fa5"
+    "revision": "c4cc5c57d4c8eb004a7fa1b19cc17e4122553684",
+    "content_sha256": "79f74a6ae36470c96c7395824c11cc1c2bc6ebbb555e4364942a16f0f1515f30"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "eac0fa535fd2a362521ade78901db8c68dedf15e",
-    "content_sha256": "7b47ed990d821d66c3f27677cb376cffd28bd2e905fe98d44207dc9b9fe30668"
+    "revision": "dbac886ac676052de539355a0e7f8603131508e3",
+    "content_sha256": "91de0345c72ae5f637034266fdf058356730432bbcb138db59fbabe07d988c1e"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -35,12 +35,12 @@
     "content_sha256": "72008afead28043e8e0ddccb7813d4347f3d4e9d9ecc0bcc0827b06c35eb5392"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
-    "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
+    "revision": "1a34e033976b0007776170a413b11008427948d8",
+    "content_sha256": "3f81b0a0c13c1f26caafd69cd3f5d2ca6ca6616205c03fd458e99f6da5909d8d"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
-    "content_sha256": "c3ecaf45e6e17579e7374b0e733c7d4de7d58cbacdfecddfe37c3568eb74138a"
+    "revision": "1a34e033976b0007776170a413b11008427948d8",
+    "content_sha256": "52d74414268ec7046661ebb623d5ede427f48e6f314a9f99605136ace48be031"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "1199e650a853bb0006c2384c589157f263547a7e",
@@ -71,20 +71,20 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "9d65d59edd995b1b11e403af361f0cfc86ed272b",
-    "content_sha256": "95e48a95e2b1068b0b020f4f353a7f814d524a26b6d5b15206a92881dc4d7f56"
+    "revision": "6970b61a65e9f14277c5fbef13f85fee01ef618d",
+    "content_sha256": "65b6dbf131fdbe1464e65ff17660864e0ba5f993c62db8840d8ae6622303f116"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
     "content_sha256": "a5d4486c5b3f708b16b0a86aabd670a429d37de62aa2436b87c2aadaf10e8ef9"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
-    "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
-    "content_sha256": "44d6ef289a0c6cbdff9af48520ae48056a55052f037bdfe5dd16938ec88460d6"
+    "revision": "1a34e033976b0007776170a413b11008427948d8",
+    "content_sha256": "41ff62e2227de26dd540ac9c1818b4d7287ace7171c5ea495100bdf4a7a2b3a3"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "0625eefa41cd6736e499347f7de35918e561a7e8",
-    "content_sha256": "55160598c34228822eab6bbb1078f23a9a38f1367c9d621971c062f1adc467c5"
+    "revision": "1a34e033976b0007776170a413b11008427948d8",
+    "content_sha256": "ae2b7c7c41e6d5aad953148194c3ac0a741c00a5aee6b05d4bb598fb3c579fc7"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
@@ -253,6 +253,7 @@
    "runtime.discovered-catalog",
    "runtime.resource-contract",
    "resource-access.resource-contract",
+   "resource-access.action-families",
    "runtime.materialized-policy-view",
    "containment.narrowing",
    "cross-domain.origin-principal",
@@ -543,6 +544,29 @@
    "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
   },
   {
+   "id": "authzen.profiles.transaction-assurance-required-for-bound-classes",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "profiles-and-capabilities",
+   "text": "a PEP and a PDP MUST support this feature profile for those classes and the PDP MUST advertise its capability URN",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for a parameter-bound or high-consequence class, a PDP that does not advertise the Transaction Assurance URN is not relied on (the PEP fails closed), and a conforming pair carries `parameter_digest` and `use_limit: 1` under that URN"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 10). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+  },
+  {
    "id": "authzen.context-evaluation-binding.pep-supplies-digest-and-descriptor",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-evaluation-binding",
@@ -568,7 +592,7 @@
    "id": "authzen.context-evaluation-binding.pdp-validates-or-refuses-permit",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-evaluation-binding",
-   "text": "The PDP MUST validate their shape and applicability against the declared operation binding, and MUST NOT issue a covered permit when either is missing, malformed or incompatible with that declaration.",
+   "text": "The PDP MUST validate their shape and applicability against the declared operation binding, and MUST NOT issue a covered permit when either is missing, malformed or incompatible with that declaration; it refuses such a request before evaluation ({{failure-condition-coverage}})",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -579,12 +603,12 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PDP checks both inputs against the declared operation binding and issues no covered permit when either is missing, malformed, or incompatible with that declaration"
+    "normative": "the PDP checks both inputs against the declared operation binding and issues no covered permit when either is missing, malformed, or incompatible with that declaration, refusing the request before evaluation (`evaluation_context_invalid`)"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact. Re-quoted at #1629 (D744 ruling 3): the refusal before evaluation is new text."
   },
   {
    "id": "authzen.response-context.evaluation-context-digest-equals-request",
@@ -2624,12 +2648,32 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the candidate rendered for approval carries each catalog-sourced action's binding, resolved from the trusted catalog or configuration before the rendering"
+    "normative": "the candidate rendered for approval carries each catalog-sourced action's binding, resolved from the trusted catalog or configuration before the rendering",
+    "local": "The AS's Mission approval page and its expansion deferral page render the candidate bound from the trusted catalog, each catalog-sourced action with its binding; the render revision commits the bound set, and the Mission or successor commits exactly the bindings rendered. On the expansion page a retained action keeps the binding the predecessor's approval made."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > renders the complete candidate Authority Set for approval, and the Mission Record commits exactly the rendered set",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-identity",
@@ -2646,12 +2690,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering shows, per bound action, the tool or operation identity, and it agrees with the committed binding's tool_id and operation_ref"
+    "normative": "the approval rendering shows, per bound action, the tool or operation identity, and it agrees with the committed binding's tool_id and operation_ref",
+    "local": "The AS's Mission approval page and its expansion deferral page name, per bound action, the tool it invokes (operation_ref) and its tool_id, as the committed binding records them."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-what-each-action-authorizes",
@@ -2668,12 +2726,32 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering states, per bound action, what invoking it authorizes, in terms the Approver can act on, and the statement agrees with the committed binding"
+    "normative": "the approval rendering states, per bound action, what invoking it authorizes, in terms the Approver can act on, and the statement agrees with the committed binding",
+    "local": "The AS's Mission approval page and its expansion deferral page state what invoking each bound tool does in the tool's own description, read from the trusted catalog in the very definition the binding's source_digest commits, beside the entry's resource and constraints."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a tool's description renders as inert text, and the binding commits the definition shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-source-and-publisher",
@@ -2690,12 +2768,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering shows, per bound action, its source, and an established publisher, or that the publisher is unknown, or that a named publisher is the source's own claim"
+    "normative": "the approval rendering shows, per bound action, its source, and an established publisher, or that the publisher is unknown, or that a named publisher is the source's own claim",
+    "local": "The AS's Mission approval page and its expansion deferral page show each bound action's source (the trusted catalog's URI and the deployment's configured name for it) and state that the publisher is unknown, since this server establishes none."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-drift-refusal",
@@ -2712,12 +2804,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering tells the Approver, per bound action, that a later change to the capability's definition is refused"
+    "normative": "the approval rendering tells the Approver, per bound action, that a later change to the capability's definition is refused",
+    "local": "The AS's Mission approval page and its expansion deferral page tell the Approver, per bound action, that a later change to the tool's definition is refused."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.raw-metadata-insufficient",
@@ -2734,12 +2840,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a rendering that shows only a digest or URI for a bound action does not meet the disclosure; catalog-supplied text renders as inert content and the exact machine binding is retained"
+    "normative": "a rendering that shows only a digest or URI for a bound action does not meet the disclosure; catalog-supplied text renders as inert content and the exact machine binding is retained",
+    "local": "The AS's Mission approval page and its expansion deferral page pair each binding's machine values with the tool's own description, rendered as escaped, inert text, and the committed entry retains the exact machine binding."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a tool's description renders as inert text, and the binding commits the definition shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.revalidate-at-decision",
@@ -2756,12 +2876,32 @@
    "surface": "approval-ceremony",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a bound capability's definition or identity changed between rendering and decision, with unchanged action and tool names, creates no Mission from the old decision; a fresh approval over the re-rendered candidate commits the changed binding"
+    "normative": "a bound capability's definition or identity changed between rendering and decision, with unchanged action and tool names, creates no Mission from the old decision; a fresh approval over the re-rendered candidate commits the changed binding",
+    "local": "The decision binds the candidate again from the current catalog and compares it with the rendering's: a covered definition change with unchanged action and tool names asks for a fresh decision (approval_context_changed, or successor_hash on the expansion page), and the fresh approval commits the changed binding. On the expansion page a binding changed after the approval refuses the completion."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a covered definition change with unchanged action and tool names, between rendering and decision, creates nothing; a fresh decision commits the changed binding",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool between rendering and decision approves nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool after the approval refuses the completion; an edit to a retained action's tool changes nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.commit-consented-bindings",
@@ -2778,12 +2918,38 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the committed capability_sources equal the bindings of the consented candidate; a binding resolved from the current source for revalidation is committed only when it equals the approved one, and a different binding creates no Mission without fresh consent"
+    "normative": "the committed capability_sources equal the bindings of the consented candidate; a binding resolved from the current source for revalidation is committed only when it equals the approved one, and a different binding creates no Mission without fresh consent",
+    "local": "The AS's Mission approval page and its expansion deferral page commit exactly the bindings rendered: the decision compares the bound candidate with the rendering's, the commit records the prepared candidate that comparison admitted, and the expansion completion creates the successor only with the bound set the approval recorded."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a covered definition change with unchanged action and tool names, between rendering and decision, creates nothing; a fresh decision commits the changed binding",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool after the approval refuses the completion; an edit to a retained action's tool changes nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.unrelated-edit-not-a-change",
@@ -2800,12 +2966,32 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an edit elsewhere in the catalog between rendering and decision does not invalidate the decision when no catalog_digest was recorded and no other Changes Before the Decision input changed; it does when a catalog_digest was recorded, or when it changes another such input"
+    "normative": "an edit elsewhere in the catalog between rendering and decision does not invalidate the decision when no catalog_digest was recorded and no other Changes Before the Decision input changed; it does when a catalog_digest was recorded, or when it changes another such input",
+    "local": "An edit to another tool of the catalog leaves every binding, and so the decision, unchanged, and an edit to a retained action's tool leaves an expansion's binding as the predecessor's approval made it. This deployment records no catalog_digest, so the arm in which a recorded catalog_digest makes any edit a change is not exercised."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > an edit to another tool of the catalog is not a binding change: the decision approves, since no catalog_digest is recorded",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool after the approval refuses the completion; an edit to a retained action's tool changes nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a retained action's tool changed since the predecessor's approval is shown as kept, and the expansion still completes with the binding approved there",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "runtime.decision-inputs.capability-current-definition-at-invocation",
@@ -4135,6 +4321,374 @@
    "notes": "D585 (#1448): ruled A. Tests for a governed narrowing refresh, a widening refusal and the supported exchange paths are #1448's implementation work."
   },
   {
+   "id": "core.mission-claim-reservation.conforming-issuance-only",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-claim-reservation",
+   "text": "An AS MUST NOT issue an access token carrying the `mission` claim unless the token's issuance or derivation conforms to one",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an access token carries `mission` only where its path's issuance gating admitted it: a code under a grant bound to a suspended Mission is issued no token; and a token request whose grant resolves to no Mission (an ordinary authorization code and its refresh, client credentials in a test configuration) and the development mint route are issued an access token without the `mission` claim",
+    "local": "The reference attaches `mission` only in `extraTokenClaims`, after the Mission gate, and returns no claim where the grant resolves no Mission. The other Mission-binding paths' gating and subset rule are the Issuance Gating and Subset rows and each companion's."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a code under a grant bound to a suspended Mission keeps the Issuance Gating refusal (invalid_grant), never invalid_target, for a governed resource",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > authorization code: an ordinary code naming a governed resource is refused invalid_target, and one naming an ungoverned resource redeems to an ordinary token with no mission claim",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > refresh: an ordinary refresh naming a governed resource the refresh token carries is refused invalid_target, and the same refresh token redeems for an ungoverned resource",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > client credentials (test configuration): a governed resource is refused invalid_target, and an ungoverned one is issued a token with no mission claim",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > the development mint route never mints for a governed resource, and mints an ordinary token where its audience is not governed",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): attaching a claim on the no-Mission branch of extraTokenClaims failed the ordinary-token witnesses; skipping the save-time Mission gate failed the suspended-Mission witness."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-every-grant-type",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "Where a resource is Mission-governed, its AS MUST NOT issue a token for that resource outside a Mission, on any grant type",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request with no qualifying Mission binding whose audience is a Mission-governed resource is refused `invalid_target` on each grant type the reference serves an ordinary grant on (authorization code, refresh, and client credentials in a test configuration) and on the development mint route, while the same request for a resource that is not Mission-governed is issued an ordinary token without `mission`; a token exchange presenting an ordinary access token as its subject is refused by the exchange's own subject validation, so no exchange issues a token outside a Mission",
+    "local": "The gate runs in getResourceServerInfo on the token route (authorization code, refresh, device code and client credentials) and in rotateRefreshToken before consumption. The device authorization endpoint accepts only a Mission submission, so the device_code grant has no ordinary grant to witness. client_credentials is enabled only by the test-only build option `testClientCredentials`."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > authorization code: an ordinary code naming a governed resource is refused invalid_target, and one naming an ungoverned resource redeems to an ordinary token with no mission claim",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > client credentials (test configuration): a governed resource is refused invalid_target, and an ungoverned one is issued a token with no mission claim",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > refresh: an ordinary refresh naming a governed resource the refresh token carries is refused invalid_target, and the same refresh token redeems for an ungoverned resource",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > the development mint route never mints for a governed resource, and mints an ordinary token where its audience is not governed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > token exchange: an ordinary access token presented as the async-delegation exchange's subject token for a governed resource is refused by the exchange's subject validation, and no token is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the getResourceServerInfo gate failed the code and client credentials witnesses; removing the refresh pre-check failed the refresh witness (the refused refresh spent the rotating token); removing the dev route check failed the dev route witness."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-metadata-classifies",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "A resource is Mission-governed (a Mission-governed resource) when the deployment classifies it so, or when protected resource metadata the AS has authenticated ({{RFC9728}}) declares `mission_bound_authorization_required` as `true`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource the deployment does not classify, whose authenticated protected resource metadata declares `mission_bound_authorization_required` as `true`, is treated as Mission-governed: its token request with no qualifying Mission binding is refused `invalid_target`",
+    "local": "The reference's authenticated metadata is configured (`config/governed-resources.json`, `authenticated_metadata`); the AS fetches no RFC 9728 document."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "authenticated metadata classifies a resource, and neither source weakens the other (@spec mission#authority-proposal, #1531) > a resource the deployment does not classify, whose authenticated metadata declares mission_bound_authorization_required true, is refused like a classified one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): ignoring the metadata source failed the witness."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-metadata-cannot-weaken",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "Metadata that omits the member or sets it to `false` does not clear a deployment's classification, and a less restrictive local classification does not override metadata that declares the requirement",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment-classified resource whose metadata omits the member or sets it to `false` stays Mission-governed, and a resource whose authenticated metadata declares the requirement stays Mission-governed whatever its local classification",
+    "local": "The two sources are joined by OR (adapters/governed-resources.ts)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "authenticated metadata classifies a resource, and neither source weakens the other (@spec mission#authority-proposal, #1531) > a less restrictive local classification does not override metadata declaring the requirement",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "authenticated metadata classifies a resource, and neither source weakens the other (@spec mission#authority-proposal, #1531) > metadata setting the member false, or omitting it, does not clear the deployment's classification; false metadata on an unclassified resource leaves it ungoverned",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): letting a local classification decide where one exists failed the `not_governed` witness; letting a metadata record decide where one exists failed the `false` and omitted-member witnesses."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-invalid-target",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "The AS refuses a token request the first rule forbids with the `invalid_target` error code ({{Section 2 of RFC8707}}) once the request is otherwise processable",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the refusal is `invalid_target`; a request that also fails client authentication, syntax or grant validation gets that failure's error instead, an invalid or expired grant keeps its error, and a request under a grant bound to a Mission that is not `active` keeps the Issuance Gating refusal",
+    "local": "The gate runs only where oidc-provider has already authenticated the client, parsed the request and validated the grant, so those three precedence clauses are witnessed by ordering, with no reordering mutation available. A grant the AS recorded as Mission-bound passes the gate whatever its Mission's state."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > authorization code: an ordinary code naming a governed resource is refused invalid_target, and one naming an ungoverned resource redeems to an ordinary token with no mission claim",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > client credentials (test configuration): a governed resource is refused invalid_target, and an ungoverned one is issued a token with no mission claim",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a client authentication failure keeps invalid_client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a syntax failure keeps invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > an invalid or expired grant keeps invalid_grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a code under a grant bound to a suspended Mission keeps the Issuance Gating refusal (invalid_grant), never invalid_target, for a governed resource",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a refresh under a grant bound to a Mission is issued for a governed resource while the Mission is active, and once it is suspended keeps the Issuance Gating refusal (invalid_grant), never invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the gate failed the invalid_target witnesses; removing the Mission-binding guard turned the suspended-Mission code refusal into invalid_target; dropping the binding from the refresh pre-check refused the active Mission's refresh invalid_target. On a refresh the suspended Mission's refusal precedes the gate (preCheckRefreshMissionState runs first). The client-authentication, syntax and invalid-or-expired-grant clauses are ordering witnesses."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-default-audience",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "The rule applies to every audience the token would carry, including one the AS infers or applies by default when the request names no `resource`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request that names no `resource`, with no qualifying Mission binding, is refused `invalid_target` when the audience the AS infers or applies by default is Mission-governed: the resource an authorization code or a refresh token carries, and the AS's default resource (its issuer) on client credentials",
+    "local": "The reference's defaultResource is the issuer; the test configuration classifies it governed."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > an authorization code naming no resource, whose granted resource is governed, is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > a refresh naming no resource, whose refresh token carries a governed resource, is refused before the refresh token is consumed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > client credentials naming no resource is refused when the AS's default audience (its issuer) is governed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): gating only an explicit `resource` parameter failed the inferred-code witness; ignoring the refresh token's own resource failed the inferred-refresh witness."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-any-audience",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "the AS refuses the request if any of them is Mission-governed, and does not issue the token for the others",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request with no qualifying Mission binding naming a Mission-governed and a non-governed audience is refused whole; no token is issued for the non-governed audience",
+    "local": "oidc-provider issues one token for one resource at the token endpoint and itself refuses more than one resolved resource (lib/helpers/resolve_resource.js, lib/actions/grants/client_credentials.js), so no multi-audience token exists to narrow; the gate refuses first, with its own description, before the provider's single-resource check and, on a refresh, before consumption."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > a client credentials request naming an ungoverned and a governed resource is refused whole with the governed-resource refusal; no token is issued for the ungoverned one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > a refresh naming an ungoverned and a governed resource is refused whole before consumption, and the refresh token still redeems for the ungoverned one alone",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): checking only the first named audience failed the two-audience refresh witness."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-refresh-before-rotation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "On a refresh, the AS decides this refusal before it consumes or rotates the refresh token",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a refused refresh does not consume or rotate the refresh token: the same refresh token still redeems afterward for an audience that is not Mission-governed",
+    "local": "The witnesses use a public client, whose refresh token oidc-provider rotates on every refresh, so a refusal decided after consumption would spend it."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > refresh: an ordinary refresh naming a governed resource the refresh token carries is refused invalid_target, and the same refresh token redeems for an ungoverned resource",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > a refresh naming no resource, whose refresh token carries a governed resource, is refused before the refresh token is consumed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > a refresh naming an ungoverned and a governed resource is refused whole before consumption, and the refresh token still redeems for the ungoverned one alone",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the rotateRefreshToken pre-check (leaving the post-consumption gate) failed all three: the retry got invalid_grant."
+  },
+  {
    "id": "core.submission.proposal-checks-before-evidence",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-processing",
@@ -4797,10 +5351,11 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Authority Set committed on the Mission Record is the one approved, fixed atomically with the approval decision and not recomputed afterwards"
+    "normative": "the Authority Set committed on the Mission Record is the one approved, fixed atomically with the approval decision and not recomputed afterwards",
+    "local": "The rendering shows the candidate bound from the trusted catalog (#1447), the decision is bound to that rendering (#1446), and the record commits exactly the rendered entries, capability bindings included; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/submission-precedence.test.ts",
@@ -4821,7 +5376,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. Witnessed: the committed entries equal the rendered entries; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged while a fresh derivation differs. Partial because the record also carries the Capability Binding companion's capability_sources, which kernel.approve binds at the commit and the approval rendering does not show, so the committed set equals the approved one only in its derived members. Tracked by #1447 (when a source binding is fixed, and what the approval presents) and #1446 (a change between rendering and decision is committed without re-rendering)."
+   "notes": "D559 (#1411): ruled qualified A + C. Witnessed: the committed entries equal the rendered entries; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged while a fresh derivation differs. Partial because the record also carries the Capability Binding companion's capability_sources, which kernel.approve binds at the commit and the approval rendering does not show, so the committed set equals the approved one only in its derived members. Tracked by #1447 (when a source binding is fixed, and what the approval presents) and #1446 (a change between rendering and decision is committed without re-rendering). #1447 (D584): both named gaps are closed. The rendering shows the bound candidate, and the committed set equals the rendered one with its capability_sources, so every quoted clause is witnessed: fixed at creation (the render-equals-commit test, now without stripping bindings), atomically with the decision (the concurrent-decision test), and not recomputed afterwards (the policy-change test)."
   },
   {
    "id": "core.submission.size-bounds-evidence",
@@ -11721,7 +12276,7 @@
    "id": "core.rs-enforcement.mission-issuer-equals-iss",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rs-enforcement",
-   "text": "It MUST require `mission.issuer` to equal the token's `iss`, unless a cross-domain profile it has adopted ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) explicitly establishes the permitted relationship between the two",
+   "text": "It MUST require `mission.issuer` to equal the token's `iss`, unless a Mission-binding profile it has adopted ({{mission-claim-reservation}}), such as {{I-D.draft-mcguinness-oauth-mission-cross-domain}}, explicitly establishes the permitted relationship between the two",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -11734,7 +12289,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a resource server that has adopted no cross-domain profile refuses a JWT Mission-bound token whose `mission.issuer` is not exactly its `iss` and accepts one whose `mission.issuer` is; one that has adopted a cross-domain profile accepts a differing `mission.issuer` only in the relationship that profile establishes and refuses any other",
+    "normative": "a resource server that has adopted no Mission-binding profile establishing another relationship refuses a JWT Mission-bound token whose `mission.issuer` is not exactly its `iss` and accepts one whose `mission.issuer` is; one that has adopted such a profile (here Cross-Domain) accepts a differing `mission.issuer` only in the relationship that profile establishes and refuses any other",
     "local": "mcp-payments adopts no cross-domain profile: it compares the verified `iss` with `mission.issuer` as exact strings on the at+jwt path (HTTP, mediated and gateway validators) and on an attenuation root, before any Mission lookup or decision. mcp-saas is the Cross-Domain destination: `iss` is the Resource AS and `mission.issuer` must be one of its configured `trustedMissionIssuers`, the originating issuers that Resource AS trusts"
    },
    "level": "endpoint",
@@ -11783,7 +12338,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed without a cross-domain profile at mcp-payments: a foreign issuer and the trusted issuer spelled with a trailing slash are each refused on every validator, the HTTP request never reaches the PEP although the loader holds a Mission under the foreign issuer, an at+jwt naming its own issuer is admitted, and an attenuation root naming another issuer is refused while the same root naming its own verifies. Over the in-process MCP channel, the same mismatch is refused at validation with no PEP evidence, though the channel's id-only loader would serve the Mission (live OpenFGA). Witnessed under the Cross-Domain profile at mcp-saas: a Resource AS token whose originating issuer the resource does not trust is refused with no journal effect, and the same token posts at the resource that trusts it. Proved by mutation: removing the at+jwt equality check fails the four mcp-payments token tests, and the HTTP test's no-decision and no-evidence assertions each fail alone; removing the attenuation root check fails the attenuation test; removing the `trustedMissionIssuers` check fails the SaaS test, its no-effect assertion alone included."
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed without a cross-domain profile at mcp-payments: a foreign issuer and the trusted issuer spelled with a trailing slash are each refused on every validator, the HTTP request never reaches the PEP although the loader holds a Mission under the foreign issuer, an at+jwt naming its own issuer is admitted, and an attenuation root naming another issuer is refused while the same root naming its own verifies. Over the in-process MCP channel, the same mismatch is refused at validation with no PEP evidence, though the channel's id-only loader would serve the Mission (live OpenFGA). Witnessed under the Cross-Domain profile at mcp-saas: a Resource AS token whose originating issuer the resource does not trust is refused with no journal effect, and the same token posts at the resource that trusts it. Proved by mutation: removing the at+jwt equality check fails the four mcp-payments token tests, and the HTTP test's no-decision and no-evidence assertions each fail alone; removing the attenuation root check fails the attenuation test; removing the `trustedMissionIssuers` check fails the SaaS test, its no-effect assertion alone included. #1531 (D741): re-quoted when the exception widened from a cross-domain profile to any adopted Mission-binding profile; the witnesses are unchanged (no profile at mcp-payments, Cross-Domain at mcp-saas)."
   },
   {
    "id": "core.rs-enforcement.mission-issuer-invalid-token",
@@ -11987,6 +12542,82 @@
     }
    ],
    "notes": "#825 acceptance item 7 (D402): introspection and the resource read the Mission access-token profile with one reader, readMissionAccessProfile in @mission/core (the typed claim set and its clock bounds, the `mission` claim's members, the authority through parseCredentialAuthority, a present `act` through the Actor Profile's validateActChain (#904, D428), and `cnf` structure through parseConfirmation), and run one negative-vector list, @mission/core/test-vectors. Each adds only its own rule: the resource requires the DPoP key it proves possession of; introspection requires `cnf` where the token's profile requires sender constraint and never proves possession, as Composite Active State says. The authority read only gates; the projection still reads the raw entries, delegation and capability bindings included. Sender constraint is required where a draft requires it of the issued token: a delegated token (the OAuth binding's Delegation section), a Child Mission's token (child-delegation, Attenuation Rules) and a dispatched template instance's token (the Template's Dispatch request and response, and its Dispatch Handoff), identified by the record's template basis. The Child Mission case stubs the kernel read; the dispatch case re-signs a real dispatched token. #250: a delegated token minted before a restart, whose issuance record the restart lost, is correctly signed under the key ring and introspects bare inactive while its Mission is active, where it introspected active before the restart. Proven by disabling the code it covers: reading a missing issuance record as the Mission's approval grant answers it active."
+  },
+  {
+   "id": "core.introspection.mission-member-conforming-path-only",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspection",
+   "text": "The AS discloses a `mission` member only for a token it has established was issued on a path that conforms to {{mission-claim-reservation}}",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspection"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a correctly signed token the AS has not established was issued on a conforming path (in the reference, one with no issuance record) introspects as the bare `{active: false}` with no `mission` member, including when its Mission is suspended or terminated",
+    "local": "The reference establishes a conforming path by its own issuance record, checked before the non-active branch; grant liveness stays after it."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > @spec mission#introspection (#1531, D741): a correctly signed token with no issuance record is bare active:false whatever its Mission's state, while the token the AS issued on its own path still reports the Mission's state",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "strict token resolution: bare active:false, no Mission or token detail > a correctly signed token whose jti has no issuance record is never returned active",
+     "level": "endpoint",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): restoring the issuance-record check after the non-active branch failed the suspended and terminated witnesses."
+  },
+  {
+   "id": "core.introspection.composite-otherwise-valid-conforming-path",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "composite-active",
+   "text": "An otherwise valid token is one that passes those checks and that the AS has established was issued on a conforming path",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspection"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an otherwise valid token issued on a conforming path whose Mission is `terminated` still introspects `active: false` with `mission.state` and `mission.termination`",
+    "local": "The issuance-record check precedes the non-active branch; the grant-liveness check stays after it, so a terminated Mission whose grant was destroyed still reports its state."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > @spec mission#introspection (#1531, D741): a correctly signed token with no issuance record is bare active:false whatever its Mission's state, while the token the AS issued on its own path still reports the Mission's state",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details",
+     "level": "endpoint",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): moving the grant-liveness check before the non-active branch failed the witness whose terminated Mission's grant is destroyed."
   },
   {
    "id": "core.introspection.active-response-carries-mission",
@@ -12614,9 +13245,15 @@
      "name": "who presents which proof (@spec mission#designation, mission#delegation) > a client the designation does not name cannot redeem it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/subject-credential-class.test.ts",
+     "name": "a subject_token is a Mission access token: the AS's access-token key and the at+jwt type (@spec #831 role binding) > the delegated exchange (a designation redeemed) > refuses a transaction token presented as the subject_token, as another credential class",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers: accepting any accounted token as a designation fails both witnesses. #250: by the owner's review of #1488, the restart witness's refused redemption is not cited here. It presents a designation this AS issued to the client it names, so it shows the deployment's per-boot restart policy, not this row's refusal of another token kind or recipient; the restart inventory in src/docs/control-plane-deployment.md records it."
+   "notes": "#869 (D449): proven by disabling the code it covers: accepting any accounted token as a designation fails both witnesses. #250: by the owner's review of #1488, the restart witness's refused redemption is not cited here. It presents a designation this AS issued to the client it names, so it shows the deployment's per-boot restart policy, not this row's refusal of another token kind or recipient; the restart inventory in src/docs/control-plane-deployment.md records it. #831 A: a transaction token this AS signed under another role's key is refused invalid_request with no token issued, at the credential-class check (the access-token key alone and typ at+jwt); disabling both the key-role and token-type checks makes it pass that check."
   },
   {
    "id": "core.delegation.redemption-evaluated-afresh",
@@ -13266,7 +13903,7 @@
     "normative": "introspecting a designation returns active: false with no mission member, to every caller"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
@@ -13276,12 +13913,18 @@
     },
     {
      "file": "src/services/authorization-server/test/delegation-accounting-restart.test.ts",
-     "name": "delegation accounting across a restart on the same kernel file and key ring (@spec mission#delegation-constraints, #869, #250) > keeps a designation minted before the restart bare inactive, with no Mission data, once its Mission is not active, to a resource server it is not an audience of: audience separation",
+     "name": "delegation accounting across a restart on the same kernel file and key ring (@spec mission#delegation-constraints, #869, #250) > keeps a designation minted before the restart bare inactive, with no Mission data, once its Mission is not active, to a resource server it is not an audience of; the origin token minted before the restart, which that resource server is an audience of, has no issuance record and is bare inactive too (#1531, D741)",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-accounting-restart.test.ts",
+     "name": "delegation accounting across a restart on the same kernel file and key ring (@spec mission#delegation-constraints, #869, #250) > a caller that accepts the designated client's identifier is answered bare inactive for a designation minted before the restart, whose issuance record is gone, once its Mission is not active (#1531, D741)",
      "level": "endpoint",
      "surface": "introspection"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers: without the check, a resource server that starts accepting the designated client's identifier during the designation's life is told it is active. Partial (#250): the designation check reads the token issuance index, which is per boot, so it does not survive a restart. On the file-backed kernel with a key ring, a designation minted before the restart stays bare inactive to a resource server it is not an audience of, through the missing issuance record while its Mission is active and through caller visibility (audience separation) once it is not; disabling the caller-visibility check fails that witness. Not met across a restart: once the Mission is not active, a caller that accepts the designated client's identifier, which audience separation forbids, receives the Mission member (delegation-accounting-restart.test.ts, the residual test, pinned; before the restart the same request answers bare inactive). Keeping the accounting with the provider's tokens, or a designation marker the AS can read from the token itself, would close it."
+   "notes": "#869 (D449): proven by disabling the code it covers: without the check, a resource server that starts accepting the designated client's identifier during the designation's life is told it is active. Across a restart (#250) the designation check's record, the per-boot token issuance index, is gone; the introspection issuance-record check (#1531, D741), which precedes the non-active branch, answers instead: on the file-backed kernel with a key ring, a designation minted before the restart is bare inactive once its Mission is not active, to a resource server it is not an audience of and to a caller that accepts the designated client's identifier. Proved by restoring the issuance-record check after the non-active branch: the second restart witness then received the Mission member, the residual this row was partial for until #1531."
   },
   {
    "id": "core.introspection.opaque-requires-introspection",
@@ -30544,28 +31187,6 @@
    "notes": "The configured remote client bounds the complete response and `channelDeadlineMs` caps the configured deadline at the class budget, so a call for a class with a tighter declared window cannot wait out the configured timeout. Timeout, transport failure and any non-2xx status reach the PEP as pdp_unreachable. Partial: this is the remote path, not a timeout wrapper for arbitrary co-resident decision functions."
   },
   {
-   "id": "authzen.transport.no-double-charge-on-retry",
-   "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "transport-behavior",
-   "text": "metering MUST NOT charge the bound twice for the retried request",
-   "role": "PDP",
-   "strength": "MUST NOT",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "runtime-enforced"
-   ],
-   "surface": "decision-request",
-   "assertion": "no-side-effect",
-   "observation": {
-    "normative": "a PEP retry of a lost-response evaluation, carrying the same normalized parameters and idempotency key, never causes a metered bound to be charged twice"
-   },
-   "level": "concurrency",
-   "coverage": "todo",
-   "tests": []
-  },
-  {
    "id": "authzen.transport.no-retry-before-retry-after",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "transport-behavior",
@@ -31510,7 +32131,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "ARAP is pinned in notes/external-pins.json (id ARAP, openid/authzen #515, commit 7327cb1bcea8cfc223e7b6816535f60149845468, status established); the reference implementation is verified against that commit."
+   "notes": "ARAP is pinned in notes/external-pins.json (id ARAP, published Draft 1, commit 6d5380cb4b48e8f613ef3a09c48d9fe71179599f, pin ARAP@54e9de06a870; re-pinned at #1629 from 7327cb1bcea8cfc223e7b6816535f60149845468). The reference implementation was verified against 7327cb1; the `approval` object's members (`id`, `approved_at`, `approved_until`, `state`) are unchanged in Draft 1, so the witness still applies."
   },
   {
    "id": "authzen.context-approval.mission-checks-beyond-arap",
@@ -31695,7 +32316,7 @@
    "id": "authzen.context-history.no-caller-asserted-outcome",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-history",
-   "text": "A caller-supplied `mission_history` value is never itself evidence of a predicate's outcome, and carries no result member; the PDP MUST NOT accept a predicate outcome asserted through any context member.",
+   "text": "A caller-supplied `context.mission_history` value is never itself evidence of a predicate's outcome, and carries no result member; the PDP MUST NOT accept a predicate outcome asserted through any context member.",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -31708,11 +32329,36 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PDP never accepts a caller-asserted predicate outcome; mission_history only supplies facts the PDP itself evaluates against the policy-selected predicate"
+    "normative": "the PDP never accepts a caller-asserted predicate outcome; `context.mission_history` only supplies facts the PDP itself evaluates against the policy-selected predicate"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Re-quoted at #1629 (D744 ruling 7): the request object is named by its full path."
+  },
+  {
+   "id": "authzen.evidence.mission-history-computed",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "evidence",
+   "text": "`mission_history` records the predicates the PDP evaluated and their outcomes ({{context-history}}); the PDP computes it, never copying it from `context.mission_history`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Decision Evidence `mission_history` holds the PDP's own evaluated predicates and outcomes, and differs from a supplied `context.mission_history` when that input asserts anything else"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 7). todo: no reference witness yet; existing coverage does not transfer to the changed text."
   },
   {
    "id": "authzen.context-history.unrecognized-predicate-refusal",
@@ -31833,7 +32479,7 @@
    "id": "authzen.runtime-denial-classification.stale-state-marked-transient",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "runtime-denial-classification",
-   "text": "While the condition is expected to clear on a fresh read, the PDP SHOULD mark the denial transient with `next_action: retry`",
+   "text": "Where a fresh read or reconciliation is expected to resolve the condition, the PDP SHOULD mark the denial transient with `next_action: retry`",
    "role": "PDP",
    "strength": "SHOULD",
    "applicability": {
@@ -31845,11 +32491,199 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a stale_state denial is marked transient with next_action: retry, since a fresh state read is expected to clear it"
+    "normative": "a `stale_state` denial is marked transient with `next_action: retry` only where a fresh read or reconciliation is expected to resolve the condition, and otherwise carries no retry recommendation"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-stale-state.test.ts",
+     "name": "stale_state is marked transient only where a fresh read or reconciliation is expected to resolve it (@spec authzen#runtime-denial-classification, #1629) > over the remote channel, each cause denies stale_state, transient exactly where a fresh read clears it, and a known non-active Mission denies mission_inactive",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-stale-state.test.ts",
+     "name": "stale_state is marked transient only where a fresh read or reconciliation is expected to resolve it (@spec authzen#runtime-denial-classification, #1629) > each cause of stale_state a fresh read or reconciliation clears carries next_action retry",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-stale-state.test.ts",
+     "name": "stale_state is marked transient only where a fresh read or reconciliation is expected to resolve it (@spec authzen#runtime-denial-classification, #1629) > a stale_state denial re-sending cannot clear carries no retry recommendation",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-stale-state.test.ts",
+     "name": "stale_state is marked transient only where a fresh read or reconciliation is expected to resolve it (@spec authzen#runtime-denial-classification, #1629) > a Mission the PDP knows is not active is mission_inactive, never a transient stale_state",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Re-quoted at #1629 (D744 ruling 3). The PDP marks stale_state next_action: retry for a freshness-bound violation (an observation or own read past the class bound, a passed own-read fresh_until, a reported valid-through already reached), for no own read under pdp placement, and for an observation version behind the PDP's; it carries no next_action for a malformed or future-dated observation, a version ahead of the PDP's, a missing observation the pep placement requires, or no declared placement; a known non-active Mission is mission_inactive with no next_action. Witnessed in process and over the remote channel (endpoint). The classification of each cause is the reference's reading of 'expected to resolve'. Mutations: never marking transient, always marking transient, marking every version mismatch transient, and reclassifying each transient site (window age, no own read, own-read ceiling, state_view deadline) as non-transient each fail the in-process and remote witnesses; denying a non-active Mission as transient stale_state fails the mission_inactive witness."
+  },
+  {
+   "id": "authzen.context-action-phase.pdp-refuses-invalid-or-missing-phase",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-action-phase",
+   "text": "The PDP MUST refuse, before evaluation, a request whose `action_phase` is outside this set, or is absent where its trusted operation declaration requires a phase",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request with an `action_phase` outside the closed set, or with none where the trusted operation declaration requires one, is refused before evaluation (`phase_invalid`), never evaluated into a permit or a policy denial"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-action-phase.test.ts",
+     "name": "the PDP refuses an unusable action phase before evaluation (@spec authzen#context-action-phase, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #1629) > the remote PDP refuses an out-of-set phase, and a missing phase its declaration requires, before evaluation as phase_invalid, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-phase.test.ts",
+     "name": "the PDP refuses an unusable action phase before evaluation (@spec authzen#context-action-phase, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #1629) > refuses an action_phase outside the closed set before evaluation as phase_invalid: no decision, no Decision Evidence, no FGA check and no Resource policy query",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-phase.test.ts",
+     "name": "the PDP refuses an unusable action phase before evaluation (@spec authzen#context-action-phase, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #1629) > refuses a request with no action_phase for an action the trusted operation declaration places at phases, and never infers a phase for it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-phase.test.ts",
+     "name": "the PDP refuses an unusable action phase before evaluation (@spec authzen#context-action-phase, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #1629) > a decision point applies its own phase declaration, and a caller's options cannot replace or remove it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "compound-action phase carriers on the decision (@spec authzen#context-action-phase, response-context) > refuses a context.action_phase outside the closed set before evaluation as phase_invalid, never echoing it (#1629)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1629 (D744 ruling 3). The PDP checks action_phase in evaluate(), after the operation target: an out-of-set value (unknown, case, padding, empty, null, number, array, object) and a missing phase for an action its trusted operation declaration places at phases are refused before evaluation as phase_invalid, with no decision, no Decision Evidence, no FGA check and no Resource policy query, in process and over the remote channel. The trusted declaration is the PDP-side phasedActions binding (EvaluateOptions, the decision point and the remote server), stripped from a caller's options. The shipped demo stack binds no phasedActions, so its PDP declares no phased action and refuses only an out-of-set phase; binding the catalog's compound actions there is a deployment follow-up. Mutations: not refusing an out-of-set phase fails the out-of-set, signed-record, remote and evaluate-decision witnesses; ignoring the declaration fails the missing-phase, signed-record, decision-point and remote witnesses; keeping a caller's declaration at the decision point fails the decision-point witness; the remote server not applying its own declaration fails the remote witness."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.unusable-inputs-not-denials",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "They describe decision inputs the PDP cannot use, not an evaluated policy denial, and a PDP claiming only the Decision Base records them in its own internal form",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`phase_invalid` and `evaluation_context_invalid` refusals are pre-evaluation records, never a `decision` with a `denial_reason`; a Decision-Base-only PDP keeps them in its internal form"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-action-phase.test.ts",
+     "name": "the PDP refuses an unusable action phase before evaluation (@spec authzen#context-action-phase, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #1629) > the remote PDP refuses an out-of-set phase, and a missing phase its declaration requires, before evaluation as phase_invalid, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-phase.test.ts",
+     "name": "the PDP refuses an unusable action phase before evaluation (@spec authzen#context-action-phase, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #1629) > refuses an action_phase outside the closed set before evaluation as phase_invalid: no decision, no Decision Evidence, no FGA check and no Resource policy query",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1629 (D744 ruling 3). partial: the phase_invalid half is witnessed: the refusal is a pre-evaluation Refusal Record, never a decision with a denial_reason (no Decision Evidence, no evaluation_id, the remote channel answers a refusal, not a signed decision). evaluation_context_invalid has no reference surface (Evaluation-Context Binding at the PDP, #773, is unclaimed), and the Decision-Base-only clause (internal form) has none either: the reference PDP signs the portable Refusal Record. Mutation: not refusing an out-of-set phase fails both witnesses."
+  },
+  {
+   "id": "authzen.runtime-denial-classification.stale-state-scope",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "runtime-denial-classification",
+   "text": "`stale_state`: the Mission state the decision relies on is not current: the PEP-supplied freshness is outside the deployment's staleness bound (a freshness-bound violation), the PDP cannot establish the state it is required to establish, or the request's state version differs from the PDP's",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a freshness-bound violation, state the PDP cannot establish where state establishment is placed with it, and a state-version mismatch each deny `stale_state`, while a Mission the PDP knows is not `active` denies `mission_inactive`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-stale-state.test.ts",
+     "name": "stale_state is marked transient only where a fresh read or reconciliation is expected to resolve it (@spec authzen#runtime-denial-classification, #1629) > over the remote channel, each cause denies stale_state, transient exactly where a fresh read clears it, and a known non-active Mission denies mission_inactive",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PDP placement the observation is absent and the PDP establishes state from its own read > with no read of its own, a stale one or a malformed one, the PDP denies stale_state",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > every high-consequence action_class with context.mission_state_observation present but stale -> deny stale_state (the pre-existing arm, unchanged)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-own-read.test.ts",
+     "name": "the own read's signed fresh_until under pdp placement (@spec runtime#state-freshness) > establishes no state from a read whose signed fresh_until has passed or does not parse: stale_state, before the authority match",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > under PDP placement the observation is absent and the PDP establishes state from its own read > with no read of its own, denies stale_state below the high-consequence floor too: a consequential write and a read",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > an observation version the PDP does not track is staleness (@spec authzen#pdp-request rule 4) > an observation version other than the PDP's tracked Mission state version denies stale_state",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own revoked view against a PEP-supplied active state denies mission_inactive: the PDP's view wins",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own active view against a PEP-supplied revoked state denies mission_inactive",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1629 (D744 ruling 3). The remote PDP denies stale_state for each cause over the authenticated decision channel: a PEP observation or own read aged past the class bound, an own read whose signed fresh_until has passed or a reported valid-through already reached (freshness-bound violations), no own read under pdp placement (state the PDP must establish and cannot), and an observation version behind or ahead of the PDP's tracked version; a suspended view and a PEP-supplied terminated state deny mission_inactive (endpoint). The in-process witnesses take one clause each: freshness (the stale own read; the stale high-consequence observation; the passed signed fresh_until), not establishable (no own read below the high-consequence floor), version mismatch, and mission_inactive on both sides of a disagreement. Mutations: dropping the freshness window check together with the permit deadline's state_view ceiling fails the stale-read, stale-observation and remote witnesses (the window check alone is masked by the deadline, which also denies stale_state); dropping the pdp-placement no-read check fails the below-floor and remote witnesses; dropping the own-read ceiling check fails the own-read and remote witnesses; denying a version mismatch view_inconsistent fails the version and remote witnesses; denying a non-active Mission stale_state fails the three mission_inactive witnesses and the remote one."
   },
   {
    "id": "authzen.runtime-denial-classification.terminal-refusal-carries-next-action-none",
@@ -32411,7 +33245,7 @@
    "id": "authzen.obligations.permit-fulfillment-and-denial-execution",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "obligations",
-   "text": "on a permit the PEP MUST fulfill each obligation before releasing the action's effect; on a denial the PEP MUST still deny the action and MUST additionally execute every returned obligation. Failure to fulfill an obligation, or an unrecognized obligation type, makes the effective result deny.",
+   "text": "on a permit the PEP MUST fulfill each obligation before releasing the action's effect; on a denial the PEP MUST still deny the action and MUST additionally execute every returned obligation.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -32423,11 +33257,108 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PEP fulfills every attached obligation before releasing a permitted action's effect and treats an unfulfilled or unrecognized one as an effective deny; on a denial the PEP still denies and additionally executes every returned obligation"
+    "normative": "the PEP fulfills every attached obligation before releasing a permitted action's effect; on a denial the PEP still denies and additionally executes every returned obligation"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "an obligation the PEP does not recognize or cannot fulfill is an effective deny at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1629) > a denial carrying obligations is still a denial over HTTP with DPoP: nothing is scheduled",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "an obligation the PEP does not recognize or cannot fulfill is an effective deny at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1629) > a permit carrying an unrecognized or unfulfillable obligation releases no protected effect over HTTP with DPoP: the write is refused unfulfillable_obligation, nothing is scheduled, and the permit's disposition is suppressed obligation_unfulfilled; the same permit with no obligation schedules",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Re-quoted at #1629 (D744 ruling 8): the effective-deny clause is its own row, authzen.obligation-processing.effective-deny. partial: 'on a denial the PEP MUST still deny' is witnessed (a denial carrying an obligation stays out_of_authority with no effect and no Execution Evidence, over HTTP with DPoP), and no effect is released while an attached obligation is unfulfilled. Fulfilling an obligation before release and executing a denial's obligations have no witness: the payments PEP implements no obligation type. Mutations: letting a denial carrying obligations take the permit path fails the denial witness; skipping the obligation check fails the permit witness."
+  },
+  {
+   "id": "authzen.obligation-processing.pdp-publishes-supported-obligations",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "obligation-processing",
+   "text": "A PDP claiming the Obligations feature profile ({{profiles-and-capabilities}}) MUST publish in its metadata `supported_obligations` array each obligation type it supports",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.obligations"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PDP that advertises the Obligations feature profile publishes `supported_obligations` in its metadata, listing every obligation type it can attach, the step-up obligation included"
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#1629 (D744 ruling 1). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+  },
+  {
+   "id": "authzen.obligation-processing.pep-omission-unknown-capability",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "obligation-processing",
+   "text": "A PEP that omits the declaration has an unknown capability, not support for no obligation type, and the omission never relaxes obligation processing",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a request without `supported_obligations` is not read as supporting no obligation type: the PDP still attaches the obligations policy requires, and the PEP's fail-closed processing is unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 1). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+  },
+  {
+   "id": "authzen.obligation-processing.effective-deny",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "obligation-processing",
+   "text": "The PEP MUST treat an obligation it does not recognize, or cannot fulfill, as an effective deny and MUST release no protected effect; it still executes every obligation it understands and can perform, as on any denial.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a permit carrying an obligation the PEP does not recognize or cannot fulfill releases no effect, and the PEP still executes the other obligations it understands and can perform"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "an obligation the PEP does not recognize or cannot fulfill is an effective deny at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1629) > a permit carrying an unrecognized or unfulfillable obligation releases no protected effect over HTTP with DPoP: the write is refused unfulfillable_obligation, nothing is scheduled, and the permit's disposition is suppressed obligation_unfulfilled; the same permit with no obligation schedules",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1629 (D744 ruling 8). partial: the effective-deny clause is witnessed: a permit carrying an obligation type the PEP does not recognize, a step-up obligation it cannot perform, or both, is refused unfulfillable_obligation over HTTP with DPoP with no protected effect (nothing scheduled, no reservation, no consumed permit) and a suppressed obligation_unfulfilled Execution Evidence record; the same permit with no obligation schedules. The 'still executes every obligation it understands and can perform' clause has no witness: the payments PEP implements no obligation type, so every obligation is unfulfillable. Mutation: skipping the PEP's obligation check fails both witnesses."
   },
   {
    "id": "authzen.obligations.no-authority-and-no-remediation-content",
@@ -32944,6 +33875,48 @@
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed at the PDP's projections (operation identity, authorization binding, cache key) and its idempotency claim, not at a PEP-side projection; the payments PEP keeps no permit cache of its own. Mutations M7 and M8 fail P9 and C1. #1276 argument-derived contracts: two payments PEP requests for the same invoice under contracts deriving different targets carry the same audience, action and type/id, and differ in operation_target, parameter_digest, operation identity and cache key (computed with the PDP's projections). Still no PEP-side permit cache, so the row stays partial. Mutation: binding the service identifier rather than the target into the effective parameters fails that witness."
   },
   {
+   "id": "metering.retry.no-double-consumption",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "retry",
+   "text": "A retry of the same normalized action under the same idempotency key or single-use decision identifier MUST NOT consume the bound twice.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a retry of the same normalized action under the same idempotency key or single-use decision identifier consumes a metered bound once"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a retry under the same idempotency key draws the metered reservation once (@spec metering#retry, #1629) > a retransmitted keyed request returns the same permit and concurrent duplicates are suppressed: one activity is opened, leased by one permit",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal carries its own idempotency key, claimed with the renewal's identity (@spec metering#lease-renewal, runtime#idempotency, #1464) > a retransmitted renewal returns the same permit and concurrent duplicates are suppressed: the lease is extended once",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal's claim settles when the PDP commits the lease extension (@spec metering#lease-renewal, runtime#idempotency, #1464) > the renewal's claim settles completed with no Execution Evidence, never ages to unresolved or indeterminate, raises no operator alert, and its retransmission returns the same permit without extending the lease again",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1629 (D744 ruling 5): the AuthZEN profile's copy (authzen.transport.no-double-charge-on-retry) is removed in favor of this home. partial: the reference's one metered bound is the duration-lease reservation (#1440). A keyed request retried under the same idempotency key, sequentially or concurrently, opens one activity leased by one permit, and a keyed renewal retried under its key extends the lease once, settled or not (decision point with a real Exact claim domain, in process). Not witnessed: the single-use decision identifier half, any accumulated bound (max_duration accumulation, max_budget and counters are not built, D606), and a retry over the remote channel. Mutations: committing the lease on a retransmission fails all three witnesses; committing it on a suppressed duplicate fails the first two."
+  },
+  {
    "id": "metering.lease-renewal.continuity-with-renewed-evaluation",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "lease-renewal",
@@ -33425,7 +34398,7 @@
    "id": "authzen.decision-id-propagation.signature-must-cover-header",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "decision-id-propagation",
-   "text": "where the deployment signs resource requests the signature MUST cover it.",
+   "text": "Where the deployment signs resource requests, the signature MUST cover the field.",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -33441,7 +34414,31 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Re-quoted at #1629 (D744 ruling 11)."
+  },
+  {
+   "id": "authzen.decision-id-propagation.tls-on-resource-hop",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "decision-id-propagation",
+   "text": "A PEP that propagates the field MUST send the resource request carrying it over TLS 1.2 or later",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a resource request carrying `Mission-Decision` is sent only over TLS 1.2 or later; the PEP does not send the field on a cleartext hop"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 11). todo: no reference witness yet; existing coverage does not transfer to the changed text."
   },
   {
    "id": "authzen.decision-id-propagation.no-treat-as-permit",
@@ -33583,7 +34580,7 @@
    "id": "authzen.conformance.pep-checklist-runtime-evidence",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "conformance",
-   "text": "A PEP additionally claiming the Runtime Evidence profile ({{profiles-and-capabilities}}) MUST emit a Refusal Record ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for a pre-decision refusal, and, for the classes the runtime profile's transaction-assurance tier covers, an Execution Evidence Object for the final disposition of every consequential permit",
+   "text": "A PEP additionally claiming the Runtime Evidence profile ({{profiles-and-capabilities}}) MUST emit a Refusal Record ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for a pre-decision refusal, and an Execution Evidence Object for the final disposition of every consequential permit",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -33594,11 +34591,31 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a PEP claiming the Runtime Evidence profile emits a Refusal Record for every pre-decision refusal and, for transaction-assurance-tier classes, an Execution Evidence Object for the final disposition of every consequential permit; a PEP claiming only the Decision Base is not required to (#703, closing the unconditional-adoption-gate defect #703 identified)"
+    "normative": "a PEP claiming the Runtime Evidence profile emits a Refusal Record for every pre-decision refusal and an Execution Evidence Object for the final disposition of every consequential permit, whatever its class; a PEP claiming only the Decision Base is not required to (#703)"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a compound-action phase the PEP cannot establish is refused phase_unavailable at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1629) > refuses hold_transfer whose Operation Profile entry places no phase, or one outside the closed set, over HTTP with DPoP: no PDP request, no policy query, no Decision Evidence, no effect and one verifiable signed phase_unavailable refusal; the shipped entry reaches the PDP at prepare and permits",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "an obligation the PEP does not recognize or cannot fulfill is an effective deny at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1629) > a permit carrying an unrecognized or unfulfillable obligation releases no protected effect over HTTP with DPoP: the write is refused unfulfillable_obligation, nothing is scheduled, and the permit's disposition is suppressed obligation_unfulfilled; the same permit with no obligation schedules",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > keys the operation on the phase where two tools share an action identifier",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Re-quoted at #1629 (D744 ruling 2): the transaction-assurance-class restriction is removed, an expansion, so earlier coverage does not transfer. partial: a pre-decision refusal emits a signed Refusal Record (phase_unavailable, endpoint); a suppressed consequential write (schedule_payment) emits Execution Evidence (endpoint); a completed irreversible commit (execute_wire_transfer) emits completed Execution Evidence (unit). Gap: a completed consequential read (callReadTool) and a completed reversible consequential write (callWriteTool and callKeyedReversibleWrite) release the effect with no Execution Evidence, so 'every consequential permit' is not met by the reference PEP. Mutations: skipping the phase check fails the refusal witness; skipping the obligation check fails the suppression witness; failing the completed record's emission fails the completion witness."
   },
   {
    "id": "authzen.conformance.pdp-checklist",
@@ -33640,28 +34657,6 @@
     "normative": "a PDP claiming the Runtime Evidence profile emits the runtime evidence companion's records, including a Refusal Record, for every decision and pre-evaluation refusal; a PDP claiming only the Decision Base records decisions and refusals in its own internal form (#703, closing the unconditional-adoption-gate defect #703 identified)"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
-  },
-  {
-   "id": "authzen.conformance.pdp-should-advertise-supported-obligations",
-   "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "conformance",
-   "text": "A PDP conforming to this profile SHOULD advertise in its metadata `supported_obligations` array each obligation type it supports",
-   "role": "PDP",
-   "strength": "SHOULD",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "runtime-enforced"
-   ],
-   "surface": "decision-request",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a conforming PDP advertises each obligation type it supports in its metadata supported_obligations array"
-   },
-   "level": "unit",
    "coverage": "todo",
    "tests": []
   },
@@ -36633,7 +37628,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, resource_contract_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing, operation_target_invalid), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
+    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, resource_contract_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable, phase_unavailable; PDP-side: mission_context_missing, operation_target_invalid, phase_invalid), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
    "coverage": "partial",
@@ -36759,7 +37754,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it; #1329, D496: a Mission-bound schedule_payment whose Mission the loader does not hold is refused at the HTTP endpoint with DPoP with one verifiable signed Refusal Record carrying that value, no decision request, no Resource-policy query and no business effect, while the same write under the held Mission schedules; treating the unknown Mission as an empty active view lets the request reach the PDP, and a different refusal reason, each fails the witness), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). target_unresolvable (the unknown_vendor diagnostic, #1251, D484): a lookup_vendor naming a vendor the store does not hold is refused with one verifiable signed Refusal Record carrying that value, no decision request and no Resource-policy query, under an unconstrained credential and under one that names the vendor, at the PEP over both decision channels and over the HTTP endpoint with DPoP; with D324's server fallback restored, the unconstrained lookup reaches the PDP and the named one signs credential_authority_insufficient, and each assertion fails. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither #1276 clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it; #1329, D496: a Mission-bound schedule_payment whose Mission the loader does not hold is refused at the HTTP endpoint with DPoP with one verifiable signed Refusal Record carrying that value, no decision request, no Resource-policy query and no business effect, while the same write under the held Mission schedules; treating the unknown Mission as an empty active view lets the request reach the PDP, and a different refusal reason, each fails the witness), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). target_unresolvable (the unknown_vendor diagnostic, #1251, D484): a lookup_vendor naming a vendor the store does not hold is refused with one verifiable signed Refusal Record carrying that value, no decision request and no Resource-policy query, under an unconstrained credential and under one that names the vendor, at the PEP over both decision channels and over the HTTP endpoint with DPoP; with D324's server fallback restored, the unconstrained lookup reaches the PDP and the named one signs credential_authority_insufficient, and each assertion fails. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither #1276 clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet. #1629: the closed sets gain phase_unavailable (PEP) and phase_invalid (PDP); the refusal-denial-reason closed-set tests assert both. evaluation_context_invalid has no reference surface (#773) and is not listed as witnessed."
   },
   {
    "id": "evidence.refusal.resource-contract-unresolvable",
@@ -36849,6 +37844,120 @@
     }
    ],
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. The reference evidence store's PDP closed set holds only mission_context_missing. #1276 implementation (D457, payments-runtime-profile-v6). The PDP signs a pdp-role Refusal Record operation_target_invalid over the request as submitted (P6); the PEP-side store refuses to sign that value (R1). Mutation M19 fails P5 and P6. #1296 review: a syntactically malformed target (RFC 3986 absolute-URI) is recorded operation_target_invalid in process and over the remote channel."
+  },
+  {
+   "id": "evidence.refusal.pep-phase-unavailable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "`phase_unavailable` (the operation is a phase of a compound action and the PEP cannot establish the phase before requesting a decision)",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP that cannot establish a compound action's phase before requesting a decision records a Refusal Record with denial_reason `phase_unavailable` and requests no decision"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a compound-action phase the PEP cannot establish is refused phase_unavailable at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1629) > refuses hold_transfer whose Operation Profile entry places no phase, or one outside the closed set, over HTTP with DPoP: no PDP request, no policy query, no Decision Evidence, no effect and one verifiable signed phase_unavailable refusal; the shipped entry reaches the PDP at prepare and permits",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "a phase the PEP cannot establish is refused before any decision request (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1629) > refuses a crossing whose Operation Profile entry places no phase, or a phase outside the closed set, on every dispatch path: no decision request, no Decision Evidence, no effect, one signed phase_unavailable Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-denial-reason.test.ts",
+     "name": "the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > phase_invalid is the PDP's alone and phase_unavailable the PEP's alone: a PEP-side store signs phase_unavailable and never phase_invalid (#1629)",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-denial-reason.test.ts",
+     "name": "the PEP maps every Refusal Record diagnostic into the closed set (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > the mapping covers exactly the Refusal Record path's diagnostics, and each maps to a value in the closed PEP set",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1629 (D744 ruling 3). A payments crossing the trusted catalog or its Operation Profile places in a compound action, whose own profile entry carries no phase or one outside the closed set, is refused before any decision request with one verifiable signed Refusal Record phase_unavailable: no PDP request, no policy query, no Decision Evidence and no effect, at the HTTP endpoint with DPoP (endpoint) and on all three dispatch paths (unit); the shipped entry reaches the PDP at its phase. phase_unavailable joins the PEP closed set and the diagnostic mapping. Mutations: skipping the check fails the endpoint and dispatch-path witnesses; dropping both compound-action detections (catalog and sibling crossing) fails them too; mapping the diagnostic to state_unavailable fails them; removing phase_unavailable from the PEP set fails the endpoint, dispatch-path, closed-set and mapping witnesses."
+  },
+  {
+   "id": "evidence.refusal.pdp-phase-invalid",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for one whose action phase is outside the defined set, or is absent where the PDP's trusted operation declaration requires a phase, `phase_invalid`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP's pre-evaluation refusal of an out-of-set or missing required action phase is a Refusal Record with denial_reason `phase_invalid`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-action-phase.test.ts",
+     "name": "the PDP refuses an unusable action phase before evaluation (@spec authzen#context-action-phase, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #1629) > the remote PDP refuses an out-of-set phase, and a missing phase its declaration requires, before evaluation as phase_invalid, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-phase.test.ts",
+     "name": "the PDP refuses an unusable action phase before evaluation (@spec authzen#context-action-phase, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #1629) > records the refusal as a PDP-signed Refusal Record over the request as submitted, naming no Mission and no evaluation",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-denial-reason.test.ts",
+     "name": "the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > phase_invalid is the PDP's alone and phase_unavailable the PEP's alone: a PEP-side store signs phase_unavailable and never phase_invalid (#1629)",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1629 (D744 ruling 3). The PDP signs a pdp-role Refusal Record phase_invalid over the request as submitted, naming no Mission and no evaluation, for an out-of-set phase and for a missing phase its declaration requires; the remote PDP retains one verifiable record per refusal (endpoint). phase_invalid joins the evidence store's PDP closed set, and a PEP-side store refuses to sign it. Mutations: recording the refusal as operation_target_invalid fails the signed-record and remote witnesses; removing phase_invalid from the PDP set fails the closed-set witness; adding it to the PEP set fails it too."
+  },
+  {
+   "id": "evidence.refusal.pdp-evaluation-context-invalid",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for one whose evaluation-context binding inputs are missing, malformed, or incompatible with the declared binding, for an operation the runtime profile's Evaluation-Context Binding extension covers, `evaluation_context_invalid`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP's pre-evaluation refusal of missing, malformed or incompatible evaluation-context binding inputs for a covered operation is a Refusal Record with denial_reason `evaluation_context_invalid`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 3). todo: no reference witness yet; existing coverage does not transfer to the changed text."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
@@ -52948,7 +54057,8 @@
    "role": "RS",
    "strength": "SHOULD",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "resource-access.action-families"
    },
    "profiles": [
     "issuance",
@@ -52962,7 +54072,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1376. Guidance to the resource's documented namespace. The reference resources define no action families, so no test observes it. The residual is stated in Security Considerations (Action Family Growth)."
+   "notes": "#1376. Guidance to the resource's documented namespace. The reference resources define no action families, so no test observes it. The residual is stated in Security Considerations (Action Family Growth). Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to a resource server that documents and supports action families, whatever its authorization server does; an authorization server's refusal of family input does not exempt it. The reference resources define no families, so the row is not applicable to them. Coverage stays todo until positively witnessed."
   },
   {
    "id": "resource-access.type.action-family-new-namespace",
@@ -52972,7 +54082,8 @@
    "role": "RS",
    "strength": "SHOULD",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "resource-access.action-families"
    },
    "profiles": [
     "issuance",
@@ -52986,7 +54097,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1376. Guidance to the resource's documented namespace; a departure is recorded, not failed. The reference resources define no action families. A binding compatibility rule for families is out of scope here (#249)."
+   "notes": "#1376. Guidance to the resource's documented namespace; a departure is recorded, not failed. The reference resources define no action families. A binding compatibility rule for families is out of scope here (#249). Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to a resource server that documents and supports action families, whatever its authorization server does; an authorization server's refusal of family input does not exempt it. The reference resources define no families, so the row is not applicable to them. Coverage stays todo until positively witnessed."
   },
   {
    "id": "resource-access.type.action-family-consent-rendering",
@@ -52996,7 +54107,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "resource-access.action-families"
    },
    "profiles": [
     "issuance",
@@ -53011,7 +54123,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "In the draft since its first version (#637); the MUST was reshaped by #1258 item 12 and the #1260 review and reworded by #1520, and no row was added at any of those changes. Before #1377 the reference admitted a family at PAR intake and compared actions literally, so a family reached the approval page only under a ceiling listing the same string, where the derived entry rendered as JSON with the family verbatim. Since #1377 it refuses family input, recorded under observation.local. Coverage stays todo: a refusal observes no rendering (D444). Making the row not applicable to an implementation that refuses families needs an action-families capability gate, a model change proposed on #1377."
+   "notes": "In the draft since its first version (#637); the MUST was reshaped by #1258 item 12 and the #1260 review and reworded by #1520, and no row was added at any of those changes. Before #1377 the reference admitted a family at PAR intake and compared actions literally, so a family reached the approval page only under a ceiling listing the same string, where the derived entry rendered as JSON with the family verbatim. Since #1377 it refuses family input, recorded under observation.local. Coverage stays todo: a refusal observes no rendering (D444). Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to an authorization server that admits action families. One that consistently refuses family input, as the reference does since #1576, has no family rendering obligation, and the row is not applicable to it; refusal tests make the row neither tested nor evidence of narrowing support. Coverage stays todo until positively witnessed."
   },
   {
    "id": "resource-access.type.action-family-derivation-high-risk",
@@ -53021,7 +54133,8 @@
    "role": "AS",
    "strength": "SHOULD",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "resource-access.action-families"
    },
    "profiles": [
     "issuance",
@@ -53036,7 +54149,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "In the draft since its first version (#637), with no row until now. Before #1377 derivation compared actions literally and applied no breadth or risk classification to an action value. Since #1377 the reference refuses family input, recorded under observation.local. A departure is recorded, not failed. Coverage stays todo: a refusal observes no breadth handling (D444). Making the row not applicable to an implementation that refuses families needs an action-families capability gate, a model change proposed on #1377."
+   "notes": "In the draft since its first version (#637), with no row until now. Before #1377 derivation compared actions literally and applied no breadth or risk classification to an action value. Since #1377 the reference refuses family input, recorded under observation.local. A departure is recorded, not failed. Coverage stays todo: a refusal observes no breadth handling (D444). Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to an authorization server that admits action families. One that consistently refuses family input, as the reference does since #1576, has no family derivation obligation, and the row is not applicable to it; refusal tests make the row neither tested nor evidence of narrowing support. Coverage stays todo until positively witnessed."
   },
   {
    "id": "resource-access.type.emit-enforced-constraint-keys",
@@ -61208,9 +62321,15 @@
      "name": "invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178) > refuses a subject_token without readable authorization_details with invalid_request, creating nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/subject-credential-class.test.ts",
+     "name": "a subject_token is a Mission access token: the AS's access-token key and the at+jwt type (@spec #831 role binding) > child creation > refuses a transaction token presented as the subject_token, as another credential class",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1178 (D415). #1239's route-level tests witness the subject_token and actor_token classes; \"unacceptable for the exchange\" is open-ended, so the row stays partial."
+   "notes": "#1178 (D415). #1239's route-level tests witness the subject_token and actor_token classes; \"unacceptable for the exchange\" is open-ended, so the row stays partial. #831 A: a transaction token, another credential class this AS signs, is one unacceptable subject_token, refused invalid_request at the credential-class check; the open-ended class keeps the row partial."
   },
   {
    "id": "child-delegation.request-processing.dpop-proof-code",
@@ -62645,9 +63764,45 @@
      "name": "invalid or unacceptable subject and actor tokens at the expansion exchange (@spec expansion#verification-order, RFC 8693 Section 2.2.2, #1178) > refuses %s with invalid_request, no Mission diagnostic, and no deferral, reservation or count",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/subject-credential-class.test.ts",
+     "name": "a subject_token is a Mission access token: the AS's access-token key and the at+jwt type (@spec #831 role binding) > child creation > refuses a transaction token presented as the subject_token, as another credential class",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/subject-credential-class.test.ts",
+     "name": "a subject_token is a Mission access token: the AS's access-token key and the at+jwt type (@spec #831 role binding) > Expansion > refuses a transaction token presented as the subject_token, as another credential class",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/subject-credential-class.test.ts",
+     "name": "a subject_token is a Mission access token: the AS's access-token key and the at+jwt type (@spec #831 role binding) > designation > refuses a transaction token presented as the subject_token, as another credential class",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/subject-credential-class.test.ts",
+     "name": "a subject_token is a Mission access token: the AS's access-token key and the at+jwt type (@spec #831 role binding) > the delegation handle > refuses a transaction token presented as the subject_token, as another credential class",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/subject-credential-class.test.ts",
+     "name": "a subject_token is a Mission access token: the AS's access-token key and the at+jwt type (@spec #831 role binding) > the delegated exchange (a designation redeemed) > refuses a transaction token presented as the subject_token, as another credential class",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/subject-credential-class.test.ts",
+     "name": "a subject_token is a Mission access token: the AS's access-token key and the at+jwt type (@spec #831 role binding) > the async-delegation transport (a delegation handle) > refuses a transaction token presented as the subject_token, as another credential class",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1178 (D415). #1239's route-level tests witness the subject_token and actor_token classes; \"unacceptable for the exchange\" is open-ended, so the row stays partial."
+   "notes": "#1178 (D415). #1239's route-level tests witness the subject_token and actor_token classes; \"unacceptable for the exchange\" is open-ended, so the row stays partial. #831 A: a transaction token, another credential class this AS signs, is refused invalid_request on each of these Token Exchanges at the credential-class check; the open-ended class keeps the row partial."
   },
   {
    "id": "core.error-mapping.token-exchange-dpop-nonce",
@@ -67346,9 +68501,15 @@
      "name": "invalid or unacceptable subject and actor tokens at the expansion exchange (@spec expansion#verification-order, RFC 8693 Section 2.2.2, #1178) > refuses %s with invalid_request, no Mission diagnostic, and no deferral, reservation or count",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/subject-credential-class.test.ts",
+     "name": "a subject_token is a Mission access token: the AS's access-token key and the at+jwt type (@spec #831 role binding) > Expansion > refuses a transaction token presented as the subject_token, as another credential class",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1178 (D415). #1239's route-level tests witness the subject_token and actor_token classes; \"unacceptable for the exchange\" is open-ended, so the row stays partial."
+   "notes": "#1178 (D415). #1239's route-level tests witness the subject_token and actor_token classes; \"unacceptable for the exchange\" is open-ended, so the row stays partial. #831 A: a transaction token, another credential class this AS signs, is one unacceptable subject_token, refused invalid_request at the credential-class check; the open-ended class keeps the row partial."
   },
   {
    "id": "expansion.verification-order.dpop-proof-code",

@@ -358,15 +358,16 @@ describe("Authority Set derivation timing (@spec mission#derivation-modes)", () 
     const { rendered, approved } = await renderAndApprove();
     // The complete candidate: the full derivation of this Intent and proposal,
     // more than one entry, not a partial set.
-    const full = deriveAs.kernel.derive(deriveAs.kernel.validateSubmission(JSON.stringify({ intent: INTENT })).intent, DEMO_AGENT_PROPOSAL as never);
+    // Bound before the rendering (#1447): each catalog-sourced action carries
+    // its capability_sources binding.
+    const full = deriveAs.kernel.resolveFreshCapabilities(
+      deriveAs.kernel.derive(deriveAs.kernel.validateSubmission(JSON.stringify({ intent: INTENT })).intent, DEMO_AGENT_PROPOSAL as never),
+    );
     expect(full.length).toBeGreaterThan(1);
+    expect(full.some((e) => e.capability_sources?.length)).toBe(true);
     expect(rendered).toEqual(full);
-    // The record commits the rendered entries. The only member it adds is
-    // the Capability Binding companion's capability_sources, which
-    // kernel.approve binds at the commit (docs/provider-integration-port.md
-    // section 3.3) and the rendering does not show.
-    const committed = (approved as Record<string, unknown>[]).map(({ capability_sources: _, ...rest }) => rest);
-    expect(committed).toEqual(rendered);
+    // The record commits exactly the rendered entries, their bindings included.
+    expect(approved).toEqual(rendered);
   });
 
   it("keeps the approved Authority Set fixed after creation: a later derivation-policy change does not recompute it", async () => {

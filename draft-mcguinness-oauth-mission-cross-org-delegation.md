@@ -524,6 +524,36 @@ requested audience outside the leaf's `aud` refuses with
 `invalid_target`.  On success the Resource AS mints the
 audience-local token per the rules above.
 
+# Mission-Binding Profile {#binding-profile}
+
+Every token a Chain carries, and a local token a Resource AS projects
+from a verified Chain, carries the `mission` claim under this profile,
+which states the elements the issuance profile's Claim Reservation
+names for a path whose minter is not the Mission's issuer
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Claim Reservation"):
+
+1. **Chain.** The root the originating Mission Issuer issues
+   ({{root-issuance}}), and each hop's `par_hash` link and signature
+   under the key its parent's `cnf.jwk` carries ({{derivation}}); the
+   local token derives from a Chain the Resource AS verified
+   ({{verification}}, {{projection}}).
+2. **Authority bound.** The root's mapped entry lies within the
+   Mission Authority Set ({{root-issuance}}); each hop is a subset of
+   its parent under the attenuation substrate's tool and constraint
+   model ({{derivation}}); the local token carries only the locally
+   permitted subset of the verified leaf ({{projection}}).
+3. **Mission state.** The originating Mission Issuer issues the root
+   only while the Mission is `active` ({{root-issuance}}). A holder
+   mints a hop with no state check; the destination establishes that
+   the Mission is `active` from a locally available state source,
+   within the deployment's declared freshness bound, before it relies
+   on the Chain or projects from it ({{verification}}).
+4. **Consumer checks.** A chain-verifying resource server performs
+   {{verification}}. A resource server consuming the local token
+   applies the issuance profile's resource-server requirements; the
+   token's `iss` is the Resource AS and its `mission.issuer` the
+   originating Mission Issuer ({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server Enforcement").
+
 # Provenance for AS-Mediated Consumption {#provenance-bridge}
 
 An AS-mediated consumer needing provenance of the upstream hops uses
