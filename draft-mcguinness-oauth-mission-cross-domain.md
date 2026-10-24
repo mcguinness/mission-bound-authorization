@@ -28,6 +28,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC3339:
   RFC7523:
   RFC7662:
   RFC7800:
@@ -340,7 +341,10 @@ The projection is exact about what leaves the issuing domain.
 Three values cross unchanged: `mission.id`, `mission.issuer`, and
 `authority_hash`, the claim-shape Mission binding every downstream
 token preserves ({{validation-at-resource-as}}). They are audit and
-correlation anchors, not credentials.
+correlation anchors, not credentials. The Mission's `expires_at` also
+crosses unchanged, in the same claim, so a Resource AS that issues
+further credentials keeps the Mission's lifetime bound
+({{validation-at-resource-as}}).
 
 Two things cross scoped: the audience-scoped Authority Set entries
 ({{audience-scope}}, {{conveyed-delegation}}), and the Mission's
@@ -603,9 +607,12 @@ A Mission-bound cross-domain grant:
   {{RFC7523}} Section 3);
 - MUST carry the `mission` claim
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Claim")
-  with `id` and `issuer` unchanged from the Mission, and the
-  audience-scoped `authorization_details` ({{audience-scope}}). This
-  profile REQUIRES `authority_hash` on that claim too, reintroducing
+  with `id`, `issuer`, and `expires_at` unchanged from the Mission,
+  and the audience-scoped `authorization_details`
+  ({{audience-scope}}). Its `expires_at` is the Mission's, never the
+  grant's own `exp`: a Resource AS issues further credentials from
+  the grant, so that section's rule for downstream minting applies.
+  This profile REQUIRES `authority_hash` on that claim too, reintroducing
   it beyond the issuance profile's baseline as this profile's own
   lineage and audit anchor for the party receiving the grant across
   the trust-domain hop; and
@@ -727,6 +734,9 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   - Because this document defines no cross-domain status query,
     freshness is the Resource AS's only check that the Mission was
     active at issuance; the short grant lifetime bounds the staleness.
+- MUST reject, with `invalid_grant`, a grant whose `mission` claim
+  lacks `expires_at`, carries a value that is not an RFC 3339
+  {{RFC3339}} date-time, or carries one already elapsed.
 - MUST verify the grant's sender-constraint by the proof-of-possession
   mechanism the cross-domain grant profile defines. For the ID-JAG
   profile this is a DPoP proof ({{RFC9449}}) for the Resource AS's own
@@ -764,13 +774,16 @@ A Resource AS consuming a Mission-bound cross-domain grant:
 - When issuing local access tokens for its resources, the Resource AS
   uses the subject-resolution rules of the underlying cross-domain
   grant and identity chaining specifications. The local token preserves
-  the `mission` claim (`id`, `issuer`, and `authority_hash`) unchanged
-  from the cross-domain grant. The issuing `iss` is the Resource AS;
-  `mission.issuer` remains the originating AS. Such a local token:
-  - has an `exp` that MUST NOT exceed the grant's `exp`. The Resource
-    AS does not hold the Mission's `expires_at`; because the grant's
-    own `exp` is bounded by it ({{cross-domain-grant}}), the local
-    token is bounded transitively;
+  the `mission` claim (`id`, `issuer`, `authority_hash`, and
+  `expires_at`) unchanged from the cross-domain grant, including a
+  local token from which further credentials are issued. The issuing
+  `iss` is the Resource AS; `mission.issuer` remains the originating
+  AS. Such a local token:
+  - has an `exp` that MUST NOT exceed the grant's `exp`. The grant's
+    own `exp` is bounded by the Mission's `expires_at`
+    ({{cross-domain-grant}}), so the local token is bounded by both.
+    Carrying `expires_at` extends no credential's lifetime and
+    authorizes no renewal (below);
   - MUST be sender-constrained ({{RFC7800}}), like the grant it
     derives from;
   - MUST NOT be issued as a bearer token; and
@@ -1105,6 +1118,7 @@ The origin issuer's chain and both destination tokens carry:
   "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "issuer": "https://as.origin.example",
   "authority_hash": "sha-256:5bIi6JURtxBtod8WtezufytnypnNE86se44ndaL6-W0",
+  "expires_at": "2026-12-31T23:59:59Z",
   "subject": { "iss": "https://id.origin.example", "sub": "p-7QxT2m" }
 }
 ~~~
@@ -1138,7 +1152,7 @@ At redemption (the JWT-bearer grant at the Resource AS,
 | Condition | Error |
 |---|---|
 | Client authentication fails | `invalid_client` |
-| Untrusted issuer; the grant's `iss` not equal to its `mission.issuer`; wrong or missing `typ`; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a grant client claim absent or not identifying the authenticated client; a replayed `jti`; a malformed `mission` claim, or a grant carrying none where the deployment's pre-established trust requires Mission binding for the requested resources ({{validation-at-resource-as}}) | `invalid_grant` |
+| Untrusted issuer; the grant's `iss` not equal to its `mission.issuer`; wrong or missing `typ`; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a grant client claim absent or not identifying the authenticated client; a replayed `jti`; a malformed `mission` claim, including one whose `expires_at` is absent or not an RFC 3339 date-time; a Mission `expires_at` already elapsed; or a grant carrying none where the deployment's pre-established trust requires Mission binding for the requested resources ({{validation-at-resource-as}}) | `invalid_grant` |
 | The request names a resource outside the conveyed entries | `invalid_target` |
 
 A Resource AS rejecting a grant reveals no Mission state it does not
@@ -1208,9 +1222,11 @@ Mission Issuer of the issuance profile that additionally:
 A **Resource AS**:
 
 - honors the cross-domain grant per {{validation-at-resource-as}},
-  including issuer trust by local policy, explicit typing,
-  sender-constraint and one-time-use verification, and fail-closed
-  interpretation of conveyed authority;
+  including issuer trust by local policy, explicit typing, the
+  Mission's `expires_at`, sender-constraint and one-time-use
+  verification, and fail-closed interpretation of conveyed authority;
+- preserves the `mission` claim, `expires_at` included, unchanged on
+  every local token ({{validation-at-resource-as}});
 - bounds every local token by the grant that seeded it and issues it
   sender-constrained and short-lived ({{validation-at-resource-as}},
   {{cross-domain-revocation}});
@@ -1530,15 +1546,17 @@ audience-scoped authority for the ERP:
     "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM",
+    "expires_at": "2026-12-31T23:59:59Z"
   }
 }
 ~~~
 
 The ID-JAG is short-lived (300 s), explicitly typed
 (`oauth-id-jag+jwt` in its JWT header), and sender-constrained to the
-agent. Its `exp` does not exceed the Mission's `expires_at`
-({{cross-domain-grant}}). Its `client_id` is the agent's
+agent. Its `exp` does not exceed the Mission's `expires_at`, which
+its `mission` claim carries unchanged ({{cross-domain-grant}}). Its
+`client_id` is the agent's
 registration at `ras.partner.example.com`, `partner-agent-042`,
 which the home AS resolves from its destination-scoped mapping for
 the authenticated client `s6BhdRkqt3` ({{pre-established-trust}}).
@@ -1554,8 +1572,9 @@ Record identified by `mission.id`. The read entry keeps its
 `ras.partner.example.com` validates the ID-JAG
 ({{validation-at-resource-as}}): it
 establishes issuer trust in `as.example.com`, verifies the signature,
-checks that `aud` is itself, checks the expiry, and verifies the
-sender-constraint proof. It then issues its own access token for the
+checks that `aud` is itself, checks the expiry and the Mission's
+`expires_at`, and verifies the sender-constraint proof. It then issues
+its own access token for the
 ERP, preserving the `mission` claim unchanged and capping `exp` at the
 ID-JAG's `exp`. The agent redeems the ID-JAG under its own
 registration with `ras.partner.example.com`
@@ -1595,7 +1614,8 @@ token's `client_id` names that registration:
     "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM",
+    "expires_at": "2026-12-31T23:59:59Z"
   }
 }
 ~~~
@@ -1684,7 +1704,8 @@ operation:
     "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM",
+    "expires_at": "2026-12-31T23:59:59Z"
   }
 }
 ~~~
@@ -1712,8 +1733,8 @@ no call to `mission.issuer`.
 | Resource AS token | unchanged | ERP: read + write | 1793606690 |
 | Txn Token (within domain) | unchanged | one ledger lookup | 1793606520 |
 
-The Mission anchor (`id`, `issuer`, `authority_hash`) is constant end
-to end. OAuth authority is preserved or narrowed at the cross-domain
+The Mission anchor (`id`, `issuer`, `authority_hash`) and the
+Mission's `expires_at` are constant end to end. OAuth authority is preserved or narrowed at the cross-domain
 boundary, and local transaction context narrows the internal operation
 inside the partner domain. The lifetime shrinks at every hop and never
 exceeds the Mission's `expires_at`. The ID-JAG carried identity
@@ -1725,6 +1746,16 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Changes a requirement, a normative wire change (#1630, D751): every
+  cross-domain grant's `mission` claim carries the Mission's
+  `expires_at`, unchanged and never the grant's `exp`. The Resource AS
+  refuses with `invalid_grant` a grant whose `expires_at` is absent,
+  not an RFC 3339 date-time, or already elapsed, and preserves it
+  unchanged on every local token, including one from which further
+  credentials are issued. The local token's `exp` still never exceeds
+  the grant's, and carrying the value extends no lifetime and
+  authorizes no renewal.
 
 - Changes a requirement (#1374): the Mission Issuer omits an entry's
   `delegation` from the conveyed copy unless every retained origin of

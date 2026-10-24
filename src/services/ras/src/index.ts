@@ -15,10 +15,10 @@ import {
   type EntitlementAuthorityEntry,
   type EntitlementResolver,
   entryOverlapsResource,
-  isRfc3339Instant,
   type LocalMappingPolicy,
   narrowToEntitledAuthority,
   type OriginPrincipal,
+  parseRfc3339Instant,
   resolveCoResolvedLocalPrincipal,
 } from "@mission/core";
 import { openStore, redeemOnce, redemptionSchema, type Database } from "@mission/store";
@@ -168,8 +168,8 @@ export class ResourceAuthorizationServer {
    * whatever local `sub` it presents, so no redemption path mints a local
    * token without an entitlement check.
    *
-   * Mints a local token preserving mission.id/issuer/authority_hash/subject
-   * and identifying the authenticated client as `client_id`, after checking
+   * Mints a local token preserving mission.id/issuer/authority_hash/expires_at/
+   * subject and identifying the authenticated client as `client_id`, after checking
    * that the grant's own `client_id` (the client's registration at this RAS,
    * ID-JAG -04 Section 3.1) identifies that client (#1166, D510).
    */
@@ -206,8 +206,8 @@ export class ResourceAuthorizationServer {
     if (header.typ !== ID_JAG_TYP) throw new RasError("invalid_grant", "wrong grant typ");
 
     // @spec cross-domain#origin-principal-mapping: strictly parse the
-    // complete Mission claim -- `id`, `issuer`, `authority_hash`, and the
-    // closed {iss, sub} `subject` member every grant now carries
+    // complete Mission claim -- `id`, `issuer`, `authority_hash`, `expires_at`,
+    // and the closed {iss, sub} `subject` member every grant now carries
     // (kernel/cross-domain.ts) -- before either the base or continuation
     // path runs. A missing or malformed profile-required member is a
     // refusal, never a silently dropped or coerced value.
@@ -225,6 +225,20 @@ export class ResourceAuthorizationServer {
     if (mission.issuer !== issuer) throw new RasError("invalid_grant", "grant iss != mission.issuer");
     if (typeof mission.authority_hash !== "string" || !mission.authority_hash) {
       throw new RasError("invalid_grant", "grant mission claim missing or malformed authority_hash");
+    }
+    // @spec cross-domain#validation-at-resource-as (#1630, D751): every grant,
+    // a continuation ID-JAG included (continuation#transport-ica, #1589), carries
+    // the Mission's `expires_at` as an RFC 3339 date-time. An absent or malformed
+    // value, or one already elapsed, refuses invalid_grant before the one-time
+    // jti is consumed. Elapsed compares whole seconds, as `exp` does. The local
+    // token preserves the whole claim, this value included.
+    const now = this.now();
+    const missionExpiry = parseRfc3339Instant(mission.expires_at);
+    if (!missionExpiry) {
+      throw new RasError("invalid_grant", "grant mission claim missing or malformed expires_at");
+    }
+    if (missionExpiry.seconds <= BigInt(Math.floor(now.getTime() / 1000))) {
+      throw new RasError("invalid_grant", "grant mission claim expires_at has elapsed");
     }
     const originSubject = mission.subject;
     if (
@@ -277,18 +291,10 @@ export class ResourceAuthorizationServer {
     }
 
     const audience = this.cfg.localTokenAudience ?? "http://localhost:4406/mcp";
-    const now = this.now();
     // @spec id-continuation-assertion: read only from the payload `jwtVerify`
     // already authenticated against the trusted originating issuer -- never
     // request-controlled, so this branch cannot be forced by a presenter.
     const isContinuation = typeof payload.identity_continuation_handle === "string";
-    // @spec continuation#transport-ica (#1589, D726): a continuation ID-JAG MUST
-    // carry the Mission's `expires_at` as an RFC 3339 date-time; its absence, or a
-    // value that is not one, refuses invalid_grant before the one-time jti is
-    // consumed. The local token preserves the whole claim.
-    if (isContinuation && !isRfc3339Instant(mission.expires_at)) {
-      throw new RasError("invalid_grant", "continuation grant mission claim missing or malformed expires_at");
-    }
 
     let localSub: string;
     // The mapping's own validity bound additionally caps the minted token's

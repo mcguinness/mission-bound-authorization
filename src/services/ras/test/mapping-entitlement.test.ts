@@ -68,7 +68,7 @@ interface GrantOverrides {
   missionId?: string | null; // null = omit entirely, "" = present but empty (malformed)
   missionAuthorityHash?: string | null; // null = omit entirely, "" = present but empty (malformed)
   identityContinuationHandle?: string;
-  /** The Mission's `expires_at`; a continuation grant carries one by default, null omits it. */
+  /** The Mission's `expires_at`; every grant carries one by default, null omits it. */
   missionExpiresAt?: string | null;
   exp?: number; // absolute epoch seconds
   /** The delegated set the grant carries; defaults to one covered entry. */
@@ -88,7 +88,7 @@ async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
   if (overrides.missionSubject !== null) {
     mission.subject = overrides.missionSubject ?? { iss: IDP_ISS, sub: IDP_SUB };
   }
-  if (overrides.missionExpiresAt !== null && (overrides.missionExpiresAt !== undefined || overrides.identityContinuationHandle !== undefined)) {
+  if (overrides.missionExpiresAt !== null) {
     mission.expires_at = overrides.missionExpiresAt ?? new Date(Date.now() + 86_400_000).toISOString();
   }
   const payload: Record<string, unknown> = {
@@ -705,7 +705,7 @@ describe("RAS continuation grant carries the Mission's expiry (@spec continuatio
     const grant = await mintGrant({ sub: "acct_noexpiry", identityContinuationHandle: "handle-exp-1", missionExpiresAt: null });
     await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({
       code: "invalid_grant",
-      message: "continuation grant mission claim missing or malformed expires_at",
+      message: "grant mission claim missing or malformed expires_at",
     });
   });
 
@@ -714,7 +714,7 @@ describe("RAS continuation grant carries the Mission's expiry (@spec continuatio
     const grant = await mintGrant({ sub: "acct_badexpiry", identityContinuationHandle: "handle-exp-2", missionExpiresAt: "not-a-date" });
     await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({
       code: "invalid_grant",
-      message: "continuation grant mission claim missing or malformed expires_at",
+      message: "grant mission claim missing or malformed expires_at",
     });
   });
 
@@ -730,7 +730,7 @@ describe("RAS continuation grant carries the Mission's expiry (@spec continuatio
       const grant = await mintGrant({ sub: "acct_strictexpiry", identityContinuationHandle: `handle-${value}`, missionExpiresAt: value });
       await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({
         code: "invalid_grant",
-        message: "continuation grant mission claim missing or malformed expires_at",
+        message: "grant mission claim missing or malformed expires_at",
       });
     });
   }
@@ -744,12 +744,70 @@ describe("RAS continuation grant carries the Mission's expiry (@spec continuatio
     expect(claims.mission.expires_at).toBe(expiresAt);
   });
 
-  it("still redeems a base cross-domain grant that carries no expires_at", async () => {
+});
+
+describe("RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630)", () => {
+  const MISSING_OR_MALFORMED = { code: "invalid_grant", message: "grant mission claim missing or malformed expires_at" };
+  const ELAPSED = { code: "invalid_grant", message: "grant mission claim expires_at has elapsed" };
+  const claimsOf = (jwt: string) => JSON.parse(Buffer.from(jwt.split(".")[1] as string, "base64url").toString());
+
+  it("denies invalid_grant for a base grant whose mission claim lacks expires_at", async () => {
     const server = await ras();
-    const grant = await mintGrant();
+    const grant = await mintGrant({ missionExpiresAt: null });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject(MISSING_OR_MALFORMED);
+  });
+
+  // Not a date-time at all, then values `Date.parse` accepts that are not RFC
+  // 3339 date-times: a date only, no timezone, and a day past the month's end.
+  for (const [label, value] of [
+    ["not a date-time", "not-a-date"],
+    ["a date-only value", "2027-01-01"],
+    ["a date-time without a timezone", "2027-01-01T00:00:00"],
+    ["an impossible date", "2027-02-30T00:00:00Z"],
+  ] as const) {
+    it(`denies invalid_grant for a base grant whose mission.expires_at is ${label}`, async () => {
+      const server = await ras();
+      const grant = await mintGrant({ missionExpiresAt: value });
+      await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject(MISSING_OR_MALFORMED);
+    });
+  }
+
+  it("denies invalid_grant for a grant whose mission.expires_at has elapsed while its own exp has not, without consuming its one-time jti", async () => {
+    const fixedNowS = Math.floor(Date.now() / 1000);
+    let nowS = fixedNowS;
+    const server = await ras({ now: () => new Date(nowS * 1000) });
+    // A misissued grant: its own exp is 300 s away, but the Mission it names
+    // expired one second ago. Only the Mission's expiry refuses it.
+    const elapsed = await mintGrant({ exp: fixedNowS + 300, missionExpiresAt: new Date((fixedNowS - 1) * 1000).toISOString() });
+    await expect(server.redeem(elapsed, clientJkt)).rejects.toMatchObject(ELAPSED);
+    // At the very second it names, the Mission has expired too.
+    const atNow = await mintGrant({ exp: fixedNowS + 300, missionExpiresAt: new Date(fixedNowS * 1000).toISOString() });
+    await expect(server.redeem(atNow, clientJkt)).rejects.toMatchObject(ELAPSED);
+    // One second earlier it was still live, and the refusal had not burned the
+    // grant's one-time jti, so the same grant redeems then.
+    nowS = fixedNowS - 1;
+    const { access_token } = await server.redeem(atNow, clientJkt);
+    expect(claimsOf(access_token).mission.expires_at).toBe(new Date(fixedNowS * 1000).toISOString());
+  });
+
+  it("preserves the Mission's expires_at unchanged on the local token it mints from a base grant, never substituting the grant's exp", async () => {
+    const server = await ras();
+    // A fraction and an offset, so carriage is shown verbatim, not normalized.
+    const expiresAt = `${new Date().getUTCFullYear() + 2}-01-01T00:00:00.5+02:00`;
+    const grant = await mintGrant({ missionExpiresAt: expiresAt });
     const { access_token } = await server.redeem(grant, clientJkt);
-    const claims = JSON.parse(Buffer.from(access_token.split(".")[1] as string, "base64url").toString());
-    expect(claims.mission.expires_at).toBeUndefined();
+    const local = claimsOf(access_token);
+    expect(local.mission.expires_at).toBe(expiresAt);
+    expect(local.mission).toEqual(claimsOf(grant).mission);
+  });
+
+  it("keeps the local token within the grant's exp when the Mission's expires_at lies far beyond it, returning no refresh_token", async () => {
+    const server = await ras();
+    const nowS = Math.floor(Date.now() / 1000);
+    const grant = await mintGrant({ exp: nowS + 30, missionExpiresAt: new Date((nowS + 86_400) * 1000).toISOString() });
+    const response = await server.redeem(grant, clientJkt);
+    expect(claimsOf(response.access_token).exp).toBeLessThanOrEqual(nowS + 30);
+    expect(Object.keys(response).sort()).toEqual(["access_token", "expires_in"]);
   });
 });
 
