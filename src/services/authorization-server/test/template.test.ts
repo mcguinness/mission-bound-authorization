@@ -858,6 +858,33 @@ describe("per-instance derivation limit under the committed Dispatch Policy (@sp
   });
 });
 
+// @spec resource-access#entry-validation (#1310, #1376, #1625): a template
+// ceiling entry meets the per-entry rules proposal intake applies, refused
+// naming the entry and the value, so the Approver never consents to an entry
+// no proposal could carry.
+describe("template ceiling entries meet the action grammar and the absolute-URI rule (#1625)", () => {
+  it("refuses an action value outside the grammar, naming the entry and the value", () => {
+    for (const action of ["payments/invoice.read", "payments:invoice.read ", "payments invoice", "invoices.*.read", "*"]) {
+      expect(() => mkTemplate({ ceiling: [ceilEntry(["payments:invoice.read", action])] }), JSON.stringify(action)).toThrow(
+        `ceiling[0] has action ${JSON.stringify(action)}, which is neither an action identifier nor an action family`,
+      );
+    }
+  });
+
+  it("refuses a resource that is not an RFC 3986 absolute URI, naming the entry and the value", () => {
+    const good = ceilEntry(["payments:invoice.read"]);
+    for (const resource of [`${good.resource}#frag`, "https:///orders", "https:api.example/orders", "https://erp.example.com/%zz"]) {
+      expect(() => mkTemplate({ ceiling: [good, { ...good, resource }] }), resource).toThrow(
+        `ceiling[1] has resource ${JSON.stringify(resource)}, which is not an RFC 3986 absolute URI`,
+      );
+    }
+  });
+
+  it("creates a template whose ceiling meets both rules (positive control)", () => {
+    expect(mkTemplate({ ceiling: [ceilEntry(["payments:invoice.read", "payments:vendor.read"])] }).id).toBeDefined();
+  });
+});
+
 describe("a template instance keeps its template consent's original approved audiences (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2)", () => {
   const consentOn = (k: MissionKernel, retain: boolean) =>
     createTemplate(

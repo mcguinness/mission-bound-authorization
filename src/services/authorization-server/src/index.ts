@@ -3,6 +3,9 @@
 import {
   INTROSPECTION_PRINCIPALS,
   DESIGNABLE_CLIENTS,
+  GOVERNED_RESOURCES,
+  type GovernedResourcePolicy,
+  MAS_JOIN,
   type IntrospectionPrincipal,
   ACTOR_PROFILES,
   AUTHORITY_SOURCES,
@@ -39,6 +42,11 @@ import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
 export { RENDER_REVISION_HEADER } from "./adapters/approval-render-revision.js";
+export {
+  governedResourceRefusal,
+  isMissionGovernedResource,
+  withoutGovernedResource,
+} from "./adapters/governed-resources.js";
 export {
   type ActingToken,
   type ActingTokenResult,
@@ -1189,13 +1197,26 @@ export async function buildAuthorizationServer(opts: {
   /**
    * @spec authority-server#mission-join (#557) — DEV ONLY: serve
    * `POST /dev/ordinary-token`, which mints an ORDINARY DPoP-bound access
-   * token (a `scope`, the payments audience, no `mission` claim) on a
+   * token (a `scope`, the join route's audience, no `mission` claim) on a
    * registered service token's authority. The MAS Join acts under exactly
    * that credential class and nothing else here issues one, so the demo
    * stack turns it on to have a credential to present. Absent (the default):
    * no such route exists.
    */
   devOrdinaryIssuance?: boolean;
+  /**
+   * @spec mission#authority-proposal (#1531, D741): the resources this AS
+   * treats as Mission-governed, by the deployment's classification or by
+   * protected resource metadata it has authenticated. Default: the shipped
+   * `config/governed-resources.json`.
+   */
+  governedResources?: GovernedResourcePolicy;
+  /**
+   * TEST-ONLY (#1531, D741): enable the `client_credentials` grant so a test
+   * can exercise the governed-resource rule on it. The reference implements
+   * no client-credentials issuance; production callers MUST omit this.
+   */
+  testClientCredentials?: boolean;
   /**
    * @spec discharge#discharge-authority — additional service-token principals and
    * their scopes, merged OVER the shipped dev token (which carries both
@@ -1809,6 +1830,7 @@ export async function buildAuthorizationServer(opts: {
     clients: clientRegistrations,
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
+    accessTokenJwks: { keys: [tokenJwkPub] },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),
     ...(opts.approverLogin ? { approverLogin: new ApproverLoginRelyingParty(opts.approverLogin, opts.issuer) } : {}),
@@ -1825,6 +1847,9 @@ export async function buildAuthorizationServer(opts: {
     introspectionPrincipals: [...INTROSPECTION_PRINCIPALS, ...(opts.testIntrospectionPrincipals ?? [])],
     // @spec mission#designation (#869, D449): config/delegation.json.
     designableClients: opts.designableClients ?? DESIGNABLE_CLIENTS,
+    // @spec mission#authority-proposal (#1531, D741): config/governed-resources.json.
+    governedResources: opts.governedResources ?? GOVERNED_RESOURCES,
+    ...(opts.testClientCredentials === true ? { testClientCredentials: true } : {}),
     // @spec mission#delegation-constraints (#869): the issuance index, which
     // is also the delegation accounting, exposed on BuiltAs.
     tokenIssuanceStore,
@@ -1858,13 +1883,17 @@ export async function buildAuthorizationServer(opts: {
     // @spec authority-server#mission-join (#557) — the dev-only ordinary
     // issuance route, signed with this AS's own token key so the resource
     // verifies it on the jwks_uri exactly as it verifies a Mission-bound one.
+    // @spec mission#authority-proposal (#1531, D741): its audience is the join
+    // route's own resource (config/mas-join.json `join_resource`), which is not
+    // Mission-governed; the payments resource is, so the route never mints
+    // for it.
     ...(opts.devOrdinaryIssuance
       ? {
           devOrdinaryIssuance: {
             key: tokenPrivateKey,
             kid: asToken.kid,
             alg: asToken.alg,
-            audience: CANONICAL_RESOURCE,
+            audience: MAS_JOIN.join_resource,
           },
         }
       : {}),

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
   actionFamilyRefusal,
+  actionOutsideGrammar,
   delegateMatcherListViolation,
   entryWithinCeiling,
   isAuthorityEntry,
@@ -440,5 +441,69 @@ describe("a max_amount currency is exactly three upper-case ASCII letters (#1595
     expect(isSubsetEntry(capped("XYZ"), capped("XYZ", "500.00"))).toBe(true);
     expect(isSubsetEntry(capped("XYZ"), capped("XYA", "500.00"))).toBe(false);
     expect(isSubsetEntry(capped("USD"), capped("EUR", "500.00"))).toBe(false);
+  });
+});
+
+// @spec resource-access#entry-validation (#1310, #1376, #1625): the shared
+// guard the configured-ceiling loaders call applies the per-entry rules
+// proposal intake applies, so it is never looser than intake.
+describe("isAuthorityEntry applies the action grammar and the absolute-URI rule (#1625)", () => {
+  const OUTSIDE = [
+    "invoices/read",
+    "invoices.read ",
+    "invoices read",
+    "invoices.*.read",
+    "*",
+    "invoices.read\n",
+    "ünicode",
+  ];
+  const MALFORMED_RESOURCES = [
+    "https://resource.test/a#b",
+    "https:///orders",
+    "https:resource.test",
+    "https://resource.test/%zz",
+    "resource.test",
+  ];
+
+  it("actionOutsideGrammar names the first value outside the grammar, and nothing for identifiers and families", () => {
+    for (const action of OUTSIDE) {
+      expect(
+        actionOutsideGrammar({ ...entry, actions: ["read", action] }),
+        JSON.stringify(action),
+      ).toBe(action);
+    }
+    expect(
+      actionOutsideGrammar({
+        ...entry,
+        actions: ["read", "payments:invoice.read", "a_b-c.d", "invoices.*"],
+      }),
+    ).toBeUndefined();
+    expect(actionOutsideGrammar(null)).toBeUndefined();
+    expect(actionOutsideGrammar({ ...entry, actions: "read" })).toBeUndefined();
+  });
+
+  it("isAuthorityEntry refuses an entry carrying an action value outside the grammar", () => {
+    for (const action of OUTSIDE) {
+      expect(
+        isAuthorityEntry({ ...entry, actions: ["read", action] }),
+        JSON.stringify(action),
+      ).toBe(false);
+    }
+    expect(
+      isAuthorityEntry({ ...entry, actions: ["read", "payments:invoice.read", "a_b-c.d"] }),
+    ).toBe(true);
+  });
+
+  it("isAuthorityEntry refuses an entry whose resource is not an RFC 3986 absolute URI", () => {
+    for (const resource of MALFORMED_RESOURCES) {
+      expect(isAuthorityEntry({ ...entry, resource }), resource).toBe(false);
+    }
+    for (const resource of [
+      "https://resource.test",
+      "https://resource.test/a%2Fb?q=1",
+      "urn:example:resource",
+    ]) {
+      expect(isAuthorityEntry({ ...entry, resource }), resource).toBe(true);
+    }
   });
 });

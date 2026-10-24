@@ -354,10 +354,24 @@ export async function createHttpMcpChannel(
      * every joined request refuses with no usable permit.
      */
     masGoverned?: boolean;
+    /**
+     * @spec authority-server#mission-join, mission#authority-proposal (#1531,
+     * D741): the resource identifier a MAS-governed route is served under, for
+     * a join route that is its own resource. Its RFC 9728 metadata then names
+     * this identifier and does not declare Mission-bound-only acceptance
+     * (`McpPaymentsServer.joinRouteMetadata`). The enforcement boundary must
+     * accept it as an audience alias. Valid only with `masGoverned`; absent,
+     * the route publishes this resource's own metadata.
+     */
+    resource?: string;
   },
 ): Promise<HttpMcpChannel> {
   const host = opts?.host ?? "127.0.0.1";
   const masGoverned = opts?.masGoverned ?? false;
+  const joinResource = opts?.resource;
+  if (joinResource !== undefined && !masGoverned) {
+    throw new Error("a route's own resource identifier is for a MAS-governed join route only");
+  }
   const sessions = new Map<string, McpSession>();
 
   /**
@@ -399,7 +413,7 @@ export async function createHttpMcpChannel(
     // @spec txn-authorization#two-phase-expiry — the unauthenticated discovery
     // routes (RFC 9728 metadata + txn_challenge_jwks_uri) are served in front of
     // the credential gate: they publish public keys and metadata.
-    if (serveResourceMetadata(paymentsServer, req, res)) return;
+    if (serveResourceMetadata(paymentsServer, req, res, joinResource)) return;
     const authed = req as AuthedRequest;
     authenticate(authed, res, paymentsServer, masGoverned)
       .then((facts) => (facts ? dispatch(authed, res, holderOf(facts)) : undefined))

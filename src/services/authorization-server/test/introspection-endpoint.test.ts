@@ -1012,6 +1012,51 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
     expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "termination", "version"]);
   });
 
+  it("@spec mission#introspection (#1531, D741): a correctly signed token with no issuance record is bare active:false whatever its Mission's state, while the token the AS issued on its own path still reports the Mission's state", async () => {
+    const suspended = await runFlow({
+      intent: {
+        goal: "Pay Acme invoices for Q3 (no-issuance-record fixture, suspended)",
+        target_resources: [PAYMENTS],
+        expires_at: "2027-01-01T00:00:00Z",
+      },
+      proposal: PAYMENTS_PROPOSAL,
+      resource: PAYMENTS,
+    });
+    const terminated = await runFlow({
+      intent: {
+        goal: "Pay Acme invoices for Q3 (no-issuance-record fixture, terminated)",
+        target_resources: [PAYMENTS],
+        expires_at: "2027-01-01T00:00:00Z",
+      },
+      proposal: PAYMENTS_PROPOSAL,
+      resource: PAYMENTS,
+    });
+    as.kernel.transition(suspended.missionId, "suspend");
+    as.kernel.transition(terminated.missionId, "revoke");
+    // The Lifecycle endpoint's revoke also destroys the Mission's OAuth grant.
+    const terminatedGrant = await as.provider.Grant.find(as.kernel.get(terminated.missionId)?.grant_id as string);
+    expect(terminatedGrant).toBeTruthy();
+    await terminatedGrant?.destroy();
+    // The tokens the AS issued: the composite, with the Mission's state, the
+    // terminated Mission's included although its grant is gone.
+    expect((await introspect(suspended.at, { principal: RS_PAYMENTS })).body).toMatchObject({
+      active: false,
+      mission: { id: suspended.missionId, state: "suspended" },
+    });
+    const issued = await introspect(terminated.at, { principal: RS_PAYMENTS });
+    expect(Object.keys(issued.body).sort()).toEqual(["active", "mission"]);
+    expect(issued.body).toMatchObject({
+      active: false,
+      mission: { id: terminated.missionId, state: "terminated", termination: { reason: "revoked" } },
+    });
+    // The same Missions named by correctly signed tokens with no issuance
+    // record: nothing about either Mission is disclosed.
+    for (const missionId of [suspended.missionId, terminated.missionId]) {
+      const crafted = await craftToken({ jti: crypto.randomUUID(), mission: { id: missionId, issuer: ISSUER } });
+      expect((await introspect(crafted, { principal: RS_PAYMENTS })).body).toEqual({ active: false });
+    }
+  });
+
   it("Mission-expired composite: active:false with state terminated, termination expired", async () => {
     as.kernel.db
       .prepare("UPDATE missions SET expires_at = ? WHERE id = ?")

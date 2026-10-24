@@ -229,9 +229,13 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
       const unmapped = view();
       unmapped.authority_set[0]!.actions = ["payments:unmapped.op"];
       expect(await named(req({ action: { name: "payments:unmapped.op" } }), unmapped)).toEqual({ reason: "out_of_authority", bound: undefined });
-      const phase = req();
-      phase.context.action_phase = "not-a-phase" as never;
-      expect(await named(phase, view())).toEqual({ reason: "out_of_authority", bound: undefined });
+      // A class the deployment's policy does not declare is a request fault
+      // (#1629: an out-of-set phase is refused before evaluation instead, with
+      // no decision to name).
+      expect(await named(req(), view(), { stalenessBound: () => ({ kind: "undeclared" }) })).toEqual({
+        reason: "out_of_authority",
+        bound: undefined,
+      });
       expect(await named(req(), view({ state: "suspended" }))).toEqual({ reason: "mission_inactive", bound: undefined });
       expect(await named(req(), view())).toEqual({ reason: "permit", bound: undefined });
     });

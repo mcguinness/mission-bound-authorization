@@ -977,6 +977,34 @@ refresh tokens under a grant, and relies instead on the grant's
 projection of {{effective-set-projection}} MUST NOT claim
 containment- or discharge-aware issuance.
 
+## Mission-Binding Profile {#binding-profile}
+
+A token a consuming AS issues under a grant carries the `mission` claim
+under this profile, which states the elements the issuance profile's
+Claim Reservation names for a path whose minter is not the Mission's
+issuer ({{I-D.draft-mcguinness-oauth-mission}}, Section "Claim Reservation"):
+
+1. **Grant.** The Mission Issuance Grant the MAS mints for the Mission
+   ({{minting-rules}}), validated by the consuming AS and redeemed
+   once ({{grant-validation}}, {{single-use}}).
+2. **Authority bound.** Issued `authorization_details` are a subset of
+   the grant's; a consuming AS with a Mission-state integration also
+   projects them onto the Effective Authority Set
+   ({{token-issuance}}, {{effective-set-projection}}).
+3. **Mission state.** The MAS establishes that the Mission is `active`
+   when it mints the grant ({{minting-rules}}). A consuming AS with a
+   Mission-state integration also resolves the Mission's state at
+   redemption and at every refresh, within the staleness bound the
+   deployment publishes ({{mission-state-source}}). One without
+   relies on the minting gate and the short access-token lifetime,
+   issues no refresh token, and claims no containment- or
+   discharge-aware issuance ({{no-state-integration}}); its residual is
+   the revocation latency {{security-considerations}} declares.
+4. **Consumer checks.** A resource server applies the issuance
+   profile's resource-server requirements; the token's `iss` is the
+   consuming AS and its `mission.issuer` the Mission's issuer
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server Enforcement").
+
 ## Single Use {#single-use}
 
 Consumption is atomic with issuance. The single-use `jti` check of
@@ -1423,6 +1451,12 @@ Server Metadata" registry {{RFC8414}}:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission-Binding Profile states the grant, authority bound, state
+  check (with and without a Mission-state integration), and consumer
+  checks under which a consuming AS's tokens carry the `mission`
+  claim, as the issuance profile's Claim Reservation requires. No
+  requirement changed (#1531).
 
 - Redemption Errors says how a client recovers a refresh refused
   during a suspension: after a resume it may present the same
