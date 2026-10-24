@@ -55,8 +55,8 @@
     "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "b242ced38a557747cab10c976368e5f502659eed",
-    "content_sha256": "76b22b35d03a3c6603d3a26de353c4a855100d9156a50f4495d7e283e53a5b67"
+    "revision": "cb8fb904b1870d8d9b94816536376cd13b1c1f3c",
+    "content_sha256": "00aa0cfae2693ee89e19ec6edf3a8d7826da8c37d6120b600fee96f4297f6371"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -14857,7 +14857,7 @@
     "local": "the transition, its status observation and the nonce claim commit in one transaction (provider.ts withTransaction around kernel.transition, observeInCallerTx, claimInCallerTx); the signed 200 is written after it returns, and send() retains the bytes before delivering them"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
@@ -14866,7 +14866,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 finding 9 (D649, -01). Mutation: answering a failed commit with 200 fails the cited test (expected 200 to be 503)."
+   "notes": "#1535 finding 9 (D649, -01). Mutation: answering a failed commit with 200 fails the cited test (expected 200 to be 503). Partial (#1638 review): the cited test proves only that a transition whose commit throws inside the transaction is never acknowledged. That a successful commit is durable before the 200 is sent (the store's flush, and the ordering of commit and response under a successful commit) is not witnessed."
   },
   {
    "id": "status.lifecycle.final-check-not-suspension",
@@ -18994,7 +18994,42 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 finding 11 (D649, -01). Partial: the reference commits a due schedule on any read through applyExpiry (status observation, the issuance gates, transitions), but the token release fence reads the record without projecting a due schedule (kernel.ts: \"a due schedule is never projected\"), so a revoke deadline passing between a derivation's gate and its release is not treated as reached there. The gate itself applies the due schedule first."
+   "notes": "#1535 finding 11 (D649, -01). Partial: the reference commits a due schedule on any read through applyExpiry (status observation, the issuance gates, transitions), but the token release fence reads the record without projecting a due schedule (kernel.ts: \"a due schedule is never projected\"), so a revoke deadline passing between a derivation's gate and its release is not treated as reached there. The gate itself applies the due schedule first. The residual also covers a persistence failure (#1638 review): applyDueSchedule commits the owed transition, and if that write fails the read reports the stored row, so a due resume whose write failed was reported suspended in the owner's probe; the deadline-effective state is not maintained when persisting the due transition fails."
+  },
+  {
+   "id": "status.lifecycle.schedule-late-delivery-expiry",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "If the first decision after the deadline comes at or after the Mission's `expires_at`, expiry governs instead and the Mission is `terminated` with reason `expired` ({{legal-transitions}}); a revocation committed at its deadline before `expires_at` keeps reason `revoked`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission whose schedule deadline passed before expires_at but which is first decided at or after expires_at is terminated expired and never observed in the scheduled state, while a revocation the deadline committed before expires_at keeps reason revoked after expires_at passes"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > lets expiry govern a deadline before expires_at whose delivery comes only after expires_at: the Mission is terminated expired, never resumed"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > lets expiry govern a revoke deadline delivered only after expires_at, and keeps a revocation committed before it: terminated expired, or terminated revoked, never rewritten"
+    }
+   ],
+   "notes": "#1535 finding 11 (D649, -01; #1638 review), stating the #1246 review ruling on late deliveries. Existing #1002 witnesses, mutation-proved under status.lifecycle.schedule-expiry-governs: applying a due schedule before the expiry clock fails both, and letting the expiry clock rewrite an already-terminal reason fails the late-revoke test."
   },
   {
    "id": "status.lifecycle.schedule-revoke-terminated-at",
