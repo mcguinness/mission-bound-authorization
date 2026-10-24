@@ -2389,8 +2389,13 @@ one:
   Lifecycle-Gated Authorization, Monotonic Derivation, and
   Credential-Bound claims.
 
-Only the third earns the term: a `mission` claim alone is a reference,
-not Mission-bound authorization. The family defines "Mission-bound" by
+Only the third earns the term. An access token's `mission` claim is
+reserved for issuance under a Mission-binding profile (the OAuth
+binding's Claim Reservation), so a Mission-referenced access token
+carries its identifier by other means; the claim attests that issuance
+conformed to that profile, not that the minter queried current Mission
+state, and its presence alone establishes no trust. The family defines
+"Mission-bound" by
 the `credential-mission-bound` equivalence of the binding properties
 ({{binding-properties}}): six conditions, each mapped to what
 discharges it, earned only where all hold together. The OAuth binding
@@ -2400,7 +2405,9 @@ discharges the equivalence through its own conformance rule.
 
 The Mission-Bound Credential is a credential carrying the `mission`
 claim (`id`, `issuer`) and Mission-derived authorization details,
-issued only while the Mission is `active`. Its home is the OAuth
+issued only under a Mission-binding profile, which ties its issuance to
+the Mission being `active` (the OAuth binding's Claim Reservation). Its
+home is the OAuth
 binding's Mission-Bound Access Tokens and Mission Claim sections.
 The claim's `id` and `issuer` are the Mission-identity condition; a
 token-carried Authority Set commitment is never required for it, per
@@ -4083,6 +4090,15 @@ custody but makes neither High-Assurance claim. In this shape:
   custody statement made legible, not a checked assurance grade (the
   member's definition in {{deployment-profile}} states the open
   verifier gap).
+- Its `revocation_exposure` member, under `runtime`, states inputs
+  that size what can still happen inside the mediated classes'
+  revocation window: the window in seconds, the PEP's admission limit
+  in actions per second per Mission, its ceiling on actions in flight
+  per Mission, and the per-action and aggregate bounds in force. The
+  member records inputs, not a computed bound: bursts within the
+  limit, actions already in flight (each may run to its execution
+  bound), and the metering companion's reservation and settlement
+  rules determine the actual exposure.
 - Its revocation residuals follow the runtime profile's arithmetic:
   for a mediated class, the 30-second staleness bound, plus whatever
   permit window a reported lease end leaves beyond it (at most the
@@ -4122,7 +4138,14 @@ custody but makes neither High-Assurance claim. In this shape:
     ],
     "unmediated_exclusions": [
       "internal_reasoning", "local_cache_read"
-    ]
+    ],
+    "revocation_exposure": {
+      "window_seconds": 90,
+      "max_admissions_per_second_per_mission": 5,
+      "max_in_flight_actions_per_mission": 10,
+      "per_action_bounds": ["max_amount"],
+      "aggregate_bounds": ["max_budget"]
+    }
   },
   "credential_custody": {
     "held_by": "pep",
@@ -4385,6 +4408,17 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Deployment Profile Example Shapes: the first shape's illustrative
+  `revocation_exposure` member states the inputs that size what can
+  happen inside the revocation window, with units, as inputs rather
+  than a computed bound. No requirement changed.
+
+- Token Classes and The Mission-Bound Credential follow the OAuth
+  binding's Claim Reservation: an access token's `mission` claim
+  attests issuance under a Mission-binding profile, not a current
+  state check by its minter, and a Mission-referenced access token
+  does not carry it. No requirement changed (#1531).
 
 - The Authorization bases entry says the basis `type` values form a
   specification-defined namespace and that its list names each

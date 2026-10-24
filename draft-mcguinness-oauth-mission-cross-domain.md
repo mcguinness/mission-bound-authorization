@@ -910,6 +910,35 @@ against the approved commitment MAY obtain a Mission Mandate
 ({{I-D.draft-mcguinness-mission-mandate}}) and recompute
 `authority_hash` per that profile.
 
+## Mission-Binding Profile of the Local Token {#local-token-binding-profile}
+
+A local token carries the `mission` claim under this profile, which
+states the elements the issuance profile's Claim Reservation names for
+a path whose minter is not the Mission's issuer
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Claim Reservation"):
+
+1. **Grant.** The cross-domain grant: signed by the Mission's issuer,
+   typed, sender-constrained, not replayed, audienced to this Resource
+   AS, and redeemed by a client this Resource AS authenticates
+   ({{validation-at-resource-as}}).
+2. **Authority bound.** The grant's audience-scoped
+   `authorization_details` bound the local token's, under this Resource
+   AS's own policy and failing closed on what it cannot interpret
+   ({{validation-at-resource-as}}); the Resource AS holds no full
+   Authority Set to compare against ({{audience-scope}}).
+3. **Mission state.** The originating AS establishes that the Mission
+   is `active` when it issues the grant ({{cross-domain-grant}}). The
+   Resource AS makes no state query: the grant's short lifetime bounds
+   the staleness it relies on, and the local token's `exp` does not
+   exceed the grant's ({{cross-domain-revocation}}).
+4. **Consumer checks.** A resource server applies the issuance
+   profile's resource-server requirements; the local token's `iss` is
+   the Resource AS and its `mission.issuer` the originating AS
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server Enforcement").
+
+The introspection representation of a local token is that of
+{{introspection-at-resource-as}}.
+
 # The Origin Principal Profile {#origin-principal}
 
 This OPTIONAL profile preserves the on-behalf-of principal across
@@ -1175,7 +1204,8 @@ from a cross-domain grant returns the claim-shape members only: `id`,
 holds the token, not the Mission: it knows the Mission state only as
 of grant validation and has no query to the issuer keyed by
 `mission_id` (neither this document nor the issuance profile defines
-one).
+one). This response is the introspection representation of a local
+token minted under {{local-token-binding-profile}}.
 
 `authority_hash`, when included, is the issuer's commitment carried
 through the grant, not a value the Resource AS recomputes from its
@@ -1756,6 +1786,11 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
   credentials are issued. The local token's `exp` still never exceeds
   the grant's, and carrying the value extends no lifetime and
   authorizes no renewal.
+
+- The Resource AS's local token states its Mission-binding profile
+  (grant, authority bound, state check, and consumer checks), as the
+  issuance profile's Claim Reservation requires. No requirement
+  changed (#1531).
 
 - Changes a requirement (#1374): the Mission Issuer omits an entry's
   `delegation` from the conveyed copy unless every retained origin of

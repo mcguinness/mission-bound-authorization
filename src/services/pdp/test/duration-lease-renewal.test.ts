@@ -470,6 +470,33 @@ describe("a keyed renewal carries its own idempotency key, claimed with the rene
   });
 });
 
+describe("a retry under the same idempotency key draws the metered reservation once (@spec metering#retry, #1629)", () => {
+  it("a retransmitted keyed request returns the same permit and concurrent duplicates are suppressed: one activity is opened, leased by one permit", async () => {
+    const { ledger, claims, decide } = keyedHarness();
+    const key = freshKey();
+    const settled = await Promise.all(Array.from({ length: 8 }, () => decide(keyedRequest(T0, key), T0)));
+    const permits = settled.filter((d) => d.decision);
+    expect(permits.length).toBeGreaterThanOrEqual(1);
+    const openingId = permits[0]?.context.evaluation_id;
+    expect(permits.every((d) => d.context.evaluation_id === openingId)).toBe(true);
+    for (const d of settled.filter((d) => !d.decision)) expect(d.context.denial_reason).toBe("duplicate_suppressed");
+    // A later retransmission under the same key, inside the permit's validity, is the stored permit again.
+    const later = T0 + 5_000;
+    const again = await decide(keyedRequest(later, key), later);
+    expect(again.decision, JSON.stringify(again.context)).toBe(true);
+    expect(again.context.evaluation_id).toBe(openingId);
+    expect(ledger.activities()).toEqual([
+      { activityId: expect.any(String), evaluations: [openingId], leaseEndMs: T0 + PAY_LEASE_S * 1000 },
+    ]);
+    // Control: a new intended execution under a fresh key opens its own reservation.
+    const fresh = await decide(keyedRequest(later, freshKey()), later);
+    expect(fresh.decision, JSON.stringify(fresh.context)).toBe(true);
+    expect(fresh.context.evaluation_id).not.toBe(openingId);
+    expect(ledger.activities()).toHaveLength(2);
+    claims.close();
+  });
+});
+
 /** The shipped statement's execution-lease maximum and reconciliation window for the class. */
 const CLASS_LEASE_MS = 30_000;
 const WINDOW_MS = 15 * 60_000;
