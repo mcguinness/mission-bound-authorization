@@ -2762,16 +2762,20 @@ parameter digest. The Operation Profile identifies every consumer of a
 changed digest form and its migration rule, including vendor/target
 identity, amount/currency and destination facts where applicable.
 
-The salt MUST be unpredictable, secret, qualified by Mission and version,
-and retained for the lifetime of every outstanding binding that uses it.
-It never appears in decision requests or evidence. It MUST survive restart
-and be consistently available to the PEP replicas that can use those
-bindings, on the terms {{single-use-identifiers}} sets for the
-consumed-identifier store; a deployment MUST fail closed for a binding
-whose salt or descriptor cannot be recovered, rather than silently
-replacing either. This is persistent secret-state coordination, not a
-stateless digest scheme. Salting limits guessing of low-entropy values;
-digest-only evidence still exposes equality and linkability.
+The salt MUST be unpredictable, secret, and qualified by Mission and
+version. It never appears in decision requests or evidence. On the terms
+{{single-use-identifiers}} sets for the consumed-identifier store, the salt
+either survives restart and is consistently available to the PEP replicas
+that can use its bindings, or is held per epoch: a restart, or a replica
+that does not hold a version, then loses every binding made under it.
+Rotation MUST retain a version for the lifetime of every outstanding
+binding that uses it, or explicitly invalidate those bindings. Under either
+posture, a deployment MUST fail closed for a binding whose salt or
+descriptor cannot be recovered, rather than silently replacing either.
+Every execution path that can use such a binding refuses it before any
+effect. Neither posture is a stateless digest scheme. Salting limits
+guessing of low-entropy values; digest-only evidence still exposes
+equality and linkability.
 
 The PDP MUST return the supplied context digest as a permit condition
 for a covered operation. The executing PEP MUST re-resolve the declared
@@ -2785,9 +2789,14 @@ permit-binding rules still apply; the request or retrospective evidence
 cannot replace the permit condition.
 
 An inability to capture context before requesting a Decision produces a
-pre-decision Refusal Record. After a permit exists, failure to re-resolve
-or match the context produces Execution Evidence with `outcome`
-`suppressed` and `error` `target_drift`, not a new PDP denial reason.
+pre-decision Refusal Record, `evaluation_context_unresolvable`
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). After a permit exists,
+failure to re-resolve or match the context produces Execution Evidence
+with `outcome` `suppressed`, not a new PDP denial reason. Its `error` is
+`target_drift` unless the context is established and an agent-supplied
+parameter demonstrably changed, which is `parameter_mismatch`; the record
+keeps every digest pair the PEP can observe and the audit consumer reports
+each divergence ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 The extension composes with the single-use rule
 ({{single-use-identifiers}}) and never substitutes for it, changing
 neither single-use consumption nor retained-permit retry semantics.
@@ -4129,6 +4138,17 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Evaluation-Context Binding (#773): the salt survives restart and is
+  available to every replica that can use its bindings, or is held per
+  epoch, so that a restart or a replica without the version loses those
+  bindings; rotation retains a version for its outstanding bindings or
+  invalidates them explicitly, and every execution path refuses an
+  unrecoverable binding before any effect. A capture failure before the
+  decision request is the Refusal Record `evaluation_context_unresolvable`;
+  after a permit, the `error` is `target_drift` unless the context is
+  established and an agent-supplied parameter changed, with every
+  observable digest pair kept.
 
 - Deployment Considerations: a gated action waits for its gate in
   every class; whether the decision waits on the network depends on

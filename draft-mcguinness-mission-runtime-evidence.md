@@ -728,10 +728,13 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   was absent or did not verify, so no decision the PEP can rely on was
   obtained), `channel_failure`, `pdp_unreachable`, or
   `state_unavailable` (where the deployment's state-source placement
-  has the PEP supply state, and it cannot establish it), or
+  has the PEP supply state, and it cannot establish it),
   `phase_unavailable` (the operation is a phase of a compound action
   and the PEP cannot establish the phase before requesting a
-  decision). For a PDP refusal of an in-scope request that reaches it
+  decision), or `evaluation_context_unresolvable` (the runtime
+  profile's Evaluation-Context Binding extension covers the operation,
+  and the PEP cannot capture its authoritative evaluation context before
+  requesting a decision). For a PDP refusal of an in-scope request that reaches it
   without the Mission decision context a runtime enforcement scope
   requires, `mission_context_missing`; for one whose operation target
   is absent, malformed, or outside the enforcement scope the requesting
@@ -743,7 +746,9 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   incompatible with the declared binding, for an operation the runtime
   profile's Evaluation-Context Binding extension covers,
   `evaluation_context_invalid`. The last two describe decision inputs
-  the PDP cannot use, not an evaluated policy denial. These name
+  the PDP cannot use, not an evaluated policy denial;
+  `evaluation_context_unresolvable` is instead the PEP's own failure to
+  capture the context, before any decision request. These name
   pre-evaluation conditions,
   PEP-side or PDP-side, and are disjoint from the runtime profile's
   PDP denial reasons for an evaluated decision (for example, as
@@ -1210,7 +1215,8 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   is a parameter deviation, and the record REMAINS VALID: evidence of
   an unauthorized execution is still evidence, never grounds to
   discard the record. A deviation recorded against `outcome`
-  `suppressed` carries `error` `parameter_mismatch`. A deviation
+  `suppressed` carries `error` `parameter_mismatch`, except where
+  {{context-drift-classification}} names `target_drift`. A deviation
   recorded against `outcome` `completed` or `failed`, a buggy or
   compromised executor having gone ahead despite the mismatch, is
   equally representable, and a consumer MUST flag it as an
@@ -1471,7 +1477,8 @@ evidence, never an invalid record to discard.
 When the executing PEP
 detects the deviation before acting, it MUST refuse the action and
 emit Execution Evidence with `outcome` `suppressed` and `error`
-`parameter_mismatch` ({{example-parameter-deviation}}). A deviation
+`parameter_mismatch` ({{example-parameter-deviation}}), or `target_drift`
+where {{context-drift-classification}} names it. A deviation
 recorded against an `outcome` of `completed` or `failed`, a buggy or
 compromised executor having gone ahead despite the mismatch, is
 equally representable and is never grounds to reject the record.
@@ -1487,10 +1494,35 @@ Whatever the recorded `outcome`, when the two digests diverge the
 audit consumer MUST classify the execution as a parameter deviation
 and treat it as equivalent to an unauthorized action for compliance
 purposes. The record can carry two digest pairs, and the
-classification follows the pair: divergence of the parameter pair is
-a parameter deviation, the refusal identifier `parameter_mismatch`;
-divergence of the evaluation-context pair is context drift, the
-refusal identifier `target_drift`.
+classification follows each pair independently of the record's
+`error`: divergence of the parameter pair is a parameter deviation,
+and divergence of the evaluation-context pair is context drift. The
+audit consumer reports every divergence a record carries, even where
+its `error` names only one.
+
+### Context Drift and Parameter Deviation {#context-drift-classification}
+
+Under the runtime profile's Evaluation-Context Binding extension
+({{I-D.draft-mcguinness-mission-runtime}}), a fact the descriptor
+declares can also be bound as a parameter, so a moved fact can change
+both digest pairs. A suppression records one `error`, named by what
+moved, and keeps every digest pair the executing PEP can observe:
+
+| Evaluation context at use | Parameters about to be used | `error` |
+|---|---|---|
+| Established and equal | Equal | none: the bindings hold |
+| Not establishable: a declared fact, target, salt version, or descriptor | Any | `target_drift` |
+| Established | A parameter the descriptor does not declare as a fact differs | `parameter_mismatch` |
+| Established and unequal to the permit's condition, or the condition missing | Equal, or differing only in declared facts | `target_drift` |
+| Established under a changed descriptor, facts unchanged | Equal | `target_drift` |
+
+A parameter the descriptor does not declare as a fact is agent-supplied,
+so `parameter_mismatch` records that an agent-supplied parameter
+demonstrably changed. An unavailable context is never compared:
+`effective_evaluation_context_digest` is absent, and so is
+`effective_parameter_digest` where the parameters cannot be established
+({{execution-evidence-object}}). The audit consumer reports each
+divergent pair whatever the `error`.
 
 ## Retention
 
@@ -2633,6 +2665,14 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- Refusal Record: `evaluation_context_unresolvable` records a PEP that
+  cannot capture the authoritative evaluation context of an operation
+  Evaluation-Context Binding covers before requesting a decision,
+  distinct from the PDP's `evaluation_context_invalid`. Context Drift
+  and Parameter Deviation gives the one `error` a suppression records
+  when the context fails at use: `target_drift` unless the context is
+  established and an agent-supplied parameter changed, with every
+  observable digest pair kept and every divergence reported (#773).
 - Execution Evidence: a PEP that cannot establish the effective
   parameters suppresses execution and omits
   `effective_parameter_digest`, never copying or fabricating it; the
