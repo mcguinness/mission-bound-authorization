@@ -43,6 +43,8 @@ const REFUSAL_RECORD_DIAGNOSTICS = [
   "credential_boundary_changed",
   // #1629: the operation is a phase of a compound action and its phase is not establishable.
   "phase_unavailable",
+  // #773: a covered operation's authoritative evaluation context cannot be captured.
+  "evaluation_context_unresolvable",
 ];
 
 const refusalInput = (denial_reason: string) => ({
@@ -107,7 +109,12 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
   });
 
   it("operation_target_invalid is the PDP's alone, and a PEP-side store never signs it (#1276)", async () => {
-    expect(REFUSAL_DENIAL_REASONS.pdp).toEqual(["mission_context_missing", "operation_target_invalid", "phase_invalid"]);
+    expect(REFUSAL_DENIAL_REASONS.pdp).toEqual([
+      "mission_context_missing",
+      "operation_target_invalid",
+      "phase_invalid",
+      "evaluation_context_invalid",
+    ]);
     expect(isRefusalDenialReason("pdp", "operation_target_invalid")).toBe(true);
     expect(isRefusalDenialReason("pep", "operation_target_invalid")).toBe(false);
     const keys = createEphemeralEvidenceKeys();
