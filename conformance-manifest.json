@@ -33379,6 +33379,42 @@
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). target_drift at use is witnessed (T7). The parameter_mismatch precedence branch cannot arise under the reference's service-level contracts, which derive no target from arguments."
   },
   {
+   "id": "authzen.failure-condition-coverage.target-object-unestablishable-at-use",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "Named target object the permit was evaluated for, or the effective parameters it determines, not establishable at use | Execution Evidence | `target_drift`",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit whose target object, or the effective parameters that object determines, cannot be established at use is carried as Execution Evidence, suppressed with error target_drift, never as a Refusal Record (target_unresolvable is the pre-decision carrier) and never as a parameter_mismatch"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a send whose routing stops resolving between decision and commit is suppressed target_drift, keeping the authorized digest with no effective one, and sends nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24: reuse target_drift; no post-permit target_unresolvable). The invoice deleted after the decision and the recipient routing that stops resolving each land on Execution Evidence, suppressed target_drift, with no Refusal Record and no second decision. Mutations: relabelling the invoice exit parameter_mismatch fails the record-error assertion on its own; adding a Refusal Record at that exit fails the no-Refusal-Record assertion on its own; relabelling the routing exit parameter_mismatch fails the routing test. The pre-decision row (a named target object not resolvable before the decision request, target_unresolvable) is evidence.refusal.denial-reason-enum-and-boundary's."
+  },
+  {
    "id": "authzen.failure-condition-coverage.lease-renewal-out-of-authority",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "failure-condition-coverage",
