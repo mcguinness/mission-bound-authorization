@@ -1197,8 +1197,9 @@ the following members:
 `delegate_depth`:
 : An integer. The joining client's depth under the Mission, from the
   deployment's actor records, which rule 5 of {{join-rules}} evaluates.
-  Present when the joining client is a delegate. On the assertion
-  path, the assertion's `join` claim governs ({{join-assertion-pdp}}).
+  Present when the joining client is a delegate; the Mission's own
+  client is depth 0. On the assertion path, the assertion's `join`
+  claim governs ({{join-assertion-pdp}}).
 
 `assertion`:
 : A string. A Mission Join Assertion ({{join-assertion-artifact}}) for
@@ -1855,7 +1856,8 @@ mappings. It applies rule 5 of {{join-rules}} with them, and they are
 the joining client identifier and disposition that rule 9's
 commitment changes with. When `context.mission_join` also carries
 `delegate_depth` and it differs from `join.depth`, the PDP MUST deny
-with `mission_binding_failed`.
+with `mission_binding_failed`. For a client join, whose `join` claim
+carries no `depth`, the PDP compares a reported `delegate_depth` with 0.
 
 Every other join rule holds unchanged: the PDP resolves Mission state
 at the MAS under the runtime profile's freshness rules, denies with
@@ -3504,6 +3506,9 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- A client join counts as `delegate_depth` 0 in the assertion
+  comparison: a reported 0 agrees and any other value is denied, and
+  the `join` claim still carries no `depth` for a client (#1592, D681).
 - Join Assertion roles (#1591, D708). The PEP requests a Join
   Assertion; a client or delegate calls the endpoint only as the PEP it
   hosts, and no carriage of an assertion from a client to a separate
