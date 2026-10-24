@@ -462,15 +462,24 @@ export interface ExpansionDisclosure {
 }
 
 /**
- * @spec expansion#completion-modes (#1558): a pending deferral as its approval
- * surface renders it ({@link ExpansionDeferralStore.pendingReview}).
+ * @spec expansion#completion-modes (#1558): a pending deferral as its stored
+ * request names it ({@link ExpansionDeferralStore.pendingRequest}).
  */
-export interface DeferralReview {
+export interface PendingDeferral {
   deferralCode: string;
   /** The Mission the successor would supersede; its Subject is the successor's. */
   predecessor: MissionRecord;
   /** The client that requested the expansion and polls for it. */
   clientId: string;
+  /** When the deferral's own lifetime ends. */
+  expiresAt: string;
+}
+
+/**
+ * @spec expansion#completion-modes (#1558): a pending deferral as its approval
+ * surface renders it ({@link ExpansionDeferralStore.pendingReview}).
+ */
+export interface DeferralReview extends PendingDeferral {
   intent: MissionIntent;
   /** The client's proposal, untrusted, when it submitted one. */
   proposal?: AuthorityEntry[];
@@ -480,8 +489,6 @@ export interface DeferralReview {
    * from the trusted catalog (#1447).
    */
   successor: AuthorityEntry[];
-  /** When the deferral's own lifetime ends. */
-  expiresAt: string;
   disclosure: ExpansionDisclosure;
   /** The re-consent offer the disclosure rendered and retained, when it offers one. */
   offer?: CeilingConsent;
@@ -1047,16 +1054,12 @@ export class ExpansionDeferralStore {
    * Throws what derivation throws (an IntentError).
    */
   pendingReview(deferralCode: string): DeferralReview | undefined {
+    const pending = this.pendingRequest(deferralCode);
+    if (!pending) return undefined;
+    const { predecessor } = pending;
     const row = this.db
-      .prepare(
-        "SELECT predecessor_id, intent_json, client_id, created_at, carryover_plan_json FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'",
-      )
-      .get(deferralCode) as
-      | { predecessor_id: string; intent_json: string; client_id: string; created_at: number; carryover_plan_json: string | null }
-      | undefined;
-    if (!row || this.now().getTime() > row.created_at + DEFERRAL_EXPIRES_IN * 1000) return undefined;
-    const predecessor = this.kernel.get(row.predecessor_id);
-    if (!predecessor) return undefined;
+      .prepare("SELECT intent_json, carryover_plan_json FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as { intent_json: string; carryover_plan_json: string | null };
     const recorded = JSON.parse(row.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
     const proposal = recorded.pr?.length ? recorded.pr : undefined;
     // @spec capability-binding#capability-approval (#1447): bound as its creation binds it.
@@ -1064,13 +1067,10 @@ export class ExpansionDeferralStore {
     const disclosure = this.disclosure(deferralCode) as ExpansionDisclosure;
     const offer = disclosure.ceiling?.reconsent_offer;
     return {
-      deferralCode,
-      predecessor,
-      clientId: row.client_id,
+      ...pending,
       intent: recorded.i,
       ...(proposal ? { proposal } : {}),
       successor,
-      expiresAt: new Date(row.created_at + DEFERRAL_EXPIRES_IN * 1000).toISOString(),
       disclosure,
       ...(row.carryover_plan_json ? { carryover: (JSON.parse(row.carryover_plan_json) as CarryoverPlan).manifest } : {}),
       ...(offer
@@ -1081,6 +1081,30 @@ export class ExpansionDeferralStore {
             },
           }
         : {}),
+    };
+  }
+
+  /**
+   * @spec expansion#completion-modes (#1558, #1633 review): a deferral still
+   * pending within its lifetime as its stored request names it, or undefined:
+   * the Mission it widens, whose Subject is the successor's, and the
+   * requesting client. Nothing is derived or resolved, so authorizing a denial
+   * never depends on the current policy or catalog.
+   */
+  pendingRequest(deferralCode: string): PendingDeferral | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT predecessor_id, client_id, created_at FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'",
+      )
+      .get(deferralCode) as { predecessor_id: string; client_id: string; created_at: number } | undefined;
+    if (!row || this.now().getTime() > row.created_at + DEFERRAL_EXPIRES_IN * 1000) return undefined;
+    const predecessor = this.kernel.get(row.predecessor_id);
+    if (!predecessor) return undefined;
+    return {
+      deferralCode,
+      predecessor,
+      clientId: row.client_id,
+      expiresAt: new Date(row.created_at + DEFERRAL_EXPIRES_IN * 1000).toISOString(),
     };
   }
 

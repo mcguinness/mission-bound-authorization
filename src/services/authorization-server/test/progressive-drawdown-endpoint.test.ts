@@ -2608,6 +2608,24 @@ describe("capability bindings on the expansion deferral page (@spec capability-b
     });
   });
 
+  it("an Approver can deny after an added action's tool disappears from the catalog, which no approval can then bind (#1633 review)", async () => {
+    const { code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const shown = await page(code, bob.cookie as string);
+    expect(shown.status).toBe(200);
+    await withTool("lookup_vendor", (t) => {
+      t.name = "lookup_vendor_removed";
+    }, async () => {
+      const approved = await decide(code, bob, { decision: "approve", render_revision: shown.revision });
+      expect(approved.status, JSON.stringify(approved.json)).toBe(400);
+      expect(approved.json.error).toBe("invalid_authorization_details");
+      expect((await poll(code)).body.error).toBe("authorization_pending");
+      const denied = await decide(code, bob, { decision: "deny", render_revision: shown.revision });
+      expect(denied.status, JSON.stringify(denied.json)).toBe(200);
+      expect((await poll(code)).body.error).toBe("access_denied");
+    });
+  });
+
   it("a covered definition change to an added action's tool between rendering and decision approves nothing", async () => {
     const { code } = await pending();
     const bob = browserApprovalHeaders(store(), code, BOB, "");
