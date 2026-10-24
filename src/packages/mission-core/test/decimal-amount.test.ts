@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { compareAmounts, InvalidAmountError, isValidAmount } from "../src/index.js";
+import { compareAmounts, InvalidAmountError, isCurrencyCode, isValidAmount } from "../src/index.js";
 
 describe("isValidAmount", () => {
   it("accepts plain decimal amounts", () => {
@@ -64,5 +64,48 @@ describe("compareAmounts", () => {
   it("throws InvalidAmountError on a malformed operand, on either side", () => {
     expect(() => compareAmounts("NaN", "500.00")).toThrow(InvalidAmountError);
     expect(() => compareAmounts("500.00", "1e300")).toThrow(InvalidAmountError);
+  });
+});
+
+// @spec resource-access#initial-common-constraints (#1595, D727): "a
+// `currency` value is exactly three characters, each an upper-case ASCII
+// letter (`A` to `Z`)"; "Values are compared exactly, character for
+// character, with no trimming, case folding, numeric code, or conversion."
+describe("isCurrencyCode: exactly three upper-case ASCII letters (#1595, D727)", () => {
+  it("admits three upper-case ASCII letters, whether or not ISO 4217 assigns the code", () => {
+    for (const code of ["USD", "EUR", "JPY", "XYZ", "AAA", "ZZZ"]) {
+      expect(isCurrencyCode(code), code).toBe(true);
+    }
+  });
+
+  it("refuses any other length, a line terminator included, and any other character", () => {
+    for (const code of [
+      "usd",
+      "Usd",
+      "uSD",
+      "US",
+      "USDX",
+      "",
+      "USD\n",
+      "USD\r",
+      "USD\u2028",
+      " USD",
+      "USD ",
+      "840",
+      "U5D",
+      "ÜSD",
+      "ＵＳＤ",
+      "US-",
+      "@SD",
+      "US[",
+    ]) {
+      expect(isCurrencyCode(code), JSON.stringify(code)).toBe(false);
+    }
+  });
+
+  it("refuses a value that is not a string", () => {
+    for (const code of [840, null, undefined, ["USD"], { code: "USD" }]) {
+      expect(isCurrencyCode(code), JSON.stringify(code)).toBe(false);
+    }
   });
 });

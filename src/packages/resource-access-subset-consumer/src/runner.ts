@@ -91,7 +91,7 @@ export interface CaseResult {
  * Approval).
  */
 export function entryValidationCheck(entry: unknown, config: ConsumerConfig): CaseResult {
-  const parsed = parseEntry(entry, true);
+  const parsed = parseEntry(entry);
   if (!parsed.ok) {
     return {
       outcome: "refuse",

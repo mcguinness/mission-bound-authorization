@@ -143,12 +143,17 @@ export async function handleDelegationHandleExchange(
   // Mint. The handle rides a provider Grant of its own, recorded in the
   // Mission-bound grant index (kind delegation-handle), so the Mission's own
   // grant_id does not move and the save-time hook re-gates active state only.
+  // @spec mission#grant-binding-related (#1503 finding 11, D620): the exchange
+  // establishes no new grant lineage, so the handle's grant records the grant
+  // the presented token was issued under as its backing grant, and the
+  // handle's liveness keeps that grant's state.
+  const backingGrantId = typeof claims.jti === "string" ? opts.tokenIssuanceStore?.resolve(opts.issuer, claims.jti)?.grantId : undefined;
   const oidcGrant = new provider.Grant({ accountId: record.subject.sub, clientId: client.clientId });
   for (const entry of authority) {
     (oidcGrant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
   }
   const grantId = await oidcGrant.save();
-  kernel.missionBoundGrants.record({ grantId, missionId: record.id, kind: "delegation-handle" });
+  kernel.missionBoundGrants.record({ grantId, missionId: record.id, kind: "delegation-handle", backingGrantId });
   // @spec mission#self-exchange rule 3, mission#issuance-gating: the one
   // counted derivation of this exchange; nothing is counted again at save.
   try {

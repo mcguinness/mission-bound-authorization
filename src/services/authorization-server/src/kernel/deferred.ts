@@ -30,7 +30,7 @@ import {
 import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { APPROVAL_FLOOR, type ApprovalFloorPolicy } from "@mission/demo-data";
 import { evaluateApprovalFloor } from "./approval-floor.js";
-import { type ContainmentSelector, isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import { authorityHash, type ContainmentSelector, isSubsetSetIgnoringCapabilitySources, type JsonValue } from "@mission/core";
 import {
   createExpansion,
   type ReconciliationStatus,
@@ -346,6 +346,9 @@ function migrateExpansionDeferrals(db: Database): void {
     "reconsent_offer_json",
     // @spec discovery#adjudication (#1469 stage 1): the encounter facts.
     "encounter_json",
+    // @spec expansion#completion-modes (#1558): the commitment to the
+    // successor's authority the approval approved, enforced at completion.
+    "approved_authority_hash",
   ]) {
     if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
   }
@@ -411,6 +414,34 @@ export interface ExpansionDisclosure {
   };
 }
 
+/**
+ * @spec expansion#completion-modes (#1558): a pending deferral as its approval
+ * surface renders it ({@link ExpansionDeferralStore.pendingReview}).
+ */
+export interface DeferralReview {
+  deferralCode: string;
+  /** The Mission the successor would supersede; its Subject is the successor's. */
+  predecessor: MissionRecord;
+  /** The client that requested the expansion and polls for it. */
+  clientId: string;
+  intent: MissionIntent;
+  /** The client's proposal, untrusted, when it submitted one. */
+  proposal?: AuthorityEntry[];
+  /** The successor's authority, derived as the approval derives it. */
+  successor: AuthorityEntry[];
+  /** When the deferral's own lifetime ends. */
+  expiresAt: string;
+  disclosure: ExpansionDisclosure;
+  /** The re-consent offer the disclosure rendered and retained, when it offers one. */
+  offer?: CeilingConsent;
+  /**
+   * @spec child-delegation#carryover-manifest (#1558): the Carryover Manifest
+   * prepared for the predecessor's live Child Missions, which the approval
+   * commits; fixed while the deferral is pending.
+   */
+  carryover?: CarryoverManifest;
+}
+
 /** The Approver's async adjudication payload for a deferred expansion. */
 export interface ExpansionApproval {
   approver: { iss: string; sub: string };
@@ -424,9 +455,11 @@ export interface ExpansionApproval {
    * the same trust boundary as `ApprovalSessionStore.establish`, never a value
    * the client or the decision supplies, and never stamped at the approval.
    * Required when the successor's authority invokes the approval-authentication
-   * floor; without it such an approval refuses.
+   * floor; without it such an approval refuses. A trusted headless approval
+   * service (#1558) carries its own principal's values, and is not an
+   * interactive login.
    */
-  authentication?: { surface: "browser"; acr: string; auth_time: number };
+  authentication?: { surface: "browser" | "service"; acr: string; auth_time: number };
   /**
    * @spec progressive#ceiling-reconsent (#1413) — a ceiling and drawdown
    * policy the Approver explicitly re-consents at this approval, separately
@@ -715,8 +748,13 @@ export class ExpansionDeferralStore {
     };
   }
 
-  /** Approver adjudication: records the approver, the approval event, and the expiry. */
-  approve(deferralCode: string, approval: ExpansionApproval): void {
+  /**
+   * Approver adjudication: records the approver, the approval event, and the
+   * expiry. True when this call approved a pending deferral; false when the
+   * code is unknown or the deferral was no longer pending, and nothing was
+   * recorded.
+   */
+  approve(deferralCode: string, approval: ExpansionApproval): boolean {
     // @spec mission#approval-authentication (#826, D425): an expansion
     // approval is a direct approval of the successor's authority, so it meets
     // the same published floor as the approval interaction, at this decision.
@@ -730,9 +768,13 @@ export class ExpansionDeferralStore {
       )
       .get(deferralCode) as { intent_json: string; predecessor_id: string; reconsent_offer_json: string | null } | undefined;
     let reconsent: ReconsentedCeiling | undefined;
+    let approvedAuthority: string | null = null;
     if (pending) {
       const recorded = JSON.parse(pending.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
       const successor = this.kernel.derive(recorded.i, recorded.pr?.length ? recorded.pr : undefined);
+      // @spec expansion#completion-modes (#1558): the approval approves this
+      // derived set, and completion creates the successor only with it.
+      approvedAuthority = authorityHash(this.kernel.issuerId(), successor as unknown as JsonValue[]);
       // @spec progressive#ceiling-reconsent (#1413): a re-consent is a
       // ceiling consent, so its entries are validated here and classified with
       // the successor's authority, as at the initial approval (#1255).
@@ -788,9 +830,9 @@ export class ExpansionDeferralStore {
       manifestJson = JSON.stringify(committed.manifest);
       manifestHash = committed.manifestHash;
     }
-    this.db
+    const approved = this.db
       .prepare(
-        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ?, ceiling_reconsent_json = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
+        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ?, ceiling_reconsent_json = ?, approved_authority_hash = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
       )
       .run(
         JSON.stringify(approval.approver),
@@ -799,8 +841,10 @@ export class ExpansionDeferralStore {
         manifestJson,
         manifestHash,
         reconsent ? JSON.stringify(reconsent) : null,
+        approvedAuthority,
         deferralCode,
       );
+    return approved.changes === 1;
   }
 
   /**
@@ -924,6 +968,65 @@ export class ExpansionDeferralStore {
       };
     }
     return disclosure;
+  }
+
+  /**
+   * @spec expansion#completion-modes (#1558): the review an approval surface
+   * renders for a deferral still pending within its lifetime, or undefined:
+   * the successor's authority derived as the approval derives it, the request
+   * it came from, the client, the Subject (the predecessor's), and the consent
+   * disclosure, built once (which retains the re-consent offer it renders).
+   * Throws what derivation throws (an IntentError).
+   */
+  pendingReview(deferralCode: string): DeferralReview | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT predecessor_id, intent_json, client_id, created_at, carryover_plan_json FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'",
+      )
+      .get(deferralCode) as
+      | { predecessor_id: string; intent_json: string; client_id: string; created_at: number; carryover_plan_json: string | null }
+      | undefined;
+    if (!row || this.now().getTime() > row.created_at + DEFERRAL_EXPIRES_IN * 1000) return undefined;
+    const predecessor = this.kernel.get(row.predecessor_id);
+    if (!predecessor) return undefined;
+    const recorded = JSON.parse(row.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
+    const proposal = recorded.pr?.length ? recorded.pr : undefined;
+    const successor = this.kernel.derive(recorded.i, proposal);
+    const disclosure = this.disclosure(deferralCode) as ExpansionDisclosure;
+    const offer = disclosure.ceiling?.reconsent_offer;
+    return {
+      deferralCode,
+      predecessor,
+      clientId: row.client_id,
+      intent: recorded.i,
+      ...(proposal ? { proposal } : {}),
+      successor,
+      expiresAt: new Date(row.created_at + DEFERRAL_EXPIRES_IN * 1000).toISOString(),
+      disclosure,
+      ...(row.carryover_plan_json ? { carryover: (JSON.parse(row.carryover_plan_json) as CarryoverPlan).manifest } : {}),
+      ...(offer
+        ? {
+            offer: {
+              authority_ceiling: offer.authority_ceiling,
+              ...(offer.drawdown_policy ? { drawdown_policy: offer.drawdown_policy } : {}),
+            },
+          }
+        : {}),
+    };
+  }
+
+  /**
+   * @spec expansion#completion-modes (#1558): an Approver's denial of a
+   * deferral still pending. True when this call denied it; false, recording
+   * nothing, when it was no longer pending.
+   */
+  denyPending(deferralCode: string): boolean {
+    const denied = this.db
+      .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ? AND state = 'authorization_pending'")
+      .run(deferralCode);
+    if (denied.changes !== 1) return false;
+    this.cancelCarryoverPlan(deferralCode);
+    return true;
   }
 
   deny(deferralCode: string): void {
@@ -1262,6 +1365,17 @@ export class ExpansionDeferralStore {
       const predNow = this.kernel.get(row.predecessor_id as string);
       if (!predNow || predNow.state !== "active" || this.kernel.observe(predNow).state !== "active") {
         return undefined;
+      }
+      // @spec expansion#completion-modes, mission#approval-context-changes
+      // (#1558): the successor is created only with the authority its approval
+      // approved. Derived again now, inside this transaction, a set that
+      // differs (wider or narrower) refuses the completion before any write: a
+      // change after the approval needs a fresh one.
+      if (typeof row.approved_authority_hash === "string") {
+        const derivedNow = this.kernel.derive(intent, recorded.pr?.length ? recorded.pr : undefined);
+        if (authorityHash(this.kernel.issuerId(), derivedNow as unknown as JsonValue[]) !== row.approved_authority_hash) {
+          throw new IntentError("access_denied", "the successor's authority changed since its approval; a fresh approval is required");
+        }
       }
       // @spec child-delegation#carryover-manifest — completion uses EXACTLY the
       // reserved successor identifier the approval authenticated; it never

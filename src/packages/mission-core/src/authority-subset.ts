@@ -10,7 +10,7 @@ import {
   isImplementedCommonConstraint,
   validCommonConstraint,
 } from "./common-constraints.js";
-import { compareAmounts, isValidAmount } from "./decimal-amount.js";
+import { compareAmounts, isCurrencyCode, isValidAmount } from "./decimal-amount.js";
 import { isEnforceablePrefixBase, prefixAdmits } from "./operation-target.js";
 import { resourceContractViolation, sameResourceContract } from "./resource-contract.js";
 
@@ -303,6 +303,22 @@ export function entryDelegateMatcherViolation(entry: unknown): string | undefine
  * trusted issuer refuses it rather than minting it into a local token, so it
  * never reaches a resource (#1278, #1399).
  */
+/**
+ * @spec resource-access#initial-common-constraints, mission#max-amount: a
+ * `max_amount` value is the amount object exactly, with the members `amount`, a
+ * decimal string, and `currency`, a currency code (#1595, D727).
+ */
+function isAmountCap(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const cap = value as Record<string, unknown>;
+  return (
+    Object.keys(cap).every((k) => k === "amount" || k === "currency") &&
+    isCurrencyCode(cap.currency) &&
+    typeof cap.amount === "string" &&
+    isValidAmount(cap.amount)
+  );
+}
+
 export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   if (refusedEntryMember(value) !== undefined) return false;
@@ -359,20 +375,7 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
         !c.terminal_when.every((x) => conditionCanonicalBytes(x) !== undefined))
     )
       return false;
-    if (c.max_amount !== undefined) {
-      const cap = c.max_amount as Record<string, unknown> | null;
-      if (
-        !cap ||
-        typeof cap !== "object" ||
-        Array.isArray(cap) ||
-        Object.keys(cap).some((k) => k !== "amount" && k !== "currency") ||
-        typeof cap.currency !== "string" ||
-        !/^[A-Z]{3}$/.test(cap.currency) ||
-        typeof cap.amount !== "string" ||
-        !isValidAmount(cap.amount)
-      )
-        return false;
-    }
+    if (c.max_amount !== undefined && !isAmountCap(c.max_amount)) return false;
   }
   // @spec resource-access#resource-access-type (D634): a `delegation` or
   // `children` member outside the supported sets is refused
@@ -607,15 +610,20 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   if (!candidate.actions.every((a) => granted.actions.includes(a))) return false;
   const gCap = granted.constraints?.max_amount;
   const cCap = candidate.constraints?.max_amount;
+  // @spec resource-access#initial-common-constraints (#1595, D727),
+  // mission#max-amount: every present cap is validated before any comparison,
+  // whether or not the other side carries one, so a malformed currency or
+  // amount fails closed (not a subset) on either side, never passing as a
+  // candidate-only narrowing. isSubsetEntry stays a total, non-throwing
+  // predicate so its callers (e.g. child-delegation's strict-subset gate) keep
+  // treating it as a plain boolean.
+  if ((cCap !== undefined && !isAmountCap(cCap)) || (gCap !== undefined && !isAmountCap(gCap)))
+    return false;
   if (gCap) {
     if (!cCap) return false;
+    // Currency codes compare exactly; amounts as exact decimal values, never
+    // through IEEE-754 float coercion.
     if (cCap.currency !== gCap.currency) return false;
-    // @spec mission#max-amount — exact decimal-value comparison. A malformed
-    // amount on either side fails closed (not a subset) rather than comparing
-    // via IEEE-754 float coercion; isSubsetEntry stays a total, non-throwing
-    // predicate so its callers (e.g. child-delegation's strict-subset gate)
-    // keep treating it as a plain boolean.
-    if (!isValidAmount(cCap.amount) || !isValidAmount(gCap.amount)) return false;
     if (compareAmounts(cCap.amount, gCap.amount) > 0) return false;
   }
   const gVendors = granted.constraints?.vendors;

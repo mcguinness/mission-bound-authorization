@@ -24,7 +24,7 @@ import {
   isImplementedCommonConstraint,
   validCommonConstraint,
 } from "./common-constraints.js";
-import { compareAmounts, isValidAmount } from "./decimal-amount.js";
+import { compareAmounts, isCurrencyCode, isValidAmount } from "./decimal-amount.js";
 import { entryMatchesTarget, resourceMatchViolation } from "./operation-target.js";
 import {
   type ResourceContractRef,
@@ -123,7 +123,8 @@ function parseConstraints(
       !isObject(cap) ||
       typeof cap.amount !== "string" ||
       !isValidAmount(cap.amount) ||
-      !nonEmptyString(cap.currency)
+      // @spec resource-access#initial-common-constraints (#1595, D727).
+      !isCurrencyCode(cap.currency)
     ) {
       throw new CredentialAuthorityError(`${at}.constraints.max_amount is malformed`);
     }
@@ -265,8 +266,13 @@ function amountCapFromRange(
     throw new CredentialAuthorityError(`${at}.${name} must be a range carrying only max`);
   }
   const amount = String(c.max);
-  const currency = name.slice("amount_".length).toUpperCase();
-  if (!currency || !isValidAmount(amount))
+  // The deployment's argument naming (`amount_` and the currency in lower
+  // case, attenuation#root-mapping "under the deployment's rules"): exactly
+  // three lower-case ASCII letters, mapped to the upper-case code; any other
+  // suffix is malformed, never folded (#1595, D727).
+  const suffix = name.slice("amount_".length);
+  const currency = /^[a-z]{3}$/.test(suffix) ? suffix.toUpperCase() : "";
+  if (!isCurrencyCode(currency) || !isValidAmount(amount))
     throw new CredentialAuthorityError(`${at}.${name} is malformed`);
   return { amount, currency };
 }

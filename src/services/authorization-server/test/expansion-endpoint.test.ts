@@ -1455,6 +1455,40 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
     return { ...pred, childId: child.id };
   };
 
+  it("the expansion approval page shows the Carryover Manifest it commits, and the decision on it carries exactly the child shown (@spec child-delegation#carryover-manifest, expansion#completion-modes, #1558)", async () => {
+    const pred = await predecessorWithChild();
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const code = ((await opened.json()) as { deferral_code: string }).deferral_code;
+    const headers = floorApprovalHeaders(FLOOR_SESSIONS, code, "");
+    const page = await fetch(`${ISSUER}/expansions/deferrals/${code}`, { headers: { cookie: headers.cookie as string } });
+    const html = await page.text();
+    expect(page.status, html).toBe(200);
+    expect(html).toContain('<p class="carryover-exclusion-policy" data-mode="all_or_nothing">');
+    expect(html).toContain(`<li class="carryover-entry" data-child-id="${pred.childId}" data-outcome="carry">`);
+    const unescape = (s: string) =>
+      s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+    const shown = JSON.parse(unescape((html.match(/<pre class="carryover-replacement">([\s\S]*?)<\/pre>/) as RegExpMatchArray)[1] as string)) as {
+      replacement_id: string;
+      actor: { sub: string };
+      parent: { mission_id: string };
+    };
+    expect(shown.actor.sub).toBe(CARRY_ACTOR);
+    const decision = await fetch(`${ISSUER}/expansions/deferrals/${code}/decide`, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ decision: "approve", render_revision: page.headers.get("x-approval-render-revision") }),
+    });
+    expect(decision.status, await decision.clone().text()).toBe(200);
+    const done = await pollExpansion(code);
+    const result = (await done.json()) as { mission_id: string; carryover_replacements: Array<{ mission_id: string; related_to: string }> };
+    expect(done.status, JSON.stringify(result)).toBe(200);
+    expect(result.carryover_replacements).toEqual([expect.objectContaining({ mission_id: shown.replacement_id, related_to: pred.childId })]);
+    expect(shown.parent.mission_id).toBe(result.mission_id);
+  });
+
   it("completes a widening expansion by carrying the child and returns the authenticated batch map on the completion response", async () => {
     const pred = await predecessorWithChild();
     const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [

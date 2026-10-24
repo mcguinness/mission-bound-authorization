@@ -2274,7 +2274,7 @@ possession against the token's own confirmation key, and verifies any
 `parent` cross-check names the resolved Mission
 ({{request-processing}}).
 
-## Possession Proof and Parent Credentials at Rest
+## Possession Proof and Parent Credentials at Rest {#possession-at-rest}
 
 The child-creation token exchange holds no reusable parent credential
 at rest. Its possession proof is the parent's short-lived,

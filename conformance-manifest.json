@@ -15,8 +15,8 @@
     "content_sha256": "45ee6a69279bb2bd7e6eee690ecc5edca3fc9d8fbb6742b18db49fb6b2d3478b"
    },
    "draft-mcguinness-mission-metering.md": {
-    "revision": "d57add70451f53586de8f4f38e10df89397ee43c",
-    "content_sha256": "fba47845dbec53cd2c3b032ef9e102268bebc29e0b5f9e4910a241b4f17b5904"
+    "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
+    "content_sha256": "e0466f26a42dc89f7f1637996066ed8de81addad3a6190db9b7f814e21525036"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "8d60794eb32a6435d7140512bc30ca2585d8f5b9",
@@ -55,8 +55,8 @@
     "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "2ca3794ef5bf2cadbff4e2053fa19034fd3c73a4",
-    "content_sha256": "50be50d361f82afaaf72d61e5e2eca14d3928e7365b9e18118eccd5f5e9eb13b"
+    "revision": "156ca0604b98315a33aef7e9ad6313fcf73efd19",
+    "content_sha256": "92587542df6f587b8092b68d5e3649e718f5ee0cb6e5e5bf89e3e05986aa1001"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -71,12 +71,12 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "f729f22bef84e7aeb74833ef4b87e69621fdad7c",
-    "content_sha256": "804e6ad0b04cefcab1989dbc19b8e1593833ac0368fdd74576ad53e44e8941ec"
+    "revision": "f0293fb88f8590effaeaf0419963b56d6279c3f7",
+    "content_sha256": "9dd42b67971856832998a6674c405b3dd0e30fdd39164bd01dff5db74c84cea5"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
-    "content_sha256": "52dcce6f6f809438190f6b8685a9c24cf0d4f261f13f04f63f078d4ca8e44a54"
+    "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
+    "content_sha256": "a5d4486c5b3f708b16b0a86aabd670a429d37de62aa2436b87c2aadaf10e8ef9"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
@@ -111,8 +111,8 @@
     "content_sha256": "74d6ce91fa5bf904e532dfae6ead1982c0a17325fd90b491e1ef51e19a891741"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "c8eae0680f33d532b24db43e4b4b782586fe23f3",
-    "content_sha256": "d6688982eb8b956a4af4c2c62f6a8fb49a517a2b585beec700a0dc662347263f"
+    "revision": "a6567f6935140f2b1b04e1f1d819ce14dbbc341f",
+    "content_sha256": "c9636bdc3bc0a3b7baffd573b69e56708887aacb5b9fecdd0d35516a4d1d69d5"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
@@ -4149,7 +4149,7 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a submission's authority proposal is validated (type, schema, target_resources membership) after the intent object and before any evidence check"
+    "normative": "a submission's authority proposal is validated (type, schema, target_resources membership) after the envelope, with each evidence entry's structure and the size bounds (step 1), and the intent object (step 2), and before required-evidence resolution and evidence dispatch and verification"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -4179,19 +4179,13 @@
      "surface": "par"
     },
     {
-     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
-     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
-     "level": "endpoint",
-     "surface": "par"
-    },
-    {
      "file": "src/services/authorization-server/test/request-object-submission.test.ts",
      "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
      "level": "endpoint",
      "surface": "par"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification. #1512 (D625): on the Request Object path the step 2 test shows a schema failure (an entry missing its resource) and a type failure losing to an invalid Intent. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
+   "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification. #1512 (D625): on the Request Object path the step 2 test shows a schema failure (an entry missing its resource) and a type failure losing to an invalid Intent. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction. #1503 finding 12 (D620): a structurally invalid evidence entry and the evidence size bounds are step 1 checks, so they precede the proposal; the test that showed the proposal first was rewritten to the step 1 order and is cited on core.submission.step1-evidence-structure-and-bounds."
   },
   {
    "id": "core.submission.earliest-step-precedence",
@@ -4252,13 +4246,19 @@
     },
     {
      "file": "src/services/authorization-server/test/submission-precedence.test.ts",
-     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request",
      "level": "endpoint",
      "surface": "par"
     },
     {
      "file": "src/services/authorization-server/test/submission-precedence.test.ts",
-     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > refuses a missing required evidence type before the evidence entry rules (step 5 before step 6)",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a submission over a size bound together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry, or evidence over a size bound, together with a missing required evidence type is refused at step 1, with invalid_request",
      "level": "endpoint",
      "surface": "par"
     },
@@ -4285,9 +4285,15 @@
      "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > refuses a malformed proposal alone, beside a valid envelope, with invalid_authorization_details",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request, and an unsupported evidence type waits for step 6",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. Each cited test runs a combined failure beside each of its single failures as controls. #1512 (D625): the Request Object path, where the provider's RAR check runs before the extraParams validators, so the Request Object hook validates the envelope and the Intent first; its single failures are the separate envelope-only and proposal-only tests, cited as controls, and the step 2 test also carries the Intent-only case. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
+   "notes": "D559 (#1411): ruled qualified A + C. Each cited test runs a combined failure beside each of its single failures as controls. #1512 (D625): the Request Object path, where the provider's RAR check runs before the extraParams validators, so the Request Object hook validates the envelope and the Intent first; its single failures are the separate envelope-only and proposal-only tests, cited as controls, and the step 2 test also carries the Intent-only case. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction. #1503 finding 12 (D620): the step 1 tests run a structurally invalid entry or an evidence size bound beside a malformed or unsupported proposal and beside a missing required type, on the PAR form and the Request Object path."
   },
   {
    "id": "core.submission.precedence-proposal-over-missing-evidence",
@@ -4390,6 +4396,322 @@
     }
    ],
    "notes": "D559 (#1411): ruled qualified A + C. #1512 (D625): the Request Object path is cited too. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
+  },
+  {
+   "id": "core.submission.precedence-structural-evidence-over-proposal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission with an evidence entry that is not a JSON object or has no type, and a malformed authority proposal, fails invalid_request, not invalid_authorization_details"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request, and an unsupported evidence type waits for step 6",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 finding 12 (D620). Each combined case runs beside its single failures, on the PAR form and on the Request Object path. Proved by deferring the structural entry checks with type dispatch (the pre-D620 order): both tests then get invalid_authorization_details for the combined case."
+  },
+  {
+   "id": "core.submission.step1-evidence-structure-and-bounds",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Parse the Submission envelope, enforce both closed top levels and the size bounds ({{submission-via-par}}), and check that each `evidence` entry is a JSON object with a `type` member ({{intent-submission-evidence}})",
+   "facet": "evidence-structure-and-bounds",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an evidence entry that is not a JSON object or has no type, an evidence entry over the per-entry size bound, or an evidence array over the entry-count bound fails at step 1 with invalid_request, even when the authority proposal is malformed or of an unsupported type (step 3) or a required evidence type is absent (step 5); every entry's structure is checked before any entry is dispatched"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a submission over a size bound together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry, or evidence over a size bound, together with a missing required evidence type is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request, and an unsupported evidence type waits for step 6",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > checks every entry's structure before dispatching any entry (@spec mission#submission-processing, step 1 before step 6)",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 finding 12 (D620). The reference AS runs the structural pass over every entry at parse on every carrier; the PAR and Request Object intakes defer only type dispatch (deferEvidenceDispatch). Proved by: deferring the structural pass with dispatch (the step 1 structural-entry, size-bound and required-type tests and the Request Object test fail); deferring only the per-entry size check (the step 1 size-bound and required-type tests fail on their combined cases); dropping the entry-count bound (the same two tests); interleaving structure and dispatch entry by entry (the unit test fails, and together with the deferral also the step 1 structural-entry test's unsupported-type-before-untyped case)."
+  },
+  {
+   "id": "core.submission.step1-envelope-and-intent-bounds",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Parse the Submission envelope, enforce both closed top levels and the size bounds ({{submission-via-par}}), and check that each `evidence` entry is a JSON object with a `type` member ({{intent-submission-evidence}})",
+   "facet": "envelope-and-intent-bounds",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission over the envelope total size, the Intent total size, or an Intent array-length bound fails at step 1 with invalid_request, before a malformed or unsupported authority proposal",
+    "local": "the envelope total (64 KiB) and the Intent total size are not driven at the wire: the provider's 56 KiB PAR form bound refuses a larger form first. The reference AS checks the Intent's array lengths with its member validation, after the envelope; no client can tell that from step 1, since both refuse invalid_request."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a submission over a size bound together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 finding 12 (D620). The Intent array-length case (65 target_resources) is witnessed at PAR, alone and beside a malformed and an unsupported proposal; proved by dropping the target_resources length bound (the Intent-only case is then accepted)."
+  },
+  {
+   "id": "core.submission.step6-evidence-dispatch",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Dispatch each presented entry on its `type`, and validate and verify it under that type's rules ({{intent-submission-evidence}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a well-formed evidence entry of an unsupported type, or one failing its type's validation or verification, is refused after the authority proposal: a proposal failure in the same submission (a malformed or unsupported entry, or an entry outside target_resources) is refused with the proposal's error"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request, and an unsupported evidence type waits for step 6",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 finding 12 (D620): dispatch and verification stay at step 6. Proved by dispatching at parse on the PAR form intake (the proposal-before-dispatch test fails on an unknown type beside an entry outside target_resources) and in the Request Object hook (the Request Object test fails on an unsupported type beside a proposal entry missing its resource)."
+  },
+  {
+   "id": "core.submission-evidence.structural-entry-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "intent-submission-evidence",
+   "text": "An entry that is not a JSON object, or that lacks `type`, is structurally invalid and refused with the `invalid_request` error code at step 1 of the processing order ({{submission-processing}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented evidence entry that is not a JSON object, or has no type, is refused invalid_request, not invalid_mission_intent_evidence, at step 1: a malformed authority proposal or a missing required evidence type in the same submission does not change the code",
+    "local": "an entry whose type is the empty string is refused the same way"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Submission envelope carriage (@spec mission#submission-via-par, issue #506) > refuses a typeless evidence entry on the wire",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry, or evidence over a size bound, together with a missing required evidence type is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request, and an unsupported evidence type waits for step 6",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > refuses an entry without a type (and an empty-string type)",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1482 and #1503 finding 12 (D620). Proved by refusing a typeless or non-object entry with invalid_mission_intent_evidence (the rar-carriage test, the unit tests, and the step 1 structural-entry and required-type tests fail on a typeless case), by refusing only a non-object entry with that code (the same two step 1 tests fail on a non-object case), and by deferring the structural checks to step 6 (those two tests and the Request Object test fail on a combined case)."
+  },
+  {
+   "id": "core.submission-evidence.dispatch-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "intent-submission-evidence",
+   "text": "The AS MUST refuse an entry whose `type` it does not support, and an entry that fails its type's validation or verification, with the `invalid_mission_intent_evidence` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented entry of an unsupported type, an entry failing its type's validation, and an entry failing its type's verification are each refused invalid_mission_intent_evidence"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Submission envelope carriage (@spec mission#submission-via-par, issue #506) > refuses an unknown evidence type on the wire (no types are registered)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a proposed entry outside target_resources together with a presented evidence entry that fails verification is refused at step 3, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > refuses an unknown evidence type with the registered error code",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > a REGISTERED type passes stage 1 at parse; its OWN closed schema is enforced there",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "stage-2 verification (@spec mission#intent-submission-evidence) > maps EVERY verification failure to invalid_mission_intent_evidence",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1482 and #1503 finding 12 (D620). The proposal-before-dispatch test's single-failure controls carry the unsupported type and the type-validation failure, and the target_resources precedence test's control carries the verification failure. A type's validation raises its own code (the test type throws invalid_mission_intent_evidence); the AS dispatches to it and refuses. Proved by refusing an unknown type with invalid_request (the rar-carriage and unit tests fail), by skipping the type's validation (the type-validation control is then accepted, 201), and by mapping a verifier failure to invalid_request (the target_resources precedence test's control and the stage-2 unit test fail)."
+  },
+  {
+   "id": "core.conformance-roles.no-evidence-type-refusals",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "conformance-roles",
+   "text": "Such an AS refuses every presented entry under the dispatch and refusal rules ({{intent-submission-evidence}}): a structurally invalid entry with the `invalid_request` error code, and any other entry, as an unsupported type, with the `invalid_mission_intent_evidence` error code",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an AS supporting no evidence type refuses a presented entry with no type with invalid_request, and a well-formed entry, as an unsupported type, with invalid_mission_intent_evidence"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Submission envelope carriage (@spec mission#submission-via-par, issue #506) > refuses a typeless evidence entry on the wire",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "Submission envelope carriage (@spec mission#submission-via-par, issue #506) > refuses an unknown evidence type on the wire (no types are registered)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > the SHIPPED registry is EMPTY: no evidence types are implemented",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1482 (D620). The reference AS ships with an empty evidence registry (the unit test), the configuration this sentence describes, and rar-carriage registers no type, so its wire tests run that configuration. Applicability is that configuration, which the applicability model cannot express; an AS supporting a type follows the same dispatch rules for every type it does not support. Proved by swapping either code (the matching rar-carriage test fails)."
   },
   {
    "id": "core.derivation.configured-mapping-scope-key",
@@ -4518,11 +4840,10 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "submission exceeding the declared evidence entry count or per-entry size fails invalid_request",
-    "local": "driven at the intake parser, not through the PAR endpoint"
+    "normative": "submission exceeding the declared evidence entry count or per-entry size fails invalid_request"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/submission-envelope.test.ts",
@@ -4535,8 +4856,21 @@
      "name": "Intent Submission Evidence intake, stage 1 (@spec mission#intent-submission-evidence) > bounds the per-entry SIZE (config default, overridable)",
      "level": "unit",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a submission over a size bound together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a structurally invalid evidence entry, or evidence over a size bound, together with a missing required evidence type is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
     }
-   ]
+   ],
+   "notes": "#1503 finding 12 (D620): the entry-count and per-entry size bounds are driven through the PAR endpoint, alone and beside a later-step failure. Proved by dropping each bound (the matching single-failure case of the step 1 size-bound test fails)."
   },
   {
    "id": "core.submission.size-bounds-envelope-and-intent",
@@ -4556,11 +4890,20 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "submission exceeding the declared envelope total size, Intent total size, or Intent array-length bounds fails invalid_request at the wire"
+    "normative": "submission exceeding the declared envelope total size, Intent total size, or Intent array-length bounds fails invalid_request at the wire",
+    "local": "Intent array length witnessed at PAR (65 target_resources). The envelope total (64 KiB) and the Intent total size are not driven at the wire: the provider's 56 KiB PAR form bound refuses a larger form first."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a submission over a size bound together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 finding 12 (D620). Proved by dropping the target_resources length bound (the Intent-only case of the step 1 size-bound test is then accepted)."
   },
   {
    "id": "core.submission.pushed-parameters-authoritative",
@@ -9847,6 +10190,42 @@
    "tests": []
   },
   {
+   "id": "core.grant-binding.no-new-lineage-keeps-provenance",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "grant-binding",
+   "text": "the issued token rests on the grant lineage its `subject_token` was issued under",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token issued by an access-token-only Token Exchange keeps the grant lineage its subject_token was issued under: once that lineage is revoked, a designation derived from the issued token is no longer redeemable, whether the issued token is a self-exchanged token or a delegated token",
+    "local": "Observed through redemption, the one later derivation the OAuth binding names. The self-exchanged token is the reference's delegation handle, whose own provider Grant records the presented token's grant as its backing grant."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "each redemption validates the grant state backing the designated credential (@spec mission#delegated-exchange, mission#grant-binding-related, #1503 finding 11) > a self-exchanged token keeps the grant it was derived under: revoking the approval grant refuses a pending redemption and a new designation, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "each redemption validates the grant state backing the designated credential (@spec mission#delegated-exchange, mission#grant-binding-related, #1503 finding 11) > a delegated token keeps the grant its designation was derived under: revoking the approval grant refuses a pending depth-2 redemption, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 11 (D620). Proven by the mutants recorded on core.delegation.redemption-validates-backing-grant: dropping the handle's backing link fails the self-exchange witness, and settling a delegated token under a fresh grant fails the depth-2 witness."
+  },
+  {
    "id": "core.grant-binding.cross-domain-credential-association",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
@@ -10224,6 +10603,47 @@
      "surface": "authorization-endpoint"
     }
    ]
+  },
+  {
+   "id": "core.tokens.backing-grant-revocation-refuses-redemption",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-authentication-lifetime",
+   "text": "Revoking the grant state backing that credential still refuses every later redemption",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "however long a delegated token lives, revoking the grant state backing the credential its designation was derived from refuses each later redemption of that designation, issuing nothing and counting nothing, while the Mission stays active"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "each redemption validates the grant state backing the designated credential (@spec mission#delegated-exchange, mission#grant-binding-related, #1503 finding 11) > a self-exchanged token keeps the grant it was derived under: revoking the approval grant refuses a pending redemption and a new designation, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "each redemption validates the grant state backing the designated credential (@spec mission#delegated-exchange, mission#grant-binding-related, #1503 finding 11) > a delegated token keeps the grant its designation was derived under: revoking the approval grant refuses a pending depth-2 redemption, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > revoking the approval grant while the Mission stays active refuses both exchanges and inactivates the delegated token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 11 (D620). Restates core.delegation.redemption-validates-backing-grant from the lifetime side; proven by the same mutants."
   },
   {
    "id": "core.tokens.sub-is-mission-subject",
@@ -11976,7 +12396,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "each redemption re-checks the validity of the credential the designation was derived from and of its grant, the Mission's state, the delegation policy and the Mission's current authority, and is counted as a derivation; a revoked source grant or family, or a Mission that is not active, refuses a redemption even after an earlier redemption of the same designation succeeded"
+    "normative": "each redemption re-checks the validity of the credential the designation was derived from and of all applicable grant state backing it, the Mission's state, the delegation policy and the Mission's current authority, and is counted as a derivation; a revoked source grant or family, or a Mission that is not active, refuses a redemption even after an earlier redemption of the same designation succeeded"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -12036,7 +12456,73 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers. Every clause is witnessed at a redemption: the source grant or family's validity (an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses; requiring the row alone fails that witness), the Mission's state, the designation's own expiry, the delegation policy (a delegate whose AS-asserted profile is withdrawn after the designation is refused; skipping the redemption's eligibility gate fails it), the Mission's current authority (a containment after the designation narrows the result, or refuses when nothing is left; skipping the projection through current authority fails it), and a separate count per redemption, none for a refusal (#869 acceptance review). #1275: the delegation-authorization policy is also witnessed changing between a designation and its redemption (the redemption is refused; skipping the gate at redemption, or caching the policy decision, fails that witness)."
+   "notes": "#869 (D449): proven by disabling the code it covers. Every clause is witnessed at a redemption: the source grant or family's validity (an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses; requiring the row alone fails that witness), the Mission's state, the designation's own expiry, the delegation policy (a delegate whose AS-asserted profile is withdrawn after the designation is refused; skipping the redemption's eligibility gate fails it), the Mission's current authority (a containment after the designation narrows the result, or refuses when nothing is left; skipping the projection through current authority fails it), and a separate count per redemption, none for a refusal (#869 acceptance review). #1275: the delegation-authorization policy is also witnessed changing between a designation and its redemption (the redemption is refused; skipping the gate at redemption, or caching the policy decision, fails that witness). #1503 finding 11 (D620): the backing-grant clause, including grant state kept through an exchange that established no new grant lineage, has its own row (core.delegation.redemption-validates-backing-grant)."
+  },
+  {
+   "id": "core.delegation.redemption-validates-backing-grant",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "the credential the designation was derived from, and all applicable grant state backing that credential, are still valid",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "while the Mission stays active, a redemption is refused, issuing no token and counting no derivation, once grant state backing the credential the designation was derived from is revoked: the approval grant the credential was issued under, a delegation family it was issued under (invalidated, or its refresh token revoked under RFC 7009), including where that credential was itself issued by an exchange that established no new grant lineage and so keeps its subject_token's grant (a self-exchanged token, or a delegated token designated again at depth 2); the Mission's active state does not substitute for that grant state",
+    "local": "The reference resolves a credential's grant from its issuance record. A delegated exchange and a designation settle under the presented credential's recorded grant, so a delegated token designated again keeps the approval grant. The self-exchange (the delegation handle) rides a provider Grant of its own, so that grant records the presented token's grant as its backing grant (mission-bound-grant-store), and isGrantLive follows the link. A backing grant past its own lifetime fails the same Grant.find check as a revoked one, but no test drives grant expiry: every reference grant outlives the designations derived under it."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "each redemption validates the grant state backing the designated credential (@spec mission#delegated-exchange, mission#grant-binding-related, #1503 finding 11) > a self-exchanged token keeps the grant it was derived under: revoking the approval grant refuses a pending redemption and a new designation, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "each redemption validates the grant state backing the designated credential (@spec mission#delegated-exchange, mission#grant-binding-related, #1503 finding 11) > a delegated token keeps the grant its designation was derived under: revoking the approval grant refuses a pending depth-2 redemption, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > revoking the approval grant while the Mission stays active refuses both exchanges and inactivates the delegated token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > under an async family: each exchange counts exactly one derivation, and invalidating the family refuses both and inactivates the delegated token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > RFC 7009 revocation of the family's refresh token refuses new designations and pending redemptions and inactivates the delegated token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "each redemption validates the grant state backing the designated credential (@spec mission#delegated-exchange, mission#grant-binding-related, #1503 finding 11) > a handle minted at any depth of consecutive self-exchanges stays designatable, and still falls with the approval grant (#1601 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "each redemption validates the grant state backing the designated credential (@spec mission#delegated-exchange, mission#grant-binding-related, #1503 finding 11) > a backing chain that revisits a grant is corrupt state and fails closed (#1601 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 11 (D620). Each witness is proven by its own mutant. isGrantLive ignoring the backing grant, or the handle mint recording none, fails the self-exchange witness (200 instead of 400). The delegated exchange settling under a fresh Mission-bound grant instead of the designation's fails the depth-2 witness (200 instead of 400). Skipping the redemption's grant check fails all five cited tests. With the status and error assertions removed, the zero-count assertion alone fails under each mutant (the self-exchange witness counts 2 more, the depth-2 witness 1 more). On owner review of #1601 at 6f106618 (P2): isGrantLive stopped after eight backing hops while the issuer kept minting handles, so the ninth consecutive self-exchange minted a handle no designation could use. The walk now follows a chain of any depth (each link is a counted derivation) and fails closed only on a revisited grant; the depth witness fails on 6f106618, and removing the cycle guard leaves the cycle witness unable to complete."
   },
   {
    "id": "core.delegation.authority-narrows-from-designation",
@@ -12374,6 +12860,42 @@
     }
    ],
    "notes": "#869 (D449): proven by disabling the code it covers: a designation living to the Mission's expiry fails the witness. #1279 review: the expiry is pinned as an absolute instant after every awaited check, and an exhausted lifetime refuses before settlement; dropping the source bound, or the refusal, fails the boundary witness."
+  },
+  {
+   "id": "core.designation.expiry-bounds-redemption",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "designation",
+   "text": "Its expiry bounds when it can be redeemed, not the lifetime of a delegated token issued from it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a redemption presented once the designation's exp has passed is refused, issuing no token and counting no derivation",
+    "local": "The designation's exp is not a bound on the delegated token, which the OAuth binding bounds by the Mission's expires_at and the AS's own lifetime policy (Authentication Claims and Lifetime, Section 2.1 of RFC 8693); an AS capping a delegated token by its own policy also conforms. The reference gives a delegated token the full access-token lifetime within the Mission, so one redeemed from a designation pinned to its presented token's exp outlives both: adding the designation's exp to the delegated token's bounds fails the lifetime witness, which records that local choice and is not a protocol requirement."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "lifetimes are absolute across the request (@spec mission#designation, #1279 review) > a redemption whose designation expires while the exchange awaits its checks is refused invalid_request, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation's expiry bounds its redemption, not the delegated token's lifetime (@spec mission#designation, mission#token-authentication-lifetime, #1503 finding 11) > a designation pinned to its presented token's expiry is redeemed for a delegated token that outlives both, within the Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 11 (D620). The Authentication Claims and Lifetime paragraph restates the same rule; this row covers both. No parent-token expiry cap is added (D620)."
   },
   {
    "id": "core.designation.audience-separation",
@@ -32314,6 +32836,48 @@
    "notes": "#1464 (D606). Mutation: adding prior_evaluation_id to operationIdentity (services/pdp/src/projections.ts) fails the witness, while every conflict witness still passes."
   },
   {
+   "id": "metering.bounds.max-budget-currency-form",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "bounds",
+   "text": "exactly three upper-case ASCII letters, compared exactly",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Intent's max_budget currency takes max_amount's form: the authorization server admits exactly three upper-case ASCII letters and refuses any other value"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. Todo: the reference implements no max_budget."
+  },
+  {
+   "id": "metering.bounds.max-budget-currency-exact",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "bounds",
+   "text": "exactly three upper-case ASCII letters, compared exactly",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the cumulative budget counter compares currencies exactly: a debit whose currency differs from max_budget's in any character, case included, is never counted as within the cap, and no conversion applies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. Todo: the reference implements no max_budget."
+  },
+  {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "decision-id-propagation",
@@ -42277,10 +42841,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "A policy-adjudicated drawdown request whose complete successor Authority Set, including authority carried forward from the predecessor, overlaps capability the predecessor contained produces no successor by policy; it falls back to a fresh human approval whose consent disclosure names the contained capability and the event class that caused its containment.",
-    "local": "The overlap test over the successor's complete Authority Set falls back to the deferred fresh approval, and the disclosure object names the contained capability and its event class. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
+    "local": "The overlap test over the successor's complete Authority Set falls back to the deferred fresh approval, and The AS's expansion deferral page (#1558) shows the authenticated Approver the contained capability with the event class that caused its containment."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -42305,9 +42869,15 @@
      "name": "review: drawdown conservative removal > drawdown cannot restore a sibling lost through a broad predecessor entry",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment. #1480 review: partial until an approval surface renders the disclosure. #1500 review: the chain's restrictions include each overlay resolved onto the member's approved entries, so a drawdown restoring an action a fine selector removed from a broad entry falls back for a sibling resource (mutation: comparing only the selectors as named fails the witness)."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment. #1480 review: partial until an approval surface renders the disclosure. #1500 review: the chain's restrictions include each overlay resolved onto the member's approved entries, so a drawdown restoring an action a fine selector removed from a broad entry falls back for a sibling resource (mutation: comparing only the selectors as named fails the witness). #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
@@ -42361,10 +42931,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "After Mission A contains capability X and an unrelated policy drawdown creates successor B with an empty overlay, a later drawdown from B whose Authority Set overlaps X is refused policy adjudication and falls back to a fresh human approval disclosing the containment of X and its cause; an unrelated approval or a ceiling review in between does not clear the restriction.",
-    "local": "Restrictions are collected from every Mission walked from the predecessor to the chain root, and the reference never clears one: witnessed through an intervening policy-adjudicated successor and through a re-consent. The disclosure object names the containment through that successor. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
+    "local": "Restrictions are collected from every Mission walked from the predecessor to the chain root, and the reference never clears one: witnessed through an intervening policy-adjudicated successor and through a re-consent. The AS's expansion deferral page (#1558) shows the containment through that successor."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -42383,9 +42953,15 @@
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no containment restriction of the chain",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1480 review: partial until an approval surface renders the disclosure."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1480 review: partial until an approval surface renders the disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.in-ceiling.discharged-overlap-falls-back",
@@ -42403,10 +42979,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "A policy-adjudicated drawdown whose complete successor Authority Set overlaps authority the predecessor discharged produces no successor by policy; it falls back to a fresh human approval naming the discharged entry and the condition that discharged it.",
-    "local": "A committed discharge latch restricts its entry's resource and actions across the chain, and the disclosure object names the discharged entry and the condition that discharged it. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
+    "local": "A committed discharge latch restricts its entry's resource and actions across the chain, and The AS's expansion deferral page (#1558) shows the authenticated Approver the discharged entry and the condition that discharged it."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -42419,9 +42995,15 @@
      "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for discharged authority names the discharged entry and the condition that discharged it, through an intervening successor",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a discharged entry with the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no condition. #1480 review: partial until an approval surface renders the disclosure."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no condition. #1480 review: partial until an approval surface renders the disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.in-ceiling.discharge-restriction-survives-intervening-successor",
@@ -42439,10 +43021,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "After Mission A discharges entry X and an unrelated policy drawdown creates successor B without X, a drawdown from B whose Authority Set overlaps X falls back to a fresh human approval disclosing the discharge; an unrelated approval or a ceiling review in between does not clear the restriction.",
-    "local": "Witnessed through an intervening policy-adjudicated successor that holds no latch and through a re-consent. The disclosure object names the discharged entry through that successor. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
+    "local": "Witnessed through an intervening policy-adjudicated successor that holds no latch and through a re-consent. The AS's expansion deferral page (#1558) shows the discharged entry through that successor."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -42461,9 +43043,15 @@
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no discharge restriction of the chain",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a discharged entry with the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1480 review: partial until an approval surface renders the disclosure."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1480 review: partial until an approval surface renders the disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.in-ceiling.synchronous-completion-commits-before-response",
@@ -43620,10 +44208,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the approval that re-consents a ceiling renders the re-consented ceiling and drawdown policy to the Approver",
-    "local": "A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed. The object carries the re-consent offer with the initial approval page's adjudication line; disclosure() retains the offer it built, and an approval re-consents only exactly that retained offer."
+    "local": "The AS's expansion deferral page (#1558) renders the re-consent offer to the authenticated Approver as the initial approval page does: the ceiling, the drawdown policy's id and version, and its adjudication line. The rendering commits the offer: a re-consent consents only exactly that offer, a decision cannot name a ceiling of its own, and an offer changed since rendering asks for a fresh decision."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -43636,9 +44224,21 @@
      "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a re-consent is bound to the offer the disclosure rendered, not to an offer computed at the approval",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows the re-consent offer as at the initial approval; a re-consent consents only that offer, never one the decision supplies",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > a re-consent is bound to the offer the page rendered: an offer changed since asks for a fresh decision on the page rendered again",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by omitting the offer, by not binding the re-consent, and by binding it to an offer computed at the approval. #1480 review: partial until an approval surface renders it. Surface moved from token-endpoint: the requirement is a disclosure."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by omitting the offer, by not binding the re-consent, and by binding it to an offer computed at the approval. #1480 review: partial until an approval surface renders it. Surface moved from token-endpoint: the requirement is a disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.ceiling-reconsent.chain-restrictions-carry",
@@ -44804,10 +45404,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "every re-consent, before the cadence expires included, renders the chain's record since the prior review, or since the initial ceiling consent for the first review",
-    "local": "The object carries the chain's record since the latest ceiling consent: policy-adjudicated drawdowns with an hourly rate, escalations, out_of_ceiling refusals, discharged entries, and the outstanding restrictions. No reference deployment runs the metering profile with Progressive, so consumption is absent. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
+    "local": "The AS's expansion deferral page (#1558) renders the chain's record since the latest ceiling consent: the policy-adjudicated drawdowns with an hourly rate, the escalations, the out_of_ceiling refusals, the discharged entries, and the outstanding containment and discharge restrictions. The rendering commits the record (its hourly rate aside), so a record changed since rendering asks for a fresh decision. No reference deployment runs the metering profile with Progressive, so consumption is absent."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -44820,9 +45420,39 @@
      "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a review's record lists the deployment's out_of_ceiling refusals since the latest ceiling consent",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows the chain's record since the latest ceiling consent: the consent instant, the drawdowns and the escalations",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows the deployment's out_of_ceiling refusals since the latest ceiling consent",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a discharged entry with the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > a review record changed since rendering approves nothing: here an escalation landing in between",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Not implemented: the reference has no ceiling review approval (#1017). D572: every re-consent is a review; the first review covers history since the initial ceiling consent. Proved by starting the record at the initial consent, by not recording refusals and by not recording fallback reasons. #1480 review: partial until an approval surface renders the disclosure."
+   "notes": "A re-consent on the AS's expansion deferral page (#1558) is the review. D572: every re-consent is a review; the first review covers history since the initial ceiling consent. Proved by starting the record at the initial consent, by not recording refusals and by not recording fallback reasons. #1480 review: partial until an approval surface renders the disclosure. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "progressive.ceiling-review.review-is-reconsent",
@@ -47064,6 +47694,44 @@
    "notes": "#1263 (D446). Proved by restoring the former 'ceiling wins' return in minAmount: the test fails. The projection path (intersectForProjection) drops the fragment instead, since no submitted proposal exists there to refuse."
   },
   {
+   "id": "resource-access.common-constraints.max-amount-value-members",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "an object with two members",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed max_amount carrying any member beside amount and currency is refused invalid_authorization_details at submission, with no request_uri and no Mission; one carrying exactly the two is admitted",
+    "local": "the shared intake validator (validateMissionResourceAccessSchema) closes the amount object, as the published schema's additionalProperties: false does"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "the max_amount object at PAR (@spec resource-access#initial-common-constraints, #1596) > refuses a max_amount carrying a member beside amount and currency, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "the max_amount object at PAR (@spec resource-access#initial-common-constraints, #1596) > accepts a max_amount carrying exactly amount and currency (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1596 review: before it PAR admitted max_amount {amount, currency, extra} with a request_uri, although the published schema closes the object. Proved by mutation: disabling the closed-member check fails the PAR witness and vector cases ev-amt-11, sub-ref-15, sub-ref-16 and sub-ref-17."
+  },
+  {
    "id": "resource-access.common-constraints.max-amount-input",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "initial-common-constraints",
@@ -47149,6 +47817,238 @@
     }
    ],
    "notes": "#1375. The predicate is applied by the PDP on the Mission bound; the payments resource's endpoint witness is resource-access.common-constraints.max-amount-input."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-currency-form",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "a `currency` value is exactly three characters, each an upper-case ASCII letter (`A` to `Z`)",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a max_amount currency is exactly three characters, each A to Z: the authorization server refuses lower or mixed case, two or four letters, the numeric code, a trailing line terminator, a leading space and a non-ASCII letter, and admits three upper-case letters",
+    "local": "isCurrencyCode (mission-core) tests the length and each character code, with no regex end anchor; intake, the authority-entry guard, the subset relation, the scope-projection loader, credential parsing, the AAT amount_ argument mapping and the PDP's Mission-view cap all call it, and the published schema carries minLength, maxLength and the pattern"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "currency codes at PAR (@spec resource-access#initial-common-constraints, #1595) > refuses a max_amount currency that is not exactly three upper-case ASCII letters, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "currency codes at PAR (@spec resource-access#initial-common-constraints, #1595) > accepts a well-formed currency code whether or not ISO 4217 assigns it (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/packages/mission-core/test/decimal-amount.test.ts",
+     "name": "isCurrencyCode: exactly three upper-case ASCII letters (#1595, D727) > refuses any other length, a line terminator included, and any other character",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/decimal-amount.test.ts",
+     "name": "isCurrencyCode: exactly three upper-case ASCII letters (#1595, D727) > admits three upper-case ASCII letters, whether or not ISO 4217 assigns the code",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Before it the reference admitted any non-empty currency string at PAR and in a credential. Proved by mutation: letting isCurrencyCode admit a fourth character, or lower case, fails its unit witness; admitting any string at intake fails the PAR witness and vector cases ev-cur-01 to ev-cur-09, sub-cur-01 and sub-cur-02."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-currency-malformed-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "the authorization server MUST refuse an authority proposal carrying one with the `invalid_authorization_details` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose max_amount currency is malformed is refused invalid_authorization_details at submission, before any interaction, with no request_uri and no Mission; a well-formed code is admitted",
+    "local": "the shared intake validator (validateMissionResourceAccessSchema), which PAR, the token endpoint and continuation call, applies isCurrencyCode after the amount check"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "currency codes at PAR (@spec resource-access#initial-common-constraints, #1595) > refuses a max_amount currency that is not exactly three upper-case ASCII letters, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "currency codes at PAR (@spec resource-access#initial-common-constraints, #1595) > accepts a well-formed currency code whether or not ISO 4217 assigns it (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: replacing the intake check with a string-type test fails the PAR witness."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-currency-rs-unenforceable",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "a resource server treats one as a `constraints` key it cannot enforce",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at the point of use, an applicable entry whose max_amount currency is malformed provides no authority: the decision is a denial, even when the input's currency is spelled the same",
+    "local": "in the reference the payments resource server's decision is the PDP's (runtime-enforced profile): the PDP denies a malformed Mission-view cap currency as parameter_violation, credential parsing refuses a credential whose authority carries one, and an AAT amount_ argument whose suffix is not three lower-case letters is refused rather than folded"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a malformed cap currency in the Mission view is denied, even when the request's currency is spelled the same",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/credential-authority.test.ts",
+     "name": "parseCredentialAuthority: a credential's authority is read in full or refused (#825) > refuses an amount cap whose currency is \"usd\"",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/credential-authority.test.ts",
+     "name": "credentialEntriesFromAatTools: attenuation tools keep every restriction (#825) > refuses an upper-case currency suffix rather than dropping it",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Before it the PDP compared a Mission-view cap currency only by equality with the input's, and credential parsing admitted any non-empty string. Proved by mutation: removing the PDP's isCurrencyCode check fails its witness; admitting any string in credential parsing fails the parse witnesses; folding the amount_ suffix to upper case fails the suffix witness."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-currency-exact",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Values are compared exactly, character for character, with no trimming, case folding, numeric code, or conversion.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the authorization server compares currency values exactly: values differing in case or whitespace are never equal, a malformed value equals nothing, even itself, and no mapping folds a value's case on the way out or back",
+    "local": "isSubsetEntry validates every present cap on either side, whether or not the other carries one, before comparing; the AAT root mapping names amount_<code> only for a well-formed code and reads back only three lower-case letters; the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/authority-subset.test.ts",
+     "name": "a max_amount currency is exactly three upper-case ASCII letters (#1595, D727) > isSubsetEntry compares well-formed codes exactly, with no case folding or conversion",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-subset.test.ts",
+     "name": "a max_amount currency is exactly three upper-case ASCII letters (#1595, D727) > isSubsetEntry compares nothing with a malformed currency on either side, even a byte-identical pair",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-subset.test.ts",
+     "name": "a max_amount currency is exactly three upper-case ASCII letters (#1595, D727) > isSubsetEntry refuses a malformed cap on either side when the other side carries none",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
+     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapAuthorityToTools refuses a malformed currency rather than naming an argument for it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
+     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapToolsToAuthority refuses an amount suffix that is not three lower-case letters",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's check of every present cap, made before any comparison, fails the byte-identical and the uncapped-side witnesses (#1595 review: a candidate-only usd cap against an uncapped reference had passed); letting the root mapping name any string, or folding the read-back suffix to upper case, fails its attenuation witness."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-currency-unassigned-admitted",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "A well-formed value is admitted for comparison whether or not ISO 4217 assigns it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a well-formed code ISO 4217 does not assign (XYZ) is admitted at submission and compared like any other: equal codes satisfy the relation and different codes fail it",
+    "local": "the reference keeps no assignment list"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "currency codes at PAR (@spec resource-access#initial-common-constraints, #1595) > accepts a well-formed currency code whether or not ISO 4217 assigns it (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-subset.test.ts",
+     "name": "a max_amount currency is exactly three upper-case ASCII letters (#1595, D727) > isAuthorityEntry refuses a malformed currency and admits an unassigned well-formed code",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
+     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > round-trips a well-formed code ISO 4217 does not assign",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. The permission that follows ('a resource server or deployment MAY refuse a currency it does not support') has no row: it is a permission, and the reference refuses no well-formed code."
   },
   {
    "id": "resource-access.common-constraints.issued-after-enforced",
@@ -52439,9 +53339,15 @@
      "name": "isSubsetEntry compares max_amount by exact decimal value, not IEEE-754 float > a malformed proposed max_amount refuses derivation (IntentError), never silently coerced",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-subset.test.ts",
+     "name": "a max_amount currency is exactly three upper-case ASCII letters (#1595, D727) > isSubsetEntry refuses a malformed cap on either side when the other side carries none",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "Decimal Values residue (owner's \"resolve\", 2026-10-22): the section's obligations had no rows besides the submission refusal (#1529). Proved by mutation: removing the malformed-amount checks from the subset rule (authority-subset.ts) and from derivation (derive.ts) fails both witnesses."
+   "notes": "Decimal Values residue (owner's \"resolve\", 2026-10-22): the section's obligations had no rows besides the submission refusal (#1529). Proved by mutation: removing the malformed-amount checks from the subset rule (authority-subset.ts) and from derivation (derive.ts) fails both witnesses. #1595 review: a candidate-only cap with a malformed amount, against an uncapped granted entry, had passed as a subset; isSubsetEntry now validates every present cap before comparing, witnessed by the uncapped-side test."
   },
   {
    "id": "resource-access.decimal-values.rs-malformed-unenforceable",
@@ -57312,9 +58218,15 @@
      "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses an oversized plan at intake, before any approval event names it",
      "level": "cross-component",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > the expansion approval page shows the Carryover Manifest it commits, and the decision on it carries exactly the child shown (@spec child-delegation#carryover-manifest, expansion#completion-modes, #1558)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Preparation renders the manifest and reserves the proposed successor and replacement identifiers; the approval event fills the deterministic per-child approval identifiers and commits `manifest_hash` over the JCS canonical manifest, `exclusion_policy` included. The retained manifest recomputes to its commitment, a tampered commitment refuses the whole completion, an idempotent retry re-mints no identifier, a cancelled plan's identifiers stay held, and an oversized plan is refused at intake before any approval names it."
+   "notes": "Preparation renders the manifest and reserves the proposed successor and replacement identifiers; the approval event fills the deterministic per-child approval identifiers and commits `manifest_hash` over the JCS canonical manifest, `exclusion_policy` included. The retained manifest recomputes to its commitment, a tampered commitment refuses the whole completion, an idempotent retry re-mints no identifier, a cancelled plan's identifiers stay held, and an oversized plan is refused at intake before any approval names it. #1558: the AS's expansion deferral page renders the manifest to the Approver (the exclusion policy, and each child carried with the replacement's facts or terminated with the reason), and the approval on it carries exactly the child shown."
   },
   {
    "id": "child-delegation.carryover.completion-cas",
@@ -59090,6 +60002,93 @@
    "notes": "#1210 (D398)."
   },
   {
+   "id": "child-delegation.possession-at-rest.refresh-token-refused",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "possession-at-rest",
+   "text": "A refresh token MUST NOT be accepted as `subject_token`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child-creation token exchange presenting a refresh token as subject_token is refused, creating no Child Mission and issuing no child-bound grant",
+    "local": "continuation-grant.ts verifySubjectPossession refuses a refresh-token subject_token_type at step 1 (400 invalid_request, \"a refresh token MUST NOT be accepted as subject_token\"), before the token is verified. The test presents the parent's own refresh token with that type and asserts the 400 invalid_request and the description. Removing that branch fails the test only on its description: the request is still refused invalid_request by the general subject_token_type check, and a refresh token declared as an access token fails JWT verification"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > a refresh token as subject_token is rejected (#448: a reusable bearer refresh credential MUST NOT carry possession)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Added for #1619 (D729). Partial: the test asserts the refusal of a refresh token presented with the refresh-token type, but not that nothing is created, and it sends no refresh token declared as an access token. The refusal has several enforcers, so no single mutation produces an accepted refresh token."
+  },
+  {
+   "id": "child-delegation.possession-at-rest.no-clear-logging",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "possession-at-rest",
+   "text": "Where a deployment records the exchange for audit, it MUST NOT write `subject_token` or the DPoP proof to logs, traces, or audit records in the clear",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "where the AS records a child-creation exchange, neither the presented subject_token nor the DPoP proof appears in the clear in its logs, traces or audit records",
+    "local": "the test runs a real child-creation exchange, collects the parent access token presented as subject_token and every DPoP proof sent (the first and its nonce retry), and scans every row of every kernel SQLite table, the console output written during the exchange as Node renders it (util.formatWithOptions at unlimited depth, so a credential inside a logged object is found), and the stdout and stderr chunks read as text; the scan is shown to see the exchange's records (the new Child Mission's id), and neither credential appears, whole or by its signature segment. The reference keeps the exchange's records keyed by the resolved Mission and the presenter's cnf (creation idempotency, deferral, child evidence), never the raw credentials. Mutation-proved five ways: logging the subject_token as a string, logging it inside an object, logging the DPoP proof inside an object four levels deep (which util.format's default depth would print as [Object]), writing the subject_token to a kernel table, and writing the DPoP proof to a kernel table each fail the test"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > records a child-creation exchange without its subject_token or DPoP proof in the clear (@spec child-delegation#possession-at-rest, #1619)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Added for #1619 (D729). Partial: the scan covers the kernel's store and process output for an immediate creation. It does not reach oidc-provider's in-memory adapter, the deferred creation path or the idempotent recovery path, and the reference emits no traces."
+  },
+  {
+   "id": "child-delegation.possession-at-rest.redact-recorded",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "possession-at-rest",
+   "text": "MUST redact or hash them wherever the request is otherwise recorded",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "wherever the AS otherwise records a child-creation request, the subject_token and the DPoP proof are redacted or hashed, so no record carries either in the clear",
+    "local": "the test runs a real child-creation exchange, collects the parent access token presented as subject_token and every DPoP proof sent (the first and its nonce retry), and scans every row of every kernel SQLite table, the console output written during the exchange as Node renders it (util.formatWithOptions at unlimited depth, so a credential inside a logged object is found), and the stdout and stderr chunks read as text; the scan is shown to see the exchange's records (the new Child Mission's id), and neither credential appears, whole or by its signature segment. The reference keeps the exchange's records keyed by the resolved Mission and the presenter's cnf (creation idempotency, deferral, child evidence), never the raw credentials. Mutation-proved five ways: logging the subject_token as a string, logging it inside an object, logging the DPoP proof inside an object four levels deep (which util.format's default depth would print as [Object]), writing the subject_token to a kernel table, and writing the DPoP proof to a kernel table each fail the test"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > records a child-creation exchange without its subject_token or DPoP proof in the clear (@spec child-delegation#possession-at-rest, #1619)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Added for #1619 (D729). Partial: the scan covers the kernel's store and process output for an immediate creation. It does not reach oidc-provider's in-memory adapter, the deferred creation path or the idempotent recovery path, and the reference emits no traces."
+  },
+  {
    "id": "child-delegation.request-processing.possession-step",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "request-processing",
@@ -60350,9 +61349,15 @@
      "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses a batch when a rendered child was terminated after approval rather than treating it as an acceptable exclusion",
      "level": "cross-component",
      "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > the expansion approval page shows the Carryover Manifest it commits, and the decision on it carries exactly the child shown (@spec child-delegation#carryover-manifest, expansion#completion-modes, #1558)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Both committed exclusion policies are implemented and exercised. Under all-or-nothing any relevant change, the termination or disappearance of a rendered row included, requires a fresh render and approval: an already-terminal rendered row is never an automatically acceptable exclusion. Under disclosed exclusions only a committed change class excludes, dependent descendants are excluded with their parent, and an unrendered descendant cascades and appears in the authenticated result."
+   "notes": "Both committed exclusion policies are implemented and exercised. Under all-or-nothing any relevant change, the termination or disappearance of a rendered row included, requires a fresh render and approval: an already-terminal rendered row is never an automatically acceptable exclusion. Under disclosed exclusions only a committed change class excludes, dependent descendants are excluded with their parent, and an unrendered descendant cascades and appears in the authenticated result. #1558: the AS's expansion deferral page renders the manifest to the Approver (the exclusion policy, and each child carried with the replacement's facts or terminated with the reason), and the approval on it carries exactly the child shown."
   },
   {
    "id": "child-delegation.carryover.expansion-expiry",
@@ -63951,7 +64956,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "The fresh-consent approval of an expansion restoring discharged authority authorizes that authority explicitly, and its consent disclosure names the discharged entry and the condition that discharged it.",
-    "local": "A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed. For a deferred expansion the object names each discharged entry of the chain with the condition that discharged it (witnessed through the Progressive fallback). Not witnessed: the explicit authorization of the restored authority at that approval."
+    "local": "For a deferred expansion, The AS's expansion deferral page (#1558) names each discharged entry of the chain with the condition that discharged it (witnessed through the Progressive fallback). Not witnessed: the explicit authorization of the restored authority at that approval."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -63961,9 +64966,15 @@
      "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for discharged authority names the discharged entry and the condition that discharged it, through an intervening successor",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a discharged entry with the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). The explicit authorization of restored authority is not implemented. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "expansion.reconciliation.discharge-between-adjudication-and-activation",
@@ -65070,6 +66081,197 @@
     }
    ],
    "notes": "#1557 cold readers' follow-up; #1590 (D709). Witnessed: on the deferred poll and the in-ceiling drawdown the successor's records are its own, distinct from the predecessor's, each still resolving to its own Mission, and the issued token identifies the successor. The witnesses assert isolation of the AS's internal grant records, which support issuance and lookup and are not a protocol grant lineage (D709). Not witnessed: the interactive completion's authorization code and any refresh-token family (the reference implements no interactive completion and issues no refresh token on these paths), and the clause that an access-token-only completion establishes no grant binding. Mutation: binding the origin's grant to the new Mission at its first mint, with grant lookup returning the newest Mission so the reuse is silent, fails each witness at its grant-differs assertion; the other 170 tests in the three files pass."
+  },
+  {
+   "id": "expansion.completion.approver-authenticated",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "authenticates the Approver against the published approval-authentication floor",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a fresh approval of an expansion authenticates its Approver and refuses an approval whose achieved authentication the published approval-authentication floor does not accept for the successor's authority",
+    "local": "The page renders and decides only for an authenticated Approver (a browser approval session, or a trusted headless approval service), and the decision evaluates the floor over the successor's authority with that principal's achieved acr and auth_time; a headless service is not an interactive login."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > an unauthenticated viewer sees no disclosure and cannot decide",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > the approval-authentication floor applies to the successor's authority: a login below it, or a headless service, is refused",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code})."
+  },
+  {
+   "id": "expansion.completion.fresh-consent-derived-set",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "obtains fresh consent for the derived Authority Set",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a fresh approval consents to the successor's derived Authority Set as the Approver was shown it: a derived set changed since then is not approved, and the successor is created with no other authority",
+    "local": "The page shows the successor's derived Authority Set and commits it in the rendering; the decision approves only that set, and a derived set changed since rendering asks for a fresh decision. The approval records the commitment to the set it approved, and completion, deriving it again inside its transaction, refuses a successor whose authority differs, wider or narrower, before any write."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > a derived successor set changed since rendering approves nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > completion creates the successor only with the authority approved: authority added after the approval refuses it, as does authority removed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code})."
+  },
+  {
+   "id": "expansion.completion.requested-strength",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "satisfies any requested `acr_values` or `max_age` strength",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a fresh approval of an expansion satisfies any acr_values or max_age strength the expansion requested",
+    "local": "The reference records no requested acr_values or max_age on an expansion deferral, so the page checks only the published approval-authentication floor."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code}). Not implemented: no requested strength reaches the deferral."
+  },
+  {
+   "id": "expansion.completion.renders-subject",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "renders the Subject when the Approver is not the Subject",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a fresh approval by an Approver who is not the Subject renders the Subject",
+    "local": "The page renders the Subject (the predecessor's) to every Approver; the witness is an Approver deciding for another Subject."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code})."
+  },
+  {
+   "id": "expansion.completion.disclosure-reflects-successor",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "The consent disclosure MUST reflect the successor's authority being adjudicated",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the consent disclosure of a fresh approval shows the successor's Authority Set being adjudicated",
+    "local": "The page shows the successor's derived Authority Set, with the Intent and any proposal it was derived from, and the expiry the approval commits."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > shows a contained capability with the event class that caused it, through an intervening successor; the decision approves exactly the deferral rendered, until the expiry shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code})."
+  },
+  {
+   "id": "expansion.completion.decline-untouched",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "If the Approver declines, no successor is created and the predecessor is untouched",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Approver's denial of a fresh approval creates no successor and leaves the predecessor as it was; the client's poll answers access_denied",
+    "local": "A denial on the page records the deferral denied; no successor is created, the predecessor stays active, and the poll answers access_denied."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral page's refusals (@spec expansion#completion-modes, mission#approval-context-changes, #1558) > a denial creates no successor and leaves the Mission untouched; a deferral no longer pending is neither rendered nor decided",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1558: the AS's expansion deferral page (GET and POST /expansions/deferrals/{code})."
   },
   {
    "id": "expansion.successor-expiry.completion-codes",
@@ -70112,10 +71314,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "A routed encounter produces an expansion proposal that carries the pinned Encountered Resource object and the declaration digest.",
-    "local": "The deferral (the expansion proposal) carries the Encountered Resource object and the declaration digest, in its encounter facts and its encounter_disclosure. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The deferral (the expansion proposal) carries the Encountered Resource object and the declaration digest, which The AS's expansion deferral page (#1558) renders with the encounter_id; the human-approved successor records the declaration digest and the encounter_id."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
@@ -70134,9 +71336,15 @@
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > shows the Encountered Resource object pinned, the declaration as the resource's claim, the taint status, the floors and the encounter_id; the decision approves that deferral, whose successor carries them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.adjudication.route-proposal-carries-identity-contextual",
@@ -70198,19 +71406,31 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "A routed encounter's disclosure shows the Approver the issuer-verified Encountered Resource object.",
-    "local": "The disclosure carries the Encountered Resource object of the Mission Issuer's own verified values, with whether it is pinned. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The AS's expansion deferral page (#1558) shows the authenticated Approver the Encountered Resource object of the Mission Issuer's own verified values, and whether its identity is pinned, with the pinning failure when it is not."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > shows the Encountered Resource object pinned, the declaration as the resource's claim, the taint status, the floors and the encounter_id; the decision approves that deferral, whose successor carries them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > an encounter whose identity could not be pinned, with no declaration, is shown as such",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.adjudication.disclosure-resource-contextual",
@@ -70250,19 +71470,31 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "A routed encounter's disclosure presents the self-declaration labelled as the resource's own claim, not as a verified fact.",
-    "local": "The disclosure presents the declaration with claimed_by_resource true and its claimed operations. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The AS's expansion deferral page (#1558) presents the declaration under the heading of the resource's claim, not verified fact, as claimed by the resource and not verified, with its digest and claimed operations, or says that the resource published none."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > shows the Encountered Resource object pinned, the declaration as the resource's claim, the taint status, the floors and the encounter_id; the decision approves that deferral, whose successor carries them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > an encounter whose identity could not be pinned, with no declaration, is shown as such",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.adjudication.disclosure-declaration-as-claim-contextual",
@@ -70302,10 +71534,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "A routed encounter's disclosure shows whether the session was tainted at adjudication.",
-    "local": "The disclosure carries a taint statement: untrusted_content_ingested, no_untrusted_content_reported (only on an explicit, trusted untainted report), or taint_state_unknown (facts stored before trusted taint among them). Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The AS's expansion deferral page (#1558) states the session's taint status: that it had ingested untrusted content, that the harness reported none (only on an explicit, trusted untainted report), or that its taint state is unknown and treated as tainted (facts stored before trusted taint among them)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
@@ -70324,9 +71556,21 @@
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > an encounter stored before trusted taint and the floors is disclosed with its taint state unknown, claiming no floors, id or pinning, never as untainted",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > shows the Encountered Resource object pinned, the declaration as the resource's claim, the taint status, the floors and the encounter_id; the decision approves that deferral, whose successor carries them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > under taint the page states that the session had ingested untrusted content; with no trustworthy report, that its taint state is unknown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.adjudication.disclosure-taint-status-contextual",
@@ -71287,19 +72531,31 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "The disclosure for a high-consequence encounter presents the declaration labelled as the resource's claim, not as a verified fact.",
-    "local": "The disclosure presents the declaration with claimed_by_resource true, its digest and its claimed operations, the same for every encounter, high-consequence or not. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The AS's expansion deferral page (#1558) presents the declaration as the resource's claim, with its digest and claimed operations, the same for every encounter, high-consequence or not (witnessed for an irreversible-action encounter)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > the disclosure renders the Encountered Resource object, the declaration as the resource's claim, and the taint status, correlated by the encounter_id the approved successor carries",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > a high-consequence encounter's page presents the declaration as the resource's claim, not as fact",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > shows the Encountered Resource object pinned, the declaration as the resource's claim, the taint status, the floors and the encounter_id; the decision approves that deferral, whose successor carries them",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.lying-resource.routed-declaration-as-claim-contextual",
@@ -71493,10 +72749,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "The disclosure for an encounter routed under taint states that the session had ingested untrusted content.",
-    "local": "The disclosure states untrusted_content_ingested when the harness reported taint, a stale tainted report included since taint persists for the session, and taint_state_unknown when no trustworthy report says either way, facts stored before trusted taint among them; only an explicit, trusted untainted report says none was reported. Data-construction witness: the deferral's encounter_disclosure carries it; no approval surface renders the expansion deferral disclosure yet, the same gap as #1017's disclosure rows."
+    "local": "The AS's expansion deferral page (#1558) states that the session had ingested untrusted content when the harness reported taint (a stale tainted report included, since taint persists for the session), and that its taint state is unknown when no trustworthy report says either way; only an explicit, trusted untainted report says none was reported."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
@@ -71509,9 +72765,15 @@
      "name": "the floors and the human-path disclosure (@spec discovery#lying-resource, discovery#injection-discovery, discovery#adjudication, #1469 stage 4) > an encounter stored before trusted taint and the floors is disclosed with its taint state unknown, claiming no floors, id or pinning, never as untainted",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's approval page (@spec discovery#adjudication, discovery#lying-resource, discovery#injection-discovery, #1558) > under taint the page states that the session had ingested untrusted content; with no trustworthy report, that its taint state is unknown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6."
+   "notes": "Reference AS: #1469 stages 1 to 4 (D607), the encounter path's intake, identity pinning, trusted taint, floors and disclosure content through deployment ports; no encounter binds by policy before stage 6. #1558: the AS's expansion deferral page renders it to the authenticated Approver, and the decision binds to that rendering."
   },
   {
    "id": "discovery.injection-discovery.disclosure-states-untrusted-content-contextual",
