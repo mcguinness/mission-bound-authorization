@@ -961,6 +961,30 @@ PEP cannot establish the phase before requesting a decision, it MUST
 refuse locally without requesting or using a permit;
 {{failure-condition-coverage}} defines the carrier.
 
+## Compensation Link Context {#context-compensation-link}
+
+`context.compensates_evaluation_id` is CONDITIONAL: REQUIRED on a
+request whose `action_phase` is `compensate`. Its value is a string
+with the syntax of `evaluation_id` ({{response-context}}): the
+evaluation identifier of the Decision whose committed effect the
+operation offsets ({{I-D.draft-mcguinness-mission-runtime}}).
+
+The PEP MUST establish the value from retained, verified evidence of
+that committed effect and of the Decision it executed under, taking
+that Decision's `evaluation_id`, and MUST NOT take it from an
+agent-supplied argument. An agent MAY identify the effect it asks to
+offset; the PEP resolves that identification against its own evidence.
+A PEP that cannot establish the link MUST refuse before requesting a
+decision ({{failure-condition-coverage}}).
+
+The PDP checks the member ({{pdp-consistency-checks}}) and records the
+validated value as Decision Evidence's `compensates_evaluation_id`, on
+a permit or a denial, omitting malformed input
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). The member is not
+a permit condition and confers no authority: the compensation is
+evaluated as its own action, and the compensated action's permit never
+authorizes it ({{I-D.draft-mcguinness-mission-runtime}}).
+
 ## Evaluation-Context Binding {#context-evaluation-binding}
 
 For an operation covered by the runtime profile's optional
@@ -1582,6 +1606,13 @@ self-consistent:
     `resource.properties.audience`, `resource.type` or `resource.id`,
     and MUST record the refusal as a Refusal Record with
     `denial_reason` `operation_target_invalid`
+    ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+12. `context.compensates_evaluation_id`, when present, is a string with
+    the syntax of `evaluation_id` ({{response-context}}), and it is
+    present when `context.action_phase` is `compensate`
+    ({{context-compensation-link}}). Otherwise the PDP MUST refuse the
+    request before evaluation and MUST record the refusal as a Refusal
+    Record with `denial_reason` `compensation_link_invalid`
     ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 ## Clock Skew {#clock-skew}
@@ -2468,6 +2499,7 @@ rule.
 | PDP unreachable | Refusal Record | `pdp_unreachable` |
 | Mission state not establishable at the PEP | Refusal Record | `state_unavailable` |
 | Required phase not establishable at the PEP before the decision request | Refusal Record | `phase_unavailable` |
+| Committed effect a compensation offsets, or the Decision it executed under, not establishable at the PEP from retained, verified evidence before the decision request | Refusal Record | `compensation_link_unavailable` |
 | Presented credential's own authority does not cover the request, established before any decision request | Refusal Record | `credential_authority_insufficient` |
 | Enforcement surface implements no such action | Refusal Record | `request_unsupported` |
 | Supplied arguments fail the PEP-established action's required input schema | Refusal Record | `request_invalid` |
@@ -2479,6 +2511,7 @@ rule.
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
 | Operation target absent, malformed, or outside the requesting PEP's enforcement scope at the PDP | Refusal Record | `operation_target_invalid` |
 | `action_phase` outside the closed set, or absent where the trusted operation declaration requires a phase, at the PDP | Refusal Record | `phase_invalid` |
+| `compensates_evaluation_id` absent where `action_phase` is `compensate`, or malformed, at the PDP | Refusal Record | `compensation_link_invalid` |
 | Evaluation-context binding inputs missing, malformed, or incompatible with the declared operation binding, for a covered operation, at the PDP | Refusal Record | `evaluation_context_invalid` |
 | Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
 | Duration-lease renewal names no lease the PDP issued or an ended activity, or fails continuity with the evaluation it renews | PDP denial | `out_of_authority` |
@@ -2533,11 +2566,17 @@ identifier:
   ({{I-D.draft-mcguinness-mission-runtime-evidence}}); it does not
   invent a PDP denial or an Execution Evidence record for a permit
   never obtained.
-- Unusable inputs: `phase_invalid` and `evaluation_context_invalid` are
-  PDP refusals before evaluation. They describe decision inputs the PDP
-  cannot use, not an evaluated policy denial, and a PDP claiming only
-  the Decision Base records them in its own internal form
-  ({{profiles-and-capabilities}}).
+- Compensation: A PEP that cannot establish the committed effect a
+  compensation offsets refuses before any decision request, with
+  `compensation_link_unavailable`. The compensated action's permit
+  presented at a compensating crossing is a post-permit failure of its
+  phase binding, `phase_mismatch` as Execution Evidence, never a Refusal
+  Record.
+- Unusable inputs: `phase_invalid`, `compensation_link_invalid`, and
+  `evaluation_context_invalid` are PDP refusals before evaluation. They
+  describe decision inputs the PDP cannot use, not an evaluated policy
+  denial, and a PDP claiming only the Decision Base records them in its
+  own internal form ({{profiles-and-capabilities}}).
 - Target: A target-determining argument that changed under a
   parameter-bound permit is a parameter deviation, `parameter_mismatch`;
   `target_drift` records an operation target that differs while the
@@ -3074,6 +3113,14 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Compensation link (#252). `context.compensates_evaluation_id` is
+  REQUIRED on a compensate-phase request, established by the PEP from
+  retained, verified evidence of the committed effect and its Decision,
+  never from an agent argument. PDP-side consistency check 12 refuses a
+  missing or malformed link before evaluation as
+  `compensation_link_invalid`, and Failure-Condition Coverage maps it and
+  the PEP's `compensation_link_unavailable`.
 
 - Owner-ruled follow-ups to the editorial pass (#1629). A PDP claiming
   the Obligations feature publishes its supported obligation types; a
