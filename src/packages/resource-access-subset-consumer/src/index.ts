@@ -3,7 +3,7 @@
 // (vectors/mission-resource-access-subset/) from
 // draft-mcguinness-oauth-mission-resource-access alone.
 
-export { CONSTRAINT_RULES, type ConstraintRule } from "./constraints.js";
+export { CONSTRAINT_RULES, type ConstraintRule, isCurrencyCode } from "./constraints.js";
 export { compareDecimal, type DecimalValue, parseDecimal } from "./decimal.js";
 export { isValidRecipientDomain, isWithinDomain } from "./dns.js";
 export {

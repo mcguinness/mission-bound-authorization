@@ -1,11 +1,13 @@
 /**
  * @spec mission#submission-processing (#1411, D559): the Submission Processing
  * Order's refusal precedence at PAR. A submission that fails more than one
- * check is refused with the error of the earliest failing step: the envelope
- * (step 1) and the Intent (step 2) before the authority proposal (step 3), and
- * the proposal before required evidence (step 5) and evidence dispatch and
- * verification (step 6). Each combined case runs beside each of its single
- * failures, so the combined result is attributable to the order alone.
+ * check is refused with the error of the earliest failing step: the envelope,
+ * including each evidence entry's structure and the size bounds (step 1,
+ * #1503 finding 12), and the Intent (step 2) before the authority proposal
+ * (step 3), and the proposal before required evidence (step 5) and evidence
+ * dispatch and verification (step 6). Each combined case runs beside each of
+ * its single failures, so the combined result is attributable to the order
+ * alone.
  *
  * @spec mission#derivation-modes (#1411): the candidate Authority Set is
  * complete before the approval rendering, and the approved set is fixed when
@@ -20,6 +22,7 @@ import {
   ApprovalSessionStore,
   buildAuthorizationServer,
   type BuiltAs,
+  DEFAULT_MAX_EVIDENCE_ENTRIES,
   IntentError,
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
@@ -66,6 +69,28 @@ const VALID_EVIDENCE = { type: EVIDENCE_TYPE, assertion: "ok" };
 const FAILING_EVIDENCE = { type: EVIDENCE_TYPE, assertion: "fail" };
 const UNKNOWN_EVIDENCE = { type: "urn:test:intent-evidence:unregistered", assertion: "ok" };
 const INVALID_EVIDENCE = { type: EVIDENCE_TYPE, assertion: 5 };
+const UNTYPED_EVIDENCE = { assertion: "x" };
+const OVERSIZE_EVIDENCE = { ...UNKNOWN_EVIDENCE, assertion: "A".repeat(17_000) };
+
+/**
+ * The step 1 evidence failures, as evidence arrays: an entry's structure,
+ * and the evidence size bounds. None presents the test type, so each also
+ * leaves a required type absent.
+ */
+const STRUCTURAL_FAILURES: [label: string, evidence: unknown[]][] = [
+  ["an evidence entry without a type", [UNTYPED_EVIDENCE]],
+  ["an evidence entry that is not an object", ["x"]],
+  ["an entry of an unsupported type before an entry without a type", [UNKNOWN_EVIDENCE, UNTYPED_EVIDENCE]],
+];
+const EVIDENCE_SIZE_FAILURES: [label: string, evidence: unknown[]][] = [
+  ["an evidence entry over the size bound", [OVERSIZE_EVIDENCE]],
+  ["evidence over the entry-count bound", Array.from({ length: DEFAULT_MAX_EVIDENCE_ENTRIES + 1 }, () => UNKNOWN_EVIDENCE)],
+];
+/** An Intent over the reference AS's array-length bound (64 `target_resources`). */
+const OVERSIZE_INTENT = {
+  ...INTENT,
+  target_resources: [RESOURCE, ...Array.from({ length: 64 }, (_, i) => `https://r${i}.example/api`)],
+};
 
 const VALID_PROPOSAL = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["invoices.read"] }];
 const MALFORMED_PROPOSAL = [{ type: "mission_resource_access", resource: RESOURCE, actions: 17 }];
@@ -235,6 +260,8 @@ describe("Submission Processing Order refusal precedence at PAR (@spec mission#s
       ["entry outside target_resources and unknown evidence type", { intent: INTENT, evidence: [UNKNOWN_EVIDENCE] }, OUTSIDE_PROPOSAL, "invalid_request"],
       ["entry outside target_resources and evidence failing its type's validation", { intent: INTENT, evidence: [INVALID_EVIDENCE] }, OUTSIDE_PROPOSAL, "invalid_request"],
       ["unsupported proposal type and unknown evidence type", { intent: INTENT, evidence: [UNKNOWN_EVIDENCE] }, UNSUPPORTED_PROPOSAL, "invalid_authorization_details"],
+      ["malformed proposal and unknown evidence type", { intent: INTENT, evidence: [UNKNOWN_EVIDENCE] }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
+      ["malformed proposal and evidence failing its type's validation", { intent: INTENT, evidence: [INVALID_EVIDENCE] }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
       ["malformed proposal and evidence failing verification", { intent: INTENT, evidence: [FAILING_EVIDENCE] }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
     ]);
   });
@@ -252,25 +279,39 @@ describe("Submission Processing Order refusal precedence at PAR (@spec mission#s
     expect(withEmptyProposal.status, JSON.stringify(withEmptyProposal.body)).toBe(201);
   });
 
-  it("validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound", async () => {
-    const untyped = { assertion: "x" };
-    const oversize = { type: EVIDENCE_TYPE, assertion: "A".repeat(17_000) };
+  it("a structurally invalid evidence entry together with a malformed proposal is refused at step 1, with invalid_request", async () => {
     await expectRefusals(ISSUER, agentKey, [
-      ["evidence entry without a type only", { intent: INTENT, evidence: [untyped] }, VALID_PROPOSAL, "invalid_request"],
-      ["evidence entry that is not an object only", { intent: INTENT, evidence: ["x"] }, VALID_PROPOSAL, "invalid_request"],
-      ["evidence entry over the size bound only", { intent: INTENT, evidence: [oversize] }, VALID_PROPOSAL, "invalid_request"],
-      ["malformed proposal and an evidence entry without a type", { intent: INTENT, evidence: [untyped] }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
-      ["malformed proposal and an evidence entry that is not an object", { intent: INTENT, evidence: ["x"] }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
-      ["malformed proposal and an evidence entry over the size bound", { intent: INTENT, evidence: [oversize] }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
+      ...STRUCTURAL_FAILURES.map(([label, evidence]): Case => [`${label} only`, { intent: INTENT, evidence }, VALID_PROPOSAL, "invalid_request"]),
+      ["malformed proposal only", { intent: INTENT, evidence: [VALID_EVIDENCE] }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
+      ["unsupported proposal type only", { intent: INTENT, evidence: [VALID_EVIDENCE] }, UNSUPPORTED_PROPOSAL, "invalid_authorization_details"],
+      ...STRUCTURAL_FAILURES.flatMap(([label, evidence]): Case[] => [
+        [`malformed proposal and ${label}`, { intent: INTENT, evidence }, MALFORMED_PROPOSAL, "invalid_request"],
+        [`unsupported proposal type and ${label}`, { intent: INTENT, evidence }, UNSUPPORTED_PROPOSAL, "invalid_request"],
+      ]),
     ]);
   });
 
-  it("refuses a missing required evidence type before the evidence entry rules (step 5 before step 6)", async () => {
-    const untyped = { assertion: "x" };
+  it("a submission over a size bound together with a malformed proposal is refused at step 1, with invalid_request", async () => {
+    const failures: [label: string, envelope: unknown][] = [
+      ...EVIDENCE_SIZE_FAILURES.map(([label, evidence]): [string, unknown] => [label, { intent: INTENT, evidence }]),
+      ["an Intent array over the length bound", { intent: OVERSIZE_INTENT }],
+    ];
+    await expectRefusals(ISSUER, agentKey, [
+      ...failures.map(([label, envelope]): Case => [`${label} only`, envelope, VALID_PROPOSAL, "invalid_request"]),
+      ["malformed proposal only", { intent: INTENT }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
+      ["unsupported proposal type only", { intent: INTENT }, UNSUPPORTED_PROPOSAL, "invalid_authorization_details"],
+      ...failures.flatMap(([label, envelope]): Case[] => [
+        [`malformed proposal and ${label}`, envelope, MALFORMED_PROPOSAL, "invalid_request"],
+        [`unsupported proposal type and ${label}`, envelope, UNSUPPORTED_PROPOSAL, "invalid_request"],
+      ]),
+    ]);
+  });
+
+  it("a structurally invalid evidence entry, or evidence over a size bound, together with a missing required evidence type is refused at step 1, with invalid_request", async () => {
     await expectRefusals(REQUIRED_ISSUER, requiredAgentKey, [
-      ["required type present and an entry without a type", { intent: INTENT, evidence: [VALID_EVIDENCE, untyped] }, VALID_PROPOSAL, "invalid_request"],
+      ["required type present and an entry without a type", { intent: INTENT, evidence: [VALID_EVIDENCE, UNTYPED_EVIDENCE] }, VALID_PROPOSAL, "invalid_request"],
       ["required type absent only", { intent: INTENT }, VALID_PROPOSAL, "invalid_mission_intent_evidence"],
-      ["required type absent and an entry without a type", { intent: INTENT, evidence: [untyped] }, VALID_PROPOSAL, "invalid_mission_intent_evidence"],
+      ...[...STRUCTURAL_FAILURES, ...EVIDENCE_SIZE_FAILURES].map(([label, evidence]): Case => [`required type absent and ${label}`, { intent: INTENT, evidence }, VALID_PROPOSAL, "invalid_request"]),
     ]);
   });
 });

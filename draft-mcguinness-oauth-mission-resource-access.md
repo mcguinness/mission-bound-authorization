@@ -441,7 +441,8 @@ incorrectly.
 A numeric constraint value MUST lie within the range that the JSON
 Canonicalization Scheme (JCS) {{RFC8785}} serializes exactly. Monetary
 amounts avoid that hazard: `max_amount` carries its `amount` as a
-decimal string, paired with an ISO 4217 `currency` code, and any other
+decimal string, paired with a three-letter `currency` code
+({{initial-common-constraints}}), and any other
 Common Constraint for a monetary value SHOULD reuse this shape rather
 than a JSON number.
 
@@ -763,7 +764,20 @@ This document defines the following Common Constraints.
 
   - Value: an object with two members, `amount` (REQUIRED, a string
     containing a decimal number, {{decimal-values}}) and `currency`
-    (REQUIRED, a currency code as defined in {{ISO4217}}).
+    (REQUIRED, a currency code, as the next item defines it).
+  - Currency: a `currency` value is exactly three characters, each an
+    upper-case ASCII letter (`A` to `Z`), the form of an ISO 4217
+    alphabetic code {{ISO4217}}. A value of any other length, one
+    ending in a line terminator included, or carrying any other
+    character is malformed: the authorization server MUST refuse an
+    authority proposal carrying one with the
+    `invalid_authorization_details` error code, and a resource server
+    treats one as a `constraints` key it cannot enforce
+    ({{rs-enforcement}}). Values are compared exactly, character for
+    character, with no trimming, case folding, numeric code, or
+    conversion. A well-formed value is admitted for comparison whether
+    or not ISO 4217 assigns it; a resource server or deployment MAY
+    refuse a currency it does not support.
   - Subset: no broader when the `currency` values are equal and the
     candidate `amount` is less than or equal to the reference `amount`,
     compared in decimal value space; differing currencies fail the
@@ -1630,7 +1644,7 @@ Omission-Equivalent Value is `false`.
 
 | Key Name | Value Syntax | Subset Rule | Intersection Rule |
 |---|---|---|---|
-| `max_amount` | Object: `amount` (decimal string), `currency` (ISO 4217 code) | Same currency; candidate <= reference | Same currency; the smaller amount |
+| `max_amount` | Object: `amount` (decimal string), `currency` (three upper-case ASCII letters) | Same currency; candidate <= reference | Same currency; the smaller amount |
 | `resource_issued_after` | String, RFC 3339 date-time | Candidate >= reference | The later instant |
 | `resource_issued_before` | String, RFC 3339 date-time | Candidate <= reference | The earlier instant |
 | `tenant` | String | Equal | The shared value |
@@ -1666,6 +1680,9 @@ Omission-Equivalent Value is `false`.
   for, so one mapping serves both projection and the OAuth binding's
   scope-keyed configured mapping, and gives the identity case for
   `scope` values that are action identifiers.
+- `max_amount`'s `currency` is exactly three upper-case ASCII letters,
+  compared exactly, with no assignment-list validation; any other value
+  is malformed and refused at submission.
 
 -00
 

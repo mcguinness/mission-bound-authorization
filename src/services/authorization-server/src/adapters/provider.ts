@@ -364,13 +364,24 @@ export function requiredEvidenceTypesFor(opts: AdapterOptions, clientMeta?: unkn
   return [...set];
 }
 import {
+  ApprovalFloorRefusedError,
   DEFERRED_GRANT_TYPE,
   DeferralError,
+  type DeferralReview,
   type DeferralStore,
   type DeferredToken,
   EXPANSION_DEFERRAL_PREFIX,
   type ExpansionDeferralStore,
 } from "../kernel/deferred.js";
+import {
+  deciding,
+  type DeferralContext,
+  deferralContext,
+  deferralNoticePage,
+  deferralPagePath,
+  renderDeferralPage,
+  shownExpiry,
+} from "./expansion-deferral-surface.js";
 import type { ExpansionRateLimiter } from "../kernel/expansion.js";
 import {
   type ChildDenialReason,
@@ -1892,14 +1903,15 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // keeps the device authorization endpoint refusing a Request Object.
       // @spec mission#submission-processing (#1512): the hook runs before
       // the provider's RAR check, so it validates a carried Submission
-      // envelope and its Intent (steps 1 and 2) before a proposal inside the
-      // object is checked (step 3); evidence entries wait for their step.
+      // envelope and its Intent (steps 1 and 2), including each evidence
+      // entry's structure and size (step 1), before a proposal inside the
+      // object is checked (step 3); evidence type dispatch waits for step 6.
       requestObjects: {
         enabled: true,
         requireSignedRequestObject: false,
         assertJwtClaimsAndHeader: requestObjectIntake((submission) => {
           try {
-            kernel.validateSubmission(submission, undefined, { deferEvidenceEntries: true });
+            kernel.validateSubmission(submission, undefined, { deferEvidenceDispatch: true });
           } catch (e) {
             if (e instanceof IntentError) throw intentErrorToOidc(e);
             throw e;
@@ -2045,9 +2057,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         }
         // @spec mission#submission-processing (#1411): the PAR intake lifted
         // the proposal, so the envelope and the Intent (steps 1 and 2) are
-        // validated before it (step 3), and the evidence entry rules wait
-        // for the evidence step (step 6). A lifted proposal is always restored and
-        // checked, even where the provider reads no `mission_intent`.
+        // validated before it (step 3), with each evidence entry's structure
+        // and size (step 1, #1503 finding 12), and evidence type dispatch
+        // waits for the evidence step (step 6). A lifted proposal is always
+        // restored and checked, even where the provider reads no `mission_intent`.
         const lifted =
           (ctx as { oidc: { route?: string } }).oidc.route === "pushed_authorization_request"
             ? takeParIntake((ctx as { req: IncomingMessage }).req)
@@ -2073,7 +2086,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           return;
         }
         try {
-          const submission = kernel.validateSubmission(String(submitted), undefined, { deferEvidenceEntries: true });
+          const submission = kernel.validateSubmission(String(submitted), undefined, { deferEvidenceDispatch: true });
           const { intent } = submission;
           if (lifted) {
             params.authorization_details = lifted.proposal;
@@ -3370,13 +3383,30 @@ async function handleChildJwtBearerGrant(
  * refresh token destroys that Grant but leaves the row, so the row alone
  * would keep the family's tokens, and the delegations derived from them,
  * active after revocation.
+ *
+ * @spec mission#grant-binding-related, mission#delegated-exchange (#1503
+ * finding 11, D620): a grant with a recorded backing grant (a delegation
+ * handle's, minted by an exchange that establishes no new grant lineage) is
+ * live only while its backing grant is live too. A grant records its backing
+ * grant once, at its own mint, from a grant that already exists, so the chain
+ * is acyclic; one that revisits a grant is corrupt state and fails closed.
+ * Every link is a self-exchange the Mission counts as a derivation, so the
+ * Mission's derivation accounting bounds the chain the issuer mints, and a
+ * handle minted at any depth stays usable (#1601 review).
  */
 export async function isGrantLive(opts: AdapterOptions, provider: Provider, grantId: string): Promise<boolean> {
-  const grantExists = !!(await provider.Grant.find(grantId).catch(() => undefined));
-  if (opts.familyStore?.wasEverFamily(grantId)) {
-    return opts.familyStore.resolve(grantId) !== undefined && grantExists;
+  const seen = new Set<string>();
+  for (let current: string | undefined = grantId; current !== undefined; ) {
+    if (seen.has(current)) return false;
+    seen.add(current);
+    const grantExists = !!(await provider.Grant.find(current).catch(() => undefined));
+    const live = opts.familyStore?.wasEverFamily(current)
+      ? opts.familyStore.resolve(current) !== undefined && grantExists
+      : grantExists;
+    if (!live) return false;
+    current = opts.kernel.missionBoundGrants.resolve(current)?.backingGrantId;
   }
-  return grantExists;
+  return true;
 }
 
 /**
@@ -3564,18 +3594,55 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
    * present the same key. Undefined for an anonymous rendering, a preview no
    * decision can rest on.
    */
-  const renderPrincipal = (ctx: KoaCtx, uid: string): { key: string; subject: string } | undefined => {
+  const renderPrincipal = (
+    ctx: KoaCtx,
+    uid: string,
+  ): { key: string; subject: string; sub: string; selected?: string } | undefined => {
     const cookie = ctx.get("cookie");
     const sessionKey = opts.approvalSessions?.sessionKey(cookie, uid);
-    const sessionSubject = opts.approvalSessions?.subjectFor(cookie, uid);
-    if (sessionKey && sessionSubject) return { key: sessionKey, subject: sessionSubject };
+    const session = opts.approvalSessions?.principalFor(cookie, uid);
+    if (sessionKey && session) {
+      return {
+        key: sessionKey,
+        subject: session.subject ?? session.sub,
+        sub: session.sub,
+        ...(session.subject ? { selected: session.subject } : {}),
+      };
+    }
     const token = ctx.get("x-service-token");
     const service = token && Object.hasOwn(serviceTokenPrincipals, token) ? serviceTokenPrincipals[token] : undefined;
     if (!opts.allowHeadlessAdjudication || !service?.scopes.includes(MISSION_APPROVAL_SCOPE) || !validApprovalPrincipal(service.approver)) {
       return undefined;
     }
-    const subject = ctx.get(APPROVAL_SUBJECT_HEADER) || service.approver.sub;
-    return { key: serviceRenderKey(token, service.approver.sub, subject), subject };
+    const selected = ctx.get(APPROVAL_SUBJECT_HEADER);
+    const subject = selected || service.approver.sub;
+    return {
+      key: serviceRenderKey(token, service.approver.sub, subject),
+      subject,
+      sub: service.approver.sub,
+      ...(selected ? { selected } : {}),
+    };
+  };
+
+  /**
+   * @spec expansion#completion-modes (#1558): who may review and decide an
+   * expansion deferral. The successor's Subject is its predecessor's, so a
+   * Subject the principal selected is that one, and the Approver is that
+   * Subject or holds approve-for authority over it; write-bearing authority
+   * needs a distinct Approver with the approver role (D37), as at the Mission
+   * approval. The reason, or undefined when the principal may.
+   */
+  const deferralApproverRefusal = (review: DeferralReview, approver: string, selected: string | undefined): string | undefined => {
+    const subject = review.predecessor.subject.sub;
+    if (selected !== undefined && selected !== subject) return "the Subject of an expansion is its predecessor's";
+    if (!opts.knownSubjects.has(subject) || (approver !== subject && !opts.approverApprovesFor.get(approver)?.has(subject))) {
+      return "this Approver may not approve for the expansion's Subject";
+    }
+    const writeBearing = review.successor.some((e) => e.actions.some((a) => WRITE_ACTIONS.has(a)));
+    if (writeBearing && (approver === subject || !opts.approverRoleSubs.has(approver))) {
+      return "write-bearing authority requires a distinct approver";
+    }
+    return undefined;
   };
 
   /** @spec mission-template#template-consent: template proposals and their decisions. */
@@ -3966,9 +4033,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       }
       const { uid, principal } = completed;
       const session = opts.approvalSessions.establish(uid, principal);
-      // A template proposal's login returns to its consent page; every other
-      // login, to its interaction.
-      const base = templateProposals.get(uid) ? "/templates/proposals" : "/interaction";
+      // A template proposal's login returns to its consent page, an expansion
+      // deferral's to its approval page (#1558); every other login, to its
+      // interaction.
+      const base = templateProposals.get(uid)
+        ? "/templates/proposals"
+        : uid.startsWith(EXPANSION_DEFERRAL_PREFIX)
+          ? "/expansions/deferrals"
+          : "/interaction";
       ctx.res.setHeader("set-cookie", `${session.cookie}; Path=${base}/${uid}; HttpOnly; SameSite=Lax`);
       ctx.set("cache-control", "no-store");
       ctx.set("content-type", "text/html; charset=utf-8");
@@ -5463,6 +5535,219 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         if (!(e instanceof TemplateError)) throw e;
         refuse(400, "invalid_request", e.message);
       }
+      return;
+    }
+    // @spec expansion#completion-modes, progressive#fresh-approval,
+    // discovery#adjudication (#1558): the approval surface for an expansion
+    // deferral. The page renders the stored consent disclosure only to an
+    // authenticated Approver who may decide it, under a render revision bound
+    // to them; the decision approves exactly the deferral and the context
+    // rendered.
+    const deferrals = enabled("expansion") ? opts.expansionDeferrals : undefined;
+    const deferralPageMatch = ctx.path.match(/^\/expansions\/deferrals\/([^/]+)$/);
+    if (deferralPageMatch && ctx.method === "GET" && deferrals) {
+      const code = deferralPageMatch[1] as string;
+      ctx.set("cache-control", "no-store");
+      ctx.set("content-type", "text/html; charset=utf-8");
+      const viewer = renderPrincipal(ctx, code);
+      if (!viewer) {
+        ctx.status = 401;
+        ctx.body = deferralNoticePage(
+          "Sign in as the Approver to review this expansion request.",
+          opts.approverLogin && opts.approvalSessions ? `${deferralPagePath(code)}/approver-login` : undefined,
+        );
+        return;
+      }
+      let review: DeferralReview | undefined;
+      try {
+        review = deferrals.pendingReview(code);
+      } catch (e) {
+        if (!(e instanceof IntentError)) throw e;
+        ctx.status = 400;
+        ctx.body = deferralNoticePage(e.message);
+        return;
+      }
+      if (!review) {
+        ctx.status = 404;
+        ctx.body = deferralNoticePage("No expansion request with this code is pending.");
+        return;
+      }
+      const refusal = deferralApproverRefusal(review, viewer.sub, viewer.selected);
+      if (refusal) {
+        ctx.status = 403;
+        ctx.body = deferralNoticePage(refusal);
+        return;
+      }
+      const rendered = deferralContext(review, shownExpiry(kernel, review));
+      const revision = retainRenderRevision<DeferralContext>(
+        provider,
+        code,
+        viewer.key,
+        { clientId: review.clientId, ...rendered },
+        Math.floor(Date.parse(review.expiresAt) / 1000),
+      );
+      const csrf = opts.approvalSessions?.csrfFor(ctx.get("cookie"), code);
+      const client = await provider.Client.find(review.clientId);
+      ctx.set(RENDER_REVISION_HEADER, revision);
+      ctx.status = 200;
+      ctx.body = renderDeferralPage(review, rendered.context, {
+        revision,
+        ...(csrf ? { csrf } : {}),
+        changed: ctx.query.changed === "1",
+        ...(client?.clientName ? { clientName: String(client.clientName) } : {}),
+      });
+      return;
+    }
+    // @spec mission#approval-authentication (#1320): the Approver's login for
+    // one expansion deferral. Its Subject is the predecessor's, so the login
+    // selects none.
+    const deferralLoginMatch = ctx.path.match(/^\/expansions\/deferrals\/([^/]+)\/approver-login$/);
+    if (deferralLoginMatch && ctx.method === "GET" && deferrals && opts.approverLogin && opts.approvalSessions) {
+      const code = deferralLoginMatch[1] as string;
+      if (!code.startsWith(EXPANSION_DEFERRAL_PREFIX) || ctx.query.subject !== undefined) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: "no expansion request to log in for, with no Subject" };
+        return;
+      }
+      const started = await opts.approverLogin.start(code, undefined);
+      ctx.res.setHeader("set-cookie", started.cookie);
+      ctx.set("cache-control", "no-store");
+      ctx.set("location", started.location);
+      ctx.status = 303;
+      ctx.body = "";
+      return;
+    }
+    const deferralDecideMatch = ctx.path.match(/^\/expansions\/deferrals\/([^/]+)\/decide$/);
+    if (deferralDecideMatch && ctx.method === "POST" && deferrals) {
+      const code = deferralDecideMatch[1] as string;
+      const body = await readJsonBody(ctx.req);
+      // The page's form posts form-encoded with the login's CSRF secret as a
+      // field and is answered with a page; an approval service posts JSON.
+      const form = (ctx.get("content-type") ?? "").startsWith("application/x-www-form-urlencoded");
+      const answer = (status: number, result: Record<string, unknown>, message: string) => {
+        ctx.status = status;
+        ctx.set("cache-control", "no-store");
+        if (form) {
+          ctx.set("content-type", "text/html; charset=utf-8");
+          ctx.body = deferralNoticePage(message);
+        } else {
+          ctx.body = result;
+        }
+      };
+      const refuse = (status: number, error: string, description: string) =>
+        answer(status, { error, error_description: description }, description);
+      if (["approver", "subject", "approver_acr", "approver_auth_time", "ceiling", "authority_ceiling"].some((k) => Object.hasOwn(body, k)) ||
+          (body.decision !== "approve" && body.decision !== "deny")) {
+        refuse(400, "invalid_request", "decide accepts a decision, not resolving identity or a ceiling");
+        return;
+      }
+      const resolved = approvalPrincipal(
+        ctx,
+        code,
+        form ? (typeof body.csrf_token === "string" ? body.csrf_token : "") : ctx.get("x-csrf-token"),
+      );
+      if (!resolved) {
+        refuse(401, "unauthorized", "authenticate as the Approver to decide this expansion request");
+        return;
+      }
+      const { principal, interactive } = resolved;
+      // From here to the store's record of the decision nothing awaits: the
+      // pending check, the comparison with the rendering and the commit run as
+      // one synchronous step against the synchronous store, so no other
+      // decision on this deferral can come between them.
+      let review: DeferralReview | undefined;
+      try {
+        review = deferrals.pendingReview(code);
+      } catch (e) {
+        if (!(e instanceof IntentError)) throw e;
+        refuse(400, e.code, e.message);
+        return;
+      }
+      if (!review) {
+        refuse(400, "invalid_request", "no expansion request with this code is pending");
+        return;
+      }
+      const refusal = deferralApproverRefusal(review, principal.sub, principal.subject);
+      if (refusal) {
+        refuse(403, "approval_forbidden", refusal);
+        return;
+      }
+      if (body.decision !== "approve") {
+        if (!deferrals.denyPending(code)) {
+          refuse(400, "invalid_request", "no expansion request with this code is pending");
+          return;
+        }
+        answer(200, { deferral_code: code, state: "access_denied" }, "Denied. No successor is created, and the Mission is unchanged.");
+        return;
+      }
+      const principalKey = interactive
+        ? opts.approvalSessions?.sessionKey(ctx.get("cookie"), code)
+        : serviceRenderKey(ctx.get("x-service-token"), principal.sub, principal.subject ?? principal.sub);
+      const rendered = principalKey ? currentRenderRevision<DeferralContext>(provider, code, principalKey) : undefined;
+      if (!rendered || body.render_revision !== rendered.revision || rendered.clientId !== review.clientId) {
+        if (form) {
+          ctx.status = 303;
+          ctx.set("cache-control", "no-store");
+          ctx.set("location", deferralPagePath(code));
+          ctx.body = "";
+          return;
+        }
+        refuse(409, "rendering_required", "approve the latest rendering of this request made to you; it was not rendered, or was rendered again");
+        return;
+      }
+      const current = deferralContext(review, deciding(kernel, review, rendered.context.expires_at));
+      if (current.commitment !== rendered.commitment) {
+        retireRenderRevision(provider, code, principalKey as string, rendered.revision);
+        if (form) {
+          ctx.status = 303;
+          ctx.set("cache-control", "no-store");
+          ctx.set("location", `${deferralPagePath(code)}?changed=1`);
+          ctx.body = "";
+          return;
+        }
+        ctx.status = 409;
+        ctx.set("cache-control", "no-store");
+        ctx.body = {
+          error: "approval_context_changed",
+          error_description: "the request changed since it was rendered; review it again",
+          changed: changedParts<DeferralContext>(rendered.context, current.context),
+        };
+        return;
+      }
+      // A re-consent consents exactly the offer this rendering showed.
+      const reconsent = body.reconsent === true || body.reconsent === "true";
+      if (reconsent && !rendered.context.reconsent_offer) {
+        refuse(400, "invalid_request", "the rendering offered no ceiling to re-consent");
+        return;
+      }
+      const approvalEventId = `apev_${code}`;
+      try {
+        const approved = deferrals.approve(code, {
+          approver: { iss: opts.issuer, sub: principal.sub },
+          approvalEventId,
+          approvedUntil: rendered.context.expires_at,
+          authentication: { surface: interactive ? "browser" : "service", acr: principal.acr, auth_time: principal.auth_time },
+          ...(reconsent && rendered.context.reconsent_offer ? { ceiling: rendered.context.reconsent_offer } : {}),
+        });
+        if (!approved) {
+          refuse(400, "invalid_request", "no expansion request with this code is pending");
+          return;
+        }
+      } catch (e) {
+        if (e instanceof ApprovalFloorRefusedError) {
+          refuse(403, "access_denied", e.message);
+          return;
+        }
+        if (!(e instanceof IntentError)) throw e;
+        refuse(400, e.code, e.message);
+        return;
+      }
+      retireRenderRevision(provider, code, principalKey as string, rendered.revision);
+      answer(
+        200,
+        { deferral_code: code, state: "approved", approval_event_id: approvalEventId },
+        "Approved. The client completes the expansion on its next poll.",
+      );
       return;
     }
     // POST /templates/:id/lifecycle -- revoke. (No expire() accessor exists; expiry is

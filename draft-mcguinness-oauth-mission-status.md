@@ -871,13 +871,13 @@ sole Mission Status path.
 
 # Mission Lifecycle Endpoint {#mission-lifecycle-endpoint}
 
-This section is OPTIONAL. The issuance profile lets the Subject,
-Approver, or an administrator revoke a Mission by an authenticated,
-deployment-defined means and defers a standardized management API and
-the richer `suspend`, `resume`, and `complete` operations
-({{I-D.draft-mcguinness-oauth-mission}}, Sections "Revocation" and
-"Mission Lifecycle"). This section standardizes that management
-surface.
+This section is OPTIONAL. The issuance profile requires an
+authenticated, deployment-defined means to revoke a Mission and defers
+a standardized management API and the richer `suspend`, `resume`, and
+`complete` operations ({{I-D.draft-mcguinness-oauth-mission}},
+Sections "Revocation" and "Mission Lifecycle"). This section
+standardizes that management surface; who may perform each operation
+is governed by {{lifecycle-authorization}}.
 
 The AS publishes its Mission Lifecycle endpoint URL in authorization
 server metadata ({{as-metadata}}) as `mission_lifecycle_endpoint`,
@@ -1864,10 +1864,11 @@ authentication-method value space is a closed set defined inline
 ({{as-metadata}}), and Mission Lifecycle `operation` values have no
 IANA registry; a companion profile registers an extension operation
 by defining it in its own specification
-({{mission-lifecycle-endpoint}}). `suspended` and `completed`
-({{mission-lifecycle-endpoint}}) are values of the issuance profile's
-`mission_error` member, which has no IANA registry, so this document
-requests no registration for them.
+({{mission-lifecycle-endpoint}}). The `mission_error` values
+`suspended` and `completed` ({{mission-lifecycle-endpoint}}) need no
+registration, because the issuance profile's `mission_error` member
+has no registry of values; their registrations as a lifecycle state
+and a termination reason are in {{iana-lifecycle-registrations}}.
 
 This document registers no new Well-Known URI: the metadata members of
 {{as-metadata}} are published in the OAuth Authorization Server Metadata

@@ -41,9 +41,35 @@ interface Amount {
   readonly currency: string;
 }
 
+const UPPER_A = 0x41;
+const UPPER_Z = 0x5a;
+
+/**
+ * Whether a value is a well-formed max_amount currency
+ * (resource-access#initial-common-constraints max_amount, Currency): "exactly
+ * three characters, each an upper-case ASCII letter (A to Z)". "A value of any
+ * other length, one ending in a line terminator included, or carrying any
+ * other character is malformed." The test is stated by length and by
+ * character, with no pattern whose end anchor could admit a trailing line
+ * terminator. `length` counts UTF-16 code units, which here are characters:
+ * every admitted unit is an ASCII letter, so a non-ASCII character fails the
+ * character test and one outside the Basic Multilingual Plane fails the
+ * length test or the character test. Whether ISO 4217 assigns the code is not
+ * tested: "A well-formed value is admitted for comparison whether or not ISO
+ * 4217 assigns it".
+ */
+export function isCurrencyCode(value: unknown): value is string {
+  if (typeof value !== "string" || value.length !== 3) return false;
+  for (let i = 0; i < value.length; i++) {
+    const unit = value.charCodeAt(i);
+    if (unit < UPPER_A || unit > UPPER_Z) return false;
+  }
+  return true;
+}
+
 // resource-access#initial-common-constraints max_amount: "an object with two
 // members, amount (REQUIRED, a string containing a decimal number) and
-// currency (REQUIRED, a currency code as defined in ISO4217)".
+// currency (REQUIRED, a currency code, as the next item defines it)".
 const maxAmount: ConstraintRule<Amount> = {
   parse(value) {
     if (!isObject(value) || !hasOnlyMembers(value, ["amount", "currency"])) {
@@ -52,17 +78,20 @@ const maxAmount: ConstraintRule<Amount> = {
     // resource-access#decimal-values: a malformed decimal is refused, never parsed.
     const amount = parseDecimal(value.amount);
     if (amount === undefined) return { refusal: "max_amount.amount is not a decimal string" };
-    // The draft names ISO 4217 but states no grammar for the code; the value is
-    // compared by exact equality, so any non-empty string is accepted here.
+    // Currency: a malformed value is refused at proposal intake with
+    // invalid_authorization_details, and, being invalid input, makes a subset
+    // comparison refuse. It is never trimmed or case-folded into a valid one.
     const currency = value.currency;
-    if (typeof currency !== "string" || currency === "") {
-      return { refusal: "max_amount.currency is not a currency code" };
+    if (!isCurrencyCode(currency)) {
+      return { refusal: "max_amount.currency is not exactly three upper-case ASCII letters" };
     }
     return { value: { amount, currency } };
   },
   // "no broader when the currency values are equal and the candidate amount is
   // less than or equal to the reference amount, compared in decimal value
-  // space; differing currencies fail the comparison"
+  // space; differing currencies fail the comparison". Currency: "Values are
+  // compared exactly, character for character, with no trimming, case
+  // folding, numeric code, or conversion."
   noBroader: (c, r) => c.currency === r.currency && compareDecimal(c.amount, r.amount) <= 0,
   omissionEquivalent: never,
 };

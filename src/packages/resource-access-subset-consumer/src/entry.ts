@@ -112,18 +112,23 @@ function parseContract(value: unknown): { contract: ContractReference } | { refu
 /**
  * Validate an entry and restrict it to the subset.
  *
- * `requireType` is true where the check reads `type` (proposal intake); the
- * vector format gives an entry without `type` where a check does not read it.
- * A present `type` must name this type in every case.
+ * Every check that parses an entry reads its `type`: proposal intake
+ * (`entry-validation`) and both operands of `subset`, where "each operand is
+ * one mission_resource_access entry: one whose type is absent or names
+ * another type is malformed input" (vectors README, Checks, `subset`). The
+ * resource-server checks read only `resource` and `resource_match`, so the
+ * vector format gives their entries without `type` and they do not parse one.
  */
-export function parseEntry(value: unknown, requireType: boolean): ParseResult {
+export function parseEntry(value: unknown): ParseResult {
   if (!isObject(value)) return refuse("the entry is not a JSON object");
 
-  // resource-access#resource-access-type type: "REQUIRED. A string. mission_resource_access."
-  if ("type" in value) {
-    if (value.type !== ENTRY_TYPE) return refuse(`type is not ${ENTRY_TYPE}`);
-  } else if (requireType) {
-    return refuse("type is absent");
+  // resource-access#resource-access-type type: "REQUIRED. A string.
+  // mission_resource_access." An absent, non-string or other type is
+  // malformed input, refused rather than read as this type.
+  if (!("type" in value)) return refuse("type is absent");
+  if (typeof value.type !== "string") return refuse("type is not a string");
+  if (value.type !== ENTRY_TYPE) {
+    return refuse(`type names another type, ${JSON.stringify(value.type)}, not ${ENTRY_TYPE}`);
   }
 
   for (const member of Object.keys(value)) {
