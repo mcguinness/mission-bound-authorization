@@ -13,6 +13,7 @@
 
 import {
   actionFamilyRefusal,
+  actionOutsideGrammar,
   delegateMatcherListViolation,
   entryDelegateMatcherViolation,
   isAbsoluteUri,
@@ -36,12 +37,11 @@ export const MISSION_RESOURCE_ACCESS_TYPE = "mission_resource_access" as const;
 
 /**
  * @spec resource-access#resource-access-type, resource-access#entry-validation
- * (#1376): one `actions` value, matched as a whole: an action identifier
- * (`[A-Za-z0-9_.:-]+`), or an action family, an identifier followed by `.*`.
- * Anchored and without the `m` flag, so a character outside the grammar
- * anywhere in the value, a trailing newline included, fails it.
+ * (#1376): one `actions` value, matched as a whole. Declared in @mission/core
+ * (#1625) beside {@link actionOutsideGrammar}, which every entry boundary
+ * consults, and re-exported here for the published schema's readers.
  */
-export const ACTION_VALUE = /^[A-Za-z0-9_.:-]+(?:\.\*)?$/;
+export { ACTION_VALUE } from "@mission/core";
 
 /**
  * @spec resource-access#subset (#1377, D538, D684): the `actions` values this
@@ -348,7 +348,7 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   // @spec resource-access#entry-validation (#1376): each value matches the
   // action grammar as a whole, so an identifier the namespace cannot carry
   // is refused at intake rather than admitted and never matched.
-  const malformedAction = e.actions.find((a) => !ACTION_VALUE.test(a));
+  const malformedAction = actionOutsideGrammar(e);
   if (malformedAction !== undefined) {
     return `actions value ${JSON.stringify(malformedAction)} is neither an action identifier nor an action family`;
   }

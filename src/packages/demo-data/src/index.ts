@@ -13,6 +13,7 @@ import {
   ACTION_PHASES,
   type ActionPhase,
   type AuthorityEntry,
+  actionOutsideGrammar,
   computeAnchor,
   containmentSelectorViolation,
   DuplicateMemberError,
@@ -1137,6 +1138,24 @@ function wellFormedResource(file: string, e: Record<string, unknown>, ctx: strin
   return resource;
 }
 
+/**
+ * @spec resource-access#entry-validation (#1376, #1625): each of a ceiling
+ * entry's `actions` is inside the action grammar, refused at load naming the
+ * entry and the value, as proposal intake refuses it, rather than loaded as an
+ * action no admitted proposal can ever match.
+ */
+function wellFormedActions(file: string, e: Record<string, unknown>, ctx: string): string[] {
+  const actions = reqStringArray(file, e, "actions", ctx);
+  const malformed = actionOutsideGrammar({ actions });
+  if (malformed !== undefined) {
+    throw new ConfigError(
+      file,
+      `${ctx} has action ${JSON.stringify(malformed)}, which is neither an action identifier nor an action family`,
+    );
+  }
+  return actions;
+}
+
 export function parseCeilingEntry(file: string, raw: unknown, ctx: string): AuthorityEntry {
   const e = asObject(file, raw, ctx);
   const type = reqString(file, e, "type", ctx);
@@ -1148,7 +1167,7 @@ export function parseCeilingEntry(file: string, raw: unknown, ctx: string): Auth
     type,
     resource,
     ...ceilingResourceMatch(file, e, resource, ctx),
-    actions: reqStringArray(file, e, "actions", ctx),
+    actions: wellFormedActions(file, e, ctx),
     ...(e.constraints !== undefined
       ? {
           constraints: asObject(file, e.constraints, `${ctx}.constraints`) as NonNullable<
@@ -2148,7 +2167,7 @@ function loadCeilingEntries(file: string, raw: unknown, ctx: string): CeilingEnt
       type,
       resource,
       ...ceilingResourceMatch(file, e, resource, `${ctx}[${i}]`),
-      actions: reqStringArray(file, e, "actions", `${ctx}[${i}]`),
+      actions: wellFormedActions(file, e, `${ctx}[${i}]`),
     };
     if (e.constraints !== undefined) {
       entry.constraints = asObject(

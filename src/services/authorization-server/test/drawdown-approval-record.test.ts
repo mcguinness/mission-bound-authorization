@@ -647,3 +647,50 @@ describe("re-checking a ceiling-drawdown record (@spec approval-governance#re-ch
     });
   });
 });
+
+describe("a ceiling drawdown keeps the association the ceiling and the predecessor retained (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2)", () => {
+  let mapped: string[] = [];
+  const mappedKernel = () =>
+    new MissionKernel({
+      issuer: ISS,
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: CATALOG,
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+      activationPolicies: REGISTRY,
+      entryAudiences: () => mapped,
+    });
+
+  it("a drawdown after the trusted mapping changes draws each entry with the association its ceiling consent retained, and carries the ceiling's association", () => {
+    mapped = ["https://rs-a.test/"];
+    const k = mappedKernel();
+    const pred = predecessorOn(k);
+    expect(pred.approved_audiences).toEqual([["https://rs-a.test/"]]);
+    expect(pred.ceiling_audiences).toEqual(CEILING.map(() => ["https://rs-a.test/"]));
+    mapped = ["https://rs-a.test/", "https://rs-b.test/"];
+    const succ = drawdownOn(k, pred);
+    expect(succ.approved_audiences).toEqual(succ.authority_set.map(() => ["https://rs-a.test/"]));
+    expect(k.get(succ.id)?.approved_audiences).toEqual(succ.authority_set.map(() => ["https://rs-a.test/"]));
+    expect(k.get(succ.id)?.ceiling_audiences).toEqual(CEILING.map(() => ["https://rs-a.test/"]));
+  });
+
+  it("a drawdown that narrows the ceiling keeps each carried ceiling entry's association, and a ceiling consented with none draws entries with none (fail closed)", () => {
+    mapped = ["https://rs-a.test/"];
+    const k = mappedKernel();
+    const pred = predecessorOn(k, reads(["payments:invoice.read"]), "drawdown-narrow");
+    mapped = ["https://rs-a.test/", "https://rs-b.test/"];
+    const succ = drawdownOn(k, pred);
+    expect(succ.authority_ceiling).not.toEqual(pred.authority_ceiling);
+    expect(succ.ceiling_audiences).toEqual((succ.authority_ceiling ?? []).map(() => ["https://rs-a.test/"]));
+    // A predecessor whose ceiling consent retained no association.
+    const legacy = predecessorOn(k);
+    const { ceiling_audiences: _drop, ...stored } = JSON.parse(
+      (k.db.prepare("SELECT ceiling_json FROM missions WHERE id = ?").get(legacy.id) as { ceiling_json: string }).ceiling_json,
+    );
+    k.db.prepare("UPDATE missions SET ceiling_json = ? WHERE id = ?").run(JSON.stringify(stored), legacy.id);
+    const drawn = drawdownOn(k, k.get(legacy.id) as MissionRecord);
+    const widened = drawn.authority_set.findIndex((e) => e.actions.includes("payments:invoice.list"));
+    expect(drawn.approved_audiences?.[widened]).toEqual([]);
+  });
+});

@@ -1294,13 +1294,18 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     const record = approveFor(kernel, "alice", "ap-agent", [grant(READS, "acme")]);
     const forged = { ...record, id: `${record.id}x`, approval_event_id: `apev-827-forged-${seq++}` };
     refusedWith(
-      () => kernel.insertRecord({ ...forged, authority_source: { type: "service_owned" } } as never, undefined, { source: resolved }),
+      () =>
+        kernel.insertRecord({ ...forged, authority_source: { type: "service_owned" } } as never, undefined, {
+          source: resolved,
+          audiences: "fresh",
+        }),
       /is not the source its approval resolved/,
     );
     refusedWith(
       () =>
         kernel.insertRecord({ ...forged, authority_set: [grant(READS, "globex")] } as never, undefined, {
           source: resolved,
+          audiences: "fresh",
         }),
       /exceeds the authority of the user_delegated source 'alice-delegated'/,
     );

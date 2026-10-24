@@ -62,7 +62,9 @@ export type {
   TerminalWhenCondition,
 } from "./authority-entry.js";
 export {
+  ACTION_VALUE,
   actionFamilyRefusal,
+  actionOutsideGrammar,
   conditionCanonicalBytes,
   conditionsNoBroader,
   DELEGATE_MATCHER_MEMBERS,
