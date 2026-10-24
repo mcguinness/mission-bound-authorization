@@ -76,6 +76,7 @@ export {
 } from "./pep.js";
 export {
   CONNECTOR_TOOLS,
+  type DispositionGap,
   dispatchPathFor,
   McpPaymentsServer,
   REVERSIBLE_WRITE_REFUSAL_ERRORS,

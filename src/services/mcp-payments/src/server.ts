@@ -62,6 +62,7 @@ import {
   type Pep,
   recipientParams,
   type RequestSignals,
+  type SuppressOutcome,
   type TokenFacts,
   TOOL_ACTIONS,
   type TxnCredential,
@@ -434,7 +435,20 @@ export interface WriteToolResult {
   /** Present on a refusal of a keyed write: whether a later retry under the same key can succeed. */
   next_action?: "retry" | "none";
   insufficient_authorization?: InsufficientAuthorization;
+  /**
+   * @spec authzen#execution-evidence-requirement (#1640): present only when
+   * the effect was released and its `completed` Execution Evidence could not
+   * be recorded. Never a refusal: `result` describes the effect that stands.
+   */
+  gap?: DispositionGap;
 }
+
+/**
+ * Why a released effect's `completed` Execution Evidence does not exist: its
+ * emission failed after one retry, or no effective parameter digest could be
+ * observed for a parameter-bound permit.
+ */
+export type DispositionGap = Extract<SuppressOutcome, { recorded: false }>["gap"];
 
 export interface McpServerDeps {
   /** Trusted assembly's effective topology declaration, never a tool input. */
@@ -1274,6 +1288,7 @@ export class McpPaymentsServer {
     denial_reason?: string;
     refusal_reason?: string;
     insufficient_authorization?: InsufficientAuthorization;
+    gap?: DispositionGap;
   }> {
     if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
     // @spec runtime#idempotency (#918): a keyed reversible write's effect is
@@ -1319,6 +1334,7 @@ export class McpPaymentsServer {
       attempt,
     );
     if (!capability.ok) return { ok: false, refusal_reason: capability.error };
+    let listDigest: string | undefined;
     if (res.listEffective) {
       // @spec runtime#read-binding: reverify the bound list read's
       // normalized parameters immediately before execution, exactly as
@@ -1334,6 +1350,7 @@ export class McpPaymentsServer {
       }
       const bound = await this.deps.pep.reverifyList(res.listEffective, digest, token, attempt);
       if (!bound.ok) return { ok: false, refusal_reason: bound.error };
+      listDigest = bound.effectiveParameterDigest;
     }
     // The whole seam again after the awaited capability and parameter reads,
     // immediately before release: the permit can expire and the Operation
@@ -1341,10 +1358,15 @@ export class McpPaymentsServer {
     // the admission call above is not the last word on either.
     const live = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!live.ok) return { ok: false, refusal_reason: live.error };
-    return {
-      ok: true,
-      result: this.execute(tool, args, res.list_vendor_scope, res.listEffective?.members?.map((m) => m.id)),
-    };
+    const result = this.execute(tool, args, res.list_vendor_scope, res.listEffective?.members?.map((m) => m.id));
+    // @spec authzen#execution-evidence-requirement (#1640, D744 ruling 2): the
+    // read's completed disposition, recorded before its result is returned.
+    const recorded = await this.deps.pep.completeExecution(
+      attempt,
+      listDigest !== undefined ? { effectiveParameterDigest: listDigest } : {},
+    );
+    if (!recorded.recorded) return { ok: false, gap: recorded.gap, result };
+    return { ok: true, result };
   }
 
   /** @spec runtime#idempotency (#918): the Operation Profile keys this tool as a reversible write. */
@@ -1418,7 +1440,16 @@ export class McpPaymentsServer {
     // await between them.
     const singleUse = this.takeSingleUse(attempt, res.decision);
     if (singleUse !== undefined) return this.refuseSingleUse(attempt, singleUse);
-    return { ok: true, result: this.execute(tool, args) };
+    const result = this.execute(tool, args);
+    // @spec authzen#execution-evidence-requirement (#1640, D744 ruling 2): the
+    // write's completed disposition, over the parameters reverification just
+    // confirmed.
+    const recorded = await this.deps.pep.completeExecution(
+      attempt,
+      bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {},
+    );
+    if (!recorded.recorded) return { ok: false, gap: recorded.gap, result };
+    return { ok: true, result };
   }
 
   /**
@@ -1731,6 +1762,14 @@ export class McpPaymentsServer {
       return { ok: false, refusal_reason: outcome.refusal, next_action: "none" };
     }
     failpoints?.afterCommit?.();
+    // @spec authzen#execution-evidence-requirement (#1640, D744 ruling 2): the
+    // committed write's completed disposition. The effect stands whatever the
+    // emission does; a retry under the key releases the retained result.
+    const recorded = await this.deps.pep.completeExecution(
+      attempt,
+      bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {},
+    );
+    if (!recorded.recorded) return { ok: false, gap: recorded.gap, result: outcome.result };
     return { ok: true, result: outcome.result };
   }
 

@@ -2928,7 +2928,55 @@ export class Pep {
     error: string,
     opts: { obligationOutcomes?: ExecutionEvidenceObject["obligation_outcomes"] } = {},
   ): Promise<SuppressOutcome> {
-    const observed = attempt.observeEffectiveDigest();
+    return this.recordDisposition(attempt, { outcome: "suppressed", error }, opts);
+  }
+
+  /**
+   * @spec authzen#execution-evidence-requirement, authzen#conformance (#1640,
+   * D744 ruling 2): "a PEP that claims Runtime Evidence MUST emit one
+   * Execution Evidence Object for the final disposition of every
+   * consequential permit: `completed`, `failed`, or `suppressed` before
+   * release." The completed counterpart of {@link suppressExecution}, for the
+   * read and reversible-write paths, whose effect this PEP releases itself:
+   * called once the effect is released (a read's result computed, a write's
+   * local transaction committed) and before the caller learns the outcome.
+   * The transaction-assurance path records its own completed disposition at
+   * its connector commit point, under the executor role.
+   *
+   * `effectiveParameterDigest` is the digest the path's reverification just
+   * confirmed over the parameters it executed with; absent, the digest is
+   * observed here, at the disposition, from current authoritative state.
+   *
+   * No evidence capacity is reserved before these effects: a durable
+   * reservation is the transaction-assurance requirement's alone (D744
+   * ruling 2). A record that cannot be emitted after one retry leaves the
+   * effect standing, and the caller surfaces the {@link SuppressOutcome}
+   * `gap` with its result.
+   */
+  async completeExecution(
+    attempt: ExecutionAttempt,
+    opts: { effectiveParameterDigest?: string } = {},
+  ): Promise<SuppressOutcome> {
+    return this.recordDisposition(attempt, {
+      outcome: "completed",
+      ...(opts.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: opts.effectiveParameterDigest } : {}),
+    });
+  }
+
+  /**
+   * The one Execution Evidence writer behind {@link suppressExecution} and
+   * {@link completeExecution}: one record per disposition attempt, under the
+   * attempt's own execution identity, signed by this PEP.
+   */
+  private async recordDisposition(
+    attempt: ExecutionAttempt,
+    disposition: { outcome: "suppressed"; error: string } | { outcome: "completed"; effectiveParameterDigest?: string },
+    opts: { obligationOutcomes?: ExecutionEvidenceObject["obligation_outcomes"] } = {},
+  ): Promise<SuppressOutcome> {
+    const observed =
+      disposition.outcome === "completed" && disposition.effectiveParameterDigest !== undefined
+        ? disposition.effectiveParameterDigest
+        : attempt.observeEffectiveDigest();
     if (attempt.authorizedParameterDigest !== undefined && observed === undefined) {
       return { recorded: false, gap: "effective_parameter_digest_unobservable" };
     }
@@ -2948,16 +2996,17 @@ export class Pep {
             effective_parameter_digest: observed,
           }
         : {}),
-      outcome: "suppressed" as const,
-      error,
+      outcome: disposition.outcome,
+      ...(disposition.outcome === "suppressed" ? { error: disposition.error } : {}),
       ...(opts.obligationOutcomes ? { obligation_outcomes: opts.obligationOutcomes } : {}),
       ...(attempt.hopReference ? { hop_reference: attempt.hopReference } : {}),
     };
     for (let tries = 0; tries < 2; tries += 1) {
       try {
         const recorded = await this.deps.evidence.recordExecution(CANONICAL_RESOURCE, "pep", input);
-        // A suppression after redemption is the redeeming attempt's proof of
-        // no effect: it settles the claim `failed`.
+        // A disposition after redemption is the redeeming attempt's proof of
+        // how it ended: it settles the claim (a suppression settles it
+        // `failed`). No path that completes here redeems.
         if (attempt.redeemed) await this.settleClaim(recorded.content);
         return { recorded: true };
       } catch {

@@ -19,9 +19,12 @@ import {
   createEphemeralEvidenceKeys,
   createHttpMcpChannel,
   createHttpMediatedClient,
+  type DecisionEvidence,
   type DpopKeys,
   dpopProofFor,
   EvidenceStore,
+  EXECUTION_EVIDENCE_MEDIA_TYPE,
+  type ExecutionEvidence,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
   PaymentsStore,
@@ -983,6 +986,156 @@ describe("a compound-action phase the PEP cannot establish is refused phase_unav
       expect(shipped.evidence.all().filter((e) => e.kind === "refusal")).toHaveLength(0);
     } finally {
       await shipped.close();
+    }
+  });
+});
+
+describe("every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640)", () => {
+  const READS = entry(["payments:invoice.read", "payments:invoice.list", "payments:vendor.read"], { vendors: ["acme", "globex"] });
+  const HOLD = entry(["payments:payment.execute"], { vendors: ["acme"] });
+  const SCHEDULE = entry(["payments:invoice.read", "payments:payment.schedule"], { vendors: ["acme", "globex"] });
+
+  /**
+   * The resource's HTTP MCP endpoint under DPoP, deciding through the embedded
+   * signing PDP, for a Mission and a credential naming `authority`. `evidence`
+   * builds the store the PEP retains and emits into.
+   */
+  async function endpoint(
+    authority: ReturnType<typeof entry>,
+    evidence: (keys: ReturnType<typeof createEphemeralEvidenceKeys>) => EvidenceStore = (keys) =>
+      new EvidenceStore(keys.signing, keys.resolver),
+  ) {
+    const view: MissionView = { ...VIEW, authority_set: [authority as MissionView["authority_set"][number]] };
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: resourcePolicyFixture() });
+    const store = evidence(keys);
+    const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
+    const loadView = (ref: { id: string; issuer: string }) =>
+      ref.id === view.id && ref.issuer === view.issuer
+        ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+        : undefined;
+    const ledger = payments();
+    const pep = new Pep({
+      decide: (req, opts) => keys.decide(req, opts),
+      payments: ledger,
+      evidence: store,
+      fga: allowingFga,
+      modelId: "m",
+      loadView,
+      instanceEpoch: "epoch-1640-execution-evidence",
+    });
+    const routed = new McpPaymentsServer({
+      writeReservations,
+      pep,
+      payments: ledger,
+      loadView,
+      jwks: { keys: [asJwk as never] },
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
+      issuer: ISSUER,
+    });
+    const channel = await createHttpMcpChannel(routed);
+    const session = await createHttpMediatedClient(channel.url, await mint({ authorization_details: [authority] }), holder);
+    return {
+      evidence: store,
+      resolver: keys.resolver,
+      writeReservations,
+      client: session.client,
+      close: async () => {
+        await session.close();
+        await channel.close();
+      },
+    };
+  }
+
+  /**
+   * The one permit's Decision Evidence and its one completed, signed, linked
+   * Execution Evidence record; `bound` says whether the permit binds a
+   * parameter digest, which the record then carries as both digests.
+   */
+  async function expectOneCompleted(x: Awaited<ReturnType<typeof endpoint>>, label: string, bound: boolean) {
+    const decisions = x.evidence.all().filter((e): e is DecisionEvidence => e.kind === "decision");
+    const executions = x.evidence.all().filter((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(decisions, label).toHaveLength(1);
+    expect(executions, label).toHaveLength(1);
+    expect(x.evidence.all().filter((e) => e.kind === "refusal"), label).toHaveLength(0);
+    const decision = (decisions[0] as DecisionEvidence).content;
+    const record = (executions[0] as ExecutionEvidence).content;
+    expect(decision.decision, label).toBe("permit");
+    expect(record, label).toMatchObject({
+      evaluation_id: decision.evaluation_id,
+      mission_id: VIEW.id,
+      audience: CANONICAL_RESOURCE,
+      outcome: "completed",
+      emitter: { id: CANONICAL_RESOURCE, role: "pep" },
+    });
+    expect(record, label).not.toHaveProperty("error");
+    expect(decision.parameter_digest !== undefined, label).toBe(bound);
+    if (bound) {
+      expect(record.authorized_parameter_digest, label).toBe(decision.parameter_digest);
+      expect(record.effective_parameter_digest, label).toBe(decision.parameter_digest);
+    } else {
+      expect(record, label).not.toHaveProperty("authorized_parameter_digest");
+    }
+    expect(await verifyEvidenceEnvelope(record, EXECUTION_EVIDENCE_MEDIA_TYPE, x.resolver), label).toEqual({ valid: true });
+  }
+
+  it("a completed consequential read (get_invoice, list_invoices, lookup_vendor) over HTTP with DPoP releases its result with exactly one signed completed Execution Evidence record linked to the permit's evaluation", async () => {
+    for (const [tool, args, bound] of [
+      ["get_invoice", { invoice_id: "inv-1" }, true],
+      ["list_invoices", {}, true],
+      ["lookup_vendor", { vendor_id: "acme" }, false],
+    ] as const) {
+      const x = await endpoint(READS);
+      try {
+        const read = await x.client.callTool(tool, args);
+        expect(read.ok, `${tool} ${JSON.stringify(read)}`).toBe(true);
+        expect(read.result, tool).toBeDefined();
+        await expectOneCompleted(x, tool, bound);
+      } finally {
+        await x.close();
+      }
+    }
+  });
+
+  it("a completed reversible write under a single-use permit (hold_transfer) over HTTP with DPoP releases the hold with exactly one signed completed Execution Evidence record linked to the permit's evaluation", async () => {
+    const x = await endpoint(HOLD);
+    try {
+      const held = await x.client.callTool("hold_transfer", { invoice_id: "inv-1" });
+      expect(held, JSON.stringify(held)).toEqual({ ok: true, result: { held: true, invoice_id: "inv-1" } });
+      expect(x.writeReservations.consumedPermits()).toHaveLength(1);
+      await expectOneCompleted(x, "hold_transfer", true);
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a completed keyed reversible write (schedule_payment) over HTTP with DPoP schedules once with exactly one signed completed Execution Evidence record linked to the permit's evaluation", async () => {
+    const x = await endpoint(SCHEDULE);
+    try {
+      const scheduled = await x.client.callTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+      expect(scheduled.ok, JSON.stringify(scheduled)).toBe(true);
+      expect(x.writeReservations.schedules()).toHaveLength(1);
+      await expectOneCompleted(x, "schedule_payment", true);
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a released read whose completed record cannot be emitted over HTTP with DPoP returns its result with the emission_failed gap and no refusal reason", async () => {
+    class CompletionUnavailable extends EvidenceStore {
+      override async recordExecution(...args: Parameters<EvidenceStore["recordExecution"]>) {
+        if (args[2].outcome === "completed") throw new Error("retention unavailable");
+        return super.recordExecution(...args);
+      }
+    }
+    const x = await endpoint(READS, (keys) => new CompletionUnavailable(keys.signing, keys.resolver));
+    try {
+      const read = await x.client.callTool("get_invoice", { invoice_id: "inv-1" });
+      expect(read).toMatchObject({ ok: false, gap: "emission_failed", result: { id: "inv-1" } });
+      expect(read).not.toHaveProperty("refusal_reason");
+      expect(read).not.toHaveProperty("denial_reason");
+      expect(x.evidence.all().filter((e) => e.kind === "execution")).toHaveLength(0);
+    } finally {
+      await x.close();
     }
   });
 });
