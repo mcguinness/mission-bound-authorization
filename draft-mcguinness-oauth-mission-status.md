@@ -1018,6 +1018,20 @@ current, so an earlier deadline never acts on a later suspension. A
 deadline applies only a transition legal from the Mission's current
 state ({{legal-transitions}}) and never changes a `terminated` Mission.
 
+From a current schedule's deadline, every decision treats the Mission
+as in the state its `on_expiry` produces, whether or not that
+transition is persisted, so a request the AS decides after the
+deadline is decided against that state. If the first decision after
+the deadline comes at or after the Mission's `expires_at`, expiry
+governs instead and the Mission is `terminated` with reason `expired`
+({{legal-transitions}}); a revocation committed at its deadline before
+`expires_at` keeps reason `revoked`. For `on_expiry` `revoke`, the
+termination's `terminated_at` is the schedule's `suspend_until`. A new
+`suspend` whose `suspend_until` is not later than the time the AS
+processes it is refused `invalid_request`; a retransmit of an accepted
+request still replays its original response after the deadline passes
+({{idempotency}}).
+
 ## Legal Transitions {#legal-transitions}
 
 {{lifecycle-states}} shows the Mission lifecycle states and the
@@ -1437,15 +1451,33 @@ Authorization therefore precedes every replayed or state-dependent
 response: a caller not authorized for the Mission receives the
 not-found response, never a replay, `stale_version` or `conflict`.
 
+The AS MUST durably commit a transition, with the state version it
+produces, before it sends any response that acknowledges it; a
+transition whose commit fails is never answered as a success. The
+final issuance check of {{I-D.draft-mcguinness-oauth-mission}}
+(Section "Issuance Gating"), which applies to an acknowledged
+revocation, is not extended to suspension: a suspension refuses later
+derivations at their gate, and a derivation already past its gate
+when the suspension commits can complete.
+
 ## Relationship to RFC 7009
 
 A Mission revocation through this endpoint cascades to credentials
 derived from the Mission per the AS's advertised revocation
 propagation ({{revocation-enforcement-classes}}). The AS MAY
 additionally revoke specific outstanding tokens it knows by `jti`,
-with the same effect as {{RFC7009}} revocation of each token.
-{{RFC7009}} alone does NOT revoke a Mission; the lifecycle endpoint is
-the authoritative Mission state change.
+with the same effect as {{RFC7009}} revocation of each token. An
+{{RFC7009}} revocation does not by itself revoke a Mission; the
+lifecycle endpoint is the authoritative Mission state change.
+
+Where a deployment's revocation policy treats revoking a Mission's
+refresh token as revoking the Mission
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation"), the
+AS MUST commit that revocation as the same `revoke` transition this
+endpoint applies: decided by that policy for the revoking party and
+the Mission, recorded with a new state version, and emitting the same
+transition event ({{idempotency}}). The coupling requires neither a
+request to this endpoint nor an additional scope.
 
 ## Deferred Lifecycle Capabilities {#deferred-lifecycle}
 
@@ -2033,6 +2065,19 @@ Mission Termination Reasons registry
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+-01
+
+- A transition is durably committed before any response acknowledges
+  it, and the OAuth binding's final issuance check is not extended to
+  suspension.
+- A schedule's deadline governs later decisions, and expiry governs
+  when the first decision after the deadline comes at or after
+  `expires_at`; a revoke schedule terminates at its `suspend_until`,
+  and a past `suspend_until` is refused only on a new request.
+- An RFC 7009 revocation does not by itself revoke a Mission, and a
+  revocation that a deployment's policy couples to it commits the same
+  `revoke` transition, state version and event.
 
 -00
 
