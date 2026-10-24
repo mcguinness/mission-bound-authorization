@@ -13,7 +13,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { establishOperationTarget, matchResource, resolveOperationTarget } from "@mission/core";
+import { establishOperationTarget, isAuthorityEntry, matchResource, resolveOperationTarget } from "@mission/core";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -475,4 +475,32 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
       }
     });
   }
+});
+
+// @spec resource-access#entry-validation (#1625): the shared entry guard the
+// configured-ceiling loaders call (isAuthorityEntry) and proposal intake
+// decide every entry the case files carry alike, so the guard is never looser
+// than intake (and never stricter): a value no proposal could carry is never
+// admitted as configured authority.
+describe("the shared entry guard agrees with proposal intake on every case-file entry (#1625)", () => {
+  it("isAuthorityEntry admits exactly the entries validateAuthorityProposal admits", () => {
+    const disagreements: string[] = [];
+    let compared = 0;
+    for (const { name, doc } of files) {
+      for (const c of doc.cases) {
+        for (const [key, value] of Object.entries(c.input)) {
+          for (const [i, operand] of (Array.isArray(value) ? value : [value]).entries()) {
+            if (!operand || typeof operand !== "object" || !("resource" in operand) || !("actions" in operand)) continue;
+            compared++;
+            const intake = intakeViolation(operand) === undefined;
+            if (intake !== isAuthorityEntry(operand)) {
+              disagreements.push(`${name} ${c.id} ${key}[${i}]: intake ${intake ? "admits" : "refuses"}, the guard does not`);
+            }
+          }
+        }
+      }
+    }
+    expect(compared).toBeGreaterThan(200);
+    expect(disagreements).toEqual([]);
+  });
 });

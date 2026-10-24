@@ -11,7 +11,7 @@ import {
   validCommonConstraint,
 } from "./common-constraints.js";
 import { compareAmounts, isCurrencyCode, isValidAmount } from "./decimal-amount.js";
-import { isEnforceablePrefixBase, prefixAdmits } from "./operation-target.js";
+import { isAbsoluteUri, isEnforceablePrefixBase, prefixAdmits } from "./operation-target.js";
 import { resourceContractViolation, sameResourceContract } from "./resource-contract.js";
 
 /**
@@ -164,6 +164,29 @@ export function unsupportedActionFamily(entry: unknown): string | undefined {
   const actions = (entry as { actions?: unknown }).actions;
   if (!Array.isArray(actions)) return undefined;
   return actions.find((a): a is string => typeof a === "string" && a.endsWith(".*"));
+}
+
+/**
+ * @spec resource-access#resource-access-type, resource-access#entry-validation
+ * (#1376): an action value is an action identifier, the whole value matching
+ * `[A-Za-z0-9_.:-]+`, or an action family, an identifier followed by `.*`.
+ * Anchored and without the `m` flag, so a character outside the grammar
+ * anywhere in the value, a trailing newline included, fails it.
+ */
+export const ACTION_VALUE = /^[A-Za-z0-9_.:-]+(?:\.\*)?$/;
+
+/**
+ * @spec resource-access#entry-validation (#1376, #1625): the first value
+ * `entry`'s `actions` carries outside {@link ACTION_VALUE}, or undefined. The
+ * SINGLE declaration proposal intake, the configured-ceiling loaders, template
+ * ceilings and {@link isAuthorityEntry} consult, so an entry no proposal could
+ * carry is never admitted as configured or consented authority.
+ */
+export function actionOutsideGrammar(entry: unknown): string | undefined {
+  if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return undefined;
+  const actions = (entry as { actions?: unknown }).actions;
+  if (!Array.isArray(actions)) return undefined;
+  return actions.find((a): a is string => typeof a === "string" && !ACTION_VALUE.test(a));
 }
 
 /** The `error_description` a protocol boundary answers for an action family. */
@@ -335,6 +358,11 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
     !strings(e.actions)
   )
     return false;
+  // @spec resource-access#entry-validation (#1310, #1376, #1625): the per-entry
+  // rules proposal intake applies, so this guard is never looser than intake: a
+  // `resource` that is one RFC 3986 absolute URI, and every action value inside
+  // the action grammar.
+  if (!isAbsoluteUri(e.resource) || actionOutsideGrammar(e) !== undefined) return false;
   // @spec resource-access#resource-access-type, resource-access#entry-validation
   // (#1276): `resource_match` is one of the two values Resource Access
   // defines, and a `prefix` entry's `resource` is a base the shared matcher

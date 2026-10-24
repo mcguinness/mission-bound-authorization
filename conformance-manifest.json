@@ -43,8 +43,8 @@
     "content_sha256": "c3ecaf45e6e17579e7374b0e733c7d4de7d58cbacdfecddfe37c3568eb74138a"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "3a857d7464a9a158a6994a4bb5417e8a6694ab09",
-    "content_sha256": "ad693045d450b97201cc096e34891d91987e13d74623d5c318d950bfeeab5a89"
+    "revision": "1199e650a853bb0006c2384c589157f263547a7e",
+    "content_sha256": "3e76453c13322a3586481cd021766799a75f5cbe1f9517cb2698dd5a2942e868"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "213893760b7c447ff475d568bc8a54be8a85176b",
@@ -63,16 +63,16 @@
     "content_sha256": "483287bedfb2209de40290df596ca9bc2ea3178e485e6eaa226a46e903e1d6c2"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
-    "content_sha256": "f6ae35abdb5d7cbf5386e2abad26d3df7015be93fd97eb0dae56dbb826a1fcc6"
+    "revision": "e291181742f90c14fb44de0a164d0b14614623e7",
+    "content_sha256": "2144784335174ce9b70406ae1cf359ee7fc06d5c4fb2a03777c7aeb81ecf2b7a"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "2116ead1b953a6497b6c3dadbb36c46a0a9d2c02",
-    "content_sha256": "4a59c88e64d9318bd1e1d425eda5b5042a0a52283f91f4ee1b9228d06470b6f8"
+    "revision": "9d65d59edd995b1b11e403af361f0cfc86ed272b",
+    "content_sha256": "95e48a95e2b1068b0b020f4f353a7f814d524a26b6d5b15206a92881dc4d7f56"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -7674,6 +7674,37 @@
    "notes": "#760 extended this row's citation instead of adding a semantic row: `authority_source` is named beside `approval_basis` in the introspection member list and its issuer-only sentence, the member-scoped disclosure sentence, the Mission Issuer conformance bullet, and the OAuth Token Introspection Response registration. The cited disclosure test asserts the disclosed shape exactly (`type` plus organizational `policy.id`/`policy.version`, no `digest`)."
   },
   {
+   "id": "core.mission-record.approval-idempotency",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "A unique identifier of the approval event, used as the approval idempotency key: a retried or duplicate delivery of the same approval decision (a replayed callback, a double-submitted consent form, a retried standing-consent activation) MUST NOT create a second Mission, and the AS deduplicates on this identifier.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a repeated delivery of a committed approval decision, under the same `approval_event_id`, creates no second Mission: the AS holds exactly one Mission for that `approval_event_id`, the duplicate delivery causes no version change, and the repeated decision completes with the committed Mission; a retried standing-consent activation likewise resolves to the instance its first delivery committed",
+    "local": "the approval decision derives `approval_event_id` from the interaction (`apev_<uid>`), so a double-submitted decision on one interaction carries the same identifier; it completes like the first, and its code redeems to the committed Mission"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval event as the idempotency key (@spec mission#mission-record, #1608) > a repeated delivery of the same approval decision creates no second Mission: it completes with the committed Mission, the only one for its approval_event_id, at an unchanged version",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here. Strength is MUST NOT, the clause's keyword. Partial (#1614 review): this row's witness covers the direct approval decision only. Of the standing-consent types, a retried Template Dispatch and a retried Progressive ceiling drawdown are witnessed by template.dispatch.approval-event-id-per-dispatch and progressive.in-ceiling.approval-event-id-per-drawdown, each citing a retry that recovers the committed instance. A retried Child Delegation policy_drawdown activation is not witnessed: child-delegation.record.policy-drawdown-approval-event-id checks only the identifier on a single creation."
+  },
+  {
    "id": "core.discovery.held-credential-no-substitution",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "discovery",
@@ -10175,7 +10206,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an access-token-only Token Exchange derivation from a Mission-bound `subject_token` (delegation, {{delegation}}, or self-exchange down-scoping, {{self-exchange}}) creates no new grant binding; the issued token is a derived token whose `mission` claim identifies the same one Mission the subject_token's own binding resolved to. Only a Token Exchange that establishes reusable authorization state (a new refresh-token family, for example the continuation profile's delegation-family-creating exchange, {{I-D.draft-mcguinness-oauth-mission-continuation}}) creates a new grant binding, rooted in that same Mission"
+    "normative": "an access-token-only Token Exchange derivation from a Mission-bound `subject_token` (delegation, {{delegation}}, or self-exchange down-scoping, {{self-exchange}}) creates no new grant binding; the issued token is a derived token whose `mission` claim identifies the one Mission its subject_token resolved to. Only a Token Exchange that establishes a redeemable grant lineage (a new refresh-token family, for example the continuation profile's delegation-family-creating exchange, {{I-D.draft-mcguinness-oauth-mission-continuation}}) creates a new grant binding, rooted in that same Mission"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -10185,7 +10216,7 @@
    "id": "core.grant-binding.no-new-lineage-keeps-provenance",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
-   "text": "the issued token rests on the grant lineage its `subject_token` was issued under",
+   "text": "Where the `subject_token` was issued under a grant lineage, the issued token retains that grant provenance, and a later redemption of a designation derived from it validates all applicable backing-grant state",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -10196,7 +10227,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a token issued by an access-token-only Token Exchange keeps the grant lineage its subject_token was issued under: once that lineage is revoked, a designation derived from the issued token is no longer redeemable, whether the issued token is a self-exchanged token or a delegated token",
+    "normative": "a token issued by an access-token-only Token Exchange whose subject_token was issued under a grant lineage keeps that lineage: once that lineage is revoked, a designation derived from the issued token is no longer redeemable, whether the issued token is a self-exchanged token or a delegated token",
     "local": "Observed through redemption, the one later derivation the OAuth binding names. The self-exchanged token is the reference's delegation handle, whose own provider Grant records the presented token's grant as its backing grant."
    },
    "level": "endpoint",
@@ -10215,7 +10246,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 11 (D620). Proven by the mutants recorded on core.delegation.redemption-validates-backing-grant: dropping the handle's backing link fails the self-exchange witness, and settling a delegated token under a fresh grant fails the depth-2 witness."
+   "notes": "#1503 finding 11 (D620). Proven by the mutants recorded on core.delegation.redemption-validates-backing-grant: dropping the handle's backing link fails the self-exchange witness, and settling a delegated token under a fresh grant fails the depth-2 witness. Re-quoted for the owner's D726 Q4 clarification (#1617): the provenance applies where the subject_token was issued under a grant lineage, and a credential issued under none, as on the Dispatch path, has none to validate."
   },
   {
    "id": "core.grant-binding.cross-domain-credential-association",
@@ -43472,6 +43503,131 @@
    "notes": "#1195 (D390): skipping the handoff skips neither the handle nor its count. Mutation proofs: removing the handle exchange's gateDerivation call fails the success witness on the count; disabling the exchange's explicit active check alone fails the revoked and completed cases on their description while the suspended case is still refused identically by the kernel's lineage gate inside gateDerivation (defense in depth); disabling that check and the lineage gate's state checks together fails all three cases on status."
   },
   {
+   "id": "template.handoff.grant-no-lineage",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "The handoff grant establishes no grant lineage",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "neither the handoff exchange nor its redemption returns a refresh token or other reusable grant"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family"
+    }
+   ],
+   "notes": "#1589 (D726, Q1). Witnessed: the handoff exchange and the redemption each return no refresh token. Single use is not the witness, since an authorization code is also single use and starts a lineage. The clause that the replay-prevention state is not a lineage is definitional."
+  },
+  {
+   "id": "template.handoff.redemption-resolves-from-grant",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "The Mission Issuer resolves the instance from the authenticated `mission` claim of the grant that step 1 verifies, and applies steps 2 through 5 to that instance.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the token a redemption issues names the instance the grant's `mission` claim identifies, and a grant whose `mission` names a Mission that is not a dispatched instance is refused"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption) > defence in depth: a grant naming a client that is not the instance's Agent, or a non-instance Mission, is refused"
+    }
+   ],
+   "notes": "#1589 (D726, Q3). Witnessed: the issued token's `mission.id` is the grant's instance, and a grant naming a non-instance Mission is refused (asserted through its error_description). Not witnessed: that resolution precedes steps 2 to 5."
+  },
+  {
+   "id": "template.handoff.redemption-no-binding",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "It issues a derived token for the instance, and creates or extends no grant binding; it needs none.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a redemption returns the instance's delegation handle and no refresh token, for an instance that holds no grant binding"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family"
+    }
+   ],
+   "notes": "#1589 (D726, Q2). Witnessed: the redemption's response carries no refresh token and its token names the instance. Not witnessed: that the instance holds no binding before the redemption, because the Dispatch response is not checked for a refresh token. The reference's internal grant for the instance is unchanged by the redemption, but an internal record is not a protocol lineage (D709)."
+  },
+  {
+   "id": "template.handoff.first-binding-at-family",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "dispatch-handoff",
+   "text": "That family is the instance's first grant binding: on this Dispatch path the instance carries none until it exists.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.dispatch",
+     "continuation.async-transport"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the delegation-family exchange returns the instance's first refresh token, and refreshing it yields tokens for the instance; nothing before it returns a refresh token"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family"
+    }
+   ],
+   "notes": "#1589 (D726, Q4). Witnessed: the handoff exchange and the redemption return no refresh token, and the family exchange returns one whose refresh names the instance. Not witnessed: that the Dispatch response itself returns no refresh token."
+  },
+  {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
@@ -47442,6 +47598,269 @@
     }
    ],
    "notes": "#1374. Proven by disabling the code it covers: capping the Mission delegation depth at 1 fails the depth-2 witness; replacing the onward act with the current actor alone fails the attribution witness."
+  },
+  {
+   "id": "continuation.ica-transport.id-jag-identifies-mission",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "MUST identify the originating Mission by carrying its `mission` claim",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the root and every onward ID-JAG carry the `mission` claim with the originating Mission's `id`, `issuer` and `expires_at`"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "level": "endpoint",
+     "surface": "token-endpoint",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > happy path: mints a Mission-rooted ID-JAG with a fresh handle, deterministic sub, collapsed act, and carried envelope"
+    }
+   ],
+   "notes": "#1589 (D726, Q6; the #1617 owner review added `expires_at`). Witnessed: an onward ID-JAG's `mission.id`, `mission.issuer` and `mission.expires_at` match the Mission. Not witnessed: the root ID-JAG, which this reference does not mint on this path. Mutation: removing the mint's `expires_at` fails the happy path at its `expires_at` assertion."
+  },
+  {
+   "id": "continuation.ica-transport.local-token-preserves-mission",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "local access token issued on such an ID-JAG MUST preserve that `mission` reference",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource Authorization Server's local access token issued on a root or onward ID-JAG carries the same `mission` `id`, `issuer` and `expires_at`"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "level": "cross-component",
+     "surface": "token-endpoint",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > preserves the Mission's expires_at on the local token it mints from a continuation grant"
+    }
+   ],
+   "notes": "#1589 (D726, Q6; the #1617 owner review added `expires_at`). Witnessed: the reference Resource AS's local token from an onward ID-JAG keeps `mission.id`, `mission.issuer` and `mission.expires_at`, end to end and in its unit test. Not witnessed: a local token issued on a root ID-JAG."
+  },
+  {
+   "id": "continuation.ica-transport.ras-refuses-missing-expiry",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "A Resource Authorization Server MUST refuse with `invalid_grant` to redeem such an ID-JAG whose `mission` claim lacks `expires_at`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a continuation ID-JAG whose `mission` claim lacks `expires_at`, or carries one that is not an RFC 3339 date-time, is refused `invalid_grant` and yields no local token",
+    "local": "the reference Resource AS also redeems a base cross-domain grant that carries no `expires_at`: the cross-domain draft does not require it, an implementation inconsistency kept separately and unresolved here (#1617 owner review)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > denies invalid_grant for a continuation grant whose mission claim lacks expires_at"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > denies invalid_grant for a continuation grant whose mission.expires_at is not a date-time"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > denies invalid_grant for a continuation grant whose mission.expires_at is a date-only value"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > denies invalid_grant for a continuation grant whose mission.expires_at is a date-time without a timezone"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > denies invalid_grant for a continuation grant whose mission.expires_at is an impossible date"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > still redeems a base cross-domain grant that carries no expires_at"
+    }
+   ],
+   "notes": "#1589 (the #1617 owner review). The reference Resource AS checks it with strict RFC 3339 validation before the one-time jti is consumed. Witnessed: absent, not a date-time, date-only, no timezone and an impossible date are each refused; the last cited test witnesses the local observation. Mutation: removing the check fails both earlier refusal tests, and returning to `Date.parse` fails the three regression cases."
+  },
+  {
+   "id": "continuation.ica-transport.further-issuance-keeps-expiry",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "a local token from which further credentials are issued MUST carry its `expires_at`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource Authorization Server's local token from which further credentials are issued carries the Mission's `expires_at`"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > preserves the Mission's expires_at on the local token it mints from a continuation grant"
+    }
+   ],
+   "notes": "#1589 (the #1617 owner review). Witnessed: the reference Resource AS's local token keeps `expires_at`. Not witnessed: further issuance from it, which the reference Resource AS does not perform."
+  },
+  {
+   "id": "continuation.ica-transport.refresh-family-lifetime",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "The ID-JAG's own expiry bounds only its redemption, not that family's lifetime, which the Mission's `expires_at` bounds.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a refresh-token family a Resource AS issues on a continuation lasts no longer than the Mission's `expires_at`, whatever the ID-JAG's own expiry"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1589 (the #1617 owner review). No witness: the reference Resource AS issues no refresh token."
+  },
+  {
+   "id": "continuation.ica-transport.hop-record-not-lineage",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "The IdP's hop record is continuation state, not an additional grant lineage",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an IdP that records a continuation hop creates no grant lineage the Mission resolves through; continuing derives under the Mission's existing anchor"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1589 (D726, Q5). No witness yet."
+  },
+  {
+   "id": "continuation.ica-transport.ras-association-not-binding",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "A Resource Authorization Server's association of a continuation handle with the authorization state it establishes is not by itself a Mission grant binding; a redeemable grant lineage that server establishes and maps to the Mission is one.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource AS's handle association alone is not treated as a Mission grant binding, while a redeemable lineage it maps to the Mission resolves to that Mission under the grant-binding rules"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1589 (D726, Q6). No witness yet: the reference Resource AS establishes no redeemable lineage."
+  },
+  {
+   "id": "continuation.ica-transport.ras-refresh-family-binding",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "refresh-token family such a server creates by exception is a destination-side Mission grant binding, under the Mission's authority, state, expiry and termination rules",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a refresh-token family a Resource AS issues on a continuation is gated by the Mission's state, clamped to its expiry, held within its authority and ended by its termination"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1589 (D726, Q7). No witness: the reference Resource AS issues no refresh token, following the base profile's recommendation."
+  },
+  {
+   "id": "continuation.ica-transport.root-exchange-coincides",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "where they coincide, both profiles' restrictions apply",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an exchange that is both the root exchange and a cross-domain projection meets the restrictions of both profiles"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1589 (D726, Q8). No witness yet."
   },
   {
    "id": "continuation.async-transport.handle-audience",

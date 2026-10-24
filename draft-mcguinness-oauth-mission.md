@@ -2328,17 +2328,20 @@ At each subsequent derivation the AS resolves the Mission from the
 grant the client presents:
 
 - the authorization code at the token endpoint;
-- the refresh token on refresh; or
+- the refresh token on refresh;
 - the Mission-bound `subject_token` on Token Exchange (the
-  `actor_token` identifies the delegate, {{delegated-exchange}}).
+  `actor_token` identifies the delegate, {{delegated-exchange}}); or
+- a profile-defined grant, through the authenticated `mission`
+  reference it carries, such as the Template profile's handoff grant
+  ({{I-D.draft-mcguinness-oauth-mission-template}}).
 
 It then applies the gating of {{issuance-gating}}.
 
-A Mission MAY carry zero or more grant bindings. Beyond the
+A Mission MAY carry zero or more grant bindings. Beyond any
 authorization-code lineage established at approval, a refresh-token
 family a continuation transport establishes later (above) is a
-further binding, rooted in the Mission its own `subject_token`
-resolved to.
+further binding, or the Mission's first where it has none, rooted in
+the Mission its own `subject_token` resolved to.
 
 The AS MUST resolve a bound grant lineage to the same Mission on
 every derivation performed against it: the mapping is fixed for the
@@ -2369,19 +2372,33 @@ The grant binding relates to other mechanisms as follows:
   ordinary in-Mission delegation ({{delegation}}) and self-exchange
   down-scoping ({{self-exchange}}) both work this way, and the issued
   token is a derived token ({{mission-claim}}) whose `mission` claim
-  identifies the one Mission its `subject_token`'s binding resolved
-  to. Such an exchange leaves the existing grant provenance in place:
-  the issued token rests on the grant lineage its `subject_token` was
-  issued under, and a later redemption of a designation derived from
-  it validates that lineage's state ({{delegated-exchange}}). A Token
-  Exchange that instead establishes reusable
-  authorization state, such as the continuation profile's
+  identifies the one Mission its `subject_token` resolved to. Where
+  the `subject_token` was issued under a grant lineage, the issued
+  token retains that grant provenance, and a later redemption of a
+  designation derived from it validates all applicable backing-grant
+  state ({{delegated-exchange}}). A Token
+  Exchange that instead establishes a redeemable grant
+  lineage, such as the continuation profile's
   delegation-family-creating exchange
   ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a
   new grant binding, rooted in that same Mission. Three Token
   Exchanges are covered by the two items below instead: cross-domain
   projection and child creation, which return a JWT authorization
-  grant, and expansion, which creates a successor.
+  grant, and expansion, which creates a successor. The Template
+  profile's Dispatch Handoff
+  ({{I-D.draft-mcguinness-oauth-mission-template}}) returns a handoff
+  grant that establishes no grant lineage; its redemption issues a
+  derived token for the dispatched Mission, creating or extending no
+  grant binding, and the later delegation-family exchange creates
+  that Mission's first grant binding. In the continuation profile's
+  Identity Continuation Transport
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), the root and
+  onward exchanges return ID-JAGs that identify the Mission, and the
+  identity provider's hop record is continuation state, not a grant
+  lineage. Redeeming such an ID-JAG at a Resource AS produces a local
+  derived access token. A Resource AS holds a destination-side grant
+  binding only where it separately establishes a redeemable grant
+  lineage mapped to the Mission, such as a refresh-token family.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
   no destination-side grant binding. A Resource AS consumes the
@@ -3713,11 +3730,14 @@ subject to all of the following:
   backing that credential, are still valid; the Mission is `active`;
   and the delegation policy ({{delegation-constraints}}) and the
   Mission's current authority admit the result. An earlier redemption
-  establishes none of these. The backing grant state includes the
-  grant lineage that credential was issued under, kept through any
-  exchange that established no new grant lineage
-  ({{grant-binding-related}}); the Mission's `active` state never
-  substitutes for it.
+  establishes none of these. Where that credential was issued under a
+  grant lineage, the backing grant state includes that lineage, kept
+  through any exchange that established no new grant lineage
+  ({{grant-binding-related}}). A credential issued under none, as on
+  the Template profile's Dispatch path before its delegation family
+  exists, has no lineage to validate; that never excuses dropping or
+  ignoring a lineage that does exist. The Mission's `active` state
+  never substitutes for backing grant state.
 
 The `act` chain nests (`act.act`) for as long as, and only while,
 authority continues under the same approved Mission. A new approval
@@ -7292,6 +7312,15 @@ Cross-Domain:
   specify; the sentence on joining one credential to different Missions
   across requests moves to the Mission Authority Server's Mission
   Join.
+- Editorial, no requirement change: Grant Bindings and Related
+  Mechanisms places the Template profile's Dispatch Handoff and the
+  continuation profile's Identity Continuation Transport, the
+  reusable-state case reads as a redeemable grant lineage, the
+  derivation resolution list points to profile-defined grants, and a
+  derived token's Mission is the one its `subject_token` resolved to,
+  with no binding assumed, and Grant Bindings and Related Mechanisms
+  and Delegated Exchange keep a token's backing grant provenance where
+  its `subject_token` was issued under a grant lineage (#1589, D726).
 - Editorial, no requirement change: Grant Bindings and Related
   Mechanisms names the Token Exchanges its later items cover, and the
   Namespace Taxonomy lists the `approval_basis.type` values as

@@ -23,11 +23,13 @@
 
 import { randomBytes } from "node:crypto";
 import {
+  actionOutsideGrammar,
   authorityHash,
   canonicalize,
   computeAnchor,
   entryDelegateMatcherViolation,
   intentHash,
+  isAbsoluteUri,
   type JsonValue,
   MISSION_TEMPLATE_TYP,
   proposalHash,
@@ -245,6 +247,20 @@ export function assertTemplateBody(input: TemplateProposalBody): void {
     if (delegationMember !== undefined) {
       throw new TemplateError(
         `ceiling[${i}] carries ${delegationMember}, which is not a supported delegation member`,
+      );
+    }
+    // @spec resource-access#entry-validation (#1310, #1376, #1625): the
+    // per-entry rules proposal intake applies, so the Approver never consents
+    // to, and dispatch never derives from, an entry no proposal could carry.
+    if (typeof entry.resource !== "string" || !isAbsoluteUri(entry.resource)) {
+      throw new TemplateError(
+        `ceiling[${i}] has resource ${JSON.stringify(entry.resource)}, which is not an RFC 3986 absolute URI`,
+      );
+    }
+    const malformedAction = actionOutsideGrammar(entry);
+    if (malformedAction !== undefined) {
+      throw new TemplateError(
+        `ceiling[${i}] has action ${JSON.stringify(malformedAction)}, which is neither an action identifier nor an action family`,
       );
     }
     // @spec resource-access#subset (#1377, D538, D684): likewise an action
