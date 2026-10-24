@@ -138,6 +138,28 @@ export interface ExpansionResult {
 }
 
 /**
+ * @spec capability-binding#capability-approval, expansion#completion-modes
+ * (#1447): the successor's Authority Set as its approval presents it and its
+ * creation commits it, with the derivation's provenance. Every retained
+ * catalog-sourced action keeps the predecessor's recorded binding; every added
+ * one is bound from the trusted catalog now. The approval page, the approval's
+ * commitment, the completion check and {@link createExpansion} all use this one
+ * construction, so what was approved is what is created.
+ */
+export function successorAuthority(
+  kernel: MissionKernel,
+  intent: MissionIntent,
+  proposal: AuthorityEntry[] | undefined,
+  predecessor: MissionRecord,
+): ReturnType<MissionKernel["deriveWithProvenance"]> {
+  const derived = kernel.deriveWithProvenance(intent, proposal);
+  return {
+    ...derived,
+    entries: kernel.resolveFreshCapabilities(inheritCapabilitySources(derived.entries, predecessor.authority_set)),
+  };
+}
+
+/**
  * Create a successor Mission. It is `active` immediately but supersedes the
  * predecessor only on first grant redemption (supersedeOnRedemption).
  */
@@ -162,11 +184,8 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
   // @spec resource-access#delegate-eligibility: a fresh derivation, so the
   // successor's origins are its own derivation's, index-aligned through the
   // per-entry capability transforms.
-  const derived = kernel.deriveWithProvenance(input.intent, proposal);
-  const authoritySet = kernel.resolveFreshCapabilities(inheritCapabilitySources(
-    derived.entries,
-    predecessor.authority_set,
-  ));
+  const derived = successorAuthority(kernel, input.intent, proposal, predecessor);
+  const authoritySet = derived.entries;
   // @spec mission#approval-event (step 3), mission#authority-sources —
   // Expansion is a FRESH approval event with its own Approver (the
   // `approval_basis` built below is `direct`, exactly kernel.approve()'s
