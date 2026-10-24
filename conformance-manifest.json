@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "7d9ee8735b8bb4fc31546ed72e39157de300c861",
-    "content_sha256": "913731cbed17daa0f4c243f23ee1c072c5f162dec33655cb60285db7925b10ef"
+    "revision": "5eb18d4e40e828c9ac35ce71980c3aa7aae3f425",
+    "content_sha256": "abc6086f27dc02ea41a48bccb7408faa0aeafdd8464d78a79af5c370084a70e5"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "c4cc5c57d4c8eb004a7fa1b19cc17e4122553684",
@@ -65686,7 +65686,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a PEP-reported delegate_depth that disagrees with join.depth is denied mission_binding_failed",
-    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: a reported delegate_depth that differs from join.depth is denied mission_binding_failed, as is a nonzero depth reported for a client join (the Mission's own client is depth 0 in the PEP's actor records); one that agrees permits; in the pilot, the PEP's actor records put the delegate at depth 2 where the MAS's say 1"
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: a reported delegate_depth that differs from join.depth is denied mission_binding_failed; one that agrees permits; in the pilot, the PEP's actor records put the delegate at depth 2 where the MAS's say 1"
    },
    "level": "unit",
    "coverage": "tested",
@@ -65704,7 +65704,37 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by defects that drop the comparison, skip it for a client join, and read a client join as no depth."
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect that drops the comparison. The client-join case is mas.join-assertion.client-join-depth-zero (#1592)."
+  },
+  {
+   "id": "mas.join-assertion.client-join-depth-zero",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-pdp",
+   "text": "For a client join, whose `join` claim carries no `depth`, the PDP compares a reported `delegate_depth` with 0",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for a client join (the assertion's `join` claim carries no `depth`), a reported `delegate_depth` other than 0 is denied `mission_binding_failed`, and a reported 0 passes this comparison; other authorization checks still apply",
+    "local": "the reference PDP (services/pdp/src/evaluate.ts step 4b) compares a reported delegate_depth with join.depth for a delegate and with 0 for a client; the reference PEP's actor records give the Mission's own client depth 0"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-join-assertion.test.ts",
+     "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies a reported delegate_depth that differs from join.depth, and permits one that agrees",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1592 (D681, restated in D701): the client-join comparison, moved out of mas.join-assertion.depth-disagreement-denies's local observation. Witnessed by the cited test's client cases: a client join reporting depth 1 is denied mission_binding_failed, and one reporting 0 passes this comparison (the test request is otherwise authorized, so it permits). Proved by two defects, each failing the test alone: comparing a client join against the reported value itself (the comparison skipped), and against no depth (a client join read as having none)."
   },
   {
    "id": "mas.join-assertion.one-confirmation-member",
