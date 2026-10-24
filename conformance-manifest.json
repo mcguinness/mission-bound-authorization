@@ -4376,7 +4376,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the gate failed the invalid_target witnesses; removing the Mission-binding guard turned the suspended-Mission refusals into invalid_target and failed both. The client-authentication, syntax and invalid-or-expired-grant clauses are ordering witnesses."
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the gate failed the invalid_target witnesses; removing the Mission-binding guard turned the suspended-Mission code refusal into invalid_target; dropping the binding from the refresh pre-check refused the active Mission's refresh invalid_target. On a refresh the suspended Mission's refusal precedes the gate (preCheckRefreshMissionState runs first). The client-authentication, syntax and invalid-or-expired-grant clauses are ordering witnesses."
   },
   {
    "id": "core.authority-proposal.governed-resource-default-audience",
