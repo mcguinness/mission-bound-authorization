@@ -455,7 +455,7 @@ describe("the floor's classification agrees with the deployment's operation defi
         .map(([action]) => action),
     );
     expect([...fromFloor].sort()).toEqual([...fromOperations].sort());
-    expect([...fromFloor].sort()).toEqual(["payments:payment.execute", "payments:remittance.send"]);
+    expect([...fromFloor].sort()).toEqual(["payments:payment.execute", "payments:payment.reverse", "payments:remittance.send"]);
     for (const m of Object.values(TOOL_ACTIONS)) expect(Object.keys(payments?.actions ?? {})).toContain(m.action);
   });
 

@@ -67,7 +67,11 @@ const view = (): MissionView => ({
   client_id: "ap-agent",
 });
 
-/** A request for `action` at `phase`; `undefined` omits the member. */
+/**
+ * A request for `action` at `phase`; `undefined` omits the member. A
+ * `compensate` request carries the link to a committed effect it requires
+ * (#252), so the phase alone decides each case here.
+ */
 const request = (phase: unknown, action = PAY): EvaluationRequest =>
   withCredential({
     subject: { id: "alice", properties: { iss: "https://as.test" } },
@@ -78,6 +82,7 @@ const request = (phase: unknown, action = PAY): EvaluationRequest =>
       actor: { client_id: "ap-agent" },
       parameter_digest: "sha-256:pd1629",
       ...(phase !== undefined ? { action_phase: phase } : {}),
+      ...(phase === "compensate" ? { compensates_evaluation_id: "dec_committed_1629" } : {}),
     },
   } as EvaluationRequest);
 
