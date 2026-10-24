@@ -1223,6 +1223,7 @@ describe("a compound-action phase the PEP cannot establish is refused phase_unav
 describe("every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640)", () => {
   const READS = entry(["payments:invoice.read", "payments:invoice.list", "payments:vendor.read"], { vendors: ["acme", "globex"] });
   const HOLD = entry(["payments:payment.execute"], { vendors: ["acme"] });
+  const TRANSACT = entry(["payments:payment.execute", "payments:remittance.send"], { vendors: ["acme"] });
   const SCHEDULE = entry(["payments:invoice.read", "payments:payment.schedule"], { vendors: ["acme", "globex"] });
 
   /**
@@ -1359,15 +1360,17 @@ describe("every consequential permit's final disposition is one Execution Eviden
     }
   });
 
-  it("a completed irreversible commit (execute_wire_transfer) over HTTP with DPoP posts one wire with exactly one signed completed Execution Evidence record linked to the permit's evaluation, recorded by the executor at the commit point", async () => {
-    const x = await endpoint(HOLD);
-    try {
-      const wired = await x.client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
-      expect(wired.ok, JSON.stringify(wired)).toBe(true);
-      expect(x.connectors.ledgerEntries()).toHaveLength(1);
-      await expectOneCompleted(x, "execute_wire_transfer", true, "executor");
-    } finally {
-      await x.close();
+  it("a completed irreversible commit (execute_wire_transfer) or external commitment (send_remittance_email) over HTTP with DPoP commits one connector effect with exactly one signed completed Execution Evidence record linked to the permit's evaluation, recorded by the executor at the commit point", async () => {
+    for (const tool of ["execute_wire_transfer", "send_remittance_email"] as const) {
+      const x = await endpoint(TRANSACT);
+      try {
+        const committed = await x.client.callTool(tool, { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+        expect(committed.ok, `${tool} ${JSON.stringify(committed)}`).toBe(true);
+        expect(x.connectors.committedEffects(), tool).toHaveLength(1);
+        await expectOneCompleted(x, tool, true, "executor");
+      } finally {
+        await x.close();
+      }
     }
   });
 
