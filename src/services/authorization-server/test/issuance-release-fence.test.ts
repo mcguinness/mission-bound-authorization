@@ -27,6 +27,7 @@ import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapt
 import { type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { commitDuringDrain } from "./release-fence.helper.js";
 
 const PORT = 14571;
 const ISSUER = `http://localhost:${PORT}`;
@@ -181,7 +182,7 @@ async function delegationHandle(baseAccessToken: string, keys: Keys): Promise<st
 }
 
 /** The async-delegation exchange that opens a family over a delegation handle. */
-const openFamily = (handle: string, keys: Keys) =>
+const openFamily = (handle: string, keys: Keys, creationRequestId: string = crypto.randomUUID()) =>
   token(
     {
       grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
@@ -189,7 +190,7 @@ const openFamily = (handle: string, keys: Keys) =>
       subject_token: handle,
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       resource: RESOURCE,
-      creation_request_id: crypto.randomUUID(),
+      creation_request_id: creationRequestId,
     },
     keys,
   );
@@ -315,6 +316,76 @@ describe("the release fence: a revocation committed after the save-time gate ref
     expect(as.kernel.get(m.missionId)?.termination?.reason).toBe("revoked");
     expect(res.status, JSON.stringify(res.body)).toBe(400);
     expect(res.body.error).toBe("invalid_grant");
+    expect(res.body.mission_error).toBe("revoked");
+    expectNoTokenMaterial(res.body);
+  });
+});
+
+describe("the release fence on the delegation paths (@spec mission#issuance-gating, #250)", () => {
+  it("delegation handle: a revocation committed after the save-time gate and the signature is refused invalid_request with mission_error revoked and no token member", async () => {
+    const m = await issue();
+    const committed = commitAtNextIssue("revoke");
+    const res = await token(delegationHandleParams(m.accessToken, "ap-agent"), m.keys);
+    expect(committed.missionId()).toBe(m.missionId);
+    expect(as.kernel.get(m.missionId)?.termination?.reason).toBe("revoked");
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("invalid_request");
+    expect(res.body.mission_error).toBe("revoked");
+    expectNoTokenMaterial(res.body);
+  });
+
+  it("async family refresh: a revocation committed after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member", async () => {
+    const m = await issue();
+    const opened = await openFamily(await delegationHandle(m.accessToken, m.keys), m.keys);
+    expect(opened.status, JSON.stringify(opened.body)).toBe(200);
+    const committed = commitAtNextIssue("revoke");
+    const res = await refresh(opened.body.refresh_token as string, m.keys);
+    expect(committed.missionId()).toBe(m.missionId);
+    expect(as.kernel.get(m.missionId)?.termination?.reason).toBe("revoked");
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("invalid_grant");
+    expect(res.body.mission_error).toBe("revoked");
+    expectNoTokenMaterial(res.body);
+  });
+
+  it("a stored result served again: an async-delegation exchange retried after its Mission's revocation was acknowledged is refused invalid_request with mission_error revoked and no token member, where the same retry before it replays the stored family (refused before the fence)", async () => {
+    const m = await issue();
+    const handle = await delegationHandle(m.accessToken, m.keys);
+    const creationRequestId = crypto.randomUUID();
+    const opened = await openFamily(handle, m.keys, creationRequestId);
+    expect(opened.status, JSON.stringify(opened.body)).toBe(200);
+    // The control: the same retry while the Mission is active replays the stored body.
+    const replayed = await openFamily(handle, m.keys, creationRequestId);
+    expect(replayed.status, JSON.stringify(replayed.body)).toBe(200);
+    expect(replayed.body.access_token).toBe(opened.body.access_token);
+
+    as.kernel.transition(m.missionId, "revoke");
+    const res = await openFamily(handle, m.keys, creationRequestId);
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("invalid_request");
+    expect(res.body.mission_error).toBe("revoked");
+    expectNoTokenMaterial(res.body);
+  });
+
+  it("a stored result served again: the stored family replayed to a retry is refused invalid_request with mission_error revoked and no token member when the Mission is revoked while the replay's request-path drain runs", async () => {
+    const m = await issue();
+    const handle = await delegationHandle(m.accessToken, m.keys);
+    const creationRequestId = crypto.randomUUID();
+    const opened = await openFamily(handle, m.keys, creationRequestId);
+    expect(opened.status, JSON.stringify(opened.body)).toBe(200);
+    // The replay passes every check while the Mission is active; the
+    // revocation commits after them, in the drain before release.
+    const committed = commitDuringDrain(as, "revoke", () => m.missionId);
+    let res: Awaited<ReturnType<typeof openFamily>>;
+    try {
+      res = await openFamily(handle, m.keys, creationRequestId);
+    } finally {
+      committed.disarm();
+    }
+    expect(committed.missionId()).toBe(m.missionId);
+    expect(as.kernel.get(m.missionId)?.termination?.reason).toBe("revoked");
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("invalid_request");
     expect(res.body.mission_error).toBe("revoked");
     expectNoTokenMaterial(res.body);
   });
