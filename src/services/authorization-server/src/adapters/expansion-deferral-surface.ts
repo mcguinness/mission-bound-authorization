@@ -215,7 +215,7 @@ ${list("review-discharged", "Entries discharged", r.discharged, (d) => `<code>${
 export function renderDeferralPage(
   review: DeferralReview,
   context: DeferralContext,
-  view: { clientName?: string; revision?: string; csrf?: string; changed?: boolean },
+  view: { clientName?: string; revision?: string; csrf?: string; changed?: boolean; bindings?: string },
 ): string {
   const { disclosure } = review;
   const why = disclosure.drawdown_fallback
@@ -232,7 +232,7 @@ ${why}
 <h2>Subject (the authority is granted for)</h2><p class="deferral-subject"><code>${escapeHtml(review.predecessor.subject.sub)}</code></p>
 <h2>Intent (task context, untrusted)</h2><pre class="deferral-intent">${json(review.intent)}</pre>
 ${review.proposal ? `<h2>Proposed authority (submitted, untrusted)</h2><pre class="deferral-proposal">${json(review.proposal)}</pre>\n` : ""}<h2>Successor authority (what approval grants)</h2><pre class="successor-authority">${json(review.successor)}</pre>
-<h2>Expiry (when the approved authority ends)</h2><p><time class="successor-expires-at" datetime="${escapeHtml(context.expires_at)}">${escapeHtml(context.expires_at)}</time></p>
+${view.bindings ? `${view.bindings}\n` : ""}<h2>Expiry (when the approved authority ends)</h2><p><time class="successor-expires-at" datetime="${escapeHtml(context.expires_at)}">${escapeHtml(context.expires_at)}</time></p>
 ${encounterSection(disclosure)}
 ${restrictionsSection(disclosure)}
 ${carryoverSection(review.carryover)}

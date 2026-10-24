@@ -33,8 +33,15 @@ import {
 } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
-import { APPROVAL_FLOOR, CANONICAL_RESOURCE, DERIVATION_POLICY, loadProgressiveProfile, PROGRESSIVE_PROFILE } from "@mission/demo-data";
-import { authorityHash, computeAnchor, type JsonValue } from "@mission/core";
+import {
+  APPROVAL_FLOOR,
+  CANONICAL_RESOURCE,
+  DERIVATION_POLICY,
+  loadProgressiveProfile,
+  PROGRESSIVE_PROFILE,
+  TRUSTED_TOOL_CATALOGS,
+} from "@mission/demo-data";
+import { authorityHash, capabilitySourceDigest, computeAnchor, extractMcpToolDefinition, type JsonValue } from "@mission/core";
 import { type CryptoKey, decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
@@ -2479,5 +2486,180 @@ describe("the expansion deferral page's refusals (@spec expansion#completion-mod
     as.kernel.db.prepare("UPDATE expansion_deferrals SET created_at = ? WHERE deferral_code = ?").run(Date.now() - 601_000, code);
     expect((await page(code, bob.cookie)).status).toBe(404);
     expect((await decide(code, bob, { decision: "approve", render_revision: shown.revision })).status).toBe(400);
+  });
+});
+
+/**
+ * @spec capability-binding#capability-approval, expansion#completion-modes
+ * (#1447): the expansion deferral page presents the successor's bindings: an
+ * added action's binding resolved now, a retained action's kept from the
+ * predecessor's approval. The approval commits the bound successor, and a
+ * binding changed after rendering or after the approval creates nothing.
+ */
+describe("capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447)", () => {
+  const VENDOR = "payments:vendor.read";
+  const BOB = { sub: "bob", acr: "mfa", auth_time: FIXTURE_LOGIN_TIME, subject: "alice" };
+  const store = () => approvalSessions.get(ISSUER) as ApprovalSessionStore;
+  const page = async (code: string, cookie: string) => {
+    const res = await fetch(`${ISSUER}/expansions/deferrals/${code}`, { headers: { cookie } });
+    return { status: res.status, html: await res.text(), revision: res.headers.get("x-approval-render-revision") };
+  };
+  const decide = async (code: string, headers: Record<string, string>, body: Record<string, unknown>) => {
+    const res = await fetch(`${ISSUER}/expansions/deferrals/${code}/decide`, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return { status: res.status, json: (await res.json().catch(() => ({}))) as { error?: string; changed?: string[] } };
+  };
+  const poll = async (code: string) => {
+    const res = await tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code });
+    return { status: res.status, body: (await res.json()) as { error?: string; mission_id?: string } };
+  };
+  /** A root holding invoice.read, and a deferred widening that adds the vendor read. */
+  const pending = async () => {
+    const root = await issueMission(READ, ceilingOf());
+    return { root, code: await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]) };
+  };
+  /** The payments service's trusted tool catalog, whose `text` the resolver reads on every resolution. */
+  const catalog = () => TRUSTED_TOOL_CATALOGS.find((c) => c.service_id === "payments") as { text: string; source_uri: string };
+  /** Run `body` with one tool of that catalog edited, restoring the catalog after. */
+  async function withTool<T>(name: string, edit: (tool: Record<string, unknown>) => void, body: () => Promise<T>): Promise<T> {
+    const served = catalog();
+    const original = served.text;
+    const parsed = JSON.parse(original) as { tools: Record<string, unknown>[] };
+    edit(parsed.tools.find((t) => t.name === name) as Record<string, unknown>);
+    served.text = JSON.stringify(parsed);
+    try {
+      return await body();
+    } finally {
+      served.text = original;
+    }
+  }
+  const unescapeHtml = (s: string) =>
+    s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  /** The bindings a page presents: each one's machine binding, and its rendered account. */
+  const bindingItems = (html: string) =>
+    [
+      ...html.matchAll(
+        /<li class="capability-binding" data-action="([^"]*)" data-tool-id="([^"]*)" data-operation-ref="([^"]*)" data-source-digest="([^"]*)">([\s\S]*?)<\/li>/g,
+      ),
+    ].map((m) => ({
+      action: unescapeHtml(m[1] as string),
+      tool_id: unescapeHtml(m[2] as string),
+      operation_ref: unescapeHtml(m[3] as string),
+      source_digest: unescapeHtml(m[4] as string),
+      body: m[5] as string,
+    }));
+  const machine = (b: { action: string; tool_id: string; operation_ref: string; source_digest: string }) => ({
+    action: b.action,
+    tool_id: b.tool_id,
+    operation_ref: b.operation_ref,
+    source_digest: b.source_digest,
+  });
+  const byAction = (a: { action: string }, b: { action: string }) => a.action.localeCompare(b.action);
+  const digestOf = (tool: string) => capabilitySourceDigest(extractMcpToolDefinition(catalog().text, tool));
+
+  it("shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown", async () => {
+    const { root, code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const shown = await page(code, bob.cookie as string);
+    expect(shown.status, shown.html).toBe(200);
+    const items = bindingItems(shown.html);
+    const vendor = items.find((i) => i.action === VENDOR) as (typeof items)[number];
+    expect(vendor.operation_ref).toBe("lookup_vendor");
+    expect(vendor.source_digest).toBe(digestOf("lookup_vendor"));
+    expect(vendor.body).toContain('Invoking it: <q class="binding-description">Look up a vendor</q>');
+    expect(vendor.body).not.toContain("Kept from");
+    expect(vendor.body).toContain("Publisher: unknown; this server has not established one.");
+    expect(vendor.body).toContain("A later change to this tool's definition is refused.");
+    const read = items.find((i) => i.action === "payments:invoice.read") as (typeof items)[number];
+    expect(read.body).toContain("Kept from the Mission being widened, where it was approved.");
+    const inherited = (as.kernel.get(root.missionId)?.authority_set ?? []).flatMap((e) => e.capability_sources ?? []);
+    expect(inherited.map(machine)).toContainEqual(machine(read));
+    expect((await decide(code, bob, { decision: "approve", render_revision: shown.revision })).status).toBe(200);
+    const polled = await poll(code);
+    expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+    const committed = (as.kernel.get(polled.body.mission_id as string)?.authority_set ?? []).flatMap((e) => e.capability_sources ?? []);
+    expect(committed.map(machine).sort(byAction)).toEqual(items.map(machine).sort(byAction));
+  });
+
+  it("a retained action's tool changed since the predecessor's approval is shown as kept, and the expansion still completes with the binding approved there", async () => {
+    const { root, code } = await pending();
+    const inherited = (as.kernel.get(root.missionId)?.authority_set ?? [])
+      .flatMap((e) => e.capability_sources ?? [])
+      .find((b) => b.action === "payments:invoice.read");
+    await withTool("get_invoice", (t) => {
+      t.description = "Read one invoice, edited after the predecessor's approval";
+    }, async () => {
+      const bob = browserApprovalHeaders(store(), code, BOB, "");
+      const shown = await page(code, bob.cookie as string);
+      expect(shown.status, shown.html).toBe(200);
+      const read = bindingItems(shown.html).find((i) => i.action === "payments:invoice.read") as { body: string; source_digest: string };
+      expect(read.body).toContain("The trusted catalog no longer serves that definition, so a call to the changed tool is refused.");
+      expect(read.source_digest).toBe(inherited?.source_digest);
+      expect((await decide(code, bob, { decision: "approve", render_revision: shown.revision })).status).toBe(200);
+      const polled = await poll(code);
+      expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+      const committed = (as.kernel.get(polled.body.mission_id as string)?.authority_set ?? [])
+        .flatMap((e) => e.capability_sources ?? [])
+        .find((b) => b.action === "payments:invoice.read");
+      expect(committed?.source_digest).toBe(inherited?.source_digest);
+    });
+  });
+
+  it("an Approver can deny after an added action's tool disappears from the catalog, which no approval can then bind (#1633 review)", async () => {
+    const { code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const shown = await page(code, bob.cookie as string);
+    expect(shown.status).toBe(200);
+    await withTool("lookup_vendor", (t) => {
+      t.name = "lookup_vendor_removed";
+    }, async () => {
+      const approved = await decide(code, bob, { decision: "approve", render_revision: shown.revision });
+      expect(approved.status, JSON.stringify(approved.json)).toBe(400);
+      expect(approved.json.error).toBe("invalid_authorization_details");
+      expect((await poll(code)).body.error).toBe("authorization_pending");
+      const denied = await decide(code, bob, { decision: "deny", render_revision: shown.revision });
+      expect(denied.status, JSON.stringify(denied.json)).toBe(200);
+      expect((await poll(code)).body.error).toBe("access_denied");
+    });
+  });
+
+  it("a covered definition change to an added action's tool between rendering and decision approves nothing", async () => {
+    const { code } = await pending();
+    const bob = browserApprovalHeaders(store(), code, BOB, "");
+    const first = await page(code, bob.cookie as string);
+    await withTool("lookup_vendor", (t) => {
+      t.description = "Look up a vendor and its bank details";
+    }, async () => {
+      const stale = await decide(code, bob, { decision: "approve", render_revision: first.revision });
+      expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+      expect(stale.json.error).toBe("approval_context_changed");
+      expect(stale.json.changed).toEqual(["successor_hash"]);
+      expect((await poll(code)).body.error).toBe("authorization_pending");
+    });
+  });
+
+  it("a covered definition change to an added action's tool after the approval refuses the completion; an edit to a retained action's tool changes nothing", async () => {
+    const changed = await pending();
+    const bob = browserApprovalHeaders(store(), changed.code, BOB, "");
+    const shown = await page(changed.code, bob.cookie as string);
+    expect((await decide(changed.code, bob, { decision: "approve", render_revision: shown.revision })).status).toBe(200);
+    await withTool("lookup_vendor", (t) => {
+      t.description = "Look up a vendor and its bank details";
+    }, async () => {
+      expect((await poll(changed.code)).body.error).toBe("access_denied");
+    });
+    expect(successorsOf(changed.root.missionId)).toEqual([]);
+    const kept = await pending();
+    const bob2 = browserApprovalHeaders(store(), kept.code, BOB, "");
+    const keptShown = await page(kept.code, bob2.cookie as string);
+    expect((await decide(kept.code, bob2, { decision: "approve", render_revision: keptShown.revision })).status).toBe(200);
+    await withTool("get_invoice", (t) => {
+      t.description = "Read one invoice, edited after the predecessor's approval";
+    }, async () => {
+      expect((await poll(kept.code)).status).toBe(200);
+    });
   });
 });
