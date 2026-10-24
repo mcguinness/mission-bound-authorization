@@ -2623,12 +2623,32 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the candidate rendered for approval carries each catalog-sourced action's binding, resolved from the trusted catalog or configuration before the rendering"
+    "normative": "the candidate rendered for approval carries each catalog-sourced action's binding, resolved from the trusted catalog or configuration before the rendering",
+    "local": "The AS's Mission approval page and its expansion deferral page render the candidate bound from the trusted catalog, each catalog-sourced action with its binding; the render revision commits the bound set, and the Mission or successor commits exactly the bindings rendered. On the expansion page a retained action keeps the binding the predecessor's approval made."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > renders the complete candidate Authority Set for approval, and the Mission Record commits exactly the rendered set",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-identity",
@@ -2645,12 +2665,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering shows, per bound action, the tool or operation identity, and it agrees with the committed binding's tool_id and operation_ref"
+    "normative": "the approval rendering shows, per bound action, the tool or operation identity, and it agrees with the committed binding's tool_id and operation_ref",
+    "local": "The AS's Mission approval page and its expansion deferral page name, per bound action, the tool it invokes (operation_ref) and its tool_id, as the committed binding records them."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-what-each-action-authorizes",
@@ -2667,12 +2701,32 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering states, per bound action, what invoking it authorizes, in terms the Approver can act on, and the statement agrees with the committed binding"
+    "normative": "the approval rendering states, per bound action, what invoking it authorizes, in terms the Approver can act on, and the statement agrees with the committed binding",
+    "local": "The AS's Mission approval page and its expansion deferral page state what invoking each bound tool does in the tool's own description, read from the trusted catalog in the very definition the binding's source_digest commits, beside the entry's resource and constraints."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a tool's description renders as inert text, and the binding commits the definition shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-source-and-publisher",
@@ -2689,12 +2743,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering shows, per bound action, its source, and an established publisher, or that the publisher is unknown, or that a named publisher is the source's own claim"
+    "normative": "the approval rendering shows, per bound action, its source, and an established publisher, or that the publisher is unknown, or that a named publisher is the source's own claim",
+    "local": "The AS's Mission approval page and its expansion deferral page show each bound action's source (the trusted catalog's URI and the deployment's configured name for it) and state that the publisher is unknown, since this server establishes none."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-drift-refusal",
@@ -2711,12 +2779,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering tells the Approver, per bound action, that a later change to the capability's definition is refused"
+    "normative": "the approval rendering tells the Approver, per bound action, that a later change to the capability's definition is refused",
+    "local": "The AS's Mission approval page and its expansion deferral page tell the Approver, per bound action, that a later change to the tool's definition is refused."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.raw-metadata-insufficient",
@@ -2733,12 +2815,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a rendering that shows only a digest or URI for a bound action does not meet the disclosure; catalog-supplied text renders as inert content and the exact machine binding is retained"
+    "normative": "a rendering that shows only a digest or URI for a bound action does not meet the disclosure; catalog-supplied text renders as inert content and the exact machine binding is retained",
+    "local": "The AS's Mission approval page and its expansion deferral page pair each binding's machine values with the tool's own description, rendered as escaped, inert text, and the committed entry retains the exact machine binding."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a tool's description renders as inert text, and the binding commits the definition shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.revalidate-at-decision",
@@ -2755,12 +2851,32 @@
    "surface": "approval-ceremony",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a bound capability's definition or identity changed between rendering and decision, with unchanged action and tool names, creates no Mission from the old decision; a fresh approval over the re-rendered candidate commits the changed binding"
+    "normative": "a bound capability's definition or identity changed between rendering and decision, with unchanged action and tool names, creates no Mission from the old decision; a fresh approval over the re-rendered candidate commits the changed binding",
+    "local": "The decision binds the candidate again from the current catalog and compares it with the rendering's: a covered definition change with unchanged action and tool names asks for a fresh decision (approval_context_changed, or successor_hash on the expansion page), and the fresh approval commits the changed binding. On the expansion page a binding changed after the approval refuses the completion."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a covered definition change with unchanged action and tool names, between rendering and decision, creates nothing; a fresh decision commits the changed binding",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool between rendering and decision approves nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool after the approval refuses the completion; an edit to a retained action's tool changes nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.commit-consented-bindings",
@@ -2777,12 +2893,38 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the committed capability_sources equal the bindings of the consented candidate; a binding resolved from the current source for revalidation is committed only when it equals the approved one, and a different binding creates no Mission without fresh consent"
+    "normative": "the committed capability_sources equal the bindings of the consented candidate; a binding resolved from the current source for revalidation is committed only when it equals the approved one, and a different binding creates no Mission without fresh consent",
+    "local": "The AS's Mission approval page and its expansion deferral page commit exactly the bindings rendered: the decision compares the bound candidate with the rendering's, the commit records the prepared candidate that comparison admitted, and the expansion completion creates the successor only with the bound set the approval recorded."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a covered definition change with unchanged action and tool names, between rendering and decision, creates nothing; a fresh decision commits the changed binding",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool after the approval refuses the completion; an edit to a retained action's tool changes nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.unrelated-edit-not-a-change",
@@ -2799,12 +2941,32 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an edit elsewhere in the catalog between rendering and decision does not invalidate the decision when no catalog_digest was recorded and no other Changes Before the Decision input changed; it does when a catalog_digest was recorded, or when it changes another such input"
+    "normative": "an edit elsewhere in the catalog between rendering and decision does not invalidate the decision when no catalog_digest was recorded and no other Changes Before the Decision input changed; it does when a catalog_digest was recorded, or when it changes another such input",
+    "local": "An edit to another tool of the catalog leaves every binding, and so the decision, unchanged, and an edit to a retained action's tool leaves an expansion's binding as the predecessor's approval made it. This deployment records no catalog_digest, so the arm in which a recorded catalog_digest makes any edit a change is not exercised."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > an edit to another tool of the catalog is not a binding change: the decision approves, since no catalog_digest is recorded",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool after the approval refuses the completion; an edit to a retained action's tool changes nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a retained action's tool changed since the predecessor's approval is shown as kept, and the expansion still completes with the binding approved there",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "runtime.decision-inputs.capability-current-definition-at-invocation",
@@ -4796,10 +4958,11 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Authority Set committed on the Mission Record is the one approved, fixed atomically with the approval decision and not recomputed afterwards"
+    "normative": "the Authority Set committed on the Mission Record is the one approved, fixed atomically with the approval decision and not recomputed afterwards",
+    "local": "The rendering shows the candidate bound from the trusted catalog (#1447), the decision is bound to that rendering (#1446), and the record commits exactly the rendered entries, capability bindings included; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/submission-precedence.test.ts",
@@ -4820,7 +4983,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. Witnessed: the committed entries equal the rendered entries; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged while a fresh derivation differs. Partial because the record also carries the Capability Binding companion's capability_sources, which kernel.approve binds at the commit and the approval rendering does not show, so the committed set equals the approved one only in its derived members. Tracked by #1447 (when a source binding is fixed, and what the approval presents) and #1446 (a change between rendering and decision is committed without re-rendering)."
+   "notes": "D559 (#1411): ruled qualified A + C. Witnessed: the committed entries equal the rendered entries; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged while a fresh derivation differs. Partial because the record also carries the Capability Binding companion's capability_sources, which kernel.approve binds at the commit and the approval rendering does not show, so the committed set equals the approved one only in its derived members. Tracked by #1447 (when a source binding is fixed, and what the approval presents) and #1446 (a change between rendering and decision is committed without re-rendering). #1447 (D584): both named gaps are closed. The rendering shows the bound candidate, and the committed set equals the rendered one with its capability_sources, so every quoted clause is witnessed: fixed at creation (the render-equals-commit test, now without stripping bindings), atomically with the decision (the concurrent-decision test), and not recomputed afterwards (the policy-change test)."
   },
   {
    "id": "core.submission.size-bounds-evidence",
