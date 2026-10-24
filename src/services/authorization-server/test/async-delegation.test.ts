@@ -3401,3 +3401,52 @@ describe("successor remediation (@spec expansion#verification-order step 4, #134
     expect(revokeSuccessorsExpandedByAnotherClient(as.kernel, as.expansionDeferrals).revoked).toEqual([]);
   });
 });
+
+/**
+ * @spec mission#subset, mission#error-mapping (#1513, D625, D620): an
+ * async-delegation family is created from exactly the entries requested, or
+ * not at all. A requested entry within the Mission that the effective-set
+ * projection cannot issue whole (an unrecorded capability binding, a
+ * non-decimal maximum, an empty vendor list) is refused, never trimmed to the
+ * remaining entries, as #1508 does on the refresh and code paths.
+ */
+describe("a requested family set the projection cannot issue whole is refused, never trimmed (@spec mission#subset, mission#error-mapping, #1513)", () => {
+  const LIMITS = { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] };
+  const entryOf = (actions: string[], constraints: Record<string, unknown> = LIMITS) => ({
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions,
+    constraints,
+  });
+
+  it("each vector is refused invalid_authorization_details, creating no family and counting nothing; the whole request still creates the family", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const cases = [
+      // A capability_sources binding the Mission does not record for the action.
+      { ...entryOf(["payments:remittance.send"]), capability_sources: [{ action: "payments:remittance.send" }] },
+      // A max_amount the intake schema admits that is not a decimal.
+      entryOf(["payments:remittance.send"], { ...LIMITS, max_amount: { amount: "abc", currency: "USD" } }),
+      // An empty vendor list under the vendors-constrained grant.
+      entryOf(["payments:remittance.send"], { ...LIMITS, vendors: [] }),
+    ];
+    for (const poisoned of cases) {
+      // The handle request is itself a counted derivation, so it is taken first.
+      const handle = await delegationHandle(baseAccessToken);
+      const countBefore = as.kernel.get(missionId)?.derivation_count;
+      const res = await asyncDelegate(handle, {
+        rawSubject: true,
+        authorizationDetails: [entryOf(["payments:invoice.read"]), poisoned],
+      });
+      const body = (await res.json()) as { error?: string; access_token?: string; refresh_token?: string };
+      expect(res.status, JSON.stringify({ poisoned, body })).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.access_token).toBeUndefined();
+      expect(body.refresh_token).toBeUndefined();
+      expect(as.delegationFamilyStore.familiesForMission(missionId)).toEqual([]);
+      expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+    }
+    const whole = await asyncDelegate(baseAccessToken, { authorizationDetails: [entryOf(["payments:invoice.read"]), entryOf(["payments:remittance.send"])] });
+    expect(whole.status, JSON.stringify(await whole.clone().json())).toBe(200);
+  });
+});
+

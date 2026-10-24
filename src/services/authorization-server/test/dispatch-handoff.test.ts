@@ -754,6 +754,34 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
       expect(ok.status, JSON.stringify(okb)).toBe(200);
     }
   });
+
+  // @spec mission#subset, mission#error-mapping (#1513): each vector passes
+  // both subset checks, but the projection drops its entry; the request is
+  // refused rather than issued without it. The second action keeps the
+  // trimmed entry from being covered by the first.
+  it("a requested set the projection cannot issue whole is refused invalid_authorization_details, issuing no handoff grant; the whole set is issued", async () => {
+    const instance = await dispatchInstance();
+    const first = instance.authority[0] as AuthorityEntry;
+    expect(first.actions.length, "the demo instance's first entry needs two actions").toBeGreaterThanOrEqual(2);
+    expect(first.constraints?.vendors, "the demo instance's first entry needs a vendors constraint").toBeDefined();
+    const entryWith = (action: string) => ({ ...first, actions: [action] });
+    const kept = entryWith(first.actions[0] as string);
+    const second = entryWith(first.actions[1] as string);
+    const cases = [
+      { ...second, capability_sources: [{ action: first.actions[1] as string }] },
+      { ...second, constraints: { ...first.constraints, vendors: [] } },
+    ];
+    for (const poisoned of cases) {
+      const res = await handoff(instance.token, { authorization_details: JSON.stringify([kept, poisoned]) });
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, JSON.stringify({ poisoned, body })).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.access_token).toBeUndefined();
+    }
+    const ok = await handoff(instance.token, { authorization_details: JSON.stringify([kept, second]) });
+    const okb = (await ok.json()) as { access_token?: string };
+    expect(ok.status, JSON.stringify(okb)).toBe(200);
+  });
 });
 
 /** A real handoff grant for `instance`, from the exchange. */

@@ -1301,6 +1301,14 @@ export async function handleAsyncDelegationExchange(
       return;
     }
     confinedSubset = projectThroughEffective(requestedSubset, effective);
+    // @spec mission#subset, mission#error-mapping (#1513; #1508, D625): every
+    // requested entry is issued whole, or the request is refused. The
+    // comparison sets `capability_sources` aside, as the checks above do: an
+    // issued entry carries the Mission's bindings where the request names none.
+    if (!isSubsetSetIgnoringCapabilitySources(requestedSubset, confinedSubset)) {
+      txError(ctx, 400, "invalid_authorization_details", "requested authorization_details cannot be issued whole within the Mission authority");
+      return;
+    }
   }
   if (confinedSubset.length === 0) {
     txError(ctx, 400, "invalid_authorization_details", "confined authorization_details must be non-empty");
