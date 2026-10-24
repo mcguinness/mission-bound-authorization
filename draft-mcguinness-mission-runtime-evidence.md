@@ -654,9 +654,10 @@ whether the refusing component is the PEP or the PDP: a PEP refusal
 for token validation failure, a missing `mission` claim, PEP-PDP
 channel failure, PDP unreachability, or the PEP being unable to
 establish Mission state ({{I-D.draft-mcguinness-mission-runtime}}); or
-a PDP refusal of an in-scope request that reaches it without the
-Mission decision context a runtime enforcement scope requires, per
-the AuthZEN profile ({{I-D.draft-mcguinness-mission-authzen}}). Such a
+a PDP refusal, before evaluation, of an in-scope request that reaches
+it without the Mission decision context a runtime enforcement scope
+requires, or with a decision input it cannot use, per the AuthZEN
+profile ({{I-D.draft-mcguinness-mission-authzen}}). Such a
 refusal has no PDP decision and cannot populate the PDP-derived
 members above.
 
@@ -727,13 +728,23 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   was absent or did not verify, so no decision the PEP can rely on was
   obtained), `channel_failure`, `pdp_unreachable`, or
   `state_unavailable` (where the deployment's state-source placement
-  has the PEP supply state, and it cannot establish it). For a PDP
-  refusal of an in-scope request that reaches it without the Mission
-  decision context a runtime enforcement scope requires,
-  `mission_context_missing`; for one whose operation target is absent,
-  malformed, or outside the enforcement scope the requesting PEP is
-  authorized for ({{I-D.draft-mcguinness-mission-authzen}}),
-  `operation_target_invalid`. These name pre-evaluation conditions,
+  has the PEP supply state, and it cannot establish it), or
+  `phase_unavailable` (the operation is a phase of a compound action
+  and the PEP cannot establish the phase before requesting a
+  decision). For a PDP refusal of an in-scope request that reaches it
+  without the Mission decision context a runtime enforcement scope
+  requires, `mission_context_missing`; for one whose operation target
+  is absent, malformed, or outside the enforcement scope the requesting
+  PEP is authorized for ({{I-D.draft-mcguinness-mission-authzen}}),
+  `operation_target_invalid`; for one whose action phase is outside
+  the defined set, or is absent where the PDP's trusted operation
+  declaration requires a phase, `phase_invalid`; and for one whose
+  evaluation-context binding inputs are missing, malformed, or
+  incompatible with the declared binding, for an operation the runtime
+  profile's Evaluation-Context Binding extension covers,
+  `evaluation_context_invalid`. The last two describe decision inputs
+  the PDP cannot use, not an evaluated policy denial. These name
+  pre-evaluation conditions,
   PEP-side or PDP-side, and are disjoint from the runtime profile's
   PDP denial reasons for an evaluated decision (for example, as
   carried by the AuthZEN profile,
@@ -2605,6 +2616,11 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- Refusal Record: `phase_unavailable` records a PEP that cannot
+  establish a compound action's phase before requesting a decision;
+  `phase_invalid` and `evaluation_context_invalid` record a PDP refusal,
+  before evaluation, of an unusable action phase or evaluation-context
+  binding input (#1629).
 - Refusal Record and Execution Evidence: `resource_contract_unresolvable`
   records a resource contract the PEP could not resolve before the
   decision request, or that at execution did not resolve or differed
