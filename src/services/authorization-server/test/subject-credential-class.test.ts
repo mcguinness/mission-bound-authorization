@@ -273,6 +273,8 @@ const asAnotherType = (credential: string) => resigned(credential, "asToken", MI
 /** One Token Exchange path: its legitimate subject credential, the request, and what success looks like. */
 interface Path {
   name: string;
+  /** The path's code for an unacceptable subject_token (RFC 8693 Section 2.2.2; the Dispatch Handoff's own). */
+  refusal: "invalid_request" | "invalid_grant";
   legitimate: () => Promise<string>;
   send: (subjectToken: string) => Promise<Answer>;
   succeeded: (answer: Answer) => void;
@@ -319,6 +321,7 @@ async function dispatchedInstance(): Promise<string> {
 const PATHS: Path[] = [
   {
     name: "child creation",
+    refusal: "invalid_request",
     legitimate: async () => (await mission([entry(["payments:invoice.read", "payments:remittance.send"])])).accessToken,
     send: (subjectToken) =>
       token(
@@ -340,6 +343,7 @@ const PATHS: Path[] = [
   },
   {
     name: "Expansion",
+    refusal: "invalid_request",
     legitimate: async () => (await mission([entry(["payments:invoice.read"])])).accessToken,
     send: (subjectToken) =>
       token(
@@ -363,6 +367,7 @@ const PATHS: Path[] = [
   },
   {
     name: "the Dispatch Handoff",
+    refusal: "invalid_grant",
     legitimate: dispatchedInstance,
     send: (subjectToken) =>
       token("ap-agent", presenter, exchange(subjectToken, { requested_token_type: JWT_TOKEN_TYPE, mission_dispatch_handoff: "true" })),
@@ -373,6 +378,7 @@ const PATHS: Path[] = [
   },
   {
     name: "designation",
+    refusal: "invalid_request",
     legitimate: async () => (await mission([delegable()])).accessToken,
     send: (subjectToken) =>
       token("ap-agent", presenter, exchange(subjectToken, { requested_token_type: ACCESS_TOKEN_TOKEN_TYPE, audience: SUBAGENT })),
@@ -383,6 +389,7 @@ const PATHS: Path[] = [
   },
   {
     name: "the delegation handle",
+    refusal: "invalid_request",
     legitimate: async () => (await mission([entry(["payments:invoice.read", "payments:remittance.send"])])).accessToken,
     send: (subjectToken) => token("ap-agent", presenter, delegationHandleParams(subjectToken, "ap-agent")),
     succeeded: ({ status, body }) => {
@@ -392,6 +399,7 @@ const PATHS: Path[] = [
   },
   {
     name: "the delegated exchange (a designation redeemed)",
+    refusal: "invalid_request",
     legitimate: designation,
     send: (subjectToken) =>
       token(SUBAGENT, subagentDpop, exchange(subjectToken, { requested_token_type: ACCESS_TOKEN_TOKEN_TYPE, resource: RESOURCE })),
@@ -402,6 +410,7 @@ const PATHS: Path[] = [
   },
   {
     name: "the async-delegation transport (a delegation handle)",
+    refusal: "invalid_request",
     legitimate: delegationHandle,
     send: (subjectToken) =>
       token("ap-agent", presenter, {
@@ -420,8 +429,9 @@ const PATHS: Path[] = [
   },
 ];
 
-function refused({ status, body }: Answer, cause: string | RegExp): void {
+function refused({ status, body }: Answer, code: Path["refusal"], cause: string | RegExp): void {
   expect(status, JSON.stringify(body)).toBe(400);
+  expect(body.error, JSON.stringify(body)).toBe(code);
   expect(body.error_description, JSON.stringify(body)).toMatch(cause);
   expect(body.access_token, JSON.stringify(body)).toBeUndefined();
 }
@@ -494,15 +504,15 @@ describe("a subject_token is a Mission access token: the AS's access-token key a
       // Both checks refuse a transaction token, so either alone suffices here;
       // the two witnesses below each isolate one check.
       it("refuses a transaction token presented as the subject_token, as another credential class", async () => {
-        refused(await path.send(transactionToken), CREDENTIAL_CLASS);
+        refused(await path.send(transactionToken), path.refusal, CREDENTIAL_CLASS);
       });
 
       it("refuses the legitimate credential's claims, typed at+jwt, under the transaction-token key (key role)", async () => {
-        refused(await path.send(await underAnotherRole(await path.legitimate())), WRONG_KEY);
+        refused(await path.send(await underAnotherRole(await path.legitimate())), path.refusal, WRONG_KEY);
       });
 
       it("refuses the legitimate credential's claims under the access-token key, typed as a transaction token (token type)", async () => {
-        refused(await path.send(await asAnotherType(await path.legitimate())), WRONG_TYPE);
+        refused(await path.send(await asAnotherType(await path.legitimate())), path.refusal, WRONG_TYPE);
       });
 
       it("still accepts the legitimate credential", async () => {
