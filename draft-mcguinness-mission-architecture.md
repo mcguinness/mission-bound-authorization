@@ -4090,6 +4090,15 @@ custody but makes neither High-Assurance claim. In this shape:
   custody statement made legible, not a checked assurance grade (the
   member's definition in {{deployment-profile}} states the open
   verifier gap).
+- Its `revocation_exposure` member, under `runtime`, states inputs
+  that size what can still happen inside the mediated classes'
+  revocation window: the window in seconds, the PEP's admission limit
+  in actions per second per Mission, its ceiling on actions in flight
+  per Mission, and the per-action and aggregate bounds in force. The
+  member records inputs, not a computed bound: bursts within the
+  limit, actions already in flight (each may run to its execution
+  bound), and the metering companion's reservation and settlement
+  rules determine the actual exposure.
 - Its revocation residuals follow the runtime profile's arithmetic:
   for a mediated class, the 30-second staleness bound, plus whatever
   permit window a reported lease end leaves beyond it (at most the
@@ -4129,7 +4138,14 @@ custody but makes neither High-Assurance claim. In this shape:
     ],
     "unmediated_exclusions": [
       "internal_reasoning", "local_cache_read"
-    ]
+    ],
+    "revocation_exposure": {
+      "window_seconds": 90,
+      "max_admissions_per_second_per_mission": 5,
+      "max_in_flight_actions_per_mission": 10,
+      "per_action_bounds": ["max_amount"],
+      "aggregate_bounds": ["max_budget"]
+    }
   },
   "credential_custody": {
     "held_by": "pep",
@@ -4392,6 +4408,11 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Deployment Profile Example Shapes: the first shape's illustrative
+  `revocation_exposure` member states the inputs that size what can
+  happen inside the revocation window, with units, as inputs rather
+  than a computed bound. No requirement changed.
 
 - Token Classes and The Mission-Bound Credential follow the OAuth
   binding's Claim Reservation: an access token's `mission` claim
