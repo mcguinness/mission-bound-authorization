@@ -1069,7 +1069,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 26 April 2027</td>
+<td class="center">Expires 27 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1082,12 +1082,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-23" class="published">23 October 2026</time>
+<time datetime="2026-10-24" class="published">24 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-26">26 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-27">27 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1151,7 +1151,7 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 26 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 27 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2125,7 +2125,7 @@ as follows:<a href="#section-2.1-4" class="pilcrow">¶</a></p>
 server enforces the <code>authorization_details</code> statelessly and can check
 the <code>mission</code> claim (<a href="#rs-enforcement" class="auto internal xref">Section 9</a>), with no callback to the AS
 required.<a href="#section-2.1-5" class="pilcrow">¶</a></p>
-<p id="section-2.1-6">(5) An authorized revocation (<a href="#revocation" class="auto internal xref">Section 7.2</a>), or <code>expires_at</code>
+<p id="section-2.1-6">(5) A revocation (<a href="#revocation" class="auto internal xref">Section 7.2</a>), or <code>expires_at</code>
 passing, moves the Mission
 to <code>terminated</code>, with reason <code>revoked</code> or <code>expired</code>, after which the
 AS refuses further issuance and refresh. A deployment can also treat
@@ -2952,7 +2952,8 @@ member names its evidence type.<a href="#section-4.4-1" class="pilcrow">¶</a></
 <li class="normal" id="section-4.4-3.1">
             <p id="section-4.4-3.1.1"><strong>Reject, do not ignore.</strong> An entry that is not a JSON object, or
 that lacks <code>type</code>, is structurally invalid and refused with the
-<code>invalid_request</code> error code. The AS <span class="bcp14">MUST</span> refuse an entry whose
+<code>invalid_request</code> error code at step 1 of the processing order
+(<a href="#submission-processing" class="auto internal xref">Section 4.5</a>). The AS <span class="bcp14">MUST</span> refuse an entry whose
 <code>type</code> it does not support, and an entry that fails its type's
 validation or verification, with the <code>invalid_mission_intent_evidence</code>
 error code (<a href="#oauth-extensions-error-registration" class="auto internal xref">Section 23.2</a>). A
@@ -3006,8 +3007,10 @@ and is complete before the approval rendering
 step 9 to activation.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-4.5-2">
 <li id="section-4.5-2.1">
-            <p id="section-4.5-2.1.1">Parse the Submission envelope and enforce both closed top levels
-(<a href="#submission-via-par" class="auto internal xref">Section 4.2</a>).<a href="#section-4.5-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-4.5-2.1.1">Parse the Submission envelope, enforce both closed top levels and
+the size bounds (<a href="#submission-via-par" class="auto internal xref">Section 4.2</a>), and check that each
+<code>evidence</code> entry is a JSON object with a <code>type</code> member
+(<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>).<a href="#section-4.5-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.5-2.2">
             <p id="section-4.5-2.2.1">Validate the <code>intent</code> object against the Mission Intent member
@@ -3035,9 +3038,8 @@ missing required type
 "Required Evidence Is Resolved Before Derivation").<a href="#section-4.5-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.5-2.6">
-            <p id="section-4.5-2.6.1">Apply the evidence dispatch and refusal rules, verifying every
-presented entry under its type's rules
-(<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>).<a href="#section-4.5-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-4.5-2.6.1">Dispatch each presented entry on its <code>type</code>, and validate and
+verify it under that type's rules (<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>).<a href="#section-4.5-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.5-2.7">
             <p id="section-4.5-2.7.1">Apply admission policy and derive the Authority Set independently
@@ -3069,11 +3071,15 @@ type is refused at step 3, with <code>invalid_authorization_details</code>;<a hr
           <li class="normal" id="section-4.5-4.2">
             <p id="section-4.5-4.2.1">a proposed entry outside <code>target_resources</code> together with a
 presented evidence entry that fails verification is refused at
-step 3, with <code>invalid_request</code>; and<a href="#section-4.5-4.2.1" class="pilcrow">¶</a></p>
+step 3, with <code>invalid_request</code>;<a href="#section-4.5-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.5-4.3">
             <p id="section-4.5-4.3.1">an <code>intent</code> object that fails validation together with a malformed
-proposal is refused at step 2, with <code>invalid_request</code>.<a href="#section-4.5-4.3.1" class="pilcrow">¶</a></p>
+proposal is refused at step 2, with <code>invalid_request</code>; and<a href="#section-4.5-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.5-4.4">
+            <p id="section-4.5-4.4.1">a structurally invalid evidence entry together with a malformed
+proposal is refused at step 1, with <code>invalid_request</code>.<a href="#section-4.5-4.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-4.5-5">The material verified provenance of step 8 is part of the approval
@@ -3993,8 +3999,8 @@ action.<a href="#section-6.9-5" class="pilcrow">¶</a></p>
         <li class="normal" id="section-7-2.2">
           <p id="section-7-2.2.1"><code>terminated</code>: a terminal state; the Mission has ended. Its
 <code>termination</code> member (<a href="#termination" class="auto internal xref">Section 7.1</a>) gives the reason: <code>revoked</code>
-when the Subject, Approver, or policy terminated it, or <code>expired</code> when
-its <code>expires_at</code> passed.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+when it was revoked (<a href="#revocation" class="auto internal xref">Section 7.2</a>), or <code>expired</code> when its
+<code>expires_at</code> passed.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-3">The transitions are:<a href="#section-7-3" class="pilcrow">¶</a></p>
@@ -4135,11 +4141,15 @@ before reading it this way.<a href="#section-7.1-8" class="pilcrow">¶</a></p>
         <h3 id="name-revocation">
 <a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-revocation" class="section-name selfRef">Revocation</a>
         </h3>
-<p id="section-7.2-1">A Mission is revoked when the AS receives an authorized revocation
-for it. A deployment <span class="bcp14">MUST</span> provide an authenticated means for the
-Subject, the Approver, or an administrator to revoke a Mission by
-<code>mission_id</code>, independent of possession of any token (so a Mission
-can be stopped even when no refresh token is held).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-1">A Mission is revoked when the AS receives a revocation for it from a
+party the deployment's policy authorizes to revoke it, or when that
+policy itself terminates the Mission; either way, its termination
+reason is <code>revoked</code>. The Subject, the Approver, and an administrator
+are parties that policy can authorize; none is authorized by its role
+alone. A deployment <span class="bcp14">MUST</span> provide an authenticated means, independent
+of possession of any token, by which a party its policy authorizes
+revokes a Mission by <code>mission_id</code> (so a Mission can be stopped even
+when no refresh token is held).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 <p id="section-7.2-2">The wire shape of that operation is out of scope for this document. A
 deployment-defined authenticated surface satisfies this requirement;
 Mission Status (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>)
@@ -4301,8 +4311,12 @@ returns only an access token establishes no new grant lineage:
 ordinary in-Mission delegation (<a href="#delegation" class="auto internal xref">Section 12</a>) and self-exchange
 down-scoping (<a href="#self-exchange" class="auto internal xref">Section 12.4</a>) both work this way, and the issued
 token is a derived token (<a href="#mission-claim" class="auto internal xref">Section 8.8</a>) whose <code>mission</code> claim
-identifies the one Mission its <code>subject_token</code> resolved to. A
-Token Exchange that instead establishes a redeemable grant
+identifies the one Mission its <code>subject_token</code> resolved to. Such an
+exchange leaves the existing grant provenance in place: the issued
+token rests on the grant lineage its <code>subject_token</code> was issued
+under, and a later redemption of a designation derived from it
+validates that lineage's state (<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>). A Token
+Exchange that instead establishes a redeemable grant
 lineage, such as the continuation profile's
 delegation-family-creating exchange
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>), creates a
@@ -4699,6 +4713,15 @@ the approved Mission. The cross-domain companion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) specifies how
 this bound extends transitively to tokens minted in another trust
 domain.<a href="#section-8.6-4" class="pilcrow">¶</a></p>
+<p id="section-8.6-5">Within that bound, a derived token's lifetime is the AS's policy,
+which <a href="#issuance-gating" class="auto internal xref">Section 8.2</a> recommends keeping short. Token Exchange
+does not tightly couple an issued token's lifetime to its
+<code>subject_token</code>'s (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.1" class="relref">Section 2.1</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>): a designation's
+expiry (<a href="#designation" class="auto internal xref">Section 12.1</a>) bounds when it can be redeemed, not the
+lifetime of the delegated token issued from it, which can outlive
+both the designation and the credential the designation was derived
+from. Revoking the grant state backing that credential still refuses
+every later redemption (<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>).<a href="#section-8.6-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="scope-projection">
@@ -5400,7 +5423,7 @@ exchange rows of the third table.<a href="#section-10-3" class="pilcrow">¶</a><
         </thead>
         <tbody>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value) (<a href="#submission-via-par" class="auto internal xref">Section 4.2</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value), including a structurally invalid evidence entry (<a href="#submission-via-par" class="auto internal xref">Section 4.2</a>, <a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>). Detail: safe <code>error_description</code>
 </td>
@@ -5981,7 +6004,9 @@ presented token or the Mission's <code>expires_at</code>.<a href="#section-12.1-
         </ul>
 <p id="section-12.1-4">A designation names a delegate and adds none. Whether one may be
 redeemed more than once within its lifetime is the AS's policy; each
-redemption is a delegated exchange of its own (<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>).<a href="#section-12.1-4" class="pilcrow">¶</a></p>
+redemption is a delegated exchange of its own (<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>).
+Its expiry bounds when it can be redeemed, not the lifetime of a
+delegated token issued from it (<a href="#token-authentication-lifetime" class="auto internal xref">Section 8.6</a>).<a href="#section-12.1-4" class="pilcrow">¶</a></p>
 <p id="section-12.1-5">A designation authorizes no resource access. A designated client's
 identifier <span class="bcp14">MUST NOT</span> be an audience that any resource server accepts
 for this AS's access tokens, throughout the designation's lifetime.
@@ -6069,10 +6094,15 @@ key.<a href="#section-12.2-2.8.1" class="pilcrow">¶</a></p>
 derivation, refused unless the Mission is <code>active</code>
 (<a href="#issuance-gating" class="auto internal xref">Section 8.2</a>). The AS <span class="bcp14">MUST</span> evaluate every redemption of a
 designation afresh, as a derivation of its own: the credential the
-designation was derived from, and that credential's grant, are
-still valid; the Mission is <code>active</code>; and the delegation policy
-(<a href="#delegation-constraints" class="auto internal xref">Section 12.5</a>) and the Mission's current authority
-admit the result. An earlier redemption establishes none of these.<a href="#section-12.2-2.9.1" class="pilcrow">¶</a></p>
+designation was derived from, and all applicable grant state
+backing that credential, are still valid; the Mission is <code>active</code>;
+and the delegation policy (<a href="#delegation-constraints" class="auto internal xref">Section 12.5</a>) and the
+Mission's current authority admit the result. An earlier redemption
+establishes none of these. The backing grant state includes the
+grant lineage that credential was issued under, kept through any
+exchange that established no new grant lineage
+(<a href="#grant-binding-related" class="auto internal xref">Section 8.1.2</a>); the Mission's <code>active</code> state never
+substitutes for it.<a href="#section-12.2-2.9.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-12.2-3">The <code>act</code> chain nests (<code>act.act</code>) for as long as, and only while,
@@ -7687,9 +7717,10 @@ reference token under the introspected consumption mode
 </li>
         </ul>
 <p id="section-19.1-4">An AS can conform as a Mission Issuer without supporting any Intent
-Submission Evidence type. Such an AS refuses every presented entry as an
-unsupported type under the dispatch and refusal rules
-(<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>), with the
+Submission Evidence type. Such an AS refuses every presented entry
+under the dispatch and refusal rules (<a href="#intent-submission-evidence" class="auto internal xref">Section 4.4</a>):
+a structurally invalid entry with the <code>invalid_request</code> error code, and
+any other entry, as an unsupported type, with the
 <code>invalid_mission_intent_evidence</code> error code. It need not implement the
 evidence framework of
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span> for this
@@ -8927,7 +8958,7 @@ registration.<a href="#section-23.8-6.4.1" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>revoked</code>
 </td>
-              <td class="text-left" rowspan="1" colspan="1">The Subject, Approver, or policy terminated the Mission.</td>
+              <td class="text-left" rowspan="1" colspan="1">An authorized party revoked the Mission, or the deployment's policy terminated it (<a href="#revocation" class="auto internal xref">Section 7.2</a>).</td>
               <td class="text-left" rowspan="1" colspan="1">none</td>
               <td class="text-left" rowspan="1" colspan="1">IETF</td>
               <td class="text-left" rowspan="1" colspan="1">this document, <a href="#termination" class="auto internal xref">Section 7.1</a>

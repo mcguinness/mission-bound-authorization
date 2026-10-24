@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            23 October 2026
-Expires: 26 April 2027
+Intended status: Experimental                            24 October 2026
+Expires: 27 April 2027
 
 
      Mission-Bound Authorization for User-Managed Access (UMA) 2.0
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 
@@ -535,12 +535,12 @@ Table of Contents
    Mission (Section 9.1).  This binding adds to UMA's model:
 
    *  *Revocation.* The authorization server MUST provide an
-      authenticated means for the Subject, the Approver, or an
-      administrator to revoke a Mission by mission_id, independent of
-      any token, per the issuance profile.  Because resource servers
-      introspect RPTs per use ([UMA-FEDAUTHZ]), revocation takes effect
-      at the next introspection with no further plumbing; a deployment
-      that validates RPTs without introspection needs the state surfaces
+      authenticated means for a party the deployment's policy authorizes
+      to revoke a Mission by mission_id, independent of any token, per
+      the issuance profile.  Because resource servers introspect RPTs
+      per use ([UMA-FEDAUTHZ]), revocation takes effect at the next
+      introspection with no further plumbing; a deployment that
+      validates RPTs without introspection needs the state surfaces
       below.
 
    *  *Expiry.* When the record's expires_at passes, the Mission is
@@ -829,9 +829,9 @@ Table of Contents
 
    6.  *Governance gate*: only the issuance profile's active state is
        active.  Every other or unrecognized value fails closed at the
-       token endpoint and introspection projection.  The Subject,
-       Approver, and administrator have an authenticated revocation path
-       (Section 8, Section 8.1).
+       token endpoint and introspection projection.  A party the
+       deployment's policy authorizes has an authenticated revocation
+       path (Section 8, Section 8.1).
 
    7.  *Reliance bound*: RPT issuance and upgrade establish active at
        the token endpoint.  An opaque RPT is bounded by authenticated
