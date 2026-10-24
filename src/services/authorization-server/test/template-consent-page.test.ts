@@ -310,7 +310,7 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     expect((await decide(id, "approve", loggedIn(id))).status).toBe(201);
   });
 
-  it("refuses at the proposal: a named approver, approval event or issuer, a missing service token, a malformed body, and a Dispatch Policy this issuer does not hold", async () => {
+  it("refuses at the proposal: a named approver, approval event or issuer, a missing service token, a malformed body, a ceiling entry outside the action grammar or the absolute-URI rule, and a Dispatch Policy this issuer does not hold", async () => {
     for (const member of ["approver", "approval_event_id", "issuer"]) {
       const res = await propose({ ...proposalBody(), [member]: "x" });
       expect(res.status).toBe(400);
@@ -323,6 +323,20 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     expect(unheld.status).toBe(400);
     expect(((await unheld.json()) as { error_description: string }).error_description).toBe(
       "dispatch_policy not-held version 1 is not a Dispatch Policy this issuer holds",
+    );
+    // @spec resource-access#entry-validation (#1625): a ceiling entry outside
+    // the per-entry rules proposal intake applies is refused at the proposal,
+    // before any consent page renders it.
+    const ceiling = (proposalBody().ceiling as Record<string, unknown>[]).map((e) => ({ ...e }));
+    const badAction = await propose({ ...proposalBody(), ceiling: [{ ...ceiling[0], actions: ["*"] }, ...ceiling.slice(1)] });
+    expect(badAction.status).toBe(400);
+    expect(((await badAction.json()) as { error_description: string }).error_description).toBe(
+      'ceiling[0] has action "*", which is neither an action identifier nor an action family',
+    );
+    const badResource = await propose({ ...proposalBody(), ceiling: [{ ...ceiling[0], resource: "https:///orders" }, ...ceiling.slice(1)] });
+    expect(badResource.status).toBe(400);
+    expect(((await badResource.json()) as { error_description: string }).error_description).toBe(
+      'ceiling[0] has resource "https:///orders", which is not an RFC 3986 absolute URI',
     );
     expect((await page("tcon_unknown")).status).toBe(404);
     expect((await decide("tcon_unknown", "approve", loggedIn("tcon_unknown"))).status).toBe(404);
