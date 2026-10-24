@@ -573,7 +573,8 @@ describe("claim applicability: covered, uncovered and non-claiming (@spec runtim
       },
     }));
     const refused = await h.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN);
-    expect(refused).toEqual({ ok: false, refusal_reason: "unrecognized_condition" });
+    expect(refused).toEqual({ ok: false, refusal_reason: "condition_unrecognized" });
+    expect(refused).not.toHaveProperty("result");
     expect(executions(h).map((r) => r.error)).toEqual(["condition_unrecognized"]);
   });
 

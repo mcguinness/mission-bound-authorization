@@ -617,10 +617,11 @@ const RECOGNIZED_CONDITIONS: ReadonlySet<string> = new Set([
   "action_phase",
   // @spec runtime#evaluation-context-binding, authzen#response-context
   // `evaluation_context_digest` (#773): this PEP recognizes and enforces the
-  // context condition (the `evaluation_context` row of PERMIT_USE_CHECKS) on a
-  // crossing it captured a context for. "A condition on an operation outside
-  // the declared binding is invalid there": on any other crossing the member
-  // makes the permit unusable, as an unrecognized one does.
+  // context condition (the `evaluation_context` row of PERMIT_USE_CHECKS).
+  // "A condition on an operation outside the declared binding is invalid
+  // there": that row refuses it on a crossing that captured no context, after
+  // the phase row, so a permit carried to another crossing is still reported
+  // as the phase failure it is.
   "evaluation_context_digest",
 ]);
 
@@ -3089,13 +3090,8 @@ export class Pep {
     // ignore.
     const conditions = decision.context.conditions as Record<string, unknown> | undefined;
     const recognized = this.recognizedConditions();
-    // @spec runtime#evaluation-context-binding (#773): "A condition on an
-    // operation outside the declared binding is invalid there", so the
-    // context condition is recognized only on a crossing that captured one.
     const unrecognizedConditions = conditions
-      ? Object.keys(conditions).filter(
-          (k) => !recognized.has(k) || (k === "evaluation_context_digest" && attempt.evaluationContext === undefined),
-        )
+      ? Object.keys(conditions).filter((k) => !recognized.has(k))
       : [];
     if (unrecognizedConditions.length > 0) {
       // Post-permit: a permit was obtained and is unusable, so this is a
