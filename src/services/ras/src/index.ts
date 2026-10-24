@@ -10,6 +10,8 @@
 
 import {
   type AuthorityEntry,
+  compareInstants,
+  instantFromMs,
   isAuthorityEntry,
   narrowToCeiling,
   type EntitlementAuthorityEntry,
@@ -230,14 +232,16 @@ export class ResourceAuthorizationServer {
     // a continuation ID-JAG included (continuation#transport-ica, #1589), carries
     // the Mission's `expires_at` as an RFC 3339 date-time. An absent or malformed
     // value, or one already elapsed, refuses invalid_grant before the one-time
-    // jti is consumed. Elapsed compares whole seconds, as `exp` does. The local
-    // token preserves the whole claim, this value included.
+    // jti is consumed. Elapsed compares the exact instants, fractional seconds
+    // included, so a value still ahead within the current second redeems (JWT
+    // NumericDates may be fractional, RFC 7519 Section 2). The local token
+    // preserves the whole claim, this value included.
     const now = this.now();
     const missionExpiry = parseRfc3339Instant(mission.expires_at);
     if (!missionExpiry) {
       throw new RasError("invalid_grant", "grant mission claim missing or malformed expires_at");
     }
-    if (missionExpiry.seconds <= BigInt(Math.floor(now.getTime() / 1000))) {
+    if (compareInstants(missionExpiry, instantFromMs(now.getTime())) <= 0) {
       throw new RasError("invalid_grant", "grant mission claim expires_at has elapsed");
     }
     const originSubject = mission.subject;

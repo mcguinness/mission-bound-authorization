@@ -790,6 +790,34 @@ describe("RAS grant carries the Mission's expiry (@spec cross-domain#validation-
     expect(claimsOf(access_token).mission.expires_at).toBe(new Date(fixedNowS * 1000).toISOString());
   });
 
+  // T is a whole second a minute ahead of the real clock, so the signature
+  // check's own exp test (real clock) never interferes; only the RAS clock moves.
+  const aheadSecond = () => Math.floor(Date.now() / 1000) + 60;
+
+  it("redeems a grant whose mission.expires_at is still ahead within the current second: now T+0.100, grant exp T+0.800, expires_at T+0.900", async () => {
+    const T = aheadSecond();
+    const server = await ras({ now: () => new Date(T * 1000 + 100) });
+    const expiresAt = new Date(T * 1000 + 900).toISOString();
+    const grant = await mintGrant({ exp: T + 0.8, missionExpiresAt: expiresAt });
+    const { access_token } = await server.redeem(grant, clientJkt);
+    const local = claimsOf(access_token);
+    expect(local.mission.expires_at).toBe(expiresAt);
+    expect(local.exp).toBeLessThanOrEqual(T + 0.8);
+  });
+
+  it("refuses a mission.expires_at reached or passed within the current second, and the same grant redeems a millisecond before it", async () => {
+    const T = aheadSecond();
+    let nowMs = T * 1000 + 900;
+    const server = await ras({ now: () => new Date(nowMs) });
+    const grant = await mintGrant({ exp: T + 300, missionExpiresAt: new Date(T * 1000 + 900).toISOString() });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject(ELAPSED);
+    nowMs = T * 1000 + 950;
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject(ELAPSED);
+    nowMs = T * 1000 + 899;
+    const { access_token } = await server.redeem(grant, clientJkt);
+    expect(claimsOf(access_token).mission.expires_at).toBe(new Date(T * 1000 + 900).toISOString());
+  });
+
   it("preserves the Mission's expires_at unchanged on the local token it mints from a base grant, never substituting the grant's exp", async () => {
     const server = await ras();
     // A fraction and an offset, so carriage is shown verbatim, not normalized.
