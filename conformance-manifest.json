@@ -39,8 +39,8 @@
     "content_sha256": "3f81b0a0c13c1f26caafd69cd3f5d2ca6ca6616205c03fd458e99f6da5909d8d"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "1a34e033976b0007776170a413b11008427948d8",
-    "content_sha256": "52d74414268ec7046661ebb623d5ede427f48e6f314a9f99605136ace48be031"
+    "revision": "0411ee0fceb158da5e14f427dc8581deb9c14ba3",
+    "content_sha256": "d1fffe913dbd9ef23e768ac7b28a1575af348321f73965376dd9635be4f1fbf8"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "1199e650a853bb0006c2384c589157f263547a7e",
