@@ -11,8 +11,8 @@
     "content_sha256": "913731cbed17daa0f4c243f23ee1c072c5f162dec33655cb60285db7925b10ef"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "24fc25962caf421d01e5df49f2916f2b7270e2b7",
-    "content_sha256": "45ee6a69279bb2bd7e6eee690ecc5edca3fc9d8fbb6742b18db49fb6b2d3478b"
+    "revision": "6ac103f49e64c76e64122b32cc4f2903ebdf7f31",
+    "content_sha256": "94dfbb581bb1bfe68c6e1c1b1bda464310c85810d66a69cffb0a17c6540f3393"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -30787,7 +30787,7 @@
    "id": "authzen.context-audience-freshness.audience-required",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-audience-freshness",
-   "text": "REQUIRED. A string. Carried at `resource.properties.audience` ({{pdp-request}}). The boundary identifier of the enforcement boundary the PEP established for the request, byte for byte",
+   "text": "REQUIRED. A string. Carried at `resource.properties.audience` ({{envelope-mapping}}). The boundary identifier of the enforcement boundary the PEP established for the request, byte for byte",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -31235,7 +31235,7 @@
    "id": "authzen.extension-naming.collision-resistant-or-coordinated",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "runtime-denial-classification",
-   "text": "an extension value MUST be either a collision-resistant name (following the Collision-Resistant Name guidance of {{RFC7519}} Section 4.2) or a name coordinated within this document family, so values cannot collide.",
+   "text": "an extension value MUST be either a collision-resistant name (following the Collision-Resistant Name guidance of {{Section 4.2 of RFC7519}}) or a name coordinated within this document family, so values cannot collide.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -31258,7 +31258,7 @@
    "id": "authzen.runtime-denial-classification.unrecognized-value-treated-as-deny",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "runtime-denial-classification",
-   "text": "A consumer of a denial reason, wherever it is carried (the Decision Evidence `denial_reason`, {{I-D.draft-mcguinness-mission-runtime-evidence}}, or the response `context.reason`, {{response-context}}), MUST treat an unrecognized value as a deny and MUST NOT attach any other semantics to it, mirroring the issuance profile's open lifecycle state space",
+   "text": "A consumer of a denial reason, wherever it is carried (the Decision Evidence `denial_reason`, {{I-D.draft-mcguinness-mission-runtime-evidence}}, or the response `context.reason`, {{response-context}}), MUST treat an unrecognized value as a deny and MUST NOT attach any other semantics to it, mirroring the OAuth binding's open lifecycle state space",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -31302,7 +31302,7 @@
    "id": "authzen.runtime-denial-classification.terminal-refusal-carries-next-action-none",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "runtime-denial-classification",
-   "text": "A terminal policy refusal SHOULD carry `next_action: none`, except a denial carrying the step-up obligation, which carries neither `next_action` value per above",
+   "text": "A terminal policy refusal SHOULD carry `next_action: none`, except a denial carrying the step-up obligation, which carries no `next_action`",
    "role": "PDP",
    "strength": "SHOULD",
    "applicability": {
@@ -31585,7 +31585,7 @@
    "id": "authzen.response-context.valid-until-required-and-bounded",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "response-context",
-   "text": "`valid_until` MUST NOT exceed:",
+   "text": "`valid_until` MUST NOT exceed the earliest of:",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -32894,7 +32894,7 @@
    "id": "authzen.decision-id-propagation.no-treat-as-permit",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "decision-id-propagation",
-   "text": "a resource server MUST NOT treat it as a permit; the permit-binding rules above govern.",
+   "text": "a resource server MUST NOT treat it as a permit; the permit-binding rules ({{permit-binding-split}}) govern.",
    "role": "RS",
    "strength": "MUST NOT",
    "applicability": {
@@ -32916,7 +32916,7 @@
    "id": "authzen.execution-evidence.exactly-one-per-permit",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "execution-evidence-requirement",
-   "text": "independent of anything the PDP returns, a PEP that claims Runtime Evidence MUST emit one Execution Evidence Object ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for the final disposition of every consequential permit: `completed`, `failed`, or `suppressed` before release.",
+   "text": "Independent of anything the PDP returns, a PEP that claims Runtime Evidence MUST emit one Execution Evidence Object ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for the final disposition of every consequential permit: `completed`, `failed`, or `suppressed` before release.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -33116,7 +33116,7 @@
    "id": "authzen.security.access-request-service-must-be-trusted",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "security-considerations",
-   "text": "A compromised or misconfigured Access Request Service can auto-approve escalations, so it MUST be trusted, authenticated, and access-controlled like the PDP, and its auto-approval is bounded as above.",
+   "text": "A compromised or misconfigured Access Request Service can auto-approve escalations, so it MUST be trusted, authenticated, and access-controlled like the PDP, and its auto-approval is bounded as {{requestable-denials}} specifies.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -33181,7 +33181,7 @@
   {
    "id": "authzen.iana.pdp-must-advertise-full-urn",
    "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "iana",
+   "anchor": "capability-discovery",
    "text": "A PDP conforming to the Decision Base MUST advertise the full URN `urn:ietf:params:authzen:mission-runtime`, never the bare capability name.",
    "role": "PDP",
    "strength": "MUST",
@@ -33204,7 +33204,7 @@
   {
    "id": "authzen.iana.pdp-must-advertise-feature-profile-urn",
    "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "iana",
+   "anchor": "capability-discovery",
    "text": "A PDP that additionally conforms to a feature profile MUST advertise that profile's own capability URN as well; a PDP MUST NOT advertise a feature-profile URN it does not conform to.",
    "role": "PDP",
    "strength": "MUST",
@@ -33226,7 +33226,7 @@
   {
    "id": "authzen.iana.pep-no-reliance-on-unadvertised-profile",
    "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "iana",
+   "anchor": "capability-discovery",
    "text": "A PEP MUST NOT rely on a feature profile whose URN the PDP's advertised `capabilities` does not include: an unadvertised profile fails closed exactly as an absent one does elsewhere in this document ({{profiles-and-capabilities}}).",
    "role": "PEP",
    "strength": "MUST",
@@ -33248,7 +33248,7 @@
   {
    "id": "authzen.iana.no-requester-selected-profile",
    "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "iana",
+   "anchor": "capability-discovery",
    "text": "Capability advertisement is PDP-declared, never requester-selected: nothing in a PEP's request selects, enables, or negotiates a feature profile, and a requester cannot omit a required profile to downgrade enforcement ({{profiles-and-capabilities}}).",
    "role": "PDP",
    "strength": "MUST",
