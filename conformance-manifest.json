@@ -38346,7 +38346,7 @@
    "id": "evidence.execution.obligation-outcomes-schema",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
-   "text": "REQUIRED when the linked Decision Evidence carried obligations and a permit disposition exists. One object per attached obligation, with `id` (REQUIRED, a string, the obligation's identifier as returned by the decision), `type` (REQUIRED, a string, the obligation type), `outcome` (REQUIRED, a string, one of `fulfilled`, `failed`, or `unsupported`)",
+   "text": "REQUIRED when the linked Decision Evidence carried obligations and a permit disposition exists. One object per attached obligation, in the order the decision returned them, with `id` (a string, the obligation's identifier as returned by the decision), `type` (a string, the obligation type), `outcome` (REQUIRED, a string, one of `fulfilled`, `failed`, or `unsupported`)",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -38358,7 +38358,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "obligation_outcomes is REQUIRED whenever the linked Decision Evidence carried obligations and a permit disposition exists, with one object per attached obligation carrying id, type, and a fulfilled/failed/unsupported outcome"
+    "normative": "obligation_outcomes is REQUIRED whenever the linked Decision Evidence carried obligations and a permit disposition exists, with one object per attached obligation, in the order the decision returned them, each carrying a fulfilled/failed/unsupported outcome"
    },
    "level": "unit",
    "coverage": "partial",
@@ -40442,7 +40442,7 @@
    "id": "evidence.execution.effective-digest-required-when-authorized-present",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
-   "text": "CONDITIONAL. A string. REQUIRED whenever `authorized_parameter_digest` is present.",
+   "text": "CONDITIONAL. A string. REQUIRED whenever `authorized_parameter_digest` is present, except on a `suppressed` record whose executing PEP could not establish the effective parameters.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -40454,7 +40454,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "effective_parameter_digest is REQUIRED whenever authorized_parameter_digest is present, recording the digest over the normalized parameters actually attempted or executed so the two can be compared"
+    "normative": "effective_parameter_digest is REQUIRED whenever authorized_parameter_digest is present, recording the digest over the normalized parameters actually attempted or executed so the two can be compared; the one exception is a suppressed record whose executing PEP could not establish the effective parameters, so a completed or failed record carrying authorized_parameter_digest always carries it too"
    },
    "level": "unit",
    "coverage": "todo",
