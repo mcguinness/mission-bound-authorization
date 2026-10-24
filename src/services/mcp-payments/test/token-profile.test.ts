@@ -28,6 +28,8 @@ import {
   Pep,
   REFUSAL_RECORD_MEDIA_TYPE,
   type RefusalRecord,
+  TOOL_ACTIONS,
+  type ActionMapping,
   type TokenFacts,
   verifyEvidenceEnvelope,
 } from "../src/index.js";
@@ -774,6 +776,101 @@ describe("a Mission-bound credential whose Mission the loader does not hold is r
       }
     } finally {
       await channel.close();
+    }
+  });
+});
+
+describe("a compound-action phase the PEP cannot establish is refused phase_unavailable at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1629)", () => {
+  const EXECUTE = entry(["payments:payment.execute"], { vendors: ["acme"] });
+
+  /** The resource's HTTP MCP endpoint under DPoP, whose Operation Profile entry for hold_transfer is `holdTransfer`. */
+  async function endpoint(holdTransfer: ActionMapping) {
+    const view: MissionView = { ...VIEW, authority_set: [EXECUTE as MissionView["authority_set"][number]] };
+    const policy = resourcePolicyFixture();
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: policy });
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    const store = payments();
+    const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
+    const decided: unknown[] = [];
+    const loadView = (ref: { id: string; issuer: string }) =>
+      ref.id === view.id && ref.issuer === view.issuer
+        ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+        : undefined;
+    const pep = new Pep({
+      decide: (req, opts) => {
+        decided.push(req);
+        return keys.decide(req, opts);
+      },
+      payments: store,
+      evidence,
+      fga: allowingFga,
+      modelId: "m",
+      loadView,
+      instanceEpoch: "epoch-1629",
+      operationProfile: () => ({ ...TOOL_ACTIONS, hold_transfer: holdTransfer }),
+    });
+    const routed = new McpPaymentsServer({
+      writeReservations,
+      pep,
+      payments: store,
+      loadView,
+      jwks: { keys: [asJwk as never] },
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
+      issuer: ISSUER,
+    });
+    const channel = await createHttpMcpChannel(routed);
+    const session = await createHttpMediatedClient(channel.url, await mint({ authorization_details: [EXECUTE] }), holder);
+    return {
+      view,
+      policy,
+      resolver: keys.resolver,
+      evidence,
+      decided,
+      writeReservations,
+      client: session.client,
+      close: async () => {
+        await session.close();
+        await channel.close();
+      },
+    };
+  }
+
+  it("refuses hold_transfer whose Operation Profile entry places no phase, or one outside the closed set, over HTTP with DPoP: no PDP request, no policy query, no Decision Evidence, no effect and one verifiable signed phase_unavailable refusal; the shipped entry reaches the PDP at prepare and permits", async () => {
+    const base = TOOL_ACTIONS.hold_transfer as ActionMapping;
+    const { phase: _dropped, ...phaseless } = base;
+    for (const [label, holdTransfer] of [
+      ["no phase", phaseless as ActionMapping],
+      ["out-of-set phase", { ...base, phase: "settle" } as unknown as ActionMapping],
+    ] as const) {
+      const x = await endpoint(holdTransfer);
+      try {
+        const refused = await x.client.callTool("hold_transfer", { invoice_id: "inv-1" });
+        expect(refused, label).toEqual({ ok: false, refusal_reason: "phase_unavailable" });
+        expect(x.decided, label).toHaveLength(0);
+        expect(x.policy.queries, label).toEqual([]);
+        expect(x.writeReservations.consumedPermits(), label).toHaveLength(0);
+        expect(x.evidence.all().map((e) => e.kind), label).toEqual(["refusal"]);
+        const refusal = x.evidence.all()[0] as RefusalRecord;
+        expect(refusal.content, label).toMatchObject({
+          denial_reason: "phase_unavailable",
+          emitter: { role: "pep" },
+          action: { name: "payments:payment.execute" },
+          mission: { id: x.view.id, issuer: x.view.issuer },
+        });
+        expect(await verifyEvidenceEnvelope(refusal.content, REFUSAL_RECORD_MEDIA_TYPE, x.resolver), label).toEqual({ valid: true });
+      } finally {
+        await x.close();
+      }
+    }
+    const shipped = await endpoint(base);
+    try {
+      const permitted = await shipped.client.callTool("hold_transfer", { invoice_id: "inv-1" });
+      expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+      expect(shipped.decided).toHaveLength(1);
+      expect((shipped.decided[0] as { context: { action_phase?: string } }).context.action_phase).toBe("prepare");
+      expect(shipped.evidence.all().filter((e) => e.kind === "refusal")).toHaveLength(0);
+    } finally {
+      await shipped.close();
     }
   });
 });

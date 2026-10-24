@@ -41,6 +41,8 @@ const REFUSAL_RECORD_DIAGNOSTICS = [
   "unresolvable_recipients",
   // #853: the credential was validated against another boundary or statement version.
   "credential_boundary_changed",
+  // #1629: the operation is a phase of a compound action and its phase is not establishable.
+  "phase_unavailable",
 ];
 
 const refusalInput = (denial_reason: string) => ({
@@ -105,7 +107,7 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
   });
 
   it("operation_target_invalid is the PDP's alone, and a PEP-side store never signs it (#1276)", async () => {
-    expect(REFUSAL_DENIAL_REASONS.pdp).toEqual(["mission_context_missing", "operation_target_invalid"]);
+    expect(REFUSAL_DENIAL_REASONS.pdp).toEqual(["mission_context_missing", "operation_target_invalid", "phase_invalid"]);
     expect(isRefusalDenialReason("pdp", "operation_target_invalid")).toBe(true);
     expect(isRefusalDenialReason("pep", "operation_target_invalid")).toBe(false);
     const keys = createEphemeralEvidenceKeys();
@@ -113,5 +115,19 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
     await expect(evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput("operation_target_invalid"))).rejects.toThrow(/not in the closed set/);
     await expect(evidence.recordRefusal(CANONICAL_RESOURCE, "pdp", refusalInput("operation_target_invalid"))).rejects.toThrow(/no signer configured for emitter role "pdp"/);
     expect(evidence.all()).toHaveLength(0);
+  });
+
+  it("phase_invalid is the PDP's alone and phase_unavailable the PEP's alone: a PEP-side store signs phase_unavailable and never phase_invalid (#1629)", async () => {
+    expect(isRefusalDenialReason("pdp", "phase_invalid")).toBe(true);
+    expect(isRefusalDenialReason("pep", "phase_invalid")).toBe(false);
+    expect(isRefusalDenialReason("pep", "phase_unavailable")).toBe(true);
+    expect(isRefusalDenialReason("pdp", "phase_unavailable")).toBe(false);
+    const keys = createEphemeralEvidenceKeys();
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    await expect(evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput("phase_invalid"))).rejects.toThrow(/not in the closed set/);
+    expect(evidence.all()).toHaveLength(0);
+    const record = await evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput("phase_unavailable"));
+    expect(record.content.denial_reason).toBe("phase_unavailable");
+    expect(evidence.all()).toHaveLength(1);
   });
 });
