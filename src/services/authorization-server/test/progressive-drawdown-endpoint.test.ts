@@ -2575,6 +2575,30 @@ describe("capability bindings on the expansion deferral page (@spec capability-b
     expect(committed.map(machine).sort(byAction)).toEqual(items.map(machine).sort(byAction));
   });
 
+  it("a retained action's tool changed since the predecessor's approval is shown as kept, and the expansion still completes with the binding approved there", async () => {
+    const { root, code } = await pending();
+    const inherited = (as.kernel.get(root.missionId)?.authority_set ?? [])
+      .flatMap((e) => e.capability_sources ?? [])
+      .find((b) => b.action === "payments:invoice.read");
+    await withTool("get_invoice", (t) => {
+      t.description = "Read one invoice, edited after the predecessor's approval";
+    }, async () => {
+      const bob = browserApprovalHeaders(store(), code, BOB, "");
+      const shown = await page(code, bob.cookie as string);
+      expect(shown.status, shown.html).toBe(200);
+      const read = bindingItems(shown.html).find((i) => i.action === "payments:invoice.read") as { body: string; source_digest: string };
+      expect(read.body).toContain("The trusted catalog no longer serves that definition, so a call to the changed tool is refused.");
+      expect(read.source_digest).toBe(inherited?.source_digest);
+      expect((await decide(code, bob, { decision: "approve", render_revision: shown.revision })).status).toBe(200);
+      const polled = await poll(code);
+      expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+      const committed = (as.kernel.get(polled.body.mission_id as string)?.authority_set ?? [])
+        .flatMap((e) => e.capability_sources ?? [])
+        .find((b) => b.action === "payments:invoice.read");
+      expect(committed?.source_digest).toBe(inherited?.source_digest);
+    });
+  });
+
   it("a covered definition change to an added action's tool between rendering and decision approves nothing", async () => {
     const { code } = await pending();
     const bob = browserApprovalHeaders(store(), code, BOB, "");
