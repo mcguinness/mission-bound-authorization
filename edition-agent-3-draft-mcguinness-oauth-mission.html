@@ -3382,46 +3382,66 @@ type (<a href="#scope-projection" class="auto internal xref">Section 8.7</a>).<a
 <p id="section-5.5.1-3">The AS <span class="bcp14">MUST NOT</span> narrow, delegate, or project to <code>scope</code> an entry of a
 type for which it has not declared the corresponding capability; on an
 undeclared capability the entry is carried as approved.<a href="#section-5.5.1-3" class="pilcrow">¶</a></p>
-<p id="section-5.5.1-4">Issuing an entry to an audience other than its original approved
+<p id="section-5.5.1-4">The AS relates each entry to the audiences that consume it through a
+trusted entry-to-audience mapping, such as authenticated configuration
+or protected resource metadata (<span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>). An entry's original
+approved audience is the audience or audiences that mapping assigned
+the entry when the Mission was approved. An entry's <code>resource</code> value is
+not by itself an audience (<a href="#token-response" class="auto internal xref">Section 8.4</a>). The AS <span class="bcp14">MUST</span> retain that
+association with the Mission; a later change to the mapping does not
+redefine it.<a href="#section-5.5.1-4" class="pilcrow">¶</a></p>
+<p id="section-5.5.1-5">A Mission created from earlier authority, such as a Child Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), a successor
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>), or an instance of a
+standing consent (<a href="#standing-consent-bases" class="auto internal xref">Section 13</a>), does not reassign the
+original approved audience of an entry it inherits: the entry keeps that
+of the authority it derives from. Only a fresh approval of the entry, or
+a transformation under a declared capability, establishes a different
+one. Where the AS cannot establish an entry's original approved
+audience, the entry has none; the current mapping does not stand in for
+it.<a href="#section-5.5.1-5" class="pilcrow">¶</a></p>
+<p id="section-5.5.1-6">Issuing an entry to an audience other than its original approved
 audience, including audience projection to a Resource AS
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), counts as
 narrowing and needs <code>narrowing</code>, not <code>projection</code>. Without <code>narrowing</code>,
 the AS <span class="bcp14">MUST NOT</span> issue an entry to any audience other than its original
 approved audience, or, except as <code>scope</code> under a declared <code>projection</code>,
 in any form other than exactly as approved, since it cannot prove that a
-transformed copy is still a subset of what was approved.<a href="#section-5.5.1-4" class="pilcrow">¶</a></p>
-<p id="section-5.5.1-5">A type that declares <code>delegation</code> without <code>narrowing</code> is delegable only
+transformed copy is still a subset of what was approved. Without
+<code>narrowing</code>, a token for another audience does not carry the entry
+(<a href="#token-response" class="auto internal xref">Section 8.4</a>).<a href="#section-5.5.1-6" class="pilcrow">¶</a></p>
+<p id="section-5.5.1-7">A type that declares <code>delegation</code> without <code>narrowing</code> is delegable only
 unchanged: the AS <span class="bcp14">MUST NOT</span> include an entry of such a type in a
 delegated token unless it is equal (<a href="#subset" class="auto internal xref">Section 5.4</a>) to an entry of the
 presented delegating token, it keeps that entry's approved audience, and
 the type's delegation policy permits the delegate
 (<a href="#delegation-constraints" class="auto internal xref">Section 12.5</a>). The reference is the presented token, not
 the Mission Authority Set, so equality never restores an entry, or any
-part of one, that the presented token omits.<a href="#section-5.5.1-5" class="pilcrow">¶</a></p>
-<p id="section-5.5.1-6">The AS declares the capabilities through these carriers, in order of
-preference:<a href="#section-5.5.1-6" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-5.5.1-7">
-<li id="section-5.5.1-7.1">
-              <p id="section-5.5.1-7.1.1">a <code>mission_transformation_capabilities</code> member in the type's
+part of one, that the presented token omits.<a href="#section-5.5.1-7" class="pilcrow">¶</a></p>
+<p id="section-5.5.1-8">The AS declares the capabilities through these carriers, in order of
+preference:<a href="#section-5.5.1-8" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.5.1-9">
+<li id="section-5.5.1-9.1">
+              <p id="section-5.5.1-9.1.1">a <code>mission_transformation_capabilities</code> member in the type's
 entry in the <code>authorization_details_types_metadata_endpoint</code>
-response, where the AS advertises that endpoint (<a href="#discovery" class="auto internal xref">Section 17</a>);<a href="#section-5.5.1-7.1.1" class="pilcrow">¶</a></p>
+response, where the AS advertises that endpoint (<a href="#discovery" class="auto internal xref">Section 17</a>);<a href="#section-5.5.1-9.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li id="section-5.5.1-7.2">
-              <p id="section-5.5.1-7.2.1">an equivalently shaped member of its supported-type
-documentation; or<a href="#section-5.5.1-7.2.1" class="pilcrow">¶</a></p>
+            <li id="section-5.5.1-9.2">
+              <p id="section-5.5.1-9.2.1">an equivalently shaped member of its supported-type
+documentation; or<a href="#section-5.5.1-9.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li id="section-5.5.1-7.3">
-              <p id="section-5.5.1-7.3.1">deployment documentation naming the type as supported
-(<a href="#discovery" class="auto internal xref">Section 17</a>).<a href="#section-5.5.1-7.3.1" class="pilcrow">¶</a></p>
+            <li id="section-5.5.1-9.3">
+              <p id="section-5.5.1-9.3.1">deployment documentation naming the type as supported
+(<a href="#discovery" class="auto internal xref">Section 17</a>).<a href="#section-5.5.1-9.3.1" class="pilcrow">¶</a></p>
 </li>
           </ol>
-<p id="section-5.5.1-8">Deployment documentation is always a sufficient carrier; a
+<p id="section-5.5.1-10">Deployment documentation is always a sufficient carrier; a
 machine-readable carrier is additive. A
 <code>mission_transformation_capabilities</code> value is a JSON object with
 three <span class="bcp14">OPTIONAL</span> boolean members, <code>narrowing</code>, <code>delegation</code>, and
 <code>projection</code>; an absent member leaves that capability undeclared by
 this carrier, falling through to the next carrier in the order
-above.<a href="#section-5.5.1-8" class="pilcrow">¶</a></p>
+above.<a href="#section-5.5.1-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="policy-language-types">
@@ -4264,19 +4284,24 @@ grant the client presents:<a href="#section-8.1.1-4" class="pilcrow">¶</a></p>
               <p id="section-8.1.1-5.1.1">the authorization code at the token endpoint;<a href="#section-8.1.1-5.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-8.1.1-5.2">
-              <p id="section-8.1.1-5.2.1">the refresh token on refresh; or<a href="#section-8.1.1-5.2.1" class="pilcrow">¶</a></p>
+              <p id="section-8.1.1-5.2.1">the refresh token on refresh;<a href="#section-8.1.1-5.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-8.1.1-5.3">
               <p id="section-8.1.1-5.3.1">the Mission-bound <code>subject_token</code> on Token Exchange (the
-<code>actor_token</code> identifies the delegate, <a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>).<a href="#section-8.1.1-5.3.1" class="pilcrow">¶</a></p>
+<code>actor_token</code> identifies the delegate, <a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>); or<a href="#section-8.1.1-5.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-8.1.1-5.4">
+              <p id="section-8.1.1-5.4.1">a profile-defined grant, through the authenticated <code>mission</code>
+reference it carries, such as the Template profile's handoff grant
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>).<a href="#section-8.1.1-5.4.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 <p id="section-8.1.1-6">It then applies the gating of <a href="#issuance-gating" class="auto internal xref">Section 8.2</a>.<a href="#section-8.1.1-6" class="pilcrow">¶</a></p>
-<p id="section-8.1.1-7">A Mission <span class="bcp14">MAY</span> carry zero or more grant bindings. Beyond the
+<p id="section-8.1.1-7">A Mission <span class="bcp14">MAY</span> carry zero or more grant bindings. Beyond any
 authorization-code lineage established at approval, a refresh-token
 family a continuation transport establishes later (above) is a
-further binding, rooted in the Mission its own <code>subject_token</code>
-resolved to.<a href="#section-8.1.1-7" class="pilcrow">¶</a></p>
+further binding, or the Mission's first where it has none, rooted in
+the Mission its own <code>subject_token</code> resolved to.<a href="#section-8.1.1-7" class="pilcrow">¶</a></p>
 <p id="section-8.1.1-8">The AS <span class="bcp14">MUST</span> resolve a bound grant lineage to the same Mission on
 every derivation performed against it: the mapping is fixed for the
 lineage's lifetime and is never reassigned to a different Mission.
@@ -4309,19 +4334,33 @@ returns only an access token establishes no new grant lineage:
 ordinary in-Mission delegation (<a href="#delegation" class="auto internal xref">Section 12</a>) and self-exchange
 down-scoping (<a href="#self-exchange" class="auto internal xref">Section 12.4</a>) both work this way, and the issued
 token is a derived token (<a href="#mission-claim" class="auto internal xref">Section 8.8</a>) whose <code>mission</code> claim
-identifies the one Mission its <code>subject_token</code>'s binding resolved
-to. Such an exchange leaves the existing grant provenance in place:
-the issued token rests on the grant lineage its <code>subject_token</code> was
-issued under, and a later redemption of a designation derived from
-it validates that lineage's state (<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>). A Token
-Exchange that instead establishes reusable
-authorization state, such as the continuation profile's
+identifies the one Mission its <code>subject_token</code> resolved to. Where
+the <code>subject_token</code> was issued under a grant lineage, the issued
+token retains that grant provenance, and a later redemption of a
+designation derived from it validates all applicable backing-grant
+state (<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>). A Token
+Exchange that instead establishes a redeemable grant
+lineage, such as the continuation profile's
 delegation-family-creating exchange
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>), creates a
 new grant binding, rooted in that same Mission. Three Token
 Exchanges are covered by the two items below instead: cross-domain
 projection and child creation, which return a JWT authorization
-grant, and expansion, which creates a successor.<a href="#section-8.1.2-2.1.1" class="pilcrow">¶</a></p>
+grant, and expansion, which creates a successor. The Template
+profile's Dispatch Handoff
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>) returns a handoff
+grant that establishes no grant lineage; its redemption issues a
+derived token for the dispatched Mission, creating or extending no
+grant binding, and the later delegation-family exchange creates
+that Mission's first grant binding. In the continuation profile's
+Identity Continuation Transport
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>), the root and
+onward exchanges return ID-JAGs that identify the Mission, and the
+identity provider's hop record is continuation state, not a grant
+lineage. Redeeming such an ID-JAG at a Resource AS produces a local
+derived access token. A Resource AS holds a destination-side grant
+binding only where it separately establishes a redeemable grant
+lineage mapped to the Mission, such as a refresh-token family.<a href="#section-8.1.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-8.1.2-2.2">
               <p id="section-8.1.2-2.2.1"><strong>Cross-domain projection.</strong> A cross-domain projection
@@ -4562,8 +4601,20 @@ under the entry's type (for
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). A token
 request's <code>resource</code> parameter (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>) selects the audience the
 client asks for. The token's <code>aud</code> names the recipients that accept
-the token.<a href="#section-8.4-3" class="pilcrow">¶</a></p>
-<p id="section-8.4-4">The AS returns the granted <code>authorization_details</code> in every token
+the token, and the AS relates an entry to them through the entry's
+original approved audience (<a href="#transformation-capabilities" class="auto internal xref">Section 5.5.1</a>).<a href="#section-8.4-3" class="pilcrow">¶</a></p>
+<p id="section-8.4-4">A token issued for an audience carries only the entries whose original
+approved audience includes that audience; an entry approved for another
+audience is not carried, unless a declared <code>narrowing</code> capability
+permits issuing it there. A token whose <code>aud</code> names several audiences
+is issued only where the same entries are approved for each of them;
+where they differ, the AS refuses the request with <code>invalid_target</code>, and
+the client requests a separate token for each audience. The AS also
+refuses with <code>invalid_target</code> a request whose audience is approved for
+none of the entries the token would carry, and one whose
+<code>authorization_details</code> (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-6" class="relref">Section 6</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>) names an entry not
+approved for its audience.<a href="#section-8.4-4" class="pilcrow">¶</a></p>
+<p id="section-8.4-5">The AS returns the granted <code>authorization_details</code> in every token
 response, including refresh and Token Exchange responses
 (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-7" class="relref">Section 7</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). Strengthening <span><a href="https://rfc-editor.org/rfc/rfc9396#section-7" class="relref">Section 7</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>,
 the AS <span class="bcp14">MUST NOT</span> omit values from it: the response states exactly the
@@ -4571,15 +4622,15 @@ the AS <span class="bcp14">MUST NOT</span> omit values from it: the response sta
 authoritative statement of what was granted, which the client
 compares with its proposal (<a href="#authority-proposal" class="auto internal xref">Section 4.3</a>). The
 <code>mission_id</code> response parameter carries the Mission reference beside
-it (<a href="#mission-response-parameters" class="auto internal xref">Section 8.1.4</a>).<a href="#section-8.4-4" class="pilcrow">¶</a></p>
-<p id="section-8.4-5">The following is an example of a refresh request that narrows the
+it (<a href="#mission-response-parameters" class="auto internal xref">Section 8.1.4</a>).<a href="#section-8.4-5" class="pilcrow">¶</a></p>
+<p id="section-8.4-6">The following is an example of a refresh request that narrows the
 canonical ERP Mission (the worked example of <a href="#mission-record" class="auto internal xref">Section 14</a>) to a
 read-only token with the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span> <code>resource</code> parameter and the
 <code>authorization_details</code> parameter (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-6" class="relref">Section 6</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). The ERP
 consumes <code>authorization_details</code>, so a resource <code>scope</code> for it would
 be refused (<a href="#scope-projection" class="auto internal xref">Section 8.7</a>). Extra line breaks are for display
-purposes only:<a href="#section-8.4-5" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-8.4-6">
+purposes only:<a href="#section-8.4-6" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-8.4-7">
 <pre>
 POST /token HTTP/1.1
 Host: as.example.com
@@ -4590,11 +4641,11 @@ grant_type=refresh_token
 &amp;refresh_token=rt_4mN8qV2xP7sL1tY9zB3k
 &amp;resource=https%3A%2F%2Ferp.example.com
 &amp;authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
-</pre><a href="#section-8.4-6" class="pilcrow">¶</a>
+</pre><a href="#section-8.4-7" class="pilcrow">¶</a>
 </div>
-<p id="section-8.4-7">The <code>authorization_details</code> value, before form encoding, requests the
-Mission's read entry alone:<a href="#section-8.4-7" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-8.4-8">
+<p id="section-8.4-8">The <code>authorization_details</code> value, before form encoding, requests the
+Mission's read entry alone:<a href="#section-8.4-8" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.4-9">
 <pre>
 [
   { "type": "mission_resource_access",
@@ -4609,16 +4660,16 @@ Mission's read entry alone:<a href="#section-8.4-7" class="pilcrow">¶</a></p>
       "allowed_delegates": [{ "sub_profile": "ai_agent" }]
     } }
 ]
-</pre><a href="#section-8.4-8" class="pilcrow">¶</a>
+</pre><a href="#section-8.4-9" class="pilcrow">¶</a>
 </div>
-<p id="section-8.4-9">The issuance is a derivation, gated on the Mission being <code>active</code>
+<p id="section-8.4-10">The issuance is a derivation, gated on the Mission being <code>active</code>
 (<a href="#issuance-gating" class="auto internal xref">Section 8.2</a>). The following example shows the token response.
 It carries no <code>scope</code> member because none was requested or granted, and
 it echoes the narrowed grant and the <code>mission_id</code> reference
 (<a href="#mission-response-parameters" class="auto internal xref">Section 8.1.4</a>). The emitted entry is a subset
 (<a href="#subset" class="auto internal xref">Section 5.4</a>) of the Mission's read entry, its <code>constraints</code> carried
-intact:<a href="#section-8.4-9" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-8.4-10">
+intact:<a href="#section-8.4-10" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.4-11">
 <pre>
 {
   "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
@@ -4640,7 +4691,7 @@ intact:<a href="#section-8.4-9" class="pilcrow">¶</a></p>
       } }
   ]
 }
-</pre><a href="#section-8.4-10" class="pilcrow">¶</a>
+</pre><a href="#section-8.4-11" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -5364,6 +5415,12 @@ exchange rows of the third table.<a href="#section-10-3" class="pilcrow">¶</a><
 </td>
           </tr>
           <tr>
+            <td class="text-left" rowspan="1" colspan="1">Token request: the requested audience is approved for none of the entries the token would carry, the request's <code>authorization_details</code> names an entry not approved for its audience, or the audiences it names are approved for different entries (<a href="#token-response" class="auto internal xref">Section 8.4</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_target</code> (<span><a href="https://rfc-editor.org/rfc/rfc8707#section-2" class="relref">Section 2</a> of [<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>). Detail: safe <code>error_description</code>
+</td>
+          </tr>
+          <tr>
             <td class="text-left" rowspan="1" colspan="1">Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a <code>scope</code> value, or the target is <code>scope</code>-only and no safe projection exists for the applicable entries when the request names no <code>scope</code> value (<a href="#scope-projection" class="auto internal xref">Section 8.7</a>); or the AS has not established a delegated Mission-bound token's audience as a Mission-aware Resource Server that also processes the <code>act</code> chain (<a href="#rs-mission-unaware" class="auto internal xref">Section 9.2</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_target</code> (<span><a href="https://rfc-editor.org/rfc/rfc8707#section-2" class="relref">Section 2</a> of [<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>). Detail: safe <code>error_description</code>
@@ -6082,11 +6139,14 @@ designation was derived from, and all applicable grant state
 backing that credential, are still valid; the Mission is <code>active</code>;
 and the delegation policy (<a href="#delegation-constraints" class="auto internal xref">Section 12.5</a>) and the
 Mission's current authority admit the result. An earlier redemption
-establishes none of these. The backing grant state includes the
-grant lineage that credential was issued under, kept through any
-exchange that established no new grant lineage
-(<a href="#grant-binding-related" class="auto internal xref">Section 8.1.2</a>); the Mission's <code>active</code> state never
-substitutes for it.<a href="#section-12.2-2.9.1" class="pilcrow">¶</a></p>
+establishes none of these. Where that credential was issued under a
+grant lineage, the backing grant state includes that lineage, kept
+through any exchange that established no new grant lineage
+(<a href="#grant-binding-related" class="auto internal xref">Section 8.1.2</a>). A credential issued under none, as on
+the Template profile's Dispatch path before its delegation family
+exists, has no lineage to validate; that never excuses dropping or
+ignoring a lineage that does exist. The Mission's <code>active</code> state
+never substitutes for backing grant state.<a href="#section-12.2-2.9.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-12.2-3">The <code>act</code> chain nests (<code>act.act</code>) for as long as, and only while,
@@ -11115,15 +11175,26 @@ Join.<a href="#appendix-G-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-G-3.3">
           <p id="appendix-G-3.3.1">Editorial, no requirement change: Grant Bindings and Related
-Mechanisms names the Token Exchanges its later items cover, and the
-Namespace Taxonomy lists the <code>approval_basis.type</code> values as
-specification-defined, which Standing-Consent Bases cites.<a href="#appendix-G-3.3.1" class="pilcrow">¶</a></p>
+Mechanisms places the Template profile's Dispatch Handoff and the
+continuation profile's Identity Continuation Transport, the
+reusable-state case reads as a redeemable grant lineage, the
+derivation resolution list points to profile-defined grants, and a
+derived token's Mission is the one its <code>subject_token</code> resolved to,
+with no binding assumed, and Grant Bindings and Related Mechanisms
+and Delegated Exchange keep a token's backing grant provenance where
+its <code>subject_token</code> was issued under a grant lineage (#1589, D726).<a href="#appendix-G-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-G-3.4">
-          <p id="appendix-G-3.4.1">Editorial, no requirement change: the <code>approval_event_id</code> definition
+          <p id="appendix-G-3.4.1">Editorial, no requirement change: Grant Bindings and Related
+Mechanisms names the Token Exchanges its later items cover, and the
+Namespace Taxonomy lists the <code>approval_basis.type</code> values as
+specification-defined, which Standing-Consent Bases cites.<a href="#appendix-G-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.5">
+          <p id="appendix-G-3.5.1">Editorial, no requirement change: the <code>approval_event_id</code> definition
 names the approval event that creates the Mission and states that,
 under a standing-consent basis, it identifies the instance's
-creation, not the earlier standing approval.<a href="#appendix-G-3.4.1" class="pilcrow">¶</a></p>
+creation, not the earlier standing approval.<a href="#appendix-G-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-G-4">-01<a href="#appendix-G-4" class="pilcrow">¶</a></p>
