@@ -1021,7 +1021,11 @@ state ({{legal-transitions}}) and never changes a `terminated` Mission.
 From a current schedule's deadline, every decision treats the Mission
 as in the state its `on_expiry` produces, whether or not that
 transition is persisted, so a request the AS decides after the
-deadline is decided against that state. For `on_expiry` `revoke`, the
+deadline is decided against that state. If the first decision after
+the deadline comes at or after the Mission's `expires_at`, expiry
+governs instead and the Mission is `terminated` with reason `expired`
+({{legal-transitions}}); a revocation committed at its deadline before
+`expires_at` keeps reason `revoked`. For `on_expiry` `revoke`, the
 termination's `terminated_at` is the schedule's `suspend_until`. A new
 `suspend` whose `suspend_until` is not later than the time the AS
 processes it is refused `invalid_request`; a retransmit of an accepted
