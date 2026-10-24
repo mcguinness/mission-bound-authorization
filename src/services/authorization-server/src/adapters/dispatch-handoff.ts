@@ -347,7 +347,8 @@ export async function handleDispatchHandoffRedemption(
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
 
   // 1. The grant itself: signature, typ, exp, and aud = this token endpoint.
-  const grant = await verifyDispatchHandoffGrant(assertion, opts.publicJwks as JSONWebKeySet, opts.issuer);
+  // @spec #831 (role binding): the grant is signed by the AS token key and verifies under it alone.
+  const grant = await verifyDispatchHandoffGrant(assertion, opts.accessTokenJwks as JSONWebKeySet, opts.issuer);
   if (!grant) {
     refuse(ctx, "invalid_grant", "invalid dispatch handoff grant");
     return;

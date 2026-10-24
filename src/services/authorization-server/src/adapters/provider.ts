@@ -2731,6 +2731,19 @@ export function buildProvider(opts: AdapterOptions): Provider {
     await next();
     fenceRelease(ctx);
   });
+  // @spec #831 (role binding): the provider's keystore holds the access-token
+  // key alone (`jwks`), so it signs nothing under another role's key. The
+  // jwks_uri still publishes every role's public key, served here from
+  // `publicJwks` rather than from that keystore.
+  provider.use(async (ctx, next) => {
+    if (ctx.method === "GET" && ctx.path === "/jwks") {
+      ctx.status = 200;
+      ctx.type = "application/jwk-set+json; charset=utf-8";
+      ctx.body = { keys: opts.publicJwks.keys };
+      return;
+    }
+    await next();
+  });
 
   // @spec device-authorization#request (#1202): the device authorization
   // intake, before the provider parses the request (Provider#use splices it
@@ -3459,12 +3472,12 @@ async function handleChildJwtBearerGrant(
     throw new errors.InvalidRequest("assertion (the child-bound JWT authorization grant) required");
   }
 
-  // 2. Verify the assertion. It is signed by the AS token key, so it verifies on
-  //    the same public JWKS as tokens; iss = the AS, aud = the token endpoint,
-  //    typ = the child-grant typ.
+  // 2. Verify the assertion. It is signed by the AS token key, and verifies
+  //    under that key alone (#831 role binding); iss = the AS, aud = the token
+  //    endpoint, typ = the child-grant typ.
   let claims: Record<string, unknown>;
   try {
-    const verified = await jwtVerify(assertion, createLocalJWKSet(opts.publicJwks as never), {
+    const verified = await jwtVerify(assertion, createLocalJWKSet(opts.accessTokenJwks as never), {
       issuer: opts.issuer,
       audience: `${opts.issuer}/token`,
       typ: CHILD_GRANT_TYP,
@@ -3686,7 +3699,9 @@ const LIFECYCLE_OPERATION_CAPABILITY: Readonly<Record<string, ProviderCapability
 function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const { kernel } = opts;
   const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
-  const jwksResolver = createLocalJWKSet(opts.publicJwks as never);
+  // @spec #831 (role binding): introspection resolves an access token under
+  // the access-token key alone, never another AS role's key.
+  const jwksResolver = createLocalJWKSet(opts.accessTokenJwks as never);
   // @spec txn-authorization#two-phase-expiry — the admitted pending workflows.
   const txnWorkflows = newTxnWorkflows();
   // @spec deferred-approval#front-channel: where Deferred Mission Approval is
@@ -5494,7 +5509,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           issuer: opts.issuer,
           kernel,
           clients: opts.clients,
-          publicJwks: opts.publicJwks as { keys: JWK[] },
+          accessTokenJwks: opts.accessTokenJwks as { keys: JWK[] },
           dpopProofReplay: opts.dpopProofReplay as DpopProofReplay,
           // @spec txn-authorization#challenge-redemption — the SAME liveness
           // path introspection answers from: the issuance index resolves the

@@ -394,7 +394,7 @@ async function postTransaction(
  * `authorization_code` path mints only local subjects, so the Origin Principal
  * profile's credential shape (local `sub` + issuer-qualified
  * `mission.subject`, exactly as the cross-org grant mints one) is presented
- * here against a deps whose `publicJwks` the test holds the private half of.
+ * here against a deps whose `accessTokenJwks` the test holds the private half of.
  * Everything else -- client authentication, the DPoP proof, the real kernel and
  * the real ARS -- is unchanged.
  */
@@ -1243,7 +1243,7 @@ describe("terminal result ordering (@spec txn-authorization#failure-semantics)",
       issuer: ISSUER,
       kernel: as.kernel,
       clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
-      publicJwks: asJwks,
+      accessTokenJwks: asJwks,
       dpopProofReplay: newDpopProofReplay(),
       subjectTokenLive: async () => true,
       now: () => new Date(clockMs),
@@ -1381,7 +1381,7 @@ describe("origin principal vs the local subject (@spec txn-authorization#transac
       issuer: ISSUER,
       kernel: as.kernel,
       clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
-      publicJwks: { keys: [asPub] },
+      accessTokenJwks: { keys: [asPub] },
       dpopProofReplay: newDpopProofReplay(),
       subjectTokenLive: async () => true,
       now: () => new Date(),
@@ -1548,7 +1548,7 @@ describe("dual identity fail-closed paths (@spec txn-authorization#challenge-red
       issuer: ISSUER,
       kernel: as.kernel,
       clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
-      publicJwks: { keys: [asPub] },
+      accessTokenJwks: { keys: [asPub] },
       dpopProofReplay: newDpopProofReplay(),
       subjectTokenLive: async () => true,
       now: () => new Date(),
@@ -2512,7 +2512,7 @@ describe("delegated routing of transaction tokens (@spec mission#rs-enforcement)
       issuer: ISSUER,
       kernel: as.kernel,
       clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
-      publicJwks: asJwks,
+      accessTokenJwks: asJwks,
       dpopProofReplay: newDpopProofReplay(),
       subjectTokenLive: async () => true,
       now: () => new Date(),
@@ -2633,7 +2633,7 @@ describe("delegated routing of transaction tokens (@spec mission#rs-enforcement)
         { client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } },
         { client_id: SUBAGENT, jwks: { keys: [subagentPublic as JWK] } },
       ],
-      publicJwks: asJwks,
+      accessTokenJwks: asJwks,
       dpopProofReplay: newDpopProofReplay(),
       subjectTokenLive: async () => true,
       now: () => new Date(),
@@ -2704,7 +2704,7 @@ describe("transaction tokens carry only constraints keys the Challenge-Issuing R
       issuer: ISSUER,
       kernel: as.kernel,
       clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
-      publicJwks: asJwks,
+      accessTokenJwks: asJwks,
       dpopProofReplay: newDpopProofReplay(),
       subjectTokenLive: async () => true,
       now: () => new Date(),
@@ -3144,7 +3144,7 @@ describe("a workflow store file created before Operation Profile versions were r
         issuer: ISSUER,
         kernel: as.kernel,
         clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
-        publicJwks: asJwks,
+        accessTokenJwks: asJwks,
         dpopProofReplay: newDpopProofReplay(),
         subjectTokenLive: async () => true,
         now: () => new Date(),
