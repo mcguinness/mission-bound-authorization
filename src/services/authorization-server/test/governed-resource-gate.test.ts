@@ -25,7 +25,7 @@
  */
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, GOVERNED_RESOURCES, TOPOLOGY } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, GOVERNED_RESOURCES, MAS_JOIN, TOPOLOGY } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -71,7 +71,10 @@ const POLICY = {
     [LOCALLY_UNGOVERNED]: "not_governed",
     [CLASSIFIED_METADATA_FALSE]: "governed",
     [CLASSIFIED_METADATA_OMITS]: "governed",
-    [CANONICAL_RESOURCE]: "governed",
+    // The dev route's audience, the MAS Join route's own resource: governed
+    // here only, so the route's refusal is witnessed (the shipped policy
+    // classifies it not_governed).
+    [MAS_JOIN.join_resource]: "governed",
     // The AS's default audience (`defaultResource` is the issuer).
     [ISSUER]: "governed",
   },
@@ -132,9 +135,9 @@ beforeAll(async () => {
   });
   server = as.provider.listen(PORT);
   agentKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
+  // The shipped policy: payments governed, the join resource not.
   ungoverned = await buildAuthorizationServer({
     issuer: UNGOVERNED_ISSUER,
-    governedResources: withoutGovernedResource(POLICY, CANONICAL_RESOURCE),
     devOrdinaryIssuance: true,
   });
   ungovernedServer = ungoverned.provider.listen(UNGOVERNED_PORT);
@@ -364,9 +367,12 @@ describe("governed-resource classification (@spec mission#authority-proposal, #1
     expect(isMissionGovernedResource(POLICY, UNGOVERNED)).toBe(false);
   });
 
-  it("the shipped policy classifies the payments resource governed, by classification and by its published metadata", () => {
+  it("the shipped policy classifies the payments resource governed, by classification and by its published metadata, and the MAS Join route's own resource not governed", () => {
     expect(GOVERNED_RESOURCES.classification[CANONICAL_RESOURCE]).toBe("governed");
     expect(GOVERNED_RESOURCES.authenticated_metadata[CANONICAL_RESOURCE]).toEqual({ mission_bound_authorization_required: true });
+    expect(isMissionGovernedResource(GOVERNED_RESOURCES, CANONICAL_RESOURCE)).toBe(true);
+    expect(GOVERNED_RESOURCES.classification[MAS_JOIN.join_resource]).toBe("not_governed");
+    expect(isMissionGovernedResource(GOVERNED_RESOURCES, MAS_JOIN.join_resource)).toBe(false);
     expect(isMissionGovernedResource(withoutGovernedResource(GOVERNED_RESOURCES, CANONICAL_RESOURCE), CANONICAL_RESOURCE)).toBe(false);
   });
 });
@@ -409,12 +415,13 @@ describe("a Mission-governed resource gets no token outside a Mission, on every 
     const refused = await mint(ISSUER);
     const refusedBody = (await refused.json()) as Record<string, unknown>;
     expect(refused.status, JSON.stringify(refusedBody)).toBe(400);
-    expect(refusedBody).toEqual({ error: "invalid_target", error_description: governedResourceRefusal(CANONICAL_RESOURCE) });
+    expect(refusedBody).toEqual({ error: "invalid_target", error_description: governedResourceRefusal(MAS_JOIN.join_resource) });
     const minted = await mint(UNGOVERNED_ISSUER);
     const mintedBody = (await minted.json()) as Record<string, unknown>;
     expect(minted.status, JSON.stringify(mintedBody)).toBe(200);
     const claims = claimsOf(mintedBody.access_token);
-    expect(claims.aud).toBe(CANONICAL_RESOURCE);
+    expect(claims.aud).toBe(MAS_JOIN.join_resource);
+    expect(claims.aud).not.toBe(CANONICAL_RESOURCE);
     expect(claims).not.toHaveProperty("mission");
   });
 

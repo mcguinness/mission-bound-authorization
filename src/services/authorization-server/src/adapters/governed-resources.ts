@@ -29,10 +29,9 @@ export function governedResourceRefusal(resource: string): string {
 }
 
 /**
- * `policy` without any entry for `resource`, in either source. For a
- * composition whose AS has neither classified `resource` nor authenticated
- * its metadata (the MAS Join demo's premise: an AS issuing ordinary tokens
- * for that resource).
+ * `policy` without any entry for `resource`, in either source: the policy of
+ * an AS that has neither classified `resource` nor authenticated its
+ * metadata.
  */
 export function withoutGovernedResource(policy: GovernedResourcePolicy, resource: string): GovernedResourcePolicy {
   const classification = { ...policy.classification };

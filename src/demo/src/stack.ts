@@ -29,9 +29,8 @@ import {
   type SigningKeySource,
   startupRemediationNotices,
   validateMissionIntent,
-  withoutGovernedResource,
 } from "@mission/authorization-server";
-import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, GOVERNED_RESOURCES, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   type BoundaryEvidenceKey,
@@ -306,6 +305,31 @@ export interface DemoStack {
   onEnforce: (fn: PepDeps["observe"]) => void;
   /** Real-issuance + cross-domain extras; only set when withAuthServer is true. */
   authServer?: AuthServerExtras;
+}
+
+/**
+ * @spec authority-server#mission-join, runtime-oauth#boundary-audience
+ * (#1531, D741): `statement` with the MAS Join route's resource identifier
+ * declared as an audience alias of the payments boundary, accepted only from
+ * `issuer` for the `at+jwt` token profile, in every boundary version. Absent
+ * `join`, the statement is unchanged.
+ */
+function withJoinAudienceAlias(statement: RuntimePosture, join: { issuer: string; alias: string } | undefined): RuntimePosture {
+  const declared = statement.enforcement_boundaries;
+  if (!join || !declared) return statement;
+  const alias = { issuer: join.issuer, token_profile: "at+jwt", alias: join.alias };
+  return {
+    ...statement,
+    enforcement_boundaries: {
+      ...declared,
+      versions: declared.versions.map((version) => ({
+        ...version,
+        boundaries: version.boundaries.map((b) =>
+          b.boundary === CANONICAL_RESOURCE ? { ...b, audience_aliases: [...(b.audience_aliases ?? []), alias] } : b,
+        ),
+      })),
+    },
+  };
 }
 
 export async function composeStack(opts: {
@@ -603,15 +627,6 @@ export async function composeStack(opts: {
       // this only gives the demo a plain token to present. The as-native
       // target mounts no such route and mints none (D332).
       devOrdinaryIssuance: ordinaryMinting,
-      // @spec mission#authority-proposal (#1531, D741): the dev route never
-      // mints for a Mission-governed resource, and the shipped policy
-      // classifies the payments resource governed. The MAS Join this route
-      // serves acts under an ordinary payments credential by design, so a
-      // composition that arms the route gives its AS no classification and no
-      // authenticated metadata for that resource. This does not reconcile
-      // with the payments resource's own published metadata, which declares
-      // Mission-bound-only acceptance, an open question under #1531.
-      ...(ordinaryMinting ? { governedResources: withoutGovernedResource(GOVERNED_RESOURCES, CANONICAL_RESOURCE) } : {}),
       transactionAuthorization: {
         challengeIssuers,
         ars,
@@ -896,7 +911,18 @@ export async function composeStack(opts: {
   // it, and the PDP's Decision Evidence and Refusal Records and the PEP's own
   // records sign only for a boundary it authorizes their emitter for, so all
   // of them switch together at a declared cutover.
-  const statement = opts.statement ?? RUNTIME_POSTURE;
+  // @spec authority-server#mission-join, mission#authority-proposal (#1531,
+  // D741): the MAS Join route is served under its own resource identifier
+  // (`join_resource`), which is not Mission-governed, so the AS mints the
+  // join's ordinary credential for that audience and never for the payments
+  // resource. Where the route mounts, the payments boundary accepts that
+  // identifier as an audience alias scoped to this issuer and the `at+jwt`
+  // token profile (runtime-oauth#boundary-audience), declared in the
+  // statement every consumer here reads and the resource publishes.
+  const statement = withJoinAudienceAlias(
+    opts.statement ?? RUNTIME_POSTURE,
+    masGovernedResources.includes(CANONICAL_RESOURCE) ? { issuer, alias: masJoin.join_resource } : undefined,
+  );
   const boundary = paymentsBoundaryContext(statement);
   const pdpBoundary = (): string | undefined => {
     const established = boundary.establish();
@@ -1272,8 +1298,11 @@ export async function composeStack(opts: {
   // governed. It is a SECOND channel: the Mission-bound channels keep
   // `validateCredential` and keep rejecting a credential with no `mission`
   // claim, so turning the Join on never loosens an existing route.
+  // @spec mission#authority-proposal (#1531, D741): it is served under the
+  // join's own resource identifier, whose metadata does not declare
+  // Mission-bound-only acceptance.
   const masGovernedChannel = masGovernedResources.includes(CANONICAL_RESOURCE)
-    ? await createHttpMcpChannel(server, { masGoverned: true })
+    ? await createHttpMcpChannel(server, { masGoverned: true, resource: masJoin.join_resource })
     : undefined;
   // D315: the as-native target's one resource entry point, at the declared
   // audience itself, so the `htu` a client signs and the `aud` the AS issues

@@ -1,6 +1,7 @@
 {
   "classification": {
-    "http://localhost:4403/mcp": "governed"
+    "http://localhost:4403/mcp": "governed",
+    "http://localhost:4403/join": "not_governed"
   },
   "authenticated_metadata": {
     "http://localhost:4403/mcp": { "mission_bound_authorization_required": true }

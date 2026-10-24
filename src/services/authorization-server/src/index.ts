@@ -5,6 +5,7 @@ import {
   DESIGNABLE_CLIENTS,
   GOVERNED_RESOURCES,
   type GovernedResourcePolicy,
+  MAS_JOIN,
   type IntrospectionPrincipal,
   ACTOR_PROFILES,
   AUTHORITY_SOURCES,
@@ -1195,7 +1196,7 @@ export async function buildAuthorizationServer(opts: {
   /**
    * @spec authority-server#mission-join (#557) — DEV ONLY: serve
    * `POST /dev/ordinary-token`, which mints an ORDINARY DPoP-bound access
-   * token (a `scope`, the payments audience, no `mission` claim) on a
+   * token (a `scope`, the join route's audience, no `mission` claim) on a
    * registered service token's authority. The MAS Join acts under exactly
    * that credential class and nothing else here issues one, so the demo
    * stack turns it on to have a credential to present. Absent (the default):
@@ -1868,13 +1869,17 @@ export async function buildAuthorizationServer(opts: {
     // @spec authority-server#mission-join (#557) — the dev-only ordinary
     // issuance route, signed with this AS's own token key so the resource
     // verifies it on the jwks_uri exactly as it verifies a Mission-bound one.
+    // @spec mission#authority-proposal (#1531, D741): its audience is the join
+    // route's own resource (config/mas-join.json `join_resource`), which is not
+    // Mission-governed; the payments resource is, so the route never mints
+    // for it.
     ...(opts.devOrdinaryIssuance
       ? {
           devOrdinaryIssuance: {
             key: tokenPrivateKey,
             kid: asToken.kid,
             alg: asToken.alg,
-            audience: CANONICAL_RESOURCE,
+            audience: MAS_JOIN.join_resource,
           },
         }
       : {}),

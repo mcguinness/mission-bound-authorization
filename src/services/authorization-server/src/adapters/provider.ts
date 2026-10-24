@@ -5906,8 +5906,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         return;
       }
       const ttl = opts.accessTokenTTL ?? 300;
+      // `typ` is RFC 9068's: the resource accepts the join audience as an
+      // alias scoped to this issuer and the `at+jwt` token profile.
       const accessToken = await new SignJWT({ client_id: clientId, scope, cnf: { jkt } })
-        .setProtectedHeader({ alg: dev.alg, kid: dev.kid })
+        .setProtectedHeader({ alg: dev.alg, kid: dev.kid, typ: "at+jwt" })
         .setIssuer(opts.issuer)
         .setAudience(dev.audience)
         .setSubject(sub)
