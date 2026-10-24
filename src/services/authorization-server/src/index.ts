@@ -1830,6 +1830,7 @@ export async function buildAuthorizationServer(opts: {
     clients: clientRegistrations,
     jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
     publicJwks,
+    accessTokenJwks: { keys: [tokenJwkPub] },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),
     ...(opts.approverLogin ? { approverLogin: new ApproverLoginRelyingParty(opts.approverLogin, opts.issuer) } : {}),
