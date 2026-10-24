@@ -1462,9 +1462,18 @@ A Mission revocation through this endpoint cascades to credentials
 derived from the Mission per the AS's advertised revocation
 propagation ({{revocation-enforcement-classes}}). The AS MAY
 additionally revoke specific outstanding tokens it knows by `jti`,
-with the same effect as {{RFC7009}} revocation of each token.
-{{RFC7009}} alone does NOT revoke a Mission; the lifecycle endpoint is
-the authoritative Mission state change.
+with the same effect as {{RFC7009}} revocation of each token. An
+{{RFC7009}} revocation does not by itself revoke a Mission; the
+lifecycle endpoint is the authoritative Mission state change.
+
+Where a deployment's revocation policy treats revoking a Mission's
+refresh token as revoking the Mission
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation"), the
+AS MUST commit that revocation as the same `revoke` transition this
+endpoint applies: decided by that policy for the revoking party and
+the Mission, recorded with a new state version, and emitting the same
+transition event ({{idempotency}}). The coupling requires neither a
+request to this endpoint nor an additional scope.
 
 ## Deferred Lifecycle Capabilities {#deferred-lifecycle}
 
