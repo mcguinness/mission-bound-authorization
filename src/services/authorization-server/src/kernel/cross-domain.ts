@@ -376,6 +376,10 @@ async function mintCrossDomainGrant(
   // @spec id-continuation-assertion: opt-in continuation claims.
   if (input.identityContinuationHandle !== undefined) {
     payload.identity_continuation_handle = input.identityContinuationHandle;
+    // @spec continuation#transport-ica (#1589, D726): a root or onward
+    // continuation ID-JAG carries the Mission's `expires_at`, so a Resource AS
+    // issuing further credentials from its local token keeps the Mission's bound.
+    (payload.mission as Record<string, unknown>).expires_at = record.expires_at;
   }
   if (input.act !== undefined) {
     payload.act = input.act;

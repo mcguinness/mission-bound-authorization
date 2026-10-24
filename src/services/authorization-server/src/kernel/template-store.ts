@@ -47,6 +47,7 @@ CREATE TABLE templates (
   approver_sub TEXT NOT NULL,
   authority_source_json TEXT NOT NULL,
   ceiling_json TEXT NOT NULL,
+  ceiling_audiences_json TEXT,
   dispatch_policy_json TEXT NOT NULL,
   dispatchers_json TEXT NOT NULL,
   recipients_json TEXT NOT NULL,
@@ -104,6 +105,14 @@ export interface MissionTemplate {
   /** The template ceiling: one side of the double intersection at dispatch. */
   ceiling: AuthorityEntry[];
   /**
+   * @spec mission#transformation-capabilities (#1503 finding 7, D733): each
+   * ceiling entry's original approved audience, index-aligned with `ceiling`:
+   * the audiences the trusted mapping assigned it at template consent, which
+   * every instance's entries inherit. Provenance outside `template_hash`,
+   * never on the wire. Absent, it associates no audience with any entry.
+   */
+  ceiling_audiences?: string[][];
+  /**
    * @spec mission-template#the-mission-template, mission#standing-consent-bases
    * — the Dispatch Policy as an activation policy reference (`id`, `version`,
    * `digest`), inside `template_hash`; Dispatch verifies `digest` first.
@@ -152,6 +161,8 @@ export interface TemplateCreate {
   /** One committed root per recipient pair (#827). */
   source_bindings: TemplateSourceBinding[];
   ceiling: AuthorityEntry[];
+  /** @spec mission#transformation-capabilities (D733): retained at consent; absent when no mapping is configured. */
+  ceiling_audiences?: string[][];
   dispatch_policy: ActivationPolicyRef;
   dispatchers: string[];
   recipients: TemplateRecipients;
@@ -172,6 +183,7 @@ interface TemplateRow {
   approver_sub: string;
   authority_source_json: string;
   ceiling_json: string;
+  ceiling_audiences_json: string | null;
   dispatch_policy_json: string;
   dispatchers_json: string;
   recipients_json: string;
@@ -184,6 +196,23 @@ interface TemplateRow {
   expires_at: string;
   state: string;
   created_at: string;
+}
+
+/**
+ * @spec mission#transformation-capabilities (D733): the stored ceiling
+ * association, or no member where none is stored or it is not an array of
+ * string arrays (fail closed: never re-derived from a later mapping).
+ */
+function ceilingAudiencesOf(text: string | null): { ceiling_audiences?: string[][] } {
+  if (typeof text !== "string" || text === "") return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return {};
+  }
+  const valid = Array.isArray(parsed) && parsed.every((a) => Array.isArray(a) && a.every((aud) => typeof aud === "string"));
+  return valid ? { ceiling_audiences: parsed as string[][] } : {};
 }
 
 function rowToTemplate(row: TemplateRow): MissionTemplate {
@@ -199,6 +228,7 @@ function rowToTemplate(row: TemplateRow): MissionTemplate {
       `template ${row.id}`,
     ),
     ceiling: JSON.parse(row.ceiling_json) as AuthorityEntry[],
+    ...ceilingAudiencesOf(row.ceiling_audiences_json),
     dispatch_policy: JSON.parse(row.dispatch_policy_json) as ActivationPolicyRef,
     dispatchers: JSON.parse(row.dispatchers_json) as string[],
     recipients: JSON.parse(row.recipients_json) as TemplateRecipients,
@@ -239,10 +269,10 @@ export class TemplateStore {
         this.db
           .prepare(
             `INSERT INTO templates (id, template_version, issuer, approver_iss, approver_sub,
-             authority_source_json, ceiling_json, dispatch_policy_json, dispatchers_json,
+             authority_source_json, ceiling_json, ceiling_audiences_json, dispatch_policy_json, dispatchers_json,
              recipients_json, per_instance_lifetime_s, max_active, rate_per_min, review_cadence_s,
              template_hash, approval_event_id, expires_at, state, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
           )
           .run(
             input.id,
@@ -252,6 +282,7 @@ export class TemplateStore {
             input.approver.sub,
             JSON.stringify(input.authority_source),
             JSON.stringify(input.ceiling),
+            input.ceiling_audiences ? JSON.stringify(input.ceiling_audiences) : null,
             JSON.stringify(input.dispatch_policy),
             JSON.stringify(input.dispatchers),
             JSON.stringify(input.recipients),

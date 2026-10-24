@@ -38,6 +38,7 @@ import {
   validateContinuationAssertion,
 } from "../kernel/continuation-assertion.js";
 import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel/continuation-store.js";
+import { audienceProjection, audienceReferences } from "../kernel/approved-audience.js";
 import {
   ID_JAG_TOKEN_TYPE,
   AuthorityNarrowedToEmptyError,
@@ -128,6 +129,7 @@ import {
   InvalidAuthorizationDetails,
   lifecycleMissionError,
   MissionGrantError,
+  audienceCarriedEntries,
   newResourceServer,
   SCOPE_DECIDED_AT_SAVE,
   requiredEvidenceTypesFor,
@@ -1306,6 +1308,23 @@ export async function handleAsyncDelegationExchange(
     txError(ctx, 400, "invalid_authorization_details", "confined authorization_details must be non-empty");
     return;
   }
+  // @spec mission#token-response, mission#error-mapping (#1503 finding 7,
+  // D733 ruling 1): the family's tokens carry only the entries whose original
+  // approved audience includes its target. Decided here, before the
+  // reservation, the family grant and the single derivation count, so a
+  // refusal has no side effect; the scope projection below and delivery
+  // decide over the same entries.
+  const forTarget = audienceProjection(
+    audienceReferences(active.authority_set, active.approved_audiences),
+    [target],
+    confinedSubset,
+    requestedSubset !== undefined,
+  );
+  if (forTarget.refusal !== undefined) {
+    txError(ctx, 400, "invalid_target", forTarget.refusal);
+    return;
+  }
+  const targetSubset = forTarget.issued;
   // @spec mission#scope-projection — the family's access tokens are projected
   // at save() like every Mission-bound mint; refusing HERE, before the
   // reservation, the family grant and the single derivation count, keeps the
@@ -1321,7 +1340,7 @@ export async function handleAsyncDelegationExchange(
   const projection = projectScope({
     mapping: opts.scopeProjection,
     audiences: [target],
-    entries: confinedSubset,
+    entries: targetSubset,
     ...(requestedScope.resource.length
       ? { requested: { values: requestedScope.resource, explicit: true } }
       : {}),
@@ -1371,7 +1390,10 @@ export async function handleAsyncDelegationExchange(
   // the family-created transition back together, invalidates the provisional
   // family, and records a failed tombstone (the refusal replays).
   const grant = new provider.Grant({ accountId: record.subject.sub, clientId: client.clientId });
-  for (const entry of confinedSubset) {
+  // @spec mission#token-response (D733 ruling 1): the family's structural
+  // subset is the entries approved for its target, so a resumed delivery and
+  // every refresh start from them too.
+  for (const entry of targetSubset) {
     (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
   }
   const grantId = await grant.save();
@@ -1417,8 +1439,8 @@ export async function handleAsyncDelegationExchange(
     mission: active,
     grantId,
     target,
-    tokenRar: confinedSubset,
-    refreshRar: confinedSubset,
+    tokenRar: targetSubset,
+    refreshRar: targetSubset,
     jkt,
     creationRequestId,
   });
@@ -1950,12 +1972,15 @@ async function mintMissionAccessToken(
   }
   const info = resourceServerInfoFor(resource, opts.accessTokenTTL ?? 300);
   info.accessTokenTTL = Math.min(info.accessTokenTTL, secondsUntil(mission.expires_at));
+  // @spec mission#token-response (#1503 finding 7, D733 ruling 1): only the
+  // entries approved for the token's audience.
+  const carried = audienceCarriedEntries(mission, [resource], tokenRar);
   const at = new provider.AccessToken({
     accountId: mission.subject.sub,
     client,
     grantId,
     gty: TOKEN_EXCHANGE_GRANT_TYPE,
-    rar: tokenRar,
+    rar: carried,
     scope: SCOPE_DECIDED_AT_SAVE,
   });
   at.resourceServer = newResourceServer(provider, resource, info);
@@ -1976,7 +2001,7 @@ async function mintMissionAccessToken(
     // describes the Mission, which may be shorter than the requested ceiling.
     mission_id: mission.id,
     mission_expires_at: mission.expires_at,
-    authorization_details: tokenRar,
+    authorization_details: carried,
   };
   ctx.set("cache-control", "no-store");
   return true;

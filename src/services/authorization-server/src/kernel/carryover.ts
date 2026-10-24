@@ -40,6 +40,7 @@ import {
 } from "@mission/core";
 import { withTransaction, type Database } from "@mission/store";
 import { compactVerify, type CryptoKey, type JWK, type KeyObject } from "jose";
+import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import {
   asNum,
@@ -1683,6 +1684,17 @@ export function applyCarryoverInCallerTx(
     kernel.insertRecord(record, undefined, {
       inheritPinsFrom: { missionId: oldChild.id, pairs },
       source: { inherited: originRoot },
+      // @spec mission#transformation-capabilities (#1503 finding 7, D733
+      // ruling 2): a replacement carries the old child's authority, so each
+      // entry keeps the association the old child's approved entries retain,
+      // narrowed by that of the new parent entries it falls within; the
+      // replacement's creation never re-reads the mapping.
+      audiences: {
+        inherited: inheritedAudiences(authority, [
+          ...audienceReferences(oldChild.authority_set, oldChild.approved_audiences),
+          ...audienceReferences(newParent.authority_set, newParent.approved_audiences),
+        ]),
+      },
     });
     entryPairsOf.set(entry.child_id, pairs);
     // @spec child-delegation#carryover-no-reset — the transaction-participating

@@ -138,6 +138,8 @@ async function tokenRequest(
 /** Full PAR -> approval -> token dance yielding an ACTIVE mission (grant-bound). */
 async function issueBaseMissionToken(
   expiresAt = "2027-01-01T00:00:00Z",
+  extraEntries: AuthorityEntry[] = [],
+  extraTargets: string[] = [],
 ): Promise<{ token: string; missionId: string }> {
   const verifier = "dtr-endpoint-verifier-0123456789-0123456789-01234";
   const challenge = Buffer.from(
@@ -147,7 +149,7 @@ async function issueBaseMissionToken(
   const intent = JSON.stringify({
     intent: {
       goal: "Pay Acme invoices and send remittance",
-      target_resources: [RESOURCE],
+      target_resources: [RESOURCE, ...extraTargets],
       expires_at: expiresAt,
     },
   });
@@ -158,6 +160,7 @@ async function issueBaseMissionToken(
       actions: ["payments:invoice.read", "payments:remittance.send"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     },
+    ...extraEntries,
   ]);
   const par = await fetch(`${ISSUER}/request`, {
     method: "POST",
@@ -279,6 +282,36 @@ afterAll(() => {
 });
 
 describe("AS deferred grant on /token (AROP Deferred Token Response, DTR -00, D42)", () => {
+  it("refuses a deferral whose requested entries are not all approved for the first requested entry's audience, before any deferral opens (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)", async () => {
+    const LEDGER = "http://localhost:4406/mcp";
+    const ledger = { type: "mission_resource_access", resource: LEDGER, actions: ["ledger:vendor.read"], constraints: { vendors: ["acme"] } } as AuthorityEntry;
+    const both = await issueBaseMissionToken(undefined, [ledger], [LEDGER]);
+    const authoritySet = (as.kernel.get(both.missionId) as { authority_set: AuthorityEntry[] }).authority_set;
+    const payments = authoritySet.filter((e) => e.resource === RESOURCE);
+    const approvedLedger = authoritySet.filter((e) => e.resource === LEDGER);
+    expect(payments.length).toBeGreaterThan(0);
+    expect(approvedLedger.length).toBe(1);
+    const open = (requested: AuthorityEntry[]) =>
+      tokenRequest({
+        grant_type: DEFERRED_GRANT_TYPE,
+        deferred_authorization: JSON.stringify({ mission_id: both.missionId, requested }),
+      });
+    const refused = await open([...payments, ...approvedLedger]);
+    const rb = (await refused.json()) as { error?: string; error_description?: string; deferral_code?: string };
+    expect(refused.status, JSON.stringify(rb)).toBe(400);
+    expect(rb.error).toBe("invalid_target");
+    expect(rb.error_description).toMatch(
+      new RegExp(`audience ${RESOURCE} is not an original approved audience of the requested entry for ${LEDGER}`),
+    );
+    expect(rb.deferral_code).toBeUndefined();
+    const pending = await open(payments);
+    const pb = (await pending.json()) as { error?: string; deferral_code?: string };
+    expect(pending.status, JSON.stringify(pb)).toBe(400);
+    expect(pb.error).toBe("authorization_pending");
+    expect(pb.deferral_code).toMatch(/^dfr_/);
+  });
+
+
   it("initiates, pends, slow_downs, then on approval issues a REAL resource-bound mission token (single-use)", async () => {
     const requested = subset(["payments:remittance.send"]);
 
