@@ -25925,12 +25925,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation type this PEP does not implement is refused as unfulfillable_obligation: the obligation is unsupported, an effective deny distinct from an unrecognized condition",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "#610 GAP 2 fixed the CONDITION half only, against the obsolete flat response shape (parameter_digest/permit_expires_at/single_use as flat top-level members, and the whole top-level context enumerated for unrecognized members). #612 finding 2 migrates the PDP and PEP to the current draft lanes: evaluate.ts emits a NESTED conditions object ({parameter_digest, valid_until, use_limit}), and pep.ts's unrecognized-member check is scoped to decision.context.conditions ONLY (a top-level member outside conditions, e.g. a future response-context extension, is accepted without enumeration; proven by a dedicated test so the scoping is not accidental). The OBLIGATIONS half is now also proven: this PEP implements no obligation type, so obligations.length > 0 is, by definition, unfulfillable and is refused as unfulfillable_obligation (a distinct refusal_reason from unrecognized_condition, so evidence never conflates which rule fired)."
+   "notes": "#610 GAP 2 fixed the CONDITION half only, against the obsolete flat response shape (parameter_digest/permit_expires_at/single_use as flat top-level members, and the whole top-level context enumerated for unrecognized members). #612 finding 2 migrates the PDP and PEP to the current draft lanes: evaluate.ts emits a NESTED conditions object ({parameter_digest, valid_until, use_limit}), and pep.ts's unrecognized-member check is scoped to decision.context.conditions ONLY (a top-level member outside conditions, e.g. a future response-context extension, is accepted without enumeration; proven by a dedicated test so the scoping is not accidental). The OBLIGATIONS half is now also proven: an obligation type this PEP does not implement is unfulfillable and is refused as unfulfillable_obligation (a distinct refusal_reason from unrecognized_condition, so evidence never conflates which rule fired); the one type it performs, notification, is witnessed on the authzen.obligation-processing rows (#1640)."
   },
   {
    "id": "runtime.decision-inputs.authority-entry-and-subset-required",
@@ -33480,7 +33480,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation type this PEP does not implement is refused as unfulfillable_obligation: the obligation is unsupported, an effective deny distinct from an unrecognized condition",
      "level": "unit",
      "surface": "resource-operation"
     }
@@ -38778,7 +38778,7 @@
    "tests": [
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation type this PEP does not implement is refused as unfulfillable_obligation: the obligation is unsupported, an effective deny distinct from an unrecognized condition",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -38795,7 +38795,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "One entry per attached obligation that identifies itself, with id, type and outcome unsupported (this PEP implements no obligation type). OUTSTANDING, #786 review point 2: an obligation the decision returns WITHOUT a required id or type cannot be represented at all, so the member is omitted entirely rather than fabricated or emitted as a partial list that would read as complete; and this deployment's PDP does not implement Decision Evidence's own obligations member, so the conditional that makes obligation_outcomes REQUIRED cannot fire from the linked record. Both remain open."
+   "notes": "One entry per attached obligation that identifies itself, with id, type and outcome: unsupported for a type this PEP does not implement (#1640 adds fulfilled and failed for the notification type it performs). OUTSTANDING, #786 review point 2: an obligation the decision returns WITHOUT a required id or type cannot be represented at all, so the member is omitted entirely rather than fabricated or emitted as a partial list that would read as complete; and this deployment's PDP does not implement Decision Evidence's own obligations member, so the conditional that makes obligation_outcomes REQUIRED cannot fire from the linked record. Both remain open."
   },
   {
    "id": "evidence.execution.result-summary-no-user-content",

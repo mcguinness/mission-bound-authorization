@@ -2082,6 +2082,9 @@ export class McpPaymentsServer {
       authorized_parameter_digest: digest,
       effective_parameter_digest: digest,
       outcome: "completed",
+      // @spec authzen#obligation-processing (#1640): the obligations this
+      // permit's PEP fulfilled before release.
+      ...(attempt.obligationOutcomes ? { obligation_outcomes: attempt.obligationOutcomes } : {}),
       ...(token.jti
         ? {
             hop_reference: {

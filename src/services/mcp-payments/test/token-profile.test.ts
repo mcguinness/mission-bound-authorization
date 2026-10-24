@@ -26,6 +26,8 @@ import {
   EXECUTION_EVIDENCE_MEDIA_TYPE,
   type ExecutionEvidence,
   McpPaymentsServer,
+  NotificationOutbox,
+  type ObligationNotifier,
   openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
@@ -889,6 +891,199 @@ describe("an obligation the PEP does not recognize or cannot fulfill is an effec
       expect(denied, JSON.stringify(denied)).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
       expect(x.businessState()).toEqual(before);
       expect(x.evidence.all().filter((e) => e.kind === "execution")).toHaveLength(0);
+    } finally {
+      await x.close();
+    }
+  });
+});
+
+describe("the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640)", () => {
+  const SCHEDULE = entry(["payments:invoice.read", "payments:payment.schedule"], { vendors: ["acme", "globex"] });
+  const SCHEDULING_VIEW: MissionView = { ...VIEW, authority_set: [SCHEDULE as MissionView["authority_set"][number]] };
+  const READ_ONLY_VIEW: MissionView = { ...VIEW, authority_set: [entry(["payments:invoice.read"]) as MissionView["authority_set"][number]] };
+  const NOTIFY = {
+    id: "obl_notify",
+    type: "notification",
+    properties: { to: "ap-controller@example.com", topic: "Payment scheduled", body: "A payment for invoice inv-1 was scheduled." },
+  };
+
+  /**
+   * The resource's HTTP MCP endpoint under DPoP, deciding through the embedded
+   * signing PDP; `attach` adds obligations to the decision the PDP returned,
+   * as a PDP attaching them would. `notifier` is the PEP's notification
+   * transport, absent when none is configured.
+   */
+  async function endpoint(
+    attach: (decision: { decision: boolean; context: Record<string, unknown> }) => void,
+    view: MissionView,
+    notifier: ObligationNotifier | undefined,
+  ) {
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: resourcePolicyFixture() });
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    const store = payments();
+    const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
+    const loadView = (ref: { id: string; issuer: string }) =>
+      ref.id === view.id && ref.issuer === view.issuer
+        ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+        : undefined;
+    const decisionIds: string[] = [];
+    const pep = new Pep({
+      decide: async (req, opts) => {
+        const decision = await keys.decide(req, opts);
+        decisionIds.push(decision.context.decision_id as string);
+        attach(decision);
+        return decision;
+      },
+      payments: store,
+      evidence,
+      fga: allowingFga,
+      modelId: "m",
+      loadView,
+      instanceEpoch: "epoch-1640-obligations",
+      ...(notifier ? { notifier } : {}),
+    });
+    const routed = new McpPaymentsServer({
+      writeReservations,
+      pep,
+      payments: store,
+      loadView,
+      jwks: { keys: [asJwk as never] },
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
+      issuer: ISSUER,
+    });
+    const channel = await createHttpMcpChannel(routed);
+    const session = await createHttpMediatedClient(channel.url, await mint({ authorization_details: [SCHEDULE] }), holder);
+    const businessState = () => ({
+      invoices: store.listInvoices(),
+      schedules: writeReservations.schedules(),
+      reservations: writeReservations.reservations(),
+      consumedPermits: writeReservations.consumedPermits(),
+    });
+    return {
+      evidence,
+      decisionIds,
+      writeReservations,
+      businessState,
+      client: session.client,
+      close: async () => {
+        await session.close();
+        await channel.close();
+      },
+    };
+  }
+
+  const call = (client: Awaited<ReturnType<typeof endpoint>>["client"]) =>
+    client.callTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+  const executions = (x: Awaited<ReturnType<typeof endpoint>>) =>
+    x.evidence.all().filter((e): e is ExecutionEvidence => e.kind === "execution").map((e) => e.content);
+
+  it("a permit carrying a notification obligation over HTTP with DPoP completes the transmission before the write is released, then schedules, and the completed record names the obligation fulfilled", async () => {
+    // The transport takes a while to transmit, and reports how many schedules
+    // existed once it had: a PEP that released the write before the
+    // transmission completed would show one.
+    const schedulesAtTransmission: number[] = [];
+    let x: Awaited<ReturnType<typeof endpoint>> | undefined;
+    const outbox = new NotificationOutbox(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      schedulesAtTransmission.push(x?.writeReservations.schedules().length ?? -1);
+    });
+    x = await endpoint((d) => {
+      if (d.decision) d.context.obligations = [NOTIFY];
+    }, SCHEDULING_VIEW, outbox);
+    try {
+      const scheduled = await call(x.client);
+      expect(scheduled.ok, JSON.stringify(scheduled)).toBe(true);
+      expect(x.writeReservations.schedules()).toHaveLength(1);
+      expect(schedulesAtTransmission).toEqual([0]);
+      expect(outbox.sent()).toEqual([
+        { obligation_id: "obl_notify", evaluation_id: x.decisionIds[0], ...NOTIFY.properties },
+      ]);
+      const records = executions(x);
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        evaluation_id: x.decisionIds[0],
+        outcome: "completed",
+        obligation_outcomes: [{ id: "obl_notify", type: "notification", outcome: "fulfilled" }],
+      });
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a permit whose notification cannot be performed over HTTP with DPoP releases no protected effect: a failed transmission, a malformed obligation and an absent transport each refuse the write unfulfillable_obligation with nothing scheduled, and the suppressed record names the obligation failed or unsupported", async () => {
+    const failing = new NotificationOutbox(() => {
+      throw new Error("relay refused the destination");
+    });
+    const { body: _body, ...noBody } = NOTIFY.properties;
+    for (const [label, obligation, notifier, outcome] of [
+      ["the transmission fails", NOTIFY, failing, { outcome: "failed", error: "notification transmission failed" }],
+      ["the obligation carries no body", { ...NOTIFY, properties: noBody }, new NotificationOutbox(), { outcome: "failed", error: "malformed notification obligation" }],
+      ["no transport is configured", NOTIFY, undefined, { outcome: "unsupported", error: "no notification transport is configured at this PEP" }],
+    ] as const) {
+      const x = await endpoint((d) => {
+        if (d.decision) d.context.obligations = [obligation];
+      }, SCHEDULING_VIEW, notifier);
+      try {
+        const before = x.businessState();
+        const refused = await call(x.client);
+        expect(refused, label).toMatchObject({ ok: false, refusal_reason: "unfulfillable_obligation" });
+        expect(refused, label).not.toHaveProperty("result");
+        expect(x.businessState(), label).toEqual(before);
+        const records = executions(x);
+        expect(records, label).toHaveLength(1);
+        expect(records[0], label).toMatchObject({
+          outcome: "suppressed",
+          error: "obligation_unfulfilled",
+          obligation_outcomes: [{ id: "obl_notify", type: "notification", ...outcome }],
+        });
+      } finally {
+        await x.close();
+      }
+    }
+  });
+
+  it("a permit carrying a notification beside an obligation the PEP does not recognize over HTTP with DPoP still transmits the notification and releases no protected effect: the write is refused unfulfillable_obligation, nothing is scheduled, and the outcomes are fulfilled and unsupported", async () => {
+    const outbox = new NotificationOutbox();
+    const x = await endpoint((d) => {
+      if (d.decision) d.context.obligations = [{ id: "obl_unknown", type: "x-unrecognized", properties: {} }, NOTIFY];
+    }, SCHEDULING_VIEW, outbox);
+    try {
+      const before = x.businessState();
+      const refused = await call(x.client);
+      expect(refused).toMatchObject({ ok: false, refusal_reason: "unfulfillable_obligation" });
+      expect(x.businessState()).toEqual(before);
+      expect(outbox.sent().map((n) => [n.obligation_id, n.to])).toEqual([["obl_notify", NOTIFY.properties.to]]);
+      const records = executions(x);
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        outcome: "suppressed",
+        error: "obligation_unfulfilled",
+        obligation_outcomes: [
+          { id: "obl_unknown", type: "x-unrecognized", outcome: "unsupported" },
+          { id: "obl_notify", type: "notification", outcome: "fulfilled" },
+        ],
+      });
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a denial carrying a notification obligation over HTTP with DPoP stays a denial and transmits the notification, beside an obligation the PEP does not recognize: nothing is scheduled and no Execution Evidence is recorded", async () => {
+    const outbox = new NotificationOutbox();
+    // The Mission names no scheduling, so the PDP denies; the obligations ride the denial.
+    const x = await endpoint((d) => {
+      if (!d.decision) d.context.obligations = [{ id: "obl_unknown", type: "x-unrecognized", properties: {} }, NOTIFY];
+    }, READ_ONLY_VIEW, outbox);
+    try {
+      const before = x.businessState();
+      const denied = await call(x.client);
+      expect(denied, JSON.stringify(denied)).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+      expect(denied).not.toHaveProperty("refusal_reason");
+      expect(x.businessState()).toEqual(before);
+      expect(outbox.sent()).toEqual([
+        { obligation_id: "obl_notify", evaluation_id: x.decisionIds[0], ...NOTIFY.properties },
+      ]);
+      expect(executions(x)).toHaveLength(0);
     } finally {
       await x.close();
     }
