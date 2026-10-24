@@ -37,6 +37,7 @@ import {
   type ReconciliationStatus,
   reconciliationStatusFor,
   restrictedSinceAdjudication,
+  successorAuthority,
 } from "./expansion.js";
 import { conditionDigest, entryDigest, terminalWhenOf } from "./discharge.js";
 import { IntentError } from "./intent.js";
@@ -473,7 +474,11 @@ export interface DeferralReview {
   intent: MissionIntent;
   /** The client's proposal, untrusted, when it submitted one. */
   proposal?: AuthorityEntry[];
-  /** The successor's authority, derived as the approval derives it. */
+  /**
+   * The successor's authority as its creation commits it: each retained
+   * catalog-sourced action with the predecessor's binding, each added one bound
+   * from the trusted catalog (#1447).
+   */
   successor: AuthorityEntry[];
   /** When the deferral's own lifetime ends. */
   expiresAt: string;
@@ -818,9 +823,13 @@ export class ExpansionDeferralStore {
     let decisionAudiences: AudienceReference[] | undefined;
     if (pending) {
       const recorded = JSON.parse(pending.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
-      const successor = this.kernel.derive(recorded.i, recorded.pr?.length ? recorded.pr : undefined);
-      // @spec expansion#completion-modes (#1558): the approval approves this
-      // derived set, and completion creates the successor only with it.
+      const approvedPredecessor = this.kernel.get(pending.predecessor_id);
+      // @spec expansion#completion-modes (#1558), capability-binding#capability-approval
+      // (#1447): the approval approves this set, its capability bindings
+      // included, and completion creates the successor only with it.
+      const successor = approvedPredecessor
+        ? successorAuthority(this.kernel, recorded.i, recorded.pr?.length ? recorded.pr : undefined, approvedPredecessor).entries
+        : this.kernel.derive(recorded.i, recorded.pr?.length ? recorded.pr : undefined);
       approvedAuthority = authorityHash(this.kernel.issuerId(), successor as unknown as JsonValue[]);
       // @spec mission#transformation-capabilities (#1503 finding 7, D733
       // ruling 2): this decision is the fresh approval of the authority the
@@ -1050,7 +1059,8 @@ export class ExpansionDeferralStore {
     if (!predecessor) return undefined;
     const recorded = JSON.parse(row.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
     const proposal = recorded.pr?.length ? recorded.pr : undefined;
-    const successor = this.kernel.derive(recorded.i, proposal);
+    // @spec capability-binding#capability-approval (#1447): bound as its creation binds it.
+    const successor = successorAuthority(this.kernel, recorded.i, proposal, predecessor).entries;
     const disclosure = this.disclosure(deferralCode) as ExpansionDisclosure;
     const offer = disclosure.ceiling?.reconsent_offer;
     return {
@@ -1431,7 +1441,7 @@ export class ExpansionDeferralStore {
       // differs (wider or narrower) refuses the completion before any write: a
       // change after the approval needs a fresh one.
       if (typeof row.approved_authority_hash === "string") {
-        const derivedNow = this.kernel.derive(intent, recorded.pr?.length ? recorded.pr : undefined);
+        const derivedNow = successorAuthority(this.kernel, intent, recorded.pr?.length ? recorded.pr : undefined, predNow).entries;
         if (authorityHash(this.kernel.issuerId(), derivedNow as unknown as JsonValue[]) !== row.approved_authority_hash) {
           throw new IntentError("access_denied", "the successor's authority changed since its approval; a fresh approval is required");
         }

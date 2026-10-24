@@ -120,7 +120,7 @@ the store.
 |---|---|---|---|---|---|---|---|
 | Trusted approval input and achieved authentication context | Yes, both configurations | `/interaction/{uid}/decide` route, then `decide()` (§3.1) | In request, before any write; no commit of its own | None | Approval sessions and pending interactions are in memory and are lost; nothing to recover | Yes, HTTP (§3.1) | Achieved context checked, not retained; no render-to-decision binding (§3.1) |
 | Canonical Subject resolution and approve-for authorization | Yes | `decide()`: the approval surface's Subject selection, `knownSubjects`, `approverApprovesFor`, `approverRoleSubs`; the Approver as provider account (§3.2) | In request, before `kernel.approve` | None | Configuration only; nothing to recover | Yes, HTTP (§3.2) | External Subject unsupported and refused (§3.2) |
-| Source and authority derivation | Yes | `kernel.derive`; the source gates in `kernel.approve` (§3.3) | Computed before the record transaction | None | Nothing written before §4.1 | Yes, HTTP; gate detail is kernel-level (§3.3) | Decision-time `scope` check ignores `capability_sources` (§3.3) |
+| Source and authority derivation | Yes | `kernel.derive`; the source gates in `kernel.approve` (§3.3) | Computed before the record transaction | None | Nothing written before §4.1 | Yes, HTTP; gate detail is kernel-level (§3.3) | No test exercises the decision-time `scope` check on a catalog-sourced `scope_only` target (§3.3) |
 | Record and grant binding | Yes | `kernel.prepareApproval`; `grant.save()` under the interaction's grant identity; `kernel.approve` and `insertRecord`, committing the record already bound; the code on the resume request (§3.4) | Every refusal before any write, a consented ceiling's entries and drawdown policy included, except the commit's revalidation of the authority source and drawdown policy; the record commits bound (§4.1); the grant save precedes it and the code follows it on a later request | Publication of the activating event | A failure before the commit leaves an inert grant and no Mission; after it, an `active`, bound Mission whose code is not issued yet; provider state is lost at restart (§4.5) | Yes, HTTP (§3.4) | `{#approval-event}` step 7 record/code atomicity not met: the code is issued on a later request (#250; §3.4) |
 | Issuance | Yes | `at.save()`: `extraTokenClaims`, `formats.customizers.jwt`, `access_token.issued` (§3.5) | The counter `UPDATE` autocommits before signing; no acceptance callback (§4.2) | None before delivery | The count stays consumed; nothing reconciles it (§4.3) | Yes, HTTP (§3.5) | Uncoupled counter: a failure after the count stays counted (§4.3); revoke-versus-issue window (§3.5) |
 | Refresh and revocation gating | Yes | `rotateRefreshToken`; the gates in `extraTokenClaims`; the lifecycle route (§3.6) | The lifecycle commit is one kernel transaction; grant destruction follows it | Grant destruction and publication | File-backed state survives; provider grants do not (§4.5) | Yes, HTTP (§3.6) | A state change between the refresh pre-check and the save-time gate is refused after rotation consumes the presented token (§3.6; #250); a fully contained family is refused after rotation, losing no recoverable issuance authority (§3.6) |
@@ -351,9 +351,14 @@ the store.
 ### 3.3 Source and authority derivation
 
 - **Hook.** `kernel.derive` runs at render (`GET /interaction/{uid}`) and again
-  in `decide()`. `kernel.approve` derives once more, attaches and resolves
-  capability sources (`attachCapabilitySources`, `resolveFreshCapabilities`),
-  runs `establishAuthoritySource` (gates 1, 2, 4 and 5) and
+  in `decide()`, each time with the candidate's capability sources resolved
+  from the trusted catalog (`resolveFreshCapabilities`), so the rendering, its
+  revision and the decision's checks all see the bound candidate (#1447,
+  D584). `kernel.prepareApproval` derives once more for the commit, attaches
+  and resolves capability sources (`attachCapabilitySources`,
+  `resolveFreshCapabilities`), and the decision has already compared the bound
+  candidate with the one rendered, so the commit records exactly the consented
+  bindings. It runs `establishAuthoritySource` (gates 1, 2, 4 and 5) and
   `assertAuthorityWithinSource` (gate 3) on one resolution, and computes
   `authority_hash`, `intent_hash` and, with a proposal, `proposal_hash`.
   `insertRecord` re-asserts the source ceiling against that resolution, or
@@ -412,13 +417,12 @@ the store.
   - `authority source establishment (@spec mission#authority-sources, mission#approval-event) > establishes the source from configuration alone: ApproveInput carries no source member` (same file)
   - `authority source drawdown (@spec mission#authority-sources, child-delegation#child-creation) > a drawdown refuses access_denied when the source narrowed since approval` (same file)
   - `principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827)`, every case (same file)
-- **Residual.** The decision-time `scope` check in `decide()` projects
-  `kernel.derive`'s output, which has no `capability_sources`; `kernel.approve`
-  attaches them afterwards. `scopeValueSafeForEntry`
-  (`packages/mission-core/src/scope-projection.ts`) treats an entry carrying
-  `capability_sources` as never safe. A catalog-sourced `scope_only` entry can
-  therefore pass at the decision and refuse `invalid_target` at the token
-  endpoint. Code reading; no test yet.
+- **Decision-time `scope` check (#1447).** It projects the bound candidate.
+  `scopeValueSafeForEntry` (`packages/mission-core/src/scope-projection.ts`)
+  treats an entry carrying `capability_sources` as never safe, so a
+  catalog-sourced `scope_only` entry refuses `invalid_scope` at the decision
+  rather than `invalid_target` at the token endpoint. Code reading; no test,
+  since no shipped mapping makes a catalog-sourced target `scope_only`.
 
 ### 3.4 Record and grant binding
 
@@ -798,7 +802,7 @@ the store.
     here.
   - No test asserts `derivation_count` after a projection refusal on the code
     or refresh path. The Token Exchange tests above assert it on their path.
-  - The decision-time check ignores `capability_sources` (§3.3).
+  - No test exercises the decision-time check on a catalog-sourced `scope_only` target (§3.3).
 
 ### 3.8 Protected introspection
 
@@ -1576,7 +1580,7 @@ Runtime overlay:
   authoritative non-acceptance returns it (§4.3).
 - A projection refusal at the code exchange lands after code consumption
   (§3.7).
-- The decision-time `scope` check ignores `capability_sources` (§3.3).
+- No test exercises the decision-time `scope` check on a catalog-sourced `scope_only` target (§3.3).
 - The decision carries no render digest, and the page shows no separately
   computed effective expiry (§3.1).
 - The achieved authentication context is not retained (§3.1).
