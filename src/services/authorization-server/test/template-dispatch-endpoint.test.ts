@@ -39,6 +39,7 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
+import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import {
   buildAuthorizationServer,
@@ -946,5 +947,27 @@ describe("the dispatch grant at the DPoP replay cache's bound (@spec RFC 9449 Se
       replay.full = false;
     }
     expect((await dispatch(params())).status).toBe(200);
+  });
+});
+
+describe("the release fence on the Mission dispatch grant (@spec mission#issuance-gating, #250)", () => {
+  it("Mission dispatch grant: a revocation committed after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member", async () => {
+    const created = await createTemplateAdmin(readOnlyTemplateBody());
+    const { template_id } = (await created.json()) as { template_id: string };
+    // The new instance's token is saved through the provider, so the commit lands on it.
+    const committed = commitAtNextIssue(as, "revoke");
+    let res: { status: number; body: Record<string, unknown> };
+    try {
+      const sent = await dispatch({ templateId: template_id, intent: readOnlyIntent(), dispatchEventId: `evt-fence-${seq++}` });
+      res = { status: sent.status, body: (await sent.json()) as Record<string, unknown> };
+    } finally {
+      committed.disarm();
+    }
+    // The commit fired inside the token's save, so the save-time gate had passed.
+    const missionId = committed.missionId() as string;
+    expect(missionId).toBeDefined();
+    expect(as.kernel.get(missionId)?.template).toBeDefined();
+    expect(as.kernel.get(missionId)?.termination?.reason).toBe("revoked");
+    expectFenceRefusal(res, "invalid_grant");
   });
 });

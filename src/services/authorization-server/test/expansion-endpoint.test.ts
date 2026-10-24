@@ -57,6 +57,7 @@ import {
   resignWithCnf,
   tokenRequestOnce,
 } from "./subject-possession.helper.js";
+import { commitAtNextIssue, commitDuringDrain, expectFenceRefusal } from "./release-fence.helper.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   JWT_TOKEN_TYPE,
@@ -2372,5 +2373,84 @@ describe("the per-predecessor, per-client expansion rate limit (@spec expansion#
     const other = await issuePredecessor(["payments:invoice.read"]);
     const fresh = await expandViaExchange(other.accessToken, "Widen to add remittance", wide);
     expect(((await fresh.json()) as { error?: string }).error).toBe("authorization_pending");
+  });
+});
+
+describe("the release fence on the expansion deferral's deferred grant and its recovery (@spec mission#issuance-gating, #250)", () => {
+  const WIDE = ["payments:invoice.read", "payments:remittance.send"];
+  const GOAL = "Widen to add remittance";
+  const read = async (res: Response) => ({ status: res.status, body: (await res.json()) as Record<string, unknown> });
+
+  /** A widening expansion of a fresh predecessor, deferred and approved. */
+  async function approvedExpansion() {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const creationRequestId = crypto.randomUUID();
+    const opened = await read(await expandViaExchange(pred.accessToken, GOAL, WIDE, creationRequestId));
+    expect(opened.body.error, JSON.stringify(opened.body)).toBe("authorization_pending");
+    const code = opened.body.deferral_code as string;
+    approveDeferral(code);
+    return { pred, creationRequestId, code };
+  }
+
+  it("expansion deferral: a poll whose successor is revoked after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member", async () => {
+    const { pred, creationRequestId, code } = await approvedExpansion();
+    // The poll creates the successor, then mints; this commits from inside
+    // that mint's AccessToken#save(), after its gate.
+    const committed = commitAtNextIssue(as, "revoke");
+    let res: Awaited<ReturnType<typeof read>>;
+    try {
+      res = await read(await pollExpansion(code));
+    } finally {
+      committed.disarm();
+    }
+    const successorId = committed.missionId() as string;
+    expect(successorId).toBeDefined();
+    expect(successorId).not.toBe(pred.missionId);
+    expect(as.kernel.get(successorId)?.predecessor).toBe(pred.missionId);
+    expect(as.kernel.get(successorId)?.termination?.reason).toBe("revoked");
+    // The activation committed, so the predecessor stays superseded.
+    expect(as.kernel.get(pred.missionId)?.termination?.reason).toBe("superseded");
+    expectFenceRefusal(res, "invalid_grant");
+
+    // Neither a later poll nor a recovering retry releases a token.
+    const again = await read(await pollExpansion(code));
+    expect(again.status).toBe(400);
+    expect(again.body).not.toHaveProperty("access_token");
+    const retry = await read(await expandViaExchange(pred.accessToken, GOAL, WIDE, creationRequestId));
+    expect(retry.status).toBe(400);
+    expect(retry.body.error).toBe("invalid_request");
+    expect(retry.body.mission_error).toBe("revoked");
+    expect(retry.body).not.toHaveProperty("access_token");
+  });
+
+  it("expansion recovery: a retry of a completed expansion whose successor was revoked before the retry is refused invalid_request with mission_error revoked and no token member", async () => {
+    const { pred, creationRequestId, code } = await approvedExpansion();
+    const delivered = await read(await pollExpansion(code));
+    expect(delivered.status, JSON.stringify(delivered.body)).toBe(200);
+    const successorId = delivered.body.mission_id as string;
+    as.kernel.transition(successorId, "revoke");
+    // recoverExpansion's own successor-state check refuses this retry before
+    // any 200 exists, so the release fence is not what refuses it.
+    const res = await read(await expandViaExchange(pred.accessToken, GOAL, WIDE, creationRequestId));
+    expect(as.kernel.get(successorId)?.termination?.reason).toBe("revoked");
+    expectFenceRefusal(res, "invalid_request");
+  });
+
+  it("expansion recovery: the stored successor token served again to a retry is refused invalid_request with mission_error revoked and no token member when the successor is revoked while the request-path drain runs", async () => {
+    const { pred, creationRequestId, code } = await approvedExpansion();
+    const delivered = await read(await pollExpansion(code));
+    expect(delivered.status, JSON.stringify(delivered.body)).toBe(200);
+    const successorId = delivered.body.mission_id as string;
+    // The stored token is served with no save(), so the commit rides the drain.
+    const committed = commitDuringDrain(as, "revoke", () => successorId);
+    let res: Awaited<ReturnType<typeof read>>;
+    try {
+      res = await read(await expandViaExchange(pred.accessToken, GOAL, WIDE, creationRequestId));
+    } finally {
+      committed.disarm();
+    }
+    expect(committed.missionId()).toBe(successorId);
+    expect(as.kernel.get(successorId)?.termination?.reason).toBe("revoked");
+    expectFenceRefusal(res, "invalid_request");
   });
 });
