@@ -171,7 +171,12 @@ export {
   type PresentationBounds,
   parseChainPresentation,
 } from "./cross-org-presentation.js";
-export { compareAmounts, InvalidAmountError, isValidAmount } from "./decimal-amount.js";
+export {
+  compareAmounts,
+  InvalidAmountError,
+  isCurrencyCode,
+  isValidAmount,
+} from "./decimal-amount.js";
 export {
   DPOP_PROOF_FUTURE_SKEW_S,
   DPOP_PROOF_REPLAY_MAX_ENTRIES,

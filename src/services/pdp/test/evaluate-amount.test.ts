@@ -167,6 +167,23 @@ describe("PDP per-action max_amount cap compares by exact decimal value (@spec m
     expect(decision.decision).toBe(false);
     expect(decision.context.denial_reason).toBe("parameter_violation");
   });
+
+  // @spec resource-access#initial-common-constraints (#1595, D727): "a
+  // resource server treats one as a `constraints` key it cannot enforce".
+  it("a malformed cap currency in the Mission view is denied, even when the request's currency is spelled the same", async () => {
+    const capIn = (currency: string): MissionView => {
+      const v = view("500.00");
+      const [e] = v.authority_set;
+      return { ...v, authority_set: [{ ...e, constraints: { max_amount: { amount: "500.00", currency } } }] } as MissionView;
+    };
+    for (const currency of ["usd", "US", "USDX", "USD\n", " USD", "840"]) {
+      const decision = await evaluate(request("100.00", currency), optsFor(capIn(currency)));
+      expect(decision.decision, JSON.stringify(currency)).toBe(false);
+      expect(decision.context.denial_reason).toBe("parameter_violation");
+    }
+    // A well-formed code ISO 4217 does not assign is compared like any other.
+    expect((await evaluate(request("100.00", "XYZ"), optsFor(capIn("XYZ")))).decision).toBe(true);
+  });
 });
 
 describe("a bound max_amount the PDP cannot supply an amount input for refuses, never permits open (@spec runtime#input-parameters)", () => {
