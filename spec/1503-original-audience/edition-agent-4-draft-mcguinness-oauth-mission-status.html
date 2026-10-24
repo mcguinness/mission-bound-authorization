@@ -2335,13 +2335,13 @@ sole Mission Status path.<a href="#section-4-8" class="pilcrow">¶</a></p>
       <h2 id="name-mission-lifecycle-endpoint">
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-mission-lifecycle-endpoint" class="section-name selfRef">Mission Lifecycle Endpoint</a>
       </h2>
-<p id="section-5-1">This section is <span class="bcp14">OPTIONAL</span>. The issuance profile lets the Subject,
-Approver, or an administrator revoke a Mission by an authenticated,
-deployment-defined means and defers a standardized management API and
-the richer <code>suspend</code>, <code>resume</code>, and <code>complete</code> operations
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Sections "Revocation" and
-"Mission Lifecycle"). This section standardizes that management
-surface.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-1">This section is <span class="bcp14">OPTIONAL</span>. The issuance profile requires an
+authenticated, deployment-defined means to revoke a Mission and defers
+a standardized management API and the richer <code>suspend</code>, <code>resume</code>, and
+<code>complete</code> operations (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Sections "Revocation" and "Mission Lifecycle"). This section
+standardizes that management surface; who may perform each operation
+is governed by <a href="#lifecycle-authorization" class="auto internal xref">Section 5.4</a>.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">The AS publishes its Mission Lifecycle endpoint URL in authorization
 server metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>) as <code>mission_lifecycle_endpoint</code>,
 distinct from <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> token revocation. The endpoint <span class="bcp14">MUST</span> be
@@ -3541,10 +3541,11 @@ authentication-method value space is a closed set defined inline
 (<a href="#as-metadata" class="auto internal xref">Section 8</a>), and Mission Lifecycle <code>operation</code> values have no
 IANA registry; a companion profile registers an extension operation
 by defining it in its own specification
-(<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>). <code>suspended</code> and <code>completed</code>
-(<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>) are values of the issuance profile's
-<code>mission_error</code> member, which has no IANA registry, so this document
-requests no registration for them.<a href="#section-12-1" class="pilcrow">¶</a></p>
+(<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>). The <code>mission_error</code> values
+<code>suspended</code> and <code>completed</code> (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>) need no
+registration, because the issuance profile's <code>mission_error</code> member
+has no registry of values; their registrations as a lifecycle state
+and a termination reason are in <a href="#iana-lifecycle-registrations" class="auto internal xref">Section 12.4</a>.<a href="#section-12-1" class="pilcrow">¶</a></p>
 <p id="section-12-2">This document registers no new Well-Known URI: the metadata members of
 <a href="#as-metadata" class="auto internal xref">Section 8</a> are published in the OAuth Authorization Server Metadata
 document at <code>/.well-known/oauth-authorization-server</code> <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>.<a href="#section-12-2" class="pilcrow">¶</a></p>
