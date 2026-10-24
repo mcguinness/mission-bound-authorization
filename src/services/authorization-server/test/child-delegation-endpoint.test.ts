@@ -63,6 +63,12 @@ import {
 } from "../src/adapters/continuation-grant.js";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
+import {
+  commitAtNextIssue,
+  commitDuringDrain,
+  expectFenceRefusal,
+  FENCE_REFUSAL_MEMBERS,
+} from "./release-fence.helper.js";
 
 const PORT = 14470;
 const ISSUER = `http://localhost:${PORT}`;
@@ -321,6 +327,8 @@ async function createChildViaExchange(fields: {
   intent?: unknown;
   actorToken?: string;
   sentProofs?: string[];
+  /** Send once, with no dpop-nonce retry (a release-fence witness: its injection fires on the first request). */
+  once?: boolean;
 }): Promise<Response> {
   const params: Record<string, string> = {
     grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
@@ -342,6 +350,9 @@ async function createChildViaExchange(fields: {
   };
   if (fields.parent !== undefined) params.parent = fields.parent;
   if (fields.actorToken !== undefined) params.actor_token = fields.actorToken;
+  if (fields.once) {
+    return tokenRequestOnce(ISSUER, params, await clientAssertion(), await dpopProof(`${ISSUER}/token`, "POST"));
+  }
   return tokenRequest(params, fields.sentProofs);
 }
 
@@ -1196,5 +1207,75 @@ describe("invalid or unacceptable subject and actor tokens at the child-creation
     expect(r.body.mission_error).toBeUndefined();
     expect(r.childrenUnchanged).toBe(true);
     expect(r.reserved).toBe(false);
+  });
+});
+
+/**
+ * @spec mission#issuance-gating (#250): each revocation commits inside the
+ * issuing request, after its save-time gate passed, and the release fence
+ * refuses the response. A dedicated parent per test: a revocation cascades
+ * to that parent's children only.
+ */
+describe("the release fence on the child-creation exchange (@spec mission#issuance-gating, #250)", () => {
+  it("child creation: a parent revoked after the save-time gate is refused invalid_request with mission_error parent_terminated, the released child's own reason, and no token member", async () => {
+    const dedicated = await issueParentMission();
+    // The child-bound grant is not provider-saved: the parent is revoked while
+    // the request-path drain runs, after the child committed.
+    const injected = commitDuringDrain(as, "revoke", () => dedicated.missionId);
+    let res: Response;
+    try {
+      res = await createChildViaExchange({
+        subjectToken: dedicated.accessToken,
+        parent: dedicated.missionId,
+        childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+        once: true,
+      });
+    } finally {
+      injected.disarm();
+    }
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(injected.missionId()).toBe(dedicated.missionId);
+    expect(as.kernel.get(dedicated.missionId)?.termination?.reason).toBe("revoked");
+    // The child committed (the gate passed), and the parent's revocation cascaded to it.
+    const children = as.kernel.findChildren(dedicated.missionId);
+    expect(children).toHaveLength(1);
+    const child = as.kernel.get(children[0]!.id);
+    expect(child?.state).toBe("terminated");
+    expect(child?.termination?.reason).toBe("parent_terminated");
+    // The released grant names the child, so the fence reports the child's own
+    // recorded termination, which the cascade stamps parent_terminated.
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_error).toBe("parent_terminated");
+    expect(body.error_description).toContain("before its token was released");
+    expect(Object.keys(body).sort()).toEqual([...FENCE_REFUSAL_MEMBERS]);
+  });
+});
+
+describe("the release fence on the child's JWT-bearer redemption (@spec mission#issuance-gating, #250)", () => {
+  it("child redemption: a child Mission revoked after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member", async () => {
+    const dedicated = await issueParentMission();
+    const created = await createChildViaExchange({
+      subjectToken: dedicated.accessToken,
+      parent: dedicated.missionId,
+      childActor: { sub: "subagent-invoice-extractor", sub_profile: "ai_agent" },
+    });
+    const { mission_id: childId, access_token: assertion } = (await created.json()) as {
+      mission_id: string;
+      access_token: string;
+    };
+    expect(created.status).toBe(200);
+    // The redemption mints through oidc-provider: the child is revoked from its AccessToken save.
+    const injected = commitAtNextIssue(as, "revoke");
+    let res: Response;
+    try {
+      res = await childTokenRequest({ grant_type: CHILD_GRANT_TYPE, assertion });
+    } finally {
+      injected.disarm();
+    }
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(injected.missionId()).toBe(childId);
+    expect(as.kernel.get(childId)?.termination?.reason).toBe("revoked");
+    expectFenceRefusal({ status: res.status, body }, "invalid_grant");
   });
 });

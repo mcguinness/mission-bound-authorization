@@ -60,6 +60,7 @@ import {
 } from "../src/index.js";
 import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { aiAgents } from "./actor-profiles.helper.js";
+import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
 
 const PORT = 14839;
 const ISSUER = `http://localhost:${PORT}`;
@@ -2479,5 +2480,29 @@ describe("the expansion deferral page's refusals (@spec expansion#completion-mod
     as.kernel.db.prepare("UPDATE expansion_deferrals SET created_at = ? WHERE deferral_code = ?").run(Date.now() - 601_000, code);
     expect((await page(code, bob.cookie)).status).toBe(404);
     expect((await decide(code, bob, { decision: "approve", render_revision: shown.revision })).status).toBe(400);
+  });
+});
+
+describe("the release fence on the in-ceiling expansion drawdown (@spec mission#issuance-gating, #250)", () => {
+  it("in-ceiling expansion drawdown: a revocation of the successor committed after the save-time gate and the signature is refused invalid_request with mission_error revoked and no token member (D369)", async () => {
+    const pred = await issueMission(READ, ceilingOf());
+    const crid = crypto.randomUUID();
+    // The successor's token is saved through the provider, so the commit lands on the successor.
+    const committed = commitAtNextIssue(as, "revoke");
+    let res: { status: number; body: Record<string, unknown> };
+    try {
+      const sent = await tokenRequest(expansionParams(pred.accessToken, crid, READ_LIST));
+      res = { status: sent.status, body: (await sent.json()) as Record<string, unknown> };
+    } finally {
+      committed.disarm();
+    }
+    const [successor] = successorsOf(pred.missionId);
+    expect(successor).toBeDefined();
+    expect(committed.missionId()).toBe(successor?.id);
+    expect(as.kernel.get(successor?.id as string)?.termination?.reason).toBe("revoked");
+    expect(as.kernel.get(pred.missionId)?.termination).toMatchObject({ reason: "superseded", successor: successor?.id });
+    expectFenceRefusal(res, "invalid_request");
+    // The fence's own refusal, not the save-time gate's.
+    expect(res.body.error_description).toContain("before its token was released");
   });
 });
