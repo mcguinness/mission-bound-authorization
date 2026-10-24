@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         23 October 2026
-Expires: 26 April 2027
+Intended status: Standards Track                         24 October 2026
+Expires: 27 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 April 2027.
+   This Internet-Draft will expire on 27 April 2027.
 
 Copyright Notice
 
@@ -1206,11 +1206,12 @@ Table of Contents
 
    *  *Reject, do not ignore.* An entry that is not a JSON object, or
       that lacks type, is structurally invalid and refused with the
-      invalid_request error code.  The AS MUST refuse an entry whose
-      type it does not support, and an entry that fails its type's
-      validation or verification, with the
-      invalid_mission_intent_evidence error code (Section 23.2).  A
-      submission is accepted only when every presented entry verifies.
+      invalid_request error code at step 1 of the processing order
+      (Section 4.5).  The AS MUST refuse an entry whose type it does not
+      support, and an entry that fails its type's validation or
+      verification, with the invalid_mission_intent_evidence error code
+      (Section 23.2).  A submission is accepted only when every
+      presented entry verifies.
 
    *  *Policy input, not authority.* A verified entry is not copied into
       the Authority Set and does not stand in for the approval event
@@ -1245,8 +1246,9 @@ Table of Contents
    and is complete before the approval rendering (Section 5.1); step 8
    belongs to the approval event, and step 9 to activation.
 
-   1.  Parse the Submission envelope and enforce both closed top levels
-       (Section 4.2).
+   1.  Parse the Submission envelope, enforce both closed top levels and
+       the size bounds (Section 4.2), and check that each evidence entry
+       is a JSON object with a type member (Section 4.4).
 
    2.  Validate the intent object against the Mission Intent member
        definitions (Section 4).
@@ -1269,8 +1271,8 @@ Table of Contents
        ([I-D.draft-mcguinness-oauth-mission-submission-evidence],
        Section "Required Evidence Is Resolved Before Derivation").
 
-   6.  Apply the evidence dispatch and refusal rules, verifying every
-       presented entry under its type's rules (Section 4.4).
+   6.  Dispatch each presented entry on its type, and validate and
+       verify it under that type's rules (Section 4.4).
 
    7.  Apply admission policy and derive the Authority Set independently
        (Section 5), including the target_resources membership of each
@@ -1295,10 +1297,13 @@ Table of Contents
 
    *  a proposed entry outside target_resources together with a
       presented evidence entry that fails verification is refused at
-      step 3, with invalid_request; and
+      step 3, with invalid_request;
 
    *  an intent object that fails validation together with a malformed
-      proposal is refused at step 2, with invalid_request.
+      proposal is refused at step 2, with invalid_request; and
+
+   *  a structurally invalid evidence entry together with a malformed
+      proposal is refused at step 1, with invalid_request.
 
    The material verified provenance of step 8 is part of the approval
    surface.  Where a deployment commits the rendered approval surface,
@@ -2321,8 +2326,12 @@ Table of Contents
       down-scoping (Section 12.4) both work this way, and the issued
       token is a derived token (Section 8.8) whose mission claim
       identifies the one Mission its subject_token's binding resolved
-      to.  A Token Exchange that instead establishes reusable
-      authorization state, such as the continuation profile's
+      to.  Such an exchange leaves the existing grant provenance in
+      place: the issued token rests on the grant lineage its
+      subject_token was issued under, and a later redemption of a
+      designation derived from it validates that lineage's state
+      (Section 12.2).  A Token Exchange that instead establishes
+      reusable authorization state, such as the continuation profile's
       delegation-family-creating exchange
       ([I-D.draft-mcguinness-oauth-mission-continuation]), creates a new
       grant binding, rooted in that same Mission.  Three Token Exchanges
@@ -2661,6 +2670,16 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]) specifies how
    this bound extends transitively to tokens minted in another trust
    domain.
+
+   Within that bound, a derived token's lifetime is the AS's policy,
+   which Section 8.2 recommends keeping short.  Token Exchange does not
+   tightly couple an issued token's lifetime to its subject_token's
+   (Section 2.1 of [RFC8693]): a designation's expiry (Section 12.1)
+   bounds when it can be redeemed, not the lifetime of the delegated
+   token issued from it, which can outlive both the designation and the
+   credential the designation was derived from.  Revoking the grant
+   state backing that credential still refuses every later redemption
+   (Section 12.2).
 
 8.7.  Scope Projection
 
@@ -3263,7 +3282,10 @@ Table of Contents
    | PAR: malformed Submission         | invalid_request (Section 5.2  |
    | envelope or Intent (schema,       | of [RFC6749]).  Detail: safe  |
    | unknown member, invalid           | error_description             |
-   | value) (Section 4.2)              |                               |
+   | value), including a               |                               |
+   | structurally invalid evidence     |                               |
+   | entry (Section 4.2,               |                               |
+   | Section 4.4)                      |                               |
    +-----------------------------------+-------------------------------+
    | PAR or authorization:             | invalid_authorization_details |
    | malformed or unsupported          | (Section 5 of [RFC9396]).     |
@@ -3760,7 +3782,9 @@ Table of Contents
 
    A designation names a delegate and adds none.  Whether one may be
    redeemed more than once within its lifetime is the AS's policy; each
-   redemption is a delegated exchange of its own (Section 12.2).
+   redemption is a delegated exchange of its own (Section 12.2).  Its
+   expiry bounds when it can be redeemed, not the lifetime of a
+   delegated token issued from it (Section 8.6).
 
    A designation authorizes no resource access.  A designated client's
    identifier MUST NOT be an audience that any resource server accepts
@@ -3834,10 +3858,14 @@ Table of Contents
       derivation, refused unless the Mission is active (Section 8.2).
       The AS MUST evaluate every redemption of a designation afresh, as
       a derivation of its own: the credential the designation was
-      derived from, and that credential's grant, are still valid; the
-      Mission is active; and the delegation policy (Section 12.5) and
-      the Mission's current authority admit the result.  An earlier
-      redemption establishes none of these.
+      derived from, and all applicable grant state backing that
+      credential, are still valid; the Mission is active; and the
+      delegation policy (Section 12.5) and the Mission's current
+      authority admit the result.  An earlier redemption establishes
+      none of these.  The backing grant state includes the grant lineage
+      that credential was issued under, kept through any exchange that
+      established no new grant lineage (Section 8.1.2); the Mission's
+      active state never substitutes for it.
 
    The act chain nests (act.act) for as long as, and only while,
    authority continues under the same approved Mission.  A new approval
@@ -5102,9 +5130,11 @@ Table of Contents
 
    An AS can conform as a Mission Issuer without supporting any Intent
    Submission Evidence type.  Such an AS refuses every presented entry
-   as an unsupported type under the dispatch and refusal rules
-   (Section 4.4), with the invalid_mission_intent_evidence error code.
-   It need not implement the evidence framework of
+   under the dispatch and refusal rules (Section 4.4): a structurally
+   invalid entry with the invalid_request error code, and any other
+   entry, as an unsupported type, with the
+   invalid_mission_intent_evidence error code.  It need not implement
+   the evidence framework of
    [I-D.draft-mcguinness-oauth-mission-submission-evidence] for this
    configuration.  The companion defines conformance for ASs supporting
    an evidence type, whether its evidence is optional or required.
