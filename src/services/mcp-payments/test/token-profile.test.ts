@@ -874,6 +874,52 @@ describe("an obligation the PEP does not recognize or cannot fulfill is an effec
     }
   });
 
+  it("a present obligations member that is not an array is malformed, an effective deny over HTTP with DPoP: nothing is scheduled, the disposition is suppressed obligation_unfulfilled with one unsupported entry and nothing invented, and an empty list still schedules (#786)", async () => {
+    // @spec authzen#obligation-processing ("an obligation it does not
+    // recognize, or cannot fulfill, as an effective deny"), runtime-evidence
+    // #execution-evidence-object `obligation_outcomes` (#786): a member that
+    // is present but not a list is not "no obligation". It is malformed, and
+    // its one positional entry copies only what was supplied.
+    for (const [label, obligations, outcomes] of [
+      [
+        "an obligation object not wrapped in a list",
+        { id: "obl_1", type: "step_up" },
+        [{ id: "obl_1", type: "step_up", outcome: "unsupported", error: "no obligation type is implemented at this PEP" }],
+      ],
+      ["an empty object", {}, [{ outcome: "unsupported", error: "the obligation lacks a non-empty id or type" }]],
+      ["a number", 7, [{ outcome: "unsupported", error: "the obligation lacks a non-empty id or type" }]],
+      ["null", null, [{ outcome: "unsupported", error: "the obligation lacks a non-empty id or type" }]],
+    ] as const) {
+      const x = await endpoint((d) => {
+        if (d.decision) d.context.obligations = obligations;
+      }, SCHEDULING_VIEW);
+      try {
+        const before = x.businessState();
+        const refused = await call(x.client);
+        expect(refused, label).toMatchObject({ ok: false, refusal_reason: "unfulfillable_obligation" });
+        expect(x.businessState(), label).toEqual(before);
+        const executions = x.evidence.all().flatMap((e) => (e.kind === "execution" ? [e.content] : []));
+        expect(executions, label).toHaveLength(1);
+        expect(executions[0], label).toMatchObject({ outcome: "suppressed", error: "obligation_unfulfilled" });
+        expect(executions[0]?.obligation_outcomes, label).toEqual(outcomes);
+        expect(x.evidence.all().filter((e) => e.kind === "refusal"), label).toHaveLength(0);
+      } finally {
+        await x.close();
+      }
+    }
+    // Control: an empty list attaches no obligation, so the same permit schedules.
+    const control = await endpoint((d) => {
+      if (d.decision) d.context.obligations = [];
+    }, SCHEDULING_VIEW);
+    try {
+      const permitted = await call(control.client);
+      expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+      expect(control.businessState().schedules).toHaveLength(1);
+    } finally {
+      await control.close();
+    }
+  });
+
   it("a denial carrying obligations is still a denial over HTTP with DPoP: nothing is scheduled", async () => {
     // The Mission names no scheduling, so the PDP denies; the obligation rides the denial.
     const readOnly: MissionView = { ...VIEW, authority_set: [entry(["payments:invoice.read"]) as MissionView["authority_set"][number]] };
