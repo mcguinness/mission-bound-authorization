@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "1d1cd1e0823fbf4b8903b99b23d985d7f537f36f",
-    "content_sha256": "070987e7b865564e097345e28bb5058be9551ca73c3748dfceef9e6664a321cd"
+    "revision": "c4e30ae3cccc9ded9e2bbae0eeace6d5907994fe",
+    "content_sha256": "3b28af7601845938e5ed1a4e749e8968355129434cd405f5928317c02eca3b28"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -12057,7 +12057,7 @@
    "id": "core.rs-enforcement.mission-issuer-equals-iss",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rs-enforcement",
-   "text": "It MUST require `mission.issuer` to equal the token's `iss`, unless a cross-domain profile it has adopted ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) explicitly establishes the permitted relationship between the two",
+   "text": "It MUST require `mission.issuer` to equal the token's `iss`, unless a Mission-binding profile it has adopted ({{mission-claim-reservation}}), such as {{I-D.draft-mcguinness-oauth-mission-cross-domain}}, explicitly establishes the permitted relationship between the two",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -12070,7 +12070,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a resource server that has adopted no cross-domain profile refuses a JWT Mission-bound token whose `mission.issuer` is not exactly its `iss` and accepts one whose `mission.issuer` is; one that has adopted a cross-domain profile accepts a differing `mission.issuer` only in the relationship that profile establishes and refuses any other",
+    "normative": "a resource server that has adopted no Mission-binding profile establishing another relationship refuses a JWT Mission-bound token whose `mission.issuer` is not exactly its `iss` and accepts one whose `mission.issuer` is; one that has adopted such a profile (here Cross-Domain) accepts a differing `mission.issuer` only in the relationship that profile establishes and refuses any other",
     "local": "mcp-payments adopts no cross-domain profile: it compares the verified `iss` with `mission.issuer` as exact strings on the at+jwt path (HTTP, mediated and gateway validators) and on an attenuation root, before any Mission lookup or decision. mcp-saas is the Cross-Domain destination: `iss` is the Resource AS and `mission.issuer` must be one of its configured `trustedMissionIssuers`, the originating issuers that Resource AS trusts"
    },
    "level": "endpoint",
@@ -12119,7 +12119,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed without a cross-domain profile at mcp-payments: a foreign issuer and the trusted issuer spelled with a trailing slash are each refused on every validator, the HTTP request never reaches the PEP although the loader holds a Mission under the foreign issuer, an at+jwt naming its own issuer is admitted, and an attenuation root naming another issuer is refused while the same root naming its own verifies. Over the in-process MCP channel, the same mismatch is refused at validation with no PEP evidence, though the channel's id-only loader would serve the Mission (live OpenFGA). Witnessed under the Cross-Domain profile at mcp-saas: a Resource AS token whose originating issuer the resource does not trust is refused with no journal effect, and the same token posts at the resource that trusts it. Proved by mutation: removing the at+jwt equality check fails the four mcp-payments token tests, and the HTTP test's no-decision and no-evidence assertions each fail alone; removing the attenuation root check fails the attenuation test; removing the `trustedMissionIssuers` check fails the SaaS test, its no-effect assertion alone included."
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed without a cross-domain profile at mcp-payments: a foreign issuer and the trusted issuer spelled with a trailing slash are each refused on every validator, the HTTP request never reaches the PEP although the loader holds a Mission under the foreign issuer, an at+jwt naming its own issuer is admitted, and an attenuation root naming another issuer is refused while the same root naming its own verifies. Over the in-process MCP channel, the same mismatch is refused at validation with no PEP evidence, though the channel's id-only loader would serve the Mission (live OpenFGA). Witnessed under the Cross-Domain profile at mcp-saas: a Resource AS token whose originating issuer the resource does not trust is refused with no journal effect, and the same token posts at the resource that trusts it. Proved by mutation: removing the at+jwt equality check fails the four mcp-payments token tests, and the HTTP test's no-decision and no-evidence assertions each fail alone; removing the attenuation root check fails the attenuation test; removing the `trustedMissionIssuers` check fails the SaaS test, its no-effect assertion alone included. #1531 (D741): re-quoted when the exception widened from a cross-domain profile to any adopted Mission-binding profile; the witnesses are unchanged (no profile at mcp-payments, Cross-Domain at mcp-saas)."
   },
   {
    "id": "core.rs-enforcement.mission-issuer-invalid-token",
