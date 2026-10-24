@@ -3031,9 +3031,10 @@ A resource server:
    trusts to issue Mission-bound authorization for the resource;
    trusting the issuer's ordinary access tokens is not enough. It MUST
    require `mission.issuer` to equal the token's `iss`, unless a
-   cross-domain profile it has adopted
-   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) explicitly
-   establishes the permitted relationship between the two. It MUST
+   Mission-binding profile it has adopted ({{mission-claim-reservation}}),
+   such as {{I-D.draft-mcguinness-oauth-mission-cross-domain}},
+   explicitly establishes the permitted relationship between the two.
+   It MUST
    reject a token that fails either check with the `invalid_token`
    error code. For an opaque token, the issuer is the AS whose
    introspection response or issuer-local resolution the resource
@@ -7345,7 +7346,10 @@ Cross-Domain:
   profile; a profile that defines another issuance or derivation path
   identifies its grant or chain, authority bound, state check, and
   consumer checks (Claim Reservation). Introspection discloses
-  `mission` only for a token issued on a conforming path.
+  `mission` only for a token issued on a conforming path. A resource
+  server's `mission.issuer` check accepts the relationship any
+  Mission-binding profile it has adopted establishes, not only a
+  cross-domain profile's (Enforcement Requirements).
 - A Mission-governed resource, classified by the deployment or by its
   authenticated `mission_bound_authorization_required` metadata, gets
   no token outside a Mission on any grant type; the open-ended policy
