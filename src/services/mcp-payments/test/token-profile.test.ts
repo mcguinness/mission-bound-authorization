@@ -780,6 +780,118 @@ describe("a Mission-bound credential whose Mission the loader does not hold is r
   });
 });
 
+describe("an obligation the PEP does not recognize or cannot fulfill is an effective deny at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1629)", () => {
+  const SCHEDULE = entry(["payments:invoice.read", "payments:payment.schedule"], { vendors: ["acme", "globex"] });
+
+  /**
+   * The resource's HTTP MCP endpoint under DPoP, deciding through the embedded
+   * signing PDP; `attach` adds obligations to the decision the PDP returned,
+   * as a PDP attaching them would, before the PEP processes it.
+   */
+  async function endpoint(attach: (decision: { decision: boolean; context: Record<string, unknown> }) => void, view: MissionView) {
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: resourcePolicyFixture() });
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    const store = payments();
+    const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
+    const loadView = (ref: { id: string; issuer: string }) =>
+      ref.id === view.id && ref.issuer === view.issuer
+        ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+        : undefined;
+    const pep = new Pep({
+      decide: async (req, opts) => {
+        const decision = await keys.decide(req, opts);
+        attach(decision);
+        return decision;
+      },
+      payments: store,
+      evidence,
+      fga: allowingFga,
+      modelId: "m",
+      loadView,
+      instanceEpoch: "epoch-1629-obligations",
+    });
+    const routed = new McpPaymentsServer({
+      writeReservations,
+      pep,
+      payments: store,
+      loadView,
+      jwks: { keys: [asJwk as never] },
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
+      issuer: ISSUER,
+    });
+    const channel = await createHttpMcpChannel(routed);
+    const session = await createHttpMediatedClient(channel.url, await mint({ authorization_details: [SCHEDULE] }), holder);
+    const businessState = () => ({
+      invoices: store.listInvoices(),
+      schedules: writeReservations.schedules(),
+      reservations: writeReservations.reservations(),
+      consumedPermits: writeReservations.consumedPermits(),
+    });
+    return {
+      evidence,
+      businessState,
+      client: session.client,
+      close: async () => {
+        await session.close();
+        await channel.close();
+      },
+    };
+  }
+
+  const SCHEDULING_VIEW: MissionView = { ...VIEW, authority_set: [SCHEDULE as MissionView["authority_set"][number]] };
+  const call = (client: Awaited<ReturnType<typeof endpoint>>["client"]) =>
+    client.callTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+
+  it("a permit carrying an unrecognized or unfulfillable obligation releases no protected effect over HTTP with DPoP: the write is refused unfulfillable_obligation, nothing is scheduled, and the permit's disposition is suppressed obligation_unfulfilled; the same permit with no obligation schedules", async () => {
+    for (const [label, obligations] of [
+      ["an obligation type the PEP does not recognize", [{ id: "obl_1", type: "x-unrecognized" }]],
+      ["a step-up obligation this PEP cannot perform", [{ id: "obl_1", type: "step_up" }]],
+      ["both at once", [{ id: "obl_1", type: "step_up" }, { id: "obl_2", type: "x-unrecognized" }]],
+    ] as const) {
+      const x = await endpoint((d) => {
+        if (d.decision) d.context.obligations = obligations;
+      }, SCHEDULING_VIEW);
+      try {
+        const before = x.businessState();
+        const refused = await call(x.client);
+        expect(refused, label).toMatchObject({ ok: false, refusal_reason: "unfulfillable_obligation" });
+        expect(x.businessState(), label).toEqual(before);
+        const executions = x.evidence.all().filter((e) => e.kind === "execution");
+        expect(executions, label).toHaveLength(1);
+        expect(executions[0]?.content, label).toMatchObject({ outcome: "suppressed", error: "obligation_unfulfilled" });
+        expect(x.evidence.all().filter((e) => e.kind === "refusal"), label).toHaveLength(0);
+      } finally {
+        await x.close();
+      }
+    }
+    const control = await endpoint(() => {}, SCHEDULING_VIEW);
+    try {
+      const permitted = await call(control.client);
+      expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+      expect(control.businessState().schedules).toHaveLength(1);
+    } finally {
+      await control.close();
+    }
+  });
+
+  it("a denial carrying obligations is still a denial over HTTP with DPoP: nothing is scheduled", async () => {
+    // The Mission names no scheduling, so the PDP denies; the obligation rides the denial.
+    const readOnly: MissionView = { ...VIEW, authority_set: [entry(["payments:invoice.read"]) as MissionView["authority_set"][number]] };
+    const x = await endpoint((d) => {
+      if (!d.decision) d.context.obligations = [{ id: "obl_1", type: "x-unrecognized" }];
+    }, readOnly);
+    try {
+      const before = x.businessState();
+      const denied = await call(x.client);
+      expect(denied, JSON.stringify(denied)).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+      expect(x.businessState()).toEqual(before);
+      expect(x.evidence.all().filter((e) => e.kind === "execution")).toHaveLength(0);
+    } finally {
+      await x.close();
+    }
+  });
+});
+
 describe("a compound-action phase the PEP cannot establish is refused phase_unavailable at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1629)", () => {
   const EXECUTE = entry(["payments:payment.execute"], { vendors: ["acme"] });
 
