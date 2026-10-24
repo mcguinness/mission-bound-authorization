@@ -718,6 +718,23 @@ describe("RAS continuation grant carries the Mission's expiry (@spec continuatio
     });
   });
 
+  // Values `Date.parse` accepts that are not RFC 3339 date-times: a date only, no
+  // timezone, and a day past the month's end.
+  for (const [label, value] of [
+    ["a date-only value", "2027-01-01"],
+    ["a date-time without a timezone", "2027-01-01T00:00:00"],
+    ["an impossible date", "2027-02-30T00:00:00Z"],
+  ] as const) {
+    it(`denies invalid_grant for a continuation grant whose mission.expires_at is ${label}`, async () => {
+      const server = await ras({ mapping: basePolicy([]) });
+      const grant = await mintGrant({ sub: "acct_strictexpiry", identityContinuationHandle: `handle-${value}`, missionExpiresAt: value });
+      await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({
+        code: "invalid_grant",
+        message: "continuation grant mission claim missing or malformed expires_at",
+      });
+    });
+  }
+
   it("preserves the Mission's expires_at on the local token it mints from a continuation grant", async () => {
     const server = await ras({ mapping: basePolicy([]) });
     const expiresAt = "2027-01-01T00:00:00Z";

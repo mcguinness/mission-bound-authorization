@@ -46148,7 +46148,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a continuation ID-JAG whose `mission` claim lacks `expires_at`, or carries one that is not a date-time, is refused `invalid_grant` and yields no local token, while a cross-domain grant without it still redeems"
+    "normative": "a continuation ID-JAG whose `mission` claim lacks `expires_at`, or carries one that is not an RFC 3339 date-time, is refused `invalid_grant` and yields no local token",
+    "local": "the reference Resource AS also redeems a base cross-domain grant that carries no `expires_at`: the cross-domain draft does not require it, an implementation inconsistency kept separately and unresolved here (#1617 owner review)"
    },
    "level": "unit",
    "coverage": "tested",
@@ -46169,10 +46170,28 @@
      "file": "src/services/ras/test/mapping-entitlement.test.ts",
      "level": "unit",
      "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > denies invalid_grant for a continuation grant whose mission.expires_at is a date-only value"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > denies invalid_grant for a continuation grant whose mission.expires_at is a date-time without a timezone"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
+     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > denies invalid_grant for a continuation grant whose mission.expires_at is an impossible date"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "level": "unit",
+     "surface": "token-endpoint",
      "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > still redeems a base cross-domain grant that carries no expires_at"
     }
    ],
-   "notes": "#1589 (the #1617 owner review). The reference Resource AS checks it before the one-time jti is consumed. Mutation: removing the check fails both refusal tests. A cross-domain grant carries no `expires_at`, an inconsistency the cross-domain draft keeps separately; the check applies to continuation ID-JAGs only."
+   "notes": "#1589 (the #1617 owner review). The reference Resource AS checks it with strict RFC 3339 validation before the one-time jti is consumed. Witnessed: absent, not a date-time, date-only, no timezone and an impossible date are each refused; the last cited test witnesses the local observation. Mutation: removing the check fails both earlier refusal tests, and returning to `Date.parse` fails the three regression cases."
   },
   {
    "id": "continuation.ica-transport.further-issuance-keeps-expiry",

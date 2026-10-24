@@ -15,6 +15,7 @@ import {
   type EntitlementAuthorityEntry,
   type EntitlementResolver,
   entryOverlapsResource,
+  isRfc3339Instant,
   type LocalMappingPolicy,
   narrowToEntitledAuthority,
   type OriginPrincipal,
@@ -282,12 +283,10 @@ export class ResourceAuthorizationServer {
     // request-controlled, so this branch cannot be forced by a presenter.
     const isContinuation = typeof payload.identity_continuation_handle === "string";
     // @spec continuation#transport-ica (#1589, D726): a continuation ID-JAG MUST
-    // carry the Mission's `expires_at`; its absence refuses invalid_grant, before
-    // the one-time jti is consumed. The local token preserves the whole claim.
-    if (
-      isContinuation &&
-      (typeof mission.expires_at !== "string" || !Number.isFinite(Date.parse(mission.expires_at)))
-    ) {
+    // carry the Mission's `expires_at` as an RFC 3339 date-time; its absence, or a
+    // value that is not one, refuses invalid_grant before the one-time jti is
+    // consumed. The local token preserves the whole claim.
+    if (isContinuation && !isRfc3339Instant(mission.expires_at)) {
       throw new RasError("invalid_grant", "continuation grant mission claim missing or malformed expires_at");
     }
 
