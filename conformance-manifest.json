@@ -47606,8 +47606,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Resource AS refuses `invalid_grant`, minting no local token, a cross-domain grant whose `mission` claim lacks `expires_at`; carries a value that is not an RFC 3339 date-time, including values `Date.parse` accepts (a date only, no offset, a day past the month's end); or carries one at or before the current second while the grant's own `exp` has not passed",
-    "local": "the reference Resource AS checks before the grant's one-time jti is consumed and compares whole seconds, as for `exp`; the elapsed witness redeems the same grant at an earlier clock, so the refusal consumed nothing"
+    "normative": "a Resource AS refuses `invalid_grant`, minting no local token, a cross-domain grant whose `mission` claim lacks `expires_at`; carries a value that is not an RFC 3339 date-time, including values `Date.parse` accepts (a date only, no offset, a day past the month's end); or carries one at or before the current instant, fractional seconds included, while the grant's own `exp` has not passed; a value still ahead within the current second redeems",
+    "local": "the reference Resource AS checks before the grant's one-time jti is consumed and compares exact instants, fractional seconds included; the elapsed witness redeems the same grant at an earlier clock, so the refusal consumed nothing"
    },
    "level": "unit",
    "coverage": "tested",
@@ -47647,9 +47647,21 @@
      "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > denies invalid_grant for a grant whose mission.expires_at has elapsed while its own exp has not, without consuming its one-time jti",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > redeems a grant whose mission.expires_at is still ahead within the current second: now T+0.100, grant exp T+0.800, expires_at T+0.900",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > refuses a mission.expires_at reached or passed within the current second, and the same grant redeems a millisecond before it",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1630, D751. Mutation: removing the check fails every cited test (and the five Continuation refusals); returning to `Date.parse` fails the date-only, no-offset and impossible-date cases; removing only the elapsed check, or comparing with `<` instead of `<=`, fails the elapsed witness, whose grant keeps a live `exp` so only the Mission's expiry can refuse it."
+   "notes": "#1630, D751. Mutation: removing the check fails every cited test (and the five Continuation refusals); returning to `Date.parse` fails the date-only, no-offset and impossible-date cases; removing only the elapsed check, or comparing with `< 0` instead of `<= 0`, fails the elapsed witness (whose grant keeps a live `exp`, so only the Mission's expiry can refuse it) and the within-second refusal witness; comparing whole seconds, which discards the fraction (the #1644 owner review's finding), fails both fractional-boundary witnesses."
   },
   {
    "id": "cross-domain.resource-as.local-token-preserves-expiry",
