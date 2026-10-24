@@ -500,7 +500,8 @@ describe("a subject_token is a Mission access token: the AS's access-token key a
   });
 
   for (const path of PATHS) {
-    describe(path.name, () => {
+    // A template title, so a ledger citation of one path's case resolves (scripts/test-title-paths.mjs).
+    describe(`${path.name}`, () => {
       // Both checks refuse a transaction token, so either alone suffices here;
       // the two witnesses below each isolate one check.
       it("refuses a transaction token presented as the subject_token, as another credential class", async () => {
