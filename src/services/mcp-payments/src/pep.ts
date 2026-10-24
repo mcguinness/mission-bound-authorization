@@ -1947,17 +1947,18 @@ export class Pep {
    * classification of its failure, the primary `error` of Runtime Evidence's
    * truth table:
    *
-   * | Parameters about to be used | Context | `error` |
+   * | Context | Parameters about to be used | `error` |
    * |---|---|---|
-   * | a member outside the descriptor's declared facts differs | any | `parameter_mismatch` |
-   * | unchanged, or differing only in declared facts | unequal, missing binding, or changed descriptor | `target_drift` |
-   * | any, or not establishable | not establishable (fact, target, salt version, descriptor) | `target_drift` |
+   * | not establishable (fact, target, salt version, descriptor) | any | `target_drift` |
+   * | established | a member outside the descriptor's declared facts differs | `parameter_mismatch` |
+   * | established, and unequal, unbound or under a changed descriptor | unchanged, or differing only in declared facts | `target_drift` |
    *
-   * A parameter deviation is reported only where a comparison was made: the
-   * parameters about to be used were established and a member the
-   * descriptor does not declare differs from the decided one. Every digest
-   * pair that can be observed is recorded by the disposition writer either
-   * way, so naming context drift never erases a parameter divergence.
+   * An unavailable context is `target_drift` whatever else moved: no context
+   * comparison is invented for it. A parameter deviation is the primary error
+   * only where both comparisons were made and a member the descriptor does
+   * not declare differs from the decided one. Every digest pair that can be
+   * observed is recorded by the disposition writer either way, so the
+   * primary error never erases the other divergence.
    *
    * A crossing that captured no context: a context condition on it is
    * invalid there (`condition_unrecognized`), and a crossing the
@@ -1971,13 +1972,14 @@ export class Pep {
       const crossing = this.toolActionUnder(attempt.tool, attempt.operationProfile);
       return crossing && this.contextDeclarations().covers(attempt.action, crossing.phase) ? "target_drift" : undefined;
     }
+    const observed = this.observeEffectiveContextDigest(attempt);
+    if (observed === undefined) return "target_drift";
     const current = this.freshEffectiveParams(bound.effective);
     if (current && deviatingParameterMembers(bound.decided as EffectiveParams, current).some((m) => !bound.declaredParameters.has(m))) {
       return "parameter_mismatch";
     }
     // A missing condition, or one other than the binding this PEP sent.
     if (attempt.permitEvaluationContextDigest !== bound.held.digest) return "target_drift";
-    const observed = this.observeEffectiveContextDigest(attempt);
     return observed === bound.held.digest ? undefined : "target_drift";
   }
 

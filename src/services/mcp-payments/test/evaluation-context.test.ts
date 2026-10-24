@@ -437,6 +437,21 @@ describe("the primary error of a context failure at use, with every available di
     expect(record?.effective_evaluation_context_digest).toBeDefined();
   });
 
+  it("an unavailable context is target_drift even where an agent-supplied parameter also changed, and the parameter divergence is still recorded", async () => {
+    const h = harness();
+    const permit = await h.pep.enforce("hold_transfer", { invoice_id: "inv-1" }, TOKEN);
+    if (!permit.permitted || !permit.attempt || !permit.effective) throw new Error(JSON.stringify(permit));
+    permit.effective.invoice_id = "inv-2";
+    h.restart();
+    expect(await h.pep.verifyPermitAtUse(permit.attempt)).toMatchObject({ ok: false, error: "target_drift" });
+    const [record] = executions(h);
+    expect(record?.error).toBe("target_drift");
+    expect(record?.effective_parameter_digest).toBeDefined();
+    expect(record?.effective_parameter_digest).not.toBe(record?.authorized_parameter_digest);
+    expect(record?.authorized_evaluation_context_digest).toBeDefined();
+    expect(record).not.toHaveProperty("effective_evaluation_context_digest");
+  });
+
   it("an unavailable fact is target_drift, with no invented comparison: both effective digests absent, both authorized digests kept", async () => {
     const h = harness();
     const refused = await cross(h, COMMIT, () => h.payments.db.prepare("DELETE FROM invoices WHERE id = ?").run("inv-1"));

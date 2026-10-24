@@ -235,6 +235,20 @@ describe("the PDP validates the evaluation-context inputs of a covered operation
     const served = await ask(request({ digest: DIGEST, binding: DECLARED }));
     expect(served.decision, JSON.stringify(served.context)).toBe(true);
     expect((served.context.conditions as Record<string, unknown>).evaluation_context_digest).toBe(DIGEST);
+    await handle.close();
+    // A server bound to a declaration that claims nothing evaluates the
+    // request its claimed peer refused: its own binding applies, never the
+    // shipped statement's or a caller's.
+    handle = await createPdpHttpServer({
+      peps: new Map([[PEP_ID, { secret: SECRET, scopes: [AUDIENCE] }]]),
+      getOptions: () => ({ ...decisionOptions(fga), evaluationContextBinding: CLAIMED }) as DecisionOptions,
+      evaluateFn: evaluateRequest,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+      evaluationContextBinding: new EvaluationContextBindingDeclarations({}),
+    });
+    const open = handle;
+    const unclaimed = await evaluateRemote(request({ binding: DECLARED }), { url: open.url, pepId: PEP_ID, secret: SECRET });
+    expect(unclaimed.decision, JSON.stringify(unclaimed.context)).toBe(true);
   });
 });
 
@@ -301,6 +315,19 @@ describe("the PDP echoes the validated context digest and records the binding (@
     expect(refusals.map((r) => r.denial_reason)).toEqual(["evaluation_context_invalid"]);
     const permitted = await point.decide(request({ digest: DIGEST, binding: DECLARED }), decisionOptions(fga));
     expect((permitted.context.conditions as Record<string, unknown>).evaluation_context_digest).toBe(DIGEST);
+    // A decision point bound to a declaration that claims nothing requires no
+    // context, though the shipped statement claims the extension and the
+    // caller names the claimed declaration.
+    const unclaimed = createEphemeralDecisionPoint({
+      emitterId: "pdp-773",
+      audience: AUDIENCE,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+      evaluationContextBinding: new EvaluationContextBindingDeclarations({}),
+    });
+    const naming = { ...decisionOptions(fga), evaluationContextBinding: CLAIMED } as DecisionOptions;
+    const open = await unclaimed.decide(request({}), naming);
+    expect(open.decision, JSON.stringify(open.context)).toBe(true);
+    expect(open.context.conditions).not.toHaveProperty("evaluation_context_digest");
   });
 });
 
