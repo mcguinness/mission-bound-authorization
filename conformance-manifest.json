@@ -38371,18 +38371,54 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an obligation that does not identify itself is still refused with zero effect, and no entry is invented for it",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an obligation without an id and one without a type each keep their own entry, in the decision's order beside a well-formed one, the missing member absent and the outcome unsupported",
      "level": "unit",
      "surface": "evidence-emission"
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a mixed obligation set with one unidentifiable member names none of them, rather than a partial list that reads as complete",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an empty id, a non-string type and a non-object obligation are malformed too: each keeps its entry, and no member is invented",
      "level": "unit",
      "surface": "evidence-emission"
     }
    ],
-   "notes": "One entry per attached obligation that identifies itself, with id, type and outcome unsupported (this PEP implements no obligation type). OUTSTANDING, #786 review point 2: an obligation the decision returns WITHOUT a required id or type cannot be represented at all, so the member is omitted entirely rather than fabricated or emitted as a partial list that would read as complete; and this deployment's PDP does not implement Decision Evidence's own obligations member, so the conditional that makes obligation_outcomes REQUIRED cannot fire from the linked record. Both remain open."
+   "notes": "#786: one entry per attached obligation, in the decision's order, each with outcome unsupported (this PEP implements no obligation type), now also for obligations the decision returned without a non-empty id or type (their own row is evidence.execution.obligation-outcomes-malformed-entry). Exact-equality assertions fail on a dropped, reordered or invented entry (mutations: filtering malformed entries out, reversing the list, restoring the old whole-member omission). Partial: the REQUIRED-when conditional cannot fire from the linked record, since this deployment's PDP does not implement Decision Evidence's own obligations member (#594 W4-11), so the member's presence is witnessed on the PEP's obligation deny rather than keyed to the linked record; and the fulfilled and failed outcomes are unexercised, since no obligation type is implemented."
+  },
+  {
+   "id": "evidence.execution.obligation-outcomes-malformed-entry",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`id` and `type` are each REQUIRED when the decision supplied that member as a non-empty string, and absent otherwise, never invented. An obligation lacking either is malformed, and its `outcome` is `unsupported`.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each obligation_outcomes entry carries id and type exactly when the decision supplied that member as a non-empty string, copied as supplied and never invented, and the entry for an obligation lacking either has outcome unsupported; the malformed obligation still leaves the permit unusable, with no effect and no Refusal Record"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an obligation without an id and one without a type each keep their own entry, in the decision's order beside a well-formed one, the missing member absent and the outcome unsupported",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an empty id, a non-string type and a non-object obligation are malformed too: each keeps its entry, and no member is invented",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24). An obligation missing its id, one missing its type, an empty id, a non-string type and a non-object obligation each keep an entry with only the members the decision supplied as non-empty strings, outcome unsupported, beside a well-formed entry that keeps both. Mutations: inventing an id, dropping malformed entries, and restoring the old whole-member omission each fail both tests; letting a decision whose obligations are all malformed through as a permit fails the second. The representation relaxation does not relax the obligation itself: both tests assert the permit is refused unfulfillable_obligation."
   },
   {
    "id": "evidence.execution.result-summary-no-user-content",
