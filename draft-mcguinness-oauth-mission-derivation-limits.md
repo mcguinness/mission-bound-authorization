@@ -351,7 +351,7 @@ a ceiling-drawdown response returns is one derivation, counted against
 the successor, never the predecessor
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}). The redemption
 of a Dispatch Handoff grant at the Mission Issuer is one derivation,
-counted against the template instance the grant names
+counted against the dispatched Mission its `mission` claim names
 ({{I-D.draft-mcguinness-oauth-mission-template}}, Section "Dispatch
 Handoff").
 
@@ -736,8 +736,9 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
   Derivations follows the OAuth binding's Derivation definition, which
   includes the redemption of a profile-defined grant, and What Counts
   names a Dispatch Handoff grant's redemption at the Mission Issuer as
-  one derivation counted against the instance. No operation is newly
-  counted or exempt.
+  one derivation counted against the dispatched Mission. No operation's
+  accounting changes: each operation the list gains is one its profile
+  already declares a derivation.
 
 - Editorial (#1176): examples of the canonical Mission follow one
   dated history; an example line too long for the page is folded per

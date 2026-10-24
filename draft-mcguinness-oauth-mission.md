@@ -7338,8 +7338,8 @@ Cross-Domain:
   Terminology and Issuance Gating, includes the redemption of a
   profile-defined grant, such as the Template profile's handoff grant;
   a grant binding resolves the Mission for the operations using it,
-  and a profile-defined grant resolves it through its authenticated
-  `mission` reference instead (#1631, D751).
+  and a profile-defined grant can instead resolve it through its
+  authenticated `mission` reference (#1631, D751).
 
 -01
 
