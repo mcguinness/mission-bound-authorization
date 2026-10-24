@@ -3367,8 +3367,8 @@ it:
    it until it reconciles
    ({{I-D.draft-mcguinness-mission-orchestration}}, Section "Trigger
    Sources"), and PEP-supplied state is a floor for the PDP
-   ({{I-D.draft-mcguinness-mission-authzen}}, Section "PDP-side
-   consistency checks").
+   ({{I-D.draft-mcguinness-mission-authzen}}, Section "PDP-Side
+   Consistency Checks").
 3. It does not establish that accepted or in-flight work has stopped,
    or that completed effects are undone. Those are outcomes, which
    evidence establishes: a step whose outcome is not known stays
