@@ -584,41 +584,56 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     ]);
   });
 
-  it("an obligation that does not identify itself is still refused with zero effect, and no entry is invented for it", async () => {
+  it("an obligation without an id and one without a type each keep their own entry, in the decision's order beside a well-formed one, the missing member absent and the outcome unsupported", async () => {
     const { pep, evidence } = build();
-    // The decision returned an obligation with no `id`. `obligation_outcomes`
-    // requires `id` and `type` on every entry, and omitting the entry would
-    // break one-outcome-per-attached-obligation while still reading as a
-    // complete list. So the member is omitted entirely and nothing is
-    // fabricated. #786 records the representation of an unidentifiable
-    // obligation as an outstanding defect: this test pins the fail-closed
-    // behavior meanwhile.
+    // @spec runtime-evidence#execution-evidence-object `obligation_outcomes`
+    // (#786): "One object per attached obligation, in the order the decision
+    // returned them ... `id` and `type` are each REQUIRED when the decision
+    // supplied that member as a non-empty string, and absent otherwise, never
+    // invented. An obligation lacking either is malformed, and its `outcome`
+    // is `unsupported`."
     decide.mockResolvedValueOnce({
       decision: true,
-      context: await permitContext({ obligations: [{ type: "step_up" }] }, UNBOUND_CONDITIONS),
+      context: await permitContext(
+        { obligations: [{ type: "notify" }, { id: "obl_1", type: "step_up" }, { id: "obl_3" }] },
+        UNBOUND_CONDITIONS,
+      ),
     });
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
+    // A malformed obligation still makes the permit unusable: zero effect,
+    // and the permit's disposition, never a Refusal Record.
     expect(res.permitted).toBe(false);
     expect(res.refusal_reason).toBe("unfulfillable_obligation");
+    expect(evidence.forMission(missionId).some((e) => e.kind === "refusal")).toBe(false);
     const execution = evidence.forMission(missionId).find((e): e is ExecutionEvidence => e.kind === "execution");
     expect(execution?.content.outcome).toBe("suppressed");
     expect(execution?.content.error).toBe("obligation_unfulfilled");
-    expect(execution?.content.obligation_outcomes).toBeUndefined();
+    // Exact equality: an invented `id` or `type`, a dropped entry or a
+    // reordered list each fails.
+    expect(execution?.content.obligation_outcomes).toEqual([
+      { type: "notify", outcome: "unsupported", error: "the obligation lacks a non-empty id or type" },
+      { id: "obl_1", type: "step_up", outcome: "unsupported", error: "no obligation type is implemented at this PEP" },
+      { id: "obl_3", outcome: "unsupported", error: "the obligation lacks a non-empty id or type" },
+    ]);
   });
 
-  it("a mixed obligation set with one unidentifiable member names none of them, rather than a partial list that reads as complete", async () => {
+  it("an empty id, a non-string type and a non-object obligation are malformed too: each keeps its entry, and no member is invented", async () => {
     const { pep, evidence } = build();
     decide.mockResolvedValueOnce({
       decision: true,
       context: await permitContext(
-        { obligations: [{ id: "obl_1", type: "step_up" }, { type: "notify" }] },
+        { obligations: [{ id: "", type: "step_up" }, { id: "obl_2", type: 7 }, "notify"] },
         UNBOUND_CONDITIONS,
       ),
     });
     const res = await pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN);
     expect(res.refusal_reason).toBe("unfulfillable_obligation");
     const execution = evidence.forMission(missionId).find((e): e is ExecutionEvidence => e.kind === "execution");
-    expect(execution?.content.obligation_outcomes).toBeUndefined();
+    expect(execution?.content.obligation_outcomes).toEqual([
+      { type: "step_up", outcome: "unsupported", error: "the obligation lacks a non-empty id or type" },
+      { id: "obl_2", outcome: "unsupported", error: "the obligation lacks a non-empty id or type" },
+      { outcome: "unsupported", error: "the obligation lacks a non-empty id or type" },
+    ]);
   });
 
   it("a DENY decision (no permit) is unaffected by the recognized-member enumeration", async () => {
