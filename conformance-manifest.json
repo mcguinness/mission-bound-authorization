@@ -1060,15 +1060,9 @@
      "name": "compound-action phases (@spec runtime#compound-actions) > offsets a committed wire through the reference connector under a fresh compensate Decision whose evidence links the original commit's evaluation_id",
      "level": "unit",
      "surface": "resource-operation"
-    },
-    {
-     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
-     "name": "compound-action phases (@spec runtime#compound-actions) > does not offset a committed wire twice under a duplicate compensation",
-     "level": "unit",
-     "surface": "resource-operation"
     }
    ],
-   "notes": "#252 PR C2. The commit's own permit presented at the compensating crossing is refused at admission by the phase binding (phase_mismatch): zero reversal entries, the wire ledger unchanged, exactly one suppressed Execution Evidence record linked to that permit, and no Refusal Record. A compensation the Mission does not authorize is denied out_of_authority though its link to the committed original is established, and the denial records the link. The authorized compensation obtains its own Decision for its own action, with a fresh evaluation_id, use_limit 1 and its own operation key; a duplicate under the same key is denied duplicate_suppressed and under a new key is refused at use (operation_already_claimed), offsetting nothing. Mutations: disabling the phase comparison makes the refusal parameter_mismatch (the reason assertion fails), and disabling the digest comparison as well lets the commit's permit offset the wire (the zero-reversal assertion fails on its own); evaluating the compensation under the compensated action identifier permits it (the denial assertion fails, and the zero-reversal assertion fails on its own); keying the reversal per idempotency key with no connector guard offsets the wire twice."
+   "notes": "#252 PR C2. The commit's own permit presented at the compensating crossing is refused at admission by the phase binding (phase_mismatch): zero reversal entries, the wire ledger unchanged, exactly one suppressed Execution Evidence record linked to that permit, and no Refusal Record. A compensation the Mission does not authorize is denied out_of_authority though its link to the committed original is established, and the denial records the link. The authorized compensation obtains its own Decision for its own action, with a fresh evaluation_id, use_limit 1 and its own operation key. Mutations: disabling the phase comparison makes the refusal parameter_mismatch (the reason assertion fails), and disabling the digest comparison as well lets the commit's permit offset the wire (the zero-reversal assertion fails on its own); evaluating the compensation under the compensated action identifier permits it (the denial assertion fails, and the zero-reversal assertion fails on its own)."
   },
   {
    "id": "runtime.compound-actions.permit-binds-phase",
