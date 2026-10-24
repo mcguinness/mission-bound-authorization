@@ -542,6 +542,29 @@
    "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
   },
   {
+   "id": "authzen.profiles.transaction-assurance-required-for-bound-classes",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "profiles-and-capabilities",
+   "text": "a PEP and a PDP MUST support this feature profile for those classes and the PDP MUST advertise its capability URN",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "for a parameter-bound or high-consequence class, a PDP that does not advertise the Transaction Assurance URN is not relied on (the PEP fails closed), and a conforming pair carries `parameter_digest` and `use_limit: 1` under that URN"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 10). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+  },
+  {
    "id": "authzen.context-evaluation-binding.pep-supplies-digest-and-descriptor",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-evaluation-binding",
@@ -567,7 +590,7 @@
    "id": "authzen.context-evaluation-binding.pdp-validates-or-refuses-permit",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-evaluation-binding",
-   "text": "The PDP MUST validate their shape and applicability against the declared operation binding, and MUST NOT issue a covered permit when either is missing, malformed or incompatible with that declaration.",
+   "text": "The PDP MUST validate their shape and applicability against the declared operation binding, and MUST NOT issue a covered permit when either is missing, malformed or incompatible with that declaration; it refuses such a request before evaluation ({{failure-condition-coverage}})",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -578,12 +601,12 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PDP checks both inputs against the declared operation binding and issues no covered permit when either is missing, malformed, or incompatible with that declaration"
+    "normative": "the PDP checks both inputs against the declared operation binding and issues no covered permit when either is missing, malformed, or incompatible with that declaration, refusing the request before evaluation (`evaluation_context_invalid`)"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact. Re-quoted at #1629 (D744 ruling 3): the refusal before evaluation is new text."
   },
   {
    "id": "authzen.response-context.evaluation-context-digest-equals-request",
@@ -30227,28 +30250,6 @@
    "notes": "The configured remote client bounds the complete response and `channelDeadlineMs` caps the configured deadline at the class budget, so a call for a class with a tighter declared window cannot wait out the configured timeout. Timeout, transport failure and any non-2xx status reach the PEP as pdp_unreachable. Partial: this is the remote path, not a timeout wrapper for arbitrary co-resident decision functions."
   },
   {
-   "id": "authzen.transport.no-double-charge-on-retry",
-   "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "transport-behavior",
-   "text": "metering MUST NOT charge the bound twice for the retried request",
-   "role": "PDP",
-   "strength": "MUST NOT",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "runtime-enforced"
-   ],
-   "surface": "decision-request",
-   "assertion": "no-side-effect",
-   "observation": {
-    "normative": "a PEP retry of a lost-response evaluation, carrying the same normalized parameters and idempotency key, never causes a metered bound to be charged twice"
-   },
-   "level": "concurrency",
-   "coverage": "todo",
-   "tests": []
-  },
-  {
    "id": "authzen.transport.no-retry-before-retry-after",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "transport-behavior",
@@ -31193,7 +31194,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "ARAP is pinned in notes/external-pins.json (id ARAP, openid/authzen #515, commit 7327cb1bcea8cfc223e7b6816535f60149845468, status established); the reference implementation is verified against that commit."
+   "notes": "ARAP is pinned in notes/external-pins.json (id ARAP, published Draft 1, commit 6d5380cb4b48e8f613ef3a09c48d9fe71179599f, pin ARAP@54e9de06a870; re-pinned at #1629 from 7327cb1bcea8cfc223e7b6816535f60149845468). The reference implementation was verified against 7327cb1; the `approval` object's members (`id`, `approved_at`, `approved_until`, `state`) are unchanged in Draft 1, so the witness still applies."
   },
   {
    "id": "authzen.context-approval.mission-checks-beyond-arap",
@@ -31378,7 +31379,7 @@
    "id": "authzen.context-history.no-caller-asserted-outcome",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-history",
-   "text": "A caller-supplied `mission_history` value is never itself evidence of a predicate's outcome, and carries no result member; the PDP MUST NOT accept a predicate outcome asserted through any context member.",
+   "text": "A caller-supplied `context.mission_history` value is never itself evidence of a predicate's outcome, and carries no result member; the PDP MUST NOT accept a predicate outcome asserted through any context member.",
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
@@ -31391,11 +31392,36 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PDP never accepts a caller-asserted predicate outcome; mission_history only supplies facts the PDP itself evaluates against the policy-selected predicate"
+    "normative": "the PDP never accepts a caller-asserted predicate outcome; `context.mission_history` only supplies facts the PDP itself evaluates against the policy-selected predicate"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Re-quoted at #1629 (D744 ruling 7): the request object is named by its full path."
+  },
+  {
+   "id": "authzen.evidence.mission-history-computed",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "evidence",
+   "text": "`mission_history` records the predicates the PDP evaluated and their outcomes ({{context-history}}); the PDP computes it, never copying it from `context.mission_history`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.history-input"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Decision Evidence `mission_history` holds the PDP's own evaluated predicates and outcomes, and differs from a supplied `context.mission_history` when that input asserts anything else"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 7). todo: no reference witness yet; existing coverage does not transfer to the changed text."
   },
   {
    "id": "authzen.context-history.unrecognized-predicate-refusal",
@@ -31516,7 +31542,7 @@
    "id": "authzen.runtime-denial-classification.stale-state-marked-transient",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "runtime-denial-classification",
-   "text": "While the condition is expected to clear on a fresh read, the PDP SHOULD mark the denial transient with `next_action: retry`",
+   "text": "Where a fresh read or reconciliation is expected to resolve the condition, the PDP SHOULD mark the denial transient with `next_action: retry`",
    "role": "PDP",
    "strength": "SHOULD",
    "applicability": {
@@ -31528,11 +31554,81 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a stale_state denial is marked transient with next_action: retry, since a fresh state read is expected to clear it"
+    "normative": "a `stale_state` denial is marked transient with `next_action: retry` only where a fresh read or reconciliation is expected to resolve the condition, and otherwise carries no retry recommendation"
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Re-quoted at #1629 (D744 ruling 3)."
+  },
+  {
+   "id": "authzen.context-action-phase.pdp-refuses-invalid-or-missing-phase",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-action-phase",
+   "text": "The PDP MUST refuse, before evaluation, a request whose `action_phase` is outside this set, or is absent where its trusted operation declaration requires a phase",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request with an `action_phase` outside the closed set, or with none where the trusted operation declaration requires one, is refused before evaluation (`phase_invalid`), never evaluated into a permit or a policy denial"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 3). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.unusable-inputs-not-denials",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "They describe decision inputs the PDP cannot use, not an evaluated policy denial, and a PDP claiming only the Decision Base records them in its own internal form",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`phase_invalid` and `evaluation_context_invalid` refusals are pre-evaluation records, never a `decision` with a `denial_reason`; a Decision-Base-only PDP keeps them in its internal form"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 3). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+  },
+  {
+   "id": "authzen.runtime-denial-classification.stale-state-scope",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "runtime-denial-classification",
+   "text": "`stale_state`: the Mission state the decision relies on is not current: the PEP-supplied freshness is outside the deployment's staleness bound (a freshness-bound violation), the PDP cannot establish the state it is required to establish, or the request's state version differs from the PDP's",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a freshness-bound violation, state the PDP cannot establish where state establishment is placed with it, and a state-version mismatch each deny `stale_state`, while a Mission the PDP knows is not `active` denies `mission_inactive`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 3). todo: no reference witness yet; existing coverage does not transfer to the changed text."
   },
   {
    "id": "authzen.runtime-denial-classification.terminal-refusal-carries-next-action-none",
@@ -32094,7 +32190,7 @@
    "id": "authzen.obligations.permit-fulfillment-and-denial-execution",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "obligations",
-   "text": "on a permit the PEP MUST fulfill each obligation before releasing the action's effect; on a denial the PEP MUST still deny the action and MUST additionally execute every returned obligation. Failure to fulfill an obligation, or an unrecognized obligation type, makes the effective result deny.",
+   "text": "on a permit the PEP MUST fulfill each obligation before releasing the action's effect; on a denial the PEP MUST still deny the action and MUST additionally execute every returned obligation.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -32106,11 +32202,82 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PEP fulfills every attached obligation before releasing a permitted action's effect and treats an unfulfilled or unrecognized one as an effective deny; on a denial the PEP still denies and additionally executes every returned obligation"
+    "normative": "the PEP fulfills every attached obligation before releasing a permitted action's effect; on a denial the PEP still denies and additionally executes every returned obligation"
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Re-quoted at #1629 (D744 ruling 8): the effective-deny clause is its own row, authzen.obligation-processing.effective-deny."
+  },
+  {
+   "id": "authzen.obligation-processing.pdp-publishes-supported-obligations",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "obligation-processing",
+   "text": "A PDP claiming the Obligations feature profile ({{profiles-and-capabilities}}) MUST publish in its metadata `supported_obligations` array each obligation type it supports",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "authzen.obligations"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PDP that advertises the Obligations feature profile publishes `supported_obligations` in its metadata, listing every obligation type it can attach, the step-up obligation included"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 1). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+  },
+  {
+   "id": "authzen.obligation-processing.pep-omission-unknown-capability",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "obligation-processing",
+   "text": "A PEP that omits the declaration has an unknown capability, not support for no obligation type, and the omission never relaxes obligation processing",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a request without `supported_obligations` is not read as supporting no obligation type: the PDP still attaches the obligations policy requires, and the PEP's fail-closed processing is unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 1). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+  },
+  {
+   "id": "authzen.obligation-processing.effective-deny",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "obligation-processing",
+   "text": "The PEP MUST treat an obligation it does not recognize, or cannot fulfill, as an effective deny and MUST release no protected effect; it still executes every obligation it understands and can perform, as on any denial.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a permit carrying an obligation the PEP does not recognize or cannot fulfill releases no effect, and the PEP still executes the other obligations it understands and can perform"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 8). todo: no reference witness yet; existing coverage does not transfer to the changed text."
   },
   {
    "id": "authzen.obligations.no-authority-and-no-remediation-content",
@@ -32627,6 +32794,29 @@
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed at the PDP's projections (operation identity, authorization binding, cache key) and its idempotency claim, not at a PEP-side projection; the payments PEP keeps no permit cache of its own. Mutations M7 and M8 fail P9 and C1. #1276 argument-derived contracts: two payments PEP requests for the same invoice under contracts deriving different targets carry the same audience, action and type/id, and differ in operation_target, parameter_digest, operation identity and cache key (computed with the PDP's projections). Still no PEP-side permit cache, so the row stays partial. Mutation: binding the service identifier rather than the target into the effective parameters fails that witness."
   },
   {
+   "id": "metering.retry.no-double-consumption",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "retry",
+   "text": "A retry of the same normalized action under the same idempotency key or single-use decision identifier MUST NOT consume the bound twice.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a retry of the same normalized action under the same idempotency key or single-use decision identifier consumes a metered bound once"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 5): the AuthZEN profile's copy (authzen.transport.no-double-charge-on-retry) is removed in favor of this home; todo, no reference witness yet."
+  },
+  {
    "id": "metering.lease-renewal.continuity-with-renewed-evaluation",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "lease-renewal",
@@ -33108,7 +33298,7 @@
    "id": "authzen.decision-id-propagation.signature-must-cover-header",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "decision-id-propagation",
-   "text": "where the deployment signs resource requests the signature MUST cover it.",
+   "text": "Where the deployment signs resource requests, the signature MUST cover the field.",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -33124,7 +33314,31 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Re-quoted at #1629 (D744 ruling 11)."
+  },
+  {
+   "id": "authzen.decision-id-propagation.tls-on-resource-hop",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "decision-id-propagation",
+   "text": "A PEP that propagates the field MUST send the resource request carrying it over TLS 1.2 or later",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a resource request carrying `Mission-Decision` is sent only over TLS 1.2 or later; the PEP does not send the field on a cleartext hop"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 11). todo: no reference witness yet; existing coverage does not transfer to the changed text."
   },
   {
    "id": "authzen.decision-id-propagation.no-treat-as-permit",
@@ -33266,7 +33480,7 @@
    "id": "authzen.conformance.pep-checklist-runtime-evidence",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "conformance",
-   "text": "A PEP additionally claiming the Runtime Evidence profile ({{profiles-and-capabilities}}) MUST emit a Refusal Record ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for a pre-decision refusal, and, for the classes the runtime profile's transaction-assurance tier covers, an Execution Evidence Object for the final disposition of every consequential permit",
+   "text": "A PEP additionally claiming the Runtime Evidence profile ({{profiles-and-capabilities}}) MUST emit a Refusal Record ({{I-D.draft-mcguinness-mission-runtime-evidence}}) for a pre-decision refusal, and an Execution Evidence Object for the final disposition of every consequential permit",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -33277,11 +33491,12 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a PEP claiming the Runtime Evidence profile emits a Refusal Record for every pre-decision refusal and, for transaction-assurance-tier classes, an Execution Evidence Object for the final disposition of every consequential permit; a PEP claiming only the Decision Base is not required to (#703, closing the unconditional-adoption-gate defect #703 identified)"
+    "normative": "a PEP claiming the Runtime Evidence profile emits a Refusal Record for every pre-decision refusal and an Execution Evidence Object for the final disposition of every consequential permit, whatever its class; a PEP claiming only the Decision Base is not required to (#703)"
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Re-quoted at #1629 (D744 ruling 2): the transaction-assurance-class restriction is removed, an expansion, so the row stays todo until re-witnessed."
   },
   {
    "id": "authzen.conformance.pdp-checklist",
@@ -33323,28 +33538,6 @@
     "normative": "a PDP claiming the Runtime Evidence profile emits the runtime evidence companion's records, including a Refusal Record, for every decision and pre-evaluation refusal; a PDP claiming only the Decision Base records decisions and refusals in its own internal form (#703, closing the unconditional-adoption-gate defect #703 identified)"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
-  },
-  {
-   "id": "authzen.conformance.pdp-should-advertise-supported-obligations",
-   "spec": "draft-mcguinness-mission-authzen.md",
-   "anchor": "conformance",
-   "text": "A PDP conforming to this profile SHOULD advertise in its metadata `supported_obligations` array each obligation type it supports",
-   "role": "PDP",
-   "strength": "SHOULD",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "runtime-enforced"
-   ],
-   "surface": "decision-request",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a conforming PDP advertises each obligation type it supports in its metadata supported_obligations array"
-   },
-   "level": "unit",
    "coverage": "todo",
    "tests": []
   },
@@ -36532,6 +36725,76 @@
     }
    ],
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. The reference evidence store's PDP closed set holds only mission_context_missing. #1276 implementation (D457, payments-runtime-profile-v6). The PDP signs a pdp-role Refusal Record operation_target_invalid over the request as submitted (P6); the PEP-side store refuses to sign that value (R1). Mutation M19 fails P5 and P6. #1296 review: a syntactically malformed target (RFC 3986 absolute-URI) is recorded operation_target_invalid in process and over the remote channel."
+  },
+  {
+   "id": "evidence.refusal.pep-phase-unavailable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "`phase_unavailable` (the operation is a phase of a compound action and the PEP cannot establish the phase before requesting a decision)",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP that cannot establish a compound action's phase before requesting a decision records a Refusal Record with denial_reason `phase_unavailable` and requests no decision"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 3). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+  },
+  {
+   "id": "evidence.refusal.pdp-phase-invalid",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for one whose action phase is outside the defined set, or is absent where the PDP's trusted operation declaration requires a phase, `phase_invalid`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP's pre-evaluation refusal of an out-of-set or missing required action phase is a Refusal Record with denial_reason `phase_invalid`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 3). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+  },
+  {
+   "id": "evidence.refusal.pdp-evaluation-context-invalid",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for one whose evaluation-context binding inputs are missing, malformed, or incompatible with the declared binding, for an operation the runtime profile's Evaluation-Context Binding extension covers, `evaluation_context_invalid`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP's pre-evaluation refusal of missing, malformed or incompatible evaluation-context binding inputs for a covered operation is a Refusal Record with denial_reason `evaluation_context_invalid`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1629 (D744 ruling 3). todo: no reference witness yet; existing coverage does not transfer to the changed text."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
