@@ -12,8 +12,8 @@
 
 import { createHash } from "node:crypto";
 import { type Server } from "node:http";
-import { authorityHash, intentHash, type JsonValue } from "@mission/core";
-import { DERIVATION_POLICY, SCOPE_PROJECTION } from "@mission/demo-data";
+import { authorityHash, capabilitySourceDigest, extractMcpToolDefinition, intentHash, type JsonValue } from "@mission/core";
+import { DERIVATION_POLICY, SCOPE_PROJECTION, TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import { type CryptoKey, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
@@ -556,5 +556,125 @@ describe("a pushed request that no longer validates is refused, never a 500 (@sp
     const resumed = await fetch(decided.location as string, { redirect: "manual", headers: { cookie: flow.cookie } });
     expect(new URL(resumed.headers.get("location") as string).searchParams.get("error")).toBe("invalid_request");
     await expectNothingCreated(flow.uid);
+  });
+});
+
+/**
+ * @spec capability-binding#capability-approval (#1447, D584): the approval page
+ * presents each catalog-sourced action's binding in terms the Approver can act
+ * on, and the decision commits exactly the bindings shown. A covered
+ * definition change with unchanged action and tool names, between rendering
+ * and decision, asks for a fresh decision; an edit to another tool of the
+ * catalog does not, since this deployment records no catalog_digest.
+ */
+describe("capability bindings on the approval page (@spec capability-binding#capability-approval, #1447)", () => {
+  /** The payments service's trusted tool catalog, whose `text` the resolver reads on every resolution. */
+  const catalog = () => TRUSTED_TOOL_CATALOGS.find((c) => c.service_id === "payments") as { text: string; source_uri: string };
+  /** Run `body` with one tool of that catalog edited, restoring the catalog after. */
+  async function withTool<T>(name: string, edit: (tool: Record<string, unknown>) => void, body: () => Promise<T>): Promise<T> {
+    const served = catalog();
+    const original = served.text;
+    const parsed = JSON.parse(original) as { tools: Record<string, unknown>[] };
+    edit(parsed.tools.find((t) => t.name === name) as Record<string, unknown>);
+    served.text = JSON.stringify(parsed);
+    try {
+      return await body();
+    } finally {
+      served.text = original;
+    }
+  }
+  const unescapeHtml = (s: string) =>
+    s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  /** The bindings a page presents: each one's machine binding, and its rendered account. */
+  const bindingItems = (html: string) =>
+    [
+      ...html.matchAll(
+        /<li class="capability-binding" data-action="([^"]*)" data-tool-id="([^"]*)" data-operation-ref="([^"]*)" data-source-digest="([^"]*)">([\s\S]*?)<\/li>/g,
+      ),
+    ].map((m) => ({
+      action: unescapeHtml(m[1] as string),
+      tool_id: unescapeHtml(m[2] as string),
+      operation_ref: unescapeHtml(m[3] as string),
+      source_digest: unescapeHtml(m[4] as string),
+      body: m[5] as string,
+    }));
+  const machine = (b: { action: string; tool_id: string; operation_ref: string; source_digest: string }) => ({
+    action: b.action,
+    tool_id: b.tool_id,
+    operation_ref: b.operation_ref,
+    source_digest: b.source_digest,
+  });
+  const byAction = (a: { action: string }, b: { action: string }) => a.action.localeCompare(b.action);
+  const digestOf = (tool: string) => capabilitySourceDigest(extractMcpToolDefinition(catalog().text, tool));
+
+  it("presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown", async () => {
+    const flow = await open();
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    const { html, revision } = await render(flow.uid, headers);
+    const items = bindingItems(html);
+    expect(items.map((i) => i.action).sort()).toEqual(["payments:invoice.list", "payments:invoice.read"]);
+    const read = items.find((i) => i.action === "payments:invoice.read") as (typeof items)[number];
+    expect(read.operation_ref).toBe("get_invoice");
+    expect(read.tool_id).toBe("mcp://payments.demo/tools/get_invoice");
+    expect(read.source_digest).toBe(digestOf("get_invoice"));
+    expect(read.body).toContain("invokes the tool <code>get_invoice</code> (<code>mcp://payments.demo/tools/get_invoice</code>)");
+    expect(read.body).toContain('Invoking it: <q class="binding-description">Read one invoice</q>');
+    expect(read.body).toContain(`Source: the trusted catalog at <code>${catalog().source_uri}</code>, configured here as <q>AP Payments (internal MCP)</q>.`);
+    expect(read.body).toContain("Publisher: unknown; this server has not established one.");
+    expect(read.body).toContain("A later change to this tool's definition is refused.");
+    expect((await decide(flow.uid, headers, approve(revision))).status).toBe(303);
+    const committed = (as.kernel.findByApprovalEvent(`apev_${flow.uid}`)?.authority_set ?? []).flatMap((e) => e.capability_sources ?? []);
+    expect(committed.map(machine).sort(byAction)).toEqual(items.map(machine).sort(byAction));
+  });
+
+  it("a covered definition change with unchanged action and tool names, between rendering and decision, creates nothing; a fresh decision commits the changed binding", async () => {
+    const flow = await open();
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    const first = await render(flow.uid, headers);
+    await withTool("get_invoice", (t) => {
+      t.description = "Read one invoice, and its payment history";
+    }, async () => {
+      const stale = await decide(flow.uid, headers, approve(first.revision));
+      expect(stale.status, JSON.stringify(stale.json)).toBe(409);
+      expect(stale.json.error).toBe("approval_context_changed");
+      expect(stale.json.changed).toEqual(["authority_hash"]);
+      await expectNothingCreated(flow.uid);
+      const again = await render(flow.uid, headers);
+      expect(again.html).toContain('<q class="binding-description">Read one invoice, and its payment history</q>');
+      expect((await decide(flow.uid, headers, approve(again.revision))).status).toBe(303);
+      const binding = (as.kernel.findByApprovalEvent(`apev_${flow.uid}`)?.authority_set ?? [])
+        .flatMap((e) => e.capability_sources ?? [])
+        .find((b) => b.action === "payments:invoice.read");
+      expect(binding?.operation_ref).toBe("get_invoice");
+      expect(binding?.source_digest).toBe(digestOf("get_invoice"));
+    });
+  });
+
+  it("an edit to another tool of the catalog is not a binding change: the decision approves, since no catalog_digest is recorded", async () => {
+    const flow = await open();
+    const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    const { revision } = await render(flow.uid, headers);
+    await withTool("send_remittance_email", (t) => {
+      t.description = "Send remittance advice, edited";
+    }, async () => {
+      expect((await decide(flow.uid, headers, approve(revision))).status).toBe(303);
+    });
+  });
+
+  it("a tool's description renders as inert text, and the binding commits the definition shown", async () => {
+    await withTool("get_invoice", (t) => {
+      t.description = 'Read one invoice <script>alert("x")</script>';
+    }, async () => {
+      const flow = await open();
+      const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+      const shown = await render(flow.uid, headers);
+      expect(shown.html).not.toContain("<script>");
+      expect(shown.html).toContain("Read one invoice &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;");
+      expect((await decide(flow.uid, headers, approve(shown.revision))).status).toBe(303);
+      const binding = (as.kernel.findByApprovalEvent(`apev_${flow.uid}`)?.authority_set ?? [])
+        .flatMap((e) => e.capability_sources ?? [])
+        .find((b) => b.action === "payments:invoice.read");
+      expect(binding?.source_digest).toBe(digestOf("get_invoice"));
+    });
   });
 });

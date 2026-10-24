@@ -55,8 +55,8 @@
     "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "156ca0604b98315a33aef7e9ad6313fcf73efd19",
-    "content_sha256": "92587542df6f587b8092b68d5e3649e718f5ee0cb6e5e5bf89e3e05986aa1001"
+    "revision": "cb8fb904b1870d8d9b94816536376cd13b1c1f3c",
+    "content_sha256": "00aa0cfae2693ee89e19ec6edf3a8d7826da8c37d6120b600fee96f4297f6371"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -237,6 +237,7 @@
    "status.lifecycle-mtls-client-auth",
    "status.mission-status-access-token-auth",
    "status.lifecycle-access-token-auth",
+   "status.rfc7009-mission-coupling",
    "signals.events",
    "cross-org.delegation",
    "txn-authz.action",
@@ -2647,12 +2648,32 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the candidate rendered for approval carries each catalog-sourced action's binding, resolved from the trusted catalog or configuration before the rendering"
+    "normative": "the candidate rendered for approval carries each catalog-sourced action's binding, resolved from the trusted catalog or configuration before the rendering",
+    "local": "The AS's Mission approval page and its expansion deferral page render the candidate bound from the trusted catalog, each catalog-sourced action with its binding; the render revision commits the bound set, and the Mission or successor commits exactly the bindings rendered. On the expansion page a retained action keeps the binding the predecessor's approval made."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > renders the complete candidate Authority Set for approval, and the Mission Record commits exactly the rendered set",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-identity",
@@ -2669,12 +2690,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering shows, per bound action, the tool or operation identity, and it agrees with the committed binding's tool_id and operation_ref"
+    "normative": "the approval rendering shows, per bound action, the tool or operation identity, and it agrees with the committed binding's tool_id and operation_ref",
+    "local": "The AS's Mission approval page and its expansion deferral page name, per bound action, the tool it invokes (operation_ref) and its tool_id, as the committed binding records them."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-what-each-action-authorizes",
@@ -2691,12 +2726,32 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering states, per bound action, what invoking it authorizes, in terms the Approver can act on, and the statement agrees with the committed binding"
+    "normative": "the approval rendering states, per bound action, what invoking it authorizes, in terms the Approver can act on, and the statement agrees with the committed binding",
+    "local": "The AS's Mission approval page and its expansion deferral page state what invoking each bound tool does in the tool's own description, read from the trusted catalog in the very definition the binding's source_digest commits, beside the entry's resource and constraints."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a tool's description renders as inert text, and the binding commits the definition shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-source-and-publisher",
@@ -2713,12 +2768,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering shows, per bound action, its source, and an established publisher, or that the publisher is unknown, or that a named publisher is the source's own claim"
+    "normative": "the approval rendering shows, per bound action, its source, and an established publisher, or that the publisher is unknown, or that a named publisher is the source's own claim",
+    "local": "The AS's Mission approval page and its expansion deferral page show each bound action's source (the trusted catalog's URI and the deployment's configured name for it) and state that the publisher is unknown, since this server establishes none."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.disclose-drift-refusal",
@@ -2735,12 +2804,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering tells the Approver, per bound action, that a later change to the capability's definition is refused"
+    "normative": "the approval rendering tells the Approver, per bound action, that a later change to the capability's definition is refused",
+    "local": "The AS's Mission approval page and its expansion deferral page tell the Approver, per bound action, that a later change to the tool's definition is refused."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.raw-metadata-insufficient",
@@ -2757,12 +2840,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a rendering that shows only a digest or URI for a bound action does not meet the disclosure; catalog-supplied text renders as inert content and the exact machine binding is retained"
+    "normative": "a rendering that shows only a digest or URI for a bound action does not meet the disclosure; catalog-supplied text renders as inert content and the exact machine binding is retained",
+    "local": "The AS's Mission approval page and its expansion deferral page pair each binding's machine values with the tool's own description, rendered as escaped, inert text, and the committed entry retains the exact machine binding."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a tool's description renders as inert text, and the binding commits the definition shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.revalidate-at-decision",
@@ -2779,12 +2876,32 @@
    "surface": "approval-ceremony",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a bound capability's definition or identity changed between rendering and decision, with unchanged action and tool names, creates no Mission from the old decision; a fresh approval over the re-rendered candidate commits the changed binding"
+    "normative": "a bound capability's definition or identity changed between rendering and decision, with unchanged action and tool names, creates no Mission from the old decision; a fresh approval over the re-rendered candidate commits the changed binding",
+    "local": "The decision binds the candidate again from the current catalog and compares it with the rendering's: a covered definition change with unchanged action and tool names asks for a fresh decision (approval_context_changed, or successor_hash on the expansion page), and the fresh approval commits the changed binding. On the expansion page a binding changed after the approval refuses the completion."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a covered definition change with unchanged action and tool names, between rendering and decision, creates nothing; a fresh decision commits the changed binding",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool between rendering and decision approves nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool after the approval refuses the completion; an edit to a retained action's tool changes nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.commit-consented-bindings",
@@ -2801,12 +2918,38 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the committed capability_sources equal the bindings of the consented candidate; a binding resolved from the current source for revalidation is committed only when it equals the approved one, and a different binding creates no Mission without fresh consent"
+    "normative": "the committed capability_sources equal the bindings of the consented candidate; a binding resolved from the current source for revalidation is committed only when it equals the approved one, and a different binding creates no Mission without fresh consent",
+    "local": "The AS's Mission approval page and its expansion deferral page commit exactly the bindings rendered: the decision compares the bound candidate with the rendering's, the commit records the prepared candidate that comparison admitted, and the expansion completion creates the successor only with the bound set the approval recorded."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > presents each bound action's tool, what invoking it authorizes, its source, an unknown publisher and the drift refusal; the Mission commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > a covered definition change with unchanged action and tool names, between rendering and decision, creates nothing; a fresh decision commits the changed binding",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > shows the added action's binding as resolved now and the retained one as kept; the successor commits exactly the bindings shown",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool after the approval refuses the completion; an edit to a retained action's tool changes nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "capability-binding.approval.unrelated-edit-not-a-change",
@@ -2823,12 +2966,32 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an edit elsewhere in the catalog between rendering and decision does not invalidate the decision when no catalog_digest was recorded and no other Changes Before the Decision input changed; it does when a catalog_digest was recorded, or when it changes another such input"
+    "normative": "an edit elsewhere in the catalog between rendering and decision does not invalidate the decision when no catalog_digest was recorded and no other Changes Before the Decision input changed; it does when a catalog_digest was recorded, or when it changes another such input",
+    "local": "An edit to another tool of the catalog leaves every binding, and so the decision, unchanged, and an edit to a retained action's tool leaves an expansion's binding as the predecessor's approval made it. This deployment records no catalog_digest, so the arm in which a recorded catalog_digest makes any edit a change is not exercised."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "capability bindings on the approval page (@spec capability-binding#capability-approval, #1447) > an edit to another tool of the catalog is not a binding change: the decision approves, since no catalog_digest is recorded",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a covered definition change to an added action's tool after the approval refuses the completion; an edit to a retained action's tool changes nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "capability bindings on the expansion deferral page (@spec capability-binding#capability-approval, expansion#completion-modes, #1447) > a retained action's tool changed since the predecessor's approval is shown as kept, and the expansion still completes with the binding approved there",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446. #1447: the reference AS implements it on both approval pages (the Mission approval page and the expansion deferral page)."
   },
   {
    "id": "runtime.decision-inputs.capability-current-definition-at-invocation",
@@ -5188,10 +5351,11 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Authority Set committed on the Mission Record is the one approved, fixed atomically with the approval decision and not recomputed afterwards"
+    "normative": "the Authority Set committed on the Mission Record is the one approved, fixed atomically with the approval decision and not recomputed afterwards",
+    "local": "The rendering shows the candidate bound from the trusted catalog (#1447), the decision is bound to that rendering (#1446), and the record commits exactly the rendered entries, capability bindings included; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/submission-precedence.test.ts",
@@ -5212,7 +5376,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. Witnessed: the committed entries equal the rendered entries; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged while a fresh derivation differs. Partial because the record also carries the Capability Binding companion's capability_sources, which kernel.approve binds at the commit and the approval rendering does not show, so the committed set equals the approved one only in its derived members. Tracked by #1447 (when a source binding is fixed, and what the approval presents) and #1446 (a change between rendering and decision is committed without re-rendering)."
+   "notes": "D559 (#1411): ruled qualified A + C. Witnessed: the committed entries equal the rendered entries; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged while a fresh derivation differs. Partial because the record also carries the Capability Binding companion's capability_sources, which kernel.approve binds at the commit and the approval rendering does not show, so the committed set equals the approved one only in its derived members. Tracked by #1447 (when a source binding is fixed, and what the approval presents) and #1446 (a change between rendering and decision is committed without re-rendering). #1447 (D584): both named gaps are closed. The rendering shows the bound candidate, and the committed set equals the rendered one with its capability_sources, so every quoted clause is witnessed: fixed at creation (the render-equals-commit test, now without stripping bindings), atomically with the decision (the concurrent-decision test), and not recomputed afterwards (the policy-change test)."
   },
   {
    "id": "core.submission.size-bounds-evidence",
@@ -8933,10 +9097,11 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "after a revocation is acknowledged, a Token Exchange is refused `invalid_request` and a refresh `invalid_grant`, and nothing is issued"
+    "normative": "after a revocation is acknowledged, a Token Exchange is refused `invalid_request` and any other grant, refresh included, `invalid_grant`, and nothing is issued",
+    "local": "the reference re-reads Mission state at release (the release fence, #1498), after the save-time gate, the signature and the request-path drain, on every 200 that releases an access token naming a Mission this AS issues, a stored result served again included; it orders a revocation against an issuance within one process only (#641). Every fenced path is witnessed with the fence disabled delivering a token: the code exchange, refresh and the async family's refresh, the device code grant, the deferred grant (AROP, Mission approval and expansion deferrals), the JWT-bearer grant (child and Dispatch Handoff redemption), the Mission dispatch grant, the delegation-handle, async-delegation, designation, delegated-redemption, child-creation, ceiling-drawdown and Dispatch Handoff exchanges, and the async-delegation and expansion stored results. A refusal carries mission_error with the released Mission's own termination reason (parent_terminated for a child whose parent was revoked). The ICA continuation exchange answers ICA's codes (core.issuance-gating.profile-code-override) and the transaction endpoint access_denied. Work committed before the fence stays spent: the Dispatch Handoff redemption's counted derivation and consumed grant, the designation and delegated redemption's counted derivation, the AROP and Mission approval deferrals' redemption, and an expansion successor's recorded delivery, which recovery never serves because it refuses the terminated successor first (#250)"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
@@ -8985,9 +9150,135 @@
      "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > a revocation committed while the request-path drain runs, the last awaited step before release, is still refused invalid_grant with mission_error revoked and no token member",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "the release fence on the child-creation exchange (@spec mission#issuance-gating, #250) > child creation: a parent revoked after the save-time gate is refused invalid_request with mission_error parent_terminated, the released child's own reason, and no token member",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "the release fence on the child's JWT-bearer redemption (@spec mission#issuance-gating, #250) > child redemption: a child Mission revoked after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "the release fence on the continuation exchange (@spec mission#issuance-gating, id-continuation-assertion, #250) > a Mission revoked after the gate and the signature keeps ICA's code: invalid_continuation with mission_error revoked and no token member, where the same exchange without it delivers the ID-JAG",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "the release fence on the Mission approval deferral's deferred grant (@spec mission#issuance-gating, #250) > Mission approval deferral: a resolving poll whose new Mission is revoked after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member, and the approval is spent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the release fence on the designation exchange (@spec mission#issuance-gating, #250) > designation: a Mission revoked after the save-time gate and the signature is refused invalid_request with mission_error revoked and no token member, its counted derivation left spent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the release fence on the delegated redemption (@spec mission#issuance-gating, #250) > delegated redemption: a Mission revoked after the save-time gate and the signature is refused invalid_request with mission_error revoked and no token member, its counted derivation left spent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the release fence on the device_code grant (@spec mission#issuance-gating, #250) > device_code: a revocation committed after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the release fence on the Dispatch Handoff (@spec mission#issuance-gating, #250) > Dispatch Handoff exchange: a revocation committed after the exchange's state check, while the request-path drain runs, is refused invalid_request with mission_error revoked and no token member (D369)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the release fence on the Dispatch Handoff (@spec mission#issuance-gating, #250) > Dispatch Handoff redemption: a revocation committed after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member; the grant stays consumed and its derivation counted, so a retry is refused as already redeemed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "the release fence on the AROP deferral's deferred grant (@spec mission#issuance-gating, #250) > AROP deferral: a poll whose Mission is revoked after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member, and the redeemed deferral_code is spent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "the release fence on the expansion deferral's deferred grant and its recovery (@spec mission#issuance-gating, #250) > expansion deferral: a poll whose successor is revoked after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "the release fence on the expansion deferral's deferred grant and its recovery (@spec mission#issuance-gating, #250) > expansion recovery: a retry of a completed expansion whose successor was revoked before the retry is refused invalid_request with mission_error revoked and no token member",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "the release fence on the expansion deferral's deferred grant and its recovery (@spec mission#issuance-gating, #250) > expansion recovery: the stored successor token served again to a retry is refused invalid_request with mission_error revoked and no token member when the successor is revoked while the request-path drain runs",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the release fence on the in-ceiling expansion drawdown (@spec mission#issuance-gating, #250) > in-ceiling expansion drawdown: a revocation of the successor committed after the save-time gate and the signature is refused invalid_request with mission_error revoked and no token member (D369)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "the release fence on the Mission dispatch grant (@spec mission#issuance-gating, #250) > Mission dispatch grant: a revocation committed after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "the release fence at the transaction endpoint (@spec mission#issuance-gating, txn-authorization#challenge-redemption, #250) > a Mission revoked during the transaction token's mint is refused access_denied with no token member, and a later poll is refused too, never served the stored token; the same poll without it delivers",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "the release fence at the transaction endpoint (@spec mission#issuance-gating, txn-authorization#challenge-redemption, #250) > a Mission revoked while the request-path drain runs, after the mint and the issuance record, is refused access_denied with no token member",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence on the delegation paths (@spec mission#issuance-gating, #250) > delegation handle: a revocation committed after the save-time gate and the signature is refused invalid_request with mission_error revoked and no token member",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence on the delegation paths (@spec mission#issuance-gating, #250) > async family refresh: a revocation committed after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence on the delegation paths (@spec mission#issuance-gating, #250) > a stored result served again: an async-delegation exchange retried after its Mission's revocation was acknowledged is refused invalid_request with mission_error revoked and no token member, where the same retry before it replays the stored family (refused before the fence)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence on the delegation paths (@spec mission#issuance-gating, #250) > a stored result served again: the stored family replayed to a retry is refused invalid_request with mission_error revoked and no token member when the Mission is revoked while the replay's request-path drain runs",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1154 (D369). Partial (#250): the release fence (`fenceRelease`, the outermost `provider.use`, after every awaited response step including the request-path drain) refuses a token whose Mission terminated after the save-time gate, with the gate's own code. Witnessed for a revocation committed during issuance on the code exchange, a refresh and the async-delegation creating exchange, and for one committed while the drain runs; the ICA continuation exchange keeps its own code (core.issuance-gating.profile-code-override). Fenced by the same wrapper but not witnessed during issuance: the device code grant, the deferred grant (AROP, Mission approval and expansion deferrals), the JWT bearer grant (child redemption, Dispatch Handoff redemption), the Mission dispatch grant, the delegation-handle, designation, delegated-redemption, child-creation, expansion and Dispatch Handoff exchanges, and a stored result served again. The fence orders a revocation against an issuance within one process only (#641). Returns to tested when those paths are witnessed."
+   "notes": "Release fence #1498 (D663); witnesses on every fenced path, #250. Single-process only (#641); counter settlement for work spent before the fence stays with #935."
   },
   {
    "id": "core.issuance-gating.profile-code-override",
@@ -15315,6 +15606,80 @@
    "notes": "#1535 finding 3 (D649). Proved by validating the operation and members before authentication, and by looking the Mission up before it (the authentication-order test fails), by looking the Mission up before the syntax checks (the extension-guard and revoke-only ordering tests fail), by letting a retained row skip authorization (both processing-order retransmit tests fail), and by retaining the not-found refusal decided before deduplication (the lost-bytes test fails). The deduplication and expected_version precedences keep the witnesses of status.discharge.nonce-replay and status.lifecycle.stale-version-precedence. The discharge operation is status.discharge.processing-order. #1535 Item C (D704, D708): the parse-before-authentication exception and the repeated-parameter order are normative in step 1 and step 2, rowed separately. #1611 review: the normative observation names the outcome Authentication Failures assigns by mechanism; the reference's invalid_client is local."
   },
   {
+   "id": "status.lifecycle.commit-before-acknowledge",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-processing",
+   "text": "The AS MUST durably commit a transition, with the state version it produces, before it sends any response that acknowledges it; a transition whose commit fails is never answered as a success.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a lifecycle success is sent only after the transition and its state version commit: a failure inside the transition's commit is answered unavailable (503), retains nothing and leaves the Mission unchanged, never a 200",
+    "local": "the transition, its status observation and the nonce claim commit in one transaction (provider.ts withTransaction around kernel.transition, observeInCallerTx, claimInCallerTx); the signed 200 is written after it returns, and send() retains the bytes before delivering them"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint transient failures (@spec status#idempotency, status#mission-status-errors, #1191) > answers a failure inside the transition unavailable (503), retains nothing, and a same-nonce retry is processed afresh and succeeds",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 finding 9 (D649, -01). Mutation: answering a failed commit with 200 fails the cited test (expected 200 to be 503). Partial (#1638 review): the cited test proves only that a transition whose commit throws inside the transaction is never acknowledged. That a successful commit is durable before the 200 is sent (the store's flush, and the ordering of commit and response under a successful commit) is not witnessed."
+  },
+  {
+   "id": "status.lifecycle.final-check-not-suspension",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-processing",
+   "text": "The final issuance check of {{I-D.draft-mcguinness-oauth-mission}} (Section \"Issuance Gating\"), which applies to an acknowledged revocation, is not extended to suspension: a suspension refuses later derivations at their gate, and a derivation already past its gate when the suspension commits can complete.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a revocation committed after a derivation passed its gate is refused at release, while a suspension committed at the same point still delivers the derivation"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence refuses only an ended Mission (@spec mission#issuance-gating, #250) > a suspension committed at the same point, after the gate and the signature, still delivers the code exchange's tokens",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence refuses only an ended Mission (@spec mission#issuance-gating, #250) > a suspension committed while the request-path drain runs still delivers the refresh",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > code exchange: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same exchange without it delivers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1535 finding 9 (D649, -01). Existing #250 witnesses of the release fence (releaseFenceRefusal refuses only an ended Mission); no new mutation was run for this row."
+  },
+  {
    "id": "status.lifecycle.unparseable-body-refused",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "lifecycle-processing",
@@ -17047,6 +17412,82 @@
     }
    ],
    "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+  },
+  {
+   "id": "status.lifecycle.rfc7009-not-by-itself",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "An {{RFC7009}} revocation does not by itself revoke a Mission; the lifecycle endpoint is the authoritative Mission state change.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an RFC 7009 revocation of a Mission's refresh token leaves the Mission active where no revocation policy couples them"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > RFC 7009 revocation of the family's refresh token refuses new designations and pending redemptions and inactivates the delegated token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1535 finding 15 (D649, -01). The reference does not couple token revocation to Mission revocation: its RFC 7009 route never reaches kernel.transition. Existing witness; no new mutation was run."
+  },
+  {
+   "id": "status.lifecycle.rfc7009-coupled-revoke-transition",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "Where a deployment's revocation policy treats revoking a Mission's refresh token as revoking the Mission ({{I-D.draft-mcguinness-oauth-mission}}, Section \"Revocation\"), the AS MUST commit that revocation as the same `revoke` transition this endpoint applies: decided by that policy for the revoking party and the Mission, recorded with a new state version, and emitting the same transition event ({{idempotency}}).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.rfc7009-mission-coupling"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a coupled RFC 7009 revocation terminates the Mission revoked through the same transition the lifecycle endpoint commits, with a new state version and the same transition event"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 15 (D649, -01). todo (D405): the reference does not couple RFC 7009 revocation to the Mission; the capability gates the row to deployments whose revocation policy does."
+  },
+  {
+   "id": "status.lifecycle.rfc7009-coupling-no-endpoint-or-scope",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "The coupling requires neither a request to this endpoint nor an additional scope.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.rfc7009-mission-coupling"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a coupled revocation takes effect from the RFC 7009 request alone, without a lifecycle endpoint request and without a scope beyond what the revocation policy requires"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1535 finding 15 (D649, -01). todo (D405), as status.lifecycle.rfc7009-coupled-revoke-transition."
   },
   {
    "id": "status.lifecycle.tls",
@@ -19288,6 +19729,141 @@
     }
    ],
    "notes": "#1002 (D416). Proved by keeping the schedule through termination and letting a deadline act on any state (the revoked-or-completed, Child Mission and manual-transition tests fail) and by checking neither state nor generation at delivery (the first two fail)."
+  },
+  {
+   "id": "status.lifecycle.schedule-deadline-governs",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "From a current schedule's deadline, every decision treats the Mission as in the state its `on_expiry` produces, whether or not that transition is persisted, so a request the AS decides after the deadline is decided against that state.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a current schedule's deadline, a read and a lifecycle request each see the state on_expiry produces, whether or not the timer has run: a due schedule is applied before the read answers or the request is judged",
+    "local": "applyExpiry projects expiry, then applyDueSchedule commits the owed transition; expiry's precedence over a deadline is status.lifecycle.schedule-expiry-governs"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > applies a due schedule on the next read of the record, before its timer is delivered, and the Status operation reports the committed transition",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > serializes a deadline with a manual transition: whichever commits first decides, and the other acts on the state it left",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 finding 11 (D649, -01). Partial: the reference commits a due schedule on any read through applyExpiry (status observation, the issuance gates, transitions), but the token release fence reads the record without projecting a due schedule (kernel.ts: \"a due schedule is never projected\"), so a revoke deadline passing between a derivation's gate and its release is not treated as reached there. The gate itself applies the due schedule first. The residual also covers a persistence failure (#1638 review): applyDueSchedule commits the owed transition, and if that write fails the read reports the stored row, so a due resume whose write failed was reported suspended in the owner's probe; the deadline-effective state is not maintained when persisting the due transition fails."
+  },
+  {
+   "id": "status.lifecycle.schedule-late-delivery-expiry",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "If the first decision after the deadline comes at or after the Mission's `expires_at`, expiry governs instead and the Mission is `terminated` with reason `expired` ({{legal-transitions}}); a revocation committed at its deadline before `expires_at` keeps reason `revoked`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission whose schedule deadline passed before expires_at but which is first decided at or after expires_at is terminated expired and never observed in the scheduled state, while a revocation the deadline committed before expires_at keeps reason revoked after expires_at passes"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > lets expiry govern a deadline before expires_at whose delivery comes only after expires_at: the Mission is terminated expired, never resumed"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > lets expiry govern a revoke deadline delivered only after expires_at, and keeps a revocation committed before it: terminated expired, or terminated revoked, never rewritten"
+    }
+   ],
+   "notes": "#1535 finding 11 (D649, -01; #1638 review), stating the #1246 review ruling on late deliveries. Existing #1002 witnesses, mutation-proved under status.lifecycle.schedule-expiry-governs: applying a due schedule before the expiry clock fails both, and letting the expiry clock rewrite an already-terminal reason fails the late-revoke test."
+  },
+  {
+   "id": "status.lifecycle.schedule-revoke-terminated-at",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "For `on_expiry` `revoke`, the termination's `terminated_at` is the schedule's `suspend_until`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a revoke schedule's termination records terminated_at equal to its suspend_until, whether the timer applies it at the deadline or a later read applies it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > records a revoke schedule's deadline as its termination time, whether the timer or a later read applies it (@spec status#mission-lifecycle-endpoint, #1535 finding 11)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 finding 11 (D649, -01). Mutation: recording the time the schedule is applied (finite nowMs) instead of suspend_until fails only the cited test, on the late-read case."
+  },
+  {
+   "id": "status.lifecycle.schedule-past-deadline-new-request",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-lifecycle-endpoint",
+   "text": "A new `suspend` whose `suspend_until` is not later than the time the AS processes it is refused `invalid_request`; a retransmit of an accepted request still replays its original response after the deadline passes ({{idempotency}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a new suspend whose suspend_until is now or earlier is refused invalid_request with nothing changed, while an identical retransmit of an accepted suspend, arriving after its deadline, replays the original response bytes"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > replays an accepted schedule's original response to an identical retransmit after its deadline, while a new request with that deadline is refused (@spec status#mission-lifecycle-endpoint, status#idempotency, #1535 finding 11)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "suspension schedule record (@spec status#lifecycle-authorization, status#idempotency, status#mission-status-response, #1002) > refuses, as this deployment's choice, a suspend_until already passed invalid_request, before any change",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1535 finding 11 (D649, -01). Mutation: checking the deadline before deduplication fails the retransmit test (the retry gets invalid_request)."
   },
   {
    "id": "status.lifecycle.schedule-expiry-governs",
@@ -53674,7 +54250,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "In the draft since its first version (#637); the MUST was reshaped by #1258 item 12 and the #1260 review and reworded by #1520, and no row was added at any of those changes. Before #1377 the reference admitted a family at PAR intake and compared actions literally, so a family reached the approval page only under a ceiling listing the same string, where the derived entry rendered as JSON with the family verbatim. Since #1377 it refuses family input, recorded under observation.local. Coverage stays todo: a refusal observes no rendering (D444). Making the row not applicable to an implementation that refuses families needs an action-families capability gate, a model change proposed on #1377. Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to an authorization server that admits action families. One that consistently refuses family input, as the reference does since #1576, has no family rendering obligation, and the row is not applicable to it; refusal tests make the row neither tested nor evidence of narrowing support. Coverage stays todo until positively witnessed."
+   "notes": "In the draft since its first version (#637); the MUST was reshaped by #1258 item 12 and the #1260 review and reworded by #1520, and no row was added at any of those changes. Before #1377 the reference admitted a family at PAR intake and compared actions literally, so a family reached the approval page only under a ceiling listing the same string, where the derived entry rendered as JSON with the family verbatim. Since #1377 it refuses family input, recorded under observation.local. Coverage stays todo: a refusal observes no rendering (D444). Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to an authorization server that admits action families. One that consistently refuses family input, as the reference does since #1576, has no family rendering obligation, and the row is not applicable to it; refusal tests make the row neither tested nor evidence of narrowing support. Coverage stays todo until positively witnessed."
   },
   {
    "id": "resource-access.type.action-family-derivation-high-risk",
@@ -53700,7 +54276,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "In the draft since its first version (#637), with no row until now. Before #1377 derivation compared actions literally and applied no breadth or risk classification to an action value. Since #1377 the reference refuses family input, recorded under observation.local. A departure is recorded, not failed. Coverage stays todo: a refusal observes no breadth handling (D444). Making the row not applicable to an implementation that refuses families needs an action-families capability gate, a model change proposed on #1377. Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to an authorization server that admits action families. One that consistently refuses family input, as the reference does since #1576, has no family derivation obligation, and the row is not applicable to it; refusal tests make the row neither tested nor evidence of narrowing support. Coverage stays todo until positively witnessed."
+   "notes": "In the draft since its first version (#637), with no row until now. Before #1377 derivation compared actions literally and applied no breadth or risk classification to an action value. Since #1377 the reference refuses family input, recorded under observation.local. A departure is recorded, not failed. Coverage stays todo: a refusal observes no breadth handling (D444). Gated on resource-access.action-families (D727), evaluated per conforming role: the row applies to an authorization server that admits action families. One that consistently refuses family input, as the reference does since #1576, has no family derivation obligation, and the row is not applicable to it; refusal tests make the row neither tested nor evidence of narrowing support. Coverage stays todo until positively witnessed."
   },
   {
    "id": "resource-access.type.emit-enforced-constraint-keys",

@@ -439,7 +439,6 @@ deployment's values: the reference AS and `plain-rs`.
     "by default the launcher keeps every store in memory: a restart loses Missions, grants, refresh tokens and the indexes; with MISSION_KERNEL_STORE and a key ring the Mission kernel is kept, never the provider (#250)",
     "the scope-projection mapping's integrity is repository review; it is not fetched or signed",
     "Intent-only requests depend on an oidc-provider workaround (a marked, AS-written authorization_details)",
-    "the decision-time scope check projects the derived set without capability_sources, so a catalog-sourced scope_only entry can pass at the decision and refuse at the token endpoint",
     "the approval commits the Mission active and bound to its grant one request before the code is issued, so a client that never follows the redirect leaves an active Mission with no code (#250)"
   ]
 }
