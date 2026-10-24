@@ -16,6 +16,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   CANONICAL_RESOURCE,
   canonicalHtu,
+  Connectors,
   createEphemeralEvidenceKeys,
   createHttpMcpChannel,
   createHttpMediatedClient,
@@ -36,6 +37,7 @@ import {
   TOOL_ACTIONS,
   type ActionMapping,
   type TokenFacts,
+  TransactionEngine,
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, resourcePolicyFixture } from "@mission/pdp/test-support";
@@ -898,7 +900,7 @@ describe("an obligation the PEP does not recognize or cannot fulfill is an effec
 });
 
 describe("the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640)", () => {
-  const SCHEDULE = entry(["payments:invoice.read", "payments:payment.schedule"], { vendors: ["acme", "globex"] });
+  const SCHEDULE = entry(["payments:invoice.read", "payments:payment.schedule", "payments:payment.execute"], { vendors: ["acme", "globex"] });
   const SCHEDULING_VIEW: MissionView = { ...VIEW, authority_set: [SCHEDULE as MissionView["authority_set"][number]] };
   const READ_ONLY_VIEW: MissionView = { ...VIEW, authority_set: [entry(["payments:invoice.read"]) as MissionView["authority_set"][number]] };
   const NOTIFY = {
@@ -942,6 +944,7 @@ describe("the PEP performs a notification obligation before release on a permit,
       instanceEpoch: "epoch-1640-obligations",
       ...(notifier ? { notifier } : {}),
     });
+    const connectors = new Connectors();
     const routed = new McpPaymentsServer({
       writeReservations,
       pep,
@@ -950,6 +953,7 @@ describe("the PEP performs a notification obligation before release on a permit,
       jwks: { keys: [asJwk as never] },
       keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
+      transaction: { engine: new TransactionEngine("epoch-1640-obligations"), connectors, evidence },
     });
     const channel = await createHttpMcpChannel(routed);
     const session = await createHttpMediatedClient(channel.url, await mint({ authorization_details: [SCHEDULE] }), holder);
@@ -958,11 +962,13 @@ describe("the PEP performs a notification obligation before release on a permit,
       schedules: writeReservations.schedules(),
       reservations: writeReservations.reservations(),
       consumedPermits: writeReservations.consumedPermits(),
+      wires: connectors.ledgerEntries(),
     });
     return {
       evidence,
       decisionIds,
       writeReservations,
+      connectors,
       businessState,
       client: session.client,
       close: async () => {
@@ -1003,6 +1009,35 @@ describe("the PEP performs a notification obligation before release on a permit,
       expect(records[0]).toMatchObject({
         evaluation_id: x.decisionIds[0],
         outcome: "completed",
+        obligation_outcomes: [{ id: "obl_notify", type: "notification", outcome: "fulfilled" }],
+      });
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a permit for an irreversible commit (execute_wire_transfer) carrying a notification obligation over HTTP with DPoP completes the transmission before the wire is posted, and the executor's completed record names the obligation fulfilled", async () => {
+    const wiresAtTransmission: number[] = [];
+    let x: Awaited<ReturnType<typeof endpoint>> | undefined;
+    const outbox = new NotificationOutbox(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      wiresAtTransmission.push(x?.connectors.ledgerEntries().length ?? -1);
+    });
+    x = await endpoint((d) => {
+      if (d.decision) d.context.obligations = [NOTIFY];
+    }, SCHEDULING_VIEW, outbox);
+    try {
+      const wired = await x.client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+      expect(wired.ok, JSON.stringify(wired)).toBe(true);
+      expect(x.connectors.ledgerEntries()).toHaveLength(1);
+      expect(wiresAtTransmission).toEqual([0]);
+      expect(outbox.sent().map((n) => n.obligation_id)).toEqual(["obl_notify"]);
+      const records = executions(x);
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        evaluation_id: x.decisionIds[0],
+        outcome: "completed",
+        emitter: { role: "executor" },
         obligation_outcomes: [{ id: "obl_notify", type: "notification", outcome: "fulfilled" }],
       });
     } finally {
@@ -1209,6 +1244,7 @@ describe("every consequential permit's final disposition is one Execution Eviden
         ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined;
     const ledger = payments();
+    const connectors = new Connectors();
     const pep = new Pep({
       decide: (req, opts) => keys.decide(req, opts),
       payments: ledger,
@@ -1226,6 +1262,7 @@ describe("every consequential permit's final disposition is one Execution Eviden
       jwks: { keys: [asJwk as never] },
       keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
       issuer: ISSUER,
+      transaction: { engine: new TransactionEngine("epoch-1640-execution-evidence"), connectors, evidence: store },
     });
     const channel = await createHttpMcpChannel(routed);
     const session = await createHttpMediatedClient(channel.url, await mint({ authorization_details: [authority] }), holder);
@@ -1233,6 +1270,7 @@ describe("every consequential permit's final disposition is one Execution Eviden
       evidence: store,
       resolver: keys.resolver,
       writeReservations,
+      connectors,
       client: session.client,
       close: async () => {
         await session.close();
@@ -1244,9 +1282,15 @@ describe("every consequential permit's final disposition is one Execution Eviden
   /**
    * The one permit's Decision Evidence and its one completed, signed, linked
    * Execution Evidence record; `bound` says whether the permit binds a
-   * parameter digest, which the record then carries as both digests.
+   * parameter digest, which the record then carries as both digests, and
+   * `role` is the emitter that released the effect.
    */
-  async function expectOneCompleted(x: Awaited<ReturnType<typeof endpoint>>, label: string, bound: boolean) {
+  async function expectOneCompleted(
+    x: Awaited<ReturnType<typeof endpoint>>,
+    label: string,
+    bound: boolean,
+    role: "pep" | "executor" = "pep",
+  ) {
     const decisions = x.evidence.all().filter((e): e is DecisionEvidence => e.kind === "decision");
     const executions = x.evidence.all().filter((e): e is ExecutionEvidence => e.kind === "execution");
     expect(decisions, label).toHaveLength(1);
@@ -1260,7 +1304,7 @@ describe("every consequential permit's final disposition is one Execution Eviden
       mission_id: VIEW.id,
       audience: CANONICAL_RESOURCE,
       outcome: "completed",
-      emitter: { id: CANONICAL_RESOURCE, role: "pep" },
+      emitter: { id: CANONICAL_RESOURCE, role },
     });
     expect(record, label).not.toHaveProperty("error");
     expect(decision.parameter_digest !== undefined, label).toBe(bound);
@@ -1310,6 +1354,18 @@ describe("every consequential permit's final disposition is one Execution Eviden
       expect(scheduled.ok, JSON.stringify(scheduled)).toBe(true);
       expect(x.writeReservations.schedules()).toHaveLength(1);
       await expectOneCompleted(x, "schedule_payment", true);
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a completed irreversible commit (execute_wire_transfer) over HTTP with DPoP posts one wire with exactly one signed completed Execution Evidence record linked to the permit's evaluation, recorded by the executor at the commit point", async () => {
+    const x = await endpoint(HOLD);
+    try {
+      const wired = await x.client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+      expect(wired.ok, JSON.stringify(wired)).toBe(true);
+      expect(x.connectors.ledgerEntries()).toHaveLength(1);
+      await expectOneCompleted(x, "execute_wire_transfer", true, "executor");
     } finally {
       await x.close();
     }
