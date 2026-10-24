@@ -328,6 +328,14 @@ describe("the PDP echoes the validated context digest and records the binding (@
     const open = await unclaimed.decide(request({}), naming);
     expect(open.decision, JSON.stringify(open.context)).toBe(true);
     expect(open.context.conditions).not.toHaveProperty("evaluation_context_digest");
+    // A decision point with no binding of its own applies the shipped
+    // statement, which claims the extension: a caller cannot switch it off.
+    const statement = createEphemeralDecisionPoint({
+      emitterId: "pdp-773",
+      audience: AUDIENCE,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+    });
+    await expect(statement.decide(request({}), widened)).rejects.toBeInstanceOf(DecisionRequestRefused);
   });
 });
 
