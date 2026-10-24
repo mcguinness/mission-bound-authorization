@@ -1190,8 +1190,9 @@ Agent's own credential as the Subject's only authentication root:
 
 Mission bypass through source authority held outside any Mission:
 : Addressed by the downgrade-by-omission rules: no token issued
-  outside a Mission for a resource designated Mission-governed, except
-  under documented policy exceptions; its resource server rejecting a
+  outside a Mission, on any grant type, for a Mission-governed
+  resource, whether the deployment classifies it or its authenticated
+  metadata declares the requirement; its resource server rejecting a
   token without the `mission` claim; a client performing a Mission's
   task presenting no ordinary credential for it; and mandatory
   mediation where the runtime layer holds custody of the client's
@@ -1598,6 +1599,12 @@ model and pipeline layers, and saying so is the point:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission bypass through source authority held outside any Mission
+  follows the OAuth binding's governed rule: no token outside a Mission
+  on any grant type for a Mission-governed resource, classified by the
+  deployment or by its authenticated metadata, with no open-ended
+  exception (#1531).
 
 - Prose-member references follow the OAuth binding, which removed
   `success_criteria`: the inert-input assumption names `task_bounds`,
