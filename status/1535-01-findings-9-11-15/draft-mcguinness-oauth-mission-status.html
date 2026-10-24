@@ -2503,7 +2503,11 @@ state (<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>) 
 <p id="section-5.1-11">From a current schedule's deadline, every decision treats the Mission
 as in the state its <code>on_expiry</code> produces, whether or not that
 transition is persisted, so a request the AS decides after the
-deadline is decided against that state. For <code>on_expiry</code> <code>revoke</code>, the
+deadline is decided against that state. If the first decision after
+the deadline comes at or after the Mission's <code>expires_at</code>, expiry
+governs instead and the Mission is <code>terminated</code> with reason <code>expired</code>
+(<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>); a revocation committed at its deadline before
+<code>expires_at</code> keeps reason <code>revoked</code>. For <code>on_expiry</code> <code>revoke</code>, the
 termination's <code>terminated_at</code> is the schedule's <code>suspend_until</code>. A new
 <code>suspend</code> whose <code>suspend_until</code> is not later than the time the AS
 processes it is refused <code>invalid_request</code>; a retransmit of an accepted
@@ -4080,10 +4084,29 @@ Mission Termination Reasons registry
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
       </h2>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<p id="appendix-A-2">-00<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">-01<a href="#appendix-A-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-3.1">
-          <p id="appendix-A-3.1.1">Initial individual draft.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.1.1">A transition is durably committed before any response acknowledges
+it, and the OAuth binding's final issuance check is not extended to
+suspension.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.2">
+          <p id="appendix-A-3.2.1">A schedule's deadline governs later decisions, and expiry governs
+when the first decision after the deadline comes at or after
+<code>expires_at</code>; a revoke schedule terminates at its <code>suspend_until</code>,
+and a past <code>suspend_until</code> is refused only on a new request.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.3">
+          <p id="appendix-A-3.3.1">An RFC 7009 revocation does not by itself revoke a Mission, and a
+revocation that a deployment's policy couples to it commits the same
+<code>revoke</code> transition, state version and event.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-5.1">
+          <p id="appendix-A-5.1.1">Initial individual draft.<a href="#appendix-A-5.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

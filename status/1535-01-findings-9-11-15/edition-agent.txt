@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-24T15:54:10Z
-Source repository commit: 516e586bacef14f878393304add4478bfe6da7eb
+Generated: 2026-10-24T20:21:38Z
+Source repository commit: 58504d5d74a2a2845c7c4b75b0c166af493f6481
 Member count: 9
 
 Reading order:
@@ -16820,7 +16820,11 @@ Table of Contents
    From a current schedule's deadline, every decision treats the Mission
    as in the state its on_expiry produces, whether or not that
    transition is persisted, so a request the AS decides after the
-   deadline is decided against that state.  For on_expiry revoke, the
+   deadline is decided against that state.  If the first decision after
+   the deadline comes at or after the Mission's expires_at, expiry
+   governs instead and the Mission is terminated with reason expired
+   (Section 5.2); a revocation committed at its deadline before
+   expires_at keeps reason revoked.  For on_expiry revoke, the
    termination's terminated_at is the schedule's suspend_until.  A new
    suspend whose suspend_until is not later than the time the AS
    processes it is refused invalid_request; a retransmit of an accepted
@@ -18066,6 +18070,21 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   -01
+
+   *  A transition is durably committed before any response acknowledges
+      it, and the OAuth binding's final issuance check is not extended
+      to suspension.
+
+   *  A schedule's deadline governs later decisions, and expiry governs
+      when the first decision after the deadline comes at or after
+      expires_at; a revoke schedule terminates at its suspend_until, and
+      a past suspend_until is refused only on a new request.
+
+   *  An RFC 7009 revocation does not by itself revoke a Mission, and a
+      revocation that a deployment's policy couples to it commits the
+      same revoke transition, state version and event.
 
    -00
 
