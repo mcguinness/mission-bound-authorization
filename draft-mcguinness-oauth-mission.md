@@ -7420,6 +7420,41 @@ Cross-Domain:
   no token outside a Mission on any grant type; the open-ended policy
   exception is removed, and the refusal is `invalid_target`
   (Authority Proposal).
+- A token carries only the entries whose original approved audience
+  includes its audience: the audiences the AS's trusted mapping assigned
+  an entry at approval, retained with the Mission and kept by the
+  entries a derived Mission inherits. A token naming several audiences
+  is issued only where each is approved for the same entries;
+  otherwise, or where the audience is approved for none of the entries
+  the token would carry, the request is refused with `invalid_target`
+  (Declared Transformation Capabilities, Audience and Token Response;
+  #1503, D620, D733).
+- The AS refuses, with `invalid_target`, a delegated Mission-bound
+  token for an audience it has not established as a Mission-aware
+  Resource Server that processes the `act` chain; routing and logging
+  beyond that audience stay the deployment's (Mission-Unaware Resource
+  Servers, Delegated Exchange; #1503, D620).
+- Each redemption of a designation validates the originating credential
+  and all applicable grant state backing it, which an exchange that
+  establishes no new grant lineage keeps; a designation's expiry bounds
+  its redemption, not the lifetime of the delegated token issued from
+  it (Delegated Exchange, Designation, Authentication Claims and
+  Lifetime; #1503, D620).
+- Step 1 of the Submission Processing Order applies the size bounds and
+  checks each evidence entry's structure, so a structurally invalid
+  entry is refused with `invalid_request` before the authority proposal
+  is validated, and Conformance Roles names that code for it (Submission
+  Processing Order, Intent Submission Evidence, Conformance Roles;
+  #1503, #1482, D620).
+- The deployment's published approval-authentication floor, and the
+  `mission` member of an active introspection response to a caller
+  authorized for Mission data, are requirements rather than lowercase
+  statements (Approver Authentication Strength, Mission State via Token
+  Introspection; #1503, D620).
+- A Mission is revoked by a party the deployment's policy authorizes, or
+  by that policy itself; the Subject, the Approver, and an administrator
+  can be authorized, but none is by role alone (Revocation, Mission
+  Lifecycle; #1503, D620).
 
 -01
 
