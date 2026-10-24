@@ -304,10 +304,13 @@ Table of Contents
    binding defines them ([I-D.draft-mcguinness-oauth-mission],
    Section "Issuance Gating"): one issuance operation the issuer AS
    performs for a single request, namely the initial authorization-code
-   exchange, a refresh, a Token Exchange ([RFC8693]), or a cross-domain
-   grant issuance ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
-   Under the Mission Issuance Grant profile the list gains one entry,
-   the Mission Authority Server's minting of a grant (Section 4.5).
+   exchange, a refresh, a Token Exchange ([RFC8693]), a cross-domain
+   grant issuance ([I-D.draft-mcguinness-oauth-mission-cross-domain]),
+   or the redemption of a profile-defined grant, such as the Template
+   profile's handoff grant
+   ([I-D.draft-mcguinness-oauth-mission-template]).  Under the Mission
+   Issuance Grant profile the list gains one entry, the Mission
+   Authority Server's minting of a grant (Section 4.5).
 
 4.1.  What Counts
 
@@ -323,7 +326,11 @@ Table of Contents
    counted against the child's own derivation_limit.  The successor
    access token a ceiling-drawdown response returns is one derivation,
    counted against the successor, never the predecessor
-   ([I-D.draft-mcguinness-oauth-mission-progressive]).
+   ([I-D.draft-mcguinness-oauth-mission-progressive]).  The redemption
+   of a Dispatch Handoff grant at the Mission Issuer is one derivation,
+   counted against the dispatched Mission its mission claim names
+   ([I-D.draft-mcguinness-oauth-mission-template], Section "Dispatch
+   Handoff").
 
 4.2.  Atomicity and Concurrency
 
@@ -780,6 +787,14 @@ Appendix B.  Document History
    [[ To be removed from the final specification ]]
 
    -00
+
+   *  Editorial, no requirement change (#1631, D751): Counting
+      Derivations follows the OAuth binding's Derivation definition,
+      which includes the redemption of a profile-defined grant, and What
+      Counts names a Dispatch Handoff grant's redemption at the Mission
+      Issuer as one derivation counted against the dispatched Mission.
+      No operation's accounting changes: each operation the list gains
+      is one its profile already declares a derivation.
 
    *  Editorial (#1176): examples of the canonical Mission follow one
       dated history; an example line too long for the page is folded per
