@@ -139,6 +139,17 @@ describe("intake and the published schema (@spec mission#authority-proposal, res
       .constraints;
     expect(Object.keys(constraints?.properties ?? {}).sort()).toEqual([...SUPPORTED_CONSTRAINT_KEYS].sort());
   });
+
+  // @spec resource-access#initial-common-constraints (#1595, D727): the
+  // published schema states the count by length as well as by pattern, so a
+  // validator whose `$` admits a trailing newline still refuses one.
+  it("publishes the currency grammar in the type's schema", () => {
+    const constraints = (MISSION_RESOURCE_ACCESS_SCHEMA.properties as Record<string, { properties: Record<string, { properties: object }> }>)
+      .constraints;
+    expect(constraints?.properties.max_amount?.properties).toMatchObject({
+      currency: { type: "string", minLength: 3, maxLength: 3, pattern: "^[A-Z]{3}$" },
+    });
+  });
 });
 
 describe("projections that cannot carry the bound refuse it (@spec resource-access#scope-projection, attenuation#root-mapping)", () => {

@@ -38,7 +38,7 @@ const FORMAT = "mission-resource-access-cases/1";
 const OUTCOMES: Record<string, readonly string[]> = {
   "resource-match": ["match", "no-match"],
   "target-resolution": ["refuse-resolution", "no-match"],
-  subset: ["subset", "not-subset"],
+  subset: ["subset", "not-subset", "refuse"],
   derive: ["derived", "refuse"],
   "delegate-matcher": ["permitted", "not-permitted"],
   "delegate-eligibility": ["eligible", "not-eligible", "narrowed-out"],
@@ -74,13 +74,43 @@ const files = readdirSync(DIR)
 
 const intent = { target_resources: ["https://api.example/orders", "https://erp.example.com"] } as unknown as MissionIntent;
 
+/**
+ * The authorization server's proposal intake of one operand, the validation the
+ * `entry-validation` check runs: the advertised-type check first, then the
+ * published schema and the type's entry rules. The violation, or undefined when
+ * intake admits the operand, which is what makes it an AuthorityEntry.
+ */
+function intakeViolation(operand: unknown): string | undefined {
+  try {
+    validateAuthorityProposal(JSON.stringify([operand]), [String((operand as { resource?: unknown } | null)?.resource)]);
+    return undefined;
+  } catch (e) {
+    if (e instanceof IntentError) return e.message;
+    throw e;
+  }
+}
+
 /** Runs one case against this implementation; called only when every required capability is implemented. */
 function run(c: Case): void {
   const input = c.input;
   switch (c.check) {
     case "subset": {
-      const result = isSubsetEntry(input.candidate as AuthorityEntry, input.reference as AuthorityEntry);
-      expect(result, c.expected.reason).toBe(c.expected.outcome === "subset");
+      // #1596 (D727): a three-way result. Both operands pass the authorization
+      // server's proposal intake before any comparison, each on its own, so an
+      // obvious mismatch never conceals unsupported or malformed input in the
+      // other: either failing is `refuse`. Only then does the boolean subset
+      // relation, which stays fail-closed, decide `subset` or `not-subset`.
+      const candidateViolation = intakeViolation(input.candidate);
+      const referenceViolation = intakeViolation(input.reference);
+      const outcome =
+        candidateViolation !== undefined || referenceViolation !== undefined
+          ? "refuse"
+          : isSubsetEntry(input.candidate as AuthorityEntry, input.reference as AuthorityEntry)
+            ? "subset"
+            : "not-subset";
+      expect(outcome, `${c.expected.reason} (${candidateViolation ?? referenceViolation ?? "valid operands"})`).toBe(
+        c.expected.outcome,
+      );
       return;
     }
     case "derive": {
@@ -339,7 +369,13 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
         if (c.requires.includes("refusal.unsupported-input")) {
           expect(c.unless?.length ?? 0, `${c.id}: an unsupported-input case needs unless`).toBeGreaterThan(0);
         }
-        if (c.expected.outcome === "refuse") expect(typeof c.expected.error, c.id).toBe("string");
+        // A refusal at a protocol surface names its OAuth error. A `subset`
+        // refusal is a comparison the input prevents (#1596, D727), not a wire
+        // response, so it names none.
+        if (c.expected.outcome === "refuse" && c.check !== "subset") {
+          expect(typeof c.expected.error, c.id).toBe("string");
+        }
+        if (c.check === "subset") expect(c.expected.error, `${c.id}: a subset case names no error`).toBeUndefined();
       }
     }
   });
