@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-24T16:07:43Z
-Source repository commit: b400be489d5646c604cd3c6ed4e6de1cd5b480c5
+Generated: 2026-10-24T16:18:16Z
+Source repository commit: da9a1d26d49af7919a0de39878aefdb671a4b049
 Member count: 9
 
 Reading order:
@@ -5062,6 +5062,16 @@ Appendix F.  Deployment Profile Example Shapes
       custody statement made legible, not a checked assurance grade (the
       member's definition in Section 12.6 states the open verifier gap).
 
+   *  Its revocation_exposure member, under runtime, states inputs that
+      size what can still happen inside the mediated classes' revocation
+      window: the window in seconds, the PEP's admission limit in
+      actions per second per Mission, its ceiling on actions in flight
+      per Mission, and the per-action and aggregate bounds in force.
+      The member records inputs, not a computed bound: bursts within the
+      limit, actions already in flight (each may run to its execution
+      bound), and the metering companion's reservation and settlement
+      rules determine the actual exposure.
+
    *  Its revocation residuals follow the runtime profile's arithmetic:
       for a mediated class, the 30-second staleness bound, plus whatever
       permit window a reported lease end leaves beyond it (at most the
@@ -5100,7 +5110,14 @@ Appendix F.  Deployment Profile Example Shapes
        ],
        "unmediated_exclusions": [
          "internal_reasoning", "local_cache_read"
-       ]
+       ],
+       "revocation_exposure": {
+         "window_seconds": 90,
+         "max_admissions_per_second_per_mission": 5,
+         "max_in_flight_actions_per_mission": 10,
+         "per_action_bounds": ["max_amount"],
+         "aggregate_bounds": ["max_budget"]
+       }
      },
      "credential_custody": {
        "held_by": "pep",
@@ -5615,6 +5632,11 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Deployment Profile Example Shapes: the first shape's illustrative
+      revocation_exposure member states the inputs that size what can
+      happen inside the revocation window, with units, as inputs rather
+      than a computed bound.  No requirement changed.
 
    *  Token Classes and The Mission-Bound Credential follow the OAuth
       binding's Claim Reservation: an access token's mission claim
@@ -22048,7 +22070,7 @@ Table of Contents
 
 13.  Deployment Considerations
 
-   Three properties govern how this profile scales.
+   The following properties govern how this profile scales.
 
    *Token lifetime trades against the enforcement layer.* The issuance
    profile recommends short-lived tokens because, in an issuance-only
@@ -22063,53 +22085,128 @@ Table of Contents
    Statement: what stops a revoked Mission, at what latency, is a fact
    that statement already declares (Section 5.2).
 
-   *The consistency unit is the Mission.* Every strongly consistent
-   requirement this profile and its companions impose, the atomic active
-   check, single-use decision identifiers, and the consumption counters
-   and exclusivity latches of the metering companion
-   ([I-D.draft-mcguinness-mission-metering]), is scoped to one Mission.
-   A multi-node PDP therefore shards its state by the Mission Identifier
-   with no cross-shard coordination; only a deployment-configured
-   aggregate bound crosses that partition and is provisioned as its own
-   consistency domain.  Fail-closed applies per action class
-   (Section 2.11): a PDP outage stops consequential work and nothing
-   else.
+   *Decision latency is budgeted by class.* Classification (Section 5.4)
+   is the first lever: only consequential actions need a permit.  An
+   action in a gated class waits for its gate's decision whatever its
+   class.  Whether that decision needs a remote round trip depends on
+   where the state it consults is held, not on the class alone.  For
+   most of the governed surface the common-case decision is local: a PDP
+   embedded in or colocated with its PEP evaluates against a
+   materialized policy view (Section 7.1) whose network cost is paid
+   once per freshness window, not per action; a permit's validity window
+   covers the follow-through of one normalized action (Section 8); the
+   decision API's batch evaluation amortizes fan-out while still
+   deciding each action (Section 15); and metering leases amortize the
+   metered classes ([I-D.draft-mcguinness-mission-metering]).  A
+   decision that consults shared state waits on the domain that
+   preserves it, which is remote only where the deployment places it
+   away from the deciding component (below).  Offline attenuation
+   ([I-D.draft-mcguinness-oauth-mission-attenuation]) removes the issuer
+   from sub-agent fan-out entirely; its Experimental status tracks the
+   maturity of its substrate, not a judgment that localized offline
+   validation is optional at machine speed.  A deployment for which a
+   gate on a low-consequence class is too expensive reclassifies
+   deliberately and records the choice in its Enforcement Scope
+   Statement, rather than weakening the gate on the classes that matter.
 
-   *Decision latency is budgeted by class.* The synchronous cost of this
-   profile is confined to the actions whose consequences warrant it.
-   Classification (Section 5.4) is the first lever: only consequential
-   actions need a permit, and only the high-consequence classes must
-   hold a synchronous gate.  For the rest of the governed surface the
-   common-case decision is local: a PDP embedded in or colocated with
-   its PEP evaluates against a materialized policy view (Section 7.1)
-   whose network cost is paid once per freshness window, not per action;
-   a permit's validity window covers the follow-through of one
-   normalized action (Section 8); the decision API's batch evaluation
-   amortizes fan-out (Section 15); and metering leases amortize the
-   metered classes ([I-D.draft-mcguinness-mission-metering]).  Offline
-   attenuation ([I-D.draft-mcguinness-oauth-mission-attenuation])
-   removes the issuer from sub-agent fan-out entirely; its Experimental
-   status tracks the maturity of its substrate, not a judgment that
-   localized offline validation is optional at machine speed.  A
-   deployment for which a synchronous gate on a low-consequence class is
-   too expensive reclassifies deliberately and records the choice in its
-   Enforcement Scope Statement, rather than weakening the gate on the
-   classes that matter.
+   *The Mission is the partition key, not the only consistency domain.*
+   Most strongly consistent state this profile and its companions
+   require is scoped to one Mission: the atomic active check, single-use
+   decision identifiers, and Mission-keyed consumption counters.  A
+   multi-node PDP can therefore shard that state by the Mission
+   Identifier.  Some invariants span Missions, and others are narrower
+   than one; each is enforced in the domain the table below names, and
+   sharding by Mission does not partition it.  Fail-closed applies per
+   action class (Section 2.11): a PDP outage stops consequential work
+   and nothing else.
 
-   *Locality ends where the Mission's shared state begins.* The single-
-   use identifier store and idempotency match (Section 8), the metering
-   counters and exclusivity latch
-   ([I-D.draft-mcguinness-mission-metering]), and the per-Mission
-   evidence sequence ([I-D.draft-mcguinness-mission-runtime-evidence])
-   are strongly consistent state scoped to one Mission.  An embedded PDP
-   evaluating an action that consults any of them pays the round trip to
-   the Mission's consistency domain wherever the decision runs, so the
-   materialized view localizes only the actions that touch none of them;
-   for the high-consequence classes, whose permits are single-use, the
-   Mission's domain, not PDP placement, sets the latency floor.  A
-   deployment prices this deliberately: colocate a Mission's domain with
-   the PEPs that act under it, or accept the hop for the classes that
-   require it.
+   *Locality depends on where shared state is held.* Each shared
+   invariant is preserved by a domain, and a decision that consults the
+   invariant depends on that domain:
+
+   +=====================+======================+======================+
+   | Invariant           | Domain that          | Existing disclosure  |
+   |                     | preserves it         |                      |
+   +=====================+======================+======================+
+   | A single-use        | the enforcement      | none                 |
+   | decision            | scope's consumed-    |                      |
+   | identifier is       | identifier store,    |                      |
+   | consumed once       | shared or            |                      |
+   |                     | partitioned so it is |                      |
+   |                     | linearizable across  |                      |
+   |                     | every PEP replica of |                      |
+   |                     | the scope            |                      |
+   +---------------------+----------------------+----------------------+
+   | An idempotency      | the Exact claim      | Enforcement Scope    |
+   | key yields one      | domain: a single     | Statement: the Exact |
+   | execution           | serializing PDP, a   | claim domain per     |
+   |                     | shared linearizable  | mediated action      |
+   |                     | store, or claim      | class or idempotency |
+   |                     | domains structurally | scope, and the       |
+   |                     | exact by             | idempotency horizon  |
+   |                     | construction         | for the high-        |
+   |                     |                      | consequence classes  |
+   +---------------------+----------------------+----------------------+
+   | A consumption       | Exact: one           | Enforcement Scope    |
+   | bound holds:        | serializing PDP, a   | Statement: the       |
+   | exactly under the   | shared linearizable  | enforcement profile  |
+   | Exact profile, or   | counter, or per-PDP  | per counter.  Under  |
+   | within the          | sub-budgets that sum | Bounded consistency, |
+   | published           | to the cap; Bounded  | also the maximum     |
+   | overshoot and       | consistency:         | overshoot and        |
+   | staleness under     | replicas that        | staleness, published |
+   | Bounded             | converge within the  | per bound class      |
+   | consistency         | published bound      |                      |
+   +---------------------+----------------------+----------------------+
+   | An exclusivity      | one Exact latch      | Enforcement Scope    |
+   | group is never      | domain spanning      | Statement: the latch |
+   | latched to both     | every Mission bound  | domain               |
+   | sides               | to the group         |                      |
+   +---------------------+----------------------+----------------------+
+   | Gaps in an          | the emitter's own    | none                 |
+   | evidence stream     | sequence, held by    |                      |
+   | are detectable      | the emitter and any  |                      |
+   |                     | replica acting as    |                      |
+   |                     | it; no decision-time |                      |
+   |                     | barrier              |                      |
+   +---------------------+----------------------+----------------------+
+
+                                  Table 13
+
+   The rows follow Section 9.2, Section 9.3, the metering companion,
+   whose counters can be keyed across Missions (a lineage, Subject, or
+   client budget) and whose exclusivity groups span every bound Mission
+   ([I-D.draft-mcguinness-mission-metering]), and the per-emitter
+   sequence of Section 11.3.
+
+   Network latency follows placement and coordination strategy, not the
+   invariant.  A decision stays local when the domain for each invariant
+   it consults is local to the deciding component: a single serializing
+   owner colocated with it, a claim domain partitioned to the PEPs that
+   contend for it, or a sub-budget the PDP spends locally.  It pays a
+   round trip only to a domain held elsewhere.  Evidence sequencing is
+   the emitter's own and adds no wait to the decision.  For the high-
+   consequence classes, whose permits are single-use and whose keys are
+   claimed, the placement of those domains, not of the PDP alone, sets
+   the latency floor.  A deployment prices this deliberately: it places
+   each domain with the PEPs that contend for it, or accepts the hop for
+   the classes that require it.
+
+   *A revocation bound limits duration, not consequence.* The arithmetic
+   of Section 2.5 bounds how long after a revocation new effect can
+   begin.  It does not bound how much effect occurs in that interval.
+   That depends on how fast and how widely the deployment admits actions
+   (its admission rate, bursts, and concurrency), on the actions already
+   in flight when the revocation commits, each of which may run to its
+   execution bound, on the consumption bounds still unspent under the
+   metering companion's accounting, and on each action's own
+   constraints, such as a per-entry amount limit.  Lower decision
+   latency can admit more work within the same interval when decision
+   latency limits throughput.  These inputs do not combine into one
+   universal formula.  A deployment that wants its residual exposure to
+   be reviewable states them beside its revocation latency, as the
+   illustrative Deployment Profile shapes of
+   [I-D.draft-mcguinness-mission-architecture] do.
 
 14.  Operational Considerations
 
@@ -22170,7 +22267,7 @@ Table of Contents
    |               | reliance            | controls      |             |
    +---------------+---------------------+---------------+-------------+
 
-                                  Table 13
+                                  Table 14
 
    Every cell is conditional on dependency topology.  An issuer outage
    does not imply that an independently operated authoritative state
@@ -22963,6 +23060,17 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Deployment Considerations: a gated action waits for its gate in
+      every class; whether the decision waits on the network depends on
+      where the state it consults is held.  The Mission is the partition
+      key, not the only consistency domain: a table names the domain
+      that preserves each shared invariant (single-use identifiers, the
+      Exact idempotency claim, metering counters under either
+      enforcement profile, exclusivity groups spanning Missions, and the
+      per-emitter evidence sequence) and the disclosures already
+      required for each.  A revocation bound limits duration, not
+      consequence (informative).  No requirement changed.
 
    *  Idempotency: a duration-lease renewal's completed claim returns
       the renewal's permit to a retransmission while that permit is
@@ -23778,11 +23886,11 @@ Table of Contents
    for token validation failure, a missing mission claim, PEP-PDP
    channel failure, PDP unreachability, or the PEP being unable to
    establish Mission state ([I-D.draft-mcguinness-mission-runtime]); or
-   a PDP refusal of an in-scope request that reaches it without the
-   Mission decision context a runtime enforcement scope requires, per
-   the AuthZEN profile ([I-D.draft-mcguinness-mission-authzen]).  Such a
-   refusal has no PDP decision and cannot populate the PDP-derived
-   members above.
+   a PDP refusal, before evaluation, of an in-scope request that reaches
+   it without the Mission decision context a runtime enforcement scope
+   requires, or with a decision input it cannot use, per the AuthZEN
+   profile ([I-D.draft-mcguinness-mission-authzen]).  Such a refusal has
+   no PDP decision and cannot populate the PDP-derived members above.
 
    A deployment records it as a Refusal Record, carrying only facts the
    refusing role verified: a PEP populates the members it can attest
@@ -23845,16 +23953,26 @@ Table of Contents
       was absent or did not verify, so no decision the PEP can rely on
       was obtained), channel_failure, pdp_unreachable, or
       state_unavailable (where the deployment's state-source placement
-      has the PEP supply state, and it cannot establish it).  For a PDP
-      refusal of an in-scope request that reaches it without the Mission
-      decision context a runtime enforcement scope requires,
-      mission_context_missing; for one whose operation target is absent,
-      malformed, or outside the enforcement scope the requesting PEP is
-      authorized for ([I-D.draft-mcguinness-mission-authzen]),
-      operation_target_invalid.  These name pre-evaluation conditions,
-      PEP-side or PDP-side, and are disjoint from the runtime profile's
-      PDP denial reasons for an evaluated decision (for example, as
-      carried by the AuthZEN profile,
+      has the PEP supply state, and it cannot establish it), or
+      phase_unavailable (the operation is a phase of a compound action
+      and the PEP cannot establish the phase before requesting a
+      decision).  For a PDP refusal of an in-scope request that reaches
+      it without the Mission decision context a runtime enforcement
+      scope requires, mission_context_missing; for one whose operation
+      target is absent, malformed, or outside the enforcement scope the
+      requesting PEP is authorized for
+      ([I-D.draft-mcguinness-mission-authzen]),
+      operation_target_invalid; for one whose action phase is outside
+      the defined set, or is absent where the PDP's trusted operation
+      declaration requires a phase, phase_invalid; and for one whose
+      evaluation-context binding inputs are missing, malformed, or
+      incompatible with the declared binding, for an operation the
+      runtime profile's Evaluation-Context Binding extension covers,
+      evaluation_context_invalid.  The last two describe decision inputs
+      the PDP cannot use, not an evaluated policy denial.  These name
+      pre-evaluation conditions, PEP-side or PDP-side, and are disjoint
+      from the runtime profile's PDP denial reasons for an evaluated
+      decision (for example, as carried by the AuthZEN profile,
       [I-D.draft-mcguinness-mission-authzen]); a record that can
       populate the PDP-derived members of an evaluated decision is a
       Decision Evidence Object instead.
@@ -25998,6 +26116,12 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Refusal Record: phase_unavailable records a PEP that cannot
+      establish a compound action's phase before requesting a decision;
+      phase_invalid and evaluation_context_invalid record a PDP refusal,
+      before evaluation, of an unusable action phase or evaluation-
+      context binding input (#1629).
+
    *  Refusal Record and Execution Evidence:
       resource_contract_unresolvable records a resource contract the PEP
       could not resolve before the decision request, or that at
@@ -26363,11 +26487,16 @@ Table of Contents
          consequence classes, conditions.use_limit: 1 (Section 6.1.1).
 
       *  Absence: for the parameter-bound and high-consequence classes,
-         the runtime profile already makes exact parameter binding and
-         single use mandatory.  This feature profile is the wire vehicle
-         for that requirement, not a discretionary add-on, and a PEP/PDP
-         pair that does not carry it cannot conform for those classes.
-         Outside those classes, it is optional.
+         the runtime profile makes exact parameter binding and single
+         use mandatory, so a PEP and a PDP MUST support this feature
+         profile for those classes and the PDP MUST advertise its
+         capability URN (Section 8.1).  The Decision Base alone does not
+         conform for those classes, and a PEP whose PDP does not
+         advertise the URN fails closed.  The Decision Base checklist
+         repeats the conditional enforcement duties these members carry
+         (Section 8); the capability URN declares support for this
+         feature profile's complete applicable contract.  Outside those
+         classes, it is optional.
 
       *  Assurance: exact operation and parameter binding with replay
          and duplicate-execution protection (the runtime profile's
@@ -26444,10 +26573,12 @@ Table of Contents
 
       *  Roles: the PDP evaluates a policy-selected predicate against
          its evidence store; the PEP optionally supplies
-         evidence_reference or attribute_values (Section 5.14).
+         evidence_reference or attribute_values in
+         context.mission_history (Section 5.14).
 
-      *  Required members: the request mission_history (optional
-         carriage) and the Decision Evidence mission_history extension.
+      *  Required members: the optional request object
+         context.mission_history and the Decision Evidence
+         mission_history extension, which the PDP computes.
 
       *  Absence: a deployment that does not declare history evaluation
          in its Enforcement Scope Statement never receives a history-
@@ -26998,7 +27129,9 @@ Table of Contents
    action ([I-D.draft-mcguinness-mission-runtime]).  Its value is a
    string from the closed set preflight, prepare, commit, or compensate.
    The PEP MUST derive the value from that profile, never from an agent-
-   supplied argument.  The PDP MUST reject a value outside this set and
+   supplied argument.  The PDP MUST refuse, before evaluation, a request
+   whose action_phase is outside this set, or is absent where its
+   trusted operation declaration requires a phase (Section 6.8), and
    MUST return the validated phase as conditions.action_phase on a
    permit.  Decision Evidence records the validated phase and omits
    malformed input ([I-D.draft-mcguinness-mission-runtime-evidence]).
@@ -27032,7 +27165,8 @@ Table of Contents
    enforcement scope, never from agent arguments.  The PDP MUST validate
    their shape and applicability against the declared operation binding,
    and MUST NOT issue a covered permit when either is missing, malformed
-   or incompatible with that declaration.  Policy-evaluable values still
+   or incompatible with that declaration; it refuses such a request
+   before evaluation (Section 6.8).  Policy-evaluable values still
    travel in the existing parameter or attribute inputs.
 
    The extension is claimed per class: neither input becomes mandatory
@@ -27246,9 +27380,9 @@ Table of Contents
    or a name coordinated within this document family, under the same
    rule as denial reasons (Section 6.5).
 
-   The OPTIONAL mission_history member carries only what the PEP can
-   supply in support of the policy-selected predicates, never a
-   selection of which predicates apply.  Members:
+   The OPTIONAL context.mission_history request object carries only what
+   the PEP can supply in support of the policy-selected predicates,
+   never a selection of which predicates apply.  Members:
 
    evidence_reference:  OPTIONAL.  A string.  A reference to the
       evidence or state source the PEP consulted, when that source is
@@ -27265,10 +27399,13 @@ Table of Contents
    The PDP evaluates each policy-selected predicate against its own
    evidence store, or, where the deployment's policy permits a non-
    default evidence source, against the supplied evidence_reference or
-   attribute_values.  A caller-supplied mission_history value is never
-   itself evidence of a predicate's outcome, and carries no result
+   attribute_values.  A caller-supplied context.mission_history value is
+   never itself evidence of a predicate's outcome, and carries no result
    member; the PDP MUST NOT accept a predicate outcome asserted through
-   any context member.
+   any context member.  The request object is distinct from the Decision
+   Evidence mission_history member, which the PDP computes (Section 7):
+   request input neither chooses the required predicates nor asserts
+   their outcomes.
 
    The PDP MUST refuse the evaluation of a policy-selected predicate it
    does not recognize, treating the predicate as not establishable,
@@ -27342,7 +27479,10 @@ Table of Contents
    policy_view_id (sha-256:kP3xR9sQ...) differs from the runtime
    profile's worked value (sha-256:RBI8j_YN...) because the two
    manifests name different compilers; both are valid views of the same
-   Mission.
+   Mission.  In these examples, journal-entries.write is a reversible
+   consequential write whose deployment chooses single-use permits; that
+   choice, not a high-consequence class, is why its permits carry
+   use_limit: 1 (Section 6.1.1).
 
    The following is an example of a PDP request for the ERP
    reconciliation Mission:
@@ -27815,8 +27955,8 @@ Table of Contents
       the same normalized parameters and idempotency key.  The runtime
       profile's retransmission rule then returns the prior decision
       where its permit is unexpired and unconsumed
-      ([I-D.draft-mcguinness-mission-runtime]), and metering MUST NOT
-      charge the bound twice for the retried request
+      ([I-D.draft-mcguinness-mission-runtime]).  Whether the retried
+      request consumes a metered bound is the metering companion's rule
       ([I-D.draft-mcguinness-mission-metering]).
 
    *  A PDP under overload sheds load explicitly with HTTP 429 and
@@ -27854,13 +27994,13 @@ Table of Contents
       denial that carries access_request or next_action.
 
    reason:  REQUIRED when decision is false.  A string: ARAP's reason
-      member [ARAP], with a value from Section 6.5, including ARAP's
-      approval_required and any specification-defined extension under
-      that section's extensibility rule, which also governs an
-      unrecognized value.  A constraint violation uses
-      parameter_violation; the specific failing constraints keys are
-      carried in the Decision Evidence contributing_constraints, not
-      here.
+      member [ARAP], with a value from Section 6.5, including
+      approval_required, which this profile defines, and any
+      specification-defined extension under that section's extensibility
+      rule, which also governs an unrecognized value.  A constraint
+      violation uses parameter_violation; the specific failing
+      constraints keys are carried in the Decision Evidence
+      contributing_constraints, not here.
 
    obligations:  OPTIONAL.  An array of obligation objects
       ([AUTHZEN-OBL]), present when the decision carries a genuine
@@ -28027,9 +28167,11 @@ Table of Contents
    An obligation MAY accompany a permit or a denial (Section 6.1): on a
    permit the PEP MUST fulfill each obligation before releasing the
    action's effect; on a denial the PEP MUST still deny the action and
-   MUST additionally execute every returned obligation.  Failure to
-   fulfill an obligation, or an unrecognized obligation type, makes the
-   effective result deny.
+   MUST additionally execute every returned obligation.  The PEP MUST
+   treat an obligation it does not recognize, or cannot fulfill, as an
+   effective deny and MUST release no protected effect; it still
+   executes every obligation it understands and can perform, as on any
+   denial.
 
    Fail-closed processing does not depend on prior negotiation: a PDP
    MAY attach an obligation the PEP has not declared support for, and a
@@ -28047,13 +28189,17 @@ Table of Contents
    and a deployment that needs proof of its execution composes its own
    audit mechanism.
 
-   A PDP that supports the step-up obligation advertises it in its
-   metadata supported_obligations array.  A PEP MAY declare
-   supported_obligations in the request context, as the AuthZEN
-   Obligations Profile defines [AUTHZEN-OBL].  The declaration is
-   advisory, a usability optimization on the fail-closed baseline: a PDP
-   MAY use it to avoid attaching an obligation that is guaranteed to
-   fail, sparing a round trip.
+   A PDP claiming the Obligations feature profile (Section 2) MUST
+   publish in its metadata supported_obligations array each obligation
+   type it supports, the step-up obligation included, as the AuthZEN
+   Obligations Profile requires [AUTHZEN-OBL].  A PEP MAY declare
+   supported_obligations in the request context, as that profile
+   defines.  The declaration is advisory, a usability optimization on
+   the fail-closed baseline: a PDP MAY use it to avoid attaching an
+   obligation that is guaranteed to fail, sparing a round trip.  A PEP
+   that omits the declaration has an unknown capability, not support for
+   no obligation type, and the omission never relaxes obligation
+   processing.
 
 6.2.2.  Step-Up Obligation
 
@@ -28183,7 +28329,10 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-runtime]) and no context.approval
       is presented.  This is the first-evaluation reason.  The runtime
       profile owns the approval artifact; the PEP carries a presented
-      approval in context.approval (Section 5.13).
+      approval in context.approval (Section 5.13).  This profile defines
+      the value; [ARAP] uses the same spelling only in non-normative
+      examples.  The value alone does not make a denial requestable
+      (Section 6.6).
 
    *  approval_expired, out_of_scope, grant_pending, policy_denied,
       approval_unverifiable: ARAP's five registered re-evaluation
@@ -28196,11 +28345,15 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-harness]), and the decision request
       carries no context.taint (Section 5.12).
 
-   *  stale_state: the PEP-supplied freshness is outside the
-      deployment's staleness bound (a freshness-window violation).
-      While the condition is expected to clear on a fresh read, the PDP
-      SHOULD mark the denial transient with next_action: retry
-      (Section 6.1).
+   *  stale_state: the Mission state the decision relies on is not
+      current: the PEP-supplied freshness is outside the deployment's
+      staleness bound (a freshness-bound violation), the PDP cannot
+      establish the state it is required to establish, or the request's
+      state version differs from the PDP's (Section 5.17).  A Mission
+      the PDP knows is not active is mission_inactive instead.  Where a
+      fresh read or reconciliation is expected to resolve the condition,
+      the PDP SHOULD mark the denial transient with next_action: retry
+      (Section 6.1); otherwise it does not recommend a retry.
 
    *  view_inconsistent: the request's Mission id or issuer, or (when
       carried) authority_hash or policy_view_id, does not equal the
@@ -28394,11 +28547,10 @@ Table of Contents
 
    Lane 1, obligations and advice:  PEP work under the existing
       decision, whichever it is (Section 6.2).  An obligation is
-      mandatory and fail-closed: the PEP MUST fulfill it or the
-      effective result is deny.  Advice (reserved, Section 6.2.3) is
-      safely ignorable and fail-open: a PEP that does not act on it
-      proceeds unaffected.  Neither confers authority, has an approver,
-      or creates governance state.
+      mandatory and fail-closed (Section 6.2.1).  Advice (reserved,
+      Section 6.2.3) is safely ignorable and fail-open: a PEP that does
+      not act on it proceeds unaffected.  Neither confers authority, has
+      an approver, or creates governance state.
 
    Lane 2, governance (ARAP):  A governance process creates approval,
       authority, role, or relationship state: context.access_request
@@ -28408,12 +28560,12 @@ Table of Contents
    Lane 3, partial evaluation:  Residual policy, with no workflow and
       nothing conferred.  Partial evaluation is a non-goal: this profile
       returns decisions and instructions, never executable residual
-      policy. parameter_attributes (Section 5.7), mission_history
-      (Section 5.14), materialized policy views (Section 4), and
-      embedded PDPs are inputs or deployment shapes, not residual
-      evaluation.  Composition with a future AuthZEN partial-evaluation
-      profile is reserved, and a PDP MUST NOT return residual policy
-      under this profile.
+      policy. parameter_attributes (Section 5.7),
+      context.mission_history (Section 5.14), materialized policy views
+      (Section 4), and embedded PDPs are inputs or deployment shapes,
+      not residual evaluation.  Composition with a future AuthZEN
+      partial-evaluation profile is reserved, and a PDP MUST NOT return
+      residual policy under this profile.
 
    Not a lane, the RAR remediation grain:  insufficient_authorization
       and authorization_remediation of
@@ -28488,6 +28640,11 @@ Table of Contents
    |establishable at the |Record     |                                 |
    |PEP                  |           |                                 |
    +---------------------+-----------+---------------------------------+
+   |Required phase not   |Refusal    |phase_unavailable                |
+   |establishable at the |Record     |                                 |
+   |PEP before the       |           |                                 |
+   |decision request     |           |                                 |
+   +---------------------+-----------+---------------------------------+
    |Presented            |Refusal    |credential_authority_insufficient|
    |credential's own     |Record     |                                 |
    |authority does not   |           |                                 |
@@ -28541,6 +28698,22 @@ Table of Contents
    |enforcement scope at |           |                                 |
    |the PDP              |           |                                 |
    +---------------------+-----------+---------------------------------+
+   |action_phase outside |Refusal    |phase_invalid                    |
+   |the closed set, or   |Record     |                                 |
+   |absent where the     |           |                                 |
+   |trusted operation    |           |                                 |
+   |declaration requires |           |                                 |
+   |a phase, at the PDP  |           |                                 |
+   +---------------------+-----------+---------------------------------+
+   |Evaluation-context   |Refusal    |evaluation_context_invalid       |
+   |binding inputs       |Record     |                                 |
+   |missing, malformed,  |           |                                 |
+   |or incompatible with |           |                                 |
+   |the declared         |           |                                 |
+   |operation binding,   |           |                                 |
+   |for a covered        |           |                                 |
+   |operation, at the PDP|           |                                 |
+   +---------------------+-----------+---------------------------------+
    |Action outside the   |PDP denial |out_of_authority                 |
    |Authority Set        |           |                                 |
    |(including an invoked|           |                                 |
@@ -28591,9 +28764,13 @@ Table of Contents
    |fails a Mission or   |           |policy_denied, or                |
    |ARAP check           |           |approval_unverifiable ([ARAP])   |
    +---------------------+-----------+---------------------------------+
-   |Mission state stale  |PDP denial |stale_state                      |
-   |(freshness-window    |           |                                 |
-   |violation)           |           |                                 |
+   |Mission state not    |PDP denial |stale_state                      |
+   |current: a freshness-|           |                                 |
+   |bound violation,     |           |                                 |
+   |required state not   |           |                                 |
+   |establishable at the |           |                                 |
+   |PDP, or a state-     |           |                                 |
+   |version mismatch     |           |                                 |
    +---------------------+-----------+---------------------------------+
    |Request Mission id or|PDP denial |view_inconsistent                |
    |issuer, or (when     |           |                                 |
@@ -28780,10 +28957,17 @@ Table of Contents
       with outcome suppressed and error phase_mismatch, with no effect
       released.  A phase unestablishable before the decision request is
       instead a local configuration failure at the PEP, refused before
-      any decision request and recorded as a Refusal Record
+      any decision request and recorded as a Refusal Record with
+      phase_unavailable
       ([I-D.draft-mcguinness-mission-runtime-evidence]); it does not
       invent a PDP denial or an Execution Evidence record for a permit
       never obtained.
+
+   *  Unusable inputs: phase_invalid and evaluation_context_invalid are
+      PDP refusals before evaluation.  They describe decision inputs the
+      PDP cannot use, not an evaluated policy denial, and a PDP claiming
+      only the Decision Base records them in its own internal form
+      (Section 2).
 
    *  Target: A target-determining argument that changed under a
       parameter-bound permit is a parameter deviation,
@@ -28873,9 +29057,11 @@ Table of Contents
    propagate the permit's evaluation_id to the resource request in the
    Mission-Decision request header field (Section 11); the field value
    is the evaluation_id, whose ABNF (Section 6.1) is field-value-safe.
-   The field is protected in transit per deployment: at minimum it rides
-   the TLS channel this profile already requires (Section 9), and where
-   the deployment signs resource requests the signature MUST cover it.
+   A PEP that propagates the field MUST send the resource request
+   carrying it over TLS 1.2 or later; the TLS this profile requires of
+   the PDP endpoint (Section 9) does not cover that hop.  Where the
+   deployment signs resource requests, the signature MUST cover the
+   field.
 
    A resource server that logs the received evaluation_id with the
    access it serves joins that access to the decision that permitted it:
@@ -28927,9 +29113,13 @@ Table of Contents
    in addition to the members other sections require the PDP to record:
 
    *  mission, subject, resource, action, audience, credential,
-      parameter_digest, obligations, taint, and mission_history are
-      populated from the correspondingly named members of the PDP
-      request and response (Section 5, Section 6).
+      parameter_digest, obligations, and taint are populated from the
+      correspondingly named members of the PDP request and response
+      (Section 5, Section 6).
+
+   *  mission_history records the predicates the PDP evaluated and their
+      outcomes (Section 5.14); the PDP computes it, never copying it
+      from context.mission_history.
 
    *  conditions is populated from the response context.conditions
       (Section 6.1.1).
@@ -29036,6 +29226,13 @@ Table of Contents
    normative in its owning section; the checklists below cite them
    without restating their mechanics.
 
+   Mission Capability Binding
+   ([I-D.draft-mcguinness-mission-capability-binding]) and the harness
+   profile ([I-D.draft-mcguinness-mission-harness]) are normative
+   references.  The requirements that cite them bind only a deployment
+   that adopts Capability Binding, or the harness capability the
+   requirement names (PDP-enforced taint, for the taint members).
+
    A PEP conforming to the Decision Base MUST:
 
    *  carry the Mission and actor decision inputs from validated token
@@ -29049,12 +29246,7 @@ Table of Contents
       Binding, context.capability_source as that companion requires
       ([I-D.draft-mcguinness-mission-capability-binding]);
 
-   *  process obligations correctly: fulfill every obligation attached
-      to a permit, treat one it cannot perform or does not recognize as
-      unfulfillable (an effective deny on a permit), execute every
-      obligation attached to a denial while still denying the action,
-      and advertise what it can perform in supported_obligations
-      (Section 6.2.1);
+   *  process obligations as Section 6.2.1 requires;
 
    *  honor every decision condition present (parameter_digest,
       valid_until, use_limit, action_phase, evaluation_context_digest,
@@ -29074,13 +29266,11 @@ Table of Contents
    A PEP additionally claiming the Runtime Evidence profile (Section 2)
    MUST emit a Refusal Record
    ([I-D.draft-mcguinness-mission-runtime-evidence]) for a pre-decision
-   refusal, and, for the classes the runtime profile's transaction-
-   assurance tier covers, an Execution Evidence Object for the final
-   disposition of every consequential permit (completed, failed, or
-   suppressed before release, Section 7.2).  A PEP claiming only the
-   Decision Base records a refusal or an execution outcome in its own
-   internal form, never represented as this profile's portable schema
-   (Section 2).
+   refusal, and an Execution Evidence Object for the final disposition
+   of every consequential permit (completed, failed, or suppressed
+   before release, Section 7.2).  A PEP claiming only the Decision Base
+   records a refusal or an execution outcome in its own internal form,
+   never represented as this profile's portable schema (Section 2).
 
    A PDP conforming to the Decision Base MUST:
 
@@ -29111,9 +29301,8 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]) without this profile's
    portable schema.
 
-   A PDP conforming to this profile SHOULD advertise in its metadata
-   supported_obligations array each obligation type it supports
-   (Section 6.2).
+   A PDP claiming the Obligations feature profile publishes its
+   supported obligation types in metadata as Section 6.2.1 requires.
 
    A deployment whose requesting component and executing component
    differ is out of scope for conformance to this profile (Section 6.9).
@@ -29365,6 +29554,16 @@ Table of Contents
               1.0", 2026, <https://openid.github.io/authzen/authzen-
               obligations-profile-1_0.html>.
 
+   [I-D.draft-mcguinness-mission-capability-binding]
+              McGuinness, K., "Mission Capability Binding", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-capability-binding.html>.
+
+   [I-D.draft-mcguinness-mission-harness]
+              McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-harness.html>.
+
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -29467,16 +29666,6 @@ Table of Contents
               mission-bound-authorization/draft-mcguinness-mission-
               architecture.html>.
 
-   [I-D.draft-mcguinness-mission-capability-binding]
-              McGuinness, K., "Mission Capability Binding", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-capability-binding.html>.
-
-   [I-D.draft-mcguinness-mission-harness]
-              McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-harness.html>.
-
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -29522,6 +29711,24 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Owner-ruled follow-ups to the editorial pass (#1629).  A PDP
+      claiming the Obligations feature publishes its supported
+      obligation types; a PEP's supported_obligations declaration is
+      optional and its omission relaxes nothing.  Obligation Processing
+      holds the effective-deny rule for an unrecognized or unfulfillable
+      obligation.  A PEP claiming Runtime Evidence emits Execution
+      Evidence for every consequential permit.  Failure-Condition
+      Coverage maps phase_invalid, evaluation_context_invalid, and
+      phase_unavailable, and stale_state covers freshness-bound
+      violations, state the PDP cannot establish, and state-version
+      mismatch. approval_required is this profile's value.  Metering
+      owns the retried-request rule.  Capability Binding and the harness
+      are normative references, scoped to deployments adopting them.
+      The history request object is context.mission_history.
+      Transaction Assurance is required, and advertised, for the
+      parameter-bound and high-consequence classes.  A propagated
+      Mission-Decision field travels over TLS.
 
    *  Editorial and structural pass.  Mission-Bound Authorization for
       OAuth 2.0 is called the OAuth binding throughout.  Each repeated
