@@ -11309,14 +11309,15 @@ exception is removed, and the refusal is <code>invalid_target</code>
 </li>
         <li class="normal" id="appendix-G-3.8">
           <p id="appendix-G-3.8.1">A token carries only the entries whose original approved audience
-includes its audience: the audiences the AS's trusted mapping assigned
-an entry at approval, retained with the Mission and kept by the
-entries a derived Mission inherits. A token naming several audiences
-is issued only where each is approved for the same entries;
-otherwise, or where the audience is approved for none of the entries
-the token would carry, the request is refused with <code>invalid_target</code>
-(Declared Transformation Capabilities, Audience and Token Response;
-#1503, D620, D733).<a href="#appendix-G-3.8.1" class="pilcrow">¶</a></p>
+(the audiences the AS's trusted mapping assigned an entry at
+approval, retained with the Mission and kept by the entries a derived
+Mission inherits) includes its audience, unless a declared
+<code>narrowing</code> capability permits issuing an entry there. A token naming
+several audiences is issued only where each is approved for the same
+entries; otherwise, or where the audience is approved for none of the
+entries the token would carry, the request is refused with
+<code>invalid_target</code> (Declared Transformation Capabilities, Audience and
+Token Response; #1503, D620, D733).<a href="#appendix-G-3.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-G-3.9">
           <p id="appendix-G-3.9.1">The AS refuses, with <code>invalid_target</code>, a delegated Mission-bound

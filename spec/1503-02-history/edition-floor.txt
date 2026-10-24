@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-24T20:23:17Z
-Source repository commit: 0ea927d0575aa1a6dfdd915a33feaf4c39dde8ac
+Generated: 2026-10-24T20:30:59Z
+Source repository commit: 8669b6b061a18e36f2922c7b6de9cb0cd6cdd2f8
 Member count: 7
 
 Reading order:
@@ -15745,14 +15745,15 @@ Appendix G.  Document History
       (Authority Proposal).
 
    *  A token carries only the entries whose original approved audience
-      includes its audience: the audiences the AS's trusted mapping
-      assigned an entry at approval, retained with the Mission and kept
-      by the entries a derived Mission inherits.  A token naming several
-      audiences is issued only where each is approved for the same
-      entries; otherwise, or where the audience is approved for none of
-      the entries the token would carry, the request is refused with
-      invalid_target (Declared Transformation Capabilities, Audience and
-      Token Response; #1503, D620, D733).
+      (the audiences the AS's trusted mapping assigned an entry at
+      approval, retained with the Mission and kept by the entries a
+      derived Mission inherits) includes its audience, unless a declared
+      narrowing capability permits issuing an entry there.  A token
+      naming several audiences is issued only where each is approved for
+      the same entries; otherwise, or where the audience is approved for
+      none of the entries the token would carry, the request is refused
+      with invalid_target (Declared Transformation Capabilities,
+      Audience and Token Response; #1503, D620, D733).
 
    *  The AS refuses, with invalid_target, a delegated Mission-bound
       token for an audience it has not established as a Mission-aware
