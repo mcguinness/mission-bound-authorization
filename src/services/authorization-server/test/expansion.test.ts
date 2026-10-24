@@ -11,7 +11,7 @@
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createExpansion, MissionKernel, validateMissionIntent } from "../src/index.js";
+import { createExpansion, ExpansionDeferralStore, MissionKernel, validateMissionIntent } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
@@ -306,3 +306,103 @@ describe("expansion: successor expiry (@spec expansion#successor-expiry)", () =>
   });
 });
 
+describe("an Expansion successor keeps the predecessor's association for the authority it retains (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2)", () => {
+  it("an entry the successor retains from the predecessor keeps the predecessor's association, and only an entry the Expansion's approval adds takes the mapping at that approval", () => {
+    const LEDGER = DERIVATION_POLICY.ceiling.find((e) => e.resource !== RESOURCE)?.resource as string;
+    let mapped = ["https://rs-a.test/"];
+    const k = new MissionKernel({
+      issuer: ISS,
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+      entryAudiences: () => mapped,
+    });
+    const read = {
+      type: "mission_resource_access" as const,
+      resource: RESOURCE,
+      actions: ["payments:invoice.read"],
+      constraints: { vendors: ["acme"] },
+    };
+    const ledger = {
+      type: "mission_resource_access" as const,
+      resource: LEDGER,
+      actions: ["ledger:vendor.read"],
+      constraints: { vendors: ["acme"] },
+    };
+    const mission = k.approve({
+      intent: validateMissionIntent(JSON.stringify({ goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: EXP })),
+      proposedAuthority: [read],
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: `apev-${seq++}`,
+    });
+    expect(mission.approved_audiences).toEqual([["https://rs-a.test/"]]);
+    mapped = ["https://rs-a.test/", "https://rs-b.test/"];
+    const { successor } = createExpansion(k, {
+      predecessorId: mission.id,
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "Read Acme invoices and the ledger", target_resources: [RESOURCE, LEDGER], expires_at: EXP }),
+      ),
+      proposedAuthority: [read, ledger],
+      approver: { iss: ISS, sub: "bob" },
+      approvalEventId: `apev-succ-${seq++}`,
+      approvedUntil: EXP,
+    });
+    const byResource = new Map(successor.authority_set.map((e, i) => [e.resource, successor.approved_audiences?.[i]]));
+    expect(byResource.get(RESOURCE)).toEqual(["https://rs-a.test/"]);
+    expect(byResource.get(LEDGER)).toEqual(["https://rs-a.test/", "https://rs-b.test/"]);
+    expect(k.get(successor.id)?.approved_audiences).toEqual(successor.approved_audiences);
+  });
+});
+
+describe("an Expansion's added entries keep the association the mapping assigned them at the Approver's decision (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2)", () => {
+  it("a mapping change after the decision and before the completing poll leaves an added entry with the decision-time association", () => {
+    const LEDGER = DERIVATION_POLICY.ceiling.find((e) => e.resource !== RESOURCE)?.resource as string;
+    let mapped = ["https://rs-a.test/"];
+    const k = new MissionKernel({
+      issuer: ISS,
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+      entryAudiences: () => mapped,
+    });
+    const read = { type: "mission_resource_access" as const, resource: RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } };
+    const ledger = { type: "mission_resource_access" as const, resource: LEDGER, actions: ["ledger:vendor.read"], constraints: { vendors: ["acme"] } };
+    const mission = k.approve({
+      intent: validateMissionIntent(JSON.stringify({ goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: EXP })),
+      proposedAuthority: [read],
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: `apev-${seq++}`,
+    });
+    const store = new ExpansionDeferralStore(k, now);
+    const pending = store.open({
+      predecessorId: mission.id,
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "Read Acme invoices and the ledger", target_resources: [RESOURCE, LEDGER], expires_at: EXP }),
+      ),
+      proposedAuthority: [read, ledger],
+      clientId: "ap-agent",
+      jkt: "jkt-decision",
+      creationRequestId: `crid-${seq++}`,
+    });
+    // The Approver decides under this mapping.
+    mapped = ["https://rs-a.test/", "https://rs-b.test/"];
+    store.approve(pending.deferral_code, { approver: { iss: ISS, sub: "bob" }, approvalEventId: `apev-succ-${seq++}`, approvedUntil: EXP });
+    // The mapping changes again before the completing poll.
+    mapped = ["https://rs-a.test/", "https://rs-b.test/", "https://rs-c.test/"];
+    const out = store.redeem(pending.deferral_code);
+    expect("successor" in out, JSON.stringify(out)).toBe(true);
+    if (!("successor" in out)) return;
+    const successor = k.get(out.successor.id);
+    const byResource = new Map(successor?.authority_set.map((e, i) => [e.resource, successor.approved_audiences?.[i]]));
+    expect(byResource.get(RESOURCE)).toEqual(["https://rs-a.test/"]);
+    expect(byResource.get(LEDGER)).toEqual(["https://rs-a.test/", "https://rs-b.test/"]);
+  });
+});

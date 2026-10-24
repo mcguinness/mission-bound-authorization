@@ -782,6 +782,7 @@ describe("fan-out accounting and child evidence (@spec child-delegation#fanout, 
     // for this Subject through this client, exactly as approve() would (#827).
     dKernel.insertRecord(parentRecord, undefined, {
       source: dKernel.resolveAuthoritySource({ clientId: parentRecord.client_id, subject: parentRecord.subject }),
+      audiences: "fresh",
     });
 
     const dProposal: AuthorityEntry[] = [
@@ -1333,5 +1334,43 @@ describe("per-child derivation limit from the committed policy state (@spec chil
       expect((e as Error).message).toMatch(/policy_version older-policy is not the policy this issuer holds/);
     }
     expect(k.allMissions().length).toBe(before);
+  });
+});
+
+describe("a Child Mission keeps its parent's original approved audiences (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2)", () => {
+  it("a child created after the trusted mapping changes keeps the association its parent's approved entries retain, never the mapping current at its creation", () => {
+    // The trusted mapping the kernel reads at an approval event: every entry
+    // is assigned `mapped`, which the case changes between the two creations.
+    let mapped = ["https://rs-a.test/"];
+    const k = new MissionKernel({
+      issuer: ISS,
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["parent-agent"], ["bob"]),
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+      actorProfiles: CHILD_ACTORS,
+      entryAudiences: () => mapped,
+    });
+    const parent = k.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "Pay Acme invoices for Q3", target_resources: [RESOURCE], expires_at: PARENT_EXP }),
+      ),
+      proposedAuthority: proposed(["payments:invoice.read", "payments:payment.execute"]),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "parent-agent",
+      approvalEventId: `apev-${seq++}`,
+    });
+    expect(parent.approved_audiences).toEqual(parent.authority_set.map(() => ["https://rs-a.test/"]));
+    mapped = ["https://rs-a.test/", "https://rs-b.test/"];
+    const { child } = createChildMission(k, {
+      parentId: parent.id,
+      intent: childIntent(["payments:invoice.read"]),
+      proposedAuthority: proposed(["payments:invoice.read"]),
+      childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+    });
+    expect(child.approved_audiences).toEqual([["https://rs-a.test/"]]);
+    expect(k.get(child.id)?.approved_audiences).toEqual([["https://rs-a.test/"]]);
   });
 });

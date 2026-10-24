@@ -1612,6 +1612,26 @@ The AS MUST NOT narrow, delegate, or project to `scope` an entry of a
 type for which it has not declared the corresponding capability; on an
 undeclared capability the entry is carried as approved.
 
+The AS relates each entry to the audiences that consume it through a
+trusted entry-to-audience mapping, such as authenticated configuration
+or protected resource metadata ({{RFC9728}}). An entry's original
+approved audience is the audience or audiences that mapping assigned
+the entry when the Mission was approved. An entry's `resource` value is
+not by itself an audience ({{token-response}}). The AS MUST retain that
+association with the Mission; a later change to the mapping does not
+redefine it.
+
+A Mission created from earlier authority, such as a Child Mission
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), a successor
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), or an instance of a
+standing consent ({{standing-consent-bases}}), does not reassign the
+original approved audience of an entry it inherits: the entry keeps that
+of the authority it derives from. Only a fresh approval of the entry, or
+a transformation under a declared capability, establishes a different
+one. Where the AS cannot establish an entry's original approved
+audience, the entry has none; the current mapping does not stand in for
+it.
+
 Issuing an entry to an audience other than its original approved
 audience, including audience projection to a Resource AS
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), counts as
@@ -1619,7 +1639,9 @@ narrowing and needs `narrowing`, not `projection`. Without `narrowing`,
 the AS MUST NOT issue an entry to any audience other than its original
 approved audience, or, except as `scope` under a declared `projection`,
 in any form other than exactly as approved, since it cannot prove that a
-transformed copy is still a subset of what was approved.
+transformed copy is still a subset of what was approved. Without
+`narrowing`, a token for another audience does not carry the entry
+({{token-response}}).
 
 A type that declares `delegation` without `narrowing` is delegable only
 unchanged: the AS MUST NOT include an entry of such a type in a
@@ -2579,7 +2601,20 @@ under the entry's type (for
 {{I-D.draft-mcguinness-oauth-mission-resource-access}}). A token
 request's `resource` parameter ({{RFC8707}}) selects the audience the
 client asks for. The token's `aud` names the recipients that accept
-the token.
+the token, and the AS relates an entry to them through the entry's
+original approved audience ({{transformation-capabilities}}).
+
+A token issued for an audience carries only the entries whose original
+approved audience includes that audience; an entry approved for another
+audience is not carried, unless a declared `narrowing` capability
+permits issuing it there. A token whose `aud` names several audiences
+is issued only where the same entries are approved for each of them;
+where they differ, the AS refuses the request with `invalid_target`, and
+the client requests a separate token for each audience. The AS also
+refuses with `invalid_target` a request whose audience is approved for
+none of the entries the token would carry, and one whose
+`authorization_details` ({{Section 6 of RFC9396}}) names an entry not
+approved for its audience.
 
 The AS returns the granted `authorization_details` in every token
 response, including refresh and Token Exchange responses
@@ -3224,6 +3259,7 @@ exchange rows of the third table.
 |---|---|
 | PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
 | Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
+| Token request: the requested audience is approved for none of the entries the token would carry, the request's `authorization_details` names an entry not approved for its audience, or the audiences it names are approved for different entries ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or the AS has not established a delegated Mission-bound token's audience as a Mission-aware Resource Server that also processes the `act` chain ({{rs-mission-unaware}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
