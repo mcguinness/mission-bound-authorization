@@ -35,6 +35,7 @@ import {
   type MatcherList,
   WELL_FORMED_MATCHER,
 } from "./malformed-matcher.helper.js";
+import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
 import { withStoredUnsupportedMember } from "./unknown-member.helper.js";
 import {
   buildAuthorizationServer,
@@ -798,5 +799,42 @@ describe("the AROP deferral is bound to the Mission's client and the opening key
       expect(body.access_token, label).toBeUndefined();
     }
     expect(derivations()).toBe(before);
+  });
+});
+
+describe("the release fence on the AROP deferral's deferred grant (@spec mission#issuance-gating, #250)", () => {
+  it("AROP deferral: a poll whose Mission is revoked after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member, and the redeemed deferral_code is spent", async () => {
+    // A Mission of its own: the file's shared base Mission stays active.
+    const own = await issueBaseMissionToken();
+    const base = (as.kernel.get(own.missionId) as { authority_set: AuthorityEntry[] }).authority_set;
+    const requested = base
+      .filter((e) => e.actions.includes("payments:invoice.read"))
+      .map((e) => ({ ...e, actions: ["payments:invoice.read"] }));
+    const init = await tokenRequest({
+      grant_type: DEFERRED_GRANT_TYPE,
+      deferred_authorization: JSON.stringify({ mission_id: own.missionId, requested }),
+    });
+    const { deferral_code: code } = (await init.json()) as { deferral_code: string };
+    expect(code).toMatch(/^dfr_/);
+    as.deferrals.approve(code, new Date((Math.floor(Date.now() / 1000) + 120) * 1000).toISOString());
+
+    // Commits from inside mintDeferredToken's AccessToken#save(), after its gate.
+    const committed = commitAtNextIssue(as, "revoke");
+    let res: Response;
+    try {
+      res = await poll(code);
+    } finally {
+      committed.disarm();
+    }
+    expect(committed.missionId()).toBe(own.missionId);
+    expect(as.kernel.get(own.missionId)?.termination?.reason).toBe("revoked");
+    expectFenceRefusal({ status: res.status, body: (await res.json()) as Record<string, unknown> }, "invalid_grant");
+
+    // The deferral was redeemed before the mint, so the refused poll spent it.
+    const again = await poll(code);
+    const againBody = (await again.json()) as { error?: string; access_token?: string };
+    expect(again.status).toBe(400);
+    expect(againBody.error).toBe("invalid_grant");
+    expect(againBody.access_token).toBeUndefined();
   });
 });

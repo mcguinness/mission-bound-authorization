@@ -51,6 +51,7 @@ import {
   type MatcherList,
   WELL_FORMED_MATCHER,
 } from "./malformed-matcher.helper.js";
+import { commitAtNextIssue, commitDuringDrain, expectFenceRefusal } from "./release-fence.helper.js";
 import { INVALID_SUBJECT_TOKENS, resignWithCnf } from "./subject-possession.helper.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import {
@@ -1584,5 +1585,68 @@ describe("self-dispatch: a Dispatcher that is its instance's selected Agent skip
     expect(body.error_description).toContain("not a delegation handle audienced to the acting client");
     expect(body.refresh_token).toBeUndefined();
     expect(countOf(instance.missionId)).toBe(before);
+  });
+});
+
+describe("the release fence on the Dispatch Handoff (@spec mission#issuance-gating, #250)", () => {
+  const settled = async (res: Response): Promise<{ status: number; body: Record<string, unknown> }> => ({
+    status: res.status,
+    body: (await res.json()) as Record<string, unknown>,
+  });
+  /** The consumed-grant row for `grant`'s jti, if any. */
+  const takenRow = (grant: string) =>
+    as.kernel.dispatchHandoffs.db
+      .prepare("SELECT state FROM dispatch_handoff_consumed WHERE jti = ?")
+      .get(decodeJwt(grant).jti as string) as { state: string } | undefined;
+
+  it("Dispatch Handoff exchange: a revocation committed after the exchange's state check, while the request-path drain runs, is refused invalid_request with mission_error revoked and no token member (D369)", async () => {
+    const instance = await dispatchInstance();
+    const before = as.kernel.get(instance.missionId)?.derivation_count;
+    // The handoff grant is signed by the handler, not saved through the
+    // provider, so the commit lands in the drain, on the instance.
+    const committed = commitDuringDrain(as, "revoke", () => instance.missionId);
+    let res: { status: number; body: Record<string, unknown> };
+    try {
+      res = await settled(await handoff(instance.token));
+    } finally {
+      committed.disarm();
+    }
+    expect(committed.missionId()).toBe(instance.missionId);
+    expect(as.kernel.get(instance.missionId)?.termination?.reason).toBe("revoked");
+    expectFenceRefusal(res, "invalid_request");
+    // The fence's own refusal, not the exchange's state check.
+    expect(res.body.error_description).toContain("before its token was released");
+    // The exchange counts nothing.
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before);
+  });
+
+  it("Dispatch Handoff redemption: a revocation committed after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member; the grant stays consumed and its derivation counted, so a retry is refused as already redeemed", async () => {
+    const instance = await dispatchInstance();
+    const grant = await grantFor(instance);
+    const before = as.kernel.get(instance.missionId)?.derivation_count as number;
+    const committed = commitAtNextIssue(as, "revoke");
+    let res: { status: number; body: Record<string, unknown> };
+    try {
+      res = await settled(await redeem(grant));
+    } finally {
+      committed.disarm();
+    }
+    // The commit fired inside the token's save, so the save-time gate had passed.
+    expect(committed.missionId()).toBe(instance.missionId);
+    expect(as.kernel.get(instance.missionId)?.termination?.reason).toBe("revoked");
+    expectFenceRefusal(res, "invalid_grant");
+    // What is spent: the handler released its derivation reservation and
+    // confirmed the grant before the fence, so the refused redemption counted
+    // one derivation and consumed the grant. A retry of the same grant is
+    // refused as already redeemed, without mission_error.
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
+    expect(takenRow(grant)?.state).toBe("consumed");
+    const retry = await settled(await redeem(grant));
+    expect(retry.status, JSON.stringify(retry.body)).toBe(400);
+    expect(retry.body.error).toBe("invalid_grant");
+    expect(retry.body.error_description).toBe("dispatch handoff grant was already redeemed");
+    expect(retry.body.mission_error).toBeUndefined();
+    expect(retry.body.access_token).toBeUndefined();
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
   });
 });
