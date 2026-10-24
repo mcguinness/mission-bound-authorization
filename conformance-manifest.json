@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "f0293fb88f8590effaeaf0419963b56d6279c3f7",
-    "content_sha256": "9dd42b67971856832998a6674c405b3dd0e30fdd39164bd01dff5db74c84cea5"
+    "revision": "2116ead1b953a6497b6c3dadbb36c46a0a9d2c02",
+    "content_sha256": "4a59c88e64d9318bd1e1d425eda5b5042a0a52283f91f4ee1b9228d06470b6f8"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -12226,12 +12226,248 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an entry of a type without a declared narrowing capability is issued only to its original approved audience and only exactly as approved, or as scope under a declared projection; audience projection to a Resource AS counts as narrowing"
+    "normative": "an entry of a type without a declared narrowing capability is issued only to its original approved audience and only exactly as approved, or as scope under a declared projection; audience projection to a Resource AS counts as narrowing",
+    "local": "witnessed for its audience clause: a token for an audience carries only the entries whose retained original approved audience includes it, on every Mission-bound mint path, the delegated Token Exchange and the child redemption included, and an audience the trusted mapping assigns the entry only after approval is refused. Two gaps keep it partial. (1) \"only exactly as approved\": the reference narrows, delegates and projects mission_resource_access entries with no declared capability (#1377, D538; row core.other-types.transformation-boundary-declared). (2) Audience projection to a Resource AS: the cross-domain projection proceeds without a declared narrowing capability and is not refused."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No test exercises a type without a declared narrowing capability."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a code exchange for an audience the mapping gained after approval is refused invalid_target, issuing no token, while a Mission approved after the change is issued for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh refused for an audience the mapping gained after approval spends no rotating refresh token: it still refreshes for the original approved audience (#1604 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733) > a Mission approving an entry for each of two audiences issues each audience a token carrying only its own entry: the other audience's entry does not ride",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource does not ride in this token, and a token issued for that resource refuses it (boundary)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > delivers the token for the resource the submission selected",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > issues the device access token only the entries approved for its audience: an entry approved for another audience does not ride (@spec mission#token-response, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a dispatched instance approved for two audiences gets a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a successor approved for two audiences completes with a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > leaves an entry approved for another audience out of the token, never carrying it along",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733) > a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7 (D620). The reference declares no transformation capability for any type (src/docs/resource-access-transformation-capabilities.md), so the rule applies to every entry. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea. D733: the gap where an entry approved for another audience rode in a token closed; every Mission-bound token now carries only the entries approved for its audience. Proved by carrying every computed entry instead of the audience's (the save-time check then refused the two-audience witnesses), and by bypassing the code and refresh hook's filter."
+  },
+  {
+   "id": "core.other-types.entry-audience-trusted-mapping",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "The AS relates each entry to the audiences that consume it through a trusted entry-to-audience mapping",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the audiences an entry is assigned come from the AS's trusted entry-to-audience mapping alone: not from the entry's resource value, and not from any request input",
+    "local": "witnessed at unit level that the assignment is the mapping's audiences overlapping the entry, with none under no mapping, and never the entry's resource itself. Not from request input: the mapping is deployment configuration handed to the kernel (the scope-projection mapping), which no request reaches; no test exercises that clause"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approved-audience.test.ts",
+     "name": "the original approved audience (@spec mission#transformation-capabilities, #1503 finding 7) > assigns an entry every mapped audience whose resource tree overlaps it, never the entry's resource itself",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7 (D620). The draft's next sentence, that an entry's resource value is not by itself an audience, is folded into this row's observation."
+  },
+  {
+   "id": "core.other-types.original-audience-retained",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "The AS MUST retain that association with the Mission; a later change to the mapping does not redefine it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after the AS's entry-to-audience mapping changes, an approved entry's audiences stay those the mapping assigned it when the Mission was approved: a token request for an audience the mapping assigns the entry only later is refused, and the original approved audience is still issued",
+    "local": "the reference's trusted mapping is the scope-projection mapping's audiences, related to an entry by resource-tree overlap; an approval event retains each entry's audiences with the Mission (MissionRecord.approved_audiences, authorization-server state outside every anchor and never on the wire), and every Mission-bound mint reads the retained association, never the mapping current then. A Mission derived from earlier authority inherits its entries' association (row core.other-types.derived-mission-audience); a row that predates the column retains none and approves no audience"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a code exchange for an audience the mapping gained after approval is refused invalid_target, issuing no token, while a Mission approved after the change is issued for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh refused for an audience the mapping gained after approval spends no rotating refresh token: it still refreshes for the original approved audience (#1604 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7 (D620). Proved by deciding from the mapping current at issuance instead of the retained association, by retaining nothing at creation, and by not reading the retained association back from the store: the witnesses failed each time. D733: the template dispatch witness in scope-projection.test.ts recovers an instance created while the target was unmapped and issues for it once the mapping is back, because the instance inherits the association its template retained at consent. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea."
+  },
+  {
+   "id": "core.other-types.original-audience-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "Without `narrowing`, a token for another audience does not carry the entry",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a type with no declared narrowing capability, a token issued for an audience carries no entry whose original approved audience excludes that audience",
+    "local": "every Mission-bound mint path limits the entries it computed to those whose retained original approved audience includes the token's audience before it builds the token, so the token, its response and its issuance record carry the same set; a save-time check refuses any token that still carries another. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733) > a Mission approving an entry for each of two audiences issues each audience a token carrying only its own entry: the other audience's entry does not ride",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource does not ride in this token, and a token issued for that resource refuses it (boundary)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > delivers the token for the resource the submission selected",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > issues the device access token only the entries approved for its audience: an entry approved for another audience does not ride (@spec mission#token-response, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a dispatched instance approved for two audiences gets a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a successor approved for two audiences completes with a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > leaves an entry approved for another audience out of the token, never carrying it along",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733) > a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation issuance (@spec async-delegation) > opens a family only for a target its entries are approved for: a token for one audience opens none for another audience of the Mission, counting no derivation (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Re-quoted: the sentence that a request issuing an entry to another audience is refused became the carriage consequence; the refusals moved to Audience and Token Response (rows core.tokens.no-approved-entry-refusal, core.tokens.requested-entry-refusal, core.tokens.multi-audience-refusal). Proved by carrying every computed entry (the two-audience witnesses were refused at the save-time check), and by bypassing each path's filter: the code and refresh hook, the device redemption, the Deferred Mission Approval, template dispatch and Expansion completion mints each failed its witness. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
   },
   {
    "id": "core.delegation-constraints.depth-from-accounting",
@@ -52140,7 +52376,7 @@
     },
     {
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
-     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource rides in this token, and a token issued for that resource refuses it (boundary)",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource does not ride in this token, and a token issued for that resource refuses it (boundary)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -52265,7 +52501,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#1266 round 2 (D480 departures closed). An entry for another resource rides only in tokens its resource server never receives; it is checked when a token is issued for that resource (the boundary case). The cross-domain ID-JAG goes to the RAS, not to the resource server: the RAS's destination policy governs emission to the destination resource and is now fail-closed. Introspection discloses what was minted and emits nothing new. A scope-only target stays governed by the scope projection's independently enforced controls. The shipped mapping vouches exactly what each resource's metadata advertises (payments, SaaS). Mutations: dropping the AS refusal, checking every carried entry regardless of audience, letting an absent list pass, disabling the transaction-token check, loosening the mapping parser, the RAS passing an unlisted resource, the RAS passing an empty list, and the RAS stripping the key instead of dropping the entry each fail these tests. Review on PR #1427 (P2): the pairing was by equality, so an invoice-level or prefix entry under an audience skipped its list. Fixed with the overlap pairing over #1434's matcher. Mutations: pairing by equality only, checking only the first overlapping audience, a raw string prefix in place of prefixAdmits, dropping the prefix-contains clause, the RAS accepting any one overlapping list, and the RAS passing an entry that overlaps no listed resource each fail these tests. The transaction token admits only entries naming the Challenge-Issuing Resource exactly, so only the equality pairing is reachable there; the two-audience case is witnessed at the shared check."
+   "notes": "#1266 round 2 (D480 departures closed). An entry approved for another audience is not carried in this token at all (#1503 finding 7, D733); it is checked when a token is issued for its own resource (the boundary case). The cross-domain ID-JAG goes to the RAS, not to the resource server: the RAS's destination policy governs emission to the destination resource and is now fail-closed. Introspection discloses what was minted and emits nothing new. A scope-only target stays governed by the scope projection's independently enforced controls. The shipped mapping vouches exactly what each resource's metadata advertises (payments, SaaS). Mutations: dropping the AS refusal, checking every carried entry regardless of audience, letting an absent list pass, disabling the transaction-token check, loosening the mapping parser, the RAS passing an unlisted resource, the RAS passing an empty list, and the RAS stripping the key instead of dropping the entry each fail these tests. Review on PR #1427 (P2): the pairing was by equality, so an invoice-level or prefix entry under an audience skipped its list. Fixed with the overlap pairing over #1434's matcher. Mutations: pairing by equality only, checking only the first overlapping audience, a raw string prefix in place of prefixAdmits, dropping the prefix-contains clause, the RAS accepting any one overlapping list, and the RAS passing an entry that overlaps no listed resource each fail these tests. The transaction token admits only entries naming the Challenge-Issuing Resource exactly, so only the equality pairing is reachable there; the two-audience case is witnessed at the shared check."
   },
   {
    "id": "resource-access.scope-projection.narrower-resource",
@@ -61852,6 +62088,526 @@
     }
    ],
    "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness."
+  },
+  {
+   "id": "core.error-mapping.original-audience-invalid-target",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "error-mapping",
+   "text": "the requested audience is approved for none of the entries the token would carry, the request's `authorization_details` names an entry not approved for its audience, or the audiences it names are approved for different entries ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request whose audience is approved for none of the entries the token would carry, whose authorization_details names an entry not approved for its audience, or whose audiences are approved for different entries is refused invalid_target and issues no token",
+    "local": "each trigger is witnessed at the token endpoint. The third is refused for a broader reason: this reference's token endpoint (oidc-provider) refuses every token request naming more than one resource with invalid_target, so a combined request is refused whether or not its audiences' entries differ; the rule that refuses only differing entries is witnessed at unit level (row core.tokens.multi-audience-refusal)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a code exchange for an audience the mapping gained after approval is refused invalid_target, issuing no token, while a Mission approved after the change is issued for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh refused for an audience the mapping gained after approval spends no rotating refresh token: it still refreshes for the original approved audience (#1604 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a Mission whose record retains no association fails closed: its refresh is refused invalid_target rather than read from today's mapping (D733 ruling 4)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation issuance (@spec async-delegation) > opens a family only for a target its entries are approved for: a token for one audience opens none for another audience of the Mission, counting no derivation (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/emission-overlap.test.ts",
+     "name": "the token endpoint checks every entry an audience serves against that audience's own keys (@spec resource-access#resource-access-type, #1266) > does not pair the audience with a sibling outside its segment boundary (boundary)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733) > a token request that explicitly names an entry approved for another audience is refused invalid_target, issuing no token and spending no refresh token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "AS deferred grant on /token (AROP Deferred Token Response, DTR -00, D42) > refuses a deferral whose requested entries are not all approved for the first requested entry's audience, before any deferral opens (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733) > a token request naming both audiences is refused invalid_target, and a separate token is issued for each (multi-audience)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Re-quoted to the refusal cases of Audience and Token Response. Proved by disabling the refusal of a token with no approved entry (the code, refresh and legacy-record witnesses issued tokens carrying nothing), by disabling the explicit-request refusal and the explicit-request detection (the refresh witness got another description), by removing the Deferred Mission admission check (the AROP witness opened a deferral), and by removing the async family's pre-reservation decision (the family witness was refused by the scope projection instead)."
+  },
+  {
+   "id": "core.tokens.audience-specific-carriage",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "A token issued for an audience carries only the entries whose original approved audience includes that audience; an entry approved for another audience is not carried, unless a declared `narrowing` capability permits issuing it there",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a token issued for an audience, and its token response, carry no entry whose original approved audience excludes that audience, absent a declared narrowing capability for the entry's type",
+    "local": "the reference declares no narrowing capability, so the rule applies to every entry; each mint path limits its computed entries with one function (audienceCarriedEntries) before it builds the token, and the response echoes the limited set. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733) > a Mission approving an entry for each of two audiences issues each audience a token carrying only its own entry: the other audience's entry does not ride",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource does not ride in this token, and a token issued for that resource refuses it (boundary)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > delivers the token for the resource the submission selected",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > issues the device access token only the entries approved for its audience: an entry approved for another audience does not ride (@spec mission#token-response, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a dispatched instance approved for two audiences gets a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a successor approved for two audiences completes with a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > leaves an entry approved for another audience out of the token, never carrying it along",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733) > a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation issuance (@spec async-delegation) > opens a family only for a target its entries are approved for: a token for one audience opens none for another audience of the Mission, counting no derivation (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: audience-specific projection; an unrelated entry does not ride. Mutation-proved per path as for core.other-types.original-audience-refusal. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
+  },
+  {
+   "id": "core.tokens.multi-audience-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "A token whose `aud` names several audiences is issued only where the same entries are approved for each of them; where they differ, the AS refuses the request with `invalid_target`, and the client requests a separate token for each audience",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token naming several audiences is issued only where each of them is approved for the same entries, and carries those; a request naming several audiences whose approved entries differ is refused invalid_target and issues no token, while a request for each audience alone is issued",
+    "local": "this reference issues no multi-audience Mission-bound token: its token endpoint (oidc-provider) refuses every request naming more than one resource, and every custom mint names one, so the endpoint witness cannot tell differing entries from equal ones; the shared function's multi-audience decision (issue the common entries where equal, refuse where they differ) is witnessed at unit level, and separate per-audience tokens at the endpoint"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733) > a token request naming both audiences is refused invalid_target, and a separate token is issued for each (multi-audience)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > issues a token naming several audiences only the entries every one of them is approved for, and refuses it when their permitted entries differ",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: multi-audience behavior defined explicitly; separate audience tokens where permitted entries differ. Proved at unit level by disabling the differing-entries check (the refusal reason changed)."
+  },
+  {
+   "id": "core.tokens.no-approved-entry-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "The AS also refuses with `invalid_target` a request whose audience is approved for none of the entries the token would carry",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request whose audience is the original approved audience of none of the entries the token would carry is refused invalid_target and issues no token",
+    "local": "witnessed on a code exchange, a refresh (including a rotating refresh token, decided before consumption), a record that retains no association, an async-delegation family (decided before the reservation, the family grant and the derivation count), and an entry outside the audience's segment"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a code exchange for an audience the mapping gained after approval is refused invalid_target, issuing no token, while a Mission approved after the change is issued for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh naming an audience the mapping gained after approval is refused invalid_target, and the same refresh token still refreshes for the original approved audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a refresh refused for an audience the mapping gained after approval spends no rotating refresh token: it still refreshes for the original approved audience (#1604 review)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a Mission whose record retains no association fails closed: its refresh is refused invalid_target rather than read from today's mapping (D733 ruling 4)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation issuance (@spec async-delegation) > opens a family only for a target its entries are approved for: a token for one audience opens none for another audience of the Mission, counting no derivation (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/emission-overlap.test.ts",
+     "name": "the token endpoint checks every entry an audience serves against that audience's own keys (@spec resource-access#resource-access-type, #1266) > does not pair the audience with a sibling outside its segment boundary (boundary)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Proved by disabling the empty-set refusal (the witnesses issued tokens carrying no entry), by bypassing the refresh pre-check (the rotating witness spent its refresh token), and by removing the family's pre-reservation decision."
+  },
+  {
+   "id": "core.tokens.requested-entry-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "one whose `authorization_details` ({{Section 6 of RFC9396}}) names an entry not approved for its audience",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request whose authorization_details names an entry not approved for the token's audience is refused invalid_target, never issued the rest of the requested entries",
+    "local": "witnessed on a refresh (which spends no refresh token) and on an AROP deferred-grant initiation, whose requested entries the token carries exactly (refused before any deferral opens)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733) > a token request that explicitly names an entry approved for another audience is refused invalid_target, issuing no token and spending no refresh token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "AS deferred grant on /token (AROP Deferred Token Response, DTR -00, D42) > refuses a deferral whose requested entries are not all approved for the first requested entry's audience, before any deferral opens (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approved-audience.test.ts",
+     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > refuses a request that explicitly names an entry not approved for the token's audience, rather than issuing the rest",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Proved by disabling the explicit-request refusal, by never detecting a requested authorization_details, and by removing the AROP admission check."
+  },
+  {
+   "id": "core.other-types.derived-mission-audience",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "A Mission created from earlier authority, such as a Child Mission ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), a successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or an instance of a standing consent ({{standing-consent-bases}}), does not reassign the original approved audience of an entry it inherits: the entry keeps that of the authority it derives from",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after the trusted mapping changes, a Mission created from earlier authority gives each inherited entry the original approved audience of the authority it derives from, never the mapping current at its creation",
+    "local": "every record-creation path names how its entries' associations are established, and the funnel refuses a derived record whose inherited list is missing or misaligned: a Child Mission from its parent's approved entries; a template instance from the template ceiling's association retained at template consent; a governed-policy activation from the root ceiling's association retained at the human's consent; a ceiling drawdown successor from the predecessor's entries and the ceiling's association retained at its consent (carried with the ceiling, and through a narrowing); a carryover replacement from the old child's entries intersected with the new parent's; an Expansion successor's retained entries from the predecessor's. Where several retained entries contain one, their associations intersect"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "a Child Mission keeps its parent's original approved audiences (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > a child created after the trusted mapping changes keeps the association its parent's approved entries retain, never the mapping current at its creation",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "a template instance keeps its template consent's original approved audiences (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > a dispatch after the trusted mapping changes gives each instance entry the association its template retained at consent, never the mapping current at the dispatch",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "a governed activation keeps the association its consent retained (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > an activation after the trusted mapping changes gives each entry the association the root ceiling retained at the human's consent, never the mapping current at activation",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a ceiling drawdown keeps the association the ceiling and the predecessor retained (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > a drawdown after the trusted mapping changes draws each entry with the association its ceiling consent retained, and carries the ceiling's association",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a carryover replacement keeps the old child's original approved audiences (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > a replacement created after the trusted mapping changes keeps the association the old child retained, while the Expansion's newly approved entries take the mapping at that approval",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a carryover replacement keeps the old child's original approved audiences (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > a replacement never keeps an audience the new parent's entry it falls within was not approved for: the two retained associations intersect",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion.test.ts",
+     "name": "an Expansion successor keeps the predecessor's association for the authority it retains (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > an entry the successor retains from the predecessor keeps the predecessor's association, and only an entry the Expansion's approval adds takes the mapping at that approval",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection on the dispatch and expansion-successor mints (@spec mission#scope-projection) > a template dispatch to the scope-only target carries only the scope the instance's template-bounded entry proves, which the plain RS enforces, and refuses invalid_target while the target's mapping is unknown",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approved-audience.test.ts",
+     "name": "a derived entry keeps the association of the authority it derives from (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > takes the audiences every reference it falls within retains, and none when it falls within no reference or one that retains none",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "mission record expiry ceiling (@spec mission#mission-record) > insertRecord refuses a derived record whose inherited audiences are not aligned with its Authority Set (@spec mission#transformation-capabilities, #1503 finding 7, D733)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 2. Proved per path by establishing the derived record's entries from the mapping current at its creation (each witness got the later mapping), by dropping the carried ceiling association, by dropping either side of the carryover intersection, by not retaining the template, ceiling or governed consent's association, and by removing the funnel's alignment refusal."
+  },
+  {
+   "id": "core.other-types.derived-audience-change",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "Only a fresh approval of the entry, or a transformation under a declared capability, establishes a different one",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an inherited entry's original approved audience changes only through a fresh approval of the entry or a transformation under a declared capability",
+    "local": "witnessed for a fresh approval: an entry an Expansion's approval adds takes the association retained at the Approver's decision (a mapping change before the completing poll does not relabel it), and a ceiling the Approver re-consents takes the mapping at that decision, while retained entries and a carried ceiling keep theirs. Gap: the reference declares no transformation capability (#1377), so the declared-transformation clause has no path to exercise"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion.test.ts",
+     "name": "an Expansion's added entries keep the association the mapping assigned them at the Approver's decision (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > a mapping change after the decision and before the completing poll leaves an added entry with the decision-time association",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion.test.ts",
+     "name": "an Expansion successor keeps the predecessor's association for the authority it retains (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > an entry the successor retains from the predecessor keeps the predecessor's association, and only an entry the Expansion's approval adds takes the mapping at that approval",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a carryover replacement keeps the old child's original approved audiences (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > a replacement created after the trusted mapping changes keeps the association the old child retained, while the Expansion's newly approved entries take the mapping at that approval",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 2. Proved by giving an Expansion's added entry the inherited association (it got none) and by not retaining a re-consented ceiling's association. Follow-up: the Expansion's added entries keep the association retained on the deferral at the Approver's decision; proved by reading the mapping at completion, by not retaining it at the decision, and by not handing it to completion."
+  },
+  {
+   "id": "core.other-types.unestablished-audience-none",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "Where the AS cannot establish an entry's original approved audience, the entry has none; the current mapping does not stand in for it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry whose original approved audience cannot be established is approved for no audience, so no token carries it; the AS does not assign it the current mapping",
+    "local": "a record, template or governed consent stored before the association was retained, or a ceiling consented then, reads as retaining none (file-backed stores gain the column with no default and no backfill); a derived entry within such authority inherits none; and a reference whose association cannot be established is never skipped in favor of another that covers the same entry"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
+     "name": "an entry's original approved audience is the one the trusted mapping assigned at approval (@spec mission#transformation-capabilities, mission#error-mapping, #1503 finding 7) > a Mission whose record retains no association fails closed: its refresh is refused invalid_target rather than read from today's mapping (D733 ruling 4)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "a template instance keeps its template consent's original approved audiences (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > a template that retained no association at consent dispatches instances whose entries carry no audience (fail closed, D733 ruling 4)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "a governed activation keeps the association its consent retained (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > a consent recorded with no retained association activates Missions whose entries carry no audience (fail closed, D733 ruling 4)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/drawdown-approval-record.test.ts",
+     "name": "a ceiling drawdown keeps the association the ceiling and the predecessor retained (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > a drawdown that narrows the ceiling keeps each carried ceiling entry's association, and a ceiling consented with none draws entries with none (fail closed)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approved-audience.test.ts",
+     "name": "the original approved audience (@spec mission#transformation-capabilities, #1503 finding 7) > fails closed when the record retains no association, or one not aligned with its Authority Set",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approved-audience.test.ts",
+     "name": "a derived entry keeps the association of the authority it derives from (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2) > takes the audiences every reference it falls within retains, and none when it falls within no reference or one that retains none",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 4: fail closed; migration from trustworthy historical evidence is permitted, a backfill from today's mapping is not. Proved by skipping an unestablished reference instead of failing closed, by ignoring the alignment of a retained list, and by not reading a stored template or governed association back."
   },
   {
    "id": "core.remediation-grains.refresh-within-grant-and-authority",

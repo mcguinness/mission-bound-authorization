@@ -531,9 +531,29 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
           expires_at: "2026-07-01T02:00:00Z",
         },
         undefined,
-        { source: { inherited: k.committedSourceBinding(record.id) } },
+        { source: { inherited: k.committedSourceBinding(record.id) }, audiences: "fresh" },
       ),
     ).toThrow(/later than the requested ceiling/);
+  });
+
+  it("insertRecord refuses a derived record whose inherited audiences are not aligned with its Authority Set (@spec mission#transformation-capabilities, #1503 finding 7, D733)", async () => {
+    const k = await ceilingKernel(null, () => new Date(CREATED));
+    const record = k.approve({
+      intent: k.validateIntent(intent({ expires_at: "2026-07-01T01:00:00Z" })),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-audiences-1",
+    });
+    const derived = { ...record, id: newMissionId(), approval_event_id: "apev-audiences-2" };
+    const source = { inherited: k.committedSourceBinding(record.id) };
+    expect(() => k.insertRecord(derived, undefined, { source, audiences: { inherited: [] } })).toThrow(
+      /inherited audiences are not aligned with its Authority Set/,
+    );
+    expect(() => k.insertRecord(derived, undefined, { source } as never)).toThrow(
+      /inherited audiences are not aligned with its Authority Set/,
+    );
+    expect(k.get(derived.id)).toBeUndefined();
   });
 
   it("insertRecord refuses a record whose expires_at is not later than created_at", async () => {
@@ -556,7 +576,7 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
         created_at: "2026-07-01T01:00:00Z",
         },
         undefined,
-        { source: { inherited: k.committedSourceBinding(record.id) } },
+        { source: { inherited: k.committedSourceBinding(record.id) }, audiences: "fresh" },
       ),
     );
     expect(e).toBeInstanceOf(IntentError);

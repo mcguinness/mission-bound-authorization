@@ -41,6 +41,7 @@ import {
 } from "./continuation-grant.js";
 import { refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
+  audienceCarriedEntries,
   gateErrorToMissionError,
   isGrantLive,
   lifecycleMissionError,
@@ -544,12 +545,16 @@ export async function handleDelegatedExchange(
     txError(ctx, 400, "invalid_request", "the designation has expired");
     return;
   }
+  // @spec mission#token-response (#1503 finding 7, D733 ruling 1): only the
+  // entries whose original approved audience includes the token's audience,
+  // so the token, its response and its accounting carry the same set.
+  const carried = audienceCarriedEntries(active, [resource], authority);
   const at = new provider.AccessToken({
     accountId: active.subject.sub,
     client,
     grantId: issuance.grantId,
     gty: TOKEN_EXCHANGE_GRANT_TYPE,
-    rar: authority,
+    rar: carried,
     scope: SCOPE_DECIDED_AT_SAVE,
   });
   const lifetime = pinExpiry(
@@ -567,7 +572,7 @@ export async function handleDelegatedExchange(
     iss: opts.issuer,
     jti: at.jti as string,
     grantId: issuance.grantId,
-    authorizationDetails: authority,
+    authorizationDetails: carried,
     kind: "delegated",
     missionId: active.id,
     depth,
@@ -581,7 +586,7 @@ export async function handleDelegatedExchange(
     token_type: "DPoP",
     expires_in: lifetime,
     ...((at as { scope?: string }).scope ? { scope: (at as { scope?: string }).scope } : {}),
-    authorization_details: authority,
+    authorization_details: carried,
   };
   ctx.set("cache-control", "no-store");
 }
