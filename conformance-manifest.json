@@ -39,8 +39,8 @@
     "content_sha256": "3f81b0a0c13c1f26caafd69cd3f5d2ca6ca6616205c03fd458e99f6da5909d8d"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "1a34e033976b0007776170a413b11008427948d8",
-    "content_sha256": "52d74414268ec7046661ebb623d5ede427f48e6f314a9f99605136ace48be031"
+    "revision": "0411ee0fceb158da5e14f427dc8581deb9c14ba3",
+    "content_sha256": "d1fffe913dbd9ef23e768ac7b28a1575af348321f73965376dd9635be4f1fbf8"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "1199e650a853bb0006c2384c589157f263547a7e",
@@ -3208,6 +3208,35 @@
      "surface": "derivation"
     }
    ]
+  },
+  {
+   "id": "cross-domain.cross-domain-grant.mission-claim-carries-expiry",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "cross-domain-grant",
+   "text": "MUST carry the `mission` claim ({{I-D.draft-mcguinness-oauth-mission}}, Section \"Mission Claim\") with `id`, `issuer`, and `expires_at` unchanged from the Mission",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a cross-domain grant the Mission Issuer mints carries a `mission` claim whose `id`, `issuer` and `expires_at` equal the Mission's, the `expires_at` never replaced by the grant's own `exp`"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "the grant carries the Mission's expires_at to the local token unchanged (@spec cross-domain#cross-domain-grant, #validation-at-resource-as, #1630) > the grant's mission claim carries the Mission's expires_at, never the grant's exp, and the local token preserves the whole claim",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1630, D751 (a normative wire change). The witness mints through issueCrossDomainGrant and asserts each member against the kernel record, and that `expires_at` is not the grant's exp. Mutation: dropping `expires_at` from the issuer payload fails it (and every redemption, which the Resource AS then refuses)."
   },
   {
    "id": "cross-domain.cross-domain-grant.destination-client-unresolved-invalid-target",
@@ -48030,6 +48059,149 @@
    "notes": "#1180, D378. The delayed-redemption witness redeems five seconds before the grant's exp, where the RAS's 120 s local lifetime would outlive the grant, and fails when the grant bound is dropped from the RAS expiry clamp. The older \"M9 scenario 12 > the local token dies with its lease (exp never exceeds the grant)\" test redeems immediately, inside the 300 s grant, and passes with that bound removed, so it is not cited."
   },
   {
+   "id": "cross-domain.resource-as.refuses-missing-malformed-or-elapsed-expiry",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST reject, with `invalid_grant`, a grant whose `mission` claim lacks `expires_at`, carries a value that is not an RFC 3339 {{RFC3339}} date-time, or carries one already elapsed.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource AS refuses `invalid_grant`, minting no local token, a cross-domain grant whose `mission` claim lacks `expires_at`; carries a value that is not an RFC 3339 date-time, including values `Date.parse` accepts (a date only, no offset, a day past the month's end); or carries one at or before the current instant, fractional seconds included, while the grant's own `exp` has not passed; a value still ahead within the current second redeems",
+    "local": "the reference Resource AS checks before the grant's one-time jti is consumed and compares exact instants, fractional seconds included; the elapsed witness redeems the same grant at an earlier clock, so the refusal consumed nothing"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > denies invalid_grant for a base grant whose mission claim lacks expires_at",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > denies invalid_grant for a base grant whose mission.expires_at is not a date-time",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > denies invalid_grant for a base grant whose mission.expires_at is a date-only value",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > denies invalid_grant for a base grant whose mission.expires_at is a date-time without a timezone",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > denies invalid_grant for a base grant whose mission.expires_at is an impossible date",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > denies invalid_grant for a grant whose mission.expires_at has elapsed while its own exp has not, without consuming its one-time jti",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > redeems a grant whose mission.expires_at is still ahead within the current second: now T+0.100, grant exp T+0.800, expires_at T+0.900",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > refuses a mission.expires_at reached or passed within the current second, and the same grant redeems a millisecond before it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1630, D751. Mutation: removing the check fails every cited test (and the five Continuation refusals); returning to `Date.parse` fails the date-only, no-offset and impossible-date cases; removing only the elapsed check, or comparing with `< 0` instead of `<= 0`, fails the elapsed witness (whose grant keeps a live `exp`, so only the Mission's expiry can refuse it) and the within-second refusal witness; comparing whole seconds, which discards the fraction (the #1644 owner review's finding), fails both fractional-boundary witnesses."
+  },
+  {
+   "id": "cross-domain.resource-as.local-token-preserves-expiry",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "The local token preserves the `mission` claim (`id`, `issuer`, `authority_hash`, and `expires_at`) unchanged from the cross-domain grant, including a local token from which further credentials are issued.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a local token a Resource AS mints from a cross-domain grant carries the grant's `mission` claim unchanged, `id`, `issuer`, `authority_hash` and `expires_at` included, with `expires_at` byte-identical (an offset and a fraction kept, not normalized) and never the grant's `exp`",
+    "local": "the reference Resource AS mints one kind of local token and copies the verified claim whole onto every one, so a local token used for further issuance carries it the same way"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > preserves the Mission's expires_at unchanged on the local token it mints from a base grant, never substituting the grant's exp",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "the grant carries the Mission's expires_at to the local token unchanged (@spec cross-domain#cross-domain-grant, #validation-at-resource-as, #1630) > the grant's mission claim carries the Mission's expires_at, never the grant's exp, and the local token preserves the whole claim",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1630, D751. Mutation: substituting the grant's exp into the local token's `expires_at` fails both cited tests."
+  },
+  {
+   "id": "cross-domain.resource-as.expiry-extends-no-lifetime",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "Carrying `expires_at` extends no credential's lifetime and authorizes no renewal",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with the Mission's `expires_at` far beyond the grant's `exp`, a local token minted from the grant, even one redeemed just before the grant's `exp`, expires no later than the grant's `exp`, and the redemption returns no refresh token"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant carries the Mission's expiry (@spec cross-domain#validation-at-resource-as, #1630) > keeps the local token within the grant's exp when the Mission's expires_at lies far beyond it, returning no refresh_token",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "the grant carries the Mission's expires_at to the local token unchanged (@spec cross-domain#cross-domain-grant, #validation-at-resource-as, #1630) > carrying it extends no lifetime: redeemed just before the grant's exp, the local token still expires by the grant's exp, far inside the Mission's expiry, with no refresh_token",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1630, D751. Partial: the lifetime half is witnessed; the renewal half only as the redemption response's shape, which proves no refresh token and not every equivalent renewal authority, as recorded for cross-domain.resource-as.no-renewal-authority (D378). Mutation: dropping the grant's exp from the Resource AS's expiry bounds fails both cited tests."
+  },
+  {
    "id": "cross-domain.conveyed-delegation.provenance-rule",
    "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
    "anchor": "conveyed-delegation",
@@ -48765,8 +48937,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a continuation ID-JAG whose `mission` claim lacks `expires_at`, or carries one that is not an RFC 3339 date-time, is refused `invalid_grant` and yields no local token",
-    "local": "the reference Resource AS also redeems a base cross-domain grant that carries no `expires_at`: the cross-domain draft does not require it, an implementation inconsistency kept separately and unresolved here (#1617 owner review)"
+    "normative": "a continuation ID-JAG whose `mission` claim lacks `expires_at`, or carries one that is not an RFC 3339 date-time, is refused `invalid_grant` and yields no local token"
    },
    "level": "unit",
    "coverage": "tested",
@@ -48800,15 +48971,9 @@
      "level": "unit",
      "surface": "token-endpoint",
      "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > denies invalid_grant for a continuation grant whose mission.expires_at is an impossible date"
-    },
-    {
-     "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "level": "unit",
-     "surface": "token-endpoint",
-     "name": "RAS continuation grant carries the Mission's expiry (@spec continuation#transport-ica, #1589) > still redeems a base cross-domain grant that carries no expires_at"
     }
    ],
-   "notes": "#1589 (the #1617 owner review). The reference Resource AS checks it with strict RFC 3339 validation before the one-time jti is consumed. Witnessed: absent, not a date-time, date-only, no timezone and an impossible date are each refused; the last cited test witnesses the local observation. Mutation: removing the check fails both earlier refusal tests, and returning to `Date.parse` fails the three regression cases."
+   "notes": "#1589 (the #1617 owner review). The reference Resource AS checks it with strict RFC 3339 validation before the one-time jti is consumed. Witnessed: absent, not a date-time, date-only, no timezone and an impossible date are each refused. Mutation: removing the check fails both earlier refusal tests, and returning to `Date.parse` fails the three regression cases. The base cross-domain grant's omission that the #1617 owner review recorded is resolved by #1630 (D751): every cross-domain grant carries `expires_at`, and cross-domain.resource-as.refuses-missing-malformed-or-elapsed-expiry witnesses the refusal."
   },
   {
    "id": "continuation.ica-transport.further-issuance-keeps-expiry",
