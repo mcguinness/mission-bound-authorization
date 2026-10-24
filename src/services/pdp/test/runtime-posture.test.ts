@@ -39,8 +39,11 @@ describe("published runtime posture (@spec runtime#runtime-operational, status#s
     // one tier whose declaration it carries.
     // The declaration exists without the capability being claimed: ten rows
     // gated on this tier are still unmet, two of them blocked, so the shipped
-    // statement asserts nothing it cannot meet (#252 C1).
-    expect(published.claims).toBeUndefined();
+    // statement asserts nothing it cannot meet (#252 C1). Its one claim is
+    // Evaluation-Context Binding at the verified property (#773), whose
+    // declaration it carries.
+    expect(published.claims).toEqual(["evaluation_context_binding"]);
+    expect(published.claims).not.toContain("transaction_assurance");
     for (const declaration of published.extensions.transaction_assurance) {
       expect(published.mediated_scope.action_classes).toContain(declaration.mediated_class_or_scope);
       expect(published.mediated_scope.pep_locations).toContain(declaration.execution_lease_consumer);

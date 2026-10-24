@@ -151,7 +151,10 @@ describe("the PEP sits at the last controllable boundary before the action (@spe
       () => payments.bumpInvoiceAmount("inv-1", "999.00"), // mutate exactly in the decision->commit window
     );
     expect(res.ok).toBe(false);
-    expect(res.refusal_reason).toBe("parameter_mismatch");
+    // The deployment claims Evaluation-Context Binding for this operation, so
+    // the moved invoice is classified target_drift; it is refused at the same
+    // boundary either way (#773).
+    expect(res.refusal_reason).toBe("target_drift");
     // Nothing committed: the boundary that catches the race sits right before
     // the connector, not at some earlier point that a post-decision change
     // could still slip past.

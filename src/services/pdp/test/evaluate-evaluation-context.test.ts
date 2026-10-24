@@ -273,7 +273,10 @@ describe("the PDP echoes the validated context digest and records the binding (@
     expect(uncovered.evidence).not.toHaveProperty("evaluation_context_binding");
     // A covered operation under a statement that does not claim the extension needs none.
     const unclaimed = await inProcess(request({}), {
-      evaluationContextBinding: new EvaluationContextBindingDeclarations(RUNTIME_SCOPE_CONFIG),
+      evaluationContextBinding: new EvaluationContextBindingDeclarations({
+        ...(RUNTIME_SCOPE_CONFIG as Record<string, unknown>),
+        claims: [],
+      }),
     });
     const plain = (unclaimed.outcome as { decision: { decision: boolean; context: Record<string, unknown> } }).decision;
     expect(plain.decision, JSON.stringify(plain.context)).toBe(true);

@@ -51,6 +51,7 @@
       }
     ]
   },
+  "claims": ["evaluation_context_binding"],
   "extensions": {
     "transaction_assurance": [
       {
