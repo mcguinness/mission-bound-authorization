@@ -2042,6 +2042,19 @@ export class McpPaymentsServer {
       audience: attempt.audience,
       authorized_parameter_digest: digest,
       effective_parameter_digest: digest,
+      // @spec runtime-evidence#execution-evidence-object (#773): the context
+      // pair of a covered crossing. The authorized member mirrors the linked
+      // Decision Evidence; the effective one is the context `reverify()`
+      // re-established and found equal before this commit point, an
+      // observation it made, never a copy of the authorized digest.
+      ...(attempt.authorizedEvaluationContextDigest !== undefined
+        ? {
+            authorized_evaluation_context_digest: attempt.authorizedEvaluationContextDigest,
+            ...(bound.effectiveEvaluationContextDigest !== undefined
+              ? { effective_evaluation_context_digest: bound.effectiveEvaluationContextDigest }
+              : {}),
+          }
+        : {}),
       outcome: "completed",
       ...(token.jti
         ? {
