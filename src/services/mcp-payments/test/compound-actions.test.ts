@@ -29,6 +29,7 @@ import {
   CONNECTOR_TOOLS,
   createEphemeralEvidenceKeys,
   type DecisionEvidence,
+  EvaluationContextSalts,
   EvidenceStore,
   type ExecutionEvidence,
   McpPaymentsServer,
@@ -111,6 +112,8 @@ function harness(
     recognizedConditions?: ReadonlySet<string>;
     /** Run inside the PEP's `observe` hook, after the Decision and before admission. */
     onObserve?: (h: Harness) => void;
+    /** @spec runtime#evaluation-context-binding (#773): a salt keeper shared with another harness, one epoch for both. */
+    salts?: EvaluationContextSalts;
   } = {},
 ): Harness {
   let pepNowMs = BASE_MS;
@@ -203,6 +206,7 @@ function harness(
           .map(([tool, mapping]) => [tool, overridden.get(tool) ?? mapping]),
       ) as Record<string, ActionMapping>,
     ...(opts.recognizedConditions ? { recognizedConditions: opts.recognizedConditions } : {}),
+    ...(opts.salts ? { evaluationContextSalts: () => opts.salts as EvaluationContextSalts } : {}),
   });
 
   const server = new McpPaymentsServer({
@@ -634,13 +638,16 @@ describe("permit initiation validity at use (@spec runtime#execution-reverificat
     // that could not be derived opens no operation row and takes no
     // redemption, and the refusal names the permit's window rather than a
     // duplicate.
-    const source = harness();
+    // One salt epoch for both harnesses, so the replayed permit's context
+    // binding is this PEP's own and the lease is what this test reaches (#773).
+    const salts = new EvaluationContextSalts();
+    const source = harness({ salts });
     expect((await cross(source, crossings[2])).ok).toBe(true);
     const permit = source.lastDecision();
     const conditions = { ...(permit?.context.conditions as Record<string, unknown>) };
     conditions.valid_until = new Date(BASE_MS).toISOString();
 
-    const h = harness();
+    const h = harness({ salts });
     h.replay({ ...permit, context: { ...permit?.context, conditions } } as Decision);
     const refused = await cross(h, crossings[2]);
     expect(refused.refusal_reason).toBe("permit_expired");
