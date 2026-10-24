@@ -2857,8 +2857,13 @@ export class Pep {
     // obligation present is, by definition, unfulfillable: its mere presence
     // is a deny, never a silently granted permit and never folded into the
     // conditions refusal reason above (a distinct rule, a distinct reason).
-    const obligations = decision.context.obligations as unknown[] | undefined;
-    if (obligations && obligations.length > 0) {
+    //
+    // A present `obligations` member that is not an array (an object, a
+    // number, null, a string) is malformed: it is not an empty list, so it
+    // cannot be read as "no obligation". It is the same effective deny, and
+    // its one positional entry carries nothing invented (#786).
+    const obligations: unknown = decision.context.obligations;
+    if (obligations !== undefined && (!Array.isArray(obligations) || obligations.length > 0)) {
       // @spec runtime-evidence#execution-evidence-object `obligation_outcomes`
       // ("one object per attached obligation, in the order the decision
       // returned them"): every attached obligation has its entry, a malformed
