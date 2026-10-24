@@ -45,6 +45,7 @@ import {
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
 
 const PORT = 14185;
 const ISSUER = `http://localhost:${PORT}`;
@@ -1311,5 +1312,43 @@ describe("governed policy completion over the wire (@spec deferred-approval#poli
     expect(decide.status).toBe(400);
     expect(((await decide.json()) as { error: string }).error).toBe("invalid_request");
     expect(missionCount()).toBe(before);
+  });
+});
+
+describe("the release fence on the Mission approval deferral's deferred grant (@spec mission#issuance-gating, #250)", () => {
+  it("Mission approval deferral: a resolving poll whose new Mission is revoked after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member, and the approval is spent", async () => {
+    useRoot(rootDoc());
+    const keys = await newKeys();
+    const before = missionCount();
+    const deferralCode = await openDeferral(keys);
+    // The poll completes the approval, creating the Mission, then mints; this
+    // commits from inside that mint's AccessToken#save(), after its gate.
+    const committed = commitAtNextIssue(as, "revoke");
+    let res: Awaited<ReturnType<typeof poll>>;
+    try {
+      res = await poll(deferralCode, keys);
+    } finally {
+      committed.disarm();
+    }
+    const missionId = committed.missionId() as string;
+    expect(missionId).toBeDefined();
+    expect(missionCount()).toBe(before + 1);
+    expect(as.kernel.get(missionId)?.approval_event_id).toBe(as.missionApprovalDeferrals?.approvalEventId(deferralCode));
+    expect(as.kernel.get(missionId)?.termination?.reason).toBe("revoked");
+    expectFenceRefusal(res, "invalid_grant");
+
+    // confirmDelivery ran after the mint and before the fence, so the
+    // approval stays `approved` but is redeemed: spent, with no token sent.
+    expect(as.missionApprovalDeferrals?.state(deferralCode)).toBe("approved");
+    const row = as.missionApprovalDeferrals?.db
+      .prepare("SELECT redeemed, delivery_claim, mission_id FROM mission_approval_deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as { redeemed: number; delivery_claim: string | null; mission_id: string };
+    expect(row).toEqual({ redeemed: 1, delivery_claim: null, mission_id: missionId });
+    // A later poll sees the ended Mission before the redemption: access_denied.
+    const again = await resolve(deferralCode, keys);
+    expect(again.status).toBe(400);
+    expect(again.body.error).toBe("access_denied");
+    expect(again.body).not.toHaveProperty("access_token");
+    expect(missionCount()).toBe(before + 1);
   });
 });

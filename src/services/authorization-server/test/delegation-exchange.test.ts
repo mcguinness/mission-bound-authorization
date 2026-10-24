@@ -30,6 +30,7 @@ import {
   type DelegationPolicyRequest,
 } from "../src/index.js";
 import { TokenIssuanceStore } from "../src/kernel/token-issuance-store.js";
+import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
 
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
@@ -1365,5 +1366,53 @@ describe("the delegated exchange pairs entries with the requested resource throu
     expect(sibling.status, JSON.stringify(sibling.body)).toBe(400);
     expect(sibling.body.error).toBe("invalid_target");
     expect(sibling.body.error_description).toMatch(/no entry of the designation permits/);
+  });
+});
+
+/**
+ * @spec mission#issuance-gating (#250): each revocation commits inside the
+ * issuing request, from the AccessToken save `settle()` makes after counting
+ * the derivation, and the release fence refuses the response. The fence
+ * leaves the counted derivation spent (#935).
+ */
+describe("the release fence on the designation exchange (@spec mission#issuance-gating, #250)", () => {
+  it("designation: a Mission revoked after the save-time gate and the signature is refused invalid_request with mission_error revoked and no token member, its counted derivation left spent", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const before = derivations(on, missionId);
+    const injected = commitAtNextIssue(on.as, "revoke");
+    let res: Awaited<ReturnType<typeof designate>>;
+    try {
+      res = await designate(on, accessToken, SUBAGENT);
+    } finally {
+      injected.disarm();
+    }
+    expect(injected.missionId()).toBe(missionId);
+    expect(on.as.kernel.get(missionId)?.termination?.reason).toBe("revoked");
+    expectFenceRefusal(res, "invalid_request");
+    expect(res.body.error_description).toContain("before its token was released");
+    // Counted before the save; the refusal does not return it.
+    expect(derivations(on, missionId)).toBe(before + 1);
+  });
+});
+
+describe("the release fence on the delegated redemption (@spec mission#issuance-gating, #250)", () => {
+  it("delegated redemption: a Mission revoked after the save-time gate and the signature is refused invalid_request with mission_error revoked and no token member, its counted derivation left spent", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = await designate(on, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const before = derivations(on, missionId);
+    const injected = commitAtNextIssue(on.as, "revoke");
+    let res: Awaited<ReturnType<typeof redeem>>;
+    try {
+      res = await redeem(on, designation.body.access_token as string);
+    } finally {
+      injected.disarm();
+    }
+    expect(injected.missionId()).toBe(missionId);
+    expect(on.as.kernel.get(missionId)?.termination?.reason).toBe("revoked");
+    expectFenceRefusal(res, "invalid_request");
+    expect(res.body.error_description).toContain("before its token was released");
+    // Counted before the save; the refusal does not return it.
+    expect(derivations(on, missionId)).toBe(before + 1);
   });
 });
