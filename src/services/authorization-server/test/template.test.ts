@@ -884,3 +884,73 @@ describe("template ceiling entries meet the action grammar and the absolute-URI 
     expect(mkTemplate({ ceiling: [ceilEntry(["payments:invoice.read", "payments:vendor.read"])] }).id).toBeDefined();
   });
 });
+
+describe("a template instance keeps its template consent's original approved audiences (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2)", () => {
+  const consentOn = (k: MissionKernel, retain: boolean) =>
+    createTemplate(
+      store,
+      {
+        template_version: "tmpl-v1",
+        issuer: ISS,
+        approver: { iss: ISS, sub: "human-approver" },
+        ceiling: [ceilEntry(["payments:invoice.read", "payments:vendor.read"])],
+        dispatch_policy: policyRef("test-policy"),
+        dispatchers: ["orchestrator"],
+        recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker"] },
+        per_instance_lifetime_s: 3600,
+        max_active: 3,
+        rate_per_min: 5,
+        review_cadence_s: 86400,
+        approval_event_id: `tmpl-ev-${tmplSeq++}`,
+        expires_at: "2026-12-01T00:00:00Z",
+      },
+      {
+        ...k.authoritySourceOptions(),
+        dispatchPolicies: REGISTRY,
+        ...(retain ? { entryAudiences: (entries: readonly AuthorityEntry[]) => k.mappedEntryAudiences(entries) } : {}),
+      },
+    );
+  const dispatchOn = (k: MissionKernel, templateId: string) =>
+    dispatchFromTemplate(k, store, {
+      templateId,
+      dispatchEventId: `dsp-${dspSeq++}`,
+      dispatcher: "orchestrator",
+      intent: intentOf(["payments:invoice.read"]),
+      proposedAuthority: proposalOf(["payments:invoice.read"]),
+      subject: { iss: ISS, sub: "alice" },
+      policyVersion: POLICY_VERSION,
+      dispatchPolicies: REGISTRY,
+    }).mission;
+  let mapped: string[] = [];
+  const mappedKernel = () =>
+    new MissionKernel({
+      issuer: ISS,
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["worker", "intruder", "subagent-invoice-extractor", "orchestrator"], ["human-approver", "bob"]),
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+      entryAudiences: () => mapped,
+    });
+
+  it("a dispatch after the trusted mapping changes gives each instance entry the association its template retained at consent, never the mapping current at the dispatch", () => {
+    mapped = ["https://rs-a.test/"];
+    const k = mappedKernel();
+    const t = consentOn(k, true);
+    expect(t.ceiling_audiences).toEqual([["https://rs-a.test/"]]);
+    expect(store.get(t.id)?.ceiling_audiences).toEqual([["https://rs-a.test/"]]);
+    mapped = ["https://rs-a.test/", "https://rs-b.test/"];
+    const instance = dispatchOn(k, t.id);
+    expect(instance.approved_audiences).toEqual(instance.authority_set.map(() => ["https://rs-a.test/"]));
+    expect(k.get(instance.id)?.approved_audiences).toEqual(instance.authority_set.map(() => ["https://rs-a.test/"]));
+  });
+
+  it("a template that retained no association at consent dispatches instances whose entries carry no audience (fail closed, D733 ruling 4)", () => {
+    mapped = ["https://rs-a.test/"];
+    const k = mappedKernel();
+    const t = consentOn(k, false);
+    expect(t.ceiling_audiences).toBeUndefined();
+    const instance = dispatchOn(k, t.id);
+    expect(instance.approved_audiences).toEqual(instance.authority_set.map(() => []));
+  });
+});

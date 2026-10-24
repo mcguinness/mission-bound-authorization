@@ -54,6 +54,7 @@ import { entryDigest } from "./discharge.js";
 import { restrictedSinceAdjudication } from "./expansion.js";
 import { childActorCeilingOrigin, inheritChildActorOrigins } from "./child-actor-eligibility.js";
 import { ceilingOrigin, inheritOrigins } from "./eligibility-provenance.js";
+import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import { IntentError, validateAuthorityProposal } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
@@ -135,6 +136,12 @@ export function consentsOffer(consent: CeilingConsent, offer: CeilingConsent | u
 /** The ceiling members a Mission record carries. */
 export interface MissionCeiling {
   authority_ceiling: AuthorityEntry[];
+  /**
+   * @spec mission#transformation-capabilities (#1503 finding 7, D733): each
+   * ceiling entry's original approved audience, retained at the consent and
+   * carried with the ceiling. Outside `ceiling_hash`.
+   */
+  ceiling_audiences?: string[][];
   drawdown_policy?: ActivationPolicyRef;
   ceiling_hash: string;
   /** The latest explicitly consented ceiling's `ceiling_hash` (#1468); absent on records stored before it. */
@@ -271,6 +278,9 @@ export function successorCeilingMembers(
   return {
     ...digest,
     authority_ceiling: predecessor.authority_ceiling,
+    // @spec mission#transformation-capabilities (D733 ruling 2): the
+    // ceiling's retained association carries with it unchanged.
+    ...(predecessor.ceiling_audiences ? { ceiling_audiences: predecessor.ceiling_audiences } : {}),
     ...(predecessor.drawdown_policy ? { drawdown_policy: predecessor.drawdown_policy } : {}),
     ceiling_hash: predecessor.ceiling_hash,
     ceiling_consent_hash: predecessor.ceiling_consent_hash ?? predecessor.ceiling_hash,
@@ -303,6 +313,7 @@ export function serializeCeiling(record: MissionRecord): string | null {
   if (!record.authority_ceiling || !record.ceiling_hash || !record.ceiling_consented_at) return null;
   const stored: MissionCeiling = {
     authority_ceiling: record.authority_ceiling,
+    ...(record.ceiling_audiences ? { ceiling_audiences: record.ceiling_audiences } : {}),
     ...(record.drawdown_policy ? { drawdown_policy: record.drawdown_policy } : {}),
     ceiling_hash: record.ceiling_hash,
     ...(record.ceiling_consent_hash ? { ceiling_consent_hash: record.ceiling_consent_hash } : {}),
@@ -1606,6 +1617,23 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     carried === predecessor.authority_ceiling
       ? predecessor.ceiling_hash
       : ceilingHash(predecessor.issuer, carried, predecessor.drawdown_policy);
+  // @spec mission#transformation-capabilities (#1503 finding 7, D733 ruling
+  // 2): a drawdown is no approval of its own. Each successor entry keeps the
+  // association of the authority it falls within: the predecessor's approved
+  // entries and the ceiling entries, each as retained at its own consent,
+  // never the mapping current now. The carried ceiling keeps its entries'
+  // association through a narrowing the same way.
+  const ceilingReferences = audienceReferences(predecessor.authority_ceiling, predecessor.ceiling_audiences);
+  const successorAudiences = inheritedAudiences(authoritySet, [
+    ...audienceReferences(predecessor.authority_set, predecessor.approved_audiences),
+    ...ceilingReferences,
+  ]);
+  const carriedAudiences =
+    carried === predecessor.authority_ceiling
+      ? predecessor.ceiling_audiences
+      : predecessor.ceiling_audiences
+        ? inheritedAudiences(carried, ceilingReferences)
+        : undefined;
   const id = newMissionId();
   const record: MissionRecord = {
     id,
@@ -1637,6 +1665,7 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     // @spec progressive#drawdown-successor: carried unchanged under the same
     // `ceiling_hash`, or narrowed under a recomputed one.
     authority_ceiling: carried,
+    ...(carriedAudiences ? { ceiling_audiences: carriedAudiences } : {}),
     ...(predecessor.drawdown_policy ? { drawdown_policy: predecessor.drawdown_policy } : {}),
     ceiling_hash: carriedHash,
     ceiling_consent_hash: ceilingConsentHash(predecessor) as string,
@@ -1664,6 +1693,7 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     // @spec mission#standing-consent-bases: the drawdown policy snapshot this
     // adjudication verified, retained for the successor's audit horizon.
     activationPolicies: [{ ref: input.policy.ref, snapshot: input.policy.snapshot }],
+    audiences: { inherited: successorAudiences },
   });
   if (!kernel.supersedeInCallerTx(id)) {
     throw new Error("ceiling drawdown predecessor supersession failed inside the creation transaction");

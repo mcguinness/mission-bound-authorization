@@ -55,6 +55,7 @@ import {
   type RegisteredActivationPolicy,
   verifiedActivationPolicy,
 } from "./activation-policy.js";
+import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import { inheritCapabilitySources, resolveFreshCapabilitySources, type CapabilitySourceResolver } from "./capability-binding.js";
 import { UniqueViolationError } from "@mission/store";
 import { CreationIdempotencyStore, type CreationReservation, creationFingerprint } from "./creation-idempotency.js";
@@ -383,6 +384,14 @@ export function createTemplate(
      * holds; the template commits the named policy's snapshot digest.
      */
     dispatchPolicies?: DispatchPolicies;
+    /**
+     * @spec mission#transformation-capabilities (#1503 finding 7, D733): the
+     * audiences the trusted mapping assigns each ceiling entry at this
+     * consent ({@link MissionKernel.mappedEntryAudiences}), retained with the
+     * template. Absent, or returning undefined, the template retains no
+     * association, and its instances carry no entry in any token.
+     */
+    entryAudiences?: (entries: readonly AuthorityEntry[]) => string[][] | undefined;
   },
 ): MissionTemplate {
   assertTemplateBody(input);
@@ -428,7 +437,20 @@ export function createTemplate(
     templateBody as unknown as JsonValue,
   );
   const id = `tmpl_${randomBytes(18).toString("base64url")}`;
-  const create: TemplateCreate = { ...input, ceiling, dispatch_policy, id, template_hash, authority_source, source_bindings };
+  // @spec mission#transformation-capabilities (D733 ruling 2): template
+  // consent is the approval event every instance draws on, so the ceiling's
+  // association is retained here, outside `template_hash`.
+  const ceiling_audiences = options.entryAudiences?.(ceiling);
+  const create: TemplateCreate = {
+    ...input,
+    ceiling,
+    dispatch_policy,
+    id,
+    template_hash,
+    authority_source,
+    source_bindings,
+    ...(ceiling_audiences ? { ceiling_audiences } : {}),
+  };
   return store.create(create);
 }
 
@@ -1021,6 +1043,11 @@ export function dispatchFromTemplate(
         // @spec mission#standing-consent-bases: the Dispatch Policy snapshot
         // verified above, retained for this instance's audit horizon.
         activationPolicies: [{ ref: template.dispatch_policy, snapshot: dispatchPolicy }],
+        // @spec mission#transformation-capabilities (#1503 finding 7, D733
+        // ruling 2): a dispatch is no approval of its own: each instance entry
+        // keeps the association the template ceiling retained at consent,
+        // never the mapping current at this dispatch.
+        audiences: { inherited: inheritedAudiences(final, audienceReferences(template.ceiling, template.ceiling_audiences)) },
       });
       return { missionId: id, value: undefined };
     });
