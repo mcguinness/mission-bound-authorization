@@ -37,11 +37,14 @@ import {
   parameterDigest,
   PaymentsStore,
   Pep,
+  REFUSAL_RECORD_MEDIA_TYPE,
+  type RefusalRecord,
   TOOL_ACTIONS,
   TOOLS,
   TransactionEngine,
   type ActionMapping,
   type TokenFacts,
+  verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
@@ -96,6 +99,10 @@ interface Harness {
   dropFromProfile: (tool: string) => void;
   /** Put a dropped tool back, so the profile places its phase again. */
   restoreToProfile: (tool: string) => void;
+  /** Replace one tool's Operation Profile entry (#1629), or put the shipped entry back with `undefined`. */
+  overrideProfile: (tool: string, mapping: ActionMapping | undefined) => void;
+  /** How many decision requests the PEP has sent. */
+  decisionRequests: () => number;
   digest: () => string;
 }
 
@@ -109,6 +116,8 @@ function harness(
   let pepNowMs = BASE_MS;
   let state: MissionView["state"] = "active";
   const dropped = new Set<string>();
+  const overridden = new Map<string, ActionMapping>();
+  let requested = 0;
   let replayed: Decision | undefined;
   let captured: Decision | undefined;
   let envelope: Record<string, unknown> | undefined;
@@ -171,6 +180,7 @@ function harness(
     // the SAME evaluation identifier, conditions and signed Decision Evidence
     // the earlier crossing was granted, presented at a later crossing.
     decide: async (req, options) => {
+      requested += 1;
       if (replayed) return replayed;
       return EVIDENCE_KEYS.decide(req, options);
     },
@@ -188,7 +198,9 @@ function harness(
     now: () => new Date(pepNowMs),
     operationProfile: () =>
       Object.fromEntries(
-        Object.entries(TOOL_ACTIONS).filter(([tool]) => !dropped.has(tool)),
+        Object.entries(TOOL_ACTIONS)
+          .filter(([tool]) => !dropped.has(tool))
+          .map(([tool, mapping]) => [tool, overridden.get(tool) ?? mapping]),
       ) as Record<string, ActionMapping>,
     ...(opts.recognizedConditions ? { recognizedConditions: opts.recognizedConditions } : {}),
   });
@@ -228,6 +240,11 @@ function harness(
     restoreToProfile: (tool) => {
       dropped.delete(tool);
     },
+    overrideProfile: (tool, mapping) => {
+      if (mapping === undefined) overridden.delete(tool);
+      else overridden.set(tool, mapping);
+    },
+    decisionRequests: () => requested,
     digest: () => {
       const invoice = payments.getInvoice("inv-1");
       const vendor = invoice ? payments.getVendor(invoice.vendor_id) : undefined;
@@ -681,5 +698,57 @@ describe("the Operation Profile is the trusted source of a crossing's phase (@sp
       .filter(([, mapping]) => mapping.tier === "transaction-assurance")
       .map(([tool]) => tool);
     expect([...CONNECTOR_TOOLS].sort()).toEqual(committing.sort());
+  });
+});
+
+describe("a phase the PEP cannot establish is refused before any decision request (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1629)", () => {
+  /** The refusal: the diagnostic, no decision request, no Decision Evidence, no effect, and one verifiable signed `phase_unavailable` record. */
+  async function expectPhaseUnavailable(
+    h: Harness,
+    res: { ok: boolean; refusal_reason?: string; denial_reason?: string },
+    label: string,
+  ): Promise<void> {
+    expect(res, label).toMatchObject({ ok: false, refusal_reason: "phase_unavailable" });
+    expect(res.denial_reason, label).toBeUndefined();
+    expect(h.decisionRequests(), label).toBe(0);
+    expect(decisions(h), label).toHaveLength(0);
+    expect(executions(h), label).toHaveLength(0);
+    expect(h.connectors.ledgerEntries("msn_252"), label).toHaveLength(0);
+    const refusals = h.evidence.forMission("msn_252").filter((e): e is RefusalRecord => e.kind === "refusal");
+    expect(refusals, label).toHaveLength(1);
+    expect(refusals[0]?.content, label).toMatchObject({
+      denial_reason: "phase_unavailable",
+      emitter: { role: "pep" },
+      action: { name: "payments:payment.execute" },
+      mission: { id: "msn_252", issuer: "https://as.test" },
+    });
+    const content = refusals[0]?.content as RefusalRecord["content"];
+    expect(await verifyEvidenceEnvelope(content, REFUSAL_RECORD_MEDIA_TYPE, EVIDENCE_KEYS.resolver), label).toEqual({ valid: true });
+  }
+
+  it("refuses a crossing whose Operation Profile entry places no phase, or a phase outside the closed set, on every dispatch path: no decision request, no Decision Evidence, no effect, one signed phase_unavailable Refusal Record", async () => {
+    for (const crossing of crossings) {
+      const base = TOOL_ACTIONS[crossing.tool] as ActionMapping;
+      const { phase: _dropped, ...phaseless } = base;
+      for (const [label, entry] of [
+        ["no phase", phaseless as ActionMapping],
+        ["out-of-set phase", { ...base, phase: "settle" } as unknown as ActionMapping],
+      ] as const) {
+        const h = harness();
+        h.overrideProfile(crossing.tool, entry);
+        await expectPhaseUnavailable(h, await cross(h, crossing), `${crossing.tool}: ${label}`);
+      }
+    }
+  });
+
+  it("the same crossings under the shipped Operation Profile reach the PDP with their phase", async () => {
+    const h = harness();
+    for (const [i, crossing] of crossings.entries()) {
+      const res = await cross(h, crossing);
+      expect(res.ok, `${crossing.tool}: ${JSON.stringify(res)}`).toBe(true);
+      expect(h.decisionRequests()).toBe(i + 1);
+      expect(h.lastEnvelope()?.action_phase).toBe(crossing.phase);
+    }
+    expect(h.evidence.forMission("msn_252").filter((e) => e.kind === "refusal")).toHaveLength(0);
   });
 });

@@ -41,8 +41,15 @@ import {
   type CryptoKey,
   type JWK,
 } from "jose";
-import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
+import Provider, {
+  errors,
+  type Configuration,
+  type KoaContextWithOIDC,
+  type ResourceServer,
+  type SigningAlgorithmWithNone,
+} from "oidc-provider";
 import { loadReusableGrant, missionInteractionPolicy, ORDINARY_REQUEST_REFUSAL } from "./interaction-policy.js";
+import { type GovernedResourcePolicy, governedResourceRefusal, isMissionGovernedResource } from "./governed-resources.js";
 import {
   type ActivationPolicyRef,
   delegatedRoutingRefusal,
@@ -774,6 +781,12 @@ export interface AdapterOptions {
   clients: Record<string, unknown>[];
   jwks: { keys: Record<string, unknown>[] };
   publicJwks: { keys: Record<string, unknown>[] };
+  /**
+   * @spec #831 (role binding): the public half of the access-token signing
+   * key alone, the only key a Mission access token presented as a
+   * `subject_token` verifies under. `publicJwks` holds every AS role's key.
+   */
+  accessTokenJwks: { keys: Record<string, unknown>[] };
   /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;
@@ -882,6 +895,21 @@ export interface AdapterOptions {
    * and any deployment that is not the demo): the route does not exist.
    */
   devOrdinaryIssuance?: { key: CryptoKey; kid: string; alg: string; audience: string };
+  /**
+   * @spec mission#authority-proposal (#1531, D741): the resources this AS
+   * treats as Mission-governed (adapters/governed-resources.ts). A token
+   * request with no Mission binding whose audience is one of them is refused
+   * `invalid_target` on every grant type and on the dev ordinary-token route.
+   * Absent: no resource is governed.
+   */
+  governedResources?: GovernedResourcePolicy;
+  /**
+   * TEST-ONLY: enable oidc-provider's `client_credentials` grant, so the
+   * governed-resource rule can be exercised on it (#1531, D741). The
+   * reference implements no client-credentials issuance; production callers
+   * MUST omit this.
+   */
+  testClientCredentials?: boolean;
   /**
    * @spec id-continuation-assertion — the RFC 8693 token-exchange continuation
    * grant wiring. All are composed in src/index.ts; when any is unset the grant
@@ -1265,6 +1293,44 @@ export function buildProvider(opts: AdapterOptions): Provider {
       opts.familyStore?.wasEverFamily(grantId) === true ||
       kernel.missionBoundGrants.resolve(grantId) !== undefined
     );
+  }
+
+  /**
+   * @spec mission#authority-proposal (#1531, D741): the governed-resource
+   * rule at the token endpoint. A token request with no qualifying Mission
+   * binding (its grant, if any, was never bound to a Mission) whose token
+   * would carry a Mission-governed audience is refused `invalid_target`,
+   * whatever the grant type. Every audience counts, named or inferred, and
+   * one governed audience refuses the request whole.
+   *
+   * Precedence: the callers run after client authentication, request syntax
+   * and grant validation, so those failures keep their errors. A grant the AS
+   * bound to a Mission passes here whatever the Mission's state (the binding
+   * is read from the AS's records, never from liveness), so a Mission that is
+   * not `active` keeps the Issuance Gating refusal at the save-time gate.
+   */
+  function refuseGovernedOutsideMission(audiences: readonly string[], grantId: string | undefined): void {
+    if (grantId !== undefined && knownMissionBound(grantId)) return;
+    const policy = opts.governedResources;
+    if (!policy) return;
+    const governed = audiences.find((resource) => isMissionGovernedResource(policy, resource));
+    if (governed !== undefined) throw new errors.InvalidTarget(governedResourceRefusal(governed));
+  }
+
+  /**
+   * The audiences an oidc-provider refresh will issue for, decided before
+   * the refresh token is consumed: the request's `resource`, else the
+   * refresh token's own resource indicator (`useGrantedResource` is always
+   * true here). Mirrors lib/helpers/resolve_resource.js (oidc-provider
+   * 9.10.0 L3-28), which runs after consumption (refresh_token.js L216-221).
+   * A list is returned whole: oidc-provider refuses more than one resolved
+   * resource, and this gate refuses first if any of them is governed.
+   */
+  function refreshAudiences(ctx: { oidc: { params?: unknown } }, rt: { resource?: unknown } | undefined): string[] {
+    const requested = (ctx.oidc.params as { resource?: unknown } | undefined)?.resource;
+    const named = requested !== undefined && requested !== "" ? requested : rt?.resource;
+    if (typeof named === "string") return [named];
+    return Array.isArray(named) ? named.filter((r): r is string => typeof r === "string") : [];
   }
 
   /**
@@ -1910,9 +1976,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
         : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
     // @spec mission#submission-via-par (#1503): the one Request Object
-    // signing algorithm (features.requestObjects below); every other
-    // algorithm list keeps the provider's default.
-    enabledJWA: { requestObjectSigningAlgValues: ["ES256"] },
+    // signing algorithm (features.requestObjects below).
+    // @spec #831 (role binding): the provider holds every AS role's signing
+    // key and selects one by algorithm, so an ID Token in another role's
+    // algorithm would be signed under that role's key (a client registered
+    // for ES256 got an ID Token under as-status). ID Tokens are limited to the
+    // access-token key's algorithm; a registration naming another is refused.
+    // Signed userinfo, JWT introspection and JWT response modes are off, so no
+    // other client-facing JWT is signed. Every other list keeps the default.
+    enabledJWA: {
+      requestObjectSigningAlgValues: ["ES256"],
+      idTokenSigningAlgValues: accessTokenSigningAlgs(opts),
+    },
     interactions: {
       url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
       // @spec mission#approval-event (#1247), device-authorization#approval
@@ -2038,6 +2113,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         },
       },
       dPoP: { enabled: true },
+      // TEST-ONLY (#1531, D741): the reference implements no client
+      // credentials issuance; a test enables the grant to exercise the
+      // governed-resource rule on it.
+      clientCredentials: { enabled: opts.testClientCredentials === true },
       // @spec device-authorization (#1202): the RFC 8628 device flow carries
       // a Mission Intent only (the `mission_intent` validator below refuses
       // any other device request), and only where the opt-in capability is on.
@@ -2052,8 +2131,26 @@ export function buildProvider(opts: AdapterOptions): Provider {
         defaultResource: () => opts.issuer,
         // @types/oidc-provider 9.5 types `scope` as required; the 9.10 runtime
         // treats an absent one as an empty vocabulary.
-        getResourceServerInfo: (_ctx, resourceIndicator) =>
-          resourceServerInfoFor(resourceIndicator, opts.accessTokenTTL ?? 300) as unknown as ResourceServer,
+        // @spec mission#authority-proposal (#1531, D741): at the token
+        // endpoint this runs once for each audience a token would carry,
+        // named or defaulted: on the authorization_code, refresh_token and
+        // device_code grants for the resolved resource, after grant
+        // validation (lib/helpers/grant_common.js 9.10.0 L113-121), and on
+        // client_credentials for every requested resource, before the
+        // grant's single-resource check (lib/shared/check_resource.js
+        // L58-73). The authorization routes call it too; the rule is the
+        // token request's, so they pass.
+        getResourceServerInfo: (ctx, resourceIndicator) => {
+          const oidc = (ctx as unknown as {
+            oidc?: { route?: string; params?: { grant_type?: unknown }; entities?: { Grant?: { jti?: string } } };
+          }).oidc;
+          if (oidc?.route === "token") refuseGovernedOutsideMission([resourceIndicator], oidc.entities?.Grant?.jti);
+          const info = resourceServerInfoFor(resourceIndicator, opts.accessTokenTTL ?? 300);
+          // The test-only client_credentials grant reads the resource
+          // server's `scope` unguarded (lib/actions/grants/client_credentials.js
+          // 9.10.0 L55), so it gets the empty vocabulary explicitly.
+          return (oidc?.params?.grant_type === "client_credentials" ? { ...info, scope: "" } : info) as unknown as ResourceServer;
+        },
         useGrantedResource: () => true,
       },
     },
@@ -2374,6 +2471,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // effective-set and cap refusals, before consumption too. Partial: see
       // preCheckRefreshMissionState.
       preCheckRefreshMissionState(rt?.grantId);
+      // @spec mission#authority-proposal (#1531, D741): the governed-resource
+      // refusal, decided before consumption over every audience the refresh
+      // would issue for. getResourceServerInfo applies the same rule only
+      // after the refresh token is consumed.
+      refuseGovernedOutsideMission(refreshAudiences(ctx, rt as { resource?: unknown } | undefined), rt?.grantId);
       if (rt?.grantId && opts.familyStore?.resolve(rt.grantId)) return true;
       // Default: lib/helpers/defaults.js rotateRefreshToken (oidc-provider 9.10.0,
       // L528-546) — cap rotation at 1 year, rotate non-sender-constrained public
@@ -3017,6 +3119,15 @@ export function namesRequestedRar(ctx: unknown): boolean {
   } catch {
     return false;
   }
+}
+
+/** @spec #831 (role binding): the algorithms of the access-token signing key, the one key an ID Token uses. */
+function accessTokenSigningAlgs(opts: AdapterOptions): SigningAlgorithmWithNone[] {
+  return [
+    ...new Set(
+      opts.accessTokenJwks.keys.map((k) => k.alg).filter((a): a is SigningAlgorithmWithNone => typeof a === "string" && a !== "none"),
+    ),
+  ];
 }
 
 export function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
@@ -5298,6 +5409,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ctx.body = inactive;
           return;
         }
+        // @spec mission#introspection, mission#composite-active (#1531, D741):
+        // the AS discloses `mission` only for a token it has established was
+        // issued on a conforming path; here, by its own issuance record. A
+        // token with none is unresolvable, so it answers bare false before
+        // the Mission's state is consulted, whatever that state is.
+        const issuance = opts.tokenIssuanceStore?.resolve(opts.issuer, jti);
+        if (!issuance) {
+          ctx.body = inactive;
+          return;
+        }
         const mission = kernel.introspectionProjection(record, caller);
         if (mission.state !== "active") {
           // Composite non-active: the token is itself valid but the Mission is
@@ -5318,10 +5439,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // per-delegation family sharing the Mission. Destroying or
         // invalidating that family must not leave its already-issued tokens
         // introspecting active. A token this AS has no issuance record for
-        // is treated as NOT VERIFIED, never active (the stateless-JWT
+        // was already answered as NOT VERIFIED above (the stateless-JWT
         // forgery/rogue-mint surface this index closes).
-        const issuance = opts.tokenIssuanceStore?.resolve(opts.issuer, jti);
-        if (!issuance || !(await isGrantLive(opts, provider, issuance.grantId))) {
+        if (!(await isGrantLive(opts, provider, issuance.grantId))) {
           ctx.body = inactive;
           return;
         }
@@ -5926,9 +6046,19 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         };
         return;
       }
+      // @spec mission#authority-proposal (#1531, D741): this route mints with
+      // no Mission, so it never mints for a Mission-governed resource; the
+      // refusal is the token endpoint's.
+      if (opts.governedResources && isMissionGovernedResource(opts.governedResources, dev.audience)) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_target", error_description: governedResourceRefusal(dev.audience) };
+        return;
+      }
       const ttl = opts.accessTokenTTL ?? 300;
+      // `typ` is RFC 9068's: the resource accepts the join audience as an
+      // alias scoped to this issuer and the `at+jwt` token profile.
       const accessToken = await new SignJWT({ client_id: clientId, scope, cnf: { jkt } })
-        .setProtectedHeader({ alg: dev.alg, kid: dev.kid })
+        .setProtectedHeader({ alg: dev.alg, kid: dev.kid, typ: "at+jwt" })
         .setIssuer(opts.issuer)
         .setAudience(dev.audience)
         .setSubject(sub)

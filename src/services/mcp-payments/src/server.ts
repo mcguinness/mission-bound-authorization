@@ -646,6 +646,18 @@ export class McpPaymentsServer {
     return this.deps.pep ? this.deps.pep.validateAudience(aud, context) : paymentsBoundaryContext().validateAudience(aud, context);
   }
 
+  /**
+   * @spec authority-server#mission-join, mission#protected-resource-metadata
+   * (#1531, D741): the RFC 9728 metadata of a MAS Join route served under its
+   * own resource identifier. A join admits an ordinary credential, so the
+   * route's metadata names `resource` and does not declare Mission-bound-only
+   * acceptance; every other member is this resource's.
+   */
+  joinRouteMetadata(resource: string): Record<string, unknown> {
+    const { mission_bound_authorization_required: _omitted, ...metadata } = this.protectedResourceMetadata();
+    return { ...metadata, resource };
+  }
+
   /** RFC 9728 Protected Resource Metadata. */
   protectedResourceMetadata(): Record<string, unknown> {
     const txn = this.deps.txnChallenge;

@@ -558,6 +558,8 @@
    "summary": "The concrete OpenID AuthZEN profile of the runtime decision contract.",
    "pull_when": "The PDP speaks AuthZEN and needs the decision-contract wire mapping.",
    "normative_references": [
+    "draft-mcguinness-mission-capability-binding",
+    "draft-mcguinness-mission-harness",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate",

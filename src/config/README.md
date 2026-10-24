@@ -60,12 +60,48 @@ sub-agent. Delegation itself is opt-in and off in both baselines.
 - **Updating.** Edit, review, and restart the AS. A change applies to the
   next designation.
 
+## `governed-resources.json`
+
+The resources this AS treats as Mission-governed (`@spec
+mission#authority-proposal`, #1531, D741). `classification` is the
+deployment's own classification of a resource, `governed` or
+`not_governed`. `authenticated_metadata` holds the RFC 9728
+`mission_bound_authorization_required` member of each resource's protected
+resource metadata that the AS has authenticated; the reference fetches no
+metadata, so these records are configured. A resource is governed when
+either source says so, and neither source clears the other: metadata that
+omits the member or sets it to `false` leaves a `governed` classification in
+force, and a `not_governed` classification leaves metadata declaring the
+requirement in force. The AS refuses a token request with no Mission binding
+whose token would carry a governed audience, on every grant type and on the
+dev ordinary-token route. The shipped file classifies the payments resource
+governed, as its own metadata declares, in every composition, and classifies
+the MAS Join route's own resource (`mas-join.json` `join_resource`)
+`not_governed`: the dev ordinary-token route mints the join's ordinary
+credential for that resource only.
+
+- **Owner.** The deployment's security owner, with each resource server's
+  operator for the requirement its metadata declares.
+- **Integrity.** Repository review and the strict loader, which refuses
+  unknown members, a resource that is not an absolute URI, a classification
+  other than `governed` or `not_governed`, and a metadata member that is not
+  a boolean.
+- **Updating.** Edit, review, and restart the AS. A change applies to the
+  next token request.
+
 ## `mas-join.json`
 
 The shared demo stack's MAS join (`@spec authority-server#mission-join`,
 `authority-server#mapping-contract`, #557, #818): the resources whose route
 admits an ordinary credential and joins it to a Mission
-(`governed_resources`); the delegate policy (`delegates`, each client with
+(`governed_resources`); the resource identifier the join route is served
+under (`join_resource`, #1531, D741), distinct from every governed resource
+and not Mission-governed, since a join acts under an ordinary credential:
+the route's RFC 9728 metadata, served at its listener's well-known path,
+names it and does not declare Mission-bound-only acceptance, the payments
+enforcement boundary accepts it as an audience alias scoped to the
+composition's authorization server and the `at+jwt` token profile, and the
+dev ordinary-token route mints for it; the delegate policy (`delegates`, each client with
 its depth ceiling); the scope mapping, which is the credential-authority
 adapter (`scope_actions`, each `scope` value to the actions it carries at the
 payments resource; a value it does not cover maps to nothing); and the
@@ -92,7 +128,8 @@ failure semantics (`mission_binding_failed`). Read by `@mission/demo-data`
   the scope mapping.
 - **Integrity.** Repository review and the strict loader, which refuses
   unknown and missing members, any mapping value this join does not
-  implement, a client instance, and a non-positive version. A composition
+  implement, a client instance, a non-positive version, and a
+  `join_resource` that is not an absolute URI or names a governed resource. A composition
   that would mount the join route refuses to start when no contract is
   declared, before it connects to anything.
 - **Updating.** Edit, bump `mapping_contract.version` with any change to the
