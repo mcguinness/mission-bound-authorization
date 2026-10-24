@@ -52,14 +52,22 @@
  *   minting check pass again, and only while the join it carries is the join
  *   evaluated now.
  * - Rate limit. Per authenticated caller (`rate_limited`, 429).
- * - Each minting is a join evidence event, held in process memory.
+ * - Join evidence (#1560). Each minting is a join evidence event, written to
+ *   the kernel's store (`MissionKernel.joinEvidence`) and retained for its
+ *   Mission's audit horizon, after the last re-read and before the assertion
+ *   is cached or returned. A write that fails answers `unavailable` (503),
+ *   with nothing returned or cached. With the file-backed kernel store the
+ *   events survive a restart.
  */
 
 import { entryOverlapsResource } from "@mission/core";
 import { accessTokenHash } from "@mission/mcp-payments";
 import { ExpansionRateLimiter } from "../kernel/expansion.js";
+import type { JoinAssertionEvent } from "../kernel/join-evidence-store.js";
 import type { MissionKernel } from "../kernel/kernel.js";
 import type { MissionRecord } from "../kernel/types.js";
+
+export type { JoinAssertionEvent } from "../kernel/join-evidence-store.js";
 
 /** The advertised endpoint's path, published as `mission_join_assertion_endpoint`. */
 export const JOIN_ASSERTION_ENDPOINT_PATH = "/mission/join-assertion";
@@ -111,18 +119,6 @@ export interface JoinAssertionDeployment {
   evaluateJoin(token: ActingToken, mission: MissionRecord): JoinEvaluation | undefined;
   maxLifetimeSeconds?: number;
   rateLimit?: { max: number; windowSeconds: number };
-}
-
-/** A join evidence event: one minting. */
-export interface JoinAssertionEvent {
-  mission: { issuer: string; id: string };
-  token: { sha256: string } & TokenConfirmation;
-  join: { client_id: string; disposition: "client" | "delegate"; depth?: number };
-  caller: string;
-  audience: string;
-  mapping_version?: string;
-  iat: number;
-  exp: number;
 }
 
 export type JoinAssertionAnswer = { status: number; body: Record<string, unknown> };
@@ -243,16 +239,15 @@ export interface JoinAssertionServiceDeps {
 export class JoinAssertionService {
   private readonly cache = new Map<string, CachedAssertion>();
   private readonly limiter: ExpansionRateLimiter;
-  private readonly minted: JoinAssertionEvent[] = [];
 
   constructor(private readonly deps: JoinAssertionServiceDeps) {
     const limit = deps.deployment.rateLimit ?? DEFAULT_JOIN_ASSERTION_RATE_LIMIT;
     this.limiter = new ExpansionRateLimiter(limit.max, limit.windowSeconds, () => deps.kernel.nowDate().getTime());
   }
 
-  /** The join evidence events this MAS has recorded, oldest first. */
+  /** The join evidence events the kernel's store retains, oldest first (#1560). */
   events(): readonly JoinAssertionEvent[] {
-    return this.minted;
+    return this.deps.kernel.joinEvidence.all().map((r) => r.event);
   }
 
   /**
@@ -392,17 +387,26 @@ export class JoinAssertionService {
     // nor recorded as a join evidence event.
     const afterSigning = this.recheck(record, request.audience);
     if (afterSigning) return afterSigning;
+    // @spec authority-server#join-assertion-artifact (#1560): "Each minting is
+    // a join evidence event. The MAS records the following, retained for the
+    // audit horizon." Written before the assertion is cached or returned: an
+    // event that cannot be retained returns nothing and caches nothing, so no
+    // later request is served an assertion that has no event.
+    try {
+      this.deps.kernel.joinEvidence.record(record, {
+        mission: { issuer: record.issuer, id: record.id },
+        token: tokenClaim,
+        join: joinClaim,
+        caller,
+        audience: request.audience,
+        ...(join.mappingVersion !== undefined ? { mapping_version: join.mappingVersion } : {}),
+        iat: nowS,
+        exp,
+      });
+    } catch {
+      return err(503, "unavailable", "the join evidence event could not be recorded");
+    }
     this.cache.set(key, { jws, exp, join });
-    this.minted.push({
-      mission: { issuer: record.issuer, id: record.id },
-      token: tokenClaim,
-      join: joinClaim,
-      caller,
-      audience: request.audience,
-      ...(join.mappingVersion !== undefined ? { mapping_version: join.mappingVersion } : {}),
-      iat: nowS,
-      exp,
-    });
     return { status: 200, body: { assertion: jws } };
   }
 }

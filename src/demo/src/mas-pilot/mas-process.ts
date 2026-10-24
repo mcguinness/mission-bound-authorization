@@ -24,10 +24,14 @@ export interface MasProcessOptions {
   kernelStore?: string;
   /** The MAS's introspection client secret at the estate, where the configuration declares `join_assertion` (#1454). */
   joinIntrospectionSecret?: string;
+  /** Serve the operator console's MAS half on an ephemeral loopback port behind this bearer (#1560). */
+  operatorConsoleToken?: string;
 }
 
 export interface MasProcess {
   child: ChildProcess;
+  /** The operator console's address, where `operatorConsoleToken` was given. */
+  consoleUrl?: string;
   /** Approve a Mission through the MAS's kernel (operator channel). Resolves its identifier. */
   approve: (input: Record<string, unknown> & { intent: string }) => Promise<string>;
   /** Offset the MAS's kernel clock from real time (operator channel). */
@@ -41,7 +45,15 @@ export interface MasProcess {
 
 export async function startMasProcess(opts: MasProcessOptions): Promise<MasProcess> {
   const env: NodeJS.ProcessEnv = { ...process.env };
-  for (const name of ["NODE_OPTIONS", "MISSION_KEY_RING", "MISSION_EPHEMERAL_KEYS", "MISSION_KERNEL_STORE", "MAS_PILOT_JOIN_INTROSPECTION_SECRET"]) {
+  for (const name of [
+    "NODE_OPTIONS",
+    "MISSION_KEY_RING",
+    "MISSION_EPHEMERAL_KEYS",
+    "MISSION_KERNEL_STORE",
+    "MAS_PILOT_JOIN_INTROSPECTION_SECRET",
+    "MAS_PILOT_OPERATOR_TOKEN",
+    "MAS_PILOT_OPERATOR_CONSOLE_PORT",
+  ]) {
     delete env[name];
   }
   Object.assign(env, {
@@ -50,6 +62,7 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
     ...(opts.keyRing ? { MISSION_KEY_RING: opts.keyRing } : { MISSION_EPHEMERAL_KEYS: "1" }),
     ...(opts.kernelStore ? { MISSION_KERNEL_STORE: opts.kernelStore } : {}),
     ...(opts.joinIntrospectionSecret ? { MAS_PILOT_JOIN_INTROSPECTION_SECRET: opts.joinIntrospectionSecret } : {}),
+    ...(opts.operatorConsoleToken ? { MAS_PILOT_OPERATOR_TOKEN: opts.operatorConsoleToken, MAS_PILOT_OPERATOR_CONSOLE_PORT: "0" } : {}),
   });
   const child = spawn(process.execPath, ["--import", TSX_LOADER, SERVE_ENTRY], { env, stdio: ["ignore", "pipe", "pipe", "ipc"] });
   let out = "";
@@ -89,8 +102,11 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
       child.send({ ...msg, id });
     });
 
+  // The console line comes before the ready line (`mas-serve.ts`).
+  const consoleUrl = /mas-pilot: operator console (\S+)/.exec(out)?.[1];
   return {
     child,
+    ...(consoleUrl ? { consoleUrl } : {}),
     approve: async (input) => {
       const reply = await ask({ op: "approve", input });
       if (!reply.ok || !reply.missionId) throw new Error(`MAS approve: ${reply.error ?? "no Mission"}`);

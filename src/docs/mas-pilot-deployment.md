@@ -344,8 +344,22 @@ contract alone, unchanged. By party:
   `token` (`sha256` and `jkt` or `x5t#S256`), `join`, `aud`,
   `mapping_version` and an `exp` capped by the token's. It caches on
   (`issuer`, `mission_id`), the token digest and the `audience`, rechecking
-  before it serves, and records each minting as a join evidence event, in
-  process memory only (retention, follow-up: #1560). How the acting token
+  before it serves. Each minting is a join evidence event (#1560): the
+  Mission reference, the token digest and thumbprint, the `join` result,
+  the authenticated caller, the `audience`, the `mapping_version` and the
+  validity window, written to the kernel's store
+  (`MissionKernel.joinEvidence`) before the assertion is cached or
+  returned; a write that fails answers `unavailable` (503), with nothing
+  returned or cached. An event is retained until its Mission's expiry
+  plus the kernel's declared audit retention (90 days, the value the
+  terminal tombstones compose) and pruned at boot only past that horizon.
+  With `MISSION_KERNEL_STORE` and a key ring the events survive a MAS
+  restart; the in-memory default loses them with the Missions. The
+  operator console's MAS half reads a Mission's events
+  (`GET /missions/{id}/join-evidence`, behind its bearer); the MAS serves
+  them on no route of its own. Witnesses:
+  `services/authorization-server/test/join-assertion-evidence-retention.test.ts`
+  and `demo/test/mas-pilot-join-evidence.test.ts`. How the acting token
   is established and how the joins
   are evaluated are the deployment's hook. The pilot's is
   `pilotJoinAssertions` (`demo/src/mas-pilot/mas-join-assertions.ts`), which
@@ -728,7 +742,8 @@ pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.
   demo/test/mas-pilot-launcher.test.ts demo/test/mas-pilot-launcher-shutdown.test.ts \
   demo/test/mas-pilot-join-assertion.test.ts demo/test/mas-pilot-join-deployment.test.ts services/pdp/test/evaluate-join-assertion.test.ts \
   services/mcp-payments/test/mas-join-assertion-pep.test.ts services/mcp-payments/test/join-assertion-client.test.ts \
-  services/authorization-server/test/join-assertion-endpoint.test.ts
+  services/authorization-server/test/join-assertion-endpoint.test.ts \
+  services/authorization-server/test/join-assertion-evidence-retention.test.ts demo/test/mas-pilot-join-evidence.test.ts
 ```
 
 §10's four files and §11's three unit files need no OpenFGA. The reference authorization server binds
@@ -753,3 +768,7 @@ frees its ports, and the MAS exits with its launcher.
 `mas-pilot-join-assertion.test.ts` runs its MAS process on `127.0.0.1:14905`
 and its estate on `14906`, and its launcher on `14907` and `14908`; its
 declaration and launcher refusals need no OpenFGA.
+`mas-pilot-join-evidence.test.ts` needs no OpenFGA: its MAS process binds
+`127.0.0.1:14917` and its estate `14918`, and the operator console and the
+MAS's own surface bind ephemeral ports.
+`join-assertion-evidence-retention.test.ts` binds no port.

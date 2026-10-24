@@ -559,6 +559,7 @@ function heldService(kernel: MissionKernel, hooks: Hooks, enrolled: (clientId: s
     },
     get: (id: string) => kernel.get(id),
     nowDate: () => kernel.nowDate(),
+    joinEvidence: kernel.joinEvidence,
     signJoinAssertion: async (...args: Parameters<MissionKernel["signJoinAssertion"]>) => {
       await hooks.sign?.();
       return kernel.signJoinAssertion(...args);
@@ -628,8 +629,11 @@ async function expectRefused(service: JoinAssertionService, missionId: string, a
   expect(answer.status, `${label}: ${JSON.stringify(answer.body)}`).toBe(403);
   expect(answer.body.error, label).toBe("join_failed");
   expect("assertion" in answer.body, label).toBe(false);
-  expect(service.events(), label).toHaveLength(0);
+  expect(eventsFor(service, missionId), label).toHaveLength(0);
 }
+
+/** The join evidence events the kernel's store retains for one Mission (#1560: the store is the kernel's, shared by every service on it). */
+const eventsFor = (service: JoinAssertionService, missionId: string) => service.events().filter((e) => e.mission.id === missionId);
 
 /** The Mission changes three ways: revoked, suspended, and expired on a kernel whose clock the test moves. */
 let clockOffsetMs = 0;
@@ -705,7 +709,7 @@ describe("Join Assertion minting re-reads the Mission after every await (@spec a
     as.kernel.transition(record.id, "resume");
     const again = await mintWith(service, record.id, token);
     expect(again.status, JSON.stringify(again.body)).toBe(200);
-    expect(service.events()).toHaveLength(1);
+    expect(eventsFor(service, record.id)).toHaveLength(1);
   });
 
   it("does not serve a cached assertion for a Mission revoked while the next request's token is being established", async () => {
@@ -721,7 +725,7 @@ describe("Join Assertion minting re-reads the Mission after every await (@spec a
     expect(second.status, JSON.stringify(second.body)).toBe(403);
     expect(second.body.error).toBe("join_failed");
     expect("assertion" in second.body).toBe(false);
-    expect(service.events()).toHaveLength(1);
+    expect(eventsFor(service, record.id)).toHaveLength(1);
   });
 
   it("refuses join_failed when the Mission's authority_hash changes, or its audience is withdrawn, during the token check or the signing", async () => {

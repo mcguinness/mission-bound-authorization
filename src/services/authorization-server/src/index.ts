@@ -579,6 +579,13 @@ export {
   type EvaluatedActivationPolicy,
   type RetainedActivationPolicySnapshot,
 } from "./kernel/activation-policy-snapshots.js";
+// @spec authority-server#join-assertion-artifact (#1560): the retained join
+// evidence events (MissionKernel.joinEvidence).
+export {
+  JoinEvidenceRetentionError,
+  JoinEvidenceStore,
+  type RetainedJoinAssertionEvent,
+} from "./kernel/join-evidence-store.js";
 export {
   AGR_ENVELOPE_FORMAT,
   AGR_JWS_CTY,

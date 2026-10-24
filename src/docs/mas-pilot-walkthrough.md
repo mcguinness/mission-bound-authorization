@@ -71,7 +71,7 @@ In process, both consoles are the one printed URL.
 | `OPENFGA_STORE_ID`, `OPENFGA_MODEL_ID` | Attach to the administered Resource-policy store and model: verified, never written (deployment §4). |
 | `MAS_PILOT_DEVELOPMENT_STORE=1` | Instead, bootstrap a fresh store seeded from `config/mas-pilot.json` `resource_policy`. Its store and model are printed, and a later start can attach to them. |
 | `MISSION_KEY_RING=<absolute path>` or `MISSION_EPHEMERAL_KEYS=1` | Where the MAS's signing keys come from, as for the as-native target. A ring is created once with `pnpm keys init --ring <path> --issuer http://127.0.0.1:14834`. |
-| `MISSION_KERNEL_STORE=<absolute path>` | Optional: keeps the MAS's Missions across a restart. |
+| `MISSION_KERNEL_STORE=<absolute path>` | Optional: keeps the MAS's Missions, and its join evidence (§3.8), across a restart. |
 | `MAS_PILOT_CONFIG` | The configuration file (default `config/mas-pilot.json`). |
 | `OPENFGA_HTTP_URL`, `OPENFGA_PRESHARED_KEY`, `OPENFGA_CA_CERT` | The OpenFGA connection; the defaults reach the `docker compose` OpenFGA, and `scripts/mas-pilot.mjs` trusts `certs/openfga.crt` when it exists and no CA is set. |
 | `MAS_PILOT_MAS_URL`, `MAS_PILOT_PDP_KEY` | Separated only: use a MAS already running, and the PDP's private key (a JWK with its `kid`) whose public half that MAS registered (§3.7). |
@@ -312,6 +312,22 @@ under this declaration a read the MAS mints no assertion for is denied
 being joined under the mapping contract. With the class removed from
 `required_classes`, such a read joins under the mapping contract, the
 floor.
+
+Each assertion the MAS mints is a join evidence event on the MAS's kernel
+store (deployment §8). Read a Mission's events at the MAS's console:
+
+```sh
+console "$MAS_CONSOLE/missions/$MISSION/join-evidence"
+```
+
+The answer lists them oldest first, each with the Mission, the token's
+`sha256` and `jkt`, the `join` result, the `caller` (the PEP's client), the
+`audience` (the PDP), the `mapping_version` it was minted under, `iat` and
+`exp`, and `retain_until`: the Mission's expiry plus the declared audit
+retention (90 days), past which the MAS's next boot prunes it. With
+`MISSION_KERNEL_STORE` and a key ring the events survive a restart of the
+MAS; without them they are lost at shutdown with the Missions. The MAS
+serves them on no route of its own.
 
 `pnpm mas-pilot` refuses this configuration ("join_assertion applies to the
 separated topology only"). To attach to a MAS you started (§3.7), start it
