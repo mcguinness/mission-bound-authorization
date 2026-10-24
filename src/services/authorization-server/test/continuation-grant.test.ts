@@ -559,6 +559,9 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(payload.aud).toBe(RAS_AUD);
     expect((payload.cnf as { jkt?: string }).jkt).toBe(agentJkt); // sender-constrained to the DPoP key
     expect((payload.mission as { id?: string }).id).toBe(missionId);
+    // @spec continuation#transport-ica (#1589): the onward ID-JAG identifies the Mission, its expiry included.
+    expect((payload.mission as { issuer?: string }).issuer).toBe(ISSUER);
+    expect((payload.mission as { expires_at?: string }).expires_at).toBe(as.kernel.get(missionId)?.expires_at);
     expect(Array.isArray(payload.authorization_details)).toBe(true);
 
     // Audience-local, deterministic sub: NOT the global mission subject.
@@ -642,6 +645,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     expect(Array.isArray(local.authorization_details)).toBe(true);
     expect(local.mission.id).toBe(missionId); // mission anchors preserved
     expect(local.mission.issuer).toBe(ISSUER); // originating AS unchanged
+    expect(local.mission.expires_at).toBe(as.kernel.get(missionId)?.expires_at); // the Mission's bound kept (#1589)
 
     // @spec cross-domain#validation-at-resource-as (S-12): client_id identifies
     // the redeeming destination client (this RAS's own registration), never the
