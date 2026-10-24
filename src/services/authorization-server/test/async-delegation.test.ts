@@ -3424,7 +3424,9 @@ describe("a requested family set the projection cannot issue whole is refused, n
     const cases = [
       // A capability_sources binding the Mission does not record for the action.
       { ...entryOf(["payments:remittance.send"]), capability_sources: [{ action: "payments:remittance.send" }] },
-      // A max_amount the intake schema admits that is not a decimal.
+      // A max_amount the intake schema admits that is not a decimal. Here the
+      // subset check against the presented token already refuses it (the
+      // comparison fails closed), before any projection.
       entryOf(["payments:remittance.send"], { ...LIMITS, max_amount: { amount: "abc", currency: "USD" } }),
       // An empty vendor list under the vendors-constrained grant.
       entryOf(["payments:remittance.send"], { ...LIMITS, vendors: [] }),
