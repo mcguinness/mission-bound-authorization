@@ -4,8 +4,8 @@
  * Issue a Mission-bound cross-domain grant (ID-JAG): a JWT authorization
  * grant, signed by the Mission issuer, audienced to the target Resource AS,
  * <=300s, exp not exceeding the Mission's expires_at, sender-constrained by
- * cnf, one-time via jti, carrying the mission claim (id/issuer/authority_hash
- * unchanged) and the audience-scoped authorization_details. Gated as a
+ * cnf, one-time via jti, carrying the mission claim (id/issuer/authority_hash/
+ * expires_at unchanged) and the audience-scoped authorization_details. Gated as a
  * derivation (D26 lifecycle). Backs M9.
  */
 
@@ -357,6 +357,12 @@ async function mintCrossDomainGrant(
       id: record.id,
       issuer: record.issuer,
       authority_hash: record.authority_hash,
+      // @spec cross-domain#cross-domain-grant (#1630, D751): the Mission's
+      // `expires_at`, unchanged and never the grant's own `exp`, so a Resource
+      // AS issuing further credentials from its local token keeps the Mission's
+      // bound. Every grant carries it, a continuation ID-JAG included
+      // (continuation#transport-ica, #1589).
+      expires_at: record.expires_at,
       // @spec cross-domain#mission-subject, #origin-principal-mapping — the
       // immutable origin principal, carried unchanged so a Resource AS (the
       // ID-JAG RAS) can co-resolve it against the grant's own (iss, sub) at
@@ -376,10 +382,6 @@ async function mintCrossDomainGrant(
   // @spec id-continuation-assertion: opt-in continuation claims.
   if (input.identityContinuationHandle !== undefined) {
     payload.identity_continuation_handle = input.identityContinuationHandle;
-    // @spec continuation#transport-ica (#1589, D726): a root or onward
-    // continuation ID-JAG carries the Mission's `expires_at`, so a Resource AS
-    // issuing further credentials from its local token keeps the Mission's bound.
-    (payload.mission as Record<string, unknown>).expires_at = record.expires_at;
   }
   if (input.act !== undefined) {
     payload.act = input.act;
