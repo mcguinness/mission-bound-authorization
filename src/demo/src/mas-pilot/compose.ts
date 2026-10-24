@@ -133,7 +133,12 @@ export interface MasPilotParts {
   estateClients: ReadonlyMap<string, EstateClientRegistration>;
   missionIssuer: string;
   mapping: MappingContractCache;
-  actorRecords: ActorRecords;
+  /**
+   * The PEP's actor records, the deployment's on the mapping join. Absent
+   * where the PEP obtains Join Assertions (#1561): the MAS's records are then
+   * the one source, recorded at its operator console.
+   */
+  actorRecords?: ActorRecords;
   payments: PaymentsStore;
   /** The payments connectors: the wires and emails the resource actually committed. */
   connectors: Connectors;
@@ -342,7 +347,14 @@ export async function assembleMasPilot(
 
     const loadView = wiring.loadView;
     const decidePdp = wiring.decide ? wiring.decide(keys.decide) : keys.decide;
-    const actorRecords = new ActorRecords();
+    // @spec authority-server#join-assertion-request, #mission-join rule 5
+    // (#1561): where the PEP obtains Join Assertions, the MAS's actor records
+    // are a delegate's one source, and the assertion carries the depth they
+    // give. The PEP keeps no records of its own there and resolves no depth,
+    // so the two can never disagree; a delegate's joined request carrying no
+    // assertion has no depth and is denied. Otherwise the PEP's own records
+    // are the deployment's.
+    const actorRecords = wiring.assertionSource ? undefined : new ActorRecords();
     const pep = new Pep({
       decide: observe
         ? async (request, decisionOptions) => {
@@ -361,7 +373,7 @@ export async function assembleMasPilot(
       ...(opts.now ? { now: opts.now } : {}),
       masJoin: {
         mappingContract: () => mapping.current(),
-        resolveDelegateDepth: actorRecords.resolveDepth.bind(actorRecords),
+        ...(actorRecords ? { resolveDelegateDepth: actorRecords.resolveDepth.bind(actorRecords) } : {}),
         missionBoundOnlyClasses: new Set(config.mission_bound_only_classes),
         ...(wiring.assertionSource ? { assertionSource: wiring.assertionSource } : {}),
       },
@@ -417,7 +429,7 @@ export async function assembleMasPilot(
       estateClients,
       missionIssuer,
       mapping,
-      actorRecords,
+      ...(actorRecords ? { actorRecords } : {}),
       payments,
       connectors,
       evidence,
