@@ -441,6 +441,31 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     }
   });
 
+  it("a dispatched instance approved for two audiences gets a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)", async () => {
+    const LEDGER = "http://localhost:4406/mcp";
+    const payments = { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } };
+    const ledger = { type: "mission_resource_access", resource: LEDGER, actions: ["ledger:vendor.read"], constraints: { vendors: ["acme"] } };
+    const created = await createTemplateAdmin({ ...readOnlyTemplateBody(), ceiling: [payments, ledger] });
+    const createdBody = (await created.json()) as { template_id?: string };
+    expect(created.status, JSON.stringify(createdBody)).toBe(201);
+    const res = await dispatch({
+      templateId: createdBody.template_id as string,
+      intent: JSON.stringify({ intent: { goal: "reconcile Acme invoices and vendors", target_resources: [RESOURCE, LEDGER], expires_at: FAR_FUTURE } }),
+      dispatchEventId: `evt-audience-${seq++}`,
+      authorizationDetails: JSON.stringify([payments, ledger]),
+    });
+    const body = (await res.json()) as { access_token?: string; mission_id?: string; authorization_details?: Array<{ resource: string }> };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const instance = as.kernel.get(body.mission_id as string);
+    expect(new Set(instance?.authority_set.map((e) => e.resource))).toEqual(new Set([RESOURCE, LEDGER]));
+    const claims = decodeJwt(body.access_token as string);
+    const carried = claims.authorization_details as Array<{ resource: string }>;
+    expect(carried.length).toBeGreaterThan(0);
+    expect(carried.every((e) => e.resource === claims.aud)).toBe(true);
+    expect(carried.length).toBeLessThan(instance?.authority_set.length ?? 0);
+    expect(body.authorization_details?.map((e) => e.resource)).toEqual(carried.map((e) => e.resource));
+  });
+
   it("happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent", async () => {
     const created = await createTemplateAdmin(readOnlyTemplateBody());
     const { template_id } = (await created.json()) as { template_id: string };

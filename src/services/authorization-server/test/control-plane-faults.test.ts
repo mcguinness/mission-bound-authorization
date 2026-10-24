@@ -145,12 +145,15 @@ describe("single-process control-plane fault boundaries", () => {
     const b = setup("https://issuer-two.test");
     try {
       expect(() =>
-        b.kernel.insertRecord(a.record, undefined, { source: { inherited: a.kernel.committedSourceBinding(a.record.id) } }),
+        b.kernel.insertRecord(a.record, undefined, {
+          source: { inherited: a.kernel.committedSourceBinding(a.record.id) },
+          audiences: "fresh",
+        }),
       ).toThrow("record issuer does not own this kernel");
       b.kernel.insertRecord(
         { ...b.record, id: a.record.id, approval_event_id: "second-approval", status_list_idx: null },
         undefined,
-        { source: { inherited: b.kernel.committedSourceBinding(b.record.id) } },
+        { source: { inherited: b.kernel.committedSourceBinding(b.record.id) }, audiences: "fresh" },
       );
       b.kernel.transition(a.record.id, "revoke");
       expect(b.kernel.get(a.record.id)?.termination?.reason).toBe("revoked");

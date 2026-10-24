@@ -99,6 +99,7 @@ const mkKernel = (
     file?: string;
     onCommit?: (c: LifecycleCommit) => void;
     reconciliation?: { mappings?: Record<string, string> };
+    entryAudiences?: () => readonly string[];
   } = {},
 ): MissionKernel =>
   new MissionKernel({
@@ -115,6 +116,7 @@ const mkKernel = (
     actorProfiles: ACTORS,
     ...(over.file ? { store: { file: over.file } } : {}),
     ...(over.reconciliation ? { authoritySourceReconciliation: over.reconciliation } : {}),
+    ...(over.entryAudiences ? { entryAudiences: over.entryAudiences } : {}),
     onLifecycleCommit: over.onCommit ?? ((c) => commits.push(c)),
   });
 
@@ -1494,5 +1496,41 @@ describe("Child Mission Carryover termination vocabulary (@spec mission#terminat
       terminal_state: "terminated",
       termination: stored.termination,
     });
+  });
+});
+
+describe("a carryover replacement keeps the old child's original approved audiences (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2)", () => {
+  it("a replacement created after the trusted mapping changes keeps the association the old child retained, while the Expansion's newly approved entries take the mapping at that approval", () => {
+    let mapped = ["https://rs-a.test/"];
+    kernel = mkKernel({ entryAudiences: () => mapped });
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    expect(child.approved_audiences).toEqual([["https://rs-a.test/"]]);
+    mapped = ["https://rs-a.test/", "https://rs-b.test/"];
+    const run = openApproved(pred.id);
+    const replacementId = manifestOf(run).entries.find((e) => e.child_id === child.id)?.replacement?.replacement_id as string;
+    const out = redeem(run);
+    expect("error" in out).toBe(false);
+    if ("error" in out) return;
+    expect(kernel.get(replacementId)?.approved_audiences).toEqual([["https://rs-a.test/"]]);
+    // The successor widens both entries, so its own approval assigns them the mapping now.
+    expect(kernel.get(out.successor.id)?.approved_audiences).toEqual(out.successor.authority_set.map(() => ["https://rs-a.test/", "https://rs-b.test/"]));
+  });
+
+  it("a replacement never keeps an audience the new parent's entry it falls within was not approved for: the two retained associations intersect", () => {
+    let mapped = ["https://rs-a.test/", "https://rs-b.test/"];
+    kernel = mkKernel({ entryAudiences: () => mapped });
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    expect(child.approved_audiences).toEqual([["https://rs-a.test/", "https://rs-b.test/"]]);
+    // The mapping drops an audience before the Expansion's approval, which
+    // assigns the successor's widened entries the narrower mapping.
+    mapped = ["https://rs-a.test/"];
+    const run = openApproved(pred.id);
+    const replacementId = manifestOf(run).entries.find((e) => e.child_id === child.id)?.replacement?.replacement_id as string;
+    const out = redeem(run);
+    expect("error" in out).toBe(false);
+    if ("error" in out) return;
+    expect(kernel.get(replacementId)?.approved_audiences).toEqual([["https://rs-a.test/"]]);
   });
 });

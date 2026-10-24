@@ -536,8 +536,10 @@ describe("deferred Mission approval wire path (@spec deferred-approval#deferred-
     // The PAR selects the ledger: the delivered token is for the ledger.
     const toLedger = await poll(await openDeferral(keys, { ...both, extra: { resource: LEDGER } }), keys);
     expect(toLedger.status, JSON.stringify(toLedger.body)).toBe(200);
+    // @spec mission#token-response (#1503 finding 7, D733 ruling 1): only the
+    // ledger's own entry; the payments entry does not ride in it.
     const resources = (toLedger.body.authorization_details as Array<{ resource: string }>).map((e) => e.resource);
-    expect(resources).toEqual(expect.arrayContaining([RESOURCE, LEDGER]));
+    expect(resources).toEqual([LEDGER]);
     expect(audienceOf(toLedger.body)).toBe(LEDGER);
 
     // Selecting payments, or nothing, gives the payments audience.

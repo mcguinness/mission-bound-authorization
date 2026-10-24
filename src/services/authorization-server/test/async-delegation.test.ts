@@ -232,6 +232,7 @@ async function codeTokenRequest(params: Record<string, string>): Promise<Respons
 async function issueBaseMission(
   expiresAt: string = FAR_EXP,
   authority: unknown = fullAuthority(),
+  targets: string[] = [RESOURCE],
 ): Promise<{
   missionId: string;
   baseAccessToken: string;
@@ -246,7 +247,7 @@ async function issueBaseMission(
   const intent = JSON.stringify({
     intent: {
       goal: "Pay Acme invoices and send remittance",
-      target_resources: [RESOURCE],
+      target_resources: targets,
       expires_at: expiresAt,
     },
   });
@@ -644,6 +645,30 @@ describe("async-delegation issuance (@spec async-delegation)", () => {
     const families = as.delegationFamilyStore.familiesForMission(missionId);
     expect(families).toHaveLength(1);
     expect(as.delegationFamilyStore.resolve(families[0] as string)?.missionId).toBe(missionId);
+  });
+
+  it("opens a family only for a target its entries are approved for: a token for one audience opens none for another audience of the Mission, counting no derivation (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)", async () => {
+    const PLAIN = TOPOLOGY.resources.plainRs;
+    const reportsRead = { type: "mission_resource_access", resource: PLAIN, actions: ["reports:report.read"] };
+    const { missionId, baseAccessToken } = await issueBaseMission(FAR_EXP, [...fullAuthority(), reportsRead], [RESOURCE, PLAIN]);
+    expect(new Set(as.kernel.get(missionId)?.authority_set.map((e) => e.resource))).toEqual(new Set([RESOURCE, PLAIN]));
+    // The base token is the payments audience's: the reports entry does not ride in it.
+    expect(new Set((decodeJwt(baseAccessToken).authorization_details as AuthorityEntry[]).map((e) => e.resource))).toEqual(
+      new Set([RESOURCE]),
+    );
+    // The handle the transport requires, obtained first: its own exchange is not this one.
+    const handle = await delegationHandle(baseAccessToken);
+    const before = as.kernel.get(missionId)?.derivation_count;
+    const res = await asyncDelegate(handle, { resource: PLAIN, rawSubject: true });
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_target");
+    expect(body.error_description).toMatch(
+      new RegExp(`audience ${PLAIN} is not an original approved audience of any entry the token would carry`),
+    );
+    expect(body.access_token).toBeUndefined();
+    expect(as.delegationFamilyStore.familiesForMission(missionId)).toHaveLength(0);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(before);
   });
 
   it("confinement: an absent authorization_details confines to the full active Authority Set (the derived set, not the raw proposal)", async () => {

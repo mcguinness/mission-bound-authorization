@@ -687,6 +687,38 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(as.kernel.missionBoundGrants.resolve(successorGrant)?.missionId).toBe(successorId);
   });
 
+  it("a successor approved for two audiences completes with a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)", async () => {
+    const LEDGER = "http://localhost:4406/mcp";
+    const ledger = { type: "mission_resource_access", resource: LEDGER, actions: ["ledger:vendor.read"], constraints: { vendors: ["acme"] } };
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const opened = await tokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: pred.accessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      login_hint: "alice",
+      mission_intent: JSON.stringify({ intent: { goal: "Widen to the ledger", target_resources: [RESOURCE, LEDGER], expires_at: FAR_EXP } }),
+      authorization_details: JSON.stringify([...authority(["payments:invoice.read"]), ledger]),
+      creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
+    });
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(opened.status, JSON.stringify(ob)).toBe(400);
+    expect(ob.error).toBe("authorization_pending");
+    approveDeferral(ob.deferral_code as string);
+    const poll = await pollExpansion(ob.deferral_code as string);
+    const pb = (await poll.json()) as { access_token?: string; mission_id?: string; authorization_details?: Array<{ resource: string }> };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    const successor = as.kernel.get(pb.mission_id as string);
+    expect(new Set(successor?.authority_set.map((e) => e.resource))).toEqual(new Set([RESOURCE, LEDGER]));
+    const claims = decodeJwt(pb.access_token as string);
+    const carried = claims.authorization_details as Array<{ resource: string }>;
+    expect(carried.length).toBeGreaterThan(0);
+    expect(carried.every((e) => e.resource === claims.aud)).toBe(true);
+    expect(carried.length).toBeLessThan(successor?.authority_set.length ?? 0);
+    expect(pb.authorization_details?.map((e) => e.resource)).toEqual(carried.map((e) => e.resource));
+  });
+
   it("@spec expansion#successor-expiry: the successor is never later than the predecessor absent a recorded extension", async () => {
     const pred = await issuePredecessor(["payments:invoice.read"]);
     const predRecord = as.kernel.get(pred.missionId);

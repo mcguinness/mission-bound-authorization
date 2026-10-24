@@ -1103,6 +1103,10 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
     expect(s1.ceiling_consent_principal).toEqual(rootRecord.approval_basis.consent_principal);
     expect(s1.ceiling_consent_principal).not.toEqual(ALICE);
     expect(s1.drawdown_count).toBe(rootRecord.drawdown_count);
+    // @spec mission#transformation-capabilities (#1503 finding 7, D733): the
+    // ceiling's association, retained at its consent, carries with it.
+    expect(rootRecord.ceiling_audiences).toEqual(as.kernel.mappedEntryAudiences(rootRecord.authority_ceiling ?? []));
+    expect(s1.ceiling_audiences).toEqual(rootRecord.ceiling_audiences);
     // A later request that keeps the beyond-ceiling authority is outside the ceiling.
     await openFreshApproval(s1.id, approved.access_token, [...READ_LIST, "payments:payment.schedule"]);
     // One that drops it is drawn by policy under the original consent.
@@ -1131,6 +1135,11 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
     );
     const s1 = as.kernel.get(approved.mission_id) as MissionRecord;
     expect(s1.authority_ceiling).toEqual(raised);
+    // @spec mission#transformation-capabilities (#1503 finding 7, D733): a
+    // re-consent is a fresh consent, so it retains the association the
+    // mapping assigns the raised ceiling at that decision.
+    expect(s1.ceiling_audiences).toEqual(as.kernel.mappedEntryAudiences(raised));
+    expect(s1.ceiling_audiences?.length).toBe(raised.length);
     expect(s1.drawdown_policy?.id).toBe("drawdown-std");
     expect(s1.ceiling_hash).toBe(
       computeAnchor("mission-authority-ceiling", ISSUER, {

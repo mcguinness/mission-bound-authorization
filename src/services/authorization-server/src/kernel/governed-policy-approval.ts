@@ -48,6 +48,7 @@ import {
 } from "@mission/core";
 import { UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { type RegisteredActivationPolicy, verifiedActivationPolicy } from "./activation-policy.js";
+import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import {
   type AgrAssertion,
   type ApprovalGovernanceRecord,
@@ -529,6 +530,16 @@ export interface GovernedPolicyConsent {
   /** Issuer-signed JWS over the consent members above. */
   attestation: string;
   withdrawn_at?: string;
+  /**
+   * @spec mission#transformation-capabilities (#1503 finding 7, D733): each
+   * root ceiling entry's original approved audience, index-aligned with the
+   * root's `authority_ceiling`: the audiences the trusted mapping assigned it
+   * at this consent, which every activation's entries inherit.
+   * Authorization-server state outside the attestation's fixed shape, never
+   * on the wire. Absent (a consent recorded before it was retained), it
+   * associates no audience with any entry.
+   */
+  ceiling_audiences?: string[][];
 }
 
 /** The members an attestation commits, in a fixed shape. */
@@ -564,7 +575,8 @@ CREATE TABLE IF NOT EXISTS governed_policy_consents (
   approved_at TEXT NOT NULL,
   consent_event_id TEXT NOT NULL UNIQUE,
   attestation TEXT NOT NULL,
-  withdrawn_at TEXT
+  withdrawn_at TEXT,
+  ceiling_audiences_json TEXT
 ) STRICT;
 CREATE TABLE IF NOT EXISTS governed_policy_activations (
   approval_event_id TEXT PRIMARY KEY,
@@ -587,6 +599,16 @@ CREATE TABLE IF NOT EXISTS governed_policy_activations (
 export class GovernedPolicyConsentStore {
   constructor(private readonly db: Database) {
     this.db.exec(SCHEMA);
+    // @spec mission#transformation-capabilities (#1503 finding 7, D733): a
+    // file-backed store created before the ceiling association was retained
+    // gains the column with no default and no backfill, so its consents
+    // associate no audience (D733 ruling 4) rather than today's mapping.
+    const columns = new Set(
+      (this.db.prepare("PRAGMA table_info(governed_policy_consents)").all() as Array<{ name: string }>).map((c) => c.name),
+    );
+    if (!columns.has("ceiling_audiences_json")) {
+      this.db.exec("ALTER TABLE governed_policy_consents ADD COLUMN ceiling_audiences_json TEXT");
+    }
   }
 
   /** A consent by identifier, or undefined. */
@@ -667,8 +689,8 @@ export class GovernedPolicyConsentStore {
       this.db
         .prepare(
           `INSERT INTO governed_policy_consents (consent_id, issuer, policy_id, version, digest, approver_iss,
-             approver_sub, approved_at, consent_event_id, attestation)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             approver_sub, approved_at, consent_event_id, attestation, ceiling_audiences_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           c.consent_id,
@@ -681,6 +703,7 @@ export class GovernedPolicyConsentStore {
           c.approved_at,
           c.consent_event_id,
           c.attestation,
+          c.ceiling_audiences ? JSON.stringify(c.ceiling_audiences) : null,
         );
     });
   }
@@ -731,7 +754,25 @@ function consentOf(row: Record<string, unknown>): GovernedPolicyConsent {
     consent_event_id: row.consent_event_id as string,
     attestation: row.attestation as string,
     ...(row.withdrawn_at ? { withdrawn_at: row.withdrawn_at as string } : {}),
+    ...ceilingAudiencesOf(row.ceiling_audiences_json),
   };
+}
+
+/**
+ * @spec mission#transformation-capabilities (D733): the stored ceiling
+ * association, or no member where none is stored or it is not an array of
+ * string arrays (fail closed: never re-derived from a later mapping).
+ */
+function ceilingAudiencesOf(text: unknown): { ceiling_audiences?: string[][] } {
+  if (typeof text !== "string" || text === "") return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return {};
+  }
+  const valid = Array.isArray(parsed) && parsed.every((a) => Array.isArray(a) && a.every((aud) => typeof aud === "string"));
+  return valid ? { ceiling_audiences: parsed as string[][] } : {};
 }
 
 const b64 = (s: string): string => Buffer.from(s, "utf8").toString("base64url");
@@ -805,7 +846,7 @@ export function recordGovernedPolicyConsent(
       `governed policy ${input.root.id} version ${input.root.version} is not a root this issuer holds`,
     );
   }
-  parseGovernedPolicyRoot(held.content);
+  const heldRoot = parseGovernedPolicyRoot(held.content);
   const issuer = kernel.issuerId();
   const unsigned = {
     consent_id: `gpc_${randomBytes(16).toString("base64url")}`,
@@ -815,7 +856,15 @@ export function recordGovernedPolicyConsent(
     approved_at: kernel.nowDate().toISOString(),
     consent_event_id: input.consentEventId,
   };
-  const consent: GovernedPolicyConsent = { ...unsigned, attestation: signConsent(kernel, unsigned) };
+  // @spec mission#transformation-capabilities (D733 ruling 2): the human's
+  // approval of the root is the approval event every activation draws on, so
+  // the root ceiling's association is retained here, beside the attestation.
+  const ceilingAudiences = kernel.mappedEntryAudiences(heldRoot.authority_ceiling);
+  const consent: GovernedPolicyConsent = {
+    ...unsigned,
+    attestation: signConsent(kernel, unsigned),
+    ...(ceilingAudiences ? { ceiling_audiences: ceilingAudiences } : {}),
+  };
   try {
     kernel.governedPolicyConsents.insertConsent(consent, held);
   } catch (e) {
@@ -1296,6 +1345,13 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
       kernel.insertRecord(record, undefined, {
         source: resolvedSource,
         ...(deciding.evaluator ? { activationPolicies: [{ ref: deciding.ref, snapshot: deciding.evaluator }] } : {}),
+        // @spec mission#transformation-capabilities (#1503 finding 7, D733
+        // ruling 2): an activation is no human approval of its own: each
+        // entry keeps the association the root ceiling retained at the
+        // consent it activates under, never the mapping current now.
+        audiences: {
+          inherited: inheritedAudiences(final, audienceReferences(root.authority_ceiling, consent.ceiling_audiences)),
+        },
       });
       kernel.governanceRecords.retainInCallerTx(id, signed);
       kernel.governedPolicyConsents.retainActivationInCallerTx({

@@ -31,6 +31,7 @@ import { type ActObject, ActorChainError, extendChain, validateActChain } from "
 import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash, resourceWithin } from "@mission/core";
 import { verifiedActivationPolicy } from "./activation-policy.js";
 import type { EvaluatedActivationPolicy } from "./activation-policy-snapshots.js";
+import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { childActorRefusal, inheritChildActorOrigins, presentedChildActorPermitted } from "./child-actor-eligibility.js";
 import type { DelegateCandidate } from "./delegate-matcher.js";
@@ -860,6 +861,11 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     // @spec mission#standing-consent-bases: every child creation policy that
     // adjudicated this creation, retained for the child's audit horizon.
     activationPolicies: evaluatedPolicies,
+    // @spec mission#transformation-capabilities (#1503 finding 7, D733 ruling
+    // 2): a child creation is no approval of its own: each child entry keeps
+    // the association the parent's approved entries it falls within retain,
+    // never the mapping current at the child's creation.
+    audiences: { inherited: inheritedAudiences(childAuthority, audienceReferences(parent.authority_set, parent.approved_audiences)) },
   });
 
   // @spec child-delegation#child-evidence — permit record. `fanout` is recorded

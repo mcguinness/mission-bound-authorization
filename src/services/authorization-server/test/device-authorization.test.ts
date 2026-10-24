@@ -614,6 +614,21 @@ describe("Mission Device Authorization request (@spec device-authorization#reque
     const claims = decodeJwt(res.body.access_token as string);
     expect((claims.mission as { id?: string }).id).toBe(record?.id);
   });
+
+  it("issues the device access token only the entries approved for its audience: an entry approved for another audience does not ride (@spec mission#token-response, #1503 finding 7, D733)", async () => {
+    const ledger = DERIVATION_POLICY.ceiling.find((e) => e.resource !== RESOURCE)?.resource as string;
+    const ledgerRead = { type: "mission_resource_access", resource: ledger, actions: ["ledger:vendor.read"], constraints: { vendors: ["acme"] } };
+    const s = await approvedSession(PUBLIC, ALICE_BY_BOB, {
+      mission_intent: JSON.stringify({ intent: { ...INTENT, target_resources: [RESOURCE, ledger] } }),
+      authorization_details: JSON.stringify([...READ, ledgerRead]),
+    });
+    expect(missionOf(s.uid)?.authority_set.map((e) => e.resource)).toEqual([RESOURCE, ledger]);
+    const res = await poll(PUBLIC, s.deviceCode, await newKeys());
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    const carried = decodeJwt(res.body.access_token as string).authorization_details as Array<{ resource: string }>;
+    expect(carried.map((e) => e.resource)).toEqual([RESOURCE]);
+    expect((res.body.authorization_details as Array<{ resource: string }>).map((e) => e.resource)).toEqual([RESOURCE]);
+  });
 });
 
 describe("Mission Device Authorization session binding (@spec device-authorization#session-binding, #1202)", () => {
