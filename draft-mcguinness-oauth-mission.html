@@ -2333,7 +2333,9 @@ proposal, in narrowing or configured-mapping mode
           <dd style="margin-left: 1.5em" id="section-3.1-1.28">
             <p id="section-3.1-1.28.1">One issuance operation the issuer AS performs for a single request
 (<a href="#issuance-gating" class="auto internal xref">Section 8.2</a>): the initial authorization-code exchange, a
-refresh, a Token Exchange, or a cross-domain grant issuance.
+refresh, a Token Exchange, a cross-domain grant issuance, or the
+redemption of a profile-defined grant, such as the Template
+profile's handoff grant.
 Distinct from Authority Set derivation, which some section titles
 and fixed phrases, such as "derivation policy", also call
 derivation.<a href="#section-3.1-1.28.1" class="pilcrow">¶</a></p>
@@ -4292,8 +4294,9 @@ Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class
 <p id="section-8.1.1-1">At a direct approval event the AS binds the Mission to the
 authorization code it issues, or, under a back-channel carriage
 profile, to the grant artifact that profile defines
-(<a href="#extensibility" class="auto internal xref">Section 16</a>). The binding is server-side and is what
-"the referenced Mission" in <a href="#issuance-gating" class="auto internal xref">Section 8.2</a> refers to.<a href="#section-8.1.1-1" class="pilcrow">¶</a></p>
+(<a href="#extensibility" class="auto internal xref">Section 16</a>). The binding is server-side, and it resolves the
+Mission for operations using that binding; a profile-defined grant can
+instead resolve it through its authenticated <code>mission</code> reference.<a href="#section-8.1.1-1" class="pilcrow">¶</a></p>
 <p id="section-8.1.1-2">An authorization request that carries no <code>mission_intent</code> proposes no
 Mission. An AS that answers such a request through consent reuse,
 such as with a grant an authentication session holds for the client,
@@ -4489,9 +4492,11 @@ It is informational in the same way: presenting it authorizes nothing.<a href="#
         </h3>
 <p id="section-8.2-1">A derivation is one issuance operation the issuer AS performs for a
 single request: the initial authorization-code exchange, a refresh, a
-Token Exchange, or a cross-domain grant issuance
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>). A companion
-profile bounds the number of derivations under a Mission
+Token Exchange, a cross-domain grant issuance
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>), or the
+redemption of a profile-defined grant, such as the Template profile's
+handoff grant (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>). A
+companion profile bounds the number of derivations under a Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>).<a href="#section-8.2-1" class="pilcrow">¶</a></p>
 <p id="section-8.2-2">A derivation passes these checks, each stated where cited:<a href="#section-8.2-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-8.2-3">
@@ -11306,6 +11311,62 @@ authenticated <code>mission_bound_authorization_required</code> metadata, gets
 no token outside a Mission on any grant type; the open-ended policy
 exception is removed, and the refusal is <code>invalid_target</code>
 (Authority Proposal).<a href="#appendix-G-3.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.8">
+          <p id="appendix-G-3.8.1">A token carries only the entries whose original approved audience
+(the audiences the AS's trusted mapping assigned an entry at
+approval, retained with the Mission and kept by the entries a derived
+Mission inherits) includes its audience, unless a declared
+<code>narrowing</code> capability permits issuing an entry there. A token naming
+several audiences is issued only where each is approved for the same
+entries; otherwise, or where the audience is approved for none of the
+entries the token would carry, the request is refused with
+<code>invalid_target</code> (Declared Transformation Capabilities, Audience and
+Token Response; #1503, D620, D733).<a href="#appendix-G-3.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.9">
+          <p id="appendix-G-3.9.1">The AS refuses, with <code>invalid_target</code>, a delegated Mission-bound
+token for an audience it has not established as a Mission-aware
+Resource Server that processes the <code>act</code> chain; routing and logging
+beyond that audience stay the deployment's (Mission-Unaware Resource
+Servers, Delegated Exchange; #1503, D620).<a href="#appendix-G-3.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.10">
+          <p id="appendix-G-3.10.1">Each redemption of a designation validates the originating credential
+and all applicable grant state backing it, which an exchange that
+establishes no new grant lineage keeps; a designation's expiry bounds
+its redemption, not the lifetime of the delegated token issued from
+it (Delegated Exchange, Designation, Authentication Claims and
+Lifetime; #1503, D620).<a href="#appendix-G-3.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.11">
+          <p id="appendix-G-3.11.1">Step 1 of the Submission Processing Order applies the size bounds and
+checks each evidence entry's structure, so a structurally invalid
+entry is refused with <code>invalid_request</code> before the authority proposal
+is validated, and Conformance Roles names that code for it (Submission
+Processing Order, Intent Submission Evidence, Conformance Roles;
+#1503, #1482, D620).<a href="#appendix-G-3.11.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.12">
+          <p id="appendix-G-3.12.1">The deployment's published approval-authentication floor, and the
+<code>mission</code> member of an active introspection response to a caller
+authorized for Mission data, are requirements rather than lowercase
+statements (Approver Authentication Strength, Mission State via Token
+Introspection; #1503, D620).<a href="#appendix-G-3.12.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.13">
+          <p id="appendix-G-3.13.1">A Mission is revoked by a party the deployment's policy authorizes, or
+by that policy itself; the Subject, the Approver, and an administrator
+can be authorized, but none is by role alone (Revocation, Mission
+Lifecycle; #1503, D620).<a href="#appendix-G-3.13.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.14">
+          <p id="appendix-G-3.14.1">Editorial, no requirement change: the Derivation definition, in
+Terminology and Issuance Gating, includes the redemption of a
+profile-defined grant, such as the Template profile's handoff grant;
+a grant binding resolves the Mission for the operations using it,
+and a profile-defined grant can instead resolve it through its
+authenticated <code>mission</code> reference (#1631, D751).<a href="#appendix-G-3.14.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-G-4">-01<a href="#appendix-G-4" class="pilcrow">¶</a></p>
