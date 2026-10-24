@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "f0293fb88f8590effaeaf0419963b56d6279c3f7",
-    "content_sha256": "9dd42b67971856832998a6674c405b3dd0e30fdd39164bd01dff5db74c84cea5"
+    "revision": "c4e30ae3cccc9ded9e2bbae0eeace6d5907994fe",
+    "content_sha256": "3b28af7601845938e5ed1a4e749e8968355129434cd405f5928317c02eca3b28"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -4132,6 +4132,190 @@
    "coverage": "todo",
    "tests": [],
    "notes": "D585 (#1448): ruled A. Tests for a governed narrowing refresh, a widening refusal and the supported exchange paths are #1448's implementation work."
+  },
+  {
+   "id": "core.mission-claim-reservation.conforming-issuance-only",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-claim-reservation",
+   "text": "An AS MUST NOT issue an access token carrying the `mission` claim unless the token's issuance or derivation conforms to one",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every path that issues an access token carrying `mission` attaches it only after that path's issuance gating and subset rule; a token request whose grant resolves to no Mission is issued no `mission` claim"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-every-grant-type",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "Where a resource is Mission-governed, its AS MUST NOT issue a token for that resource outside a Mission, on any grant type",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request with no qualifying Mission binding whose audience is a Mission-governed resource is refused on every grant type the AS serves (authorization code, refresh, token exchange, device code, the development mint route, and client credentials in a test configuration), while the same request for a resource that is not Mission-governed is issued an ordinary token without `mission`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-metadata-classifies",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "A resource is Mission-governed (a Mission-governed resource) when the deployment classifies it so, or when protected resource metadata the AS has authenticated ({{RFC9728}}) declares `mission_bound_authorization_required` as `true`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource the deployment does not classify, whose authenticated protected resource metadata declares `mission_bound_authorization_required` as `true`, is treated as Mission-governed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-metadata-cannot-weaken",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "Metadata that omits the member or sets it to `false` does not clear a deployment's classification, and a less restrictive local classification does not override metadata that declares the requirement",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a deployment-classified resource whose metadata omits the member or sets it to `false` stays Mission-governed, and a resource whose authenticated metadata declares the requirement stays Mission-governed whatever its local classification"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-invalid-target",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "The AS refuses a token request the first rule forbids with the `invalid_target` error code ({{Section 2 of RFC8707}}) once the request is otherwise processable",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the refusal is `invalid_target`; a request that also fails client authentication, syntax or grant validation gets that failure's error instead, an invalid or expired grant keeps its error, and a request under a grant bound to a Mission that is not `active` keeps the Issuance Gating refusal"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-default-audience",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "The rule applies to every audience the token would carry, including one the AS infers or applies by default when the request names no `resource`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token request that names no `resource`, whose default audience is a Mission-governed resource, is refused `invalid_target` when it has no qualifying Mission binding"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-any-audience",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "the AS refuses the request if any of them is Mission-governed, and does not issue the token for the others",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request with no qualifying Mission binding naming a Mission-governed and a non-governed audience is refused whole; no token is issued for the non-governed audience"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+  },
+  {
+   "id": "core.authority-proposal.governed-resource-refresh-before-rotation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "On a refresh, the AS decides this refusal before it consumes or rotates the refresh token",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a refused refresh does not consume or rotate the refresh token: the same refresh token still redeems afterward for an audience that is not Mission-governed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
   },
   {
    "id": "core.submission.proposal-checks-before-evidence",
@@ -11689,7 +11873,7 @@
    "id": "core.rs-enforcement.mission-issuer-equals-iss",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rs-enforcement",
-   "text": "It MUST require `mission.issuer` to equal the token's `iss`, unless a cross-domain profile it has adopted ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) explicitly establishes the permitted relationship between the two",
+   "text": "It MUST require `mission.issuer` to equal the token's `iss`, unless a Mission-binding profile it has adopted ({{mission-claim-reservation}}), such as {{I-D.draft-mcguinness-oauth-mission-cross-domain}}, explicitly establishes the permitted relationship between the two",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -11702,7 +11886,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a resource server that has adopted no cross-domain profile refuses a JWT Mission-bound token whose `mission.issuer` is not exactly its `iss` and accepts one whose `mission.issuer` is; one that has adopted a cross-domain profile accepts a differing `mission.issuer` only in the relationship that profile establishes and refuses any other",
+    "normative": "a resource server that has adopted no Mission-binding profile establishing another relationship refuses a JWT Mission-bound token whose `mission.issuer` is not exactly its `iss` and accepts one whose `mission.issuer` is; one that has adopted such a profile (here Cross-Domain) accepts a differing `mission.issuer` only in the relationship that profile establishes and refuses any other",
     "local": "mcp-payments adopts no cross-domain profile: it compares the verified `iss` with `mission.issuer` as exact strings on the at+jwt path (HTTP, mediated and gateway validators) and on an attenuation root, before any Mission lookup or decision. mcp-saas is the Cross-Domain destination: `iss` is the Resource AS and `mission.issuer` must be one of its configured `trustedMissionIssuers`, the originating issuers that Resource AS trusts"
    },
    "level": "endpoint",
@@ -11751,7 +11935,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed without a cross-domain profile at mcp-payments: a foreign issuer and the trusted issuer spelled with a trailing slash are each refused on every validator, the HTTP request never reaches the PEP although the loader holds a Mission under the foreign issuer, an at+jwt naming its own issuer is admitted, and an attenuation root naming another issuer is refused while the same root naming its own verifies. Over the in-process MCP channel, the same mismatch is refused at validation with no PEP evidence, though the channel's id-only loader would serve the Mission (live OpenFGA). Witnessed under the Cross-Domain profile at mcp-saas: a Resource AS token whose originating issuer the resource does not trust is refused with no journal effect, and the same token posts at the resource that trusts it. Proved by mutation: removing the at+jwt equality check fails the four mcp-payments token tests, and the HTTP test's no-decision and no-evidence assertions each fail alone; removing the attenuation root check fails the attenuation test; removing the `trustedMissionIssuers` check fails the SaaS test, its no-effect assertion alone included."
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed without a cross-domain profile at mcp-payments: a foreign issuer and the trusted issuer spelled with a trailing slash are each refused on every validator, the HTTP request never reaches the PEP although the loader holds a Mission under the foreign issuer, an at+jwt naming its own issuer is admitted, and an attenuation root naming another issuer is refused while the same root naming its own verifies. Over the in-process MCP channel, the same mismatch is refused at validation with no PEP evidence, though the channel's id-only loader would serve the Mission (live OpenFGA). Witnessed under the Cross-Domain profile at mcp-saas: a Resource AS token whose originating issuer the resource does not trust is refused with no journal effect, and the same token posts at the resource that trusts it. Proved by mutation: removing the at+jwt equality check fails the four mcp-payments token tests, and the HTTP test's no-decision and no-evidence assertions each fail alone; removing the attenuation root check fails the attenuation test; removing the `trustedMissionIssuers` check fails the SaaS test, its no-effect assertion alone included. #1531 (D741): re-quoted when the exception widened from a cross-domain profile to any adopted Mission-binding profile; the witnesses are unchanged (no profile at mcp-payments, Cross-Domain at mcp-saas)."
   },
   {
    "id": "core.rs-enforcement.mission-issuer-invalid-token",
@@ -11955,6 +12139,54 @@
     }
    ],
    "notes": "#825 acceptance item 7 (D402): introspection and the resource read the Mission access-token profile with one reader, readMissionAccessProfile in @mission/core (the typed claim set and its clock bounds, the `mission` claim's members, the authority through parseCredentialAuthority, a present `act` through the Actor Profile's validateActChain (#904, D428), and `cnf` structure through parseConfirmation), and run one negative-vector list, @mission/core/test-vectors. Each adds only its own rule: the resource requires the DPoP key it proves possession of; introspection requires `cnf` where the token's profile requires sender constraint and never proves possession, as Composite Active State says. The authority read only gates; the projection still reads the raw entries, delegation and capability bindings included. Sender constraint is required where a draft requires it of the issued token: a delegated token (the OAuth binding's Delegation section), a Child Mission's token (child-delegation, Attenuation Rules) and a dispatched template instance's token (the Template's Dispatch request and response, and its Dispatch Handoff), identified by the record's template basis. The Child Mission case stubs the kernel read; the dispatch case re-signs a real dispatched token. #250: a delegated token minted before a restart, whose issuance record the restart lost, is correctly signed under the key ring and introspects bare inactive while its Mission is active, where it introspected active before the restart. Proven by disabling the code it covers: reading a missing issuance record as the Mission's approval grant answers it active."
+  },
+  {
+   "id": "core.introspection.mission-member-conforming-path-only",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspection",
+   "text": "The AS discloses a `mission` member only for a token it has established was issued on a path that conforms to {{mission-claim-reservation}}",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspection"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "introspection",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a correctly signed token the AS has not established was issued on a conforming path (in the reference, one with no issuance record) introspects as the bare `{active: false}` with no `mission` member, including when its Mission is suspended or terminated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+  },
+  {
+   "id": "core.introspection.composite-otherwise-valid-conforming-path",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "composite-active",
+   "text": "An otherwise valid token is one that passes those checks and that the AS has established was issued on a conforming path",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspection"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an otherwise valid token issued on a conforming path whose Mission is `terminated` still introspects `active: false` with `mission.state` and `mission.termination`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
   },
   {
    "id": "core.introspection.active-response-carries-mission",
