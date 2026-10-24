@@ -325,7 +325,8 @@ the decision instant refuses `parameter_violation`.
 
 A change to an invoice or vendor record between the decision and a
 write's execution changes its version, which `parameter_digest` binds, so
-the write refuses `parameter_mismatch`. Refusals are `parameter_violation`
+the write refuses `parameter_mismatch` (`target_drift` on an operation the
+Evaluation-Context Binding below covers). Refusals are `parameter_violation`
 on the Mission bound and `out_of_authority` at the PEP's credential
 bound.
 
@@ -398,10 +399,38 @@ JCS canonicalization of that object (the anchor encoding family; computed
 with `@mission/core`). The digest binds decision to execution: the PEP
 recomputes it immediately before commit after conditionally re-reading the
 same record versions; any mismatch (record changed, parameter mutated) is
-a refusal with reason `parameter_mismatch`. For `send_remittance_email` to
+a refusal with reason `parameter_mismatch`, except on an operation the
+Evaluation-Context Binding below covers, where a changed record is
+`target_drift`. For `send_remittance_email` to
 a vendor whose record names its own remittance routing, the object also
 carries `recipients`: the sorted final recipients, so a routing or list
 change between decision and commit is a mismatch.
+
+## Evaluation-Context Binding (#773)
+
+The deployment claims Runtime's Evaluation-Context Binding at the verified
+property for `payments:payment.execute` (its `check_transfer`,
+`hold_transfer` and `execute_wire_transfer` crossings) and
+`payments:remittance.send`. The declaration, with each versioned
+descriptor and its document, is the Enforcement Scope Statement's
+`extensions.evaluation_context_binding`. Each descriptor names the
+invoice and vendor as the resolved targets, and its facts: the invoice
+revision, the vendor identity and revision, the amount and currency, and
+the payee account, plus the final recipient set for
+`payments:remittance.send`. Each fact names the parameter member it also
+occupies, since the parameter digest above keeps binding the same values.
+
+Every crossing of a covered operation captures its context from the
+payments store before the decision request (a capture that fails is
+refused `evaluation_context_unresolvable`) and re-resolves it at admission
+and immediately before release, on all three dispatch paths. A change
+confined to the declared facts is `target_drift`; a changed member the
+descriptor does not declare is `parameter_mismatch`; both digest pairs are
+recorded either way. The salt is per-epoch secret material held in memory
+under random version identifiers: a restart loses every binding, rotation
+retains earlier versions unless it invalidates them, and the PEP runs as
+one process. The parameter digest, the operation key, approvals and
+transaction tokens are unchanged.
 
 ## Targets
 
