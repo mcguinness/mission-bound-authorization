@@ -3,11 +3,13 @@
  *
  * The baseline MAS Join on the COMPOSED demo stack, end to end and with
  * nothing stubbed across the seam: the real authorization server mints an
- * ordinary DPoP-bound OAuth credential (a `scope`, the payments audience, no
- * `mission` claim), the client presents it over the MAS-governed HTTP MCP
- * channel with the propagated `Mission-Reference` field, and the resource
- * joins it to a Mission the kernel actually approved before permitting a read
- * against that Mission's own Authority Set.
+ * ordinary DPoP-bound OAuth credential (a `scope`, the join route's own
+ * audience, no `mission` claim), the client presents it over the MAS-governed
+ * HTTP MCP channel with the propagated `Mission-Reference` field, and the
+ * resource joins it to a Mission the kernel actually approved before
+ * permitting a read against that Mission's own Authority Set. The join route
+ * is its own resource, which is not Mission-governed (#1531, D741); the
+ * payments resource stays governed, as its metadata declares.
  *
  * This is the configured-route half of the feature: `config/mas-join.json`
  * (the loader), the channel's `masGoverned` validator, the PEP's `masJoin`
@@ -22,8 +24,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { validateMissionIntent } from "@mission/authorization-server";
-import { CANONICAL_RESOURCE, DERIVATION_POLICY, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
+import { isMissionGovernedResource, validateMissionIntent } from "@mission/authorization-server";
+import { CANONICAL_RESOURCE, DERIVATION_POLICY, DEV_SERVICE_TOKEN, GOVERNED_RESOURCES, MAS_JOIN, TOPOLOGY } from "@mission/demo-data";
 import { createHttpMediatedClient, type DpopKeys } from "@mission/mcp-payments";
 import { composeStack, type DemoStack } from "../src/stack.js";
 /** @spec runtime#idempotency (#917): each stack gets its own single-writer claim file. */
@@ -142,7 +144,34 @@ d("composed stack: the MAS-governed channel joins an ordinary credential (#557)"
     >;
     expect(claims.mission).toBeUndefined();
     expect(claims.scope).toBe("payments.read");
-    expect(claims.aud).toBe(CANONICAL_RESOURCE);
+    expect(claims.aud).toBe(MAS_JOIN.join_resource);
+  });
+
+  it("serves the join route as its own resource, not Mission-governed, while the payments resource stays governed (#1531, D741)", async () => {
+    const channel = stack.masGovernedChannel;
+    if (!channel) throw new Error("no MAS-governed channel");
+    const joinMetadata = (await (await fetch(new URL("/.well-known/oauth-protected-resource", channel.url))).json()) as Record<
+      string,
+      unknown
+    >;
+    expect(joinMetadata.resource).toBe(MAS_JOIN.join_resource);
+    expect(joinMetadata).not.toHaveProperty("mission_bound_authorization_required");
+    const payments = stack.server.protectedResourceMetadata();
+    expect(payments.resource).toBe(CANONICAL_RESOURCE);
+    expect(payments.mission_bound_authorization_required).toBe(true);
+    // The published statement accepts the join identifier as an alias of the
+    // payments boundary, from this AS only, for the at+jwt token profile.
+    const statement = payments.enforcement_scope_statement as {
+      enforcement_boundaries: { versions: { boundaries: { boundary: string; audience_aliases?: unknown[] }[] }[] };
+    };
+    for (const version of statement.enforcement_boundaries.versions) {
+      const declared = version.boundaries.find((b) => b.boundary === CANONICAL_RESOURCE);
+      expect(declared?.audience_aliases).toContainEqual({ issuer: stack.issuer, token_profile: "at+jwt", alias: MAS_JOIN.join_resource });
+    }
+    // The AS's own governed-resource policy agrees: payments is governed,
+    // the join resource is not.
+    expect(isMissionGovernedResource(GOVERNED_RESOURCES, CANONICAL_RESOURCE)).toBe(true);
+    expect(isMissionGovernedResource(GOVERNED_RESOURCES, MAS_JOIN.join_resource)).toBe(false);
   });
 
   it("permits a joined read end to end, with authority drawn from the referenced Mission", async () => {

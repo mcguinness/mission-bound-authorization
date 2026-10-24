@@ -539,6 +539,32 @@ thus a capability for deployments running the runtime enforcement
 profile ({{I-D.draft-mcguinness-mission-runtime}}); it is not available
 to a deployment that relies on token lifetime alone.
 
+# Mission-Binding Profile {#binding-profile}
+
+Every token in a Mission-bound attenuation chain carries the `mission`
+claim under this profile, which states the elements the issuance
+profile's Claim Reservation names for a path whose minter is not the
+Mission's issuer, here the holder that derives a child
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Claim Reservation"):
+
+1. **Parent chain.** The root, minted and signed by the Mission Issuer
+   with `iss` equal to `mission.issuer` ({{root}}), and each child's
+   `par_hash` link to its parent and signature under the key its
+   parent's `cnf` binds ({{attenuation}}).
+2. **Authority bound.** The root is bounded by the Mission's Authority
+   Set ({{root-mapping}}); each child is no broader than its parent
+   under the attenuation substrate's capability monotonicity, with its
+   `aud` and `exp` within its parent's ({{attenuation}}).
+3. **Mission state.** The Mission Issuer gates the root on Mission
+   state as it gates any Mission-bound token ({{root}}). A holder
+   mints a child with no state check; the consumer establishes that
+   the Mission is `active`, within the deployment's declared freshness
+   bound, on every presentation ({{kill-switch}}).
+4. **Consumer checks.** The chain verification of
+   {{mission-binding-check}} and the state check of {{kill-switch}}.
+   Chain verification alone does not satisfy this profile
+   ({{conformance}}).
+
 # Relationship to Other Delegation {#relationship-delegation}
 
 Offline attenuation sits beside two other narrowing mechanisms:
@@ -865,6 +891,11 @@ this document, {{request-discovery}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission-Binding Profile states the root, chain, authority bound,
+  state check, and consumer checks under which every token in a chain
+  carries the `mission` claim, as the issuance profile's Claim
+  Reservation requires. No requirement changed (#1531).
 
 - Deriving the Root from the Authority Set: every operation a mapped
   tool can perform at each root audience has an operation target

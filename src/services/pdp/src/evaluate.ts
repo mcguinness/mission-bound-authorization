@@ -336,9 +336,10 @@ export interface EvaluationRequest {
      * @spec authzen#context-action-phase — CONDITIONAL: REQUIRED when the
      * PEP's trusted Operation Profile identifies this operation as a phase of
      * a compound action. Typed `string` deliberately: an untrusted or
-     * mistyped value must be REJECTED here, not admitted by the type system,
-     * so `evaluateInner` validates it against the closed set. The PEP derives
-     * it from its own profile and never from an agent-supplied argument.
+     * mistyped value must be REFUSED, not admitted by the type system, so
+     * {@link evaluate} checks it against the closed set before evaluation
+     * (`phase_invalid`, #1629). The PEP derives it from its own profile and
+     * never from an agent-supplied argument.
      *
      * The request member communicates the phase being evaluated; the permit's
      * `conditions.action_phase` is the live binding, and Decision Evidence's
@@ -495,12 +496,14 @@ export interface Decision {
 
 /**
  * @spec authzen#pdp-request consistency check 11, authzen#context-operation-target
- * (#1276, D457): the Refusal Record `denial_reason` values a PDP refuses a
- * decision request with before evaluating it. A refusal is not a decision: it
- * carries no `evaluation_id` and no Decision Evidence, and never a PDP denial
- * reason such as `out_of_authority`.
+ * (#1276, D457), authzen#context-action-phase (#1629, D744): the Refusal
+ * Record `denial_reason` values a PDP refuses a decision request with before
+ * evaluating it. A refusal is not a decision: it carries no `evaluation_id`
+ * and no Decision Evidence, and never a PDP denial reason such as
+ * `out_of_authority`. `phase_invalid` names an unusable decision input, not an
+ * evaluated policy denial (@spec authzen#failure-condition-coverage).
  */
-export type PdpRefusalReason = "operation_target_invalid";
+export type PdpRefusalReason = "operation_target_invalid" | "phase_invalid";
 
 /**
  * Thrown by {@link evaluate} for a decision request the PDP refuses before
@@ -801,6 +804,16 @@ export interface EvaluateOptions {
    * renewal continues nothing.
    */
   durationLeases?: DurationLeaseDomain;
+  /**
+   * @spec authzen#context-action-phase (#1629, D744): the actions this PDP's
+   * own trusted operation declaration places at the phases of a compound
+   * action. A request for one that carries no `context.action_phase` is
+   * refused before evaluation as `phase_invalid`. A PDP-side binding, like
+   * `resourceContracts`: an enforcement component that could supply it could
+   * declare its own phaseless request acceptable. Absent, the PDP declares no
+   * phased action, and only an out-of-set phase is refused.
+   */
+  phasedActions?: ReadonlySet<string>;
 }
 
 /**
@@ -828,10 +841,21 @@ export interface EvaluateOptions {
  *
  * @spec metering#lease-renewal (#1440): so are the duration leases, for the
  * reason the claim domain is.
+ *
+ * @spec authzen#context-action-phase (#1629): so is the trusted operation
+ * declaration's phased actions, for the reason the contract declarations are.
  */
 export type DecisionOptions = Omit<
   EvaluateOptions,
-  "evidence" | "claims" | "requester" | "consumptionStatus" | "resourcePolicy" | "refusals" | "resourceContracts" | "durationLeases"
+  | "evidence"
+  | "claims"
+  | "requester"
+  | "consumptionStatus"
+  | "resourcePolicy"
+  | "refusals"
+  | "resourceContracts"
+  | "durationLeases"
+  | "phasedActions"
 >;
 
 /** What the claim step left for {@link evaluate} to finish. */
@@ -915,6 +939,28 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   if (!isOperationTarget(operationTarget)) {
     await recordPdpRefusal(opts.refusals, "operation_target_invalid", req);
     throw new DecisionRequestRefused("operation_target_invalid");
+  }
+  // @spec authzen#context-action-phase, authzen#failure-condition-coverage
+  // (#1629, D744): "The PDP MUST refuse, before evaluation, a request whose
+  // `action_phase` is outside this set, or is absent where its trusted
+  // operation declaration requires a phase". Checked after the operation
+  // target, so a request failing both is refused once, as
+  // `operation_target_invalid`. A phase the PDP cannot use is an unusable
+  // decision input, not an evaluated policy denial: it is recorded as a
+  // Refusal Record `phase_invalid`, with no decision, no evaluation_id and no
+  // Decision Evidence. The value is never coerced into the enum, and nothing
+  // downstream reads it except through `isActionPhase`. The trusted
+  // declaration is the PDP-side `phasedActions` binding, never a request
+  // member.
+  const actionPhase = (req as { context?: { action_phase?: unknown } } | undefined)?.context?.action_phase;
+  const actionName = (req as { action?: { name?: unknown } } | undefined)?.action?.name;
+  const phaseUnusable =
+    actionPhase !== undefined
+      ? !isActionPhase(actionPhase)
+      : typeof actionName === "string" && opts.phasedActions?.has(actionName) === true;
+  if (phaseUnusable) {
+    await recordPdpRefusal(opts.refusals, "phase_invalid", req);
+    throw new DecisionRequestRefused("phase_invalid");
   }
   // @spec authzen#evaluation-request-digest-input: digest the request as
   // submitted, on receipt, before evaluation applies any default or enrichment.
@@ -1041,8 +1087,8 @@ async function emitDecisionEvidence(
     // VALIDATED phase from the evaluation context, recorded on a permit and
     // on a denial alike. A denial has no permit condition to mirror, so the
     // validated request phase stands on its own; a malformed value never
-    // reaches this point (evaluateInner rejects it), and the guard here keeps
-    // an unvalidated string out of a signed record either way.
+    // reaches this point (evaluate refuses it before evaluation), and the
+    // guard here keeps an unvalidated string out of a signed record either way.
     ...(isActionPhase(req.context.action_phase) ? { action_phase: req.context.action_phase } : {}),
     ...(req.context.actor !== undefined ? { actor: req.context.actor } : {}),
     ...(req.context.credential !== undefined ? { credential: req.context.credential } : {}),
@@ -1158,26 +1204,37 @@ async function evaluateInner(
     if (authorityBound !== undefined) bound.authority_bound = authorityBound;
     return { decision: false, context: base({ denial_reason, reason: denial_reason }) };
   };
+  // @spec authzen#runtime-denial-classification `stale_state` (#1629, D744):
+  // "Where a fresh read or reconciliation is expected to resolve the
+  // condition, the PDP SHOULD mark the denial transient with `next_action:
+  // retry`; otherwise it does not recommend a retry." This PDP marks it
+  // transient for a freshness-bound violation (an observation, own read or
+  // signed status response that has aged past its bound), for state it is
+  // required to establish under `pdp` placement and cannot (no usable own
+  // read: its source may answer on the next read), and for a state-version
+  // mismatch where the request's version is behind the PDP's tracked version
+  // (the PEP missed a committed change a fresh read returns). It recommends no
+  // retry where re-sending cannot help: a malformed or self-inconsistent
+  // observation, a future-dated one, an assertion that does not verify, a
+  // version ahead of the PDP's, a missing observation the declared `pep`
+  // placement requires, or no declared placement at all. A Mission the PDP
+  // knows is not active is `mission_inactive`, never a transient stale_state.
+  const staleState = (resolvesOnFreshRead: boolean): Decision =>
+    resolvesOnFreshRead
+      ? { decision: false, context: base({ denial_reason: "stale_state", reason: "stale_state", next_action: "retry" }) }
+      : deny("stale_state");
 
-  // @spec authzen#context-action-phase — "The PDP MUST reject a value outside
-  // this set". A phase the PDP cannot place under any published compound-action
-  // rule is a request fault, and evaluating it as though a phase applied would
-  // broaden the declared scope, so it takes the same `out_of_authority`
-  // classification the undeclared-action-class fault already takes
-  // (@spec authzen#failure-condition-coverage: "or the request would broaden
-  // it"). The value is never coerced into the enum, and nothing downstream
-  // reads it except through `isActionPhase`.
-  if (req.context.action_phase !== undefined && !isActionPhase(req.context.action_phase)) {
-    return deny("out_of_authority");
-  }
+  // @spec authzen#context-action-phase (#1629): an out-of-set or missing
+  // required phase never reaches this point; `evaluate` refused it before
+  // evaluation as `phase_invalid`.
 
   // @spec authzen#context-audience-freshness (#1276, D457): `audience` is
   // REQUIRED and stays its own check. The operation target was validated
   // before evaluation (consistency check 11, in `evaluate`); a missing or
   // malformed audience is a request fault the PDP cannot place under the
   // PEP's declared scope, and the target never stands in for it, nor it for
-  // the target. It takes the request-fault classification an undeclared phase
-  // or class takes ("or the request would broaden it",
+  // the target. It takes the request-fault classification an undeclared
+  // class takes ("or the request would broaden it",
   // @spec authzen#failure-condition-coverage); check 11 does not cover it.
   if (typeof audience !== "string" || audience.length === 0) return deny("out_of_authority");
 
@@ -1225,7 +1282,7 @@ async function evaluateInner(
   const presented = req.context.mission_state_observation;
   const observation = presented === undefined ? undefined : parseStateObservation(presented);
   if (presented !== undefined) {
-    if (observation === undefined) return deny("stale_state");
+    if (observation === undefined) return staleState(false);
     // @spec authzen#context-audience-freshness, authzen#clock-skew:
     // `freshness_at` "can precede this value by no more than the published
     // maximum clock skew", and an issuance dated past the skew in the future
@@ -1235,7 +1292,7 @@ async function evaluateInner(
       (observation.freshnessAtMs < observation.issuedAtMs - skewToleranceMs ||
         observation.issuedAtMs - now().getTime() > skewToleranceMs)
     ) {
-      return deny("stale_state");
+      return staleState(false);
     }
     // @spec authzen#pdp-request rule 1: the PEP-supplied state is "exactly
     // `active`; every other value, recognized or not, is non-active". Step 2
@@ -1247,7 +1304,9 @@ async function evaluateInner(
     // against the PDP's own tracked Mission state version (the loaded view's
     // `version`), never against `policy_view_id`, and a mismatch is
     // staleness: one side has missed a committed change.
-    if (observation.version !== undefined && observation.version !== view.version) return deny("stale_state");
+    if (observation.version !== undefined && observation.version !== view.version) {
+      return staleState(observation.version < view.version);
+    }
     // @spec authzen#context-audience-freshness `assertion`: where the PEP
     // carries the signed Mission Status Response, the PDP verifies it against
     // the declared source's keys rather than trusting the unsigned snapshot.
@@ -1261,14 +1320,14 @@ async function evaluateInner(
         now(),
         skewToleranceMs / 1000,
       );
-      if (relianceBoundMs === undefined) return deny("stale_state");
+      if (relianceBoundMs === undefined) return staleState(false);
       // #1049 review P2-a: the signed reliance bound binds whether or not the
       // observation repeats `mission.fresh_until` as `mission_status_expires_at`
       // (OPTIONAL in `fresh` mode). @spec status#mission-status-caching: it
       // ends at the earliest of `fresh_until`, `exp` and, for `active`, the
       // Mission's `expires_at`, with no skew allowance. Already passed, the
       // signed state is no longer relied on; otherwise it caps the permit below.
-      if (relianceBoundMs <= now().getTime()) return deny("stale_state");
+      if (relianceBoundMs <= now().getTime()) return staleState(true);
       signedFreshUntilMs = relianceBoundMs;
     }
   }
@@ -1317,12 +1376,12 @@ async function evaluateInner(
   // with no class exception, `audit_only` included: no freshness window is
   // not the same as no state.
   const pdpPlaced = opts.stateSourcePlacement === "pdp";
-  if (opts.stateSourcePlacement === "pep" && observation === undefined) return deny("stale_state");
-  if (pdpPlaced && rfc3339Ms(opts.stateObservedAt) === undefined) return deny("stale_state");
+  if (opts.stateSourcePlacement === "pep" && observation === undefined) return staleState(false);
+  if (pdpPlaced && rfc3339Ms(opts.stateObservedAt) === undefined) return staleState(true);
   // #818: the own read's signed valid-through caps the permit like a
   // verified assertion's (own-read-ceiling.ts).
   const ownCeiling = pdpPlaced ? ownReadCeiling(opts.stateFreshUntil, now().getTime()) : undefined;
-  if (ownCeiling === "passed") return deny("stale_state");
+  if (ownCeiling === "passed") return staleState(true);
   if (ownCeiling !== undefined) signedFreshUntilMs = Math.min(signedFreshUntilMs ?? ownCeiling, ownCeiling);
   if (enforceableWindowMs !== undefined) {
     // @spec authzen#context-audience-freshness, runtime#state-freshness: the
@@ -1348,14 +1407,11 @@ async function evaluateInner(
       // runtime#state-freshness, "cannot establish ... within the staleness
       // bound"), never permits on an unverifiable input. A malformed
       // PEP-supplied observation was refused at step 2a.
-      if (
-        !Number.isFinite(observedAtMs) ||
-        (!pdpPlaced && opts.stateSourcePlacement !== "pep") ||
-        ageMs < -skewToleranceMs ||
-        ageMs > enforceableWindowMs
-      ) {
-        return deny("stale_state");
+      if (!Number.isFinite(observedAtMs) || (!pdpPlaced && opts.stateSourcePlacement !== "pep") || ageMs < -skewToleranceMs) {
+        return staleState(false);
       }
+      // The freshness-bound violation itself: a fresh read is expected to clear it.
+      if (ageMs > enforceableWindowMs) return staleState(true);
       // @spec runtime#state-freshness — the observation this Decision is
       // ACTUALLY taken against, recorded only now that it passed every gate
       // above (parseable, inside the class window, from the declared source).
@@ -1369,7 +1425,7 @@ async function evaluateInner(
     } else if (actionClass !== undefined && HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass)) {
       // Reached only with no declared placement: both declared placements
       // refused a missing state input above.
-      return deny("stale_state");
+      return staleState(false);
     }
   }
 
@@ -2228,7 +2284,11 @@ async function evaluateInner(
   if (deadline.kind === "elapsed") {
     // A window that closes at the decision instant leaves no time to rely on
     // the permit: the window refuses it, not the state view.
-    return deny(deadline.source.endsWith("time_window_not_after") ? "parameter_violation" : "stale_state");
+    // A state ceiling (the accepted observation's valid-through, or a signed
+    // status response's reliance bound) already reached is a freshness-bound
+    // violation a fresh read clears; any other ceiling recommends no retry.
+    if (deadline.source.endsWith("time_window_not_after")) return deny("parameter_violation");
+    return staleState(deadline.source === "state_view" || deadline.source === "signed_state_fresh_until");
   }
   const validUntil = deadline.validUntil;
   // @spec runtime#classification: the high-consequence classes are

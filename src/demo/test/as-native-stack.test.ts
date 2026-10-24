@@ -42,7 +42,7 @@ import {
 } from "@mission/authorization-server";
 import { calculateJwkThumbprint, decodeJwt, decodeProtectedHeader, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, type MockInstance, vi } from "vitest";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, MAS_JOIN, TOPOLOGY } from "@mission/demo-data";
 import {
   canonicalHtu,
   createHttpMcpChannel,
@@ -926,7 +926,10 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       const ordinary = ((await minted.json()) as { access_token: string }).access_token;
       const claims = decodeJwt(ordinary);
       expect(claims.mission).toBeUndefined();
-      expect(claims.aud).toBe(CANONICAL_RESOURCE);
+      // The join route's own audience (#1531, D741): the payments resource is
+      // Mission-governed, so the AS mints the ordinary credential only for the
+      // join resource, which this target neither serves nor aliases.
+      expect(claims.aud).toBe(MAS_JOIN.join_resource);
       // The baseline Join's own request shape: the credential, a valid proof
       // under its key, and the propagated reference naming a live Mission.
       const res = await post({

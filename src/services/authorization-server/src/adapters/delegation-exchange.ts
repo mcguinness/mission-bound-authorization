@@ -21,7 +21,6 @@
  */
 
 import { canonicalize, delegatedRoutingRefusal, entryOverlapsResource, type JsonValue } from "@mission/core";
-import { createLocalJWKSet, jwtVerify } from "jose";
 import type { KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
 import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
@@ -36,6 +35,7 @@ import {
   presentedTokenAuthority,
   TOKEN_EXCHANGE_GRANT_TYPE,
   txError,
+  verifyAccessTokenSubject,
   verifySubjectPossession,
   verifyTokenEndpointDpop,
 } from "./continuation-grant.js";
@@ -443,17 +443,14 @@ export async function handleDelegatedExchange(
   }
 
   // 2. The designation, by its own verifier: never a possession check, since
-  // a designation carries no key and its holder is the requesting client.
-  let claims: Record<string, unknown>;
-  try {
-    const { payload } = await jwtVerify(params.subject_token, createLocalJWKSet(opts.publicJwks as never), {
-      issuer: opts.issuer,
-    });
-    claims = payload as Record<string, unknown>;
-  } catch {
-    txError(ctx, 400, "invalid_request", "subject_token verification failed");
+  // a designation carries no key and its holder is the requesting client. A
+  // designation is a Mission access token of this AS (#831).
+  const designationToken = await verifyAccessTokenSubject(opts, params.subject_token);
+  if (!designationToken.ok) {
+    txError(ctx, 400, "invalid_request", designationToken.description);
     return;
   }
+  const claims = designationToken.claims;
   const missionId = (claims.mission as { id?: unknown } | undefined)?.id;
   const issuance = typeof missionId === "string" ? accountingFor(opts, claims, missionId) : undefined;
   const mayAct = claims.may_act as { sub?: unknown } | undefined;
