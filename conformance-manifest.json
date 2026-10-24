@@ -4149,12 +4149,44 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every path that issues an access token carrying `mission` attaches it only after that path's issuance gating and subset rule; a token request whose grant resolves to no Mission is issued no `mission` claim"
+    "normative": "an access token carries `mission` only where its path's issuance gating admitted it: a code under a grant bound to a suspended Mission is issued no token; and a token request whose grant resolves to no Mission (an ordinary authorization code and its refresh, client credentials in a test configuration) and the development mint route are issued an access token without the `mission` claim",
+    "local": "The reference attaches `mission` only in `extraTokenClaims`, after the Mission gate, and returns no claim where the grant resolves no Mission. The other Mission-binding paths' gating and subset rule are the Issuance Gating and Subset rows and each companion's."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a code under a grant bound to a suspended Mission keeps the Issuance Gating refusal (invalid_grant), never invalid_target, for a governed resource",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > authorization code: an ordinary code naming a governed resource is refused invalid_target, and one naming an ungoverned resource redeems to an ordinary token with no mission claim",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > refresh: an ordinary refresh naming a governed resource the refresh token carries is refused invalid_target, and the same refresh token redeems for an ungoverned resource",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > client credentials (test configuration): a governed resource is refused invalid_target, and an ungoverned one is issued a token with no mission claim",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > the development mint route never mints for a governed resource, and mints an ordinary token where its audience is not governed",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): attaching a claim on the no-Mission branch of extraTokenClaims failed the ordinary-token witnesses; skipping the save-time Mission gate failed the suspended-Mission witness."
   },
   {
    "id": "core.authority-proposal.governed-resource-every-grant-type",
@@ -4172,12 +4204,44 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a token request with no qualifying Mission binding whose audience is a Mission-governed resource is refused on every grant type the AS serves (authorization code, refresh, token exchange, device code, the development mint route, and client credentials in a test configuration), while the same request for a resource that is not Mission-governed is issued an ordinary token without `mission`"
+    "normative": "a token request with no qualifying Mission binding whose audience is a Mission-governed resource is refused `invalid_target` on each grant type the reference serves an ordinary grant on (authorization code, refresh, and client credentials in a test configuration) and on the development mint route, while the same request for a resource that is not Mission-governed is issued an ordinary token without `mission`; a token exchange presenting an ordinary access token as its subject is refused by the exchange's own subject validation, so no exchange issues a token outside a Mission",
+    "local": "The gate runs in getResourceServerInfo on the token route (authorization code, refresh, device code and client credentials) and in rotateRefreshToken before consumption. The device authorization endpoint accepts only a Mission submission, so the device_code grant has no ordinary grant to witness. client_credentials is enabled only by the test-only build option `testClientCredentials`."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > authorization code: an ordinary code naming a governed resource is refused invalid_target, and one naming an ungoverned resource redeems to an ordinary token with no mission claim",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > client credentials (test configuration): a governed resource is refused invalid_target, and an ungoverned one is issued a token with no mission claim",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > refresh: an ordinary refresh naming a governed resource the refresh token carries is refused invalid_target, and the same refresh token redeems for an ungoverned resource",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > the development mint route never mints for a governed resource, and mints an ordinary token where its audience is not governed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > token exchange: an ordinary access token presented as the async-delegation exchange's subject token for a governed resource is refused by the exchange's subject validation, and no token is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the getResourceServerInfo gate failed the code and client credentials witnesses; removing the refresh pre-check failed the refresh witness (the refused refresh spent the rotating token); removing the dev route check failed the dev route witness."
   },
   {
    "id": "core.authority-proposal.governed-resource-metadata-classifies",
@@ -4195,12 +4259,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a resource the deployment does not classify, whose authenticated protected resource metadata declares `mission_bound_authorization_required` as `true`, is treated as Mission-governed"
+    "normative": "a resource the deployment does not classify, whose authenticated protected resource metadata declares `mission_bound_authorization_required` as `true`, is treated as Mission-governed: its token request with no qualifying Mission binding is refused `invalid_target`",
+    "local": "The reference's authenticated metadata is configured (`config/governed-resources.json`, `authenticated_metadata`); the AS fetches no RFC 9728 document."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "authenticated metadata classifies a resource, and neither source weakens the other (@spec mission#authority-proposal, #1531) > a resource the deployment does not classify, whose authenticated metadata declares mission_bound_authorization_required true, is refused like a classified one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): ignoring the metadata source failed the witness."
   },
   {
    "id": "core.authority-proposal.governed-resource-metadata-cannot-weaken",
@@ -4218,12 +4290,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a deployment-classified resource whose metadata omits the member or sets it to `false` stays Mission-governed, and a resource whose authenticated metadata declares the requirement stays Mission-governed whatever its local classification"
+    "normative": "a deployment-classified resource whose metadata omits the member or sets it to `false` stays Mission-governed, and a resource whose authenticated metadata declares the requirement stays Mission-governed whatever its local classification",
+    "local": "The two sources are joined by OR (adapters/governed-resources.ts)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "authenticated metadata classifies a resource, and neither source weakens the other (@spec mission#authority-proposal, #1531) > a less restrictive local classification does not override metadata declaring the requirement",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "authenticated metadata classifies a resource, and neither source weakens the other (@spec mission#authority-proposal, #1531) > metadata setting the member false, or omitting it, does not clear the deployment's classification; false metadata on an unclassified resource leaves it ungoverned",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): letting a local classification decide where one exists failed the `not_governed` witness; letting a metadata record decide where one exists failed the `false` and omitted-member witnesses."
   },
   {
    "id": "core.authority-proposal.governed-resource-invalid-target",
@@ -4241,12 +4327,56 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the refusal is `invalid_target`; a request that also fails client authentication, syntax or grant validation gets that failure's error instead, an invalid or expired grant keeps its error, and a request under a grant bound to a Mission that is not `active` keeps the Issuance Gating refusal"
+    "normative": "the refusal is `invalid_target`; a request that also fails client authentication, syntax or grant validation gets that failure's error instead, an invalid or expired grant keeps its error, and a request under a grant bound to a Mission that is not `active` keeps the Issuance Gating refusal",
+    "local": "The gate runs only where oidc-provider has already authenticated the client, parsed the request and validated the grant, so those three precedence clauses are witnessed by ordering, with no reordering mutation available. A grant the AS recorded as Mission-bound passes the gate whatever its Mission's state."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > authorization code: an ordinary code naming a governed resource is refused invalid_target, and one naming an ungoverned resource redeems to an ordinary token with no mission claim",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > client credentials (test configuration): a governed resource is refused invalid_target, and an ungoverned one is issued a token with no mission claim",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a client authentication failure keeps invalid_client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a syntax failure keeps invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > an invalid or expired grant keeps invalid_grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a code under a grant bound to a suspended Mission keeps the Issuance Gating refusal (invalid_grant), never invalid_target, for a governed resource",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a refresh under a grant bound to a Mission is issued for a governed resource while the Mission is active, and once it is suspended keeps the Issuance Gating refusal (invalid_grant), never invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the gate failed the invalid_target witnesses; removing the Mission-binding guard turned the suspended-Mission code refusal into invalid_target; dropping the binding from the refresh pre-check refused the active Mission's refresh invalid_target. On a refresh the suspended Mission's refusal precedes the gate (preCheckRefreshMissionState runs first). The client-authentication, syntax and invalid-or-expired-grant clauses are ordering witnesses."
   },
   {
    "id": "core.authority-proposal.governed-resource-default-audience",
@@ -4264,12 +4394,32 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a token request that names no `resource`, whose default audience is a Mission-governed resource, is refused `invalid_target` when it has no qualifying Mission binding"
+    "normative": "a token request that names no `resource`, with no qualifying Mission binding, is refused `invalid_target` when the audience the AS infers or applies by default is Mission-governed: the resource an authorization code or a refresh token carries, and the AS's default resource (its issuer) on client credentials",
+    "local": "The reference's defaultResource is the issuer; the test configuration classifies it governed."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > an authorization code naming no resource, whose granted resource is governed, is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > a refresh naming no resource, whose refresh token carries a governed resource, is refused before the refresh token is consumed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > client credentials naming no resource is refused when the AS's default audience (its issuer) is governed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): gating only an explicit `resource` parameter failed the inferred-code witness; ignoring the refresh token's own resource failed the inferred-refresh witness."
   },
   {
    "id": "core.authority-proposal.governed-resource-any-audience",
@@ -4287,12 +4437,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request with no qualifying Mission binding naming a Mission-governed and a non-governed audience is refused whole; no token is issued for the non-governed audience"
+    "normative": "a request with no qualifying Mission binding naming a Mission-governed and a non-governed audience is refused whole; no token is issued for the non-governed audience",
+    "local": "oidc-provider issues one token for one resource at the token endpoint and itself refuses more than one resolved resource (lib/helpers/resolve_resource.js, lib/actions/grants/client_credentials.js), so no multi-audience token exists to narrow; the gate refuses first, with its own description, before the provider's single-resource check and, on a refresh, before consumption."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > a client credentials request naming an ungoverned and a governed resource is refused whole with the governed-resource refusal; no token is issued for the ungoverned one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > a refresh naming an ungoverned and a governed resource is refused whole before consumption, and the refresh token still redeems for the ungoverned one alone",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): checking only the first named audience failed the two-audience refresh witness."
   },
   {
    "id": "core.authority-proposal.governed-resource-refresh-before-rotation",
@@ -4310,12 +4474,32 @@
    "surface": "token-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a refused refresh does not consume or rotate the refresh token: the same refresh token still redeems afterward for an audience that is not Mission-governed"
+    "normative": "a refused refresh does not consume or rotate the refresh token: the same refresh token still redeems afterward for an audience that is not Mission-governed",
+    "local": "The witnesses use a public client, whose refresh token oidc-provider rotates on every refresh, so a refusal decided after consumption would spend it."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "a Mission-governed resource gets no token outside a Mission, on every grant type (@spec mission#authority-proposal, #1531) > refresh: an ordinary refresh naming a governed resource the refresh token carries is refused invalid_target, and the same refresh token redeems for an ungoverned resource",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > a refresh naming no resource, whose refresh token carries a governed resource, is refused before the refresh token is consumed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
+     "name": "every audience the token would carry, named or inferred (@spec mission#authority-proposal, #1531) > a refresh naming an ungoverned and a governed resource is refused whole before consumption, and the refresh token still redeems for the ungoverned one alone",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the rotateRefreshToken pre-check (leaving the post-consumption gate) failed all three: the retry got invalid_grant."
   },
   {
    "id": "core.submission.proposal-checks-before-evidence",
@@ -12157,12 +12341,26 @@
    "surface": "introspection",
    "assertion": "privacy",
    "observation": {
-    "normative": "a correctly signed token the AS has not established was issued on a conforming path (in the reference, one with no issuance record) introspects as the bare `{active: false}` with no `mission` member, including when its Mission is suspended or terminated"
+    "normative": "a correctly signed token the AS has not established was issued on a conforming path (in the reference, one with no issuance record) introspects as the bare `{active: false}` with no `mission` member, including when its Mission is suspended or terminated",
+    "local": "The reference establishes a conforming path by its own issuance record, checked before the non-active branch; grant liveness stays after it."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > @spec mission#introspection (#1531, D741): a correctly signed token with no issuance record is bare active:false whatever its Mission's state, while the token the AS issued on its own path still reports the Mission's state",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "strict token resolution: bare active:false, no Mission or token detail > a correctly signed token whose jti has no issuance record is never returned active",
+     "level": "endpoint",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): restoring the issuance-record check after the non-active branch failed the suspended and terminated witnesses."
   },
   {
    "id": "core.introspection.composite-otherwise-valid-conforming-path",
@@ -12181,12 +12379,26 @@
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an otherwise valid token issued on a conforming path whose Mission is `terminated` still introspects `active: false` with `mission.state` and `mission.termination`"
+    "normative": "an otherwise valid token issued on a conforming path whose Mission is `terminated` still introspects `active: false` with `mission.state` and `mission.termination`",
+    "local": "The issuance-record check precedes the non-active branch; the grant-liveness check stays after it, so a terminated Mission whose grant was destroyed still reports its state."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1531 (D733, D741). todo: the reference implementation PR stacked on this one implements and witnesses it."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > @spec mission#introspection (#1531, D741): a correctly signed token with no issuance record is bare active:false whatever its Mission's state, while the token the AS issued on its own path still reports the Mission's state",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "composite non-active: active:false WITH mission.state (@spec mission#composite-active) > revoked Mission + valid token: only { active, mission }, state terminated with termination revoked, NO top-level or mission authorization_details",
+     "level": "endpoint",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): moving the grant-liveness check before the non-active branch failed the witness whose terminated Mission's grant is destroyed."
   },
   {
    "id": "core.introspection.active-response-carries-mission",
@@ -13230,7 +13442,7 @@
     "normative": "introspecting a designation returns active: false with no mission member, to every caller"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
@@ -13240,12 +13452,18 @@
     },
     {
      "file": "src/services/authorization-server/test/delegation-accounting-restart.test.ts",
-     "name": "delegation accounting across a restart on the same kernel file and key ring (@spec mission#delegation-constraints, #869, #250) > keeps a designation minted before the restart bare inactive, with no Mission data, once its Mission is not active, to a resource server it is not an audience of: audience separation",
+     "name": "delegation accounting across a restart on the same kernel file and key ring (@spec mission#delegation-constraints, #869, #250) > keeps a designation minted before the restart bare inactive, with no Mission data, once its Mission is not active, to a resource server it is not an audience of; the origin token minted before the restart, which that resource server is an audience of, has no issuance record and is bare inactive too (#1531, D741)",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-accounting-restart.test.ts",
+     "name": "delegation accounting across a restart on the same kernel file and key ring (@spec mission#delegation-constraints, #869, #250) > a caller that accepts the designated client's identifier is answered bare inactive for a designation minted before the restart, whose issuance record is gone, once its Mission is not active (#1531, D741)",
      "level": "endpoint",
      "surface": "introspection"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers: without the check, a resource server that starts accepting the designated client's identifier during the designation's life is told it is active. Partial (#250): the designation check reads the token issuance index, which is per boot, so it does not survive a restart. On the file-backed kernel with a key ring, a designation minted before the restart stays bare inactive to a resource server it is not an audience of, through the missing issuance record while its Mission is active and through caller visibility (audience separation) once it is not; disabling the caller-visibility check fails that witness. Not met across a restart: once the Mission is not active, a caller that accepts the designated client's identifier, which audience separation forbids, receives the Mission member (delegation-accounting-restart.test.ts, the residual test, pinned; before the restart the same request answers bare inactive). Keeping the accounting with the provider's tokens, or a designation marker the AS can read from the token itself, would close it."
+   "notes": "#869 (D449): proven by disabling the code it covers: without the check, a resource server that starts accepting the designated client's identifier during the designation's life is told it is active. Across a restart (#250) the designation check's record, the per-boot token issuance index, is gone; the introspection issuance-record check (#1531, D741), which precedes the non-active branch, answers instead: on the file-backed kernel with a key ring, a designation minted before the restart is bare inactive once its Mission is not active, to a resource server it is not an audience of and to a caller that accepts the designated client's identifier. Proved by restoring the issuance-record check after the non-active branch: the second restart witness then received the Mission member, the residual this row was partial for until #1531."
   },
   {
    "id": "core.introspection.opaque-requires-introspection",
