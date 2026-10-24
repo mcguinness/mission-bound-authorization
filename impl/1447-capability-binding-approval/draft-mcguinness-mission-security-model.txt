@@ -1052,12 +1052,13 @@ Table of Contents
 
    Mission bypass through source authority held outside any Mission:  Addressed
       by the downgrade-by-omission rules: no token issued outside a
-      Mission for a resource designated Mission-governed, except under
-      documented policy exceptions; its resource server rejecting a
-      token without the mission claim; a client performing a Mission's
-      task presenting no ordinary credential for it; and mandatory
-      mediation where the runtime layer holds custody of the client's
-      credentials ([I-D.draft-mcguinness-oauth-mission],
+      Mission, on any grant type, for a Mission-governed resource,
+      whether the deployment classifies it or its authenticated metadata
+      declares the requirement; its resource server rejecting a token
+      without the mission claim; a client performing a Mission's task
+      presenting no ordinary credential for it; and mandatory mediation
+      where the runtime layer holds custody of the client's credentials
+      ([I-D.draft-mcguinness-oauth-mission],
       [I-D.draft-mcguinness-mission-runtime]).  Residual: a workload's
       provisioned authority exists beside any Mission that draws on it,
       and Mission state does not revoke a grant held outside any
@@ -1836,6 +1837,12 @@ Appendix A.  OWASP Agentic Threat Coverage
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Mission bypass through source authority held outside any Mission
+      follows the OAuth binding's governed rule: no token outside a
+      Mission on any grant type for a Mission-governed resource,
+      classified by the deployment or by its authenticated metadata,
+      with no open-ended exception (#1531).
 
    *  Prose-member references follow the OAuth binding, which removed
       success_criteria: the inert-input assumption names task_bounds,
