@@ -3421,17 +3421,21 @@ describe("a requested family set the projection cannot issue whole is refused, n
 
   it("each vector is refused invalid_authorization_details, creating no family and counting nothing; the whole request still creates the family", async () => {
     const { missionId, baseAccessToken } = await issueBaseMission();
-    const cases = [
+    const WHOLE = "requested authorization_details cannot be issued whole";
+    const cases: Array<[Record<string, unknown>, string]> = [
       // A capability_sources binding the Mission does not record for the action.
-      { ...entryOf(["payments:remittance.send"]), capability_sources: [{ action: "payments:remittance.send" }] },
+      [{ ...entryOf(["payments:remittance.send"]), capability_sources: [{ action: "payments:remittance.send" }] }, WHOLE],
       // A max_amount the intake schema admits that is not a decimal. Here the
       // subset check against the presented token already refuses it (the
       // comparison fails closed), before any projection.
-      entryOf(["payments:remittance.send"], { ...LIMITS, max_amount: { amount: "abc", currency: "USD" } }),
+      [
+        entryOf(["payments:remittance.send"], { ...LIMITS, max_amount: { amount: "abc", currency: "USD" } }),
+        "requested authorization_details exceed the presented token's authority",
+      ],
       // An empty vendor list under the vendors-constrained grant.
-      entryOf(["payments:remittance.send"], { ...LIMITS, vendors: [] }),
+      [entryOf(["payments:remittance.send"], { ...LIMITS, vendors: [] }), WHOLE],
     ];
-    for (const poisoned of cases) {
+    for (const [poisoned, description] of cases) {
       // The handle request is itself a counted derivation, so it is taken first.
       const handle = await delegationHandle(baseAccessToken);
       const countBefore = as.kernel.get(missionId)?.derivation_count;
@@ -3439,16 +3443,29 @@ describe("a requested family set the projection cannot issue whole is refused, n
         rawSubject: true,
         authorizationDetails: [entryOf(["payments:invoice.read"]), poisoned],
       });
-      const body = (await res.json()) as { error?: string; access_token?: string; refresh_token?: string };
+      const body = (await res.json()) as {
+        error?: string;
+        error_description?: string;
+        access_token?: string;
+        refresh_token?: string;
+      };
       expect(res.status, JSON.stringify({ poisoned, body })).toBe(400);
       expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toBe(description);
       expect(body.access_token).toBeUndefined();
       expect(body.refresh_token).toBeUndefined();
       expect(as.delegationFamilyStore.familiesForMission(missionId)).toEqual([]);
       expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
     }
-    const whole = await asyncDelegate(baseAccessToken, { authorizationDetails: [entryOf(["payments:invoice.read"]), entryOf(["payments:remittance.send"])] });
-    expect(whole.status, JSON.stringify(await whole.clone().json())).toBe(200);
+    const whole = await asyncDelegate(baseAccessToken, {
+      authorizationDetails: [entryOf(["payments:invoice.read"]), entryOf(["payments:remittance.send"])],
+    });
+    const wholeBody = (await whole.json()) as { authorization_details?: Array<{ actions: string[] }> };
+    expect(whole.status, JSON.stringify(wholeBody)).toBe(200);
+    expect((wholeBody.authorization_details ?? []).flatMap((e) => e.actions).sort()).toEqual([
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
   });
 });
 

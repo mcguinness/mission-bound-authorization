@@ -776,11 +776,15 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
       const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
       expect(res.status, JSON.stringify({ poisoned, body })).toBe(400);
       expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toBe("requested authorization_details cannot be issued whole");
       expect(body.access_token).toBeUndefined();
     }
     const ok = await handoff(instance.token, { authorization_details: JSON.stringify([kept, second]) });
-    const okb = (await ok.json()) as { access_token?: string };
+    const okb = (await ok.json()) as { access_token: string };
     expect(ok.status, JSON.stringify(okb)).toBe(200);
+    expect(actionsOf(decodeJwt(okb.access_token).authorization_details).sort()).toEqual(
+      [...first.actions.slice(0, 2)].sort(),
+    );
   });
 });
 

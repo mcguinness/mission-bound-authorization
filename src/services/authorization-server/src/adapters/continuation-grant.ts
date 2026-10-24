@@ -1306,7 +1306,7 @@ export async function handleAsyncDelegationExchange(
     // comparison sets `capability_sources` aside, as the checks above do: an
     // issued entry carries the Mission's bindings where the request names none.
     if (!isSubsetSetIgnoringCapabilitySources(requestedSubset, confinedSubset)) {
-      txError(ctx, 400, "invalid_authorization_details", "requested authorization_details cannot be issued whole within the Mission authority");
+      txError(ctx, 400, "invalid_authorization_details", "requested authorization_details cannot be issued whole");
       return;
     }
   }
