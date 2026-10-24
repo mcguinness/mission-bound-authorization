@@ -65092,7 +65092,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "for a client join (the assertion's `join` claim carries no `depth`), a reported `delegate_depth` other than 0 is denied `mission_binding_failed`, and a reported 0 permits",
+    "normative": "for a client join (the assertion's `join` claim carries no `depth`), a reported `delegate_depth` other than 0 is denied `mission_binding_failed`, and a reported 0 passes this comparison; other authorization checks still apply",
     "local": "the reference PDP (services/pdp/src/evaluate.ts step 4b) compares a reported delegate_depth with join.depth for a delegate and with 0 for a client; the reference PEP's actor records give the Mission's own client depth 0"
    },
    "level": "unit",
@@ -65105,7 +65105,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1592 (D681, restated in D701): the client-join comparison, moved out of mas.join-assertion.depth-disagreement-denies's local observation. Witnessed by the cited test's client cases: a client join reporting depth 1 is denied mission_binding_failed, and one reporting 0 permits. Proved by two defects, each failing the test alone: comparing a client join against the reported value itself (the comparison skipped), and against no depth (a client join read as having none)."
+   "notes": "#1592 (D681, restated in D701): the client-join comparison, moved out of mas.join-assertion.depth-disagreement-denies's local observation. Witnessed by the cited test's client cases: a client join reporting depth 1 is denied mission_binding_failed, and one reporting 0 passes this comparison (the test request is otherwise authorized, so it permits). Proved by two defects, each failing the test alone: comparing a client join against the reported value itself (the comparison skipped), and against no depth (a client join read as having none)."
   },
   {
    "id": "mas.join-assertion.one-confirmation-member",
