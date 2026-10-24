@@ -1329,21 +1329,23 @@ export interface ExecutionAttempt {
   /**
    * Re-observe this operation's effective parameter digest from CURRENT
    * authoritative state, at the moment of the disposition. `undefined` means
-   * the operation binds no parameters, or its target can no longer be
-   * resolved; it is never a licence to repeat the authorized digest, which
-   * would assert an observation that was not made.
+   * the operation binds no parameters, or its effective parameters can no
+   * longer be established (its target or routing no longer resolves); the
+   * record then omits the effective digest, and this is never a licence to
+   * repeat the authorized digest, which would assert an observation that was
+   * not made.
    */
   observeEffectiveDigest: () => string | undefined;
 }
 
 /**
- * The result of one post-permit disposition. `recorded: false` carries the
- * reason no valid record could be emitted: the disposition still refuses the
- * action, and the gap is an open defect rather than a fabricated record.
+ * The result of one post-permit disposition. `recorded: false` means the
+ * record could not be emitted after one retry: the disposition still refuses
+ * the action, and the gap is reported rather than papered over.
  */
 export type SuppressOutcome =
   | { recorded: true }
-  | { recorded: false; gap: "effective_parameter_digest_unobservable" | "emission_failed" };
+  | { recorded: false; gap: "emission_failed" };
 
 /**
  * The typed result of a pre-execution recheck. `error` names the gate that
@@ -2917,12 +2919,13 @@ export class Pep {
    * agent's arguments or an unverified response. `role` is `pep`: nothing
    * executed, so the executor did not dispose of this permit.
    *
-   * The effective digest is OBSERVED here, at the disposition, and the record
-   * is not emitted at all when an authorized digest is present and no
-   * observation can be made ({@link SuppressOutcome} `gap`). Emitting a
-   * sentinel would fabricate an observation; emitting the record without the
-   * member would be invalid under the present schema. That case is #786's
-   * declared outstanding defect, joint with #594.
+   * The effective digest is OBSERVED here, at the disposition. When the
+   * effective parameters cannot be established (the permit's target no
+   * longer resolves, say), the record keeps the authorized digest and omits
+   * the effective one: "this member MUST be absent rather than copied from
+   * `authorized_parameter_digest` or populated with a fabricated digest ...
+   * The absence means the comparison is unavailable". That exception is the
+   * suppressed record's alone, which is the only outcome this writer emits.
    *
    * Emission is awaited so signing and retention complete before the caller
    * learns the outcome, and one retry reuses the same execution identity. A
@@ -2934,9 +2937,6 @@ export class Pep {
     opts: { obligationOutcomes?: ExecutionEvidenceObject["obligation_outcomes"] } = {},
   ): Promise<SuppressOutcome> {
     const observed = attempt.observeEffectiveDigest();
-    if (attempt.authorizedParameterDigest !== undefined && observed === undefined) {
-      return { recorded: false, gap: "effective_parameter_digest_unobservable" };
-    }
     const input = {
       permitId: attempt.permitId,
       opKey: attempt.joinKey,
@@ -2944,13 +2944,14 @@ export class Pep {
       evaluation_id: attempt.evaluationId,
       mission_id: attempt.mission.id,
       audience: attempt.audience,
-      // The pair is carried together or not at all: the authorized member MUST
-      // be absent when the linked Decision Evidence carries no
-      // `parameter_digest`, and an effective digest alone commits nothing.
-      ...(attempt.authorizedParameterDigest !== undefined && observed !== undefined
+      // The authorized member mirrors the linked Decision Evidence: present
+      // exactly when it carries `parameter_digest`. The effective member is
+      // present only beside it and only when observed: an effective digest
+      // alone commits nothing, and an unobserved one is never invented.
+      ...(attempt.authorizedParameterDigest !== undefined
         ? {
             authorized_parameter_digest: attempt.authorizedParameterDigest,
-            effective_parameter_digest: observed,
+            ...(observed !== undefined ? { effective_parameter_digest: observed } : {}),
           }
         : {}),
       outcome: "suppressed" as const,
@@ -3083,19 +3084,26 @@ export class Pep {
     const invoice = this.deps.payments.getInvoice(effective.invoice_id);
     const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
     if (!invoice || !vendor) {
-      // The permit's target no longer resolves. The parameters it bound cannot
-      // be met, so the disposition is a parameter mismatch; the record itself
-      // is the outstanding case above (no effective digest is observable).
-      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
-      return { ok: false, error: "parameter_mismatch", disposition };
+      // @spec runtime-evidence#execution-evidence-object
+      // `effective_parameter_digest` (#786): the target the permit was
+      // evaluated for no longer resolves, so the effective parameters cannot
+      // be established. That is `target_drift`, "never `parameter_mismatch`:
+      // no comparison was made", and the record carries the authorized digest
+      // with the effective one absent.
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
     }
     // @spec resource-access#initial-common-constraints (#1266): the routed
-    // recipients re-resolved now; a routing that changed, or no longer
-    // resolves, is a parameter mismatch.
+    // recipients re-resolved now. A routing that changed is a parameter
+    // mismatch, caught by the digest comparison below. A routing that no
+    // longer resolves leaves the recipients the operation addresses, and so
+    // its effective parameters, unestablished: the post-permit counterpart of
+    // the pre-decision `unresolvable_recipients` (`target_unresolvable`),
+    // recorded `target_drift` with no effective digest (#786).
     const bound = recipientParams(effective.recipients !== undefined || this.reachesRecipients(effective.action), this.deps.payments, vendor.id);
     if (!bound) {
-      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
-      return { ok: false, error: "parameter_mismatch", disposition };
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
     }
     const fresh = buildEffectiveParams({ action: effective.action, invoice, vendor, resource: effective.resource, ...bound });
     const freshDigest = parameterDigest(fresh);

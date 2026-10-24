@@ -210,6 +210,11 @@ export interface ExecutionEvidenceObject {
   mission_id: string;
   audience: string;
   authorized_parameter_digest?: string;
+  /**
+   * Absent beside `authorized_parameter_digest` only on a `suppressed` record
+   * whose PEP could not establish the effective parameters: the comparison
+   * is unavailable, never equality and never a deviation (#786).
+   */
   effective_parameter_digest?: string;
   outcome: "completed" | "failed" | "suppressed";
   outcome_at: string;
