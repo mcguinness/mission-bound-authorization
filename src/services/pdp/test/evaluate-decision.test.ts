@@ -25,7 +25,15 @@
 
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
-import { evaluate as evaluateRequest, type ActionApproval, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
+import {
+  DecisionRequestRefused,
+  evaluate as evaluateRequest,
+  type ActionApproval,
+  type EvaluationRequest,
+  type MissionView,
+  relationForAction,
+  stalenessBound,
+} from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
@@ -415,12 +423,14 @@ describe("compound-action phase carriers on the decision (@spec authzen#context-
     expect((dec.context.conditions as { action_phase?: string }).action_phase).toBeUndefined();
   });
 
-  it("rejects a context.action_phase outside the closed set instead of echoing it", async () => {
+  it("refuses a context.action_phase outside the closed set before evaluation as phase_invalid, never echoing it (#1629)", async () => {
     for (const bad of ["settle", "COMMIT", "", "prepare "]) {
-      const dec = await evaluate(phaseReq(bad), phaseOpts());
-      expect(dec.decision, bad).toBe(false);
-      expect(dec.context.denial_reason, bad).toBe("out_of_authority");
-      expect(dec.context.conditions, bad).toBeUndefined();
+      const outcome = await evaluate(phaseReq(bad), phaseOpts()).then(
+        (decision) => ({ decision }),
+        (error: unknown) => ({ error }),
+      );
+      expect(outcome, bad).toEqual({ error: expect.any(DecisionRequestRefused) });
+      expect((outcome as { error: DecisionRequestRefused }).error.denial_reason, bad).toBe("phase_invalid");
     }
   });
 });
