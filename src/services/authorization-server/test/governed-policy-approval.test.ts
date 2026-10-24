@@ -143,6 +143,7 @@ const makeKernel = (
     activationPolicies?: Record<string, RegisteredActivationPolicy>;
     catalog?: AuthoritySourceCatalog;
     capabilityResolver?: CapabilitySourceResolver;
+    entryAudiences?: () => readonly string[];
   } = {},
 ) =>
   new MissionKernel({
@@ -154,6 +155,7 @@ const makeKernel = (
     governedPolicyApproval: opts.config ?? config(opts.doc),
     ...(opts.activationPolicies ? { activationPolicies: opts.activationPolicies } : {}),
     ...(opts.capabilityResolver ? { capabilityResolver: opts.capabilityResolver } : {}),
+    ...(opts.entryAudiences ? { entryAudiences: opts.entryAudiences } : {}),
     now,
   });
 
@@ -1319,5 +1321,30 @@ describe("a governed removal pairs with entries through the shared matcher (@spe
       decision: "approve",
       authority: [at(`${SERVICE}/invoices-archive`)],
     });
+  });
+});
+
+describe("a governed activation keeps the association its consent retained (@spec mission#transformation-capabilities, #1503 finding 7, D733 ruling 2)", () => {
+  it("an activation after the trusted mapping changes gives each entry the association the root ceiling retained at the human's consent, never the mapping current at activation", () => {
+    let mapped = ["https://rs-a.test/"];
+    const kernel = makeKernel({ entryAudiences: () => mapped });
+    const c = consent(kernel);
+    expect(c.ceiling_audiences).toEqual([["https://rs-a.test/"]]);
+    expect(kernel.governedPolicyConsents.get(c.consent_id)?.ceiling_audiences).toEqual([["https://rs-a.test/"]]);
+    mapped = ["https://rs-a.test/", "https://rs-b.test/"];
+    clockMs = T0 + 60_000;
+    const { mission } = activate(kernel, c.consent_id);
+    expect(mission.approved_audiences).toEqual(mission.authority_set.map(() => ["https://rs-a.test/"]));
+    expect(kernel.get(mission.id)?.approved_audiences).toEqual(mission.authority_set.map(() => ["https://rs-a.test/"]));
+  });
+
+  it("a consent recorded with no retained association activates Missions whose entries carry no audience (fail closed, D733 ruling 4)", () => {
+    const kernel = makeKernel({ entryAudiences: () => ["https://rs-a.test/"] });
+    const c = consent(kernel);
+    kernel.db.prepare("UPDATE governed_policy_consents SET ceiling_audiences_json = NULL WHERE consent_id = ?").run(c.consent_id);
+    expect(kernel.governedPolicyConsents.get(c.consent_id)?.ceiling_audiences).toBeUndefined();
+    clockMs = T0 + 60_000;
+    const { mission } = activate(kernel, c.consent_id);
+    expect(mission.approved_audiences).toEqual(mission.authority_set.map(() => []));
   });
 });
