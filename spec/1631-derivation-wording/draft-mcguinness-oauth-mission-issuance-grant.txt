@@ -97,8 +97,9 @@ Table of Contents
        6.3.3.  Transient Source Failure
        6.3.4.  Refresh
      6.4.  Without a Mission-State Integration
-     6.5.  Single Use
-     6.6.  Redemption Errors
+     6.5.  Mission-Binding Profile
+     6.6.  Single Use
+     6.7.  Redemption Errors
    7.  Authorization Code Flow Carriage
    8.  Issuance Records
    9.  Metadata
@@ -298,7 +299,7 @@ Table of Contents
 
    iat, exp:  REQUIRED. exp MUST NOT be more than 300 seconds after iat.
 
-   jti:  REQUIRED.  Unique per grant; single use (Section 6.5).
+   jti:  REQUIRED.  Unique per grant; single use (Section 6.6).
 
    client_id:  REQUIRED.  The Mission's recorded agent client identifier
       as the consuming AS knows it (Section 4.3 of [RFC8693]); the MAS
@@ -754,7 +755,7 @@ Table of Contents
        current time and exp is after it, with the clock-skew leeway of
        Section 4.1.4 of [RFC7519] applied to these two comparisons with
        the current time only; and the jti has not been seen, a seen jti
-       being retained until exp plus that leeway passes (Section 6.5);
+       being retained until exp plus that leeway passes (Section 6.6);
 
    5.  the client is the grant's client_id (Section 6): the
        authenticated client equals it, or, for a public client, the
@@ -946,7 +947,7 @@ Table of Contents
 
    An empty intersection is refused by its cause.  If items 1 to 3
    already intersect to nothing, the authorization itself is exhausted
-   and the AS refuses with invalid_grant (Section 6.6).  Where
+   and the AS refuses with invalid_grant (Section 6.7).  Where
    Containment is composed, whether the refusal carries its
    authority_contained reason is Containment's rule
    ([I-D.draft-mcguinness-oauth-mission-containment], Section "The
@@ -976,7 +977,7 @@ Table of Contents
    path a transient source failure MUST NOT consume or rotate the
    presented refresh token, so the client retries with the credential it
    already holds. invalid_grant stays for the permanent failures
-   (Section 6.6).
+   (Section 6.7).
 
 6.3.4.  Refresh
 
@@ -994,7 +995,7 @@ Table of Contents
    possession of that key: a DPoP proof whose public key has the jkt
    thumbprint, or a TLS client certificate whose SHA-256 thumbprint is
    the x5t#S256 value, and present no DPoP proof for any other key.  The
-   consuming AS refuses a refresh request that does not as Section 6.6
+   consuming AS refuses a refresh request that does not as Section 6.7
    specifies.
 
 6.4.  Without a Mission-State Integration
@@ -1005,7 +1006,40 @@ Table of Contents
    (Section 6.2).  A consuming AS that cannot perform the projection of
    Section 6.3 MUST NOT claim containment- or discharge-aware issuance.
 
-6.5.  Single Use
+6.5.  Mission-Binding Profile
+
+   A token a consuming AS issues under a grant carries the mission claim
+   under this profile, which states the elements the issuance profile's
+   Claim Reservation names for a path whose minter is not the Mission's
+   issuer ([I-D.draft-mcguinness-oauth-mission], Section "Claim
+   Reservation"):
+
+   1.  *Grant.* The Mission Issuance Grant the MAS mints for the Mission
+       (Section 5.2), validated by the consuming AS and redeemed once
+       (Section 6.1, Section 6.6).
+
+   2.  *Authority bound.* Issued authorization_details are a subset of
+       the grant's; a consuming AS with a Mission-state integration also
+       projects them onto the Effective Authority Set (Section 6.2,
+       Section 6.3).
+
+   3.  *Mission state.* The MAS establishes that the Mission is active
+       when it mints the grant (Section 5.2).  A consuming AS with a
+       Mission-state integration also resolves the Mission's state at
+       redemption and at every refresh, within the staleness bound the
+       deployment publishes (Section 6.3.1).  One without relies on the
+       minting gate and the short access-token lifetime, issues no
+       refresh token, and claims no containment- or discharge-aware
+       issuance (Section 6.4); its residual is the revocation latency
+       Section 12 declares.
+
+   4.  *Consumer checks.* A resource server applies the issuance
+       profile's resource-server requirements; the token's iss is the
+       consuming AS and its mission.issuer the Mission's issuer
+       ([I-D.draft-mcguinness-oauth-mission], Section "Resource Server
+       Enforcement").
+
+6.6.  Single Use
 
    Consumption is atomic with issuance.  The single-use jti check of
    Section 6.1 refuses a grant already recorded; the record itself is
@@ -1018,7 +1052,7 @@ Table of Contents
    Under the authorization code flow carriage, PAR validation is the
    consuming step instead (Section 7).
 
-6.6.  Redemption Errors
+6.7.  Redemption Errors
 
    The consuming AS responds to a failed redemption or refresh with an
    error response as defined in Section 5.2 of [RFC6749].  A grant that
@@ -1121,7 +1155,7 @@ Table of Contents
    for consent; at most it renders the Mission reference.
 
    The AS consumes the grant at PAR validation: it records the jti as
-   seen there, the atomic issuance step of Section 6.5 under this
+   seen there, the atomic issuance step of Section 6.6 under this
    carriage, so the grant cannot be replayed into a second authorization
    request.  From then on the request_uri, and then the authorization
    code, carry the authorization; a flow the user abandons, or the AS
@@ -1134,11 +1168,11 @@ Table of Contents
    arrive over a mutual-TLS connection with that certificate (for
    x5t#S256, Section 3 of [RFC8705]), and present no DPoP proof for any
    other key; the AS refuses a code exchange that does not as
-   Section 6.6 specifies.
+   Section 6.7 specifies.
 
    The grant's window is not re-evaluated at code exchange, since the
    authorization code carries its own lifetime.  The other redemption
-   rules (Section 6.2, Section 6.3 or Section 6.4, and Section 6.6)
+   rules (Section 6.2, Section 6.3 or Section 6.4, and Section 6.7)
    apply at the token request unchanged.  A transient source failure at
    code exchange refuses temporarily_unavailable and MUST NOT consume
    the authorization code.
@@ -1164,7 +1198,7 @@ Table of Contents
    included, with the grant's jti, Mission reference, and
    authority_hash.  Only the jti identifies the minting: several grants
    can share a Mission and an authority_hash, and the single-use record
-   (Section 6.5) expires with the grant's acceptance window.  Together
+   (Section 6.6) expires with the grant's acceptance window.  Together
    the records attribute what was approved to the MAS and what was
    issued to each consuming AS.
 
@@ -1647,6 +1681,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Mission-Binding Profile states the grant, authority bound, state
+      check (with and without a Mission-state integration), and consumer
+      checks under which a consuming AS's tokens carry the mission
+      claim, as the issuance profile's Claim Reservation requires.  No
+      requirement changed (#1531).
 
    *  Redemption Errors says how a client recovers a refresh refused
       during a suspension: after a resume it may present the same still-

@@ -87,16 +87,17 @@ Table of Contents
    7.  Verifying the Mission Binding
      7.1.  Edge Validation
    8.  The Kill Switch Requires Runtime Enforcement
-   9.  Relationship to Other Delegation
-   10. Actor Attribution on the Chain
-   11. Worked Example
-   12. Conformance
-   13. Security Considerations
-   14. Privacy Considerations
-   15. IANA Considerations
-   16. References
-     16.1.  Normative References
-     16.2.  Informative References
+   9.  Mission-Binding Profile
+   10. Relationship to Other Delegation
+   11. Actor Attribution on the Chain
+   12. Worked Example
+   13. Conformance
+   14. Security Considerations
+   15. Privacy Considerations
+   16. IANA Considerations
+   17. References
+     17.1.  Normative References
+     17.2.  Informative References
    Appendix A.  Document History
    Acknowledgments
    Author's Address
@@ -123,7 +124,7 @@ Table of Contents
    delegation ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
 
    The saving is amortization, not elimination: because a root's
-   lifetime is kept short (Section 13), the holder returns to the issuer
+   lifetime is kept short (Section 14), the holder returns to the issuer
    once per subtree per root-lifetime window to mint the root, and every
    narrowing within that window is then offline.  The issuer leaves the
    per-fork hot path; it is not removed from the deployment.
@@ -301,7 +302,7 @@ Table of Contents
 
    *  the issuer SHOULD mint separate roots per delegation class rather
       than mix entries of differing delegation policy on one root, which
-      also serves the per-subtree disclosure minimization of Section 14.
+      also serves the per-subtree disclosure minimization of Section 15.
 
    The root's authority MUST be within the Mission's approved authority
    under this mapping and the issuance profile's subset rule.  An
@@ -515,7 +516,7 @@ Table of Contents
    presentation state evaluation picks up, so an attenuation root
    already in a holder's possession keeps minting against the Mission's
    pre-containment authority until the root's own exp or del_max_depth
-   ends it, or the Mission itself is revoked or expires (Section 13).
+   ends it, or the Mission itself is revoked or expires (Section 14).
 
    A cached chain does not bypass this: a chain held in a harness cache
    is still re-checked against current Mission state on every
@@ -532,7 +533,35 @@ Table of Contents
    enforcement profile ([I-D.draft-mcguinness-mission-runtime]); it is
    not available to a deployment that relies on token lifetime alone.
 
-9.  Relationship to Other Delegation
+9.  Mission-Binding Profile
+
+   Every token in a Mission-bound attenuation chain carries the mission
+   claim under this profile, which states the elements the issuance
+   profile's Claim Reservation names for a path whose minter is not the
+   Mission's issuer, here the holder that derives a child
+   ([I-D.draft-mcguinness-oauth-mission], Section "Claim Reservation"):
+
+   1.  *Parent chain.* The root, minted and signed by the Mission Issuer
+       with iss equal to mission.issuer (Section 4), and each child's
+       par_hash link to its parent and signature under the key its
+       parent's cnf binds (Section 6).
+
+   2.  *Authority bound.* The root is bounded by the Mission's Authority
+       Set (Section 4.1); each child is no broader than its parent under
+       the attenuation substrate's capability monotonicity, with its aud
+       and exp within its parent's (Section 6).
+
+   3.  *Mission state.* The Mission Issuer gates the root on Mission
+       state as it gates any Mission-bound token (Section 4).  A holder
+       mints a child with no state check; the consumer establishes that
+       the Mission is active, within the deployment's declared freshness
+       bound, on every presentation (Section 8).
+
+   4.  *Consumer checks.* The chain verification of Section 7 and the
+       state check of Section 8.  Chain verification alone does not
+       satisfy this profile (Section 13).
+
+10.  Relationship to Other Delegation
 
    Offline attenuation sits beside two other narrowing mechanisms:
    Authorization-Server-mediated delegation (the issuance profile's act
@@ -549,7 +578,7 @@ Table of Contents
    guide for choosing among the three narrowing mechanisms; this
    document does not restate it.
 
-10.  Actor Attribution on the Chain
+11.  Actor Attribution on the Chain
 
    The chain identifies holders by key possession: each token binds its
    holder through cnf, and possession is proven at use.  This document
@@ -586,7 +615,7 @@ Table of Contents
    influence authorization; where policy requires a named actor and the
    binding is absent or invalid, verification fails closed.
 
-11.  Worked Example
+12.  Worked Example
 
    An orchestrator agent (s6BhdRkqt3), acting for alice under Mission
    msn_wJDMty6vSvxrbyZ2F5B_qqWbtovA6Sns to reconcile Q3 invoices, holds
@@ -705,7 +734,7 @@ Table of Contents
    is refused the same way, as a re-bound chain, not read as a narrower
    grant.
 
-12.  Conformance
+13.  Conformance
 
    A Mission Issuer conforming to this profile MUST bound a Mission-
    bound attenuation root by the Mission's Authority Set (Section 4.1)
@@ -737,7 +766,7 @@ Table of Contents
    A deployment MUST NOT claim this profile on a path that does not
    enforce Mission state.
 
-13.  Security Considerations
+14.  Security Considerations
 
    The security considerations of the issuance profile, the runtime
    profile, and the attenuation substrate apply.  This profile adds:
@@ -810,7 +839,7 @@ Table of Contents
       its del_depth, and its par_hash, so offline derivations are
       reconstructable in audit.
 
-14.  Privacy Considerations
+15.  Privacy Considerations
 
    The mission claim (id, issuer, authority_hash) rides every token in
    an attenuation chain unchanged (Section 6), so every consumer of any
@@ -839,7 +868,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]) as the privacy-relevant
    record of offline derivations and protect it accordingly.
 
-15.  IANA Considerations
+16.  IANA Considerations
 
    A Mission-bound attenuation root carries the mission claim, which the
    issuance profile registers as an open object, and the
@@ -860,9 +889,9 @@ Table of Contents
 
    *  mission_attenuation_root
 
-16.  References
+17.  References
 
-16.1.  Normative References
+17.1.  Normative References
 
    [I-D.draft-mcguinness-mission-runtime]
               McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
@@ -911,7 +940,7 @@ Table of Contents
               DOI 10.17487/RFC9396, May 2023,
               <https://www.rfc-editor.org/rfc/rfc9396>.
 
-16.2.  Informative References
+17.2.  Informative References
 
    [I-D.draft-mcguinness-mission-harness]
               McGuinness, K., "Mission-Aware Agent Harnesses", 2026,
@@ -961,6 +990,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Mission-Binding Profile states the root, chain, authority bound,
+      state check, and consumer checks under which every token in a
+      chain carries the mission claim, as the issuance profile's Claim
+      Reservation requires.  No requirement changed (#1531).
 
    *  Deriving the Root from the Authority Set: every operation a mapped
       tool can perform at each root audience has an operation target

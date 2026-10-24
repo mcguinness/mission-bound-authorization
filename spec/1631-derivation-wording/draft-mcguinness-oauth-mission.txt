@@ -133,6 +133,7 @@ Table of Contents
      8.6.  Authentication Claims and Lifetime
      8.7.  Scope Projection
      8.8.  Mission Claim
+       8.8.1.  Claim Reservation
    9.  Resource Server Enforcement
      9.1.  Enforcement Requirements
      9.2.  Mission-Unaware Resource Servers
@@ -728,12 +729,14 @@ Table of Contents
    Mission grant binding (grant binding):  The AS-controlled, functional
       mapping from one persistent, redeemable grant lineage to exactly
       one Mission (Section 8.1).  Distinct from a Derived token's own
-      mission claim, which every issued credential carries without
-      itself creating a grant binding.
+      mission claim, which every Derived token carries without itself
+      creating a grant binding.
 
    Mission-referenced token:  A token that carries a Mission reference
-      (the mission claim or a mission_id) without Mission-derived
-      authority or any gating guarantee.
+      (for example, a mission_id or a descriptor a companion profile
+      defines) without Mission-derived authority or any gating
+      guarantee.  An access token of this class does not carry the
+      mission claim (Section 8.8.1).
 
    Derived token (Mission-derived token):  An access token issued under
       a Mission, carrying its Mission-derived authority (the full
@@ -1142,10 +1145,19 @@ Table of Contents
    request (Section 17 states the client-side rules and Section 20.1.2
    the threat):
 
-   *  Where a deployment classifies a resource as Mission-governed (a
-      Mission-governed resource), its AS MUST NOT issue a token for that
-      resource outside a Mission, except under documented policy
-      exceptions.
+   *  Where a resource is Mission-governed, its AS MUST NOT issue a
+      token for that resource outside a Mission, on any grant type.  A
+      resource is Mission-governed (a Mission-governed resource) when
+      the deployment classifies it so, or when protected resource
+      metadata the AS has authenticated ([RFC9728]) declares
+      mission_bound_authorization_required as true (Section 18).
+      Metadata that omits the member or sets it to false does not clear
+      a deployment's classification, and a less restrictive local
+      classification does not override metadata that declares the
+      requirement.  This document defines no exception to this rule; an
+      exception requires a concrete scope that a separate specification
+      defines, and none applies to a resource whose metadata declares
+      the requirement.
 
    *  If a client registered as Mission-governed sends an authorization
       request, through PAR or at the authorization endpoint, that
@@ -1157,6 +1169,23 @@ Table of Contents
       A request carrying neither is an ordinary request that this rule
       does not reach; the first rule, for a Mission-governed resource,
       is what keeps that resource's tokens inside a Mission.
+
+   Under the first rule, a token is issued outside a Mission when the
+   request has no qualifying Mission binding: no grant bound to a
+   Mission (Section 8.1), or to a companion profile's equivalent
+   binding, from which the issuance derives under Section 8.8.1.  The AS
+   refuses a token request the first rule forbids with the
+   invalid_target error code (Section 2 of [RFC8707]) once the request
+   is otherwise processable.  Authentication, syntax, and grant-
+   validation failures keep their errors and precedence, an invalid or
+   expired grant keeps its error, and a request under a grant bound to a
+   Mission that is not active keeps the refusal of Section 8.2.  The
+   rule applies to every audience the token would carry, including one
+   the AS infers or applies by default when the request names no
+   resource: the AS refuses the request if any of them is Mission-
+   governed, and does not issue the token for the others.  On a refresh,
+   the AS decides this refusal before it consumes or rotates the refresh
+   token.
 
    A token request under an existing Mission-bound grant, such as a
    narrowing refresh, a self-exchange (Section 12.4) or an exchange for
@@ -2944,6 +2973,46 @@ Table of Contents
      }
    }
 
+8.8.1.  Claim Reservation
+
+   The mission claim of an access token, and the mission member that
+   introspection returns for an access token (Section 11), are reserved
+   for issuance that conforms to a Mission-binding profile.  An AS MUST
+   NOT issue an access token carrying the mission claim unless the
+   token's issuance or derivation conforms to one: this document's
+   issuance gating (Section 8.2) and subset rule (Section 5.4) for a
+   token the Mission's issuer derives, or a companion profile that
+   defines another issuance or derivation path, including a token that a
+   Resource AS or a consuming AS issues and a token a holder derives
+   under an attenuation profile.
+
+   A profile that defines such a path MUST identify:
+
+   1.  the authenticated grant or parent chain that connects the token's
+       authority to the Mission;
+
+   2.  the authority bound the path enforces, and the comparison or
+       projection by which it enforces it;
+
+   3.  where Mission state is checked, by which party, and the freshness
+       or lifetime bound within which that check is relied on; and
+
+   4.  any check a consumer of the token performs.
+
+   A mission claim means that the token's issuance or derivation
+   conformed to its profile.  It does not mean that the party that
+   minted the token queried the Mission's current state, and it attests
+   issuance, not the Mission's state afterward: a later suspension or
+   revocation does not change what the claim attests (Section 7,
+   Section 11).  The claim establishes no trust by its presence; a
+   resource server's issuer authorization and claim validation
+   (Section 9.1) still apply.
+
+   This reservation concerns access tokens and their introspection
+   representation.  An evidence or control artifact that embeds a
+   mission descriptor (Section 16.1) is not an access token, and this
+   section does not change its meaning.
+
 9.  Resource Server Enforcement
 
    A resource server enforces a JWT Mission-bound token from the token
@@ -3002,8 +3071,8 @@ Table of Contents
        trusts to issue Mission-bound authorization for the resource;
        trusting the issuer's ordinary access tokens is not enough.  It
        MUST require mission.issuer to equal the token's iss, unless a
-       cross-domain profile it has adopted
-       ([I-D.draft-mcguinness-oauth-mission-cross-domain]) explicitly
+       Mission-binding profile it has adopted (Section 8.8.1), such as
+       [I-D.draft-mcguinness-oauth-mission-cross-domain], explicitly
        establishes the permitted relationship between the two.  It MUST
        reject a token that fails either check with the invalid_token
        error code.  For an opaque token, the issuer is the AS whose
@@ -3373,6 +3442,14 @@ Table of Contents
    | authorization_details without     | [RFC6749]).  Detail: safe     |
    | mission_intent (Section 4.3)      | error_description             |
    +-----------------------------------+-------------------------------+
+   | Token request, any grant          | invalid_target (Section 2 of  |
+   | type: an audience the token       | [RFC8707]).  Detail: safe     |
+   | would carry, named or             | error_description             |
+   | inferred, is a Mission-           |                               |
+   | governed resource, and the        |                               |
+   | request has no qualifying         |                               |
+   | Mission binding (Section 4.3)     |                               |
+   +-----------------------------------+-------------------------------+
    | Authorization request: scope      | invalid_scope                 |
    | includes openid and the           | (Section 4.1.2.1 of           |
    | Approver is not the Subject       | [RFC6749]).  Detail: safe     |
@@ -3550,7 +3627,11 @@ Table of Contents
    For a malformed, unknown, individually expired, or otherwise
    unresolvable token, the AS responds per [RFC7662] (active: false)
    with no mission member; it does not reveal Mission state for a token
-   it cannot bind to a Mission.
+   it cannot bind to a Mission.  The AS discloses a mission member only
+   for a token it has established was issued on a path that conforms to
+   Section 8.8.1; a token it cannot establish so is unresolvable in this
+   sense.  How the AS establishes this is its own; a record of its own
+   issuance is one means.
 
    The composite-active rule (Section 11.2) and the mission member apply
    equally when a Mission-bound refresh token is introspected.
@@ -3617,7 +3698,9 @@ Table of Contents
    server can distinguish a dead Mission from a bad token.  A Mission
    transition does not by itself revoke the token as an individual
    credential; introspection reports the composite authorization as
-   inactive.
+   inactive.  An otherwise valid token is one that passes those checks
+   and that the AS has established was issued on a conforming path
+   (Section 11).
 
    Reporting the mission member, mission.state included, for an inactive
    token deviates from the SHOULD NOT of Sections 2.2 and 4 of [RFC7662]
@@ -5140,7 +5223,10 @@ Table of Contents
    mission_bound_authorization_required:  OPTIONAL boolean.  When true,
       the protected resource accepts only Mission-bound tokens: a token
       that lacks the mission claim (Section 8.8) is rejected
-      (Section 9).  If omitted, the default value is false.
+      (Section 9).  If omitted, the default value is false.  An AS that
+      has authenticated this metadata treats a true value as making the
+      resource Mission-governed (Section 4.3); false or omission does
+      not clear a deployment's classification.
 
    A type-defined authorization_details member may define its own
    constraint-discovery surface; mission_resource_access's is defined by
@@ -5289,14 +5375,14 @@ Table of Contents
    Domain"); each capability's defining section or document states its
    detailed requirements.
 
-   A token carrying a mission claim is not, by itself, Mission-bound
-   authorization.  Conformance as a Mission Issuer requires the gates:
-   authority derived from the approved Intent and committed by the
-   anchors (Section 6), issuance bounded by the subset rule
-   (Section 5.4), and derivation gated on Mission state (Section 8.2).
-   An implementation that carries Mission metadata without these gates
-   conforms to no role in this document and does not implement it: in
-   particular, it MUST NOT advertise
+   Emitting the mission claim is not, by itself, conformance: the claim
+   is reserved for conforming issuance (Section 8.8.1).  Conformance as
+   a Mission Issuer requires the gates: authority derived from the
+   approved Intent and committed by the anchors (Section 6), issuance
+   bounded by the subset rule (Section 5.4), and derivation gated on
+   Mission state (Section 8.2).  An implementation that carries Mission
+   metadata without these gates conforms to no role in this document and
+   does not implement it: in particular, it MUST NOT advertise
    mission_bound_authorization_supported as true (Section 17), the
    machine-checkable form of that claim.
 
@@ -5399,13 +5485,14 @@ Table of Contents
 
    A token bearing equivalent authorization_details but no mission claim
    is governed by no Mission state, revocation, or consent commitment.
-   A deployment can classify a resource as Mission-governed (a Mission-
-   governed resource) or register a client as Mission-governed.  Rules
-   on three sides address this downgrade:
+   A resource can be Mission-governed (Section 4.3), and a deployment
+   can register a client as Mission-governed.  Rules on three sides
+   address this downgrade:
 
    *  *Issuance.* The rules of Section 4.3 keep such a resource's tokens
-      inside a Mission and refuse such a client's authorization request
-      that carries authorization_details but omits the Intent.
+      inside a Mission on every grant type, client credentials included,
+      and refuse such a client's authorization request that carries
+      authorization_details but omits the Intent.
 
    *  *Client.* A client holding a Mission Intent does not fall back to
       an ordinary request where Mission support is not established, and
@@ -8065,6 +8152,65 @@ Appendix G.  Document History
       names the approval event that creates the Mission and states that,
       under a standing-consent basis, it identifies the instance's
       creation, not the earlier standing approval.
+
+   *  An access token's mission claim, and its introspection mission
+      member, are reserved for issuance that conforms to a Mission-
+      binding profile; a profile that defines another issuance or
+      derivation path identifies its grant or chain, authority bound,
+      state check, and consumer checks (Claim Reservation).
+      Introspection discloses mission only for a token issued on a
+      conforming path.  A resource server's mission.issuer check accepts
+      the relationship any Mission-binding profile it has adopted
+      establishes, not only a cross-domain profile's (Enforcement
+      Requirements).
+
+   *  A Mission-governed resource, classified by the deployment or by
+      its authenticated mission_bound_authorization_required metadata,
+      gets no token outside a Mission on any grant type; the open-ended
+      policy exception is removed, and the refusal is invalid_target
+      (Authority Proposal).
+
+   *  A token carries only the entries whose original approved audience
+      (the audiences the AS's trusted mapping assigned an entry at
+      approval, retained with the Mission and kept by the entries a
+      derived Mission inherits) includes its audience, unless a declared
+      narrowing capability permits issuing an entry there.  A token
+      naming several audiences is issued only where each is approved for
+      the same entries; otherwise, or where the audience is approved for
+      none of the entries the token would carry, the request is refused
+      with invalid_target (Declared Transformation Capabilities,
+      Audience and Token Response; #1503, D620, D733).
+
+   *  The AS refuses, with invalid_target, a delegated Mission-bound
+      token for an audience it has not established as a Mission-aware
+      Resource Server that processes the act chain; routing and logging
+      beyond that audience stay the deployment's (Mission-Unaware
+      Resource Servers, Delegated Exchange; #1503, D620).
+
+   *  Each redemption of a designation validates the originating
+      credential and all applicable grant state backing it, which an
+      exchange that establishes no new grant lineage keeps; a
+      designation's expiry bounds its redemption, not the lifetime of
+      the delegated token issued from it (Delegated Exchange,
+      Designation, Authentication Claims and Lifetime; #1503, D620).
+
+   *  Step 1 of the Submission Processing Order applies the size bounds
+      and checks each evidence entry's structure, so a structurally
+      invalid entry is refused with invalid_request before the authority
+      proposal is validated, and Conformance Roles names that code for
+      it (Submission Processing Order, Intent Submission Evidence,
+      Conformance Roles; #1503, #1482, D620).
+
+   *  The deployment's published approval-authentication floor, and the
+      mission member of an active introspection response to a caller
+      authorized for Mission data, are requirements rather than
+      lowercase statements (Approver Authentication Strength, Mission
+      State via Token Introspection; #1503, D620).
+
+   *  A Mission is revoked by a party the deployment's policy
+      authorizes, or by that policy itself; the Subject, the Approver,
+      and an administrator can be authorized, but none is by role alone
+      (Revocation, Mission Lifecycle; #1503, D620).
 
    *  Editorial, no requirement change: the Derivation definition, in
       Terminology and Issuance Gating, includes the redemption of a

@@ -2500,6 +2500,19 @@ suspension ends or an authorized replacement supersedes it
 current, so an earlier deadline never acts on a later suspension. A
 deadline applies only a transition legal from the Mission's current
 state (<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>) and never changes a <code>terminated</code> Mission.<a href="#section-5.1-10" class="pilcrow">¶</a></p>
+<p id="section-5.1-11">From a current schedule's deadline, every decision treats the Mission
+as in the state its <code>on_expiry</code> produces, whether or not that
+transition is persisted, so a request the AS decides after the
+deadline is decided against that state. If the first decision after
+the deadline comes at or after the Mission's <code>expires_at</code>, expiry
+governs instead and the Mission is <code>terminated</code> with reason <code>expired</code>
+(<a href="#legal-transitions" class="auto internal xref">Section 5.2</a>); a revocation committed at its deadline before
+<code>expires_at</code> keeps reason <code>revoked</code>. For <code>on_expiry</code> <code>revoke</code>, the
+termination's <code>terminated_at</code> is the schedule's <code>suspend_until</code>. A new
+<code>suspend</code> whose <code>suspend_until</code> is not later than the time the AS
+processes it is refused <code>invalid_request</code>; a retransmit of an accepted
+request still replays its original response after the deadline passes
+(<a href="#idempotency" class="auto internal xref">Section 5.6</a>).<a href="#section-5.1-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="legal-transitions">
@@ -3004,6 +3017,14 @@ transition.<a href="#section-5.7-2.6.1" class="pilcrow">¶</a></p>
 <p id="section-5.7-3">Authorization therefore precedes every replayed or state-dependent
 response: a caller not authorized for the Mission receives the
 not-found response, never a replay, <code>stale_version</code> or <code>conflict</code>.<a href="#section-5.7-3" class="pilcrow">¶</a></p>
+<p id="section-5.7-4">The AS <span class="bcp14">MUST</span> durably commit a transition, with the state version it
+produces, before it sends any response that acknowledges it; a
+transition whose commit fails is never answered as a success. The
+final issuance check of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>
+(Section "Issuance Gating"), which applies to an acknowledged
+revocation, is not extended to suspension: a suspension refuses later
+derivations at their gate, and a derivation already past its gate
+when the suspension commits can complete.<a href="#section-5.7-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="relationship-to-rfc-7009">
@@ -3015,9 +3036,17 @@ not-found response, never a replay, <code>stale_version</code> or <code>conflict
 derived from the Mission per the AS's advertised revocation
 propagation (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>). The AS <span class="bcp14">MAY</span>
 additionally revoke specific outstanding tokens it knows by <code>jti</code>,
-with the same effect as <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> revocation of each token.
-<span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> alone does NOT revoke a Mission; the lifecycle endpoint is
-the authoritative Mission state change.<a href="#section-5.8-1" class="pilcrow">¶</a></p>
+with the same effect as <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> revocation of each token. An
+<span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> revocation does not by itself revoke a Mission; the
+lifecycle endpoint is the authoritative Mission state change.<a href="#section-5.8-1" class="pilcrow">¶</a></p>
+<p id="section-5.8-2">Where a deployment's revocation policy treats revoking a Mission's
+refresh token as revoking the Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Revocation"), the
+AS <span class="bcp14">MUST</span> commit that revocation as the same <code>revoke</code> transition this
+endpoint applies: decided by that policy for the revoking party and
+the Mission, recorded with a new state version, and emitting the same
+transition event (<a href="#idempotency" class="auto internal xref">Section 5.6</a>). The coupling requires neither a
+request to this endpoint nor an additional scope.<a href="#section-5.8-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deferred-lifecycle">
@@ -4055,10 +4084,29 @@ Mission Termination Reasons registry
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
       </h2>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<p id="appendix-A-2">-00<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">-01<a href="#appendix-A-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-3.1">
-          <p id="appendix-A-3.1.1">Initial individual draft.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.1.1">A transition is durably committed before any response acknowledges
+it, and the OAuth binding's final issuance check is not extended to
+suspension.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.2">
+          <p id="appendix-A-3.2.1">A schedule's deadline governs later decisions, and expiry governs
+when the first decision after the deadline comes at or after
+<code>expires_at</code>; a revoke schedule terminates at its <code>suspend_until</code>,
+and a past <code>suspend_until</code> is refused only on a new request.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.3">
+          <p id="appendix-A-3.3.1">An RFC 7009 revocation does not by itself revoke a Mission, and a
+revocation that a deployment's policy couples to it commits the same
+<code>revoke</code> transition, state version and event.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-5.1">
+          <p id="appendix-A-5.1.1">Initial individual draft.<a href="#appendix-A-5.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
