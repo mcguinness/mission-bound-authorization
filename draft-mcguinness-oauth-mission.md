@@ -7421,14 +7421,15 @@ Cross-Domain:
   exception is removed, and the refusal is `invalid_target`
   (Authority Proposal).
 - A token carries only the entries whose original approved audience
-  includes its audience: the audiences the AS's trusted mapping assigned
-  an entry at approval, retained with the Mission and kept by the
-  entries a derived Mission inherits. A token naming several audiences
-  is issued only where each is approved for the same entries;
-  otherwise, or where the audience is approved for none of the entries
-  the token would carry, the request is refused with `invalid_target`
-  (Declared Transformation Capabilities, Audience and Token Response;
-  #1503, D620, D733).
+  (the audiences the AS's trusted mapping assigned an entry at
+  approval, retained with the Mission and kept by the entries a derived
+  Mission inherits) includes its audience, unless a declared
+  `narrowing` capability permits issuing an entry there. A token naming
+  several audiences is issued only where each is approved for the same
+  entries; otherwise, or where the audience is approved for none of the
+  entries the token would carry, the request is refused with
+  `invalid_target` (Declared Transformation Capabilities, Audience and
+  Token Response; #1503, D620, D733).
 - The AS refuses, with `invalid_target`, a delegated Mission-bound
   token for an audience it has not established as a Mission-aware
   Resource Server that processes the `act` chain; routing and logging
