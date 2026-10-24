@@ -1437,6 +1437,15 @@ Authorization therefore precedes every replayed or state-dependent
 response: a caller not authorized for the Mission receives the
 not-found response, never a replay, `stale_version` or `conflict`.
 
+The AS MUST durably commit a transition, with the state version it
+produces, before it sends any response that acknowledges it; a
+transition whose commit fails is never answered as a success. The
+final issuance check of {{I-D.draft-mcguinness-oauth-mission}}
+(Section "Issuance Gating"), which applies to an acknowledged
+revocation, is not extended to suspension: a suspension refuses later
+derivations at their gate, and a derivation already past its gate
+when the suspension commits can complete.
+
 ## Relationship to RFC 7009
 
 A Mission revocation through this endpoint cascades to credentials
