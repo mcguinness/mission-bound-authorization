@@ -537,14 +537,19 @@ describe("the refusal is invalid_target once the request is otherwise processabl
     expect(answer.body).not.toHaveProperty("access_token");
   });
 
-  it("a refresh under a grant bound to a suspended Mission keeps the Issuance Gating refusal (invalid_grant), never invalid_target, for a governed resource", async () => {
+  it("a refresh under a grant bound to a Mission is issued for a governed resource while the Mission is active, and once it is suspended keeps the Issuance Gating refusal (invalid_grant), never invalid_target", async () => {
     const { missionId, code } = await approvedMissionCode("Read the quarterly reports (suspended before refresh)");
     const keys = await newKeys();
     const redeemed = await tokenRequest(redeemParams(code, PLAIN), "ap-agent", { dpop: keys });
     expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
     expect(claimsOf(redeemed.body.access_token).mission).toMatchObject({ id: missionId });
+    // While the Mission is active its binding qualifies: the refresh is issued for the governed resource.
+    const refreshed = await tokenRequest(refreshParams(redeemed.body.refresh_token as string, PLAIN), "ap-agent", { dpop: keys });
+    expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+    expect(claimsOf(refreshed.body.access_token).mission).toMatchObject({ id: missionId });
     as.kernel.transition(missionId as string, "suspend");
-    const answer = await tokenRequest(refreshParams(redeemed.body.refresh_token as string, PLAIN), "ap-agent", { dpop: keys });
+    const refreshToken = (refreshed.body.refresh_token ?? redeemed.body.refresh_token) as string;
+    const answer = await tokenRequest(refreshParams(refreshToken, PLAIN), "ap-agent", { dpop: keys });
     expect(answer.status, JSON.stringify(answer.body)).toBe(400);
     expect(answer.body.error).toBe("invalid_grant");
     expect(answer.body).not.toHaveProperty("access_token");

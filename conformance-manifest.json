@@ -4371,7 +4371,7 @@
     },
     {
      "file": "src/services/authorization-server/test/governed-resource-gate.test.ts",
-     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a refresh under a grant bound to a suspended Mission keeps the Issuance Gating refusal (invalid_grant), never invalid_target, for a governed resource",
+     "name": "the refusal is invalid_target once the request is otherwise processable; earlier failures keep their errors (@spec mission#authority-proposal, #1531) > a refresh under a grant bound to a Mission is issued for a governed resource while the Mission is active, and once it is suspended keeps the Issuance Gating refusal (invalid_grant), never invalid_target",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
