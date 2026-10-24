@@ -38571,9 +38571,15 @@
      "name": "the payments resource executes only the authorized target (@spec resource-access#resource-matching, #1276) > a contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed end to end at the payments resource (T7: suppression with target_drift); no unit-level witness of the Execution Evidence record alone. Mutation M14 fails T7."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed end to end at the payments resource (T7: suppression with target_drift); no unit-level witness of the Execution Evidence record alone. Mutation M14 fails T7. #786: a unit-level witness of the record itself now covers the cannot-be-established half for the target object the permit was evaluated for (the invoice deleted at use: one suppressed target_drift record, the effective digest absent; relabelling the exit parameter_mismatch fails it). The differs half is still witnessed only end to end (T7), and the evaluation-context clause stays unclaimed (#773), so the row stays partial."
   },
   {
    "id": "evidence.execution.error-condition-unrecognized",
@@ -39700,8 +39706,14 @@
     },
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
-     "name": "Mission Receipt build + verify > rejects an Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3)",
+     "name": "Mission Receipt build + verify > rejects a completed or failed Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3, #786)",
      "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > accepts a suppressed record that keeps the authorized digest and omits the effective one as comparison unavailable, and reports no parameter deviation (#786)",
+     "level": "unit",
      "surface": "verification"
     },
     {
@@ -39711,7 +39723,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#594 W4-6 adds unit coverage of qualified issuer joins and observable unauthorized completed parameter deviation. Partial remains: full cross-component target reconciliation and the richer disposition/history families are not established by these signed fixtures. Exact authorized-digest mirror is already normative; no reverse-direction spec gap remains."
+   "notes": "#594 W4-6 adds unit coverage of qualified issuer joins and observable unauthorized completed parameter deviation. Partial remains: full cross-component target reconciliation and the richer disposition/history families are not established by these signed fixtures. Exact authorized-digest mirror is already normative; no reverse-direction spec gap remains. #786: digest consistency follows the amended member; a completed or failed record missing the effective digest beside the authorized one is still a join failure (removing the check, or exempting failed records, fails that test), and a suppressed record omitting it verifies with no deviation flag (rejecting it fails that test)."
   },
   {
    "id": "evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present",
@@ -40494,7 +40506,116 @@
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#786 re-quoted the clause with its one exception, a suppressed record whose executing PEP could not establish the effective parameters; that branch has its own row (evidence.execution.effective-digest-absent-when-parameters-unestablishable). The REQUIRED branch itself, a PEP or executor always carrying the member beside the authorized digest on a completed, failed or established suppressed record, has no PEP-role assertion cited here yet (#594 W4-4); the receipt verifier's rejection of a completed or failed record missing it is a verifier witness, cited on evidence.receipt.step4-cross-record-joins."
+  },
+  {
+   "id": "evidence.execution.effective-digest-absent-when-parameters-unestablishable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "If the executing PEP cannot establish the effective parameters, this member MUST be absent rather than copied from `authorized_parameter_digest` or populated with a fabricated digest, and execution MUST be suppressed.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP that cannot establish the effective parameters of a permit it holds releases no effect and emits one suppressed Execution Evidence record that carries authorized_parameter_digest and omits effective_parameter_digest, never a copy of the authorized digest or another fabricated value, and emits no Refusal Record"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a send whose routing stops resolving between decision and commit is suppressed target_drift, keeping the authorized digest with no effective one, and sends nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/view-source.test.ts",
+     "name": "a remote Mission view source at the PEP (#818, D560) > a list read whose view lapses between the decision and its re-verification is suppressed target_drift, recording no observation it did not make",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24). Three exits where the effective parameters cannot be established: the invoice deleted after the decision and its redemption (transaction tool), the recipient routing no longer resolving (send_remittance_email), and a remote Mission view that lapsed before a bound list read's re-verification. Each asserts no effect, one suppressed record with the authorized digest present (equal to the retained Decision Evidence's parameter_digest in the invoice case) and the effective digest absent, and no Refusal Record (count deltas in the invoice case). Mutations: copying the authorized digest into the effective member fails all three; restoring the old recordless gap fails all three; letting the missing invoice through fails the zero-effect assertion on its own; adding a Refusal Record at that exit fails the no-Refusal-Record assertion on its own."
+  },
+  {
+   "id": "evidence.execution.unestablishable-parameters-error-names-condition",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The `error` names the condition that prevented it, `target_drift` when the target the permit was evaluated for cannot be established at use, and is never `parameter_mismatch`: no comparison was made.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a suppression whose effective parameters could not be established carries the error naming the condition that prevented them, target_drift for a target the permit was evaluated for that cannot be established at use, and never parameter_mismatch"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a send whose routing stops resolving between decision and commit is suppressed target_drift, keeping the authorized digest with no effective one, and sends nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24: reuse target_drift; the post-permit target_unresolvable recommendation is withdrawn, and the pre-decision Refusal Record target_unresolvable is unchanged). A deleted invoice and an unresolvable recipient routing each record target_drift on the record and on the caller-visible reason. Mutations: relabelling either exit parameter_mismatch fails its test, and the invoice test's record-error assertion fails on its own with the caller-visible assertion removed. A routing that resolves differently stays parameter_mismatch through the digest comparison (the existing list-membership test)."
+  },
+  {
+   "id": "evidence.execution.absent-effective-digest-comparison-unavailable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The absence means the comparison is unavailable, and a consumer MUST NOT read it as equality or as a parameter deviation.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer reading a suppressed record that carries authorized_parameter_digest without effective_parameter_digest accepts it as comparison unavailable, reporting neither the binding-held case nor a parameter deviation"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > accepts a suppressed record that keeps the authorized digest and omits the effective one as comparison unavailable, and reports no parameter deviation (#786)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#786. The consumer witnessed is the reference receipt verifier, reading the record at step 4: it verifies the suppressed record and reports no unauthorized_execution. Mutations: rejecting the absence on a suppressed record, and flagging a suppressed record as a deviation, each fail the test. Partial: the not-equality half has no distinguishing output in this verifier, which reports a deviation and never a binding-held result, so an implementation reading the absence as equality would return the same verdict."
   },
   {
    "id": "evidence.execution.object-required-members-and-types",
