@@ -10162,7 +10162,7 @@
    "id": "core.grant-binding.no-new-lineage-keeps-provenance",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
-   "text": "the issued token rests on the grant lineage its `subject_token` was issued under",
+   "text": "Where the `subject_token` was issued under a grant lineage, the issued token retains that grant provenance, and a later redemption of a designation derived from it validates all applicable backing-grant state",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -10173,7 +10173,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a token issued by an access-token-only Token Exchange keeps the grant lineage its subject_token was issued under: once that lineage is revoked, a designation derived from the issued token is no longer redeemable, whether the issued token is a self-exchanged token or a delegated token",
+    "normative": "a token issued by an access-token-only Token Exchange whose subject_token was issued under a grant lineage keeps that lineage: once that lineage is revoked, a designation derived from the issued token is no longer redeemable, whether the issued token is a self-exchanged token or a delegated token",
     "local": "Observed through redemption, the one later derivation the OAuth binding names. The self-exchanged token is the reference's delegation handle, whose own provider Grant records the presented token's grant as its backing grant."
    },
    "level": "endpoint",
@@ -10192,7 +10192,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 11 (D620). Proven by the mutants recorded on core.delegation.redemption-validates-backing-grant: dropping the handle's backing link fails the self-exchange witness, and settling a delegated token under a fresh grant fails the depth-2 witness."
+   "notes": "#1503 finding 11 (D620). Proven by the mutants recorded on core.delegation.redemption-validates-backing-grant: dropping the handle's backing link fails the self-exchange witness, and settling a delegated token under a fresh grant fails the depth-2 witness. Re-quoted for the owner's D726 Q4 clarification (#1617): the provenance applies where the subject_token was issued under a grant lineage, and a credential issued under none, as on the Dispatch path, has none to validate."
   },
   {
    "id": "core.grant-binding.cross-domain-credential-association",

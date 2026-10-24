@@ -2350,11 +2350,11 @@ The grant binding relates to other mechanisms as follows:
   ordinary in-Mission delegation ({{delegation}}) and self-exchange
   down-scoping ({{self-exchange}}) both work this way, and the issued
   token is a derived token ({{mission-claim}}) whose `mission` claim
-  identifies the one Mission its `subject_token` resolved to. Such an
-  exchange leaves the existing grant provenance in place: the issued
-  token rests on the grant lineage its `subject_token` was issued
-  under, and a later redemption of a designation derived from it
-  validates that lineage's state ({{delegated-exchange}}). A Token
+  identifies the one Mission its `subject_token` resolved to. Where
+  the `subject_token` was issued under a grant lineage, the issued
+  token retains that grant provenance, and a later redemption of a
+  designation derived from it validates all applicable backing-grant
+  state ({{delegated-exchange}}). A Token
   Exchange that instead establishes a redeemable grant
   lineage, such as the continuation profile's
   delegation-family-creating exchange
@@ -3694,11 +3694,14 @@ subject to all of the following:
   backing that credential, are still valid; the Mission is `active`;
   and the delegation policy ({{delegation-constraints}}) and the
   Mission's current authority admit the result. An earlier redemption
-  establishes none of these. The backing grant state includes the
-  grant lineage that credential was issued under, kept through any
-  exchange that established no new grant lineage
-  ({{grant-binding-related}}); the Mission's `active` state never
-  substitutes for it.
+  establishes none of these. Where that credential was issued under a
+  grant lineage, the backing grant state includes that lineage, kept
+  through any exchange that established no new grant lineage
+  ({{grant-binding-related}}). A credential issued under none, as on
+  the Template profile's Dispatch path before its delegation family
+  exists, has no lineage to validate; that never excuses dropping or
+  ignoring a lineage that does exist. The Mission's `active` state
+  never substitutes for backing grant state.
 
 The `act` chain nests (`act.act`) for as long as, and only while,
 authority continues under the same approved Mission. A new approval
@@ -7279,7 +7282,9 @@ Cross-Domain:
   reusable-state case reads as a redeemable grant lineage, the
   derivation resolution list points to profile-defined grants, and a
   derived token's Mission is the one its `subject_token` resolved to,
-  with no binding assumed (#1589, D726).
+  with no binding assumed, and Grant Bindings and Related Mechanisms
+  and Delegated Exchange keep a token's backing grant provenance where
+  its `subject_token` was issued under a grant lineage (#1589, D726).
 - Editorial, no requirement change: Grant Bindings and Related
   Mechanisms names the Token Exchanges its later items cover, and the
   Namespace Taxonomy lists the `approval_basis.type` values as
