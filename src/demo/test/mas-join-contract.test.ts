@@ -98,6 +98,7 @@ describe("every join-enabling deployment declares the mapping contract its joins
   it("the shared join's contract loader refuses an unknown member, a missing one, a mapping this join does not implement, and an instance it does not establish", () => {
     const shipped = () => ({
       governed_resources: [CANONICAL_RESOURCE],
+      join_resource: MAS_JOIN.join_resource,
       delegates: MAS_JOIN.delegates,
       scope_actions: MAS_JOIN.scope_actions,
       mapping_contract: { ...(MAS_JOIN.mapping_contract as object) },
@@ -112,5 +113,23 @@ describe("every join-enabling deployment declares the mapping contract its joins
     expect(() => parseMasJoinPolicy(withContract({ failure: "out_of_authority" }))).toThrow(/failure must be "mission_binding_failed"/);
     expect(() => parseMasJoinPolicy(withContract({ instance: { supported: true, required: false } }))).toThrow(/establishes no client instance/);
     expect(() => parseMasJoinPolicy(withContract({ version: 0 }))).toThrow(/version must be a positive integer/);
+  });
+
+  it("the join route's own resource is required, an absolute URI, and distinct from every governed resource (#1531, D741)", () => {
+    expect(MAS_JOIN.join_resource).not.toBe(CANONICAL_RESOURCE);
+    const shipped = () => ({
+      governed_resources: [CANONICAL_RESOURCE],
+      join_resource: MAS_JOIN.join_resource,
+      delegates: MAS_JOIN.delegates,
+      scope_actions: MAS_JOIN.scope_actions,
+      mapping_contract: { ...(MAS_JOIN.mapping_contract as object) },
+    });
+    expect(parseMasJoinPolicy(shipped()).join_resource).toBe(MAS_JOIN.join_resource);
+    const { join_resource: _join, ...missing } = shipped();
+    expect(() => parseMasJoinPolicy(missing)).toThrow(/join_resource must be a non-empty string/);
+    expect(() => parseMasJoinPolicy({ ...shipped(), join_resource: "not a uri" })).toThrow(/join_resource must be an absolute URI/);
+    expect(() => parseMasJoinPolicy({ ...shipped(), join_resource: CANONICAL_RESOURCE })).toThrow(
+      /join_resource must differ from every governed resource/,
+    );
   });
 });

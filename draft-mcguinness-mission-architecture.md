@@ -2389,8 +2389,13 @@ one:
   Lifecycle-Gated Authorization, Monotonic Derivation, and
   Credential-Bound claims.
 
-Only the third earns the term: a `mission` claim alone is a reference,
-not Mission-bound authorization. The family defines "Mission-bound" by
+Only the third earns the term. An access token's `mission` claim is
+reserved for issuance under a Mission-binding profile (the OAuth
+binding's Claim Reservation), so a Mission-referenced access token
+carries its identifier by other means; the claim attests that issuance
+conformed to that profile, not that the minter queried current Mission
+state, and its presence alone establishes no trust. The family defines
+"Mission-bound" by
 the `credential-mission-bound` equivalence of the binding properties
 ({{binding-properties}}): six conditions, each mapped to what
 discharges it, earned only where all hold together. The OAuth binding
@@ -2400,7 +2405,9 @@ discharges the equivalence through its own conformance rule.
 
 The Mission-Bound Credential is a credential carrying the `mission`
 claim (`id`, `issuer`) and Mission-derived authorization details,
-issued only while the Mission is `active`. Its home is the OAuth
+issued only under a Mission-binding profile, which ties its issuance to
+the Mission being `active` (the OAuth binding's Claim Reservation). Its
+home is the OAuth
 binding's Mission-Bound Access Tokens and Mission Claim sections.
 The claim's `id` and `issuer` are the Mission-identity condition; a
 token-carried Authority Set commitment is never required for it, per
@@ -4406,6 +4413,12 @@ with no `suspended` state and its own termination reasons, served by
   `revocation_exposure` member states the inputs that size what can
   happen inside the revocation window, with units, as inputs rather
   than a computed bound. No requirement changed.
+
+- Token Classes and The Mission-Bound Credential follow the OAuth
+  binding's Claim Reservation: an access token's `mission` claim
+  attests issuance under a Mission-binding profile, not a current
+  state check by its minter, and a Mission-referenced access token
+  does not carry it. No requirement changed (#1531).
 
 - The Authorization bases entry says the basis `type` values form a
   specification-defined namespace and that its list names each

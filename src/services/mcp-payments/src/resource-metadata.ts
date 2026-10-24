@@ -20,11 +20,14 @@ export const PROTECTED_RESOURCE_METADATA_PATH = "/.well-known/oauth-protected-re
 /**
  * Try to serve a discovery route. Returns true when the request was handled, so
  * a caller can fall through to its credential-gated dispatch otherwise.
+ * `joinResource`, on a MAS Join route served under its own resource
+ * identifier, makes the metadata that route's ({@link McpPaymentsServer.joinRouteMetadata}).
  */
 export function serveResourceMetadata(
   server: McpPaymentsServer,
   req: IncomingMessage,
   res: ServerResponse,
+  joinResource?: string,
 ): boolean {
   if (req.method !== "GET") return false;
   const path = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`).pathname;
@@ -39,7 +42,7 @@ export function serveResourceMetadata(
     return true;
   }
   if (path === PROTECTED_RESOURCE_METADATA_PATH) {
-    return json(res, server.protectedResourceMetadata());
+    return json(res, joinResource !== undefined ? server.joinRouteMetadata(joinResource) : server.protectedResourceMetadata());
   }
   const jwks = server.txnChallengeJwks();
   if (jwks && path === server.txnChallengeJwksPath()) {
