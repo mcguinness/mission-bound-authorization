@@ -1158,7 +1158,10 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       expect(decisions.slice(before.decisions)).toEqual([{ audience: CANONICAL_RESOURCE, permit: false }]);
       const last = stack.evidence.forMission(spareId).filter((e) => e.kind === "decision").at(-1)?.content;
       expect(last).toMatchObject({ decision: "deny", denial_reason: "mission_inactive" });
-      expect(stack.evidence.forMission(spareId).filter((e) => e.kind === "execution")).toHaveLength(0);
+      // The permitted read's completed disposition (#1640); the refused read adds none.
+      expect(stack.evidence.forMission(spareId).flatMap((e) => (e.kind === "execution" ? [e.content.outcome] : []))).toEqual([
+        "completed",
+      ]);
     },
 
     // @spec runtime#compound-actions (#253 acceptance): each phase is its own
@@ -1192,7 +1195,11 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
         expect(decisions.slice(before.decisions)).toEqual([{ audience: CANONICAL_RESOURCE, permit: false }]);
         expect(stack.connectors.ledgerEntries().length).toBe(before.ledger);
         expect(stack.connectors.ledgerEntries(payId)).toHaveLength(0);
-        expect(stack.evidence.forMission(payId).filter((e) => e.kind === "execution")).toHaveLength(0);
+        // The preflight's and the prepare's completed dispositions (#1640); the refused commit adds none.
+        expect(stack.evidence.forMission(payId).flatMap((e) => (e.kind === "execution" ? [e.content.outcome] : []))).toEqual([
+          "completed",
+          "completed",
+        ]);
       } finally {
         await close();
       }
