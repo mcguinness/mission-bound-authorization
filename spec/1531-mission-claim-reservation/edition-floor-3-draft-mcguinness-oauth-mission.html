@@ -5090,9 +5090,10 @@ advertises the requirement in <a href="#protected-resource-metadata" class="auto
 trusts to issue Mission-bound authorization for the resource;
 trusting the issuer's ordinary access tokens is not enough. It <span class="bcp14">MUST</span>
 require <code>mission.issuer</code> to equal the token's <code>iss</code>, unless a
-cross-domain profile it has adopted
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>) explicitly
-establishes the permitted relationship between the two. It <span class="bcp14">MUST</span>
+Mission-binding profile it has adopted (<a href="#mission-claim-reservation" class="auto internal xref">Section 8.8.1</a>),
+such as <span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>,
+explicitly establishes the permitted relationship between the two.
+It <span class="bcp14">MUST</span>
 reject a token that fails either check with the <code>invalid_token</code>
 error code. For an opaque token, the issuer is the AS whose
 introspection response or issuer-local resolution the resource
@@ -11226,7 +11227,10 @@ member, are reserved for issuance that conforms to a Mission-binding
 profile; a profile that defines another issuance or derivation path
 identifies its grant or chain, authority bound, state check, and
 consumer checks (Claim Reservation). Introspection discloses
-<code>mission</code> only for a token issued on a conforming path.<a href="#appendix-G-3.5.1" class="pilcrow">¶</a></p>
+<code>mission</code> only for a token issued on a conforming path. A resource
+server's <code>mission.issuer</code> check accepts the relationship any
+Mission-binding profile it has adopted establishes, not only a
+cross-domain profile's (Enforcement Requirements).<a href="#appendix-G-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-G-3.6">
           <p id="appendix-G-3.6.1">A Mission-governed resource, classified by the deployment or by its
