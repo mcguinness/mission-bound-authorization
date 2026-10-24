@@ -653,6 +653,7 @@ describe("terminal tombstones and identifier nonreuse", () => {
       expect(() =>
         kernel.insertRecord({ ...record, approval_event_id: "second-approval" }, undefined, {
           source: { inherited: kernel.committedSourceBinding(record.id) },
+          audiences: "fresh",
         }),
       ).toThrow(MissionIdReuseError);
 
@@ -668,6 +669,7 @@ describe("terminal tombstones and identifier nonreuse", () => {
       expect(() =>
         kernel.insertRecord({ ...record, approval_event_id: "third-approval" }, undefined, {
           source: { inherited: kernel.committedSourceBinding(record.id) },
+          audiences: "fresh",
         }),
       ).toThrow(MissionIdReuseError);
       // Pruning is idempotent and never resurrects the identifier.
@@ -723,6 +725,7 @@ describe("terminal tombstones and identifier nonreuse", () => {
       expect(() =>
         kernel.insertRecord({ ...record, approval_event_id: "after-prune" }, undefined, {
           source: { inherited: kernel.committedSourceBinding(record.id) },
+          audiences: "fresh",
         }),
       ).toThrow(
         MissionIdReuseError,
@@ -772,7 +775,7 @@ describe("terminal tombstones and identifier nonreuse", () => {
       b.kernel.insertRecord(
         { ...bRecord, id: record.id, approval_event_id: "b-second", status_list_idx: null },
         undefined,
-        { source: { inherited: b.kernel.committedSourceBinding(bRecord.id) } },
+        { source: { inherited: b.kernel.committedSourceBinding(bRecord.id) }, audiences: "fresh" },
       );
       expect(b.kernel.get(record.id)?.issuer).toBe("https://issuer-b.test");
     } finally {

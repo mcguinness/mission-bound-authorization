@@ -15,6 +15,7 @@ import {
   type EntitlementAuthorityEntry,
   type EntitlementResolver,
   entryOverlapsResource,
+  isRfc3339Instant,
   type LocalMappingPolicy,
   narrowToEntitledAuthority,
   type OriginPrincipal,
@@ -211,7 +212,7 @@ export class ResourceAuthorizationServer {
     // path runs. A missing or malformed profile-required member is a
     // refusal, never a silently dropped or coerced value.
     const mission = payload.mission as
-      | { id?: unknown; issuer?: unknown; authority_hash?: unknown; subject?: OriginPrincipal }
+      | { id?: unknown; issuer?: unknown; authority_hash?: unknown; subject?: OriginPrincipal; expires_at?: unknown }
       | undefined;
     if (!mission) throw new RasError("invalid_grant", "grant missing mission claim");
     if (typeof mission.id !== "string" || !mission.id) {
@@ -281,6 +282,13 @@ export class ResourceAuthorizationServer {
     // already authenticated against the trusted originating issuer -- never
     // request-controlled, so this branch cannot be forced by a presenter.
     const isContinuation = typeof payload.identity_continuation_handle === "string";
+    // @spec continuation#transport-ica (#1589, D726): a continuation ID-JAG MUST
+    // carry the Mission's `expires_at` as an RFC 3339 date-time; its absence, or a
+    // value that is not one, refuses invalid_grant before the one-time jti is
+    // consumed. The local token preserves the whole claim.
+    if (isContinuation && !isRfc3339Instant(mission.expires_at)) {
+      throw new RasError("invalid_grant", "continuation grant mission claim missing or malformed expires_at");
+    }
 
     let localSub: string;
     // The mapping's own validity bound additionally caps the minted token's

@@ -268,10 +268,18 @@ describe("the token endpoint checks every entry an audience serves against that 
   });
 
   it("does not pair the audience with a sibling outside its segment boundary (boundary)", async () => {
-    // `/mcp-other` shares the audience's characters but not its path segment.
+    // `/mcp-other` shares the audience's characters but not its path segment,
+    // so the audience neither serves the entry nor is its original approved
+    // audience (#1503 finding 7, D733 ruling 1): the entry is not carried in
+    // the audience's token, and with nothing approved for it the token is
+    // refused on that, never on the entry's constraints key.
     const sibling = at(SIBLING, TENANT);
     const issued = await issueUnder([], sibling);
-    expect(issued.status, JSON.stringify(issued.body)).toBe(200);
-    expect(decodeJwt(issued.body.access_token as string).authorization_details).toEqual([sibling]);
+    expect(issued.status, JSON.stringify(issued.body)).toBe(400);
+    expect(issued.body.error).toBe("invalid_target");
+    expect(issued.body.error_description).toMatch(
+      new RegExp(`audience ${PAYMENTS} is not an original approved audience of any entry the token would carry`),
+    );
+    expect(issued.body.access_token).toBeUndefined();
   });
 });

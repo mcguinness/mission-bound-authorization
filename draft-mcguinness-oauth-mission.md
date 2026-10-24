@@ -1640,6 +1640,26 @@ The AS MUST NOT narrow, delegate, or project to `scope` an entry of a
 type for which it has not declared the corresponding capability; on an
 undeclared capability the entry is carried as approved.
 
+The AS relates each entry to the audiences that consume it through a
+trusted entry-to-audience mapping, such as authenticated configuration
+or protected resource metadata ({{RFC9728}}). An entry's original
+approved audience is the audience or audiences that mapping assigned
+the entry when the Mission was approved. An entry's `resource` value is
+not by itself an audience ({{token-response}}). The AS MUST retain that
+association with the Mission; a later change to the mapping does not
+redefine it.
+
+A Mission created from earlier authority, such as a Child Mission
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), a successor
+({{I-D.draft-mcguinness-oauth-mission-expansion}}), or an instance of a
+standing consent ({{standing-consent-bases}}), does not reassign the
+original approved audience of an entry it inherits: the entry keeps that
+of the authority it derives from. Only a fresh approval of the entry, or
+a transformation under a declared capability, establishes a different
+one. Where the AS cannot establish an entry's original approved
+audience, the entry has none; the current mapping does not stand in for
+it.
+
 Issuing an entry to an audience other than its original approved
 audience, including audience projection to a Resource AS
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), counts as
@@ -1647,7 +1667,9 @@ narrowing and needs `narrowing`, not `projection`. Without `narrowing`,
 the AS MUST NOT issue an entry to any audience other than its original
 approved audience, or, except as `scope` under a declared `projection`,
 in any form other than exactly as approved, since it cannot prove that a
-transformed copy is still a subset of what was approved.
+transformed copy is still a subset of what was approved. Without
+`narrowing`, a token for another audience does not carry the entry
+({{token-response}}).
 
 A type that declares `delegation` without `narrowing` is delegable only
 unchanged: the AS MUST NOT include an entry of such a type in a
@@ -2334,17 +2356,20 @@ At each subsequent derivation the AS resolves the Mission from the
 grant the client presents:
 
 - the authorization code at the token endpoint;
-- the refresh token on refresh; or
+- the refresh token on refresh;
 - the Mission-bound `subject_token` on Token Exchange (the
-  `actor_token` identifies the delegate, {{delegated-exchange}}).
+  `actor_token` identifies the delegate, {{delegated-exchange}}); or
+- a profile-defined grant, through the authenticated `mission`
+  reference it carries, such as the Template profile's handoff grant
+  ({{I-D.draft-mcguinness-oauth-mission-template}}).
 
 It then applies the gating of {{issuance-gating}}.
 
-A Mission MAY carry zero or more grant bindings. Beyond the
+A Mission MAY carry zero or more grant bindings. Beyond any
 authorization-code lineage established at approval, a refresh-token
 family a continuation transport establishes later (above) is a
-further binding, rooted in the Mission its own `subject_token`
-resolved to.
+further binding, or the Mission's first where it has none, rooted in
+the Mission its own `subject_token` resolved to.
 
 The AS MUST resolve a bound grant lineage to the same Mission on
 every derivation performed against it: the mapping is fixed for the
@@ -2375,19 +2400,33 @@ The grant binding relates to other mechanisms as follows:
   ordinary in-Mission delegation ({{delegation}}) and self-exchange
   down-scoping ({{self-exchange}}) both work this way, and the issued
   token is a derived token ({{mission-claim}}) whose `mission` claim
-  identifies the one Mission its `subject_token`'s binding resolved
-  to. Such an exchange leaves the existing grant provenance in place:
-  the issued token rests on the grant lineage its `subject_token` was
-  issued under, and a later redemption of a designation derived from
-  it validates that lineage's state ({{delegated-exchange}}). A Token
-  Exchange that instead establishes reusable
-  authorization state, such as the continuation profile's
+  identifies the one Mission its `subject_token` resolved to. Where
+  the `subject_token` was issued under a grant lineage, the issued
+  token retains that grant provenance, and a later redemption of a
+  designation derived from it validates all applicable backing-grant
+  state ({{delegated-exchange}}). A Token
+  Exchange that instead establishes a redeemable grant
+  lineage, such as the continuation profile's
   delegation-family-creating exchange
   ({{I-D.draft-mcguinness-oauth-mission-continuation}}), creates a
   new grant binding, rooted in that same Mission. Three Token
   Exchanges are covered by the two items below instead: cross-domain
   projection and child creation, which return a JWT authorization
-  grant, and expansion, which creates a successor.
+  grant, and expansion, which creates a successor. The Template
+  profile's Dispatch Handoff
+  ({{I-D.draft-mcguinness-oauth-mission-template}}) returns a handoff
+  grant that establishes no grant lineage; its redemption issues a
+  derived token for the dispatched Mission, creating or extending no
+  grant binding, and the later delegation-family exchange creates
+  that Mission's first grant binding. In the continuation profile's
+  Identity Continuation Transport
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), the root and
+  onward exchanges return ID-JAGs that identify the Mission, and the
+  identity provider's hop record is continuation state, not a grant
+  lineage. Redeeming such an ID-JAG at a Resource AS produces a local
+  derived access token. A Resource AS holds a destination-side grant
+  binding only where it separately establishes a redeemable grant
+  lineage mapped to the Mission, such as a refresh-token family.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
   no destination-side grant binding. A Resource AS consumes the
@@ -2590,7 +2629,20 @@ under the entry's type (for
 {{I-D.draft-mcguinness-oauth-mission-resource-access}}). A token
 request's `resource` parameter ({{RFC8707}}) selects the audience the
 client asks for. The token's `aud` names the recipients that accept
-the token.
+the token, and the AS relates an entry to them through the entry's
+original approved audience ({{transformation-capabilities}}).
+
+A token issued for an audience carries only the entries whose original
+approved audience includes that audience; an entry approved for another
+audience is not carried, unless a declared `narrowing` capability
+permits issuing it there. A token whose `aud` names several audiences
+is issued only where the same entries are approved for each of them;
+where they differ, the AS refuses the request with `invalid_target`, and
+the client requests a separate token for each audience. The AS also
+refuses with `invalid_target` a request whose audience is approved for
+none of the entries the token would carry, and one whose
+`authorization_details` ({{Section 6 of RFC9396}}) names an entry not
+approved for its audience.
 
 The AS returns the granted `authorization_details` in every token
 response, including refresh and Token Exchange responses
@@ -3273,6 +3325,7 @@ exchange rows of the third table.
 |---|---|
 | PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
 | Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
+| Token request: the requested audience is approved for none of the entries the token would carry, the request's `authorization_details` names an entry not approved for its audience, or the audiences it names are approved for different entries ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or the AS has not established a delegated Mission-bound token's audience as a Mission-aware Resource Server that also processes the `act` chain ({{rs-mission-unaware}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
@@ -3750,11 +3803,14 @@ subject to all of the following:
   backing that credential, are still valid; the Mission is `active`;
   and the delegation policy ({{delegation-constraints}}) and the
   Mission's current authority admit the result. An earlier redemption
-  establishes none of these. The backing grant state includes the
-  grant lineage that credential was issued under, kept through any
-  exchange that established no new grant lineage
-  ({{grant-binding-related}}); the Mission's `active` state never
-  substitutes for it.
+  establishes none of these. Where that credential was issued under a
+  grant lineage, the backing grant state includes that lineage, kept
+  through any exchange that established no new grant lineage
+  ({{grant-binding-related}}). A credential issued under none, as on
+  the Template profile's Dispatch path before its delegation family
+  exists, has no lineage to validate; that never excuses dropping or
+  ignoring a lineage that does exist. The Mission's `active` state
+  never substitutes for backing grant state.
 
 The `act` chain nests (`act.act`) for as long as, and only while,
 authority continues under the same approved Mission. A new approval
@@ -7333,6 +7389,15 @@ Cross-Domain:
   specify; the sentence on joining one credential to different Missions
   across requests moves to the Mission Authority Server's Mission
   Join.
+- Editorial, no requirement change: Grant Bindings and Related
+  Mechanisms places the Template profile's Dispatch Handoff and the
+  continuation profile's Identity Continuation Transport, the
+  reusable-state case reads as a redeemable grant lineage, the
+  derivation resolution list points to profile-defined grants, and a
+  derived token's Mission is the one its `subject_token` resolved to,
+  with no binding assumed, and Grant Bindings and Related Mechanisms
+  and Delegated Exchange keep a token's backing grant provenance where
+  its `subject_token` was issued under a grant lineage (#1589, D726).
 - Editorial, no requirement change: Grant Bindings and Related
   Mechanisms names the Token Exchanges its later items cover, and the
   Namespace Taxonomy lists the `approval_basis.type` values as
