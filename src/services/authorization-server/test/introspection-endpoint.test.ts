@@ -1033,7 +1033,12 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
     });
     as.kernel.transition(suspended.missionId, "suspend");
     as.kernel.transition(terminated.missionId, "revoke");
-    // The tokens the AS issued: the composite, with the Mission's state.
+    // The Lifecycle endpoint's revoke also destroys the Mission's OAuth grant.
+    const terminatedGrant = await as.provider.Grant.find(as.kernel.get(terminated.missionId)?.grant_id as string);
+    expect(terminatedGrant).toBeTruthy();
+    await terminatedGrant?.destroy();
+    // The tokens the AS issued: the composite, with the Mission's state, the
+    // terminated Mission's included although its grant is gone.
     expect((await introspect(suspended.at, { principal: RS_PAYMENTS })).body).toMatchObject({
       active: false,
       mission: { id: suspended.missionId, state: "suspended" },
