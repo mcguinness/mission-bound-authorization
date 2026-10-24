@@ -610,7 +610,7 @@ export async function composeStack(opts: {
       // composition that arms the route gives its AS no classification and no
       // authenticated metadata for that resource. This does not reconcile
       // with the payments resource's own published metadata, which declares
-      // Mission-bound-only acceptance; #1531 records the open question.
+      // Mission-bound-only acceptance, an open question under #1531.
       ...(ordinaryMinting ? { governedResources: withoutGovernedResource(GOVERNED_RESOURCES, CANONICAL_RESOURCE) } : {}),
       transactionAuthorization: {
         challengeIssuers,

@@ -14,15 +14,14 @@
  *    designated (`invalid_target`, depth not established);
  *  - nothing is counted for a refusal, and nothing counted before the restart
  *    is returned;
- *  - introspection answers a resource server bare inactive for each of them.
- *    The designation check itself loses its record: while the Mission is
- *    active the missing issuance record answers, and once it is not, audience
- *    separation alone keeps the designation's Mission data from a caller.
- *
- * The residual: a caller that accepts the designated client's identifier,
- * which audience separation forbids, is told a non-active Mission's state for
- * a designation minted before the restart. Before the restart the designation
- * check answers that same request bare inactive.
+ *  - introspection answers bare inactive for each of them, whatever the
+ *    Mission's state. The designation check itself loses its record, and the
+ *    AS discloses `mission` only for a token whose issuance record
+ *    establishes a conforming path (#1531, D741), so the missing record
+ *    answers: a caller that accepts the designated client's identifier, which
+ *    audience separation forbids, is answered bare inactive as it is before
+ *    the restart, and a token minted before the restart does not report its
+ *    Mission's later termination.
  *
  * oidc-provider's memory adapter is process-global, so this in-process
  * rebuild still holds the provider Grant the tokens were minted under; a
@@ -382,15 +381,12 @@ describe("delegation accounting across a restart on the same kernel file and key
     expect(await introspect(active.designation)).toEqual({ active: false });
   });
 
-  it("keeps a designation minted before the restart bare inactive, with no Mission data, once its Mission is not active, to a resource server it is not an audience of: audience separation", async () => {
+  it("keeps a designation minted before the restart bare inactive, with no Mission data, once its Mission is not active, to a resource server it is not an audience of; the origin token minted before the restart, which that resource server is an audience of, has no issuance record and is bare inactive too (#1531, D741)", async () => {
     expect(await introspect(revoked.designation)).toEqual({ active: false });
-    // A token the same resource server is an audience of reports the revoked Mission.
-    expect((await introspect(revoked.origin)).mission).toMatchObject({ id: revoked.missionId, state: "terminated" });
+    expect(await introspect(revoked.origin)).toEqual({ active: false });
   });
 
-  it("the residual: a caller that accepts the designated client's identifier is told the revoked Mission's state for a designation minted before the restart, since its designation record is gone and only audience separation stood", async () => {
-    const body = await introspectAsLate(revoked.designation);
-    expect(body.active).toBe(false);
-    expect(body.mission).toMatchObject({ id: revoked.missionId, state: "terminated", termination: { reason: "revoked" } });
+  it("a caller that accepts the designated client's identifier is answered bare inactive for a designation minted before the restart, whose issuance record is gone, once its Mission is not active (#1531, D741)", async () => {
+    expect(await introspectAsLate(revoked.designation)).toEqual({ active: false });
   });
 });

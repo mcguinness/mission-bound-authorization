@@ -60,6 +60,36 @@ sub-agent. Delegation itself is opt-in and off in both baselines.
 - **Updating.** Edit, review, and restart the AS. A change applies to the
   next designation.
 
+## `governed-resources.json`
+
+The resources this AS treats as Mission-governed (`@spec
+mission#authority-proposal`, #1531, D741). `classification` is the
+deployment's own classification of a resource, `governed` or
+`not_governed`. `authenticated_metadata` holds the RFC 9728
+`mission_bound_authorization_required` member of each resource's protected
+resource metadata that the AS has authenticated; the reference fetches no
+metadata, so these records are configured. A resource is governed when
+either source says so, and neither source clears the other: metadata that
+omits the member or sets it to `false` leaves a `governed` classification in
+force, and a `not_governed` classification leaves metadata declaring the
+requirement in force. The AS refuses a token request with no Mission binding
+whose token would carry a governed audience, on every grant type and on the
+dev ordinary-token route. The shipped file classifies the payments resource,
+whose own metadata declares the requirement. A demo composition that arms the
+dev ordinary-token route (the shared demo, and the as-native test fixture)
+gives its AS no entry for the payments resource, because the MAS Join acts
+under an ordinary payments credential; that does not reconcile with the
+resource's published metadata, an open question under #1531.
+
+- **Owner.** The deployment's security owner, with each resource server's
+  operator for the requirement its metadata declares.
+- **Integrity.** Repository review and the strict loader, which refuses
+  unknown members, a resource that is not an absolute URI, a classification
+  other than `governed` or `not_governed`, and a metadata member that is not
+  a boolean.
+- **Updating.** Edit, review, and restart the AS. A change applies to the
+  next token request.
+
 ## `mas-join.json`
 
 The shared demo stack's MAS join (`@spec authority-server#mission-join`,
