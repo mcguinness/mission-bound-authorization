@@ -26,6 +26,8 @@ import type { Server } from "node:http";
 import { APPROVAL_FLOOR, AUTHORITY_SOURCES, SCOPE_PROJECTION } from "@mission/demo-data";
 import { type CryptoKey, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
+import { ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 
@@ -46,7 +48,18 @@ const VENDOR_READ = "ledger:vendor.read";
 
 const ENTRY = { type: "mission_resource_access", resource: ORIGIN, resource_match: "prefix", actions: [READ] } as AuthorityEntry;
 const SAAS_ENTRY = { type: "mission_resource_access", resource: SAAS, actions: [VENDOR_READ] } as AuthorityEntry;
-const CEILING: AuthorityEntry[] = [ENTRY, SAAS_ENTRY];
+
+/** Entries that permit Child Missions, for the child redemption case. */
+const LIST = "payments:invoice.list";
+const CHILDREN = {
+  max_depth: 1,
+  allowed_delegates: [{ sub_profile: "ai_agent" }],
+  children: { max_children: 5, max_child_depth: 1, allowed_child_actors: [{ sub_profile: "ai_agent" }] },
+};
+const ORIGIN_CHILDREN = { type: "mission_resource_access", resource: ORIGIN, resource_match: "prefix", actions: [LIST], delegation: CHILDREN } as AuthorityEntry;
+const ADDED_CHILDREN = { type: "mission_resource_access", resource: ADDED, actions: [LIST], delegation: CHILDREN } as AuthorityEntry;
+const CHILD_ACTOR = "subagent-invoice-extractor";
+const CEILING: AuthorityEntry[] = [ENTRY, SAAS_ENTRY, ORIGIN_CHILDREN, ADDED_CHILDREN];
 
 type Keys = { privateKey: CryptoKey; publicKey: CryptoKey; jwk: JWK };
 type Json = Record<string, unknown>;
@@ -246,8 +259,10 @@ beforeAll(async () => {
       ...APPROVAL_FLOOR,
       classification: [
         ...APPROVAL_FLOOR.classification,
-        { type: "mission_resource_access" as const, resource: ORIGIN, actions: { [READ]: "consequential_read" as const } },
+        { type: "mission_resource_access" as const, resource: ORIGIN, actions: { [READ]: "consequential_read" as const, [LIST]: "consequential_read" as const } },
         { type: "mission_resource_access" as const, resource: SAAS, actions: { [VENDOR_READ]: "consequential_read" as const } },
+        // A prefix entry over the origin meets every classification within it, the reports resource's included.
+        { type: "mission_resource_access" as const, resource: ADDED, actions: { [READ]: "consequential_read" as const, [LIST]: "consequential_read" as const } },
       ],
     },
     authoritySources: {
@@ -370,5 +385,92 @@ describe("a token for an audience carries only the entries approved for it (@spe
     const payments = await redeem(await approveBoth(), keys, PAYMENTS);
     expectIssuedFor(payments, PAYMENTS, [ENTRY]);
     expectIssuedFor(await refresh(payments.body.refresh_token as string, keys, SAAS), SAAS, [SAAS_ENTRY]);
+  });
+});
+
+describe("a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733)", () => {
+  /** The child actor's own client authentication and DPoP proof, retried once with the server's nonce. */
+  async function childRedeem(assertion: string, keys: Keys): Promise<TokenResponse> {
+    const childKey = (await importJWK(as.childClientJwk as never, "ES256")) as CryptoKey;
+    const htu = `${ISSUER}/token`;
+    const send = async (extra: Json = {}) =>
+      fetch(htu, {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          dpop: await new SignJWT({ htm: "POST", htu, ...extra })
+            .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: keys.jwk })
+            .setIssuedAt()
+            .setJti(crypto.randomUUID())
+            .sign(keys.privateKey),
+        },
+        body: new URLSearchParams({
+          grant_type: CHILD_JWT_BEARER_GRANT_TYPE,
+          assertion,
+          client_assertion: await new SignJWT({})
+            .setProtectedHeader({ alg: "ES256", kid: `${CHILD_ACTOR}-auth` })
+            .setIssuer(CHILD_ACTOR)
+            .setSubject(CHILD_ACTOR)
+            .setAudience(ISSUER)
+            .setIssuedAt()
+            .setExpirationTime("2m")
+            .setJti(crypto.randomUUID())
+            .sign(childKey),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        }).toString(),
+      });
+    let res = await send();
+    const nonce = res.headers.get("dpop-nonce");
+    if (res.status === 400 && nonce) res = await send({ nonce });
+    return { status: res.status, body: (await res.json()) as Json };
+  }
+
+  it("a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other", async () => {
+    await withAddedAudience(async () => {
+      // The parent approves the origin prefix (both audiences) and the reports entry (that audience alone).
+      const keys = await newKeys();
+      const parentToken = await redeem(await approve([ORIGIN_CHILDREN, ADDED_CHILDREN], [PAYMENTS, ADDED], [ORIGIN, ADDED]), keys, ADDED);
+      expect(parentToken.status, JSON.stringify(parentToken.body)).toBe(200);
+      const parentId = parentToken.body.mission_id as string;
+      const parent = as.kernel.get(parentId);
+      parent?.authority_set.forEach((e, i) =>
+        expect(parent.approved_audiences?.[i], e.resource as string).toEqual(e.resource === ORIGIN ? [PAYMENTS, ADDED] : [ADDED]),
+      );
+      // A child within the token's authority: a payments entry, and a reports
+      // entry inside both parent entries, so its association is the reports
+      // audience alone.
+      const payments = { type: "mission_resource_access", resource: PAYMENTS, actions: [LIST] } as AuthorityEntry;
+      const reports = { type: "mission_resource_access", resource: ADDED, actions: [LIST] } as AuthorityEntry;
+      const created = await token(
+        {
+          grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+          subject_token: parentToken.body.access_token as string,
+          subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+          requested_token_type: JWT_TOKEN_TYPE,
+          creation_request_id: crypto.randomUUID(),
+          login_hint: "alice",
+          mission_intent: JSON.stringify({
+            intent: { goal: "List Acme invoices and reports", target_resources: [PAYMENTS, ADDED], expires_at: "2099-01-01T00:00:00Z" },
+          }),
+          authorization_details: JSON.stringify([payments, reports]),
+          child_actor: JSON.stringify({ sub: CHILD_ACTOR, sub_profile: "ai_agent" }),
+        },
+        keys,
+      );
+      expect(created.status, JSON.stringify(created.body)).toBe(200);
+      const child = as.kernel.get(created.body.mission_id as string);
+      expect(child?.authority_set[0]?.resource).toBe(PAYMENTS);
+      child?.authority_set.forEach((e, i) =>
+        expect(child.approved_audiences?.[i], e.resource as string).toEqual(e.resource === PAYMENTS ? [PAYMENTS, ADDED] : [ADDED]),
+      );
+      expect(child?.authority_set.some((e) => e.resource === ADDED)).toBe(true);
+
+      const issued = await childRedeem(created.body.access_token as string, await newKeys());
+      expect(issued.status, JSON.stringify(issued.body)).toBe(200);
+      const claims = decodeJwt(issued.body.access_token as string);
+      expect(claims.aud).toBe(PAYMENTS);
+      expect((claims.authorization_details as Json[]).map((e) => e.resource)).toEqual([PAYMENTS]);
+      expect((issued.body.authorization_details as Json[]).map((e) => e.resource)).toEqual([PAYMENTS]);
+    });
   });
 });

@@ -5,7 +5,7 @@
  * (subagent-invoice-extractor) by Token Exchange, proving its own token's key;
  * the sub-agent redeems the designation as its own client, proving its own key.
  */
-import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { ApprovalSessionStore } from "../src/index.js";
 
 import { type Server } from "node:http";
@@ -27,7 +27,9 @@ import {
   ALL_PROVIDER_CAPABILITIES,
   buildAuthorizationServer,
   type BuiltAs,
+  DEFERRED_GRANT_TYPE,
   type DelegationPolicyRequest,
+  validateMissionIntent,
 } from "../src/index.js";
 import { TokenIssuanceStore } from "../src/kernel/token-issuance-store.js";
 
@@ -1254,5 +1256,73 @@ describe("the delegated exchange pairs entries with the requested resource throu
     expect(sibling.status, JSON.stringify(sibling.body)).toBe(400);
     expect(sibling.body.error).toBe("invalid_target");
     expect(sibling.body.error_description).toMatch(/no entry of the designation permits/);
+  });
+});
+
+describe("the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733)", () => {
+  /** An audience the mapping names only after the Mission's approval: the whole payments origin. */
+  const ORIGIN_AUDIENCE = "http://localhost:4403/";
+  const mapping = structuredClone(SCOPE_PROJECTION) as typeof SCOPE_PROJECTION;
+  let mapped: Harness;
+  beforeAll(async () => {
+    mapped = await harness(14876, {
+      capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
+      scopeProjection: mapping,
+    });
+  });
+  afterAll(() => {
+    mapped?.server.close();
+  });
+
+  it("a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it", async () => {
+    // The Mission approves the invoice read while the mapping names only the payments audience.
+    const base = await baseMission(mapped);
+    const payments = mapping.audiences[RESOURCE] as Record<string, unknown>;
+    // The mapping then names the payments origin as an audience: the read overlaps it but was not approved for it.
+    (mapping.audiences as Record<string, unknown>)[ORIGIN_AUDIENCE] = { ...payments, version: "d733-origin-1", mission_aware: true };
+    try {
+      // An Expansion approved now adds a scheduling entry, whose association the mapping assigns at this decision.
+      const schedule = {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:payment.schedule"],
+        constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] },
+        delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "ai_agent" }] },
+      };
+      const agent = dpop.get("ap-agent") as Keys;
+      const pending = mapped.as.expansionDeferrals.open({
+        predecessorId: base.missionId,
+        intent: validateMissionIntent(JSON.stringify({ goal: "Read and schedule Acme invoices", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
+        proposedAuthority: [delegable(), schedule] as never,
+        clientId: "ap-agent",
+        jkt: await jktOf(agent),
+        creationRequestId: crypto.randomUUID(),
+      });
+      mapped.as.expansionDeferrals.approve(pending.deferral_code, {
+        approver: { iss: mapped.issuer, sub: "bob" },
+        authentication: FIXTURE_BROWSER_LOGIN,
+        approvalEventId: `apev-d733-${crypto.randomUUID()}`,
+        approvedUntil: "2027-01-01T00:00:00Z",
+      });
+      const completed = await token(mapped, "ap-agent", agent, { grant_type: DEFERRED_GRANT_TYPE, deferral_code: pending.deferral_code });
+      expect(completed.status, JSON.stringify(completed.body)).toBe(200);
+      const successor = mapped.as.kernel.get(completed.body.mission_id as string);
+      const audiencesOf = (action: string) =>
+        successor?.approved_audiences?.[successor.authority_set.findIndex((e) => e.actions.includes(action))];
+      expect(audiencesOf("payments:invoice.read")).toEqual([RESOURCE]);
+      expect(audiencesOf("payments:payment.schedule")).toEqual(expect.arrayContaining([RESOURCE, ORIGIN_AUDIENCE]));
+
+      const designation = await designate(mapped, completed.body.access_token as string, SUBAGENT);
+      expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+      const delegated = await redeem(mapped, designation.body.access_token as string, SUBAGENT, undefined, { resource: ORIGIN_AUDIENCE });
+      expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+      const t = decodeJwt(delegated.body.access_token as string) as Body;
+      expect(t.aud).toBe(ORIGIN_AUDIENCE);
+      const actions = (t.authorization_details as Array<{ actions: string[] }>).flatMap((e) => e.actions);
+      expect(actions).toEqual(["payments:payment.schedule"]);
+      expect((delegated.body.authorization_details as Array<{ actions: string[] }>).flatMap((e) => e.actions)).toEqual(actions);
+    } finally {
+      delete (mapping.audiences as Record<string, unknown>)[ORIGIN_AUDIENCE];
+    }
   });
 });
