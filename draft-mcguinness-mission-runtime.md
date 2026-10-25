@@ -1107,8 +1107,9 @@ that digest immediately before acting
   substrate's default commitment construction, which this document
   imports normatively ({{I-D.draft-mcguinness-mission-substrate}}): a
   duplicate member is rejected at parse time, array order is
-  significant because JCS preserves it, URI-valued parameters are
-  compared byte-for-byte, and this document defines no second
+  significant because JCS preserves it, a URI-valued parameter is
+  preserved unless the Operation Profile defines its normalization
+  ({{parameter-binding}}), and this document defines no second
   canonicalization. It is a canonical-object digest under that
   construction: the I-JSON requirement and the reject-unknown-prefix
   rule apply to computing and verifying it unchanged.
@@ -2574,6 +2575,13 @@ implementers of the same operation bind the same bytes:
   canonicalization;
 - set-like array handling and any other canonicalization beyond the
   substrate's default commitment construction;
+- the normalization of URI-valued parameters. Absent one, a URI-valued
+  parameter is preserved as presented. A defined normalization applies
+  identically before the commitment and at execution reverification
+  ({{execution-reverification}}); it never changes how authority
+  entries match resources
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) and never
+  rewrites an approved identifier;
 - exactly which fields enter the `parameter_digest`;
 - where Evaluation-Context Binding is claimed, the versioned descriptor
   of decision-relevant resource-resolved facts and their granularity
