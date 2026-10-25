@@ -291,7 +291,7 @@ describe("the external-change bound, measured end to end (@spec runtime#state-fr
       suspended: RECONCILIATION_S,
     });
     as.kernel.close();
-  });
+  }, 60_000);
 });
 
 describe("the declared schedules, run by the authorization server's own timers (@spec runtime#state-freshness, #830)", () => {

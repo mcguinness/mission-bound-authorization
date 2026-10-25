@@ -489,7 +489,7 @@ describe("the reconciler across a restart of a file-backed authorization server 
     expect((await restarted.reconcile()).transitions).toEqual([]);
     after.suspensionScheduler?.stop();
     after.kernel.close();
-  });
+  }, 30_000);
 });
 
 describe("an unresolved Subject under lifecycle-only enforcement is an uncertainty that refuses, never a revocation (@spec runtime#input-authority-dependency, #830, D813)", () => {

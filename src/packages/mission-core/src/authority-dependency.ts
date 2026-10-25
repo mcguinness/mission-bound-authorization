@@ -711,11 +711,8 @@ export function checkAuthorityDependency(
       return { ok: true, validUntilMs: Math.min(reconciledUntilMs, staleUntilMs) };
     }
   }
-  if (!apply.direct)
-    return {
-      ok: true,
-      ...(reconciledUntilMs !== undefined ? { validUntilMs: reconciledUntilMs } : {}),
-    };
+  // Neither route applies here (lifecycle-only returned above).
+  if (!apply.direct) return { ok: true };
   const evaluated = evaluateAuthorityDependency(
     enforcement.declaration,
     enforcement.resolver.view(governed.subject),
