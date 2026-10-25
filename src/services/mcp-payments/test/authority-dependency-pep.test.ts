@@ -87,14 +87,19 @@ const TOKEN: TokenFacts = {
   credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
-/** The shipped declaration with direct evaluation routed to the PEP's composed step. */
-function routedToPep(): AuthorityDependencyDeclaration {
+/** The shipped declaration with direct evaluation routed to the PEP's composed step, or to the PDP. */
+function routedTo(direct: "pep" | "pdp"): AuthorityDependencyDeclaration {
   const shipped = AUTHORITY_DEPENDENCIES[0] as AuthorityDependencyDeclaration;
-  return parseAuthorityDependencyDeclarations([{ ...shipped, enforcement: { ...shipped.enforcement, direct: "pep" } }])[0] as AuthorityDependencyDeclaration;
+  return parseAuthorityDependencyDeclarations([{ ...shipped, enforcement: { ...shipped.enforcement, direct } }])[0] as AuthorityDependencyDeclaration;
 }
 
-/** A resource whose PEP evaluates the dependency, over a controlled identity source and clock. */
-async function build() {
+/**
+ * A resource whose PEP holds the dependency, over a controlled identity
+ * source and one clock the PEP, the PDP and the connectors read. Routed to
+ * the PEP (the default), its composed step evaluates it; routed to the PDP,
+ * the decision point evaluates it and the PEP rechecks it at release.
+ */
+async function build(route: "pep" | "pdp" = "pep") {
   let source: unknown = [{ sub: "alice" }];
   let nowMs = T0;
   const evidence = new AuthorityDependencyEvidence();
@@ -110,6 +115,13 @@ async function build() {
   // The resolver the enforcement reads: the test can hand it a different one
   // between admission and release, as a read completing in that window would.
   let viewing = resolver;
+  const dependency = {
+    declaration: routedTo(route),
+    resolver: { view: (principal: { iss: string; sub: string }) => viewing.view(principal) } as unknown as AuthorityDependencyResolver,
+    evidence,
+    now: () => nowMs,
+    governed: (mission: { id: string }) => (mission.id === view.id ? { subject: { iss: ISSUER, sub: "alice" }, clientId: "ap-agent" } : undefined),
+  };
   // The transaction tier's high-consequence class needs the PDP's claim
   // domain; settlement verifies against this resource's evidence keys.
   let pepKeys: ((params: never) => unknown) | undefined;
@@ -117,6 +129,7 @@ async function build() {
     emitterId: CANONICAL_RESOURCE,
     audience: CANONICAL_RESOURCE,
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+    ...(route === "pdp" ? { authorityDependency: dependency } : {}),
     claims: openEphemeralClaimDomain({
       owner: RUNTIME_POSTURE.pdps[0] as string,
       statement: RUNTIME_POSTURE,
@@ -138,16 +151,17 @@ async function build() {
   const missionFga = { checkWithContext: async () => true } as unknown as Fga;
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === view.id && ref.issuer === view.issuer
-      ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+      ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date(nowMs).toISOString() } }
       : undefined;
   const channel = await createDecisionChannel(point, {
     mode: "co-resident",
     pepId: "mcp-payments-pep",
     audience: CANONICAL_RESOURCE,
-    getOptions: () => ({ view, fga: missionFga, modelId: "test", now: () => new Date(), stalenessBound, relationForAction, stateSourcePlacement: "pep" as const }),
+    getOptions: () => ({ view, fga: missionFga, modelId: "test", now: () => new Date(nowMs), stalenessBound, relationForAction, stateSourcePlacement: "pep" as const }),
   });
   const decisions: unknown[] = [];
   const pep = new Pep({
+    now: () => new Date(nowMs),
     payments,
     evidence: records,
     fga: missionFga,
@@ -160,13 +174,7 @@ async function build() {
       return decision;
     },
     claims: channel.claims,
-    authorityDependency: {
-      declaration: routedToPep(),
-      resolver: { view: (principal: { iss: string; sub: string }) => viewing.view(principal) } as unknown as AuthorityDependencyResolver,
-      evidence,
-      now: () => nowMs,
-      governed: (mission) => (mission.id === view.id ? { subject: { iss: ISSUER, sub: "alice" }, clientId: "ap-agent" } : undefined),
-    },
+    authorityDependency: dependency,
   });
   const connectors = new Connectors(() => new Date(nowMs));
   const server = new McpPaymentsServer({
@@ -361,6 +369,53 @@ describe("the composed step's ceiling on a read admitted at the edge of the obse
       expect(result.ok, JSON.stringify(result)).toBe(false);
       expect(result.refusal_reason).toBe("resource_policy");
       expect(x.executions().at(-1)).toMatchObject({ outcome: "suppressed", error: "resource_policy" });
+    } finally {
+      await x.close();
+    }
+  });
+});
+
+describe("a permit is held to the observation it was admitted on, and a PEP holding a dependency routed to the PDP rechecks it at release (@spec runtime#input-authority-dependency, #830, D813)", () => {
+  it("releases no effect after the admission observation's validity though a newer read re-established the dependency before release, on every dispatch path", async () => {
+    const x = await build();
+    try {
+      for (const [path, call] of Object.entries(x.paths)) {
+        x.after(-299);
+        x.observeWith(x.resolver);
+        await x.resolver.refresh();
+        x.after(0);
+        const fresh = x.newResolver([{ sub: "alice" }]);
+        await fresh.refresh();
+        const refused = await call(() => {
+          x.observeWith(fresh);
+          x.after(1);
+        });
+        expect(refused.ok, `${path}: ${JSON.stringify(refused)}`).toBe(false);
+        expect(refused.refusal_reason, path).toBe("resource_policy");
+        expect(x.evidence.entries().at(-1), path).toMatchObject({ enforcer: "pep", failure: "stale" });
+      }
+      expect(x.ledger()).toHaveLength(0);
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("refuses at release, routed to the PDP, a permit the PDP issued before a known withdrawal reached the PEP, on every dispatch path", async () => {
+    const x = await build("pdp");
+    try {
+      await x.resolver.refresh();
+      expect((await x.read()).ok).toBe(true);
+      const withdrawn = x.newResolver([{ sub: "alice", withdrawn_delegations: ["ap-agent"] }]);
+      await withdrawn.refresh();
+      for (const [path, call] of Object.entries(x.paths)) {
+        x.observeWith(x.resolver);
+        const refused = await call(() => x.observeWith(withdrawn));
+        expect(refused.ok, `${path}: ${JSON.stringify(refused)}`).toBe(false);
+        expect(refused.refusal_reason, path).toBe("resource_policy");
+        expect((x.decisions.at(-1) as { decision: boolean }).decision, path).toBe(true);
+        expect(x.evidence.entries().at(-1), path).toMatchObject({ enforcer: "pep", failure: "withdrawn" });
+      }
+      expect(x.ledger()).toHaveLength(0);
     } finally {
       await x.close();
     }
