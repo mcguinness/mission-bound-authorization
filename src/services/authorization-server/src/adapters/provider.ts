@@ -2726,16 +2726,14 @@ export function buildProvider(opts: AdapterOptions): Provider {
   });
   // @spec #831 (role binding): the provider's keystore holds the access-token
   // key alone (`jwks`), so it signs nothing under another role's key. The
-  // jwks_uri still publishes every role's public key, served here from
-  // `publicJwks` rather than from that keystore.
+  // jwks_uri still publishes every role's public key: the provider serves the
+  // route, with its CORS handling and content type, and only the key set it
+  // answered with is replaced by `publicJwks`.
   provider.use(async (ctx, next) => {
-    if (ctx.method === "GET" && ctx.path === "/jwks") {
-      ctx.status = 200;
-      ctx.type = "application/jwk-set+json; charset=utf-8";
-      ctx.body = { keys: opts.publicJwks.keys };
-      return;
-    }
     await next();
+    if (ctx.method === "GET" && ctx.path === "/jwks" && ctx.status === 200) {
+      ctx.body = { keys: opts.publicJwks.keys };
+    }
   });
 
   // @spec device-authorization#request (#1202): the device authorization

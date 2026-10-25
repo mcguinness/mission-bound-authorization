@@ -617,8 +617,19 @@ describe("the AS's other verifiers and its provider sign and accept only under t
 
   it("the jwks_uri publishes every role's public key, and no private member, though the provider holds the access-token key alone", async () => {
     const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Body;
-    const res = await fetch(meta.jwks_uri as string);
+    // A browser fetches keys cross-origin: the provider's CORS handling stays
+    // on the route (the preflight and the GET both answer for the origin).
+    const origin = "https://app.example.com";
+    const preflight = await fetch(meta.jwks_uri as string, {
+      method: "OPTIONS",
+      headers: { origin, "access-control-request-method": "GET" },
+    });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get("access-control-allow-origin")).toBe(origin);
+    const res = await fetch(meta.jwks_uri as string, { headers: { origin } });
     expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe(origin);
+    expect(res.headers.get("vary")).toContain("Origin");
     expect(res.headers.get("content-type")).toContain("application/jwk-set+json");
     const { keys } = (await res.json()) as { keys: Body[] };
     expect(keys.map((k) => k.kid).sort()).toEqual(Object.values(ROLES).map((r) => r.kid).sort());
