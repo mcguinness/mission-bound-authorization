@@ -99,3 +99,60 @@ describe("MCP _meta reference parsing (@spec authority-server#mcp-reference)", (
     expect(parseMcpReferenceMeta([ID, ISS])).toEqual({ malformed: true });
   });
 });
+
+describe("the harness profile's work-item members on the reference tuple (@spec harness#work-item-identity, authority-server#reference-tuple, #815)", () => {
+  const HARNESS = "https://harness.example.com";
+  const WORK = "work_jrnl_2026q3_0042";
+
+  it("accepts work_item_issuer and work_item together, as Strings, in both carriages", () => {
+    expect(
+      parseMissionReferenceField(`${OK}, work_item_issuer="${HARNESS}", work_item="${WORK}"`),
+    ).toEqual({
+      id: ID,
+      issuer: ISS,
+      workItem: { issuer: HARNESS, id: WORK },
+    });
+    expect(
+      parseMcpReferenceMeta({
+        mission_id: ID,
+        issuer: ISS,
+        work_item_issuer: HARNESS,
+        work_item: WORK,
+      }),
+    ).toEqual({
+      id: ID,
+      issuer: ISS,
+      workItem: { issuer: HARNESS, id: WORK },
+    });
+  });
+
+  it("rejects one work-item member without the other, a non-String or empty one, and one past its bound", () => {
+    const fieldCases = [
+      `${OK}, work_item="${WORK}"`,
+      `${OK}, work_item_issuer="${HARNESS}"`,
+      `${OK}, work_item_issuer="${HARNESS}", work_item=${WORK}`,
+      `${OK}, work_item_issuer="${HARNESS}", work_item=""`,
+      `${OK}, work_item_issuer="${HARNESS}", work_item="${"w".repeat(257)}"`,
+      `${OK}, work_item_issuer="https://${"h".repeat(512)}", work_item="${WORK}"`,
+      `${OK}, work_item_issuer="${HARNESS}", work_item="${WORK}", work_item="other"`,
+    ];
+    for (const value of fieldCases)
+      expect(parseMissionReferenceField(value), value).toEqual({ malformed: true });
+    const metaCases: unknown[] = [
+      { mission_id: ID, issuer: ISS, work_item: WORK },
+      { mission_id: ID, issuer: ISS, work_item_issuer: HARNESS },
+      { mission_id: ID, issuer: ISS, work_item_issuer: HARNESS, work_item: 7 },
+      { mission_id: ID, issuer: ISS, work_item_issuer: HARNESS, work_item: "" },
+      { mission_id: ID, issuer: ISS, work_item_issuer: HARNESS, work_item: "w".repeat(257) },
+      {
+        mission_id: ID,
+        issuer: ISS,
+        work_item_issuer: HARNESS,
+        work_item: WORK,
+        work_item_mission: ID,
+      },
+    ];
+    for (const value of metaCases)
+      expect(parseMcpReferenceMeta(value), JSON.stringify(value)).toEqual({ malformed: true });
+  });
+});

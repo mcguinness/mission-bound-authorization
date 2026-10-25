@@ -2,9 +2,11 @@
  * @spec authority-server#reference-propagation — the Mission Reference
  * Propagation channel: the tuple a gateway PEP that does not itself hold the
  * Mission binding receives from the party that does. The channel carries
- * exactly the reference tuple (`issuer`, `mission_id`) and nothing else;
- * state, anchors, authority, and policy data never ride it, and a carriage
- * that smuggles anything else is malformed, refused rather than absorbed.
+ * exactly the reference tuple (`issuer`, `mission_id`) and nothing else
+ * beyond the extension members a profile this receiver implements defines
+ * (the harness profile's two work-item members, #815); state, anchors,
+ * authority, and policy data never ride it, and a carriage that smuggles
+ * anything else is malformed, refused rather than absorbed.
  *
  * The propagated value is a SELECTION ASSERTION, never authority: parsing
  * success grants nothing. Verification against the credential-carried or
@@ -18,13 +20,56 @@ export const MISSION_REFERENCE_HEADER = "mission-reference";
 export const MCP_REFERENCE_META_KEY = "com.karlmcguinness.mission/reference";
 
 /**
+ * @spec harness#work-item-identity (#815): the qualified work-item identifier
+ * a harness attaches as two extension members of the reference tuple,
+ * `work_item_issuer` (the harness's URI) and `work_item` (its identifier for
+ * the item), both Strings, carried together or not at all. Parsed, it is
+ * still unattributed: the PEP takes it only where the Enforcement Scope
+ * Statement names that harness as the attacher for the authenticated client.
+ */
+export interface PropagatedWorkItem {
+  issuer: string;
+  id: string;
+}
+
+/**
  * A parsed propagation result: the tuple, or the fact that carriage was
  * present but unusable. Malformedness is preserved rather than dropped
  * because it denies (`mission_reference_conflict`) wherever governance
  * requires a reference; silently ignoring a bad reference is the
- * non-conforming behavior the spec names.
+ * non-conforming behavior the spec names. `workItem` is present only when
+ * the reference carried both work-item members (#815).
  */
-export type PropagatedMissionReference = { id: string; issuer: string } | { malformed: true };
+export type PropagatedMissionReference =
+  | { id: string; issuer: string; workItem?: PropagatedWorkItem }
+  | { malformed: true };
+
+/**
+ * @spec authority-server#reference-tuple, harness#work-item-identity (#815):
+ * the members the tuple admits beyond `id`/`mission_id` and `issuer`, under
+ * the channel's extension rule, because this receiver implements the harness
+ * profile that defines them. Any other member is still malformed.
+ */
+const WORK_ITEM_MEMBERS: readonly string[] = ["work_item", "work_item_issuer"];
+const WORK_ITEM_MAX = 256;
+const WORK_ITEM_ISSUER_MAX = 512;
+
+/**
+ * The work-item members as one result: absent when neither was carried, the
+ * pair when both are non-empty Strings within their bounds, and `malformed`
+ * when only one was carried, or either is not such a String.
+ */
+function workItemOf(
+  members: Record<string, unknown>,
+): PropagatedWorkItem | "malformed" | undefined {
+  const id = members.work_item;
+  const issuer = members.work_item_issuer;
+  if (id === undefined && issuer === undefined) return undefined;
+  if (typeof id !== "string" || typeof issuer !== "string") return "malformed";
+  if (id.length === 0 || issuer.length === 0) return "malformed";
+  if (id.length > WORK_ITEM_MAX || issuer.length > WORK_ITEM_ISSUER_MAX) return "malformed";
+  return { issuer, id };
+}
 
 /** RFC 9651 Dictionary key: lc-alpha or `*` first, then lc-alnum `_-.*`. */
 const SF_KEY = /^[a-z*][a-z0-9_.*-]*$/;
@@ -35,7 +80,8 @@ const SF_KEY_CHAR = /[a-z0-9_.*-]/;
  * parsing of the `Mission-Reference` Structured Fields Dictionary
  * (RFC 9651). Deliberately NOT a general SF parser: the spec requires
  * rejection, before map collapse, of duplicate members, parameters, Inner
- * Lists, non-String values, and any member other than `id` and `issuer`,
+ * Lists, non-String values, and any member other than `id`, `issuer` and
+ * the harness profile's `work_item` and `work_item_issuer` (#815),
  * so last-duplicate-wins smuggling is foreclosed. Exactly one field line is
  * accepted (`fieldLineCount` comes from the transport's raw header view).
  *
@@ -62,7 +108,9 @@ export function parseMissionReferenceField(
     const key = s.slice(keyStart, i);
     if (!SF_KEY.test(key)) return { malformed: true };
     if (key in seen) return { malformed: true }; // duplicate, pre-collapse
-    if (key !== "id" && key !== "issuer") return { malformed: true }; // closed
+    // Closed, beyond the harness profile's two work-item members (#815).
+    if (key !== "id" && key !== "issuer" && !WORK_ITEM_MEMBERS.includes(key))
+      return { malformed: true };
     if (s.charAt(i) !== "=") return { malformed: true }; // bare key = Boolean, non-String
     i++;
     if (s.charAt(i) === "(") return { malformed: true }; // Inner List
@@ -103,13 +151,16 @@ export function parseMissionReferenceField(
   const issuer = seen.issuer;
   if (id === undefined || issuer === undefined) return { malformed: true };
   if (id.length > 256 || issuer.length > 512) return { malformed: true };
-  return { id, issuer };
+  const workItem = workItemOf(seen);
+  if (workItem === "malformed") return { malformed: true };
+  return workItem === undefined ? { id, issuer } : { id, issuer, workItem };
 }
 
 /**
  * @spec authority-server#mcp-reference — the `_meta` carriage names the same
  * tuple with different member names (`mission_id`, `issuer`). This parser
  * enforces the closure reachable after parsing: exactly the two members,
+ * plus the harness profile's two work-item members together (#815),
  * both strings, nothing else. The spec's duplicate-member-rejection arm is
  * NOT implemented here: the MCP SDK owns the JSON parse and collapses
  * duplicate keys before this object exists, so that arm is unenforced at
@@ -123,7 +174,9 @@ export function parseMcpReferenceMeta(value: unknown): PropagatedMissionReferenc
   }
   const record = value as Record<string, unknown>;
   const keys = Object.keys(record);
-  if (keys.length !== 2 || !("mission_id" in record) || !("issuer" in record)) {
+  if (!("mission_id" in record) || !("issuer" in record)) return { malformed: true };
+  // Closed, beyond the harness profile's two work-item members (#815).
+  if (keys.some((k) => k !== "mission_id" && k !== "issuer" && !WORK_ITEM_MEMBERS.includes(k))) {
     return { malformed: true };
   }
   const missionId = record.mission_id;
@@ -132,5 +185,7 @@ export function parseMcpReferenceMeta(value: unknown): PropagatedMissionReferenc
     return { malformed: true };
   }
   if (missionId.length > 256 || issuer.length > 512) return { malformed: true };
-  return { id: missionId, issuer };
+  const workItem = workItemOf(record);
+  if (workItem === "malformed") return { malformed: true };
+  return workItem === undefined ? { id: missionId, issuer } : { id: missionId, issuer, workItem };
 }
