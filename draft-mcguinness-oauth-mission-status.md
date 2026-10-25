@@ -382,6 +382,10 @@ credential it presented:
 
 Every challenge carries the `resource_metadata` parameter naming the
 endpoint's Protected Resource Metadata ({{Section 5.1 of RFC9728}}).
+A 401 response carries the challenge or challenges and a JSON body
+({{mission-status-errors}}): a challenge's `error` attribute, when
+present, follows its scheme as above and is distinct from the body's
+`error`, which is `unauthorized`.
 An authenticated caller not authorized for the referenced Mission
 receives `not_found` (404) with no challenge
 ({{mission-status-anti-oracle}}).
