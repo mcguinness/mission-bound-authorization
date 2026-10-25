@@ -327,6 +327,15 @@ describe("the signing key ring file (@spec #831 slice 1)", () => {
     expect(() => kernelStoreFromEnv({ ...env, MISSION_KERNEL_WITNESS: "/var/state/kernel.witness" })).toThrow(
       /^MISSION_KERNEL_WITNESS must be outside the store's directory/,
     );
+    // review: nested either way, the store's tree and the witness's would be restored together.
+    for (const [store, witness] of [
+      ["/var/state/kernel.db", "/var/state/recovery/kernel.witness"],
+      ["/var/witness/state/kernel.db", "/var/witness/kernel.witness"],
+    ]) {
+      expect(() => kernelStoreFromEnv({ ...env, MISSION_KERNEL_STORE: store, MISSION_KERNEL_WITNESS: witness }), witness).toThrow(
+        /^MISSION_KERNEL_WITNESS must be outside the store's directory/,
+      );
+    }
   });
 });
 

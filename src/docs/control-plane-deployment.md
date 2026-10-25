@@ -378,44 +378,87 @@ With a recovery witness (#250 step 3; `KernelOptions.recoveryWitness`, or
 launchers), the file-backed kernel answers Control Plane's rollback resistance for
 one writer on one host.
 
-- **The witness.** A small file at an absolute path in another directory than the
-  store, outside the store's restore unit: restoring the store cannot restore the
-  witness with it. It holds the store's identity, the writer generation, the last
-  committed recovery sequence, and the sequence of a commit in flight. The store
+- **The witness.** A small file at an absolute path outside the store's directory
+  tree, with the store outside the witness's (both compared canonically), so
+  restoring either tree cannot restore the other with it. It holds the store's
+  identity, the writer generation, the last committed recovery sequence, the
+  sequence of a commit in flight, and any uncertainty a run recorded. The store
   holds the matching `recovery_marker` row. `pnpm kernel-recovery init --store
   <path> --witness <path>` creates both, once, for a new store or one that
   predates the witness; nothing initializes them automatically.
+- **One writer, one witness.** The kernel holds its store with an exclusive lock,
+  and the witness's own lock (`<witness>.lock`, a SQLite handle the operating
+  system releases with the process), taken before the witness is read. A second
+  kernel, on the same store or on a copy of it, and an offline reconciliation are
+  refused while one holds either.
 - **Every write is witnessed.** Each outermost write transaction on the kernel
-  database writes the witness intent durably before its commit, advances the
-  marker inside it, and finalizes the witness after it, before any lifecycle
-  publication. A bare statement runs as a one-statement guarded transaction. The
-  inventory is therefore every write to the kernel database (its 32 tables, the
-  Mission rows, the outbox, tombstones, reservations, idempotency, continuation,
-  families, deferrals and evidence included), enforced rather than listed: a write
-  that bypasses the guard is detected at the next guarded transaction, after that
-  write committed, and stops the kernel.
-- **One writer.** The kernel holds its store with an exclusive lock: a second
-  process or handle on the same file is refused at open.
+  database reads the witness back (it must be the record this writer last wrote),
+  writes the intent durably before its commit, advances the marker inside it, and
+  finalizes the witness after it, before any lifecycle publication. Every
+  statement that can write runs inside such a transaction: `run`, `get`, `all`
+  and `iterate` on a statement that is not read-only, the same through a chained
+  builder, and `exec`.
 - **A closed boot.** The kernel opens only when the store's marker matches the
-  witness exactly. A store older than the witness (a restored backup), a lost or
-  unreadable witness, another store's witness, a store ahead of its witness and
-  a commit left in flight all refuse, and the AS does not start: `pnpm
+  witness exactly, with nothing recorded. A store older than the witness (a
+  restored backup), a lost, unreadable or foreign witness, a store ahead of its
+  witness, a commit left in flight, a recorded uncertainty, and a witnessed store
+  opened without its witness all refuse, and the AS does not start: `pnpm
   as-native`, for one, exits 1 with the refusal as its startup-failure line.
 - **Offline reconciliation.** With the AS stopped, `pnpm kernel-recovery
-  acknowledge` records a commit the store holds, and `abandon` clears one it does
-  not; each refuses when the store says otherwise, and both refuse while another
-  writer holds the store. Nothing lowers the witness: an older store is refused
-  until the witnessed one is restored.
+  acknowledge` records a commit the store holds, `abandon` clears one it does
+  not, and `accept` takes the store as it is, under a new generation, once a run
+  recorded an uncertainty (an escaped write, a witness that moved) with no commit
+  in flight. Each refuses when the store says otherwise. Nothing lowers the
+  witness: an older store is refused until the witnessed one is restored.
 - **Uncertain while running.** A witness write that fails, a commit that fails
-  after its intent, or a write that bypassed the guard leaves the kernel
-  uncertain: every later write refuses, and the AS answers every request but
-  discovery metadata and the key set with 503 `temporarily_unavailable` until it
-  is restarted and reconciled. A commit whose witness could not be finalized
-  publishes nothing; boot recovery publishes it after `acknowledge`. The demo
-  stack's and the in-process MAS pilot's PEP, RS and PDP load Missions through
+  after its intent, a witness that changed underneath the writer, or a write that
+  bypassed the guard leaves the kernel uncertain: every later write refuses, the
+  uncertainty is recorded in the witness where it can be written (a pending
+  intent is the trace when it cannot), and the AS answers every request but
+  discovery metadata and the key set with 503 `temporarily_unavailable`, a
+  request already in flight included: the release fence checks again after
+  every await. A commit whose witness could not be finalized publishes nothing;
+  boot recovery publishes it after `acknowledge`. The demo stack's and the
+  in-process MAS pilot's PEP, RS and PDP load Missions through
   `kernelMissionView`, which loads none while the kernel is uncertain, so their
   decisions refuse too. Other in-process readers that only display state (the
   console BFF's fleet view, the agent console, the catalog) are not gated.
+
+### Transaction inventory
+
+Every table in the kernel database, the module that writes it, and how its
+writes are witnessed. "Managed" is a `withTransaction` (or an `...InCallerTx`
+step inside one); "statement" is a bare statement the guard runs as a
+one-statement transaction; "boot" writes run at construction or `recoverAtBoot`.
+`recovery-witness-as.test.ts` fails when the database holds a table this list
+does not name. A write the list misses is still caught by the guard's backstop,
+a check at the next guarded transaction, after that write committed.
+
+| Table | Module | Writes |
+|---|---|---|
+| `missions` | `kernel.ts` | managed (insert, transitions, containment, discharge latch, schedule, status-list slot, supersession, carryover's version check); statement (`bindGrant`, `bindFirstGrant`, the derivation count and its refund) |
+| `approval_reservations` | `kernel.ts` | statement (`reserveApproval`) |
+| `authority_source_bindings` | `source-binding-store.ts` | managed (with the Mission insert; boot reconciliation) |
+| `continuation_anchors`, `continuation_handles` | `continuation-store.ts` | managed (rooting, termination); statement (a continuation hop's `mint`) |
+| `delegation_families` | `delegation-family-store.ts` | managed (termination); statement (`record`, `invalidate`) |
+| `mission_tombstones` | `tombstones.ts` | managed (with the terminal transition); boot (detail pruning) |
+| `lifecycle_events`, `lifecycle_deliveries` | `lifecycle-outbox.ts` | managed (enqueue with the transition); statement (delivery outcomes, after the commit); boot (pruning, migration) |
+| `lifecycle_responses`, `discharge_events` | `lifecycle-idempotency.ts` | managed (claims, discharge records); statement (`record`, expiry purges) |
+| `derivation_reservations` | `derivation-reservations.ts` | managed (reserve, release, reconcile); boot (`recoverAtBoot`) |
+| `activation_policy_snapshots` | `activation-policy-snapshots.ts` | managed (upsert); boot (pruning) |
+| `join_assertion_events` | `join-evidence-store.ts` | statement (`record`); boot (pruning) |
+| `discharge_mapping_pins` | `discharge-pin-store.ts` | managed (with the Mission insert) |
+| `discharge_selectors` | `discharge-selector-store.ts` | managed (`selectorFor`) |
+| `approval_governance_records` | `approval-governance.ts` | managed |
+| `direct_approval_rules`, `direct_approval_inputs` | `direct-approval-record.ts` | managed |
+| `drawdown_recording_rules`, `drawdown_record_inputs` | `drawdown-approval-record.ts` | managed |
+| `governed_policy_roots`, `governed_policy_consents`, `governed_policy_activations` | `governed-policy-approval.ts` | managed (consent, activation); statement (`withdraw`) |
+| `creation_idempotency` | `creation-idempotency.ts` | managed (reserve, complete, advance); statement (`failReserved`, `completeDelivered`, `recordDelivery`, expiry purge) |
+| `expansion_deferrals`, `progressive_refusals` | `deferred.ts` (`ExpansionDeferralStore`) | managed (redemption); statement (open, approve, deny, cancel, polls, refusals) |
+| `carryover_reservations`, `carryover_results`, `carryover_replacements` | `carryover.ts` | managed (reserve, consume, retain); statement (`cancel`) |
+| `mission_approval_deferrals` | `mission-approval-deferral.ts` | managed (open, completion, direct approval); statement (resolve, cancel, polls, delivery claims) |
+| `mission_deferred_authorization_codes` | `adapters/deferred-mission-approval.ts` | managed (`openOnce`); statement (`stage`) |
+| `recovery_marker` | `recovery-witness.ts` | managed (every guarded transaction; reconciliation) |
 
 Not supported: a way back from an older store by invalidating its authority under
 a new generation (#250, slice B), more than one writer, and more than one host

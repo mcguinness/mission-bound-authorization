@@ -1,4 +1,4 @@
-// pnpm kernel-recovery <init|acknowledge|abandon> --store <path> --witness <path>:
+// pnpm kernel-recovery <init|acknowledge|abandon|accept> --store <path> --witness <path>:
 // reconcile a file-backed kernel store with its recovery witness, offline
 // (#250 step 3). Give the absolute paths to the AS as MISSION_KERNEL_STORE and
 // MISSION_KERNEL_WITNESS.

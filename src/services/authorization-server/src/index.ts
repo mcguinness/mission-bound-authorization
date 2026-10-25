@@ -234,6 +234,7 @@ export {
   type RecoveryReconciliation,
   type RecoveryUncertainReason,
   type RecoveryWitnessRecord,
+  witnessSharesStoreTree,
 } from "./kernel/recovery-witness.js";
 export type { ProtectedEventSource } from "./adapters/provider.js";
 export {

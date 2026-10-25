@@ -4,15 +4,20 @@
  * witness. The process around it is `kernel-recovery-cli.ts`; the tests drive
  * this function directly.
  *
- *   pnpm kernel-recovery <init|acknowledge|abandon> --store <path> --witness <path>
+ *   pnpm kernel-recovery <init|acknowledge|abandon|accept> --store <path> --witness <path>
  *
  * - `init` creates the witness for a store that has none (a new store, or one
  *   that predates the witness), before the AS first starts with it.
  * - `acknowledge` and `abandon` resolve a commit that was in flight when the AS
  *   stopped: `acknowledge` when the store holds it, `abandon` when it does not.
  *   Each refuses when the store says otherwise.
+ * - `accept` takes the store as it is, under a new generation, after a run
+ *   recorded an uncertainty (an escaped write, a witness that moved) with no
+ *   commit in flight. It refuses an older store than the witness.
  *
- * The store is opened exclusively, so each refuses while an AS holds it. An
+ * The store is opened exclusively and the witness's lock taken, so each
+ * refuses while an AS holds either. The witness must be outside the store's
+ * directory tree, and the store outside the witness's. An
  * older store than the witness is never accepted: restore the witnessed one.
  * Relative paths resolve against the directory `pnpm` was started in
  * (`INIT_CWD`); the result names the absolute paths to give the AS as
@@ -20,10 +25,10 @@
  */
 import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
-import { reconcileKernelRecovery, type RecoveryReconciliation } from "@mission/authorization-server";
+import { reconcileKernelRecovery, type RecoveryReconciliation, witnessSharesStoreTree } from "@mission/authorization-server";
 
-const USAGE = "usage: pnpm kernel-recovery <init|acknowledge|abandon> --store <path> --witness <path>";
-const ACTIONS: readonly RecoveryReconciliation[] = ["init", "acknowledge", "abandon"];
+const USAGE = "usage: pnpm kernel-recovery <init|acknowledge|abandon|accept> --store <path> --witness <path>";
+const ACTIONS: readonly RecoveryReconciliation[] = ["init", "acknowledge", "abandon", "accept"];
 
 /** Run `argv`; returns the lines to print, or throws. */
 export function kernelRecoveryAdmin(
@@ -48,8 +53,10 @@ export function kernelRecoveryAdmin(
   const base = env.INIT_CWD ?? cwd;
   const store = isAbsolute(storeArg) ? storeArg : resolve(base, storeArg);
   const witness = isAbsolute(witnessArg) ? witnessArg : resolve(base, witnessArg);
-  if (dirname(store) === dirname(witness)) {
-    throw new Error("the witness must be outside the store's directory, so restoring the store cannot restore the witness with it");
+  if (witnessSharesStoreTree(store, witness)) {
+    throw new Error(
+      "the witness must be outside the store's directory, and the store outside the witness's, so restoring one cannot restore the other with it",
+    );
   }
   if (action === "init") {
     mkdirSync(dirname(store), { recursive: true });

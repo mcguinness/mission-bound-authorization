@@ -27,6 +27,7 @@
 import { closeSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync, writeSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { exportJWK, generateKeyPair, importJWK, type JWK } from "jose";
+import { witnessSharesStoreTree } from "./recovery-witness.js";
 
 /** The AS signing roles, in `TOPOLOGY.keys` names. */
 export const AS_SIGNING_ROLES = ["asToken", "asStatus", "asTxn", "asContinuation"] as const;
@@ -300,9 +301,9 @@ export function kernelStoreFromEnv(env: Readonly<Record<string, string | undefin
   if (!isAbsolute(witness)) {
     throw new Error(`MISSION_KERNEL_WITNESS must be an absolute path, not ${witness}`);
   }
-  if (dirname(witness) === dirname(file)) {
+  if (witnessSharesStoreTree(file, witness)) {
     throw new Error(
-      "MISSION_KERNEL_WITNESS must be outside the store's directory, so restoring the store cannot restore the witness with it",
+      "MISSION_KERNEL_WITNESS must be outside the store's directory, and the store outside the witness's, so restoring one cannot restore the other with it",
     );
   }
   return { file, witness };

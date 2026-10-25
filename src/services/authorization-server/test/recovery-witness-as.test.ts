@@ -18,6 +18,7 @@ import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import {
+  ALL_PROVIDER_CAPABILITIES,
   buildAuthorizationServer,
   type BuiltAs,
   readRecoveryWitness,
@@ -273,3 +274,97 @@ describe("the AS on a witnessed kernel store (@spec control-plane#rollback, #250
     });
   });
 });
+
+describe("the AS on a witnessed kernel store: review fixes (@spec control-plane#rollback, #250 step 3)", () => {
+  it("review: refuses a refresh whose kernel becomes uncertain during the final awaited drain, releasing no token", async () => {
+    const t = await start(14974);
+    const m = await issue(t);
+    let armed = false;
+    let injected = false;
+    t.as.provider.once("access_token.issued", () => {
+      armed = true;
+    });
+    const original = t.as.kernel.drainLifecycleOutbox.bind(t.as.kernel);
+    vi.spyOn(t.as.kernel, "drainLifecycleOutbox").mockImplementation(async () => {
+      await original();
+      if (armed && !injected) {
+        injected = true;
+        // Another write, made while this refresh is in flight, finds the witness unwritable.
+        const guard = t.as.kernel.recovery as unknown as { persist(record: RecoveryWitnessRecord): void };
+        vi.spyOn(guard, "persist").mockImplementationOnce(() => {
+          throw new Error("injected witness write failure");
+        });
+        expect(() => t.as.kernel.gateDerivation(m.missionId)).toThrow(RecoveryUncertainError);
+      }
+    });
+    const refreshed = await token(t, { grant_type: "refresh_token", refresh_token: m.refreshToken }, m.keys);
+    expect(injected).toBe(true);
+    expect(t.as.kernel.recoveryUncertainty()?.reason).toBe("witness_write_failed");
+    expect(refreshed.status).toBe(503);
+    expect(refreshed.body.error).toBe("temporarily_unavailable");
+    expect(refreshed.body.access_token).toBeUndefined();
+  });
+
+  it("the kernel database holds exactly the tables the transaction inventory names (control-plane-deployment.md, Restore admission)", async () => {
+    const paths = witnessedStore();
+    const as = await buildAuthorizationServer({
+      issuer: "http://localhost:14975",
+      allowHeadlessAdjudication: true,
+      serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+      capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "deferred-approval"]),
+      deferredApproval: { pendingLifetimeS: 600, maxPendingPerClient: 3 },
+      kernelStore: { file: paths.store, witness: paths.witness },
+    });
+    try {
+      const tables = (
+        as.kernel.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as Array<{
+          name: string;
+        }>
+      ).map((r) => r.name);
+      expect(tables).toEqual([...KERNEL_TABLE_INVENTORY].sort());
+    } finally {
+      as.kernel.close();
+    }
+  });
+});
+
+/**
+ * @spec control-plane#rollback (#250 step 3): the kernel database's tables, as
+ * control-plane-deployment.md's transaction inventory names them. A new table
+ * fails the test above until it is added there and here.
+ */
+const KERNEL_TABLE_INVENTORY = [
+  "activation_policy_snapshots",
+  "approval_governance_records",
+  "approval_reservations",
+  "authority_source_bindings",
+  "carryover_replacements",
+  "carryover_reservations",
+  "carryover_results",
+  "continuation_anchors",
+  "continuation_handles",
+  "creation_idempotency",
+  "delegation_families",
+  "derivation_reservations",
+  "direct_approval_inputs",
+  "direct_approval_rules",
+  "discharge_events",
+  "discharge_mapping_pins",
+  "discharge_selectors",
+  "drawdown_record_inputs",
+  "drawdown_recording_rules",
+  "expansion_deferrals",
+  "governed_policy_activations",
+  "governed_policy_consents",
+  "governed_policy_roots",
+  "join_assertion_events",
+  "lifecycle_deliveries",
+  "lifecycle_events",
+  "lifecycle_responses",
+  "mission_approval_deferrals",
+  "mission_deferred_authorization_codes",
+  "mission_tombstones",
+  "missions",
+  "progressive_refusals",
+  "recovery_marker",
+];
