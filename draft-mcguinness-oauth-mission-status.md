@@ -429,10 +429,10 @@ In the ERP examples in this document, the operation contract identifies
 `https://erp.example.com` as the operation target
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
 constraints determine the permitted operations within that service.
-In the Mission Status examples, the consumer is the ERP resource
-server, client `erp-rs`, which the Mission Issuer's configuration
-authorizes for that audience; its client identifier is the
-response's `sub`.
+In the audience-scoped Mission Status example below, the consumer is
+the ERP resource server, client `erp-rs`, which the Mission Issuer's
+configuration authorizes for that audience; its client identifier is
+the response's `sub`.
 
 The signed payload reports the Mission's current state and the
 audience-scoped evidence the consumer needs.
@@ -2074,11 +2074,11 @@ Mission Termination Reasons registry
 - An RFC 7009 revocation does not by itself revoke a Mission, and a
   revocation that a deployment's policy couples to it commits the same
   `revoke` transition, state version and event.
-- Editorial, no requirement change: in the examples, the Mission
-  Status consumer is the ERP resource server, no response shows
-  `authority_hash` to a caller the example does not show holding
-  its disclosure privilege, and the revocation's `reason` describes
-  a revocation, not a completion (#1535).
+- Editorial, no requirement change: in the audience-scoped Mission
+  Status example, the consumer is the ERP resource server; no example
+  response shows `authority_hash` to a caller the example does not
+  show holding its disclosure privilege; and the revocation's `reason`
+  describes a revocation, not a completion (#1535).
 
 -00
 
