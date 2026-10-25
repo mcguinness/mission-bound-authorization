@@ -39,6 +39,8 @@ import {
   type EvidenceVerifyResult,
   MISSION_RECEIPT_MEDIA_TYPE,
   newRecordId,
+  parseWorkItem,
+  type WorkItemRef,
   REFUSAL_RECORD_MEDIA_TYPE,
   evaluationRequestDigest,
   preRequestDigest,
@@ -241,6 +243,13 @@ export interface ExecutionEvidenceObject {
   sequence: number;
   emitter: { id: string; role: "pep" | "executor" };
   hop_reference?: RuntimeHopReference;
+  /**
+   * @spec runtime-evidence#evidence-extensions `work_item` (#815): the
+   * qualified work-item identifier the executing PEP attributed to the
+   * request this disposition concerns, a coordinated extension member the
+   * harness profile owns.
+   */
+  work_item?: WorkItemRef;
   attempted_at?: string;
   completed_at?: string;
   result_summary?: Record<string, JsonValue>;
@@ -823,6 +832,10 @@ export const REFUSAL_DENIAL_REASONS = Object.freeze({
     // (#773): evaluation-context binding inputs missing, malformed or
     // incompatible with the declared binding, for a covered operation.
     "evaluation_context_invalid",
+    // @spec runtime-evidence#pre-decision-refusal, authzen#context-work-item
+    // (#815): a request whose `context.work_item` is present but not
+    // exactly `{issuer, id}`, an unusable input refused before evaluation.
+    "work_item_invalid",
     // @spec runtime-evidence#pre-decision-refusal, authzen#pdp-consistency-checks
     // (#956, D814): a mediated request with no action class established, where
     // the Enforcement Scope Statement declares classes; recorded with no class.
@@ -884,6 +897,8 @@ export interface ExecutionEvidenceInput {
   error?: string;
   obligation_outcomes?: ExecutionEvidenceObject["obligation_outcomes"];
   hop_reference?: RuntimeHopReference;
+  /** @spec runtime-evidence#evidence-extensions `work_item` (#815). */
+  work_item?: WorkItemRef;
   attempted_at?: string;
   completed_at?: string;
   result_summary?: Record<string, JsonValue>;
@@ -1333,6 +1348,8 @@ export class EvidenceStore {
       sequence,
       emitter: { id: emitterId, role },
       ...(input.hop_reference !== undefined ? { hop_reference: input.hop_reference } : {}),
+      // Runtime allowlist, not a cast: exactly `issuer` and `id`, or nothing.
+      ...((w) => (w !== undefined ? { work_item: w } : {}))(parseWorkItem(input.work_item)),
       ...(input.attempted_at !== undefined ? { attempted_at: input.attempted_at } : {}),
       ...(input.completed_at !== undefined ? { completed_at: input.completed_at } : {}),
       ...(input.result_summary !== undefined ? { result_summary: input.result_summary } : {}),

@@ -354,6 +354,29 @@ describe("discharge state at a carryover's completion (@spec child-delegation#ca
     expect(store.carryoverResultFor(code)).toBeUndefined();
   });
 
+  // @spec child-delegation#carryover-cas (#1673, D803): a latch on an entry
+  // containment already removed narrows nothing, so only the committed
+  // discharge state, compared as a set, distinguishes it from a state change.
+  it("refuses a discharge after rendering that leaves the effective authority unchanged, under a plan that excludes only state changes", async () => {
+    const store = new ExpansionDeferralStore(as.kernel, () => new Date(), { ...CARRYOVER, exclusionPolicy: STATE_ONLY });
+    const pred = approvePredecessor();
+    const child = addChild(pred.id);
+    as.kernel.contain(child.id, {
+      event: { type: "anomaly.detected", source: "svc:soc", observed_at: new Date().toISOString(), event_id: `ev-1673-${seq}` },
+      remove: [{ resource: PAY, actions: ["payments:invoice.list"] }],
+    });
+    const code = renderCarry(pred.id, PAIR(), store);
+    const effectiveBefore = as.kernel.effectiveAuthoritySet(as.kernel.get(child.id) as MissionRecord);
+    const res = await lifecycle(child.id, body(child, "payments:invoice.list"));
+    expect(res.status).toBe(200);
+    expect(latched(child.id)).toEqual([digestOf(child, "payments:invoice.list")]);
+    expect(as.kernel.effectiveAuthoritySet(as.kernel.get(child.id) as MissionRecord)).toEqual(effectiveBefore);
+    expect(store.redeem(code)).toEqual({ error: "access_denied" });
+    expect((as.kernel.get(child.id) as MissionRecord).state).toBe("active");
+    expect((as.kernel.get(pred.id) as MissionRecord).state).toBe("active");
+    expect(store.carryoverResultFor(code)).toBeUndefined();
+  });
+
   it("does not restore an entry discharged on the old child: the replacement carries only the remaining entry, though its new parent holds both", async () => {
     const pred = approvePredecessor();
     const child = addChild(pred.id);

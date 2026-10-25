@@ -10,11 +10,16 @@
  * client is stubbed, so this file never skips.
  */
 
-import { type AuthorityEntry, MissionKernel, validateMissionIntent } from "@mission/authorization-server";
+import {
+  type AuthorityEntry,
+  MissionKernel,
+  RecoveryUncertainError,
+  validateMissionIntent,
+} from "@mission/authorization-server";
 import { evaluate, type EvaluationRequest, type Fga, relationForAction, stalenessBound } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { generateKeyPair } from "jose";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { kernelMissionView } from "../src/kernel-mission-view.js";
 
 const ISS = "https://as.overlay-view.test";
@@ -126,5 +131,21 @@ describe("review: same-resource entries under different modes", () => {
       { resource: base, resource_match: "prefix", actions: [READ, LIST] },
     ]);
     expect(await decide(kernel, id, LIST)).toBe("authority_contained");
+  });
+});
+
+describe("the in-process Mission loader while the kernel is uncertain (@spec control-plane#rollback, #250 step 3)", () => {
+  it("loads no Mission while the kernel's durable state is uncertain, so a decision is refused as for an unknown Mission, and loads it again otherwise", () => {
+    const { kernel, id } = approvedMission();
+    expect(kernelMissionView(kernel, id)?.id).toBe(id);
+    const uncertain = vi
+      .spyOn(kernel, "recoveryUncertainty")
+      .mockReturnValue(new RecoveryUncertainError("witness_write_failed", "injected"));
+    try {
+      expect(kernelMissionView(kernel, id)).toBeUndefined();
+    } finally {
+      uncertain.mockRestore();
+    }
+    expect(kernelMissionView(kernel, id)?.id).toBe(id);
   });
 });

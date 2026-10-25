@@ -127,6 +127,13 @@ export interface DecisionPointConfig {
    */
   claims?: IdempotencyClaimDomain;
   /**
+   * @spec authzen#context-work-item (#815): the action classes this decision
+   * point's Enforcement Scope Statement claims work-item attribution for
+   * (`readWorkItemAttribution(statement).claimedClasses`), bound here for the
+   * reason the phased actions are. Absent, no class is claimed.
+   */
+  workItemAttributedClasses?: ReadonlySet<string>;
+  /**
    * @spec runtime#input-resource-policy (#828): this decision point's
    * independently administered Resource policy, bound here for the same
    * reason as the claim domain: an enforcement component that could supply
@@ -203,6 +210,7 @@ export interface DecisionPoint {
 interface PointBindings {
   emitter: DecisionEvidenceEmitter | undefined;
   claims: IdempotencyClaimDomain | undefined;
+  workItemAttributedClasses?: ReadonlySet<string> | undefined;
   resourcePolicy: ResourcePolicy | undefined;
   refusals: PdpRefusalRecorder | undefined;
   resourceContracts?: ResourceContractDeclarations | undefined;
@@ -233,6 +241,8 @@ function bindDecide(
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
     delete forwarded.evidence;
     delete forwarded.claims;
+    delete forwarded.workItemAttributedClasses;
+    if (bindings.workItemAttributedClasses) forwarded.workItemAttributedClasses = bindings.workItemAttributedClasses;
     delete forwarded.resourcePolicy;
     delete forwarded.requester;
     delete forwarded.consumptionStatus;
@@ -292,6 +302,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
   const bindings: PointBindings = {
     emitter,
     claims: config.claims,
+    workItemAttributedClasses: config.workItemAttributedClasses,
     resourcePolicy: config.resourcePolicy,
     refusals: config.refusals,
     resourceContracts: config.resourceContracts,

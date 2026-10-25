@@ -646,9 +646,9 @@ canonicalization, and integrity envelope a deployment emits.
 A Decision Evidence Object is closed to uncoordinated extension; see
 {{evidence-extensions}} for the extension rule and the coordinated
 extension members a deployment following the AuthZEN profile
-commonly carries (`taint`, `mission_history`, `authority_bound`,
-`capability_source`, `hop_reference`, `principal_mapping`,
-`join_view_id`).
+commonly carries (`taint`, `work_item`, `mission_history`,
+`authority_bound`, `capability_source`, `hop_reference`,
+`principal_mapping`, `join_view_id`).
 
 ## Refusal Record {#pre-decision-refusal}
 
@@ -756,14 +756,17 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   declaration requires a phase, `phase_invalid`; for a compensate-phase
   request with no `compensates_evaluation_id`, or a request whose
   `compensates_evaluation_id` is malformed, `compensation_link_invalid`;
-  and for one whose
+  for one whose
   evaluation-context binding inputs are missing, malformed, or
   incompatible with the declared binding, for an operation the runtime
   profile's Evaluation-Context Binding extension covers,
-  `evaluation_context_invalid`. The last three describe decision inputs
-  the PDP cannot use, not an evaluated policy denial;
-  `evaluation_context_unresolvable` is instead the PEP's own failure to
-  capture the context, before any decision request. These name
+  `evaluation_context_invalid`; and for one carrying a work-item
+  context that is not well-formed (the harness profile,
+  {{I-D.draft-mcguinness-mission-harness}}), `work_item_invalid`. The
+  last four describe decision inputs the PDP cannot use, not an
+  evaluated policy denial; `evaluation_context_unresolvable` is
+  instead the PEP's own failure to capture the context, before any
+  decision request. These name
   pre-evaluation conditions,
   PEP-side or PDP-side, and are disjoint from the runtime profile's
   PDP denial reasons for an evaluated decision (for example, as
@@ -1304,8 +1307,11 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   contract the operation would be performed under),
   `obligation_unfulfilled` (a permit suppressed before release because
   an attached obligation could not be fulfilled; the failing entry is
-  named in `obligation_outcomes`), and `kill_switch` (execution
-  suppressed by an operator or safety control). A deployment MAY
+  named in `obligation_outcomes`), `work_item_mismatch` (the
+  permit's work-item condition differs from the work item the
+  executing PEP attributes to the request, or one is present without
+  the other), and `kill_switch` (execution suppressed by an operator
+  or safety control). A deployment MAY
   define additional values, which MUST be collision-resistant names
   (a short name within a namespace the deployment controls, following
   the Collision-Resistant Name guidance of {{RFC7519}} Section 4.2) so
@@ -2249,6 +2255,19 @@ a common wire carrier.
   ({{I-D.draft-mcguinness-mission-authority-server}}), which defines
   what the commitment distinguishes.
 
+`work_item`:
+: OPTIONAL. An object with `issuer` and `id`, recorded at the top
+  level of Decision Evidence and Execution Evidence: the qualified
+  work-item identifier of the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}), which owns this member.
+  REQUIRED on Decision Evidence when the decision request carried a
+  well-formed work-item context, recorded as presented, and on
+  Execution Evidence when the request the disposition concerns carried
+  one, recorded as the executing PEP attributed it. It joins the
+  Harness Evidence of the same work item, whose `work_item_issuer` and
+  `work_item` carry the same pair. The AuthZEN profile is one wire
+  carrier ({{I-D.draft-mcguinness-mission-authzen}}).
+
 # Conformance {#conformance}
 
 This document defines conformance for four roles: a PRODUCER that
@@ -2691,6 +2710,15 @@ evidence representation their shared envelope carries (using the
   mediated request with no action class established, where the runtime
   Enforcement Scope Statement declares classes, with no class recorded
   (#956, D814).
+- Extension Members, Refusal Record and Execution Evidence:
+  `work_item`, owned by the harness profile, records the qualified
+  work-item identifier on Decision and Execution Evidence, joining
+  Harness Evidence; the Refusal Record `work_item_invalid` records a
+  PDP refusal, before evaluation, of a malformed work-item context; and
+  the Execution Evidence `error` `work_item_mismatch` records a permit
+  whose work-item condition differs from the request it would execute
+  (#815).
+
 - Refusal Record: `evaluation_context_unresolvable` records a PEP that
   cannot capture the authoritative evaluation context of an operation
   Evaluation-Context Binding covers before requesting a decision,

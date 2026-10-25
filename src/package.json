@@ -26,7 +26,8 @@
     "mas-pilot": "node scripts/mas-pilot.mjs in-process",
     "mas-pilot:separated": "node scripts/mas-pilot.mjs separated",
     "resource-policy": "node scripts/resource-policy.mjs",
-    "keys": "node scripts/keys.mjs"
+    "keys": "node scripts/keys.mjs",
+    "kernel-recovery": "node scripts/kernel-recovery.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.4",
