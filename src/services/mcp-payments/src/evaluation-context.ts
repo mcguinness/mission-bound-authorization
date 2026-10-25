@@ -291,16 +291,19 @@ export function captureEvaluationContext(input: {
 }
 
 /**
- * @spec runtime#evaluation-context-binding: "The executing PEP MUST
- * re-resolve the declared facts and recompute the bound context with its own
- * applicable descriptor". The applicable descriptor is the one the live
- * declaration names for the held crossing now; it is never the held
- * reference reinterpreted. A crossing no longer covered, a descriptor that
- * does not resolve, a salt version this process no longer holds, and a fact
- * or target that does not resolve each leave the context unestablished: the
- * caller records no effective digest for it. A descriptor that changed
- * recomputes under the new reference, which the digest commits, so the
- * result differs from the held one without any fact having moved.
+ * @spec runtime#evaluation-context-binding, runtime-evidence#execution-evidence-object
+ * `effective_evaluation_context_digest`: "It commits the attempted context
+ * under the same descriptor and salt version." The facts are re-resolved
+ * now, under the descriptor the binding committed (its `{id, version,
+ * digest}` reference, resolved from the published declaration and verified
+ * against its digest) and the salt version the binding was made under, so
+ * the result is comparable with the authorized digest: unchanged facts give
+ * an equal digest even when the operation's descriptor has changed since,
+ * which the caller refuses as its own check. A committed descriptor that is
+ * no longer published or no longer hashes to its reference, a salt version
+ * this process no longer holds, and a fact or target that does not resolve
+ * each leave the context unestablished: the caller records no effective
+ * digest for it, never one computed under a substitute.
  */
 export function recomputeEvaluationContext(input: {
   held: HeldEvaluationContext;
@@ -309,9 +312,7 @@ export function recomputeEvaluationContext(input: {
   invoiceId: string;
   payments: PaymentsStore;
 }): { ok: true; digest: string } | { ok: false; reason: ContextUnavailable } {
-  const entry = input.declarations.operation(input.held.operation.action, input.held.operation.phase);
-  if (!entry) return { ok: false, reason: "not_covered" };
-  const resolved = input.declarations.descriptor(entry.descriptor);
+  const resolved = input.declarations.descriptor(input.held.reference);
   if (!resolved.ok) return { ok: false, reason: "descriptor_unrecoverable" };
   // The salt version is the one the binding was made under. A version this
   // process does not hold is unrecoverable: no substitute salt is used.
@@ -319,7 +320,7 @@ export function recomputeEvaluationContext(input: {
   if (salt === undefined) return { ok: false, reason: "salt_unavailable" };
   return commit({
     descriptor: resolved.document,
-    reference: entry.descriptor,
+    reference: input.held.reference,
     mission: input.held.mission,
     operation: input.held.operation,
     invoiceId: input.invoiceId,

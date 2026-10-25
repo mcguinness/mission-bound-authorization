@@ -24,6 +24,7 @@ import {
   establishOperationTarget,
   type EvaluationContextBindingDeclarations,
   type IdempotencyScope,
+  sameEvaluationContextBinding,
   idempotencyScopeDigest,
   isActionPhase,
   type JsonValue,
@@ -1949,10 +1950,14 @@ export class Pep {
    *
    * | Context | Parameters about to be used | `error` |
    * |---|---|---|
-   * | not establishable (fact, target, salt version, descriptor) | any | `target_drift` |
+   * | not establishable (fact, target, salt version, committed descriptor) | any | `target_drift` |
    * | established | a member outside the descriptor's declared facts differs | `parameter_mismatch` |
-   * | established, and unequal, unbound or under a changed descriptor | unchanged, or differing only in declared facts | `target_drift` |
+   * | established, and unequal or unbound | unchanged, or differing only in declared facts | `target_drift` |
+   * | established and equal, under a descriptor the declaration no longer names | unchanged | `target_drift` |
    *
+   * The context is recomputed under the descriptor the binding committed, so
+   * its digest stays comparable: a changed descriptor is refused by its own
+   * check, never by an unequal digest over unchanged facts.
    * An unavailable context is `target_drift` whatever else moved: no context
    * comparison is invented for it. A parameter deviation is the primary error
    * only where both comparisons were made and a member the descriptor does
@@ -1980,7 +1985,13 @@ export class Pep {
     }
     // A missing condition, or one other than the binding this PEP sent.
     if (attempt.permitEvaluationContextDigest !== bound.held.digest) return "target_drift";
-    return observed === bound.held.digest ? undefined : "target_drift";
+    if (observed !== bound.held.digest) return "target_drift";
+    // The descriptor-change check, independent of the digests: the operation's
+    // live declaration must still name the descriptor the binding committed.
+    // A crossing no longer covered, or now covered under another descriptor,
+    // is refused though its facts are unchanged.
+    const live = this.contextDeclarations().operation(bound.held.operation.action, bound.held.operation.phase);
+    return live && sameEvaluationContextBinding(live.descriptor, bound.held.reference) ? undefined : "target_drift";
   }
 
   /**
