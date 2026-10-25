@@ -23,8 +23,8 @@
     "content_sha256": "2589fb9ff1db587d07713a2638dbb74699dd5494bc9678facd31afd467455210"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "d32da54c5957197b6a58a0afc954c0c3c68fb532",
-    "content_sha256": "62db7ed7a1f90db961842de8e0eb587be4bf67a56078946b9ec1aa5e6d056133"
+    "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
+    "content_sha256": "5429fe9833f24e1d2d4c30b6366c4d3ce87469cc144d063e651892466a9b17e1"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -91,8 +91,8 @@
     "content_sha256": "6b1af63354697423fb6b73b8a3ddf1d592106c4835848f99c5a3a03299eda724"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "1e0fa8a821c5ae0a6c5a172635ecbf720d3392d3",
-    "content_sha256": "3174fa1ab1b9b76c260e561a7d036e61f599d50f9543356ffa6f96d92d8ef946"
+    "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
+    "content_sha256": "b54570c5a1a8170b7fba90bb8e4d9b163e3603e736726d81bbbc8334f1007637"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
     "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
@@ -159,8 +159,8 @@
     "content_sha256": "437ffcf048e52ad43a7c044adb6a46af60a4c9f76faf6142da3794b6456844f6"
    },
    "draft-mcguinness-mission-harness.md": {
-    "revision": "1859f68af5307bc7ad368e3cd58383c8b42c7dd9",
-    "content_sha256": "d339ce2786b7f680f388cb23abe5df7a94e68d1ec6b73f4efd3b09d2ebaeefe1"
+    "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
+    "content_sha256": "9af0d69fb3397fc1c4341de0f9b98855f0b7b70a6cb4149e8a1e9d8860a078ee"
    }
   }
  },
@@ -30672,6 +30672,54 @@
    "notes": "The failure-modes table's individual rows restate refusal conditions already rowed under their own anchors (token-validation, mission-binding, state-freshness, input-history, evidence, input-time, input-state, capability-drift, metering, parameter-digest, single-use-identifiers, input-history, input-authority); this row covers only the table's own added requirement, that the evidence record reconstructs the path."
   },
   {
+   "id": "runtime.failure-modes.unemittable-evidence-fails-closed-or-commits-pdp",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "failure-modes",
+   "text": "A required evidence record cannot be signed or emitted for a consequential decision or refusal | Fail closed, or durably commit the record for signing and publication under a declared recovery bound ({{agent-isolated-evidence-emission}})",
+   "facet": "decision-evidence-and-pdp-refusals",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the PDP cannot sign or emit a required Decision Evidence record or PDP refusal record for a consequential action, it fails closed, or durably commits the record for signing and publication under the declared recovery bound; the record is never lost while the action proceeds"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Twin of runtime.failure-modes.unemittable-evidence-fails-closed-or-commits-pep: the table's governing sentence binds a PDP or PEP, and each holder is witnessed on its own."
+  },
+  {
+   "id": "runtime.failure-modes.unemittable-evidence-fails-closed-or-commits-pep",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "failure-modes",
+   "text": "A required evidence record cannot be signed or emitted for a consequential decision or refusal | Fail closed, or durably commit the record for signing and publication under a declared recovery bound ({{agent-isolated-evidence-emission}})",
+   "facet": "pep-refusals",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the PEP cannot sign or emit a required refusal record for a consequential action (a Refusal Record, or Execution Evidence for a suppressed action), it fails closed, or durably commits the record for signing and publication under the declared recovery bound; the record is never silently dropped"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Twin of runtime.failure-modes.unemittable-evidence-fails-closed-or-commits-pdp."
+  },
+  {
    "id": "runtime.evidence.decision-and-refusal-must-produce-record",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "evidence",
@@ -30801,6 +30849,50 @@
      "surface": "evidence-emission"
     }
    ]
+  },
+  {
+   "id": "runtime.evidence.pre-effect-durability",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "For an action in the high-consequence classes, the component that releases the effect MUST NOT release it until the permit's Decision Evidence and the identifiers that recover the action's disposition (the evaluation identifier, and any idempotency claim or consumption reservation the action holds) are durably committed.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the component that releases a high-consequence effect releases it only after the permit's Decision Evidence and the identifiers that recover the action's disposition (the evaluation identifier, and any idempotency claim or consumption reservation) are durably committed, so a restart after the release still finds them"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The prose is placement-neutral: the Decision Evidence can be durable in its producer's store or in the releasing component's, and the row is cited under the releasing role. A witness restarts after the release and reopens the durable store (#821 PR B items 1 to 3)."
+  },
+  {
+   "id": "runtime.evidence.pre-effect-commit-failure-refuses",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "If they cannot be committed, that component MUST refuse the action.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "when the pre-effect commit of the Decision Evidence or of the disposition identifiers fails, the releasing component refuses the high-consequence action and releases no effect"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "A witness fails the pre-effect write and observes the refusal with zero effects at the resource (#821 PR B item 3)."
   },
   {
    "id": "runtime.evidence.reconciliation-must-actively-reconcile",
@@ -31027,6 +31119,54 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "runtime.record-integrity.sequence-not-reused-pdp",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "record-integrity",
+   "text": "An emitter MUST NOT reuse a sequence value for one Mission, including across a restart and among replicas acting as that emitter",
+   "facet": "decision-evidence-emitter",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PDP emitter never issues a sequence value twice for one Mission, including after a restart and among replicas acting as that emitter; a value it cannot use leaves a detectable gap"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Twin of runtime.record-integrity.sequence-not-reused-pep: the duty binds every emitter, and each role is witnessed on its own. The restart clause is witnessed by reopening a file-backed store (#821 PR B item 1)."
+  },
+  {
+   "id": "runtime.record-integrity.sequence-not-reused-pep",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "record-integrity",
+   "text": "An emitter MUST NOT reuse a sequence value for one Mission, including across a restart and among replicas acting as that emitter",
+   "facet": "execution-evidence-emitter",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PEP emitter never issues a sequence value twice for one Mission, including after a restart and among replicas acting as that emitter; a value it cannot use leaves a detectable gap"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Twin of runtime.record-integrity.sequence-not-reused-pdp. The restart clause is witnessed by reopening the PEP's file-backed retention store (#821 PR B item 2)."
   },
   {
    "id": "runtime.compromise-resistant.key-custody-condition",
