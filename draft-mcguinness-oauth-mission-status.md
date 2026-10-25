@@ -1764,8 +1764,8 @@ An implementation claiming an extension MUST meet its requirements:
   the operations that introduce them. An implementation claiming
   Mission Lifecycle meets this class.
 - **Revocation propagation**: advertise `mission_max_stale_seconds`
-  and size Mission-bound access-token TTLs to it
-  ({{revocation-enforcement-classes}}).
+  and size Mission-bound access-token TTLs as
+  {{revocation-enforcement-classes}} provides.
 
 A Mission Issuer that claims any extension above meets the following
 requirement, whichever companion profiles it adopts. Every
