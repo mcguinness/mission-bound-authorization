@@ -264,6 +264,7 @@ describe("the external-change bound, measured end to end (@spec runtime#state-fr
         expect(start, sub).toBe(base);
         const gate = built(first.gate, `${sub}: the gate refusal`);
         const pdp = built(first.pdp, `${sub}: the PDP refusal`);
+        expect(first.effect, `${sub}: the held permit's refusal at release`).toBeDefined();
         const effect = built(first.effect, `${sub}: the held permit's refusal at release`);
         const suspended = built(first.suspended, `${sub}: the suspension`);
         // Released after the cutoff, the held permit releases no effect.
