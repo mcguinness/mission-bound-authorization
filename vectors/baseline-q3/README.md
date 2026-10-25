@@ -9,7 +9,7 @@
 | Member | Meaning |
 |---|---|
 | `mission` | The full reference (`issuer`, `id`) |
-| `cast` | Client `s6BhdRkqt3`; Alice (`https://idp.example.com` / `user_3p2q8mN1a0kV7tR`) as Subject and direct Approver; the resource `https://erp.example.com` |
+| `cast` | Client `s6BhdRkqt3`; Alice (`https://idp.example.com` / `user_3p2q8mN1a0kV7tR`) as Subject and direct Approver; the resource `https://erp.example.com`, and its resource server, client `erp-rs`, as the Mission Status consumer |
 | `expiry` | Requested and effective `expires_at`, `2026-12-31T23:59:59Z`, and its NumericDate |
 | `anchors` | `intent_hash`, `proposal_hash` and `authority_hash` over the record's objects, and `root_commitment` (for a direct approval, the Mission's own `authority_hash`) |
 | `record` | The Mission Record the core's Worked Example displays |
@@ -37,7 +37,7 @@ All instants are UTC on 2026-11-02.
 
 Token issuance and ordinary execution leave the Status version unchanged. The Mission issues and executes only in [08:00:05, 08:20:00) and [08:30:00, 08:53:20). A token issued before a suspension or the revocation can remain valid after it: the issuer's state and an already-issued token's validity are distinct. The token refreshed at 08:50:00 is that case: it is valid until 08:55:00, and introspection after 08:53:20 reports it inactive because its Mission is terminated.
 
-The revocation is the Status lifecycle `revoke` by the Mission's client `s6BhdRkqt3`, with the `reason` "Quarterly reconcile completed early". The scenario grants that client an explicit lifecycle authorization to revoke this Mission (a `mission_lifecycle` grant, Status Section "Authorization"); being the Mission's client, holding its resource tokens, or a DPoP binding does not by itself confer that authority.
+The revocation is the Status lifecycle `revoke` by the Mission's client `s6BhdRkqt3`, with the `reason` "Quarterly reconcile cancelled". The scenario grants that client an explicit lifecycle authorization to revoke this Mission (a `mission_lifecycle` grant, Status Section "Authorization"); being the Mission's client, holding its resource tokens, or a DPoP binding does not by itself confer that authority.
 
 ## Variants
 
