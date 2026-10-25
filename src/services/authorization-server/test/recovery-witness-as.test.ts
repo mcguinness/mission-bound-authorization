@@ -329,6 +329,41 @@ describe("the AS on a witnessed kernel store: review fixes (@spec control-plane#
 });
 
 /**
+ * @spec control-plane#partitions (#250 step 4): with one writer and no replica,
+ * every operation reads and writes the authoritative kernel record in its own
+ * transaction. When the kernel cannot establish that its state is current (it
+ * is uncertain), the AS refuses rather than serving from what it last knew.
+ */
+describe("the AS refuses control-plane mutation while its state is uncertain (@spec control-plane#partitions, #250 step 4)", () => {
+  it("an uncertain kernel refuses a delegated Token Exchange 503 and every lifecycle mutation, and nothing moves: the Mission's version and the store's marker stay where they were", async () => {
+    const t = await start(14976);
+    const m = await issue(t);
+    const before = { version: t.as.kernel.get(m.missionId)?.version, marker: marker(t) };
+    const guard = t.as.kernel.recovery as unknown as { persist(record: RecoveryWitnessRecord): void };
+    vi.spyOn(guard, "persist").mockImplementationOnce(() => {
+      throw new Error("injected: the witness cannot be written");
+    });
+    expect(() => t.as.kernel.transition(m.missionId, "suspend")).toThrow(RecoveryUncertainError);
+
+    const exchanged = await token(t, delegationHandleParams(m.accessToken, "ap-agent"), m.keys);
+    expect(exchanged.status).toBe(503);
+    expect(exchanged.body.error).toBe("temporarily_unavailable");
+    expect(exchanged.body.access_token).toBeUndefined();
+    for (const operation of ["suspend", "revoke", "complete"] as const) {
+      expect(() => t.as.kernel.transition(m.missionId, operation), operation).toThrow(RecoveryUncertainError);
+    }
+    expect(() =>
+      t.as.kernel.contain(m.missionId, {
+        event: { type: "incident", source: "soc", observed_at: new Date().toISOString(), event_id: "partition-1" },
+        remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
+      }),
+    ).toThrow(RecoveryUncertainError);
+    expect(t.as.kernel.get(m.missionId)).toMatchObject({ state: "active", version: before.version });
+    expect(marker(t)).toBe(before.marker);
+  });
+});
+
+/**
  * @spec control-plane#rollback (#250 step 3): the kernel database's tables, as
  * control-plane-deployment.md's transaction inventory names them. A new table
  * fails the test above until it is added there and here.

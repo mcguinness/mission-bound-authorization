@@ -5138,12 +5138,32 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write."
+    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write.",
+    "local": "one writer and no replica, so every operation reads and writes the kernel record in its own transaction; while the kernel is uncertain, the AS answers 503 temporarily_unavailable to a refresh, a delegated Token Exchange, introspection and PAR, a refresh already in flight included, and the kernel refuses every lifecycle mutation and containment, with nothing committed"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS refuses control-plane mutation while its state is uncertain (@spec control-plane#partitions, #250 step 4) > an uncertain kernel refuses a delegated Token Exchange 503 and every lifecycle mutation, and nothing moves: the Mission's version and the store's marker stay where they were",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store (@spec control-plane#rollback, #250 step 3) > a running AS whose kernel became uncertain answers every state-dependent request 503 temporarily_unavailable, and still serves discovery and the key set",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store: review fixes (@spec control-plane#rollback, #250 step 3) > review: refuses a refresh whose kernel becomes uncertain during the final awaited drain, releasing no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#250 step 4. Partial: tested within the declared single-writer topology (control-plane-deployment.md, Deployment declaration). The clause is unconditional, and its multi-node cases (a replica read, a partition that outlasts the freshness horizon) cannot be constructed here; expansion and child creation are refused by the same middleware and kernel guard but are not exercised one by one. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.emergency-deny",
@@ -5160,12 +5180,26 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior."
+    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior.",
+    "local": "containment, from the Lifecycle endpoint or from a protected event through the issuer's own ContainmentPolicy, commits a narrower effective set at a new version and nothing else: state, expiry, derivation limit and observation freshness do not move, a suspended Mission is not resumed, the answer carries no observation, and the narrowing has no expiry"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane emergency narrowing (@spec control-plane#emergency-deny, #250) > a protected event narrows a suspended Mission without resuming it or moving its expiry, derivation limit or observation freshness, and the narrowing does not lapse",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle containment creates no authority and no freshness (@spec control-plane#emergency-deny, #250) > contain answers its commit alone, leaves an active and a suspended Mission in their state with their expiry, and the next observation is a new read with the ordinary freshness span",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the issuer clauses are tested. The deny-entry clauses (version, authenticated source, expiry or a reconciliation rule, and expiry removing only the added denial) have no subject in the reference, which keeps no deny cache; a containment is a committed narrowing of the Mission, not a deny entry, and authority it removed returns only through a new approval (an expansion successor, another Mission). The terminal-tombstone clause is control-plane.consistency.tombstones. The Signals receiver package, which no shipped service runs, is a retaining consumer rather than a deny cache; its lease does not consult the rematerialization latch a narrowing sets, which its consumer reads separately. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.emergency-authority",
@@ -5182,12 +5216,20 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one."
+    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one.",
+    "local": "the PEP publishes break_glass absent in its Enforcement Scope Statement and does not start under a statement declaring any other emergency mode, so no positive emergency permission exists to be represented as Mission authority"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes positive emergency permission absent, and refuses to start under a statement declaring any other emergency mode",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the refusal of positive emergency configuration is tested at the PEP, as comment 14 asks (refuse it rather than define an emergency field). Excluding actions that rely on such permission from the Mission enforcement claim has no subject while none can be configured. The PDP's loader refuses the same statement (runtime-posture.test.ts). No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.isolation",
@@ -5400,12 +5442,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks."
+    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks.",
+    "local": "src/docs/control-plane-deployment.md's Deployment declaration states each item under its own heading, with a recovery point and a recovery time, and lists as residual risks exactly the control-plane rows not marked tested"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > documents each item the declaration requires under its own heading: serialization domains, authoritative observation mechanism, replication and recovery model, recovery objectives, tenant isolation and residual risks",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > makes no claim, and lists as residual risks exactly the control-plane rows the ledger has not marked tested",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. The reference makes no claim (control-plane.consistency.claim) and still writes the declaration, so a reader can check it against the ledger. The tests check that each item is present and that the residual risks match the ledger, not the prose against the code; each item points to the section, and that section's witnesses, that carry its accuracy."
   },
   {
    "id": "control-plane.consistency.claim",
@@ -5422,12 +5478,20 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs."
+    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs.",
+    "local": "the reference makes no claim: its Deployment declaration says so and lists as residual risks the control-plane rows not marked tested"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > makes no claim, and lists as residual risks exactly the control-plane rows the ledger has not marked tested",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the obligation binds a claiming deployment, and the reference makes no claim because these rows are not tested: serialization, fresh-observation, state-surfaces, rollback, partitions, emergency-deny, emergency-authority and isolation (each row's notes name its gap). The cited test fails when the declaration's residual risks and the ledger disagree."
   },
   {
    "id": "core.submission.front-channel-refusal",
