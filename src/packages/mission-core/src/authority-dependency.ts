@@ -699,14 +699,14 @@ export function checkAuthorityDependency(
       // and where the declaration requires an online check, a failed latest
       // read refuses (`unavailable`). Withdrawal and invalidation stay the
       // reconciler's to classify and commit.
-      const observedAt = new Date(last).toISOString();
+      const observedAt = () => new Date(last).toISOString();
       const staleUntilMs = last + enforcement.declaration.max_staleness_seconds * 1000;
-      if (nowMs >= staleUntilMs) return refuse("stale", observedAt);
+      if (nowMs >= staleUntilMs) return refuse("stale", observedAt());
       if (
         enforcement.declaration.online_check &&
         !enforcement.resolver.view(governed.subject).sourceAvailable
       ) {
-        return refuse("unavailable", observedAt);
+        return refuse("unavailable", observedAt());
       }
       return { ok: true, validUntilMs: Math.min(reconciledUntilMs, staleUntilMs) };
     }
