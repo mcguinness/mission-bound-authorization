@@ -30735,12 +30735,50 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "under lifecycle-mediated enforcement, an action the dependency governs is refused while upstream observation or reconciliation exceeds its declared bound, even though the Mission state reads `active`"
+    "normative": "under lifecycle-mediated enforcement, an action the dependency governs is refused while upstream observation or reconciliation exceeds its declared bound, even though the Mission state reads `active`",
+    "local": "the reference's declared dependency (config/authority-dependencies.json, subject-delegation) under lifecycle-mediated enforcement: the authorization server's reconciler (services/authorization-server/src/adapters/authority-reconciler.ts) commits suspend or revoke through the lifecycle operations and records its progress, the time the observation its last complete pass acted on represents; a failed source read, or a pass whose transitions do not all commit, does not advance it. The PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) refuses resource_policy once that progress is absent or older than reconciliation_max_lag_seconds (60 s), whatever the Mission's state reads, records reconciliation_overdue in the dependency evidence, and caps a permit at the progress plus the lag bound. The reference composition gives the PDP the progress in process (BuiltAs.authorityDependency.reconciliation); a PDP without it refuses every governed action. The issuance gates evaluate the observation directly and do not apply the lag refusal"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "an overdue reconciliation stops dependent execution while the Mission still reads active (@spec runtime#input-authority-dependency, #830) > permits while the last complete reconciliation is within the lag bound, refuses resource_policy once it is overdue with the Mission still active, and permits again once a reconciliation completes",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "an overdue reconciliation stops dependent execution while the Mission still reads active (@spec runtime#input-authority-dependency, #830) > refuses before any reconciliation has completed: a reconciler that never ran, or lost its progress in a restart, fails closed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "an overdue reconciliation stops dependent execution while the Mission still reads active (@spec runtime#input-authority-dependency, #830) > refuses an overdue reconciliation where the PDP also evaluates the dependency directly, though the observation shows the delegation held",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "a lost event, a disconnected feed and a failed reconciliation are each caught while the Mission still reads active (@spec runtime#input-authority-dependency, #830) > refuses at the PDP once a disconnected feed leaves the reconciliation overdue, though the cached observation is still within its validity and the Mission reads active",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "a lost event, a disconnected feed and a failed reconciliation are each caught while the Mission still reads active (@spec runtime#input-authority-dependency, #830) > does not advance its progress over a failed reconciliation, so the PDP refuses the Mission it could not restrict; a reconciler restarted mid-pass commits only the remainder",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "the reconciler across a restart of a file-backed authorization server (@spec runtime#input-authority-dependency, #830) > refuses at the PDP until its first pass after the restart, then commits no transition twice and acts on the next change",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR B (D798). Mutation-proved: dropping the lag check, accepting absent progress, refusing only past the bound rather than at it, applying no lag at the PDP, skipping the PDP's step under lifecycle-only enforcement, advancing the progress over a failed pass, treating a failed read as a pass, not giving the PDP the reconciler's progress, starting a reconciler with progress present, and dropping the permit's cap at the reconciliation's currency, each failed its witness."
   },
   {
    "id": "runtime.authority-dependency.refuse-when-not-established",
@@ -31057,12 +31095,32 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment claiming an external-change bound states it from the authoritative system recording the change to a dependent action no longer beginning an effect, states how already-started work is treated, and accounts for detection, evaluation, state change, downstream reliance and permit validity"
+    "normative": "a deployment claiming an external-change bound states it from the authoritative system recording the change to a dependent action no longer beginning an effect, states how already-started work is treated, and accounts for detection, evaluation, state change, downstream reliance and permit validity",
+    "local": "config/authority-dependencies.json's external_change_bound: 60 s from the identity source recording the change (identity.json's changed_at) to every issuance gate and PDP decision under a governed Mission refusing and the reconciler having suspended or revoked it, with already-started work stated separately and a path naming detection (detection_period_seconds, 30 s), evaluation, state change (reconciliation_period_seconds, 30 s), downstream reliance, permit validity and the behavior under a failed read or reconciliation. The reader requires the bound to cover one period of each in sequence and the reconciliation period to be shorter than the lag bound; the authorization server refuses to start with a scheduled read or pass slower than declared. Measured under a controlled clock at the declared periods, from every phase of the two schedules in 5 s steps: worst case 30 s to the first gate refusal, to the first PDP refusal and to the suspension. The matrix by principal role, with each cell's owner, source and staleness bound, is src/docs/authority-dependencies.md"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/authority-dependency-declaration.test.ts",
+     "name": "the deployment's Enforcement Scope Statement declares its authority dependency (@spec runtime#input-authority-dependency, #830) > @spec runtime#state-freshness (#830): states its bound from an external authority change from start to end, work already started separately, and the path the claim accounts for",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-dependency-bound.test.ts",
+     "name": "the external-change bound, measured end to end (@spec runtime#state-freshness, #830) > stops every dependent action within the declared bound from the source recording the change, from every phase of the declared schedules; a permit decided before the change expires within its observation's validity",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-dependency-bound.test.ts",
+     "name": "the declared schedules, run by the authorization server's own timers (@spec runtime#state-freshness, #830) > refuses to start a composition that schedules either period slower than declared",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR B (D798). Mutation-proved: accepting a bound that does not cover its periods, a reconciliation period not shorter than the lag bound, or a lifecycle declaration without a reconciliation period, starting with a slower schedule, and a reconciliation pass acting on a cached read instead of reading the source, each failed its witness."
   },
   {
    "id": "authzen.conventions.required-when-known-no-inference",
