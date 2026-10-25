@@ -1198,7 +1198,17 @@ export interface EnforceResult {
    * write path refuses it before any effect.
    */
   writeReservationUnkeyable?: true;
+  /**
+   * @spec authzen#obligation-processing (#1640, D770 ruling 6): present on a
+   * denial whose Decision Evidence did not verify, so none was retained. The
+   * authenticated decision still stands and its obligations were performed:
+   * retrospective evidence is not what authorizes them.
+   */
+  evidence_gap?: DecisionEvidenceGap;
 }
+
+/** Why a denial carries no retained Decision Evidence (D770 ruling 6). */
+export type DecisionEvidenceGap = "decision_evidence_unverifiable";
 
 /** @spec runtime#idempotency (#918): the pair a keyed reversible write reserves. */
 export interface WriteReservationScope {
@@ -2603,6 +2613,13 @@ export class Pep {
       // denial is unchanged whatever they do, and none is evidenced: a
       // denial-side obligation inherits the Obligations Profile's
       // no-proof-of-execution posture.
+      //
+      // D770 ruling 6: the obligation's authority is the authenticated decision
+      // response, not the retrospective Decision Evidence. A response the
+      // decision channel could not authenticate, or whose integrity failed,
+      // was refused above as a channel failure and carried none; a denial
+      // whose evidence did not verify still stands, still runs its
+      // obligations, and says that its evidence is missing.
       if (Array.isArray(decision.context.obligations) && decision.context.obligations.length > 0) {
         const denialId = decision.context.decision_id;
         await processObligations(
@@ -2618,6 +2635,7 @@ export class Pep {
         denial_reason: decision.context.denial_reason as string,
         ...(effective ? { effective } : {}),
         ...(ar ? { access_request: ar } : {}),
+        ...(!retention.retained ? { evidence_gap: "decision_evidence_unverifiable" as const } : {}),
       };
       // @spec txn-authorization#resource-challenge — on an
       // action_approval_required denial the resource normalizes the operation,
@@ -2963,9 +2981,10 @@ export class Pep {
    *
    * No evidence capacity is reserved before these effects: a durable
    * reservation is the transaction-assurance requirement's alone (D744
-   * ruling 2). A record that cannot be emitted after one retry leaves the
-   * effect standing, and the caller surfaces the {@link SuppressOutcome}
-   * `gap` with its result.
+   * ruling 2). When the record cannot be emitted after one retry, the caller
+   * returns no protected result (D770 ruling 4): a read or a hold disclosed
+   * nothing and is suppressed instead, and a keyed write whose effect
+   * committed reports the {@link SuppressOutcome} `gap` without its result.
    */
   async completeExecution(
     attempt: ExecutionAttempt,
