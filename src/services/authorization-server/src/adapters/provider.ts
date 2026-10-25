@@ -310,6 +310,11 @@ function settleCountedDerivations(kernel: MissionKernel, ctx: { status: number }
   for (const missionId of counted) kernel.refundDerivation(missionId);
 }
 
+/** A request that reads no Mission state: discovery metadata or the key set (#250 step 3). */
+function isRecoveryDiagnostic(ctx: { method: string; path: string }): boolean {
+  return (ctx.method === "GET" || ctx.method === "HEAD") && (ctx.path === "/jwks" || ctx.path.startsWith("/.well-known/"));
+}
+
 /**
  * @spec mission#issuance-gating, status#mission-lifecycle-endpoint — map a
  * kernel {@link GateError} onto the `mission_error` diagnostic value, where
@@ -2780,6 +2785,24 @@ export function buildProvider(opts: AdapterOptions): Provider {
     if (ctx.method === "GET" && ctx.path === "/jwks" && ctx.status === 200) {
       ctx.body = { keys: opts.publicJwks.keys };
     }
+  });
+
+  // @spec control-plane#rollback (#250 step 3): a witnessed kernel whose durable
+  // state became uncertain while running (a witness write that failed, or a
+  // write that bypassed its guard) refuses every state-dependent request until
+  // it is reconciled offline. Only discovery metadata and the key set, which
+  // read no Mission state, still answer.
+  provider.use(async (ctx, next) => {
+    if (kernel.recoveryUncertainty() && !isRecoveryDiagnostic(ctx)) {
+      ctx.status = 503;
+      ctx.body = {
+        error: "temporarily_unavailable",
+        error_description: "the authorization server's durable state is uncertain and must be reconciled before it serves again",
+      };
+      ctx.set("cache-control", "no-store");
+      return;
+    }
+    await next();
   });
 
   // @spec derivation-limits#counted-operations (#935, D772): settles the

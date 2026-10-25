@@ -299,7 +299,11 @@ describe("the signing key ring file (@spec #831 slice 1)", () => {
     const ring = { MISSION_KEY_RING: "/var/keys/ring.json" };
     expect(kernelStoreFromEnv({})).toBeUndefined();
     expect(kernelStoreFromEnv({ ...ring, MISSION_KERNEL_STORE: "" })).toBeUndefined();
-    expect(kernelStoreFromEnv({ ...ring, MISSION_KERNEL_STORE: "/var/state/kernel.db" })).toEqual({ file: "/var/state/kernel.db" });
+    const witness = { MISSION_KERNEL_WITNESS: "/var/witness/kernel.witness" };
+    expect(kernelStoreFromEnv({ ...ring, ...witness, MISSION_KERNEL_STORE: "/var/state/kernel.db" })).toEqual({
+      file: "/var/state/kernel.db",
+      witness: "/var/witness/kernel.witness",
+    });
     expect(() => kernelStoreFromEnv({ ...ring, MISSION_KERNEL_STORE: "state/kernel.db" })).toThrow(
       /^MISSION_KERNEL_STORE must be an absolute path, not state\/kernel\.db$/,
     );
@@ -308,6 +312,21 @@ describe("the signing key ring file (@spec #831 slice 1)", () => {
         /^MISSION_KERNEL_STORE requires MISSION_KEY_RING/,
       );
     }
+  });
+
+  it("a kernel kept in a file needs a recovery witness: MISSION_KERNEL_WITNESS is an absolute path outside the store's directory (#250 step 3)", () => {
+    const env = { MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KERNEL_STORE: "/var/state/kernel.db" };
+    for (const witness of [undefined, "", " "]) {
+      expect(() => kernelStoreFromEnv({ ...env, ...(witness === undefined ? {} : { MISSION_KERNEL_WITNESS: witness }) })).toThrow(
+        /^MISSION_KERNEL_STORE requires MISSION_KERNEL_WITNESS/,
+      );
+    }
+    expect(() => kernelStoreFromEnv({ ...env, MISSION_KERNEL_WITNESS: "witness/kernel.witness" })).toThrow(
+      /^MISSION_KERNEL_WITNESS must be an absolute path, not witness\/kernel\.witness$/,
+    );
+    expect(() => kernelStoreFromEnv({ ...env, MISSION_KERNEL_WITNESS: "/var/state/kernel.witness" })).toThrow(
+      /^MISSION_KERNEL_WITNESS must be outside the store's directory/,
+    );
   });
 });
 

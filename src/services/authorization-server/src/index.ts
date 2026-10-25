@@ -172,6 +172,7 @@ export {
   AS_SIGNING_ROLES,
   type AsSigningRole,
   initSigningKeyRing,
+  type KernelStoreConfig,
   kernelStoreFromEnv,
   loadSigningKeyRing,
   SIGNING_KEY_RING_FORMAT,
@@ -999,9 +1000,11 @@ export async function buildAuthorizationServer(opts: {
    * default is in-memory and single-process; a `file` selects the OPT-IN
    * file-backed SINGLE-WRITER store, which is what makes the durable lifecycle
    * outbox and the terminal tombstones survive a restart and lets the recovery
-   * test exercise that path. It authorizes no second writer.
+   * test exercise that path. It authorizes no second writer. A `witness`
+   * (#250 step 3) adds the recovery witness: the store is held exclusively and
+   * opens only when it matches the witness.
    */
-  kernelStore?: { file?: string };
+  kernelStore?: { file?: string; witness?: string };
   /**
    * @spec control-plane#tombstones, authority-server#join-assertion-artifact
    * (#1560, D770): the deployment's declared post-expiry audit retention, in
@@ -1566,6 +1569,10 @@ export async function buildAuthorizationServer(opts: {
     // @spec control-plane#deployment-declaration (D27) — in-memory by default;
     // the file-backed single-writer store is the declared opt-in.
     ...(opts.kernelStore?.file ? { store: { file: opts.kernelStore.file } } : {}),
+    // @spec control-plane#rollback (#250 step 3): the recovery witness.
+    ...(opts.kernelStore?.file && opts.kernelStore.witness
+      ? { recoveryWitness: { file: opts.kernelStore.witness } }
+      : {}),
     // @spec control-plane#tombstones — the deployment's declared retention
     // horizons, composed into the detailed tombstone horizon. Every input is a
     // number this deployment actually declares: the access-token lifetime is

@@ -258,6 +258,13 @@ export function signingKeysFromEnv(env: Readonly<Record<string, string | undefin
   );
 }
 
+/** A file-backed kernel store and its recovery witness (#250 step 3). */
+export interface KernelStoreConfig {
+  file: string;
+  /** The recovery witness, outside the store's restore unit; absent, a restored older store is not detected. */
+  witness?: string;
+}
+
 /**
  * @spec #250, #831: a deployment entry point's kernel store, from its
  * environment. `MISSION_KERNEL_STORE` absent: the kernel is in memory and a
@@ -266,12 +273,14 @@ export function signingKeysFromEnv(env: Readonly<Record<string, string | undefin
  * change at every restart, nothing the kept kernel issued or signed verifies
  * after one.
  *
- * This is restart recovery for one process on one host. The file takes no
- * lock, so a second process on the same file is not refused, and a restore
- * from an older backup is not detected; both belong to #250's restore and
- * fencing step.
+ * It also requires a recovery witness (`MISSION_KERNEL_WITNESS`, #250 step 3):
+ * an absolute path in another directory than the store, outside the store's
+ * restore unit, created once with `pnpm kernel-recovery init`. The kernel then
+ * holds its file exclusively, so a second process on it is refused, and opens
+ * only when the store matches the witness, so a restored older store is
+ * refused rather than resumed. One process on one host.
  */
-export function kernelStoreFromEnv(env: Readonly<Record<string, string | undefined>>): { file: string } | undefined {
+export function kernelStoreFromEnv(env: Readonly<Record<string, string | undefined>>): KernelStoreConfig | undefined {
   const file = env.MISSION_KERNEL_STORE?.trim();
   if (!file) return undefined;
   if (!isAbsolute(file)) {
@@ -282,5 +291,19 @@ export function kernelStoreFromEnv(env: Readonly<Record<string, string | undefin
       "MISSION_KERNEL_STORE requires MISSION_KEY_RING: with signing keys that change at every restart, nothing the kept kernel issued or signed verifies after one",
     );
   }
-  return { file };
+  const witness = env.MISSION_KERNEL_WITNESS?.trim();
+  if (!witness) {
+    throw new Error(
+      "MISSION_KERNEL_STORE requires MISSION_KERNEL_WITNESS: without a recovery witness outside the store, a restored older store would be resumed (create it once with `pnpm kernel-recovery init`)",
+    );
+  }
+  if (!isAbsolute(witness)) {
+    throw new Error(`MISSION_KERNEL_WITNESS must be an absolute path, not ${witness}`);
+  }
+  if (dirname(witness) === dirname(file)) {
+    throw new Error(
+      "MISSION_KERNEL_WITNESS must be outside the store's directory, so restoring the store cannot restore the witness with it",
+    );
+  }
+  return { file, witness };
 }
