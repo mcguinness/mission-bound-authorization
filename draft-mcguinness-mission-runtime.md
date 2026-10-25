@@ -479,8 +479,16 @@ deployment establishes it in one of two modes:
   establishes a Mission in this mode only under a separately specified
   verified join ({{I-D.draft-mcguinness-mission-aauth}}).
 
-The mode each enforcement scope uses is part of its Enforcement
-Scope Statement ({{runtime-conformance}}). In either mode, the
+Each enforcement scope declares the modes it serves as
+`mission_establishment_mode` in its Enforcement Scope Statement
+({{runtime-conformance}}): `credential_carried`,
+`externally_established`, or a non-empty list of those values without
+duplicates where it serves both. A scope declares only the modes it
+actually serves. Declaring both creates no fallback: the binding
+profile's precedence decides which reference establishes the Mission
+(under the Mission Authority Server profile, a credential-carried
+reference governs), and a conflicting selector or an invalid
+credential is not rescued by an externally established reference. In either mode, the
 established Mission is the Mission every input of {{decision-inputs}}
 (authority, Resource policy, parameters, actor, time, state) is
 evaluated against, and the Mission reference the permit and the
@@ -1595,7 +1603,7 @@ The nested declaration has this shape:
   "action_classes": ["irreversible_action"],
   "execution_paths": ["tool-gateway"],
   "pep_locations": ["tool-gateway"],
-  "mission_establishment_mode": "mission_claim"
+  "mission_establishment_mode": "credential_carried"
 }
 ~~~
 
