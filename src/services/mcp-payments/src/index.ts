@@ -184,6 +184,7 @@ export {
   type ReceiptIssuerScope,
   type ReceiptResolvedRecord,
   type ReceiptVerifyFailure,
+  type ReceiptDivergence,
   type ReceiptVerifyResult,
 } from "./mission-receipt.js";
 export {
