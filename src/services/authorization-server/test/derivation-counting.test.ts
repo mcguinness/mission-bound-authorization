@@ -23,6 +23,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { commitAtNextIssue } from "./release-fence.helper.js";
 
 const PORT = 14787;
 const ISSUER = `http://localhost:${PORT}`;
@@ -231,7 +232,7 @@ describe("a derivation that fails after admission (@spec mission#issuance-gating
     expect(derivations(m.missionId)).toBe(2); // rolled back with the transaction
   });
 
-  it("residual: the provider access-token hook counts before signing, so a code exchange that fails after the count leaves the failed derivation counted (#250)", async () => {
+  it("the provider access-token hook: a code exchange that fails after the count, before the token leaves, returns the count (#935, D772)", async () => {
     const pushed = await issueCode();
     const missionId = pushed.missionId;
     const before = derivations(missionId);
@@ -255,8 +256,47 @@ describe("a derivation that fails after admission (@spec mission#issuance-gating
     as.provider.removeListener("access_token.issued", fail);
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.body.access_token).toBeUndefined();
-    // No token was delivered, yet the derivation is counted: the hook has no
-    // rollback, reservation or acceptance callback (control-plane-deployment.md).
-    expect(derivations(missionId)).toBe((before ?? 0) + 1);
+    // No token was delivered: the request observed the failure and settled
+    // the count it spent.
+    expect(derivations(missionId)).toBe(before);
+  });
+
+  it("the delegation handle exchange: a save that fails after the count, before the handle leaves, returns the count (#935, D772)", async () => {
+    const m = await issue();
+    const before = derivations(m.missionId);
+    const save = vi.spyOn(as.provider.AccessToken.prototype, "save").mockRejectedValueOnce(new Error("injected save failure"));
+    let res: { status: number; body: Record<string, unknown> };
+    try {
+      res = await token(delegationHandleParams(m.accessToken, "ap-agent"), m.keys);
+    } finally {
+      save.mockRestore();
+    }
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.body.access_token).toBeUndefined();
+    expect(derivations(m.missionId)).toBe(before);
+    // A handle that is delivered keeps its count.
+    await handle(m.accessToken, m.keys);
+    expect(derivations(m.missionId)).toBe((before ?? 0) + 1);
+  });
+
+  it("a token the release fence refuses keeps its count: its Mission has ended, and the fence refunds nothing (#935, D771, D772)", async () => {
+    const pushed = await issueCode();
+    const before = derivations(pushed.missionId);
+    const committed = commitAtNextIssue(as, "revoke");
+    let res: { status: number; body: Record<string, unknown> };
+    try {
+      res = await token(
+        { grant_type: "authorization_code", code: pushed.code, redirect_uri: REDIRECT_URI, code_verifier: VERIFIER, resource: RESOURCE },
+        pushed.keys,
+      );
+    } finally {
+      committed.disarm();
+    }
+    expect(committed.missionId()).toBe(pushed.missionId);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_grant");
+    expect(res.body.mission_error).toBe("revoked");
+    expect(res.body.access_token).toBeUndefined();
+    expect(derivations(pushed.missionId)).toBe((before ?? 0) + 1);
   });
 });

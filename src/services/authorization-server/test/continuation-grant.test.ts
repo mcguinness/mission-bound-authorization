@@ -1867,7 +1867,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
 });
 
 describe("a continuation ID-JAG that fails after admission (@spec mission#issuance-gating, #914 ruling 1)", () => {
-  it("residual: a continuation grant that fails after admission leaves the derivation counted under an unreleased reservation, until an authoritative non-acceptance returns it", async () => {
+  it("a continuation grant that fails after admission settles its own reservation as not accepted: the count returns (#935, D772)", async () => {
     // At the token endpoint the deterministic refusals run before admission:
     // the audience-scoped authority check counts nothing ((b2), (f5)). A grant
     // still fails after the gate admits when a state change since that check
@@ -1889,23 +1889,43 @@ describe("a continuation ID-JAG that fails after admission (@spec mission#issuan
       }),
     ).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
 
-    // The failed derivation IS counted: its reservation is reserved and never
-    // released, keyed by a grant identity nobody will retry.
+    // The issuing process observed the failure before any grant left, an
+    // authoritative non-acceptance: the reservation is refunded and the count
+    // returned.
+    expect(count()).toBe(before);
+    const rows = as.kernel.db
+      .prepare("SELECT state, settled_by FROM derivation_reservations WHERE mission_id = ?")
+      .all(missionId) as Array<{ state: string; settled_by: string }>;
+    expect(rows).toEqual([{ state: "refunded", settled_by: "as:in-process-failure" }]);
+  });
+
+  it("a retry that replays an unsettled reservation and fails again leaves it counted: an earlier attempt's grant may have been accepted (#935, D772)", async () => {
+    const { missionId } = newLineage("apev-ambiguous-replay");
+    const count = () => as.kernel.get(missionId)?.derivation_count;
+    const before = count();
+    // An earlier attempt reserved under this operation identity and never
+    // settled: whether its grant left is unknown.
+    as.kernel.reserveDerivation(missionId, { operationId: "op-ambiguous" });
+    expect(count()).toBe((before ?? 0) + 1);
+    const { privateKey } = await generateKeyPair("ES256");
+
+    await expect(
+      issueCrossDomainGrant(as.kernel, privateKey, "test-kid", {
+        missionId,
+        targetAs: RAS_AUD,
+        clientId: "ap-agent",
+        cnfJkt: agentJkt,
+        resourceToAs: (r: string) => (r === RESOURCE ? RAS_AUD : ISSUER),
+        authorityFilter: () => [],
+        operationId: "op-ambiguous",
+      }),
+    ).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
+
     expect(count()).toBe((before ?? 0) + 1);
     const rows = as.kernel.db
-      .prepare("SELECT reservation_id, state FROM derivation_reservations WHERE mission_id = ?")
-      .all(missionId) as Array<{ reservation_id: string; state: string }>;
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.state).toBe("reserved");
-
-    // Only an authoritative observation that no artifact was accepted returns it.
-    expect(
-      as.kernel.reconcileDerivation(rows[0]?.reservation_id as string, {
-        accepted: false,
-        authority: "svc:test-issuance-log",
-      }),
-    ).toBe(true);
-    expect(count()).toBe(before);
+      .prepare("SELECT state FROM derivation_reservations WHERE mission_id = ?")
+      .all(missionId) as Array<{ state: string }>;
+    expect(rows).toEqual([{ state: "reserved" }]);
   });
 });
 

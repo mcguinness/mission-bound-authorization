@@ -4442,6 +4442,21 @@ export class MissionKernel {
   }
 
   /**
+   * @spec derivation-limits#counted-operations (#935, D772): return one
+   * derivation counted WITHOUT a reservation (the provider token hook, the
+   * delegated exchange, the delegation handle) when the process that counted
+   * it observed the derivation fail before any artifact left: an authoritative
+   * in-process non-acceptance. Only the request that spent the count calls
+   * this, once per count; an ambiguous outcome (a crash or a lost response)
+   * never reaches it and stays counted.
+   */
+  refundDerivation(id: string): void {
+    this.db
+      .prepare("UPDATE missions SET derivation_count = derivation_count - 1 WHERE id = ? AND derivation_count > 0")
+      .run(id);
+  }
+
+  /**
    * @spec control-plane#serialization — boot recovery for the reservation
    * ledger. Reservations this process left unreleased become `unacknowledged`
    * and KEEP their count: a missing local acknowledgement is not evidence that

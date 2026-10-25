@@ -41,6 +41,7 @@ import {
   markDelegationHandle,
   MissionExchangeError,
   newResourceServer,
+  noteCountedDerivation,
   resourceServerInfoFor,
   SCOPE_DECIDED_AT_SAVE,
   tokenEndpointGateRefusal,
@@ -158,6 +159,8 @@ export async function handleDelegationHandleExchange(
   // counted derivation of this exchange; nothing is counted again at save.
   try {
     kernel.gateDerivation(record.id);
+    // A failure after this, before the handle leaves, returns it (#935, D772).
+    noteCountedDerivation(ctx, record.id);
   } catch (e) {
     await (oidcGrant as unknown as { destroy: () => Promise<void> }).destroy();
     if (!(e instanceof GateError)) throw e;

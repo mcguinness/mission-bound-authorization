@@ -280,6 +280,36 @@ export function lifecycleMissionError(
 }
 
 /**
+ * @spec derivation-limits#counted-operations (#935, D772): the derivations a
+ * token request counted without a reservation, by request, for
+ * {@link settleCountedDerivations}.
+ */
+const derivationsCountedBy = new WeakMap<object, string[]>();
+
+/** Record that the token request `ctx` counted one derivation against `missionId`; nothing outside a request. */
+export function noteCountedDerivation(ctx: unknown, missionId: string): void {
+  if (!ctx || typeof ctx !== "object") return;
+  const counted = derivationsCountedBy.get(ctx);
+  if (counted) counted.push(missionId);
+  else derivationsCountedBy.set(ctx, [missionId]);
+}
+
+/**
+ * @spec derivation-limits#counted-operations (#935, D772): settle the
+ * derivations `ctx` counted: a response other than 200 delivered no token,
+ * so each one failed in process before any artifact left and is returned.
+ * A 200 settles nothing, a 200 the release fence then refuses included: that
+ * Mission has ended, and the fence refunds nothing (D771).
+ */
+function settleCountedDerivations(kernel: MissionKernel, ctx: { status: number }): void {
+  const counted = derivationsCountedBy.get(ctx);
+  if (!counted) return;
+  derivationsCountedBy.delete(ctx);
+  if (ctx.status === 200) return;
+  for (const missionId of counted) kernel.refundDerivation(missionId);
+}
+
+/**
  * @spec mission#issuance-gating, status#mission-lifecycle-endpoint — map a
  * kernel {@link GateError} onto the `mission_error` diagnostic value, where
  * one applies. `reason` alone is not enough: `mission_not_active` covers
@@ -2414,8 +2444,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // MissionKernel.reserveDerivation}). The conditional write still
         // prevents cap overshoot; coupling the count to THIS artifact needs the
         // provider's issuance state recorded transactionally before delivery,
-        // which this slice does not build.
+        // which this slice does not build. A failure this request observes
+        // before the token leaves returns the count (#935, D772); a crash or
+        // a lost response does not, and stays counted.
         const gated = missionGate(target, "issue");
+        noteCountedDerivation(_ctx, record.id);
         // @spec child-delegation#parent-member + expansion#predecessor-member — a
         // Child Mission projects the `parent` lineage member; a successor Mission
         // projects the `predecessor` lineage member (its predecessor's mission_id),
@@ -2732,6 +2765,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
   provider.use(async (ctx, next) => {
     await next();
     fenceRelease(ctx);
+  });
+
+  // @spec derivation-limits#counted-operations (#935, D772): settles the
+  // derivations a request counted without a reservation. Registered second,
+  // so it runs inside the fence: its code after `next()` sees the response the
+  // grant produced, before the fence decides, and awaits nothing.
+  provider.use(async (ctx, next) => {
+    try {
+      await next();
+    } finally {
+      settleCountedDerivations(kernel, ctx);
+    }
   });
 
   // @spec device-authorization#request (#1202): the device authorization
