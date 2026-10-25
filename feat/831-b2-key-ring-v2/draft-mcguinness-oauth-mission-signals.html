@@ -1651,7 +1651,7 @@ Mission's <code>expires_at</code> carried with cached Mission status
       "version": 4,
       "committed_at": "2026-11-02T08:53:20Z",
       "expires_at": "2026-12-31T23:59:59Z",
-      "reason": "Quarterly reconcile completed early"
+      "reason": "Quarterly reconcile cancelled"
     }
   }
 }
@@ -2008,7 +2008,7 @@ consumer's receiver (<span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</s
       "version": 4,
       "committed_at": "2026-11-02T08:53:20Z",
       "expires_at": "2026-12-31T23:59:59Z",
-      "reason": "Quarterly reconcile completed early"
+      "reason": "Quarterly reconcile cancelled"
     }
   }
 }
@@ -2369,6 +2369,11 @@ a termination observed but not committed has no event (#705).<a href="#appendix-
         <li class="normal" id="appendix-A-2.2">
           <p id="appendix-A-2.2.1">Added carryover cascade correlation and out-of-order recovery semantics;
 event delivery remains non-atomic and may reorder (#576).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Editorial, no requirement change: the lifecycle-change examples'
+revocation <code>reason</code> describes a revocation, not a completion
+(#1535).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
