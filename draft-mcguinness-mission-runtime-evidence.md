@@ -750,12 +750,15 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   declaration requires a phase, `phase_invalid`; for a compensate-phase
   request with no `compensates_evaluation_id`, or a request whose
   `compensates_evaluation_id` is malformed, `compensation_link_invalid`;
-  and for one whose
+  for one whose
   evaluation-context binding inputs are missing, malformed, or
   incompatible with the declared binding, for an operation the runtime
   profile's Evaluation-Context Binding extension covers,
-  `evaluation_context_invalid`. The last three describe decision inputs
-  the PDP cannot use, not an evaluated policy denial. These name
+  `evaluation_context_invalid`; and for one carrying a work-item
+  context that is not well-formed (the harness profile,
+  {{I-D.draft-mcguinness-mission-harness}}), `work_item_invalid`. The
+  last four describe decision inputs the PDP cannot use, not an
+  evaluated policy denial. These name
   pre-evaluation conditions,
   PEP-side or PDP-side, and are disjoint from the runtime profile's
   PDP denial reasons for an evaluated decision (for example, as
@@ -2661,10 +2664,12 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
-- Extension Members and Execution Evidence: `work_item`, owned by the
-  harness profile, records the qualified work-item identifier on
-  Decision and Execution Evidence, joining Harness Evidence, and the
-  Execution Evidence `error` `work_item_mismatch` records a permit
+- Extension Members, Refusal Record and Execution Evidence:
+  `work_item`, owned by the harness profile, records the qualified
+  work-item identifier on Decision and Execution Evidence, joining
+  Harness Evidence; the Refusal Record `work_item_invalid` records a
+  PDP refusal, before evaluation, of a malformed work-item context; and
+  the Execution Evidence `error` `work_item_mismatch` records a permit
   whose work-item condition differs from the request it would execute
   (#815).
 
