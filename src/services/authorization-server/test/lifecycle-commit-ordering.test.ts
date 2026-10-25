@@ -83,9 +83,10 @@ afterEach(() => {
 describe("a lifecycle transition is committed before its acknowledgement is released (@spec status#lifecycle-processing, #1659 D771)", () => {
   it("runs on a WAL store with synchronous NORMAL, under which a committed transaction survives a process crash", () => {
     expect(String(as.kernel.db.pragma("journal_mode", { simple: true })).toLowerCase()).toBe("wal");
-    // 1 is NORMAL: in WAL mode a commit is in the WAL file when it returns, so
-    // it survives the process; only an OS crash or power loss can lose it.
-    expect(as.kernel.db.pragma("synchronous", { simple: true })).toBe(1);
+    // NORMAL (1) is the floor: in WAL mode a commit is in the WAL file when it
+    // returns, so it survives the process; only an OS crash or power loss can
+    // lose it. FULL (2) also passes.
+    expect(as.kernel.db.pragma("synchronous", { simple: true })).toBeGreaterThanOrEqual(1);
   });
 
   it("holds no open transaction at response release, and the committed rows already carry the transition, its version and the claimed nonce; the retransmit replays with no second transition", async () => {
