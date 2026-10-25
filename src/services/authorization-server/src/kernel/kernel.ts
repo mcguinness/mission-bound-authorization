@@ -410,6 +410,14 @@ export class MissionNotFoundError extends Error {}
  */
 export class StaleVersionError extends Error {}
 /**
+ * @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): a due
+ * schedule's transition could not be persisted, and a re-read shows no other
+ * request committed it or replaced the schedule. A decision never reports the
+ * pre-deadline state in its place: the Status operation answers `unavailable`
+ * and issuance fails closed.
+ */
+export class MissionStateUnavailableError extends Error {}
+/**
  * @spec control-plane#fresh-observation — raised only under the OPTIONAL
  * `strictObservationWatermark` policy: state advanced between the observation
  * point and delivery, and this deployment chose refusal over delivering a
@@ -4113,15 +4121,16 @@ export class MissionKernel {
    * expiry takes precedence over its parent's termination.
    */
   observe(record: MissionRecord): MissionRecord {
-    return this.observeAt(record, this.now().getTime(), 0);
+    return this.observeAt(record, this.now().getTime(), 0, false);
   }
 
-  private observeAt(record: MissionRecord, nowMs: number, depth: number): MissionRecord {
-    const own = observeExpiry(record, nowMs);
+  private observeAt(record: MissionRecord, nowMs: number, depth: number, dueRevoke: boolean): MissionRecord {
+    let own = observeExpiry(record, nowMs);
+    if (dueRevoke && own.state !== "terminated") own = observeDueRevoke(own, nowMs);
     if (own.state === "terminated" || !record.parent?.id || depth > 64) return own;
     const stored = this.get(record.parent.id);
     if (!stored) return own;
-    const parent = this.observeAt(stored, nowMs, depth + 1);
+    const parent = this.observeAt(stored, nowMs, depth + 1, dueRevoke);
     if (parent.state !== "terminated") return own;
     return { ...own, state: "terminated", termination: parentTerminatedTermination(parent) };
   }
@@ -4130,6 +4139,23 @@ export class MissionKernel {
   observedRecord(id: string): MissionRecord | undefined {
     const record = this.get(id);
     return record ? this.observe(record) : undefined;
+  }
+
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"), mission#issuance-gating
+   * (#1659, D771): the record as the release fence decides on it. As
+   * {@link observe}, and a due `on_expiry=revoke` schedule of the Mission or
+   * any ancestor is also projected, read-only, as its `revoked` termination at
+   * `suspend_until`. Expiry is observed first, so a deadline the Mission's
+   * `expires_at` overtook yields `expired`; a recorded termination is kept; a
+   * replaced or cancelled schedule is not the record's current one and
+   * projects nothing. A due `resume` projects nothing: the suspension it ends
+   * was committed after the gate, which still releases. Nothing is written, no
+   * version advances, no event is emitted and no derivation is refunded.
+   */
+  observedForRelease(id: string): MissionRecord | undefined {
+    const record = this.get(id);
+    return record ? this.observeAt(record, this.now().getTime(), 0, true) : undefined;
   }
 
   /**
@@ -4145,10 +4171,11 @@ export class MissionKernel {
    * @spec status#state-machine, status#legal-transitions: the same clock
    * applies a due suspension schedule, AFTER expiry, so a Mission past its
    * `expires_at` is `expired` and never resumed, and a deadline at or after
-   * `expires_at` never applies. Unlike expiry, a due
-   * schedule is never projected: a resume or revocation that did not commit
-   * is not reported, and the caller gets the stored `suspended` row (which
-   * derives nothing) until the commit lands.
+   * `expires_at` never applies. Unlike expiry, a due schedule is never
+   * projected here: it commits, and a resume or revocation whose write fails
+   * is never reported as the stored `suspended` row ({@link applyDueSchedule};
+   * the release fence projects a due revocation read-only,
+   * {@link observedForRelease}).
    */
   applyExpiry(record: MissionRecord): MissionRecord {
     const observed = this.observe(record);
@@ -4170,10 +4197,17 @@ export class MissionKernel {
    * @spec status#mission-lifecycle-endpoint ("Operations"): commit the
    * transition a due schedule owes ({@link dueScheduleTransition}) under the
    * `(version, state)` compare-and-set, which clears the schedule with it.
-   * On a failed write the caller gets the current row, never a projection.
    * Whichever path reaches it (a read, a request, or the timer), the commit
    * names the schedule it applied, so every effect outside the kernel follows
    * that commit through the durable fan-out.
+   *
+   * @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): a
+   * failed write is re-read. When the row moved (another request committed the
+   * transition or replaced the schedule), the expiry clock runs on the row as
+   * it now stands. When it did not, the write failed in storage, and
+   * {@link MissionStateUnavailableError} is raised rather than reporting the
+   * pre-deadline state: the Status operation answers `unavailable`, issuance
+   * fails closed, and the timer retries.
    */
   private applyDueSchedule(record: MissionRecord, observed: MissionRecord): MissionRecord {
     const due = dueScheduleTransition(record, this.now().getTime());
@@ -4184,12 +4218,16 @@ export class MissionKernel {
         appliedSchedule: record.schedule,
       });
     } catch {
+      let current: MissionRecord | undefined;
       try {
-        const current = this.get(record.id);
-        return current ? this.observe(current) : observed;
+        current = this.get(record.id);
       } catch {
-        return observed;
+        current = undefined;
       }
+      if (current && (current.version !== record.version || current.state !== record.state)) {
+        return this.applyExpiry(current);
+      }
+      throw new MissionStateUnavailableError(`mission ${record.id}: its due schedule could not be applied`);
     }
   }
 
@@ -4473,6 +4511,21 @@ export class MissionKernel {
     observation: { accepted: boolean; authority: string; artifactId?: string; completion?: string },
   ): boolean {
     return this.derivationReservations.reconcile(reservationId, observation);
+  }
+
+  /**
+   * @spec derivation-limits#counted-operations (#935, D772): return one
+   * derivation counted WITHOUT a reservation (the provider token hook, the
+   * delegated exchange, the delegation handle) when the process that counted
+   * it observed the derivation fail before any artifact left: an authoritative
+   * in-process non-acceptance. Only the request that spent the count calls
+   * this, once per count; an ambiguous outcome (a crash or a lost response)
+   * never reaches it and stays counted.
+   */
+  refundDerivation(id: string): void {
+    this.db
+      .prepare("UPDATE missions SET derivation_count = derivation_count - 1 WHERE id = ? AND derivation_count > 0")
+      .run(id);
   }
 
   /**
@@ -5284,6 +5337,19 @@ function dueScheduleTransition(
   return schedule.on_expiry === "resume"
     ? { to: "active" }
     : { to: "terminated", termination: { reason: "revoked", terminated_at: new Date(until).toISOString() } };
+}
+
+/**
+ * @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): the
+ * record with a due `on_expiry=revoke` schedule projected as its termination,
+ * with no write and no `version`; any other record unchanged. The caller has
+ * already observed expiry, so a deadline `expires_at` overtook never reaches
+ * here as due.
+ */
+function observeDueRevoke(record: MissionRecord, nowMs: number): MissionRecord {
+  const due = dueScheduleTransition(record, nowMs);
+  if (due?.to !== "terminated" || !due.termination) return record;
+  return { ...record, state: "terminated", termination: due.termination };
 }
 
 /**

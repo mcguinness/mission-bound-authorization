@@ -31,12 +31,14 @@ import {
   type BuiltAs,
   buildAuthorizationServer,
   type CarryoverConfig,
+  type CarryoverExclusionPolicy,
   type CarryoverMapRow,
   conditionDigest,
   createChildMission,
   decodeCarryoverEvidence,
   type DischargeAuthorityPolicy,
   entryDigest,
+  ExpansionDeferralStore,
   MISSION_DISCHARGE_SCOPE,
   type MissionRecord,
   type ProviderCapability,
@@ -157,15 +159,16 @@ function addChild(parentId: string, entries: AuthorityEntry[] = PAIR(), actor = 
 }
 
 /**
- * Expand `predecessorId` onto the ledger and carry its children. `payments`
+ * Open and approve the expansion of `predecessorId` onto the ledger, which
+ * renders and commits its carryover plan, without completing it. `payments`
  * overrides the successor's payments entries (to add an inherited constraint).
  */
-function expandAndCarry(
+function renderCarry(
   predecessorId: string,
   payments: AuthorityEntry[] = PAIR(),
-): { successor: MissionRecord; replacements: MissionRecord[]; map: CarryoverMapRow[] } {
+  store: ExpansionDeferralStore = as.expansionDeferrals,
+): string {
   seq += 1;
-  const store = as.expansionDeferrals;
   const pending = store.open({
     predecessorId,
     intent: intentOf("Pay Acme invoices and post the ledger", [PAY, LEDGER]),
@@ -182,9 +185,19 @@ function expandAndCarry(
     approvalEventId: `xapev-dco-${seq}`,
     approvedUntil: EXPIRES_AT,
   });
-  const out = store.redeem(pending.deferral_code);
+  return pending.deferral_code;
+}
+
+/** Expand `predecessorId` onto the ledger and carry its children ({@link renderCarry}). */
+function expandAndCarry(
+  predecessorId: string,
+  payments: AuthorityEntry[] = PAIR(),
+): { successor: MissionRecord; replacements: MissionRecord[]; map: CarryoverMapRow[] } {
+  const store = as.expansionDeferrals;
+  const code = renderCarry(predecessorId, payments, store);
+  const out = store.redeem(code);
   if ("error" in out || !("successor" in out)) throw new Error(`carryover failed: ${JSON.stringify(out)}`);
-  const result = store.carryoverResultFor(pending.deferral_code);
+  const result = store.carryoverResultFor(code);
   if (!result) throw new Error("no carryover result");
   return {
     successor: out.successor,
@@ -288,6 +301,78 @@ describe("Carryover Evidence entry pairing (@spec child-delegation#carryover-evi
     expect(entryDigest(ISSUER, effectiveOld)).not.toBe(oldInvoices);
     // At most one counterpart per old entry.
     expect(new Set(row.entry_pairs.map((p) => p.entry_digest)).size).toBe(row.entry_pairs.length);
+  });
+});
+
+describe("discharge state at a carryover's completion (@spec child-delegation#carryover-cas, child-delegation#carryover-no-reset, #919)", () => {
+  // A plan that commits a state change as an exclusion, but not narrowed
+  // authority: a discharge after rendering is both.
+  const STATE_ONLY: CarryoverExclusionPolicy = {
+    mode: "disclosed_exclusions",
+    change_classes: ["state_changed"],
+    dependent_descendant_exclusion: true,
+    unrendered_child_cascade: true,
+  };
+
+  it("refuses a batch whose child entry was discharged after rendering, creating nothing", async () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id);
+    const store = as.expansionDeferrals;
+    const code = renderCarry(pred.id);
+    const res = await lifecycle(child.id, body(child, "payments:invoice.list"));
+    expect(res.status).toBe(200);
+    expect(latched(child.id)).toEqual([digestOf(child, "payments:invoice.list")]);
+    expect(store.redeem(code)).toEqual({ error: "access_denied" });
+    const after = as.kernel.get(child.id) as MissionRecord;
+    expect(after.state).toBe("active");
+    expect(after.termination).toBeUndefined();
+    expect((as.kernel.get(pred.id) as MissionRecord).state).toBe("active");
+    expect(store.carryoverResultFor(code)).toBeUndefined();
+  });
+
+  it("refuses it even where the plan commits a state change as an exclusion: the child's effective authority moved, which the plan did not commit", async () => {
+    const store = new ExpansionDeferralStore(as.kernel, () => new Date(), { ...CARRYOVER, exclusionPolicy: STATE_ONLY });
+    // Control: a child suspended after rendering is only a state change, which
+    // this plan excludes, and the batch completes.
+    const controlPred = approvePredecessor();
+    const suspended = addChild(controlPred.id);
+    const controlCode = renderCarry(controlPred.id, PAIR(), store);
+    as.kernel.transition(suspended.id, "suspend");
+    const control = store.redeem(controlCode);
+    expect("error" in control, JSON.stringify(control)).toBe(false);
+    const controlRow = store.carryoverResultFor(controlCode)?.map.find((r) => r.old_child.mission_id === suspended.id);
+    expect(controlRow?.outcome).toBe("excluded");
+
+    const pred = approvePredecessor();
+    const child = addChild(pred.id);
+    const code = renderCarry(pred.id, PAIR(), store);
+    const res = await lifecycle(child.id, body(child, "payments:invoice.list"));
+    expect(res.status).toBe(200);
+    expect(store.redeem(code)).toEqual({ error: "access_denied" });
+    expect((as.kernel.get(child.id) as MissionRecord).state).toBe("active");
+    expect((as.kernel.get(pred.id) as MissionRecord).state).toBe("active");
+    expect(store.carryoverResultFor(code)).toBeUndefined();
+  });
+
+  it("does not restore an entry discharged on the old child: the replacement carries only the remaining entry, though its new parent holds both", async () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id);
+    const res = await lifecycle(child.id, body(child, "payments:invoice.list"));
+    expect(res.status).toBe(200);
+    const batch = expandAndCarry(pred.id);
+    expect(batch.successor.authority_set.flatMap((e) => e.actions)).toContain("payments:invoice.list");
+    const replacement = replacementOf(batch, child);
+    expect(replacement.authority_set.flatMap((e) => e.actions)).toEqual(["payments:invoice.read"]);
+    expect(as.kernel.effectiveAuthoritySet(replacement).flatMap((e) => e.actions)).toEqual(["payments:invoice.read"]);
+    // Nothing is reset: the replacement holds no discharge latch of its own,
+    // because the discharged entry never enters it.
+    expect(replacement.discharged).toBeUndefined();
+    const row = batch.map.find((r) => r.old_child.mission_id === child.id);
+    expect(row?.outcome).toBe("carried");
+    if (row?.outcome !== "carried") return;
+    expect(row.entry_pairs).toEqual([
+      { entry_digest: digestOf(child, "payments:invoice.read"), replacement_entry_digest: digestOf(replacement, "payments:invoice.read") },
+    ]);
   });
 });
 

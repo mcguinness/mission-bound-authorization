@@ -588,6 +588,11 @@ export interface DispatchInput {
 export interface DispatchResult {
   mission: MissionRecord;
   template: MissionTemplate;
+  /**
+   * Set only when the result recovers a recorded Dispatch: the delivery the
+   * adapter recorded for it ({@link recordDispatchDelivery}), if any.
+   */
+  recovered?: { delivery?: Record<string, unknown> };
 }
 
 /**
@@ -686,7 +691,7 @@ function dispatchIdempotency(kernel: MissionKernel, store: TemplateStore, input:
     }
     const recorded = op.missionId ? kernel.get(op.missionId) : undefined;
     if (!recorded) throw new Error(`recorded dispatch instance ${op.missionId ?? "(none)"} not found`);
-    return { mission: recorded, template };
+    return { mission: recorded, template, recovered: op.delivery ? { delivery: op.delivery } : {} };
   };
   const lookup = (): DispatchResult | undefined => {
     // @spec mission#authority-sources (#829): the instance's Subject is a
@@ -716,6 +721,24 @@ function dispatchIdempotency(kernel: MissionKernel, store: TemplateStore, input:
  */
 export function findDispatch(kernel: MissionKernel, store: TemplateStore, input: DispatchInput): DispatchResult | undefined {
   return dispatchIdempotency(kernel, store, input).lookup();
+}
+
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery: record the
+ * access token a Dispatch delivered under its reservation key (authenticated
+ * Dispatcher, dispatch_event_id), so a retry recovers that delivery instead of
+ * deriving again.
+ */
+export function recordDispatchDelivery(
+  kernel: MissionKernel,
+  input: Pick<DispatchInput, "dispatcher" | "dispatchEventId" | "idempotency">,
+  delivery: Record<string, unknown>,
+): void {
+  (input.idempotency ?? new CreationIdempotencyStore(kernel)).recordDelivery(
+    input.dispatcher,
+    input.dispatchEventId,
+    delivery,
+  );
 }
 
 export function dispatchFromTemplate(

@@ -16,6 +16,33 @@ snapshot: a lifecycle transition compares and sets on `(version, state)`, and
 a transition whose expiry clock materialized the expiry (`terminated`, reason
 `expired`) first is refused rather than overwritten.
 
+Child Mission Carryover (`child-delegation.carryover`; `child_mission_carryover`
+in `policy.json`, on in the reference deployment) widens that expansion
+transaction rather than adding a second one. The plan is rendered, its
+identifiers reserved and its manifest committed on the deferral row at
+approval. Completion runs the whole batch in the expansion completion
+transaction, between successor activation and predecessor supersession:
+- the descendant-set membership pass;
+- one compare-and-set per carried row against its rendered snapshot;
+- every replacement record, in generation order, each keeping the old child's
+  `derivation_limit` and `derivation_count`;
+- the cascade of the whole old subtree;
+- the complete final map and the signed Carryover Evidence;
+- the terminal tombstones and the durable outbox payloads.
+
+A failure anywhere rolls all of it back, so no partial successor, replacement or
+cascade survives, and publication runs after the commit, as for every other
+transition. The consistency domain is therefore the predecessor, its whole live
+subtree and the successor, together with their budget state and their durable
+publication, in one issuer's kernel database with its single writer. A
+deployment that shards Mission state per Mission cannot offer carryover without
+a transaction spanning that domain. No external meter or latch participates:
+the deployment declares none (`noApplicableExternalState`), so a carried budget
+is the kernel's own counters. The domain is bounded at intake by
+`carryover_max_rows` (8 in `policy.json`): a larger plan is refused
+`carryover_plan_too_large` before any approval names it. A deployment that
+omits carryover keeps the ordinary cascade, and the specification is unchanged.
+
 Every committed transition writes one immutable event row on the kernel handle
 in the same transaction as the state write, with its event identity assigned
 inside that transaction. Publication runs after the commit. Managed
@@ -72,7 +99,14 @@ source that asserted it. Operators reconciling a fleet should read
 The ID-JAG and attenuation-root paths use that reservation. The provider
 access-token hook does not: it is synchronous, runs inside the provider's own
 token save, and offers neither an operation identity nor an acceptance
-callback, so its count stays uncoupled from the token it pays for. Recording
+callback, so its count stays uncoupled from the token it pays for. A failure
+the request itself observes before the token leaves returns that count
+(#935, D772): the request notes each count the hook spends and settles it
+when it answers anything but a 200, or fails by an exception after its
+response was prepared. A crash or a lost response is never
+observed, so it stays counted. The ID-JAG path settles a reservation it
+admitted itself as not accepted, with authority `as:in-process-failure`,
+when the grant fails before it is returned. Recording
 authoritative issuance state and artifact material transactionally before
 delivery is a possible future architecture; this deployment does not implement
 it, and no completed serialization conformance claim is made. In particular, an
@@ -225,6 +259,7 @@ Namespace inventory for the changed seams:
 | Mutable seam | Namespace boundary |
 |---|---|
 | Mission state/version, counters, child accounting and expansion deferrals | One issuer owns the kernel database |
+| Carryover plans and manifests, identifier reservations, results and replacement evidence | One issuer owns the kernel database; reservations and replacements are keyed on issuer and Mission identity |
 | Suspension schedules and their generations | The Mission's own row in the kernel database |
 | Durable lifecycle events and per-subscriber delivery rows | One issuer owns the kernel database; each event row records the issuer it committed under |
 | Terminal tombstones | Keyed on the canonical issuer and Mission identity pair |
@@ -242,6 +277,43 @@ treats the SET `iss` and the event's `mission.issuer` as one identity and
 refuses a SET that separates them. Its tests prove equal Mission and event IDs
 at distinct issuers remain independent, not an exhaustive audit of all
 cross-issuer services, quotas or replication authority.
+
+## Carryover compositions
+
+How an expansion composes with the predecessor's children here, with the
+reference configuration: carryover on, `all_or_nothing`, at most 8 rows, no
+external state. These rows declare the reference deployment's behavior; a
+deployment that omits carryover or selects other exclusions changes them
+without changing the specification. Unless its row says otherwise, a refusal
+comes at completion, rolls the whole transaction back (no successor, no
+replacement, no cascade, the predecessor still active) and answers the client
+`access_denied`, so a fresh expansion request is needed. Each witness names a test file under
+`src/services/authorization-server/test/` and the test's title, unique in its
+file. "Not supported" marks a composition the reference deployment does not
+offer.
+
+| Composition | Outcome | Mechanism | Witness | Ledger row |
+|---|---|---|---|---|
+| Expansion with no live descendant | No plan; an ordinary expansion supersedes the predecessor | `prepareCarryover` prepares no plan | `carryover.test.ts`: "prepares no plan for a predecessor with no live descendant and completes an ordinary expansion" | None |
+| Live children, carryover off when the expansion opens | No plan; supersession cascades the whole subtree `parent_terminated`, each naming its immediate parent, and carries nothing | The supersession's own cascade (`supersedeInCallerTx`) | `carryover.test.ts`: "with the switch off when the expansion opens, prepares no plan and cascades the live subtree ordinarily, carrying nothing" | None |
+| Live children under carryover, `all_or_nothing` | Each active child is replaced under the successor, or under its parent's replacement, and terminated `parent_terminated` with `carried_to`; the signed map lists every old child | Rendering, then at completion the membership pass, one compare-and-set per carried row, and inserts in generation order, in one transaction | `carryover.test.ts`: "carries an active leaf child under the successor with a fresh direct approval basis, the preserved budget and bare same-issuer correlation"; "carries a grandchild under its replacement parent, never the root successor" | `child-delegation.carryover.fresh-direct-records`, `.generation-order`, `.atomic-records-map-outbox` |
+| Live children under carryover, `disclosed_exclusions` | Not supported by `policy.json`, which fixes `all_or_nothing`; through the `childMissionCarryover` option, a change of a committed class excludes that child and its dependents and carries the rest, and any other class refuses | Adjudication against the plan's committed change classes | `carryover.test.ts`: "excludes only a committed change class under disclosed exclusions and carries the rest"; "refuses a change class the plan did not commit, even under disclosed exclusions" | `child-delegation.carryover.completion-cas`, `.expansion-disclosure` |
+| Child suspended at rendering | Rendered as a cascade (`suspended_not_resumed`) and terminated `parent_terminated`, never resumed; its dependents are excluded | Rendering reads each child's effective state | `carryover.test.ts`: "excludes a suspended child and never resumes it" | `child-delegation.carryover.effective-set-basis` |
+| Child suspended and resumed before rendering | Carried as an active child | Rendering reads the current state | `carryover.test.ts`: "carries a child suspended and resumed before rendering; one suspended at rendering and resumed before completion refuses the batch" | `child-delegation.carryover.completion-cas` |
+| Child suspended, or resumed, after rendering | Refused | Membership pass (`state_changed`); for a carried row, also the compare-and-set on state and version | `carryover.test.ts`: "refuses a batch when a rendered child was suspended after approval", and the resume test above | `child-delegation.carryover.completion-cas` |
+| Child contained before rendering | Carried without the contained authority; no containment is restored or carried | The replacement is derived from the old child's effective set, under an independent ceiling of that set | `carryover.test.ts`: "does not restore containment removed from the old child's effective set" | `child-delegation.carryover.effective-set-basis` |
+| Child contained after rendering | Refused | Membership pass (`containment_version`, effective authority) | `carryover.test.ts`: "refuses a batch when a rendered child was contained after approval" | `child-delegation.carryover.completion-cas` |
+| Child entry discharged before rendering | Carried without the discharged entry, though the successor holds it; the replacement has no latch of its own | The old child's effective set drops discharged entries | `discharge-carryover.test.ts`: "does not restore an entry discharged on the old child: the replacement carries only the remaining entry, though its new parent holds both" | `child-delegation.carryover.effective-set-basis` |
+| Child entry discharged after rendering | Refused, even by a plan that excludes the discharge's state change | Membership pass (effective authority, `state_changed`) | `discharge-carryover.test.ts`: "refuses a batch whose child entry was discharged after rendering, creating nothing"; "refuses it even where the plan commits a state change as an exclusion: the child's effective authority moved, which the plan did not commit" | `child-delegation.carryover.completion-cas` |
+| Derivation consumed after rendering | Refused | Membership pass (`derivation_consumed`); compare-and-set on `derivation_count`, which moves with no version change | `carryover.test.ts`: "refuses a batch whose derivation counter moved after rendering with no lifecycle version bump" | `child-delegation.carryover.completion-cas` |
+| Child created after rendering | Refused | Membership pass (`unrendered_descendant`; the parent's fan-out occupancy moved) | `carryover.test.ts`: "refuses a batch when a grandchild was inserted after approval, so no unrendered descendant is silently carried" | `child-delegation.carryover.completion-cas` |
+| Rendered child terminated, or its record gone, after rendering | Refused; a terminated row is not an acceptable exclusion | Membership pass (`state_changed`, `record_missing`) | `carryover.test.ts`: "refuses a batch when a rendered child was terminated after approval rather than treating it as an acceptable exclusion"; "refuses a batch when a rendered child's record is gone at completion" | `child-delegation.carryover.completion-cas` |
+| Carried child's own expiry arriving before completion | Refused; no replacement outlives the old child | The replacement's expiry is bounded by the old child's, and creation refuses an expiry not later than its creation instant | `carryover.test.ts`: "refuses a batch when a carried child's own expiry arrives before completion: no replacement can outlive it" | `child-delegation.carryover.no-expiry-extension` |
+| Successor expiry extension | Completes; each replacement keeps the old child's expiry. The deferred expansion route offers no extension; the kernel accepts one | The old child's expiry is an independent bound beside the new parent's | `carryover.test.ts`: "refuses to extend a carried child under a successor whose approved extension outlives the predecessor" (the batch completes) | `child-delegation.carryover.no-expiry-extension`, `.expansion-expiry` |
+| Carryover switched off after the plan was approved | Completion refused `server_error` (HTTP 500), a deployment fault rather than a decision; nothing is cascaded and the approval stays unredeemed; restoring the switch completes the same plan | Completion refuses a committed plan while the switch is off | `carryover.test.ts`: "refuses completion when a committed manifest meets a disabled switch, and cascades nothing"; "executes the same committed manifest intact once the switch is restored" | None |
+| Plan above `carryover_max_rows` | Refused at intake, before any approval names it: `invalid_request` with `mission_denial_reason` `carryover_plan_too_large`; nothing reserved | The cap counts every non-terminal descendant | `carryover.test.ts`: "refuses an oversized plan at intake, before any approval event names it" | `child-delegation.carryover.manifest-committed` |
+| Policy-adjudicated (Progressive) drawdown with live children | Not supported: the request falls back to a fresh direct approval (`live_children`), which prepares carryover; the policy path never carries | The drawdown's live-children fallback; the carryover funnel refuses a non-direct basis | `progressive-drawdown-endpoint.test.ts`: "a predecessor with a non-terminal Child Mission falls back; once the child is terminal it is adjudicated" | `progressive.in-ceiling.live-children-fall-back`; `child-delegation.carryover.no-progressive-drawdown` stays `todo` |
+| External meter or latch | Not supported: the deployment declares none, so a carried budget is the kernel's own counters | `noApplicableExternalState` | `carryover.test.ts`: "renders a child ineligible when no external meter or latch can participate and the deployment declares none absent"; "rolls the whole batch back when a transaction-participating external transfer fails" | `child-delegation.carryover.budget-transfer` stays `partial` |
 
 ## Restart inventory
 
