@@ -436,10 +436,10 @@ deployment's values: the reference AS and `plain-rs`.
     "an introspection call that exceeds its timeout (default 2000 ms) or fails refuses service with 503; the plain RS never falls back to the JWT alone",
     "provider token acceptance and derivation counting are not coupled atomically (#250)",
     "the release fence orders a revocation against an issuance within one process only (#641); a revocation committing after the fence is acknowledged after the token is answered",
-    "a failure after the derivation is counted is never refunded (#250)",
+    "a failure after the derivation is counted is refunded only when the request observes it; a crash or a lost response keeps the count (#935, #250)",
     "a token indexed but never delivered introspects active while unexpired with its Mission active and its grant live; nothing reconciles or revokes it (#250)",
     "no artifact is replayed: a retry after a lost code-exchange response is code reuse, refused invalid_grant with nothing counted, and revokes the grant, leaving the Mission active with no grant; a retry after a lost refresh response is a fresh, counted derivation until the refresh token rotates (#250)",
-    "by default the launcher keeps every store in memory: a restart loses Missions, grants, refresh tokens and the indexes; with MISSION_KERNEL_STORE and a key ring the Mission kernel is kept, never the provider (#250)",
+    "by default the launcher keeps every store in memory: a restart loses Missions, grants, refresh tokens and the indexes; with MISSION_KERNEL_STORE, a key ring and a recovery witness the Mission kernel is kept, never the provider (#250)",
     "the scope-projection mapping's integrity is repository review; it is not fetched or signed",
     "Intent-only requests depend on an oidc-provider workaround (a marked, AS-written authorization_details)",
     "the approval commits the Mission active and bound to its grant one request before the code is issued, so a client that never follows the redirect leaves an active Mission with no code (#250)"
@@ -525,8 +525,10 @@ The audience stays the mapped one. It also chooses the AS's signing keys
 `pnpm keys init --ring <path>`, kept across restarts. For development the ring lives at `src/var/keys/as-signing-keys.json`, which git ignores (`src/.gitignore` ignores `/var/`). From `src/`, `pnpm keys init --ring var/keys/as-signing-keys.json` creates it once, and `MISSION_KEY_RING="$PWD/var/keys/as-signing-keys.json"` names it. The launchers set no default: the variable is always explicit. Neither, both, a
 relative path or an unusable ring refuses startup with one `issuance-only:`
 line. `MISSION_KERNEL_STORE=<absolute path>` keeps the Mission kernel in that
-file (Restart and recovery, above), and requires `MISSION_KEY_RING`.
-`src/server.ts` reads the same three variables. The launcher adds one input that
+file (Restart and recovery, above), and requires `MISSION_KEY_RING` and a
+recovery witness, `MISSION_KERNEL_WITNESS=<absolute path>` in another
+directory, created once by `pnpm kernel-recovery init --store <path> --witness
+<path>`. `src/server.ts` reads the same four variables. The launcher adds one input that
 `src/server.ts` lacks: the demo's trusted approval input (below).
 
 It writes the per-boot dev credentials, mode 0600, to
