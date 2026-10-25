@@ -470,7 +470,7 @@ describe("Mission Lifecycle endpoint authorization and request members (@spec st
   it("accepts a nonce of 1 and of 255 code points, inside or outside the Basic Multilingual Plane, echoing it exactly, and refuses an empty one and one of 256 invalid_request with none echoed, after authentication (@spec status#lifecycle-operations, status#idempotency, #1535 finding 17, D805, #1689 review)", async () => {
     const m = approve();
     // U+1F600 is one code point and two UTF-16 units.
-    const astral = "\u{1F600}";
+    const astral = String.fromCodePoint(0x1f600);
     for (const refused of ["", "n".repeat(256), astral.repeat(256), `n${astral.repeat(255)}`]) {
       const answer = await op({ mission_id: m.id, operation: "suspend", nonce: refused });
       expect(answer.status, answer.text).toBe(400);

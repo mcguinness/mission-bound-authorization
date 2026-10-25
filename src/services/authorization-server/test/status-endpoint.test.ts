@@ -256,7 +256,7 @@ describe("Mission Status endpoint errors (@spec status#mission-status-auth-failu
     const members = { mission_id: record.id, audience: CANONICAL_RESOURCE };
     // U+1F600 is one code point and two UTF-16 units: 255 of them are 510
     // units, and 128 of them (256 units) are within the bound.
-    const astral = "\u{1F600}";
+    const astral = String.fromCodePoint(0x1f600);
     for (const accepted of ["k", "k".repeat(255), astral, astral.repeat(128), astral.repeat(255), `k${astral.repeat(254)}`]) {
       const answer = await read(reader, { ...members, nonce: accepted });
       expect(answer.status, answer.text).toBe(200);
