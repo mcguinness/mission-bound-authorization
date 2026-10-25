@@ -23,6 +23,15 @@ export function openStore(schemaSql: string, options: StoreOptions = {}): Databa
 }
 
 /**
+ * Open an existing store file read-only, for an inspection that must not
+ * write (#831 B2: retiring a Status key reads the kernel's standing
+ * consents). Refuses a file that does not exist.
+ */
+export function openStoreReadOnly(file: string): Database.Database {
+  return new Database(file, { readonly: true, fileMustExist: true });
+}
+
+/**
  * A durable store that could not be opened safely. Every refusal of
  * {@link openDurableStore} is this error and is fatal at startup: the caller
  * holds no handle, so nothing can fall back to an in-memory best effort.
