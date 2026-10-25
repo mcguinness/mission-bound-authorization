@@ -579,6 +579,13 @@ export {
   type EvaluatedActivationPolicy,
   type RetainedActivationPolicySnapshot,
 } from "./kernel/activation-policy-snapshots.js";
+// @spec authority-server#join-assertion-artifact (#1560): the retained join
+// evidence events (MissionKernel.joinEvidence).
+export {
+  JoinEvidenceRetentionError,
+  JoinEvidenceStore,
+  type RetainedJoinAssertionEvent,
+} from "./kernel/join-evidence-store.js";
 export {
   AGR_ENVELOPE_FORMAT,
   AGR_JWS_CTY,
@@ -985,6 +992,14 @@ export async function buildAuthorizationServer(opts: {
    * test exercise that path. It authorizes no second writer.
    */
   kernelStore?: { file?: string };
+  /**
+   * @spec control-plane#tombstones, authority-server#join-assertion-artifact
+   * (#1560, D770): the deployment's declared post-expiry audit retention, in
+   * seconds: the one value this kernel's terminal tombstones, activation policy
+   * snapshots and join evidence events compose. Absent, the reusable kernel's
+   * default (`DEFAULT_AUDIT_RETENTION_S`, 90 days).
+   */
+  auditRetentionSeconds?: number;
   /**
    * @spec child-delegation#carryover — override the deployment's Child Mission
    * Carryover configuration (the capability on-switch, the plan cap, the
@@ -1559,6 +1574,9 @@ export async function buildAuthorizationServer(opts: {
         LIFECYCLE_NONCE_TTL_S,
       ),
       child_cascade_seconds: (opts.derivationPolicy ?? DERIVATION_POLICY).max_mission_lifetime_s ?? 0,
+      // (#1560, D770) the deployment's declared audit retention, where it
+      // declares one; absent, the kernel's default.
+      ...(opts.auditRetentionSeconds !== undefined ? { audit_retention_seconds: opts.auditRetentionSeconds } : {}),
     },
     // @spec containment#containment-policy — the issuer-held ContainmentPolicy;
     // only containOnEvent reads it (the manual contain path is unaffected).

@@ -364,8 +364,12 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     expect(refused.refusal_reason).toBe("phase_mismatch");
     expect(h.connectors.ledgerEntries("msn_252")).toHaveLength(0);
     // A preflight Decision cannot be the gate for a consequential phase even
-    // though its own crossing was permitted moments earlier.
-    expect(executions(h).map((e) => e.content.error)).toEqual(["phase_mismatch"]);
+    // though its own crossing was permitted moments earlier: that crossing's
+    // completed disposition, then the commit's suppression.
+    expect(executions(h).map((e) => [e.content.outcome, e.content.error])).toEqual([
+      ["completed", undefined],
+      ["suppressed", "phase_mismatch"],
+    ]);
   });
 
   it("compares the bound phase before any effect on all three dispatch paths", async () => {

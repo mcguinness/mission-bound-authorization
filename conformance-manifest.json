@@ -51,8 +51,8 @@
     "content_sha256": "0cf9c0c15240b62a32a5bd9bf0dddbb93cfe86d6390685e3c5c5fd7858b87a4f"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "fb06431ab4097ecb13a45efbff7c2cc8f25ef7d0",
-    "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
+    "revision": "dffb5f036c98b5d0a07ce1cb4a8f52282cf3b021",
+    "content_sha256": "ef7986472e164657a50fd9059751606e9b1232bfed4f97228bb70aad69e66e73"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "cb8fb904b1870d8d9b94816536376cd13b1c1f3c",
@@ -79,8 +79,8 @@
     "content_sha256": "a5d4486c5b3f708b16b0a86aabd670a429d37de62aa2436b87c2aadaf10e8ef9"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
-    "revision": "1a34e033976b0007776170a413b11008427948d8",
-    "content_sha256": "41ff62e2227de26dd540ac9c1818b4d7287ace7171c5ea495100bdf4a7a2b3a3"
+    "revision": "dffb5f036c98b5d0a07ce1cb4a8f52282cf3b021",
+    "content_sha256": "1e23fc90eeccb463c3ad04f8959da9809246e9c626f150d072fa59cf9d129ff9"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "1a34e033976b0007776170a413b11008427948d8",
@@ -115,8 +115,8 @@
     "content_sha256": "c9636bdc3bc0a3b7baffd573b69e56708887aacb5b9fecdd0d35516a4d1d69d5"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "eda90f1adc97cb7ba190e0ff407894a5a7d83d81",
-    "content_sha256": "c20667c9cf5df054afac0f8b4596796d6fc4829235b48e2862e449b7ee0dd63c"
+    "revision": "0c7677a870b2d9a40af7bbafc5e04792ea63fa99",
+    "content_sha256": "07e01880187e375f571aa1a1afeccbd73901610ee6cb31bbc6d039756c360b07"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -6825,7 +6825,7 @@
     "normative": "under a `service_owned` or `organizational` source, as under `user_delegated`, a derived token's `client_id` names the Agent and the Subject stays in `sub`; a delegate appears in `act`, never in `sub` or in place of the Subject"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
@@ -6844,9 +6844,21 @@
      "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/organizational-principal-agent.test.ts",
+     "name": "an agent acting for an organizational principal (@spec mission#authority-sources, mission#mission-bound-tokens, mission#designation, #1313) > step 2 (token): the access token's sub is the organizational principal, not the Approver, its client_id the Agent, and it carries no act",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/organizational-principal-agent.test.ts",
+     "name": "an agent acting for an organizational principal (@spec mission#authority-sources, mission#mission-bound-tokens, mission#designation, #1313) > step 3 (same-Mission delegation): the Agent designates a sub-agent, and the sub-agent's redeemed token keeps the organizational principal as sub, names the sub-agent in act and carries the sub-agent as client_id",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1194. Witnessed for a service_owned source (the agent ledger-reconciler, workload Subject agt_ledger_reconciler): client_id names the Agent and the Subject stays in sub (step 3), and a delegate the agent designates appears in act with sub unchanged (step 5); and for user_delegated by the delegation-exchange witness. Partial: the organizational source is not exercised for client_id or for a delegate in act. Proofs: overwriting client_id with the Subject in the JWT customizer fails step 3; omitting act at redemption fails step 5; taking sub from the delegate fails step 5 only with both the redemption's account and the customizer's Subject assignment disabled (either alone keeps sub)."
+   "notes": "#1194, #1313 item 1. Witnessed for a service_owned source (the agent ledger-reconciler, workload Subject agt_ledger_reconciler): client_id names the Agent and the Subject stays in sub (step 3), and a delegate the agent designates appears in act with sub unchanged (step 5); for user_delegated by the delegation-exchange witness; and for an organizational source (Subject acme-accounts-payable under the shipped acme-accounts-payable source and its governed policy, approved headlessly by bob) by the organizational-principal-agent witness: the access token's sub is the organizational principal, not the Approver, its client_id the Agent, with no act (step 2); the designation keeps the Agent as client_id and the Subject in sub, and the sub-agent's redeemed token keeps the Subject in sub and names the sub-agent in act and as client_id (step 3). The organizational Agent is a test registration added to that source: the shipped governed-agent holds no Token Exchange grant (its exchange is refused, requested grant type is not allowed for this client), although the governed policy's ceiling admits ai_agent delegates. Proofs: overwriting client_id with the Subject in the JWT customizer fails step 3 (service_owned) and the organizational step 2; omitting act at redemption fails step 5 and the organizational step 3; taking sub from the delegate fails step 5 only with both the redemption's account and the customizer's Subject assignment disabled (either alone keeps sub), and fails the organizational step 3 under that double mutant or under a customizer that writes act.sub into sub; a customizer writing the Agent into sub for organizational Missions only fails the organizational steps 2 and 3 while the service_owned and user_delegated witnesses pass; removing the customizer's Subject assignment fails the organizational step 2 (sub becomes the Approver); naming the designee as a designation's client_id or sub, or the Mission's Agent as a delegated token's client_id, fails the organizational step 3."
   },
   {
    "id": "core.approval-event.approver-establishment-not-from-client-input",
@@ -25960,12 +25972,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation type this PEP does not implement is refused as unfulfillable_obligation: the obligation is unsupported, an effective deny distinct from an unrecognized condition",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "#610 GAP 2 fixed the CONDITION half only, against the obsolete flat response shape (parameter_digest/permit_expires_at/single_use as flat top-level members, and the whole top-level context enumerated for unrecognized members). #612 finding 2 migrates the PDP and PEP to the current draft lanes: evaluate.ts emits a NESTED conditions object ({parameter_digest, valid_until, use_limit}), and pep.ts's unrecognized-member check is scoped to decision.context.conditions ONLY (a top-level member outside conditions, e.g. a future response-context extension, is accepted without enumeration; proven by a dedicated test so the scoping is not accidental). The OBLIGATIONS half is now also proven: this PEP implements no obligation type, so obligations.length > 0 is, by definition, unfulfillable and is refused as unfulfillable_obligation (a distinct refusal_reason from unrecognized_condition, so evidence never conflates which rule fired)."
+   "notes": "#610 GAP 2 fixed the CONDITION half only, against the obsolete flat response shape (parameter_digest/permit_expires_at/single_use as flat top-level members, and the whole top-level context enumerated for unrecognized members). #612 finding 2 migrates the PDP and PEP to the current draft lanes: evaluate.ts emits a NESTED conditions object ({parameter_digest, valid_until, use_limit}), and pep.ts's unrecognized-member check is scoped to decision.context.conditions ONLY (a top-level member outside conditions, e.g. a future response-context extension, is accepted without enumeration; proven by a dedicated test so the scoping is not accidental). The OBLIGATIONS half is now also proven: an obligation type this PEP does not implement is unfulfillable and is refused as unfulfillable_obligation (a distinct refusal_reason from unrecognized_condition, so evidence never conflates which rule fired); the one type it performs, notification, is witnessed on the authzen.obligation-processing rows (#1640)."
   },
   {
    "id": "runtime.decision-inputs.authority-entry-and-subset-required",
@@ -33419,10 +33431,10 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PEP fulfills every attached obligation before releasing a permitted action's effect; on a denial the PEP still denies and additionally executes every returned obligation"
+    "normative": "the PEP fulfills every attached obligation before releasing a permitted action's effect; on a denial the PEP still denies and additionally executes every returned obligation it can perform. The obligations are those of the authenticated decision response: a denial whose Decision Evidence does not verify still executes them and says its evidence is missing, and a response that fails channel authentication or integrity supplies none (D770 ruling 6)"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/token-profile.test.ts",
@@ -33435,9 +33447,45 @@
      "name": "an obligation the PEP does not recognize or cannot fulfill is an effective deny at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1629) > a permit carrying an unrecognized or unfulfillable obligation releases no protected effect over HTTP with DPoP: the write is refused unfulfillable_obligation, nothing is scheduled, and the permit's disposition is suppressed obligation_unfulfilled; the same permit with no obligation schedules",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit carrying a notification obligation over HTTP with DPoP completes the transmission before the write is released, then schedules, and the completed record names the obligation fulfilled",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit for an irreversible commit (execute_wire_transfer) carrying a notification obligation over HTTP with DPoP completes the transmission before the wire is posted, and the executor's completed record names the obligation fulfilled",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit whose notification cannot be performed over HTTP with DPoP releases no protected effect: a failed transmission, a malformed obligation and an absent transport each refuse the write unfulfillable_obligation with nothing scheduled, and the suppressed record names the obligation failed or unsupported",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a denial carrying a notification obligation over HTTP with DPoP stays a denial and transmits the notification, beside an obligation the PEP does not recognize: nothing is scheduled and no Execution Evidence is recorded",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a denial whose Decision Evidence does not verify over HTTP with DPoP still stands and still transmits its notification, and the response says its evidence is missing: nothing is scheduled and no evidence is retained or recorded",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a denial whose response fails channel authentication over HTTP with DPoP executes none of the obligations it carries: the request is refused channel_failure, nothing is transmitted and nothing is scheduled",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Re-quoted at #1629 (D744 ruling 8): the effective-deny clause is its own row, authzen.obligation-processing.effective-deny. partial: 'on a denial the PEP MUST still deny' is witnessed (a denial carrying an obligation stays out_of_authority with no effect and no Execution Evidence, over HTTP with DPoP), and no effect is released while an attached obligation is unfulfilled. Fulfilling an obligation before release and executing a denial's obligations have no witness: the payments PEP implements no obligation type. Mutations: letting a denial carrying obligations take the permit path fails the denial witness; skipping the obligation check fails the permit witness."
+   "notes": "Re-quoted at #1629 (D744 ruling 8): the effective-deny clause is its own row, authzen.obligation-processing.effective-deny. Tested at #1640: the payments PEP performs the AuthZEN Obligations Profile's notification through its configured transport, every witness over HTTP with DPoP. On a permit it completes the transmission before releasing the effect: for a keyed write and for an irreversible commit, no schedule or wire exists when the transmission completes, and the completed record names the obligation fulfilled. A notification it cannot fulfill (a failed transmission, a malformed instance, no transport configured) releases nothing. On a denial it still denies (out_of_authority, nothing scheduled, no Execution Evidence) and transmits the returned notification. Mutations: treating the permit's obligations as fulfilled without performing them fails the fulfilment, irreversible-commit and cannot-perform witnesses; not awaiting the transmission fails both before-release witnesses; counting a failed transmission as fulfilled fails the cannot-perform witness; skipping the denial's obligations fails the denial witness; letting a denial carrying obligations take the permit path fails both denial witnesses. D770 ruling 6: a denial whose Decision Evidence does not verify still stands, still transmits its notification and carries evidence_gap decision_evidence_unverifiable, with nothing retained or recorded; a denial carried by a response that fails channel authentication is refused channel_failure and transmits nothing. Mutations: skipping the denial's obligations when its evidence did not verify fails the unverifiable-evidence witness; dropping the evidence gap fails it too, and reporting the gap on every denial fails the verified denial witness; accepting an unauthenticated channel response fails the channel witness, and with its refusal assertion removed the nothing-transmitted assertion alone fails."
   },
   {
    "id": "authzen.obligation-processing.pdp-publishes-supported-obligations",
@@ -33502,10 +33550,10 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a permit carrying an obligation the PEP does not recognize or cannot fulfill releases no effect, and the PEP still executes the other obligations it understands and can perform"
+    "normative": "a permit carrying an obligation the PEP does not recognize or cannot fulfill releases no effect, and the PEP still executes the other obligations it understands and can perform; a present obligations member that is not an array is malformed and refuses the permit with no fabricated outcome list, while an absent member or an empty array does not (D770 ruling 5)"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/token-profile.test.ts",
@@ -33515,12 +33563,30 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation type this PEP does not implement is refused as unfulfillable_obligation: the obligation is unsupported, an effective deny distinct from an unrecognized condition",
      "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit whose notification cannot be performed over HTTP with DPoP releases no protected effect: a failed transmission, a malformed obligation and an absent transport each refuse the write unfulfillable_obligation with nothing scheduled, and the suppressed record names the obligation failed or unsupported",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit carrying a notification beside an obligation the PEP does not recognize over HTTP with DPoP still transmits the notification and releases no protected effect: the write is refused unfulfillable_obligation, nothing is scheduled, and the outcomes are fulfilled and unsupported",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit whose obligations member is present but not an array (null, an object, a string) over HTTP with DPoP releases no protected effect: the write is refused unfulfillable_obligation, nothing is transmitted, and the suppressed record carries no outcome list; an absent member or an empty array schedules",
+     "level": "endpoint",
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1629 (D744 ruling 8). partial: the effective-deny clause is witnessed: a permit carrying an obligation type the PEP does not recognize, a step-up obligation it cannot perform, or both, is refused unfulfillable_obligation over HTTP with DPoP with no protected effect (nothing scheduled, no reservation, no consumed permit) and a suppressed obligation_unfulfilled Execution Evidence record; the same permit with no obligation schedules. The 'still executes every obligation it understands and can perform' clause has no witness: the payments PEP implements no obligation type, so every obligation is unfulfillable. Mutation: skipping the PEP's obligation check fails both witnesses."
+   "notes": "#1629 (D744 ruling 8); tested at #1640. Over HTTP with DPoP, a permit carrying an obligation type the PEP does not implement, a step-up it cannot perform, a notification it cannot fulfill (a failed transmission, a malformed instance, no transport configured), or a notification beside an unrecognized obligation is refused unfulfillable_obligation with no protected effect (nothing scheduled, no reservation, no consumed permit) and a suppressed obligation_unfulfilled record naming each outcome; the same permit with no obligation schedules. The PEP still performs every obligation it understands and can perform: the notification beside an unrecognized obligation is transmitted, with outcomes fulfilled and unsupported. Mutations: skipping the obligation check fails the three endpoint permit witnesses and the unit witness, and with the refusal assertions removed the no-effect assertions alone fail; stopping at the first unfulfillable obligation fails the mixed witness; counting a failed transmission as fulfilled fails the cannot-perform witness. D770 ruling 5: an obligations member of null, an object or a string refuses the write unfulfillable_obligation with nothing scheduled, nothing transmitted and no obligation_outcomes member; absent or empty, the write schedules. Mutations: ignoring a non-array member fails the witness, and with the refusal assertion removed the no-effect assertion alone fails; giving a non-array member an empty outcome list fails it."
   },
   {
    "id": "authzen.obligations.no-authority-and-no-remediation-content",
@@ -34076,7 +34142,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1629 (D744 ruling 5): the AuthZEN profile's copy (authzen.transport.no-double-charge-on-retry) is removed in favor of this home. partial: the reference's one metered bound is the duration-lease reservation (#1440). A keyed request retried under the same idempotency key, sequentially or concurrently, opens one activity leased by one permit, and a keyed renewal retried under its key extends the lease once, settled or not (decision point with a real Exact claim domain, in process). Not witnessed: the single-use decision identifier half, any accumulated bound (max_duration accumulation, max_budget and counters are not built, D606), and a retry over the remote channel. Mutations: committing the lease on a retransmission fails all three witnesses; committing it on a suppressed duplicate fails the first two."
+   "notes": "#1629 (D744 ruling 5): the AuthZEN profile's copy (authzen.transport.no-double-charge-on-retry) is removed in favor of this home. partial: the reference's one metered bound is the duration-lease reservation (#1440). A keyed request retried under the same idempotency key, sequentially or concurrently, opens one activity leased by one permit, and a keyed renewal retried under its key extends the lease once, settled or not (decision point with a real Exact claim domain, in process). Not witnessed, and not closable without what D606 leaves out of scope (#1640): (1) the single-use decision identifier half has no PDP surface. The PDP issues a fresh evaluation identifier for every evaluation and draws the lease at that decision; the only PDP inputs naming an earlier identifier are a renewal's prior_evaluation_id, which may continue a live activity more than once by design, and the idempotency claim's Execution Evidence settlement, which commits no metered consumption. A re-presented single-use identifier is refused at the PEP (the runtime.single-use rows); the PDP draws on it twice only through a metering settlement intake (measured_duration committed idempotently on evaluation_id, metering#settlement-contract), which is not built. (2) No accumulated bound is metered: max_duration accumulation, max_budget, max_calls and max_egress_volume are not built (D606). A retry over the remote channel is also not witnessed. Mutations: committing the lease on a retransmission fails all three witnesses; committing it on a suppressed duplicate fails the first two. D770 ruling 3: D606's scope stays, so neither gap is closed here; the deferred settlement intake and accumulated bounds are owned by #1660 (parked)."
   },
   {
    "id": "metering.lease-renewal.continuity-with-renewed-evaluation",
@@ -34753,10 +34819,10 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a PEP claiming the Runtime Evidence profile emits a Refusal Record for every pre-decision refusal and an Execution Evidence Object for the final disposition of every consequential permit, whatever its class; a PEP claiming only the Decision Base is not required to (#703)"
+    "normative": "a PEP claiming the Runtime Evidence profile emits a Refusal Record for every pre-decision refusal and an Execution Evidence Object for the final disposition of every consequential permit, whatever its class; a PEP claiming only the Decision Base is not required to (#703); a result whose completed record cannot be recorded is not disclosed, so a read or a hold is recorded suppressed and returns no protected data (D770 ruling 4)"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/token-profile.test.ts",
@@ -34771,13 +34837,43 @@
      "surface": "resource-operation"
     },
     {
-     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
-     "name": "compound-action phases (@spec runtime#compound-actions) > keys the operation on the phase where two tools share an action identifier",
-     "level": "unit",
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a completed consequential read (get_invoice, list_invoices, lookup_vendor) over HTTP with DPoP releases its result with exactly one signed completed Execution Evidence record linked to the permit's evaluation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a completed reversible write under a single-use permit (hold_transfer) over HTTP with DPoP releases the hold with exactly one signed completed Execution Evidence record linked to the permit's evaluation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a completed keyed reversible write (schedule_payment) over HTTP with DPoP schedules once with exactly one signed completed Execution Evidence record linked to the permit's evaluation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a completed irreversible commit (execute_wire_transfer) or external commitment (send_remittance_email) over HTTP with DPoP commits one connector effect with exactly one signed completed Execution Evidence record linked to the permit's evaluation, recorded by the executor at the commit point",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a read or a hold whose completed record cannot be recorded over HTTP with DPoP returns no protected data: no response byte carries the result, the refusal is evidence_unavailable, and the permit's disposition is recorded suppressed",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a keyed write whose effect committed but whose completed record cannot be recorded over HTTP with DPoP reports the emission_failed gap with no result on the wire: the schedule stands once, and a retry under the same key retrieves it under its own permit",
+     "level": "endpoint",
      "surface": "resource-operation"
     }
    ],
-   "notes": "Re-quoted at #1629 (D744 ruling 2): the transaction-assurance-class restriction is removed, an expansion, so earlier coverage does not transfer. partial: a pre-decision refusal emits a signed Refusal Record (phase_unavailable, endpoint); a suppressed consequential write (schedule_payment) emits Execution Evidence (endpoint); a completed irreversible commit (execute_wire_transfer) emits completed Execution Evidence (unit). Gap: a completed consequential read (callReadTool) and a completed reversible consequential write (callWriteTool and callKeyedReversibleWrite) release the effect with no Execution Evidence, so 'every consequential permit' is not met by the reference PEP. Mutations: skipping the phase check fails the refusal witness; skipping the obligation check fails the suppression witness; failing the completed record's emission fails the completion witness."
+   "notes": "Re-quoted at #1629 (D744 ruling 2): the transaction-assurance-class restriction is removed, an expansion, so earlier coverage does not transfer. Tested at #1640, every witness over HTTP with DPoP: a pre-decision refusal emits a signed Refusal Record (phase_unavailable). A completed consequential read (get_invoice, list_invoices, lookup_vendor), a completed reversible write (hold_transfer under a single-use permit, schedule_payment under an idempotency key) and a completed irreversible commit or external commitment (execute_wire_transfer, send_remittance_email) each emit exactly one signed completed record linked to the permit's evaluation, carrying both parameter digests where the permit binds one; a suppressed consequential write emits a suppressed record (obligation_unfulfilled). The reference emits no failed outcome. The Decision Base exemption is a permission with no observable duty. Durable evidence reservation stays the transaction-assurance requirement's (D744 ruling 2). Mutations: skipping the phase check fails the refusal witness; dropping the completed record on the read path, the unkeyed write path, the keyed write path or the transaction path fails that path's witness and no other completed-record witness; skipping the obligation check fails the suppression witness. D770 ruling 4: when the completed record cannot be recorded, a read or a hold, which disclosed nothing, is refused evidence_unavailable with its disposition recorded suppressed under a deployment error name, and no response byte over HTTP with DPoP carries the result; a keyed write whose local transaction committed reports gap emission_failed with no result on the wire, and a retry under its key retrieves the result. Mutations: releasing the result on the read path or the unkeyed write path fails the withholding witness, and with the parsed-response assertion removed the response-bytes assertion alone fails; returning the keyed write's result with the gap fails the keyed witness, again on the bytes alone; not recording the withheld result's suppression fails the withholding witness."
   },
   {
    "id": "authzen.conformance.pdp-checklist",
@@ -38813,7 +38909,7 @@
    "tests": [
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation type this PEP does not implement is refused as unfulfillable_obligation: the obligation is unsupported, an effective deny distinct from an unrecognized condition",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -38828,9 +38924,33 @@
      "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a mixed obligation set with one unidentifiable member names none of them, rather than a partial list that reads as complete",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit carrying a notification obligation over HTTP with DPoP completes the transmission before the write is released, then schedules, and the completed record names the obligation fulfilled",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit whose notification cannot be performed over HTTP with DPoP releases no protected effect: a failed transmission, a malformed obligation and an absent transport each refuse the write unfulfillable_obligation with nothing scheduled, and the suppressed record names the obligation failed or unsupported",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit carrying a notification beside an obligation the PEP does not recognize over HTTP with DPoP still transmits the notification and releases no protected effect: the write is refused unfulfillable_obligation, nothing is scheduled, and the outcomes are fulfilled and unsupported",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit whose obligations member is present but not an array (null, an object, a string) over HTTP with DPoP releases no protected effect: the write is refused unfulfillable_obligation, nothing is transmitted, and the suppressed record carries no outcome list; an absent member or an empty array schedules",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "One entry per attached obligation that identifies itself, with id, type and outcome unsupported (this PEP implements no obligation type). OUTSTANDING, #786 review point 2: an obligation the decision returns WITHOUT a required id or type cannot be represented at all, so the member is omitted entirely rather than fabricated or emitted as a partial list that would read as complete; and this deployment's PDP does not implement Decision Evidence's own obligations member, so the conditional that makes obligation_outcomes REQUIRED cannot fire from the linked record. Both remain open."
+   "notes": "One entry per attached obligation that identifies itself, with id, type and outcome: unsupported for a type this PEP does not implement (#1640 adds fulfilled and failed for the notification type it performs). OUTSTANDING, #786 review point 2: an obligation the decision returns WITHOUT a required id or type cannot be represented at all, so the member is omitted entirely rather than fabricated or emitted as a partial list that would read as complete; and this deployment's PDP does not implement Decision Evidence's own obligations member, so the conditional that makes obligation_outcomes REQUIRED cannot fire from the linked record. Both remain open. #1640 witnesses over HTTP with DPoP: a completed record naming a transmitted notification fulfilled, a suppressed record naming a failed, malformed or untransportable notification failed or unsupported, and a mixed set named fulfilled and unsupported. Mutations: treating the permit's obligations as fulfilled without performing them fails the fulfilled witness; counting a failed transmission as fulfilled fails the failed witness; stopping at the first unfulfillable obligation fails the mixed witness. A non-array obligations member names no obligation and the record carries no outcome list (D770 ruling 5); giving it an empty list fails the non-array witness."
   },
   {
    "id": "evidence.execution.result-summary-no-user-content",
@@ -43704,6 +43824,36 @@
     }
    ],
    "notes": "#1325 (D495). Two permitted Dispatchers, ap-agent and a test-registered erp-scheduler, each dispatch from one template. Proved by mutation: recording the template approver's sub, a constant client_id, the template's first listed Dispatcher, or the client_id as iss each fails the witness."
+  },
+  {
+   "id": "template.dispatch.one-derivation",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "grant-type",
+   "text": "This grant performs exactly one derivation per `dispatch_event_id`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Dispatch increments the derivation_count of the instance it creates by exactly one, and a repeated dispatch_event_id, gated to the committed instance, counts nothing more",
+    "local": "the reference counts a new Dispatch once, which the cited test witnesses; a retry with the same dispatch_event_id currently counts again, the defect #1661 owns (first recorded in PR #1635), so the second clause has no witness"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a Dispatch under a Dispatch Policy stating a per-instance maximum records it, capping a larger request, each instance counting its own",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1647, D764. Partial until a retried Dispatch stops counting again: #1661, linked to #250 (first recorded in PR #1635). The instance's limit is at least 1, so the Dispatch's own derivation never meets the limit, and no limit refusal applies. Mutation: counting an approval-bound grant as uncounted fails the cited test."
   },
   {
    "id": "template.handoff.selector-refusal",
@@ -49664,7 +49814,7 @@
     "normative": "an RS enforcing more than one applicable mission_resource_access entry treats them as alternative grants, not a conjunctive filter."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
@@ -49707,9 +49857,21 @@
      "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > a read authorizes through a later unconstrained entry beside one whose tenant fact the record lacks",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > a write authorizes through a later entry whose max_amount admits the amount",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > a transaction-assured operation authorizes and commits through a later entry whose max_amount admits the amount",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed at the SaaS resource (review on PR #1298): an unconstrained entry authorizes beside one SaaS cannot enforce, and each of two entries authorizes its own action. In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646: at the payments resource the alternative-grant behavior is witnessed for reads (a vendor-scoped list read relies on an entry that admits the vendor, at decision and reverification; a read relies on an unconstrained entry beside one missing its tenant fact; a vendor from one entry and a tenant from another never combine) and at the PDP, not across every operation the resource serves (writes, transaction-assured operations)."
+   "notes": "Witnessed at the SaaS resource (review on PR #1298): an unconstrained entry authorizes beside one SaaS cannot enforce, and each of two entries authorizes its own action. In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646 until writes and transaction-assured operations were witnessed; they now are (#1375): at the payments resource a read, a vendor-scoped list read, a write (schedule_payment) and a transaction-assured operation (execute_wire_transfer, committing one ledger entry) each authorize through a later entry that covers them whole, and parts of two entries never combine for any of them. No PEP path selects an entry: the list-scope derivation was the only one (#1646); every other operation's decision is the PDP's, which weighs each applicable entry. Proved by mutation: judging max_amount, or the Common Constraints, on the first applicable entry only fails these witnesses."
   },
   {
    "id": "resource-access.rs-enforcement.resource-match-unrecognized-fail-closed",
@@ -50134,7 +50296,7 @@
     "normative": "a request is authorized only through one applicable entry that covers it whole with every constraint satisfied; an independently sufficient alternative entry authorizes, none refuses, and parts of entries never combine"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
@@ -50189,9 +50351,27 @@
      "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > never combines parts of two entries: one admitting the vendor and another the tenant authorize nothing",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > a write authorizes through a later entry whose max_amount admits the amount",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > a transaction-assured operation authorizes and commits through a later entry whose max_amount admits the amount",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > never combines parts of two entries for a write or a transaction-assured operation: one admitting the amount and another the tenant authorize nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1375. Witnessed at the helper the payments PEP calls; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Vector cases cc-satisfaction-* still skip: the case reader has no rs-authorize executor. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646: at the payments resource the alternative-grant behavior is witnessed for reads (a vendor-scoped list read relies on an entry that admits the vendor, at decision and reverification; a read relies on an unconstrained entry beside one missing its tenant fact; a vendor from one entry and a tenant from another never combine) and at the PDP, not across every operation the resource serves (writes, transaction-assured operations)."
+   "notes": "#1375. Witnessed at the helper the payments PEP calls; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Vector cases: the PDP's rs-authorize executor (services/pdp/test/resource-access-rs-cases.test.ts) runs cc-satisfaction-alternative, -no-alternative and -fragments, all agreeing; cc-satisfaction-absent-* require rs.enforcement and stay skipped. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646 until writes and transaction-assured operations were witnessed; they now are (#1375): at the payments resource a read, a vendor-scoped list read, a write (schedule_payment) and a transaction-assured operation (execute_wire_transfer, committing one ledger entry) each authorize through a later entry that covers them whole, and parts of two entries never combine for any of them. No PEP path selects an entry: the list-scope derivation was the only one (#1646); every other operation's decision is the PDP's, which weighs each applicable entry. Proved by mutation: judging max_amount, or the Common Constraints, on the first applicable entry only fails these witnesses."
   },
   {
    "id": "resource-access.common-constraints.max-amount-currency-no-intersection",
@@ -54953,9 +55133,15 @@
      "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > never combines parts of two entries: one admitting the vendor and another the tenant authorize nothing",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > never combines parts of two entries for a write or a transaction-assured operation: one admitting the amount and another the tenant authorize nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 2. Witnessed at the SaaS resource (review on PR #1298): a write whose action is in one entry and whose vendor is in another is refused, and an entry SaaS cannot enforce lends its action to no other entry. The payments policy decision point's Mission bound (since #1375) and its credential bound each judge entries whole, so neither combines entries. Cases fc-01..03 stay skipped: the case reader has no rs-authorize executor."
+   "notes": "#1258 item 2. Witnessed at the SaaS resource (review on PR #1298): a write whose action is in one entry and whose vendor is in another is refused, and an entry SaaS cannot enforce lends its action to no other entry. The payments policy decision point's Mission bound (since #1375) and its credential bound each judge entries whole, so neither combines entries. Cases fc-01..03 run under the PDP's rs-authorize executor (services/pdp/test/resource-access-rs-cases.test.ts), all agreeing."
   },
   {
    "id": "resource-access.rs-enforcement.refuse-without-covering-entry",
@@ -54992,7 +55178,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 2. Witnessed at the SaaS resource (review on PR #1298): an entry carrying a key SaaS does not enforce lends no authority, and a request no other entry covers is refused with no effect. Cases fc-01 and fc-02 stay skipped (rs.alternative-grants): the case reader has no rs-authorize executor. The payments policy decision point's Mission bound weighs every applicable entry since #1375."
+   "notes": "#1258 item 2. Witnessed at the SaaS resource (review on PR #1298): an entry carrying a key SaaS does not enforce lends no authority, and a request no other entry covers is refused with no effect. Cases fc-01 and fc-02 run under the PDP's rs-authorize executor (services/pdp/test/resource-access-rs-cases.test.ts), both agreeing. The payments policy decision point's Mission bound weighs every applicable entry since #1375."
   },
   {
    "id": "resource-access.rs-enforcement.token-wide-failure",
@@ -55060,7 +55246,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 4. #1362: witnessed at the SaaS resource: an entry carrying `delegation`, with a member a companion profile adds inside it, authorizes a write, while its own `actions` and `constraints` still refuse an unlisted action and an unlisted vendor. Proved by mutation: removing `delegation` from the disregarded members, and refusing a companion member inside it, each fail the test. Case fc-06 stays skipped (rs.member-roles): the reader has no rs-authorize executor. D634: a second witness carries a delegation member the authorization server refuses as unsupported; the resource server still disregards it and enforces the entry's other members. Proved by mutation: removing `delegation` from the disregarded members fails it."
+   "notes": "#1258 item 4. #1362: witnessed at the SaaS resource: an entry carrying `delegation`, with a member a companion profile adds inside it, authorizes a write, while its own `actions` and `constraints` still refuse an unlisted action and an unlisted vendor. Proved by mutation: removing `delegation` from the disregarded members, and refusing a companion member inside it, each fail the test. Case fc-06 stays skipped (rs.member-roles): the PDP's rs-authorize executor (services/pdp/test/resource-access-rs-cases.test.ts) declares no member roles. D634: a second witness carries a delegation member the authorization server refuses as unsupported; the resource server still disregards it and enforces the entry's other members. Proved by mutation: removing `delegation` from the disregarded members fails it."
   },
   {
    "id": "resource-access.rs-enforcement.unknown-member-unenforceable",
@@ -55109,7 +55295,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1258 item 4, #1277 review finding 1 (D454). #1362: witnessed at the SaaS resource, which enforces type, resource, resource_match, actions and constraints, disregards delegation, and implements no extension member. An entry carrying a member SaaS does not recognize, whatever its value, or `capability_sources`, an extension member whose obligations SaaS cannot fulfill, provides no authority: a write only that entry covers is refused with no journal entry, and its action is lent to no clean entry beside it. Proved by mutation: dropping the member-role check, treating a null or false member as absent, disregarding `capability_sources`, and pooling actions across entries each fail these tests. The reference credential bound refuses any unknown member for the whole token (credential-authority tests), which is stricter than this per-entry rule, and sets aside `delegation` and `capability_sources`. Cases fc-05 and fc-10 in vectors/mission-resource-access/fail-closed.json stay skipped: the case reader has no rs-authorize executor. Since #1375 the payments policy decision point treats a Mission entry carrying a member outside the supported set, or locations, as providing no authority, alone or as the fallback for a failing entry (judged on the committed entry, so a PDP-local join_delegation is not mistaken for one; delegation is disregarded), and its list-scope selection skips such an entry; fc-10 also requires rs.extension-members."
+   "notes": "#1258 item 4, #1277 review finding 1 (D454). #1362: witnessed at the SaaS resource, which enforces type, resource, resource_match, actions and constraints, disregards delegation, and implements no extension member. An entry carrying a member SaaS does not recognize, whatever its value, or `capability_sources`, an extension member whose obligations SaaS cannot fulfill, provides no authority: a write only that entry covers is refused with no journal entry, and its action is lent to no clean entry beside it. Proved by mutation: dropping the member-role check, treating a null or false member as absent, disregarding `capability_sources`, and pooling actions across entries each fail these tests. The reference credential bound refuses any unknown member for the whole token (credential-authority tests), which is stricter than this per-entry rule, and sets aside `delegation` and `capability_sources`. Case fc-05 runs under the PDP's rs-authorize executor (services/pdp/test/resource-access-rs-cases.test.ts), agreeing; fc-10 stays skipped (rs.member-roles, rs.extension-members). Since #1375 the payments policy decision point treats a Mission entry carrying a member outside the supported set, or locations, as providing no authority, alone or as the fallback for a failing entry (judged on the committed entry, so a PDP-local join_delegation is not mistaken for one; delegation is disregarded), and its list-scope selection skips such an entry; fc-10 also requires rs.extension-members."
   },
   {
    "id": "resource-access.rs-enforcement.defined-extension-enforceable",
@@ -55178,7 +55364,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1258 item 4, kept separate from the member rule (D454). #1362: witnessed at the SaaS resource: an entry carrying `locations`, populated or empty, provides no authority, and a write only that entry covers is refused with no journal entry. The RAS refuses a grant whose entry carries it (#1283), so the witness mints the RAS-issued token directly. Proved by mutation: dropping the member-role check, disregarding `locations`, and treating an empty `locations` as absent each fail the test. Case fc-07 stays skipped: the case reader has no rs-authorize executor. Since #1375 the payments policy decision point treats a Mission entry carrying a member outside the supported set, or locations, as providing no authority, alone or as the fallback for a failing entry (judged on the committed entry, so a PDP-local join_delegation is not mistaken for one; delegation is disregarded), and its list-scope selection skips such an entry."
+   "notes": "#1258 item 4, kept separate from the member rule (D454). #1362: witnessed at the SaaS resource: an entry carrying `locations`, populated or empty, provides no authority, and a write only that entry covers is refused with no journal entry. The RAS refuses a grant whose entry carries it (#1283), so the witness mints the RAS-issued token directly. Proved by mutation: dropping the member-role check, disregarding `locations`, and treating an empty `locations` as absent each fail the test. Case fc-07 runs under the PDP's rs-authorize executor (services/pdp/test/resource-access-rs-cases.test.ts), agreeing. Since #1375 the payments policy decision point treats a Mission entry carrying a member outside the supported set, or locations, as providing no authority, alone or as the fallback for a failing entry (judged on the committed entry, so a PDP-local join_delegation is not mistaken for one; delegation is disregarded), and its list-scope selection skips such an entry."
   },
   {
    "id": "resource-access.entry-validation.locations-refused",
@@ -60483,7 +60669,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the Intent Submission Evidence a deferred submission presented is verified again at the activation, which creates no Mission when the evidence no longer verifies, and the verified facts are recorded on the Mission as submission_evidence, as at a synchronous approval",
-    "local": "The whole Submission envelope (intent and evidence) is carried through the deferral. The evidence is verified at the governed_policy activation before any derivation, and again after the model call with nothing awaited before the commit, so evidence that expires while the model is consulted authorizes nothing; both checks use the deployment's current required types for the client, and the recorded facts are the last check's. A failure resolves the approval (denied under this assembly's refusal setting) with the reason invalid_mission_intent_evidence recorded issuer-side, and the poll answers access_denied, the deferred substrate's outcome for a denied deferral. The unwired human path (approveDirect) refuses to commit when the approval carries evidence and no verified facts are supplied."
+    "local": "The whole Submission envelope (intent and evidence) is carried through the deferral. The evidence is verified at the governed_policy activation before any derivation, and again after the model call with nothing awaited before the commit, so evidence that expires while the model is consulted authorizes nothing; both checks use the deployment's current required types for the client, and the recorded facts are the last check's. A failure resolves the approval (denied under this assembly's refusal setting) with the reason invalid_mission_intent_evidence recorded issuer-side, and the poll answers access_denied, the deferred substrate's outcome for a denied deferral. The unwired human path (approveDirect) refuses to commit when the approval carries evidence and no verified facts are supplied. Where no model advisor is configured, the check before derivation is the only one."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -60505,9 +60691,27 @@
      "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > verifies submission evidence again after a delayed model call, so evidence that expires meanwhile creates no Mission",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-approval-evidence-no-advisor.test.ts",
+     "name": "deferred Mission approval evidence check with no model advisor (@spec deferred-approval#deferred-sequencing, mission#submission-processing, #1300, #1313) > refuses evidence that verified at PAR and lapsed before the activation: access_denied, with no Mission, no record and no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-approval-evidence-no-advisor.test.ts",
+     "name": "deferred Mission approval evidence check with no model advisor (@spec deferred-approval#deferred-sequencing, mission#submission-processing, #1300, #1313) > checks the evidence before selecting a policy or deriving: lapsed evidence under a root that admits no such client is refused for the evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-approval-evidence-no-advisor.test.ts",
+     "name": "deferred Mission approval evidence check with no model advisor (@spec deferred-approval#deferred-sequencing, mission#submission-processing, #1300, #1313) > records on the Mission the facts its one evidence check verified at the activation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1300 review (D474). #1300 second review."
+   "notes": "#1300 review (D474). #1300 second review. #1313 item 3: the check before derivation is witnessed on the wire on an assembly with no model advisor, where it is the only check: evidence that lapsed while the approval pended gives access_denied with no Mission, record or token; lapsed evidence under a root that admits no such client is refused for the evidence (invalid_mission_intent_evidence), not for the policy; and evidence that still verifies is recorded with the activation's instant. Proofs: removing the check before derivation (M44) fails all three no-advisor tests and the unit test, while the advisor assembly's two wire tests still pass (its post-advisor check refuses); moving that check after policy selection and derivation fails only the ordering test."
   },
   {
    "id": "deferred-approval.deferral.substrate-discovery",
@@ -66503,6 +66707,96 @@
    "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that advertises a list without the algorithm the MAS signs with."
   },
   {
+   "id": "mas.join-assertion.evidence-retained",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-artifact",
+   "text": "Each minting is a join evidence event. The MAS records the following, retained for the audit horizon",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every minted assertion leaves a join evidence event recording the Mission reference, the token digest and thumbprint, the join result, the authenticated caller, the mapping version where one is published, and the validity window, and the event is retained for the audit horizon",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, kernel/join-evidence-store.ts) and the MAS pilot (demo/src/mas-pilot/mas-as.ts): each minting writes its event (mission issuer and id, token sha256 and its one confirmation, join, caller, audience, mapping_version, iat, exp) to the kernel database after the last Mission re-read and before the assertion is cached or returned; a write that fails answers unavailable (503) with nothing returned or cached, so a retry mints anew. Each event is kept until a retain_until written when it is recorded: its Mission's expires_at plus the kernel's declared audit retention, the one value its terminal tombstones and activation policy snapshots compose. The pilot's MAS declares the deployment's audit horizon, AUDIT_HORIZON_SECONDS (config/policy.json audit_horizon_s, 31536000 seconds: one year after Mission expiry, D770); the reusable kernel's default (7776000 seconds) applies only where a deployment declares none. Boot recovery deletes only events whose stored retain_until has passed, and a reboot under another declaration neither recomputes nor shortens it. Durable only on the file-backed kernel store with a key ring: restart is witnessed in process and for the separated MAS process started directly (demo/src/mas-pilot/mas-serve.ts through startMasProcess); a relaunch through the launcher (launchMasPilot) is not witnessed. The in-memory default does not survive a restart. Events read back oldest first, so a mapping change is attributable through each event's mapping_version. An operator reads a Mission's events through the operator console's MAS half (GET /missions/{id}/join-evidence, behind its bearer); the MAS serves them on no route of its own. The reference MAS validates no Instance Context as a Context Consumer, so that member is never recorded."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > records each minting on the kernel store, and the event survives a restart with the key ring and the kernel file: the Mission reference, the token digest and thumbprint, the join, the caller, the audience, mapping_version and the validity window",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > makes a mapping change attributable after a restart: each retained event names the mapping_version its assertion was minted under, in minting order",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > keeps each event for its Mission's audit horizon, the Mission's expiry plus the declared audit retention: a boot at that horizon keeps it, and a boot past it prunes it and keeps a later Mission's",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > returns no assertion, and caches none, when the event cannot be recorded: unavailable (HTTP 503), and the same request then mints anew and records its event",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > the store refuses an event under another Mission, a Mission expiry that is not a date-time, and a retention that is not a non-negative number, writing nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > a declared audit retention is the one horizon the kernel's join evidence and tombstones compose (#1560, D770); absent, the reusable kernel's 90-day default",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > keeps an event's stored horizon across a reboot (#1560, D770): a kernel rebooted under the 90-day default neither recomputes nor shortens the one-year retain_until it was recorded with, and prunes the event only once that stored horizon passes",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion artifact (@spec authority-server#join-assertion-artifact, #1454) > mints a sender-bound assertion for an enrolled PDP: typ, a listed alg, iss, mission, token with its one confirmation, join, aud, mapping_version",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-evidence.test.ts",
+     "name": "the pilot's kernel keeps join evidence for the deployment's audit horizon (@spec authority-server#join-assertion-artifact, #1560, D770) > keeps an event for one year after its Mission's expiry, the horizon its tombstones share: past the reusable 90-day default and at its retain_until it is kept across a restart, and only a boot after retain_until prunes it",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-evidence.test.ts",
+     "name": "the MAS operator console reads join evidence (@spec authority-server#join-assertion-artifact, #1560) > reads a Mission's join evidence events behind the console's bearer, that Mission's alone, and the MAS serves them on no route of its own",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-evidence.test.ts",
+     "name": "the separated MAS process keeps its join evidence across a restart (@spec authority-server#join-assertion-artifact, #1560) > with a key ring and a kernel store, a minted assertion's event, with its mapping_version, reads back through the MAS's operator console after the MAS restarts",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1560 (join evidence retention, from #1454): the MAS side. D770 item 2: the pilot's kernel keeps join evidence (with its tombstones and activation policy snapshots) for the deployment's declared audit horizon, AUDIT_HORIZON_SECONDS, one year after Mission expiry, not the reusable kernel's 90-day default; the one-year boundary is witnessed by the pilot horizon test (kept past the 90-day default and at retain_until across restarts, pruned only after). Restart scope: in process, and the separated MAS process started directly (mas-serve.ts through startMasProcess); a relaunch through the launcher (launchMasPilot) is not witnessed. Proved by defects that skip the event write, cache the assertion before the write, let a failed write propagate instead of answering unavailable, drop mapping_version from the event, compute the horizon from the assertion's exp or without the audit retention, prune at the horizon (<=) or prune every event, drop the boot-recovery prune, read events newest first, read every Mission's events for one Mission (store and console route), keep the events in a process-memory database instead of the kernel's, have mas-serve.ts ignore the kernel store, return no events from the service, write the event before the post-signing re-read, serve the events on the MAS's own route, skip the console's bearer check, drop each of the store's three input guards, have the pilot fall back to the kernel default, have the authorization server ignore the declared retention, and recompute retain_until at a reboot (in the boot prune, and by rewriting the stored value). The Instance Context member is not applicable: the reference MAS validates none."
+  },
+  {
    "id": "mas.join-assertion.pdp-rejects-unlisted-alg",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "discovery",
@@ -71908,6 +72202,47 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1202: the reference AS side is built (opt-in device-authorization capability); no reference Mission client implements this profile's client rules, so this row stays todo."
+  },
+  {
+   "id": "device-authorization.issuance.first-redemption-gated",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "issuance",
+   "text": "Issuance gating applies to the first redemption as to any later derivation.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the first device_code redemption is a derivation: it is refused with the issuance-gating refusal once the Mission is revoked or expired after approval, and a successful one increments the Mission's derivation_count by exactly one, while the approval decision, a pending poll and a refused repeat count nothing"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the first device_code redemption is a counted derivation (@spec device-authorization#issuance, derivation-limits#counting, #1647) > counts the first redemption once against the Mission; the decision, a pending poll and a refused repeat count nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > refuses redemption with the issuance-gating refusal once the Mission was revoked after approval",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > refuses redemption with the issuance-gating refusal once the Mission expired after approval",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1647, D764. The counting witness is new; the two refusal witnesses are also cited by device-authorization.outcomes.redemption-gates. Mutation: counting an approval-bound grant as uncounted fails the counting witness."
   },
   {
    "id": "device-authorization.conformance.as-advertises",
