@@ -446,13 +446,20 @@ occupies, since the parameter digest above keeps binding the same values.
 
 The compensate crossing `reverse_wire_transfer` (`payments:payment.reverse`,
 an `irreversible_action`) is covered too, under its own descriptor. Its
-facts describe the reversal it performs, read from the committed wire's
-ledger record through the link the PEP established (#252): the vendor the
-wire paid, its amount and currency, its payee, and the operation key it
-committed under, with the invoice and vendor that record names as the
-targets. None is read from the invoice as it reads now, so an invoice that
-changes after its wire committed leaves the context unchanged, and a
-changed or missing ledger record is `target_drift`. The request carries
+effect facts describe the reversal it performs, read from the committed
+wire's ledger record through the link the PEP established (#252): the
+vendor the wire paid, its amount and currency, its payee, and the
+operation key it committed under, with the invoice and vendor that record
+names as the targets. None of them is read from the invoice as it reads
+now, so an invoice amount that changes after its wire committed leaves
+them unchanged. The descriptor also declares the live resource facts the
+compensating decision evaluates through the Common Constraints: the
+invoice's issuance instant and classification, and the tenant of the
+vendor the invoice names, each read from the payments store as the
+decision request carries it (the value, or null when the record names
+none). Each resolver names the crossings it serves, so the compensate
+crossing reads no effect fact from the store. A changed or missing ledger
+record, or a moved live fact, is `target_drift`. The request carries
 `compensates_evaluation_id` beside the context members.
 
 Every crossing of a covered operation captures its context from the
