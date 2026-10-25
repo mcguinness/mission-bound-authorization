@@ -8413,7 +8413,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a failed or refused derivation leaves the derivation count unchanged",
-    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200; the ID-JAG continuation settles its own fresh reservation as not accepted. NOT covered: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted (#250 step 3); a replayed reservation that fails again stays counted, since an earlier attempt's artifact may have been accepted; and a Dispatch Handoff redemption that fails after its reservation keeps it for the retry that replays it. Partial on those."
+    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200 or fails by an exception after its response was prepared; the ID-JAG continuation settles its own fresh reservation as not accepted. NOT covered: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted (#250 step 3); a replayed reservation that fails again stays counted, since an earlier attempt's artifact may have been accepted; and a Dispatch Handoff redemption that fails after its reservation keeps it for the retry that replays it. Partial on those."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -8464,6 +8464,12 @@
      "file": "src/services/authorization-server/test/continuation-grant.test.ts",
      "name": "a continuation ID-JAG that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a continuation grant that fails after admission settles its own reservation as not accepted: the count returns (#935, D772)",
      "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a failure that escapes the request after its response was prepared (the request-path drain throws) answers 500 and returns the count (#935, D772)",
+     "level": "endpoint",
      "surface": "token-endpoint"
     }
    ],

@@ -894,8 +894,10 @@ acceptance callback. The observable points inside `AccessToken#save()`
    response body, which the response middleware completes.
 6. The request-path drain (`drainLifecycleOutbox`), awaited. Then the
    derivation settlement (`settleCountedDerivations`, the second
-   `provider.use`, so inside the fence): a response other than 200 returns
-   each derivation the request counted without a reservation (#935, D772).
+   `provider.use`, so inside the fence): a response other than 200, or an
+   exception that escapes the request after its response was prepared,
+   returns each derivation the request counted without a reservation (#935,
+   D772).
 7. The release fence (`fenceRelease`,
    `services/authorization-server/src/adapters/provider.ts:2315`), the AS's
    decision to answer. It is the first `provider.use` in `buildProvider`
