@@ -46,7 +46,6 @@ import Provider, {
   type Configuration,
   type KoaContextWithOIDC,
   type ResourceServer,
-  type SigningAlgorithmWithNone,
 } from "oidc-provider";
 import { loadReusableGrant, missionInteractionPolicy, ORDINARY_REQUEST_REFUSAL } from "./interaction-policy.js";
 import { type GovernedResourcePolicy, governedResourceRefusal, isMissionGovernedResource } from "./governed-resources.js";
@@ -323,15 +322,17 @@ export function gateErrorToMissionError(
  * token whose Mission ended after the save-time gate is refused here, at the
  * last synchronous point before the response leaves. Only an ended Mission
  * refuses: `terminated` by any cause, its own expiry or an ancestor's
- * termination included, as {@link MissionKernel.observedRecord} observes it.
- * A suspension committed after the gate still releases. The check is a read
- * and commits nothing, not even an expiry it observes.
+ * termination included, and a revocation schedule of the Mission or an
+ * ancestor whose deadline has passed (#1659, D771), as
+ * {@link MissionKernel.observedForRelease} projects it. A suspension committed
+ * after the gate still releases, and so does a due `resume`. The check is a
+ * read and commits nothing, not even an expiry or a due schedule it observes.
  *
  * A refusal here leaves the derivation the gate counted spent. Whether such a
  * refusal returns the count is #935's, and nothing here returns it.
  */
 export function releaseFenceRefusal(kernel: MissionKernel, missionId: string): GateError | undefined {
-  const observed = kernel.observedRecord(missionId);
+  const observed = kernel.observedForRelease(missionId);
   if (!observed) return new GateError("mission_not_active", `mission ${missionId} does not resolve at release`);
   if (observed.state !== "terminated") return undefined;
   return new GateError(
@@ -476,6 +477,7 @@ import {
   type ApproveInput,
   type MissionKernel,
   MissionNotFoundError,
+  MissionStateUnavailableError,
   type PreparedApproval,
   StaleVersionError,
   STATUS_SIGNING_ALG,
@@ -1391,12 +1393,16 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * `mission_error` where a value applies. `ctx` is the token request; the
    * refresh pre-check passes none, so it refuses `invalid_grant`.
    */
-  function missionGateRefusal(e: unknown, missionId: string, ctx?: unknown): unknown {
+  function missionGateRefusal(e: unknown, missionId: string, ctx?: unknown, observed?: MissionRecord): unknown {
+    // @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): a
+    // due schedule whose transition could not be persisted fails closed as a
+    // transient refusal, never as the pre-deadline state.
+    if (e instanceof MissionStateUnavailableError) return sourceUnavailableError(e.message);
     return e instanceof GateError
       ? tokenEndpointGateRefusal(
           e.reason,
           e.message,
-          gateErrorToMissionError(e.reason, kernel.observedRecord(missionId)),
+          gateErrorToMissionError(e.reason, observed ?? kernel.observedRecord(missionId)),
           isTokenExchangeRequest(ctx),
         )
       : e;
@@ -1511,6 +1517,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           exchange,
         );
       }
+      if (e instanceof MissionStateUnavailableError) throw sourceUnavailableError(e.message);
       throw e;
     }
     throw expiring();
@@ -1976,18 +1983,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
         : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
     // @spec mission#submission-via-par (#1503): the one Request Object
-    // signing algorithm (features.requestObjects below).
-    // @spec #831 (role binding): the provider holds every AS role's signing
-    // key and selects one by algorithm, so an ID Token in another role's
-    // algorithm would be signed under that role's key (a client registered
-    // for ES256 got an ID Token under as-status). ID Tokens are limited to the
-    // access-token key's algorithm; a registration naming another is refused.
-    // Signed userinfo, JWT introspection and JWT response modes are off, so no
-    // other client-facing JWT is signed. Every other list keeps the default.
-    enabledJWA: {
-      requestObjectSigningAlgValues: ["ES256"],
-      idTokenSigningAlgValues: accessTokenSigningAlgs(opts),
-    },
+    // signing algorithm (features.requestObjects below); every other
+    // algorithm list keeps the provider's default. The provider's keystore
+    // holds the access-token key alone (#831 role binding), so it signs no
+    // ID Token or other JWT under another role's key, and a client registered
+    // for another algorithm is refused.
+    enabledJWA: { requestObjectSigningAlgValues: ["ES256"] },
     interactions: {
       url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
       // @spec mission#approval-event (#1247), device-authorization#approval
@@ -2697,15 +2698,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
     }
     if (!refused) return;
     const { missionId, refusal } = refused;
+    // The fence's own observation (#1659): a due revocation it projected is the
+    // refusal's `mission_error`, never the stored `suspended`.
+    const observed = kernel.observedForRelease(missionId);
     if (ctx.oidc?.route !== "token") {
       // The transaction endpoint's own refusal for a Mission that is not active.
       ctx.status = 400;
       ctx.body = { error: "access_denied", error_description: refusal.message };
     } else if (isTokenExchangeRequest(ctx) && body.issued_token_type === ID_JAG_TOKEN_TYPE) {
       // @spec id-continuation-assertion: ICA -02 5.5.6's codes, as at the gate.
-      refuseContinuationGate(ctx as unknown as KoaContextWithOIDC, refusal.reason, kernel.observedRecord(missionId));
+      refuseContinuationGate(ctx as unknown as KoaContextWithOIDC, refusal.reason, observed);
     } else {
-      const err = missionGateRefusal(refusal, missionId, ctx) as MissionGrantError | MissionExchangeError;
+      const err = missionGateRefusal(refusal, missionId, ctx, observed) as MissionGrantError | MissionExchangeError;
       ctx.status = err.statusCode;
       ctx.body = {
         error: err.error,
@@ -2730,6 +2734,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
   provider.use(async (ctx, next) => {
     await next();
     fenceRelease(ctx);
+  });
+  // @spec #831 (role binding): the provider's keystore holds the access-token
+  // key alone (`jwks`), so it signs nothing under another role's key. The
+  // jwks_uri still publishes every role's public key: the provider serves the
+  // route, with its CORS handling and content type, and only the key set it
+  // answered with is replaced by `publicJwks`.
+  provider.use(async (ctx, next) => {
+    await next();
+    if (ctx.method === "GET" && ctx.path === "/jwks" && ctx.status === 200) {
+      ctx.body = { keys: opts.publicJwks.keys };
+    }
   });
 
   // @spec device-authorization#request (#1202): the device authorization
@@ -3121,15 +3136,6 @@ export function namesRequestedRar(ctx: unknown): boolean {
   }
 }
 
-/** @spec #831 (role binding): the algorithms of the access-token signing key, the one key an ID Token uses. */
-function accessTokenSigningAlgs(opts: AdapterOptions): SigningAlgorithmWithNone[] {
-  return [
-    ...new Set(
-      opts.accessTokenJwks.keys.map((k) => k.alg).filter((a): a is SigningAlgorithmWithNone => typeof a === "string" && a !== "none"),
-    ),
-  ];
-}
-
 export function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
   return {
     audience: resource,
@@ -3459,12 +3465,12 @@ async function handleChildJwtBearerGrant(
     throw new errors.InvalidRequest("assertion (the child-bound JWT authorization grant) required");
   }
 
-  // 2. Verify the assertion. It is signed by the AS token key, so it verifies on
-  //    the same public JWKS as tokens; iss = the AS, aud = the token endpoint,
-  //    typ = the child-grant typ.
+  // 2. Verify the assertion. It is signed by the AS token key, and verifies
+  //    under that key alone (#831 role binding); iss = the AS, aud = the token
+  //    endpoint, typ = the child-grant typ.
   let claims: Record<string, unknown>;
   try {
-    const verified = await jwtVerify(assertion, createLocalJWKSet(opts.publicJwks as never), {
+    const verified = await jwtVerify(assertion, createLocalJWKSet(opts.accessTokenJwks as never), {
       issuer: opts.issuer,
       audience: `${opts.issuer}/token`,
       typ: CHILD_GRANT_TYP,
@@ -3686,7 +3692,9 @@ const LIFECYCLE_OPERATION_CAPABILITY: Readonly<Record<string, ProviderCapability
 function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const { kernel } = opts;
   const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
-  const jwksResolver = createLocalJWKSet(opts.publicJwks as never);
+  // @spec #831 (role binding): introspection resolves an access token under
+  // the access-token key alone, never another AS role's key.
+  const jwksResolver = createLocalJWKSet(opts.accessTokenJwks as never);
   // @spec txn-authorization#two-phase-expiry — the admitted pending workflows.
   const txnWorkflows = newTxnWorkflows();
   // @spec deferred-approval#front-channel: where Deferred Mission Approval is
@@ -4340,12 +4348,24 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
         ctx.set("cache-control", "no-store");
         ctx.body = jws;
-      } catch {
+      } catch (e) {
+        ctx.set("cache-control", "no-store");
+        if (e instanceof MissionStateUnavailableError) {
+          // @spec status#mission-status-errors (#1659, D771): a due schedule
+          // whose transition could not be persisted is `unavailable`, never a
+          // signed pre-deadline state.
+          ctx.status = 503;
+          ctx.body = {
+            error: "unavailable",
+            error_description: "Mission state is temporarily unavailable.",
+            ...(statusNonce ? { nonce: statusNonce } : {}),
+          };
+          return;
+        }
         // @spec status#mission-status-errors, status#mission-status-anti-oracle
         // — one not-found shape for the unknown and the invisible reference,
         // echoing the request's `nonce` when it carried one.
         ctx.status = 404;
-        ctx.set("cache-control", "no-store");
         ctx.body = {
           error: "not_found",
           error_description: "Mission reference is not found or not visible.",
@@ -4446,8 +4466,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
         ctx.set("cache-control", "no-store");
         ctx.body = jws;
-      } catch {
-        refuse(404, "not_found", "Mission reference is not found or not visible.", echo);
+      } catch (e) {
+        // @spec status#mission-status-errors (#1659, D771): a due schedule whose
+        // transition could not be persisted is `unavailable`, never a signed
+        // pre-deadline state; every other failure is the one not-found shape.
+        if (e instanceof MissionStateUnavailableError) {
+          refuse(503, "unavailable", "Mission state is temporarily unavailable.", echo);
+        } else {
+          refuse(404, "not_found", "Mission reference is not found or not visible.", echo);
+        }
       }
       return;
     }
@@ -5508,7 +5535,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           issuer: opts.issuer,
           kernel,
           clients: opts.clients,
-          publicJwks: opts.publicJwks as { keys: JWK[] },
+          accessTokenJwks: opts.accessTokenJwks as { keys: JWK[] },
           dpopProofReplay: opts.dpopProofReplay as DpopProofReplay,
           // @spec txn-authorization#challenge-redemption — the SAME liveness
           // path introspection answers from: the issuance index resolves the
