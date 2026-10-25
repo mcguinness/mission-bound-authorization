@@ -3933,9 +3933,45 @@
      "name": "recovery witness: one writer and every write guarded (@spec control-plane#rollback, #250 step 3) > a witnessed store does not open without its witness, so nothing writes to it unwitnessed; a store that never had a witness still opens",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: a copied store cannot share the witness: the witness is fenced across store paths, and the copy is refused afterwards rather than lowering it",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: a mutating statement run through get, all, iterate, a chained builder or exec is guarded: the witness advances and nothing escapes",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: an escaped write is recorded in the witness, so a restart refuses until accept takes the store under a new generation",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > a witness rewritten underneath a running kernel stops it, the change is recorded over what is on disk, and accept never lowers the witness",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > a kernel stays stopped even when its uncertainty could not be recorded in the witness",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: a witness inside the store's directory tree, or a store inside the witness's, is refused by the kernel and by reconciliation",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. With a recovery witness configured (#250 step 3, slice A), the kernel holds its store exclusively and opens only when the store's recovery marker matches the witness, a file outside the database restore unit that every write transaction advances (intent before the commit, finalized after it): a restored older store, a lost, unreadable or foreign witness and an unresolved intent refuse to open, a witnessed store refuses to open without its witness, and a run-time witness or commit failure, or a write that bypassed the guard, stops every further write. Offline reconciliation under the exclusive lock acknowledges or abandons an intent and never lowers the witness. Not yet covered: the Authorization Server's wiring and its refusal of state-dependent service while a running kernel is uncertain (slice A, second PR); a way back from an older store other than restoring the witnessed one, by invalidating authority under a new generation (slice B); the retaining-consumer high-water mark; and any topology beyond one writer on one host. The escape detector notices a bypassing write only at the next guarded transaction, after that write committed. No waiver of existing binding-level requirements."
+   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. With a recovery witness configured (#250 step 3, slice A), the kernel holds its store and its witness's lock exclusively (so a copied store cannot share the witness), and opens only when the store's recovery marker matches the witness, a file outside the database restore unit that every write transaction advances (intent before the commit, finalized after it): a restored older store, a lost, unreadable or foreign witness and an unresolved intent refuse to open, a witnessed store refuses to open without its witness, and a run-time witness or commit failure, a witness changed underneath it, or a write that bypassed the guard (every statement API that can write is guarded), stops every further write and is recorded in the witness, so a restart refuses until reconciled. Offline reconciliation under both locks acknowledges or abandons an intent, or accepts a store with a recorded uncertainty under a new generation, and never lowers the witness. Not yet covered: the Authorization Server's wiring and its refusal of state-dependent service while a running kernel is uncertain (slice A, second PR); a way back from an older store other than restoring the witnessed one, by invalidating authority under a new generation (slice B); the retaining-consumer high-water mark; and any topology beyond one writer on one host. The escape detector notices a bypassing write only at the next guarded transaction, after that write committed. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.tombstones",
