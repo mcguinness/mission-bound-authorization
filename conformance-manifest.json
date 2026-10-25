@@ -496,7 +496,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#773. Additive binding: the claimed and unclaimed deployments send byte-identical parameter_digest and derive the same operation key for one wire, so every consumer keyed on them (action-bound approvals, transaction challenges and tokens, operation idempotency) is unchanged. partial: the parameter and operation-idempotency clauses are witnessed directly; the approval-to-decision and transaction-token clauses rest on those unchanged bytes and are not separately witnessed under the claim. The witness is the equality itself; no mutation of the binding code is specific to it."
+   "notes": "#773. Additive binding: the claimed and unclaimed deployments send byte-identical parameter_digest and derive the same operation key for one wire, so every consumer keyed on them (action-bound approvals, transaction challenges and tokens, operation idempotency) is unchanged. partial: the parameter and operation-idempotency clauses are witnessed directly; the approval-to-decision and transaction-token clauses rest on those unchanged bytes and are not separately witnessed under the claim. Mutation M30 (a covered crossing's parameter digest dropping the facts the context now binds) fails the equality."
   },
   {
    "id": "runtime.evaluation-context.salt-recovery",
@@ -584,7 +584,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#773. A covered permit's conditions.evaluation_context_digest is the request's digest, echoed verbatim (an arbitrary well-formed value the PDP could not compute), over the in-process and remote decision paths; the signed record carries no salt. partial: the clause that authoritative facts remain available to policy rests on the unchanged parameter and attribute inputs and is not separately witnessed. Mutation P14 (no echo) fails the remote test's echo assertion cleanly; in process it trips the emitter's equality guard."
+   "notes": "#773. A covered permit's conditions.evaluation_context_digest is the request's digest, echoed verbatim (an arbitrary well-formed value the PDP could not compute), over the in-process and remote decision paths; the signed record carries no salt. partial: the clause that authoritative facts remain available to policy rests on the unchanged parameter and attribute inputs and is not separately witnessed. The remote test is titled for the refusal; its second half serves a well-formed request and asserts the echoed condition. Mutation P14 (no echo) fails that echo assertion cleanly; in process it trips the emitter's equality guard."
   },
   {
    "id": "runtime.evaluation-context.reverify-and-fail-closed",
