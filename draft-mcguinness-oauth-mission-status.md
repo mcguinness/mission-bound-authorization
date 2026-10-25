@@ -2074,6 +2074,11 @@ Mission Termination Reasons registry
 - An RFC 7009 revocation does not by itself revoke a Mission, and a
   revocation that a deployment's policy couples to it commits the same
   `revoke` transition, state version and event.
+- Editorial, no requirement change: in the examples, the Mission
+  Status consumer is the ERP resource server, no response shows
+  `authority_hash` to a caller the example does not show holding
+  its disclosure privilege, and the revocation's `reason` describes
+  a revocation, not a completion (#1535).
 
 -00
 
