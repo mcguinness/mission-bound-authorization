@@ -494,7 +494,7 @@ Example SET (decoded), for a revocation:
       "version": 4,
       "committed_at": "2026-11-02T08:53:20Z",
       "expires_at": "2026-12-31T23:59:59Z",
-      "reason": "Quarterly reconcile completed early"
+      "reason": "Quarterly reconcile cancelled"
     }
   }
 }
@@ -814,7 +814,7 @@ consumer's receiver ({{RFC8935}}). Decoded SET:
       "version": 4,
       "committed_at": "2026-11-02T08:53:20Z",
       "expires_at": "2026-12-31T23:59:59Z",
-      "reason": "Quarterly reconcile completed early"
+      "reason": "Quarterly reconcile cancelled"
     }
   }
 }
@@ -992,6 +992,9 @@ IETF; Reference this document, {{as-metadata}}.
   a termination observed but not committed has no event (#705).
 - Added carryover cascade correlation and out-of-order recovery semantics;
   event delivery remains non-atomic and may reorder (#576).
+- Editorial, no requirement change: the lifecycle-change examples'
+  revocation `reason` describes a revocation, not a completion
+  (#1535).
 
 # Acknowledgments
 {:numbered="false"}

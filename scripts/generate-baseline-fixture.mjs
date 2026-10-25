@@ -170,7 +170,7 @@ const REVOCATION = {
   actor: "s6BhdRkqt3",
   operation: "revoke",
   authorization: "mission_lifecycle grant for this Mission",
-  reason: "Quarterly reconcile completed early",
+  reason: "Quarterly reconcile cancelled",
 };
 
 // Named variants: flows that need a different Mission than the baseline's

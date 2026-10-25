@@ -1219,7 +1219,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &operation=revoke
-&reason=Quarterly+reconcile+completed+early
+&reason=Quarterly+reconcile+cancelled
 &nonce=nonce_8Y3vN0sM6tP1xR9bQ5
 ~~~
 
