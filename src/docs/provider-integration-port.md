@@ -122,7 +122,7 @@ the store.
 | Canonical Subject resolution and approve-for authorization | Yes | `decide()`: the approval surface's Subject selection, `knownSubjects`, `approverApprovesFor`, `approverRoleSubs`; the Approver as provider account (§3.2) | In request, before `kernel.approve` | None | Configuration only; nothing to recover | Yes, HTTP (§3.2) | External Subject unsupported and refused (§3.2) |
 | Source and authority derivation | Yes | `kernel.derive`; the source gates in `kernel.approve` (§3.3) | Computed before the record transaction | None | Nothing written before §4.1 | Yes, HTTP; gate detail is kernel-level (§3.3) | No test exercises the decision-time `scope` check on a catalog-sourced `scope_only` target (§3.3) |
 | Record and grant binding | Yes | `kernel.prepareApproval`; `grant.save()` under the interaction's grant identity; `kernel.approve` and `insertRecord`, committing the record already bound; the code on the resume request (§3.4) | Every refusal before any write, a consented ceiling's entries and drawdown policy included, except the commit's revalidation of the authority source and drawdown policy; the record commits bound (§4.1); the grant save precedes it and the code follows it on a later request | Publication of the activating event | A failure before the commit leaves an inert grant and no Mission; after it, an `active`, bound Mission whose code is not issued yet; provider state is lost at restart (§4.5) | Yes, HTTP (§3.4) | `{#approval-event}` step 7 record/code atomicity not met: the code is issued on a later request (#250; §3.4) |
-| Issuance | Yes | `at.save()`: `extraTokenClaims`, `formats.customizers.jwt`, `access_token.issued` (§3.5) | The counter `UPDATE` autocommits before signing; no acceptance callback (§4.2) | None before delivery | The count stays consumed; nothing reconciles it (§4.3) | Yes, HTTP (§3.5) | Uncoupled counter: a failure after the count stays counted (§4.3); revoke-versus-issue window (§3.5) |
+| Issuance | Yes | `at.save()`: `extraTokenClaims`, `formats.customizers.jwt`, `access_token.issued` (§3.5) | The counter `UPDATE` autocommits before signing; no acceptance callback (§4.2) | None before delivery | A failure the request observes returns the count; a crash or a lost response keeps it (§4.3) | Yes, HTTP (§3.5) | Uncoupled counter: a crash or a lost response after the count stays counted (§4.3); revoke-versus-issue window (§3.5) |
 | Refresh and revocation gating | Yes | `rotateRefreshToken`; the gates in `extraTokenClaims`; the lifecycle route (§3.6) | The lifecycle commit is one kernel transaction; grant destruction follows it | Grant destruction and publication | File-backed state survives; provider grants do not (§4.5) | Yes, HTTP (§3.6) | A state change between the refresh pre-check and the save-time gate is refused after rotation consumes the presented token (§3.6; #250); a fully contained family is refused after rotation, losing no recoverable issuance authority (§3.6) |
 | Scope projection | Yes (`plain-rs` is `scope_only`) | `earlyScopeRefusal`; the decision check; `decideMissionScope`; `preCheckRefreshProjection`; the JWT customizer (§3.7) | In request, before the state gate and before refresh consumption; reads only | None | The mapping is configuration, strictly loaded at boot | Yes, HTTP; the JWT customizer directly and on a delegated mint (§3.7) | Code-exchange refusal after code consumption (§3.7) |
 | Protected introspection | JWT-plus-introspection configuration only | `/introspect` route in `makeRoutes` (§3.8) | Per-request read of current kernel state; may commit an expiry | None | The index is per boot, and so are the keys unless a key ring keeps them; pre-restart tokens introspect `active: false` either way (§3.8) | Yes, HTTP (§3.8) | None: a signed token with no issuance record is never active (§3.8) |
@@ -892,7 +892,12 @@ acceptance callback. The observable points inside `AccessToken#save()`
    for the token.
 5. `save()` returns; then refresh-token creation, the ID token, and the
    response body, which the response middleware completes.
-6. The request-path drain (`drainLifecycleOutbox`), awaited.
+6. The request-path drain (`drainLifecycleOutbox`), awaited. Then the
+   derivation settlement (`settleCountedDerivations`, the second
+   `provider.use`, so inside the fence): a response other than 200, or an
+   exception that escapes the request after its response was prepared,
+   returns each derivation the request counted without a reservation (#935,
+   D772).
 7. The release fence (`fenceRelease`,
    `services/authorization-server/src/adapters/provider.ts:2315`), the AS's
    decision to answer. It is the first `provider.use` in `buildProvider`
@@ -918,8 +923,9 @@ or refresh response), each with its outcome and owner, are listed in
 [issuance-only-deployment.md](issuance-only-deployment.md) §4; D408 accepts
 them as unsupported for that reference deployment. Also open: a crash after
 the count, the replay of a lost response under one operation identity, the
-window between the approval commit and the code (#916), the refund of a
-fenced derivation's count (#935), and multi-process issuance (#641), where
+window between the approval commit and the code (#916), a fenced
+derivation's count, which stays spent because its Mission has ended (D771,
+D772), and multi-process issuance (#641), where
 the fence orders a revocation against an issuance only within one process.
 
 ### 4.3 Failed-issuance counting
@@ -927,14 +933,19 @@ the fence orders a revocation against an issuance only within one process.
 - **Counts nothing:** a projection refusal (it runs before the gate); a gate
   refusal (the `UPDATE` does not run, or changes no row at the cap); any
   client, code or grant refusal before `at.save()`.
-- **Counts, and never returns the count:** any failure after the `UPDATE`.
-  That covers a customizer refusal, a signing failure, a throw from the index
-  listener, on the code path a refresh-token or ID-token failure, a response
-  lost in transit, and a process exit. No reservation row exists for these, so
-  `recoverAtBoot` has nothing to mark `unacknowledged` and nothing refunds. The
-  count is the only record that a derivation was spent:
-  `a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > residual: the provider access-token hook counts before signing, so a code exchange that fails after the count leaves the failed derivation counted (#250)`
-  (`derivation-counting.test.ts`).
+- **Counts, then returns the count:** a failure after the `UPDATE` that the
+  request observes before the token leaves: a customizer refusal, a signing
+  failure, a throw from the index listener, on the code path a refresh-token
+  or ID-token failure. The hook notes the count against the request, and the
+  settlement step returns it when the response is not a 200 (#935, D772):
+  `a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > the provider access-token hook: a code exchange that fails after the count, before the token leaves, returns the count (#935, D772)`
+  (`derivation-counting.test.ts`). The delegated exchange and the delegation
+  handle note their counts the same way.
+- **Counts, and never returns the count:** a response lost in transit, a
+  process exit, and a token the release fence refuses (its Mission has ended;
+  D771). No reservation row exists for these, so `recoverAtBoot` has nothing
+  to mark `unacknowledged` and nothing refunds; the count is the only record
+  that a derivation was spent.
 - **Where reservations apply.** The ID-JAG and attenuation-root paths use
   `reserveDerivation` and its recovery
   ([control-plane-deployment.md](control-plane-deployment.md); the
@@ -943,12 +954,13 @@ the fence orders a revocation against an issuance only within one process.
   At the token endpoint, the ID-JAG continuation's deterministic refusals
   run before admission and count nothing (the audience-scoped authority
   check). A continuation grant that fails after admission, which a state
-  change between that check and the gate can cause, leaves its reservation
-  `reserved` and the count spent until an authoritative non-acceptance
-  returns it; the reservation is keyed by the grant's own `jti`, so no retry
-  replays it. The test drives that failure at `issueCrossDomainGrant`, not
-  through the endpoint:
-  `a continuation ID-JAG that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > residual: a continuation grant that fails after admission leaves the derivation counted under an unreleased reservation, until an authoritative non-acceptance returns it`
+  change between that check and the gate can cause, settles its own
+  reservation as not accepted, which returns the count (#935, D772); the
+  reservation is keyed by the grant's own `jti`, so no retry replays it. A
+  replayed reservation that fails again stays counted, since an earlier
+  attempt's grant may have been accepted. The test drives that failure at
+  `issueCrossDomainGrant`, not through the endpoint:
+  `a continuation ID-JAG that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a continuation grant that fails after admission settles its own reservation as not accepted: the count returns (#935, D772)`
   (`continuation-grant.test.ts`).
 - **Rolled back:** the async-delegation creating exchange counts inside the
   transaction that commits the family, so a failure before that commit

@@ -22,6 +22,12 @@ import type { AuthorityEntry, MissionRecord } from "./types.js";
 export const ID_JAG_TYP = "oauth-id-jag+jwt";
 export const ID_JAG_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:id-jag";
 export const MAX_GRANT_LIFETIME_S = 300;
+/**
+ * @spec derivation-limits#counted-operations (#935, D772): the settling
+ * authority recorded when the issuing process itself observed a grant fail
+ * before it left.
+ */
+export const IN_PROCESS_NON_ACCEPTANCE = "as:in-process-failure";
 
 /**
  * @spec cross-domain#audience-scope: project only the authority-set entries
@@ -306,6 +312,33 @@ async function mintCrossDomainGrant(
       ReturnType<typeof issueCrossDomainGrant>
     >;
   }
+  // @spec derivation-limits#counted-operations (#935, D772): a grant that
+  // fails in process after this call's own reservation was admitted, before
+  // it is returned, was never accepted, so the reservation is settled as such
+  // and its count returned. A replayed reservation is left as it is: an
+  // earlier attempt's grant may have been accepted.
+  try {
+    return await signAdmittedGrant(kernel, signKey, kid, input, jti, admitted);
+  } catch (e) {
+    if (admitted.reservation.kind === "reserved") {
+      kernel.reconcileDerivation(admitted.reservation.reservation.reservationId, {
+        accepted: false,
+        authority: IN_PROCESS_NON_ACCEPTANCE,
+      });
+    }
+    throw e;
+  }
+}
+
+/** The admitted grant: narrowed, signed, and released against its reservation. */
+async function signAdmittedGrant(
+  kernel: MissionKernel,
+  signKey: CryptoKey,
+  kid: string,
+  input: IssueGrantInput,
+  jti: string,
+  admitted: ReturnType<MissionKernel["reserveDerivation"]>,
+): Promise<{ grant: string; jti: string; audienceScoped: AuthorityEntry[] }> {
   const record: MissionRecord = admitted.record;
 
   // Containment: the audience-scoped projection draws on the EFFECTIVE set, so
