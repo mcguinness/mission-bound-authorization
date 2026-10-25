@@ -46,7 +46,7 @@ import {
   type JsonValue,
   proposalHash,
 } from "@mission/core";
-import { UniqueViolationError, withTransaction, type Database } from "@mission/store";
+import { openStoreReadOnly, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { type RegisteredActivationPolicy, verifiedActivationPolicy } from "./activation-policy.js";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import {
@@ -783,6 +783,36 @@ function signConsent(kernel: MissionKernel, c: Omit<GovernedPolicyConsent, "atte
   return `${input}.${signer.sign(input).toString("base64url")}`;
 }
 
+/** The `kid` an attestation's protected header names, or undefined. */
+function attestationKid(attestation: string): unknown {
+  try {
+    return (JSON.parse(Buffer.from(attestation.split(".")[0] as string, "base64url").toString("utf8")) as Record<string, unknown>).kid;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * @spec #831 B2: how many governed-policy consents not withdrawn carry an
+ * attestation under `kid`, in the kernel store at `file`, read without
+ * writing. Retiring that Status generation would leave them unverifiable,
+ * so retirement refuses while any stands. A store with no consent table
+ * holds none.
+ */
+export function standingConsentsAttestedUnder(file: string, kid: string): number {
+  const db = openStoreReadOnly(file);
+  try {
+    const table = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'governed_policy_consents'").get();
+    if (!table) return 0;
+    const rows = db.prepare("SELECT attestation FROM governed_policy_consents WHERE withdrawn_at IS NULL").all() as Array<{
+      attestation: string;
+    }>;
+    return rows.filter((r) => attestationKid(r.attestation) === kid).length;
+  } finally {
+    db.close();
+  }
+}
+
 /** True when the consent row still carries the issuer's attestation over exactly its members. */
 function consentAuthentic(kernel: MissionKernel, c: GovernedPolicyConsent): boolean {
   const parts = c.attestation.split(".");
@@ -790,12 +820,7 @@ function consentAuthentic(kernel: MissionKernel, c: GovernedPolicyConsent): bool
   const [h, p, s] = parts as [string, string, string];
   // @spec #831 B2: the key the header names, among the Status generations
   // the AS still accepts, so a consent signed before a rotation still verifies.
-  let kid: unknown;
-  try {
-    kid = (JSON.parse(Buffer.from(h, "base64url").toString("utf8")) as Record<string, unknown>).kid;
-  } catch {
-    return false;
-  }
+  const kid = attestationKid(c.attestation);
   const key = typeof kid === "string" ? kernel.statusVerificationKeyFor(kid) : undefined;
   if (!key) return false;
   const ok = verify("sha256", Buffer.from(`${h}.${p}`, "utf8"), { key, dsaEncoding: "ieee-p1363" }, Buffer.from(s, "base64url"));

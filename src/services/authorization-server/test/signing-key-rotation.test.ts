@@ -29,13 +29,16 @@ import {
   initSigningKeyRing,
   JWKS_MAX_AGE_SECONDS,
   loadSigningKeyRing,
+  loadSigningKeyRingState,
   migrateSigningKeyRing,
   retireSigningKeyGeneration,
   SIGNING_KEY_RING_FORMAT,
   SIGNING_KEY_RING_FORMAT_V1,
   SigningKeyRingError,
   stageSigningKeyGeneration,
+  verifySigningKeyRing,
 } from "../src/index.js";
+import { confirmRing } from "./ring-confirm.helper.js";
 
 void FIXTURE_BROWSER_LOGIN;
 const FLOOR_SESSIONS = new ApprovalSessionStore();
@@ -129,6 +132,7 @@ describe("a /2 ring's generations (@spec #831 B2)", () => {
       return ringWith(r);
     };
     const cases: [string, string, RegExp][] = [
+      ["no revision", variant((_, r) => { delete r.revision; }), /has no revision/],
       ["a changed alg", variant((_, r) => { r.roles.asToken!.alg = "ES256"; }), /asToken is recorded with alg ES256, not the configured RS256/],
       ["no generations", variant((g) => { g.length = 0; }), /asStatus has no generations/],
       ["a generation recorded twice", variant((g) => { g[1]!.generation = 1; g[1]!.kid = "as-status"; }), /asStatus records generation 1 twice/],
@@ -213,57 +217,113 @@ describe("rotating, retiring and compromising a role's generations (@spec #831 B
     await expect(stageSigningKeyGeneration(file, ISSUER, ROLES, "asOther", at(1))).rejects.toThrow(/unknown role asOther/);
   });
 
-  it("activation waits out the /jwks freshness lifetime, then signs under the new generation and keeps the old one in overlap", async () => {
+  it("verification confirms only a running AS that serves this ring's revision and exactly its live set, recording without advancing the revision", async () => {
+    const file = ringPath();
+    await initSigningKeyRing(file, ISSUER, ROLES, at(0));
+    expect(readRing(file).revision).toBe(1);
+    await stageSigningKeyGeneration(file, ISSUER, ROLES, "asToken", at(0));
+    expect(readRing(file).revision).toBe(2);
+    const { keys } = await loadSigningKeyRingState(file, ISSUER, ROLES);
+    const live = Object.values(keys).flatMap((r) => r.published);
+    const serving = (etag: string | null, served: Record<string, unknown>[]) => async (url: string) =>
+      url.endsWith("/.well-known/openid-configuration")
+        ? Response.json({ issuer: ISSUER, jwks_uri: `${ISSUER}/jwks` })
+        : new Response(JSON.stringify({ keys: served }), { headers: etag ? { etag } : {} });
+    const verify = (etag: string | null, served: Record<string, unknown>[], s: number) =>
+      verifySigningKeyRing(file, ISSUER, ROLES, { fetch: serving(etag, served), now: at(s) });
+    const raw = readFileSync(file, "utf8");
+    // An AS still running the previous revision, or a key set with none.
+    await expect(verify('"1"', live, 5)).rejects.toThrow(
+      /the running AS serves revision "1", not this ring's "2": restart it with this ring, then verify again/,
+    );
+    await expect(verify(null, live, 5)).rejects.toThrow(/the running AS serves revision \(none\)/);
+    // This revision, but not this ring's live set.
+    await expect(verify('"2"', live.filter((k) => k.kid !== "as-token-2"), 5)).rejects.toThrow(/not this ring's live set/);
+    expect(readFileSync(file, "utf8")).toBe(raw);
+    expect(await verify('"2"', live, 5)).toEqual({
+      revision: 2,
+      published: ["as-token", "as-token-2", "as-status", "as-txn", "as-continuation"],
+      stopped: [],
+      withdrawn: [],
+    });
+    expect(readRing(file).revision).toBe(2);
+    expect(generationsOf(file, "asToken").map((g) => g.published_at)).toEqual([at(5)().toISOString(), at(5)().toISOString()]);
+    // A later verification records nothing it already recorded.
+    expect(await verify('"2"', live, 9)).toEqual({ revision: 2, published: [], stopped: [], withdrawn: [] });
+  });
+
+  it("activation waits out the /jwks freshness lifetime from the publication the running AS was confirmed serving, then signs under the new generation", async () => {
     const file = ringPath();
     await initSigningKeyRing(file, ISSUER, ROLES, at(0));
     const minPublishedS = JWKS_MAX_AGE_SECONDS;
-    await expect(activateSigningKeyGeneration(file, ISSUER, ROLES, "asToken", { minPublishedS, now: at(1) })).rejects.toThrow(
-      /asToken has no pending generation; stage one with `pnpm keys rotate --role asToken`/,
-    );
+    const activate = (s: number) => activateSigningKeyGeneration(file, ISSUER, ROLES, "asToken", { minPublishedS, now: at(s) });
+    await expect(activate(1)).rejects.toThrow(/asToken has no pending generation; stage one with `pnpm keys rotate --role asToken`/);
     await stageSigningKeyGeneration(file, ISSUER, ROLES, "asToken", at(0));
-    await expect(
-      activateSigningKeyGeneration(file, ISSUER, ROLES, "asToken", { minPublishedS, now: at(minPublishedS - 1) }),
-    ).rejects.toThrow(new RegExp(`as-token-2 has been published for ${minPublishedS - 1}s; activation needs ${minPublishedS}s, 1s more`));
-    expect(
-      await activateSigningKeyGeneration(file, ISSUER, ROLES, "asToken", { minPublishedS, now: at(minPublishedS) }),
-    ).toEqual({ kid: "as-token-2", previous: "as-token" });
+    // Staging publishes nothing: with no confirmed publication, no wait suffices.
+    await expect(activate(10 * minPublishedS)).rejects.toThrow(
+      /as-token-2 is not confirmed published: start the AS with this ring, then run `pnpm keys verify`/,
+    );
+    await confirmRing(file, ISSUER, ROLES, at(1000));
+    await expect(activate(1000 + minPublishedS - 1)).rejects.toThrow(
+      new RegExp(`as-token-2 has been confirmed published for ${minPublishedS - 1}s; activation needs ${minPublishedS}s, 1s more`),
+    );
+    expect(await activate(1000 + minPublishedS)).toEqual({ kid: "as-token-2", previous: "as-token" });
     const keys = await loadSigningKeyRing(file, ISSUER, ROLES);
     expect(keys.asToken.kid).toBe("as-token-2");
     expect(keys.asToken.privateJwk.kid).toBe("as-token-2");
     expect(kidsOf(keys.asToken.published)).toEqual(["as-token", "as-token-2"]);
     expect(kidsOf(keys.asToken.verification)).toEqual(["as-token", "as-token-2"]);
     const [old] = generationsOf(file, "asToken");
-    expect([old!.state, old!.stopped_at]).toEqual(["overlap", at(minPublishedS)().toISOString()]);
+    // The edit's time is recorded, but only a verification confirms the stop.
+    expect([old!.state, old!.stopped_at, old!.stop_confirmed_at]).toEqual(["overlap", at(1000 + minPublishedS)().toISOString(), undefined]);
     noRetainedPrivateKeys(file);
   });
 
-  it("retirement removes an overlap generation only after the audit horizon since it stopped signing; a pending one at once; never the active one", async () => {
+  it("retirement waits for the retention deadline from the confirmed stop, refuses when none can be established, and refuses a Status generation a standing consent depends on", async () => {
     const file = ringPath();
     await initSigningKeyRing(file, ISSUER, ROLES, at(0));
-    await stageSigningKeyGeneration(file, ISSUER, ROLES, "asToken", at(0));
-    await activateSigningKeyGeneration(file, ISSUER, ROLES, "asToken", { minPublishedS: 0, now: at(100) });
-    const opts = (s: number) => ({ minRetentionS: HORIZON_S, now: at(s) });
-    await expect(retireSigningKeyGeneration(file, ISSUER, ROLES, "asToken", "as-token-2", opts(200))).rejects.toThrow(
+    for (const role of ["asToken", "asStatus"]) await stageSigningKeyGeneration(file, ISSUER, ROLES, role, at(0));
+    await confirmRing(file, ISSUER, ROLES, at(10));
+    for (const role of ["asToken", "asStatus"]) {
+      await activateSigningKeyGeneration(file, ISSUER, ROLES, role, { minPublishedS: 0, now: at(100) });
+    }
+    const retention = { auditHorizonS: HORIZON_S, maxMissionLifetimeS: HORIZON_S / 2 };
+    const retire = (role: string, kid: string, s: number, extra: Record<string, unknown> = {}) =>
+      retireSigningKeyGeneration(file, ISSUER, ROLES, role, kid, { retention: { ...retention, ...extra }, now: at(s) });
+    await expect(retire("asToken", "as-token-2", 200)).rejects.toThrow(
       /as-token-2 is asToken's active generation; activate a successor before retiring it/,
     );
-    await expect(retireSigningKeyGeneration(file, ISSUER, ROLES, "asToken", "as-token", opts(100 + HORIZON_S - 5))).rejects.toThrow(
-      new RegExp(`as-token stopped signing at ${at(100)().toISOString()}; it stays published for the audit horizon \\(${HORIZON_S}s\\), 5s more`),
+    // The activation's edit is not a confirmed stop: the running AS may still sign under generation 1.
+    await expect(retire("asToken", "as-token", 100 + 10 * HORIZON_S)).rejects.toThrow(
+      /as-token is not confirmed to have stopped signing: start the AS with this ring, then run `pnpm keys verify`/,
     );
-    await retireSigningKeyGeneration(file, ISSUER, ROLES, "asToken", "as-token", opts(100 + HORIZON_S));
-    let keys = await loadSigningKeyRing(file, ISSUER, ROLES);
-    expect(kidsOf(keys.asToken.published)).toEqual(["as-token-2"]);
-    expect(kidsOf(keys.asToken.verification)).toEqual(["as-token-2"]);
-    await expect(retireSigningKeyGeneration(file, ISSUER, ROLES, "asToken", "as-token", opts(100 + HORIZON_S))).rejects.toThrow(
-      /as-token is already retired/,
+    await confirmRing(file, ISSUER, ROLES, at(500));
+    await expect(retire("asToken", "as-token", 500 + 10 * HORIZON_S, { maxMissionLifetimeS: null })).rejects.toThrow(
+      /no retention deadline can be established for as-token: the Mission lifetime is unbounded/,
     );
-    // An abandoned rotation: a pending generation never signed, so it retires without a wait.
-    await stageSigningKeyGeneration(file, ISSUER, ROLES, "asToken", at(200 + HORIZON_S));
-    await retireSigningKeyGeneration(file, ISSUER, ROLES, "asToken", "as-token-3", opts(200 + HORIZON_S));
-    keys = await loadSigningKeyRing(file, ISSUER, ROLES);
-    expect(kidsOf(keys.asToken.published)).toEqual(["as-token-2"]);
-    await expect(retireSigningKeyGeneration(file, ISSUER, ROLES, "asToken", "as-token-9", opts(0))).rejects.toThrow(
-      /asToken has no generation as-token-9/,
+    // The deadline: the confirmed stop, plus the longer of the audit horizon and the longest Mission lifetime.
+    await expect(retire("asToken", "as-token", 500 + HORIZON_S - 5)).rejects.toThrow(
+      new RegExp(`as-token was confirmed to have stopped signing at ${at(500)().toISOString()}; it stays published for ${HORIZON_S}s .*, 5s more`),
     );
+    await expect(retire("asToken", "as-token", 500 + 2 * HORIZON_S - 5, { maxMissionLifetimeS: 2 * HORIZON_S })).rejects.toThrow(
+      new RegExp(`it stays published for ${2 * HORIZON_S}s .*, 5s more`),
+    );
+    await retire("asToken", "as-token", 500 + HORIZON_S);
+    expect(kidsOf((await loadSigningKeyRing(file, ISSUER, ROLES)).asToken.published)).toEqual(["as-token-2"]);
+    await expect(retire("asToken", "as-token", 500 + HORIZON_S)).rejects.toThrow(/as-token is already retired/);
+    // A Status generation: the standing governed-policy consents attested under it decide.
+    await expect(retire("asStatus", "as-status", 500 + HORIZON_S)).rejects.toThrow(
+      /the standing governed-policy consents attested under as-status are unknown; name the kernel store/,
+    );
+    await expect(retire("asStatus", "as-status", 500 + HORIZON_S, { standingConsents: 2 })).rejects.toThrow(
+      /2 standing governed-policy consent\(s\) are attested under as-status; retirement does not expire a consent/,
+    );
+    await retire("asStatus", "as-status", 500 + HORIZON_S, { standingConsents: 0 });
+    // An abandoned rotation: a pending generation never signed, so it retires with no deadline.
+    await stageSigningKeyGeneration(file, ISSUER, ROLES, "asToken", at(600 + HORIZON_S));
+    await retire("asToken", "as-token-3", 600 + HORIZON_S, { maxMissionLifetimeS: null });
+    expect(kidsOf((await loadSigningKeyRing(file, ISSUER, ROLES)).asToken.published)).toEqual(["as-token-2"]);
+    await expect(retire("asToken", "as-token-9", 0)).rejects.toThrow(/asToken has no generation as-token-9/);
     noRetainedPrivateKeys(file);
   });
 
@@ -296,6 +356,7 @@ describe("rotating, retiring and compromising a role's generations (@spec #831 B
     const file = ringPath();
     await initSigningKeyRing(file, ISSUER, ROLES, at(0));
     await stageSigningKeyGeneration(file, ISSUER, ROLES, "asTxn", at(0));
+    await confirmRing(file, ISSUER, ROLES, at(10));
     await activateSigningKeyGeneration(file, ISSUER, ROLES, "asTxn", { minPublishedS: 0, now: at(100) });
     await expect(
       compromiseSigningKeyGeneration(file, ISSUER, ROLES, "asTxn", "as-txn", { compromisedAt: at(500)(), now: at(200) }),
@@ -498,39 +559,45 @@ async function exchangeRefusal(as: As, subjectToken: string): Promise<string> {
 const kidOf = (jwt: string) => decodeProtectedHeader(jwt).kid;
 
 describe("an AS across a rotation, a retirement and a compromise (@spec #831 B2)", () => {
-  it("publishes each generation while it is live, signs under the active one, and accepts a token only under an active or overlap generation", { timeout: 120_000 }, async () => {
+  it("follows stop, edit, start, verify: publishes each generation while it is live, signs under the active one, and accepts a credential only under an active or overlap generation", { timeout: 180_000 }, async () => {
     const file = ringPath();
     const start = new Date();
     const later = (s: number) => () => new Date(start.getTime() + s * 1000);
+    const verify = (s: number) => verifySigningKeyRing(file, ISSUER, ROLES, { now: later(s) });
     await initSigningKeyRing(file, ISSUER, ROLES, later(0));
 
     const { accessToken: first, idToken: firstId } = await withAs(file, async (as) => {
       expect(await publishedKids()).toEqual(KIDS);
+      expect((await verify(0)).published.sort()).toEqual(KIDS);
       const signed = await signIn(as, true);
       expect(await validatesAsHint(as, signed.idToken as string)).toBe(true);
+      // Staged while this AS runs: an edit, not yet in effect, so verification refuses until a restart.
+      await stageSigningKeyGeneration(file, ISSUER, ROLES, "asToken", later(1));
+      await stageSigningKeyGeneration(file, ISSUER, ROLES, "asStatus", later(1));
+      await expect(verify(1)).rejects.toThrow(/the running AS serves revision "1", not this ring's "3"/);
       return signed;
     });
     expect(kidOf(first)).toBe("as-token");
     expect(kidOf(firstId as string)).toBe("as-token");
 
-    // Staged: published, not yet signing. The Status role rotates alongside.
-    await stageSigningKeyGeneration(file, ISSUER, ROLES, "asToken", later(0));
-    await stageSigningKeyGeneration(file, ISSUER, ROLES, "asStatus", later(0));
+    // Started on the staged ring: generation 2 published, not signing.
     await withAs(file, async (as) => {
       expect(await publishedKids()).toEqual([...KIDS, "as-token-2", "as-status-2"].sort());
+      expect((await verify(2)).published).toEqual(["as-token-2", "as-status-2"]);
       expect(kidOf(await mintAccessToken(as))).toBe("as-token");
       expect(as.kernel.statusSigner().kid).toBe("as-status");
     });
 
-    // Activated: signs under generation 2; generation 1 stays published and accepted.
+    // Activated once confirmed published for the freshness lifetime; generation 1 moves to overlap.
     for (const role of ["asToken", "asStatus"]) {
       await activateSigningKeyGeneration(file, ISSUER, ROLES, role, {
         minPublishedS: JWKS_MAX_AGE_SECONDS,
-        now: later(JWKS_MAX_AGE_SECONDS),
+        now: later(2 + JWKS_MAX_AGE_SECONDS),
       });
     }
     const second = await withAs(file, async (as) => {
       expect(await publishedKids()).toEqual([...KIDS, "as-token-2", "as-status-2"].sort());
+      expect((await verify(3 + JWKS_MAX_AGE_SECONDS)).stopped).toEqual(["as-token", "as-status"]);
       expect(await exchangeRefusal(as, first)).toBe(SIGNATURE_ACCEPTED);
       // The provider still verifies its own ID Token from generation 1, and signs a new one only under generation 2.
       expect(await validatesAsHint(as, firstId as string)).toBe(true);
@@ -541,30 +608,29 @@ describe("an AS across a rotation, a retirement and a compromise (@spec #831 B2)
     });
     expect(kidOf(second)).toBe("as-token-2");
 
-    // Retired after the audit horizon: generation 1 leaves /jwks and verification.
-    await retireSigningKeyGeneration(file, ISSUER, ROLES, "asToken", "as-token", {
-      minRetentionS: HORIZON_S,
-      now: later(JWKS_MAX_AGE_SECONDS + HORIZON_S),
-    });
-    await retireSigningKeyGeneration(file, ISSUER, ROLES, "asStatus", "as-status", {
-      minRetentionS: HORIZON_S,
-      now: later(JWKS_MAX_AGE_SECONDS + HORIZON_S),
-    });
+    // Retired at the deadline from the confirmed stop (this AS's kernel is in memory: no consent outlives it).
+    const retention = { auditHorizonS: HORIZON_S, maxMissionLifetimeS: HORIZON_S, standingConsents: 0 };
+    for (const [role, kid] of [["asToken", "as-token"], ["asStatus", "as-status"]] as const) {
+      await retireSigningKeyGeneration(file, ISSUER, ROLES, role, kid, { retention, now: later(3 + JWKS_MAX_AGE_SECONDS + HORIZON_S) });
+    }
     const live = (...extra: string[]) => [...KIDS.filter((k) => k !== "as-token" && k !== "as-status"), ...extra].sort();
     await withAs(file, async (as) => {
       expect(await publishedKids()).toEqual(live("as-token-2", "as-status-2"));
+      expect((await verify(4 + JWKS_MAX_AGE_SECONDS + HORIZON_S)).withdrawn).toEqual(["as-token", "as-status"]);
       expect(await exchangeRefusal(as, first)).toBe(WRONG_KEY);
       expect(await validatesAsHint(as, firstId as string)).toBe(false);
       expect(await exchangeRefusal(as, second)).toBe(SIGNATURE_ACCEPTED);
       expect(as.kernel.statusVerificationKeyFor("as-status")).toBeUndefined();
     });
 
-    // Compromised while active: withdrawn at once, and a replacement signs.
+    // Compromised while active: withdrawn, and a replacement signs, once the AS restarts.
     await compromiseSigningKeyGeneration(file, ISSUER, ROLES, "asToken", "as-token-2", {
-      now: later(JWKS_MAX_AGE_SECONDS + HORIZON_S + 1),
+      now: later(5 + JWKS_MAX_AGE_SECONDS + HORIZON_S),
     });
     await withAs(file, async (as) => {
       expect(await publishedKids()).toEqual(live("as-token-3", "as-status-2"));
+      const confirmed = await verify(6 + JWKS_MAX_AGE_SECONDS + HORIZON_S);
+      expect([confirmed.stopped, confirmed.withdrawn]).toEqual([["as-token-2"], ["as-token-2"]]);
       expect(await exchangeRefusal(as, second)).toBe(WRONG_KEY);
       expect(kidOf(await mintAccessToken(as))).toBe("as-token-3");
     });

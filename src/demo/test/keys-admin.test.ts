@@ -1,12 +1,19 @@
 /**
  * @spec #831: `pnpm keys`, driven through `keysAdmin`: `init` (slice 1), and
- * `migrate`, `rotate`, `retire` and `compromise` (B2).
+ * `migrate`, `rotate`, `retire`, `compromise` and `verify` (B2).
  */
 import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadSigningKeyRing, SIGNING_KEY_RING_FORMAT, SIGNING_KEY_RING_FORMAT_V1 } from "@mission/authorization-server";
-import { AUDIT_HORIZON_SECONDS, TOPOLOGY } from "@mission/demo-data";
+import {
+  loadSigningKeyRing,
+  loadSigningKeyRingState,
+  SIGNING_KEY_RING_FORMAT,
+  SIGNING_KEY_RING_FORMAT_V1,
+} from "@mission/authorization-server";
+import { DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import { keysAdmin } from "../src/keys-admin.js";
@@ -46,6 +53,9 @@ describe("pnpm keys init (@spec #831 slice 1)", () => {
       ["rotate", "--ring", "x"],
       ["retire", "--ring", "x", "--role", "asToken"],
       ["compromise", "--ring", "x", "--kid", "as-token"],
+      ["verify"],
+      ["verify", "--ring", "x", "--role", "asToken"],
+      ["retire", "--ring", "x", "--role", "asStatus", "--kid", "as-status", "--in-memory-kernel", "--activate"],
     ]) {
       await expect(keysAdmin(argv, {}), JSON.stringify(argv)).rejects.toThrow(usage);
     }
@@ -58,12 +68,7 @@ describe("pnpm keys init (@spec #831 slice 1)", () => {
 /** The ring's AS issuer: the configured default `pnpm keys` uses. */
 const ISSUER = `http://localhost:${TOPOLOGY.ports.as}`;
 const ROLES = (({ asToken, asStatus, asTxn, asContinuation }) => ({ asToken, asStatus, asTxn, asContinuation }))(TOPOLOGY.keys);
-const freshRing = async (): Promise<string> => {
-  const ring = join(mkdtempSync(join(tmpdir(), "keys-admin-")), "keys", "ring.json");
-  await keysAdmin(["init", "--ring", ring], {});
-  return ring;
-};
-type Generation = { kid: string; state: string; created_at: string; stopped_at?: string; compromised_at?: string };
+type Generation = { kid: string; state: string; created_at: string; published_at?: string; compromised_at?: string };
 const generations = (ring: string, role: string): Generation[] =>
   (JSON.parse(readFileSync(ring, "utf8")) as { roles: Record<string, { generations: Generation[] }> }).roles[role]!.generations;
 /** Move every recorded time `seconds` into the past, as if the ring had been written then. */
@@ -75,7 +80,33 @@ function age(ring: string, seconds: number): void {
   writeFileSync(ring, JSON.stringify(walk(JSON.parse(readFileSync(ring, "utf8")))), { mode: 0o600 });
 }
 
-describe("pnpm keys migrate, rotate, retire and compromise (@spec #831 B2)", () => {
+/**
+ * A ring and a stand-in for the AS running it: its metadata, and a `/jwks`
+ * serving the ring's live set under its revision as `ETag`, as an AS started
+ * after each edit serves it.
+ */
+async function servedRing(): Promise<{ ring: string; issuer: string; close: () => Promise<void> }> {
+  const ring = join(mkdtempSync(join(tmpdir(), "keys-admin-")), "keys", "ring.json");
+  let issuer = "";
+  const server = createServer(async (req, res) => {
+    if (req.url === "/.well-known/openid-configuration") {
+      res.end(JSON.stringify({ issuer, jwks_uri: `${issuer}/jwks` }));
+    } else if (req.url === "/jwks") {
+      const { keys, revision } = await loadSigningKeyRingState(ring, issuer, ROLES);
+      res.setHeader("etag", `"${revision}"`);
+      res.end(JSON.stringify({ keys: Object.values(keys).flatMap((r) => r.published) }));
+    } else {
+      res.statusCode = 404;
+      res.end();
+    }
+  });
+  await new Promise<void>((r) => server.listen(0, () => r()));
+  issuer = `http://localhost:${(server.address() as AddressInfo).port}`;
+  await keysAdmin(["init", "--ring", ring, "--issuer", issuer], {});
+  return { ring, issuer, close: () => new Promise<void>((r) => server.close(() => r())) };
+}
+
+describe("pnpm keys migrate, rotate, retire, compromise and verify (@spec #831 B2)", () => {
   it("migrate converts a slice 1 ring, keeping its keys", async () => {
     const dir = join(mkdtempSync(join(tmpdir(), "keys-admin-")), "keys");
     mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -93,48 +124,89 @@ describe("pnpm keys migrate, rotate, retire and compromise (@spec #831 B2)", () 
     expect((await loadSigningKeyRing(ring, ISSUER, ROLES)).asToken.kid).toBe("as-token");
   });
 
-  it("rotate stages, and rotate --activate activates only after the /jwks freshness lifetime", async () => {
-    const ring = await freshRing();
-    const staged = await keysAdmin(["rotate", "--ring", ring, "--role", "asStatus"], {});
-    expect(staged.split("\n")[0]).toBe("staged as-status-2 for asStatus: published, not signing");
-    await expect(keysAdmin(["rotate", "--ring", ring, "--role", "asStatus", "--activate"], {})).rejects.toThrow(
-      /as-status-2 has been published for \d+s; activation needs 300s/,
-    );
-    age(ring, 301);
-    expect((await keysAdmin(["rotate", "--ring", ring, "--role", "asStatus", "--activate"], {})).split("\n")[0]).toBe(
-      "activated as-status-2 for asStatus; as-status stops signing and stays published in overlap",
-    );
-    expect((await loadSigningKeyRing(ring, ISSUER, ROLES)).asStatus.kid).toBe("as-status-2");
+  it("rotate stages; verify confirms the running AS publishes it; rotate --activate waits the /jwks freshness lifetime from that confirmation", async () => {
+    const { ring, issuer, close } = await servedRing();
+    try {
+      const staged = await keysAdmin(["rotate", "--ring", ring, "--role", "asStatus", "--issuer", issuer], {});
+      expect(staged.split("\n")).toEqual([
+        "staged as-status-2 for asStatus: to be published, not signing",
+        `next: start the AS with this ring, then \`pnpm keys verify --ring ${ring} --issuer ${issuer}\`; the edit is not in effect until then. Activation waits 300s from the publication that verification confirms`,
+      ]);
+      // Neither the staging's age nor any wait stands in for a confirmed publication.
+      age(ring, 3600);
+      await expect(keysAdmin(["rotate", "--ring", ring, "--role", "asStatus", "--activate", "--issuer", issuer], {})).rejects.toThrow(
+        /as-status-2 is not confirmed published/,
+      );
+      expect((await keysAdmin(["verify", "--ring", ring, "--issuer", issuer], {})).split("\n")).toEqual([
+        `the AS at ${issuer} runs revision 2 of ${ring}`,
+        "confirmed published: as-token, as-status, as-status-2, as-txn, as-continuation; stopped signing: none new; withdrawn: none new",
+      ]);
+      await expect(keysAdmin(["rotate", "--ring", ring, "--role", "asStatus", "--activate", "--issuer", issuer], {})).rejects.toThrow(
+        /as-status-2 has been confirmed published for \d+s; activation needs 300s/,
+      );
+      age(ring, 301);
+      expect((await keysAdmin(["rotate", "--ring", ring, "--role", "asStatus", "--activate", "--issuer", issuer], {})).split("\n")[0]).toBe(
+        "activated as-status-2 for asStatus; as-status stops signing and stays published in overlap",
+      );
+      expect((await loadSigningKeyRing(ring, issuer, ROLES)).asStatus.kid).toBe("as-status-2");
+      expect((await keysAdmin(["verify", "--ring", ring, "--issuer", issuer], {})).split("\n")[1]).toBe(
+        "confirmed published: none new; stopped signing: as-status; withdrawn: none new",
+      );
+    } finally {
+      await close();
+    }
   });
 
-  it("retire waits out the deployment's audit horizon since the generation stopped signing", async () => {
-    const ring = await freshRing();
-    await keysAdmin(["rotate", "--ring", ring, "--role", "asTxn"], {});
-    age(ring, 301);
-    await keysAdmin(["rotate", "--ring", ring, "--role", "asTxn", "--activate"], {});
-    await expect(keysAdmin(["retire", "--ring", ring, "--role", "asTxn", "--kid", "as-txn"], {})).rejects.toThrow(
-      new RegExp(`it stays published for the audit horizon \\(${AUDIT_HORIZON_SECONDS}s\\)`),
-    );
-    age(ring, AUDIT_HORIZON_SECONDS);
-    expect((await keysAdmin(["retire", "--ring", ring, "--role", "asTxn", "--kid", "as-txn"], {})).split("\n")[0]).toBe(
-      "retired as-txn for asTxn: it leaves the AS's key set",
-    );
-    expect(generations(ring, "asTxn").map((g) => g.state)).toEqual(["retired", "active"]);
+  it("retire refuses with the shipped policy, which bounds no Mission lifetime, so no retention deadline can be established", async () => {
+    expect(DERIVATION_POLICY.max_mission_lifetime_s).toBeNull();
+    const { ring, issuer, close } = await servedRing();
+    try {
+      await keysAdmin(["rotate", "--ring", ring, "--role", "asTxn", "--issuer", issuer], {});
+      await keysAdmin(["verify", "--ring", ring, "--issuer", issuer], {});
+      age(ring, 301);
+      await keysAdmin(["rotate", "--ring", ring, "--role", "asTxn", "--activate", "--issuer", issuer], {});
+      await expect(keysAdmin(["retire", "--ring", ring, "--role", "asTxn", "--kid", "as-txn", "--issuer", issuer], {})).rejects.toThrow(
+        /as-txn is not confirmed to have stopped signing/,
+      );
+      await keysAdmin(["verify", "--ring", ring, "--issuer", issuer], {});
+      age(ring, 10 * 365 * 86400);
+      await expect(keysAdmin(["retire", "--ring", ring, "--role", "asTxn", "--kid", "as-txn", "--issuer", issuer], {})).rejects.toThrow(
+        /no retention deadline can be established for as-txn: the Mission lifetime is unbounded/,
+      );
+      await expect(
+        keysAdmin(["retire", "--ring", ring, "--role", "asStatus", "--kid", "as-status", "--kernel-store", "/k.db", "--in-memory-kernel", "--issuer", issuer], {}),
+      ).rejects.toThrow(/name a --kernel-store or --in-memory-kernel, not both/);
+      // A pending generation never signed: retiring it abandons a staged rotation, with no deadline.
+      await keysAdmin(["rotate", "--ring", ring, "--role", "asTxn", "--issuer", issuer], {});
+      expect((await keysAdmin(["retire", "--ring", ring, "--role", "asTxn", "--kid", "as-txn-3", "--issuer", issuer], {})).split("\n")[0]).toBe(
+        "retired as-txn-3 for asTxn: it leaves the AS's key set",
+      );
+    } finally {
+      await close();
+    }
   });
 
-  it("compromise withdraws at once, replaces an active signer, and records an established compromise time", async () => {
-    const ring = await freshRing();
-    await expect(
-      keysAdmin(["compromise", "--ring", ring, "--role", "asToken", "--kid", "as-token", "--compromised-at", "last week"], {}),
-    ).rejects.toThrow(/--compromised-at is not a time: last week/);
-    const out = await keysAdmin(
-      ["compromise", "--ring", ring, "--role", "asToken", "--kid", "as-token", "--compromised-at", "2026-10-01T00:00:00Z"],
-      {},
-    );
-    expect(out.split("\n")[0]).toBe("withdrew as-token for asToken as compromised; as-token-2 replaces it as the signer");
-    expect(generations(ring, "asToken").map((g) => [g.kid, g.state, g.compromised_at])).toEqual([
-      ["as-token", "compromised", "2026-10-01T00:00:00.000Z"],
-      ["as-token-2", "active", undefined],
-    ]);
+  it("compromise withdraws at once, replaces an active signer, and records an established compromise time; verify confirms the withdrawal", async () => {
+    const { ring, issuer, close } = await servedRing();
+    try {
+      await expect(
+        keysAdmin(["compromise", "--ring", ring, "--role", "asToken", "--kid", "as-token", "--compromised-at", "last week", "--issuer", issuer], {}),
+      ).rejects.toThrow(/--compromised-at is not a time: last week/);
+      const out = await keysAdmin(
+        ["compromise", "--ring", ring, "--role", "asToken", "--kid", "as-token", "--compromised-at", "2026-10-01T00:00:00Z", "--issuer", issuer],
+        {},
+      );
+      expect(out.split("\n")[0]).toBe("withdrew as-token for asToken as compromised; as-token-2 replaces it as the signer");
+      expect(out.split("\n")[1]).toContain("authorizes a replacement only through its own trusted rotation");
+      expect(generations(ring, "asToken").map((g) => [g.kid, g.state, g.compromised_at])).toEqual([
+        ["as-token", "compromised", "2026-10-01T00:00:00.000Z"],
+        ["as-token-2", "active", undefined],
+      ]);
+      expect((await keysAdmin(["verify", "--ring", ring, "--issuer", issuer], {})).split("\n")[1]).toBe(
+        "confirmed published: as-token-2, as-status, as-txn, as-continuation; stopped signing: as-token; withdrawn: as-token",
+      );
+    } finally {
+      await close();
+    }
   });
 });

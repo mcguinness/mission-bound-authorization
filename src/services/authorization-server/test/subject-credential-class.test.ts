@@ -47,6 +47,7 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { confirmRing } from "./ring-confirm.helper.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   JWT_TOKEN_TYPE,
@@ -457,8 +458,9 @@ beforeAll(async () => {
   dirs.push(dir);
   const ringFile = join(dir, "keys", "ring.json");
   await initSigningKeyRing(ringFile, ISSUER, ROLES);
+  for (const role of ["asToken", "asTxn"]) await stageSigningKeyGeneration(ringFile, ISSUER, ROLES, role);
+  await confirmRing(ringFile, ISSUER, ROLES);
   for (const role of ["asToken", "asTxn"]) {
-    await stageSigningKeyGeneration(ringFile, ISSUER, ROLES, role);
     await activateSigningKeyGeneration(ringFile, ISSUER, ROLES, role, { minPublishedS: 0 });
   }
   ring = await loadSigningKeyRing(ringFile, ISSUER, ROLES);

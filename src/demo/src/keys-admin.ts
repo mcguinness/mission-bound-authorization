@@ -6,23 +6,31 @@
  *   pnpm keys init --ring <path> [--issuer <url>]
  *   pnpm keys migrate --ring <path> [--issuer <url>]
  *   pnpm keys rotate --ring <path> --role <role> [--activate] [--issuer <url>]
- *   pnpm keys retire --ring <path> --role <role> --kid <kid> [--issuer <url>]
+ *   pnpm keys retire --ring <path> --role <role> --kid <kid> [--kernel-store <path> | --in-memory-kernel] [--issuer <url>]
  *   pnpm keys compromise --ring <path> --role <role> --kid <kid> [--compromised-at <time>] [--issuer <url>]
+ *   pnpm keys verify --ring <path> [--issuer <url>]
  *
  * The ring holds the four AS role keys (`TOPOLOGY.keys` `asToken`,
  * `asStatus`, `asTxn`, `asContinuation`), for one issuer (default the AS's
  * configured URL, `http://localhost:4400`). `init` creates it once; an
  * existing ring is never replaced. `migrate` converts a slice 1 ring to the
  * generation format, keeping its keys. `rotate` stages a role's next
- * generation, and `rotate --activate` makes it the signer once it has been
- * published for the `/jwks` freshness lifetime. `retire` removes a
- * generation from the AS's key set after the deployment's audit horizon
- * (`policy.audit_horizon_s`). `compromise` withdraws one at once, replacing
- * the signer when it was the active one. A relative `--ring` resolves
- * against the directory `pnpm` was started in (`INIT_CWD`).
+ * generation, and `rotate --activate` makes it the signer once the running
+ * AS has been confirmed publishing it for the `/jwks` freshness lifetime.
+ * `retire` removes a generation from the AS's key set after its retention
+ * deadline (the deployment's audit horizon, `policy.audit_horizon_s`,
+ * covering the longest Mission lifetime, `policy.max_mission_lifetime_s`);
+ * retiring a Status generation reads the kernel store and refuses while a
+ * standing governed-policy consent is attested under it. `compromise`
+ * withdraws one at once, replacing the signer when it was the active one.
+ * A relative `--ring` resolves against the directory `pnpm` was started in
+ * (`INIT_CWD`).
  *
- * Every change takes effect when the AS next starts: the AS reads the ring
- * only at boot.
+ * The AS reads the ring only at boot, so a successful edit is not a
+ * completed change. Every change follows one procedure: stop the AS, edit
+ * the ring, start the AS, then `pnpm keys verify`, which confirms from the
+ * running AS's `/jwks` that it loaded this revision and records what that
+ * confirms. One operator edits a ring at a time; nothing locks it.
  */
 import { isAbsolute, resolve } from "node:path";
 import {
@@ -35,15 +43,18 @@ import {
   retireSigningKeyGeneration,
   SIGNING_KEY_RING_FORMAT,
   stageSigningKeyGeneration,
+  standingConsentsAttestedUnder,
+  verifySigningKeyRing,
 } from "@mission/authorization-server";
-import { AUDIT_HORIZON_SECONDS, TOPOLOGY } from "@mission/demo-data";
+import { AUDIT_HORIZON_SECONDS, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 
 const USAGE = [
   "usage: pnpm keys init --ring <path> [--issuer <url>]",
   "       pnpm keys migrate --ring <path> [--issuer <url>]",
   "       pnpm keys rotate --ring <path> --role <role> [--activate] [--issuer <url>]",
-  "       pnpm keys retire --ring <path> --role <role> --kid <kid> [--issuer <url>]",
+  "       pnpm keys retire --ring <path> --role <role> --kid <kid> [--kernel-store <path> | --in-memory-kernel] [--issuer <url>]",
   "       pnpm keys compromise --ring <path> --role <role> --kid <kid> [--compromised-at <time>] [--issuer <url>]",
+  "       pnpm keys verify --ring <path> [--issuer <url>]",
 ].join("\n");
 
 /** Each command's value flags, required and optional, and its boolean flags. */
@@ -51,8 +62,9 @@ const COMMANDS: Record<string, { required: string[]; optional: string[]; switche
   init: { required: ["--ring"], optional: ["--issuer"], switches: [] },
   migrate: { required: ["--ring"], optional: ["--issuer"], switches: [] },
   rotate: { required: ["--ring", "--role"], optional: ["--issuer"], switches: ["--activate"] },
-  retire: { required: ["--ring", "--role", "--kid"], optional: ["--issuer"], switches: [] },
+  retire: { required: ["--ring", "--role", "--kid"], optional: ["--issuer", "--kernel-store"], switches: ["--in-memory-kernel"] },
   compromise: { required: ["--ring", "--role", "--kid"], optional: ["--issuer", "--compromised-at"], switches: [] },
+  verify: { required: ["--ring"], optional: ["--issuer"], switches: [] },
 };
 
 /** Run `argv` (a command and its flags); returns the lines to print, or throws. */
@@ -95,7 +107,7 @@ export async function keysAdmin(
   const kids = AS_SIGNING_ROLES.map((r) => roles[r].kid).join(", ");
   const role = flags.get("--role") as string;
   const kid = flags.get("--kid") as string;
-  const restart = "restart the AS to load it; it reads the ring only at boot";
+  const next = `next: start the AS with this ring, then \`pnpm keys verify --ring ${ring} --issuer ${issuer}\`; the edit is not in effect until then`;
 
   switch (command) {
     case "init": {
@@ -112,20 +124,41 @@ export async function keysAdmin(
     case "rotate": {
       if (switches.has("--activate")) {
         const done = await activateSigningKeyGeneration(ring, issuer, roles, role, { minPublishedS: JWKS_MAX_AGE_SECONDS });
-        return [
-          `activated ${done.kid} for ${role}; ${done.previous} stops signing and stays published in overlap`,
-          restart,
-        ].join("\n");
+        return [`activated ${done.kid} for ${role}; ${done.previous} stops signing and stays published in overlap`, next].join(
+          "\n",
+        );
       }
       const staged = await stageSigningKeyGeneration(ring, issuer, roles, role);
       return [
-        `staged ${staged.kid} for ${role}: published, not signing`,
-        `${restart}, now: the ${JWKS_MAX_AGE_SECONDS}s publication interval before \`pnpm keys rotate --ring ${ring} --role ${role} --activate\` counts from this staging`,
+        `staged ${staged.kid} for ${role}: to be published, not signing`,
+        `${next}. Activation waits ${JWKS_MAX_AGE_SECONDS}s from the publication that verification confirms`,
       ].join("\n");
     }
     case "retire": {
-      await retireSigningKeyGeneration(ring, issuer, roles, role, kid, { minRetentionS: AUDIT_HORIZON_SECONDS });
-      return [`retired ${kid} for ${role}: it leaves the AS's key set`, restart].join("\n");
+      const store = flags.get("--kernel-store") ?? env.MISSION_KERNEL_STORE?.trim();
+      if (store && switches.has("--in-memory-kernel")) throw new Error("name a --kernel-store or --in-memory-kernel, not both");
+      // An in-memory kernel's consents end with the process stopped for this edit.
+      const standingConsents = store
+        ? standingConsentsAttestedUnder(isAbsolute(store) ? store : resolve(env.INIT_CWD ?? cwd, store), kid)
+        : switches.has("--in-memory-kernel")
+          ? 0
+          : undefined;
+      await retireSigningKeyGeneration(ring, issuer, roles, role, kid, {
+        retention: {
+          auditHorizonS: AUDIT_HORIZON_SECONDS,
+          maxMissionLifetimeS: DERIVATION_POLICY.max_mission_lifetime_s,
+          ...(standingConsents !== undefined ? { standingConsents } : {}),
+        },
+      });
+      return [`retired ${kid} for ${role}: it leaves the AS's key set`, next].join("\n");
+    }
+    case "verify": {
+      const done = await verifySigningKeyRing(ring, issuer, roles);
+      const list = (kids: string[]) => (kids.length > 0 ? kids.join(", ") : "none new");
+      return [
+        `the AS at ${issuer} runs revision ${done.revision} of ${ring}`,
+        `confirmed published: ${list(done.published)}; stopped signing: ${list(done.stopped)}; withdrawn: ${list(done.withdrawn)}`,
+      ].join("\n");
     }
     case "compromise": {
       const raw = flags.get("--compromised-at");
@@ -134,7 +167,7 @@ export async function keysAdmin(
       const done = await compromiseSigningKeyGeneration(ring, issuer, roles, role, kid, compromisedAt ? { compromisedAt } : {});
       return [
         `withdrew ${kid} for ${role} as compromised${done.replacement ? `; ${done.replacement} replaces it as the signer` : ""}`,
-        "restart the AS now: until it restarts it keeps the key set it loaded, and a consumer keeps a key set it fetched until it fetches again",
+        `${next}. Until the AS restarts it keeps the key set it loaded; a consumer keeps a key set it fetched until it fetches again, and authorizes a replacement only through its own trusted rotation`,
       ].join("\n");
     }
   }

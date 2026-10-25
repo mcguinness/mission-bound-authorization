@@ -826,6 +826,12 @@ export interface AdapterOptions {
    * `subject_token` verifies under. `publicJwks` holds every AS role's key.
    */
   accessTokenJwks: { keys: Record<string, unknown>[] };
+  /**
+   * @spec #831 B2: the key ring revision the AS loaded, served as the
+   * `/jwks` `ETag` so verification can confirm which revision is running.
+   * Absent with keys generated at boot.
+   */
+  jwksRevision?: number;
   /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;
@@ -2786,6 +2792,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     if (ctx.method === "GET" && ctx.path === "/jwks" && ctx.status === 200) {
       ctx.body = { keys: opts.publicJwks.keys };
       ctx.set("cache-control", `max-age=${JWKS_MAX_AGE_SECONDS}`);
+      if (opts.jwksRevision !== undefined) ctx.set("etag", `"${opts.jwksRevision}"`);
     }
   });
 

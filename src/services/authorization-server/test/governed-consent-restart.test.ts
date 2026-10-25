@@ -28,8 +28,11 @@ import {
   type RegisteredActivationPolicy,
   type SigningKeySource,
   stageSigningKeyGeneration,
+  standingConsentsAttestedUnder,
   validateMissionIntent,
+  withdrawGovernedPolicyConsent,
 } from "../src/index.js";
+import { confirmRing } from "./ring-confirm.helper.js";
 
 const ISSUER = "http://localhost:14846";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource as string;
@@ -121,6 +124,7 @@ describe("a governed-policy consent across a restart (@spec approval-governance#
     const activate = await consentAcrossRestart(async () => {
       if (boots++ === 1) {
         await stageSigningKeyGeneration(ring, ISSUER, roles, "asStatus");
+        await confirmRing(ring, ISSUER, roles);
         await activateSigningKeyGeneration(ring, ISSUER, roles, "asStatus", {
           minPublishedS: JWKS_MAX_AGE_SECONDS,
           now: () => new Date(Date.now() + (JWKS_MAX_AGE_SECONDS + 1) * 1000),
@@ -144,6 +148,25 @@ describe("a governed-policy consent across a restart (@spec approval-governance#
       return { ring };
     });
     expect(activate).toThrow(expect.objectContaining({ code: "consent_unauthenticated" }));
+  });
+
+  it("retiring a Status generation counts, from the kernel store read without writing, the standing consents attested under it (#831 B2)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "governed-consent-count-"));
+    dirs.push(dir);
+    const file = join(dir, "kernel.db");
+    const ring = join(dir, "keys", "ring.json");
+    await initSigningKeyRing(ring, ISSUER, { asToken, asStatus, asTxn, asContinuation });
+    const as = await boot({ ring }, file);
+    const consent = recordGovernedPolicyConsent(as.kernel, {
+      root: { id: ROOT_ID, version: "1" },
+      approver: { iss: ISSUER, sub: "dana" },
+      consentEventId: `gpce-${crypto.randomUUID()}`,
+    });
+    expect(standingConsentsAttestedUnder(file, asStatus.kid)).toBe(1);
+    expect(standingConsentsAttestedUnder(file, `${asStatus.kid}-2`)).toBe(0);
+    expect(withdrawGovernedPolicyConsent(as.kernel, consent.consent_id)).toBe(true);
+    expect(standingConsentsAttestedUnder(file, asStatus.kid)).toBe(0);
+    as.kernel.close();
   });
 
   it("no longer verifies after a restart with keys generated at each boot: activation refuses consent_unauthenticated", async () => {

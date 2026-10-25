@@ -33,7 +33,7 @@ import type { ResourceContractDeclarations, ScopeProjectionMapping } from "@miss
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import {
   generateEphemeralSigningKeys,
-  loadSigningKeyRing,
+  loadSigningKeyRingState,
   SigningKeyRingError,
   type SigningKeySource,
 } from "./kernel/signing-key-ring.js";
@@ -180,8 +180,11 @@ export {
   JWKS_MAX_AGE_SECONDS,
   kernelStoreFromEnv,
   loadSigningKeyRing,
+  loadSigningKeyRingState,
   migrateSigningKeyRing,
   retireSigningKeyGeneration,
+  type SigningKeyRetention,
+  type SigningKeyRingVerification,
   type RoleSigningKeys,
   SIGNING_KEY_RING_FORMAT,
   SIGNING_KEY_RING_FORMAT_V1,
@@ -191,6 +194,7 @@ export {
   type SigningKeyState,
   signingKeysFromEnv,
   stageSigningKeyGeneration,
+  verifySigningKeyRing,
   type WithdrawnSigningKey,
 } from "./kernel/signing-key-ring.js";
 export {
@@ -654,6 +658,7 @@ export {
   type RecordedModelOutput,
   recordGovernedPolicyConsent,
   STANDARD_CLASS,
+  standingConsentsAttestedUnder,
   unclassifiedActions,
   validateGovernedPolicyApprovalConfig,
   withdrawGovernedPolicyConsent,
@@ -1413,10 +1418,11 @@ export async function buildAuthorizationServer(opts: {
   if ("ring" in keySource && opts.testTokenSigningJwk) {
     throw new SigningKeyRingError("testTokenSigningJwk cannot be combined with a key ring");
   }
-  const signing =
+  const ringState =
     "ring" in keySource
-      ? await loadSigningKeyRing(keySource.ring, opts.issuer, roleConfig)
-      : await generateEphemeralSigningKeys(roleConfig);
+      ? await loadSigningKeyRingState(keySource.ring, opts.issuer, roleConfig)
+      : { keys: await generateEphemeralSigningKeys(roleConfig) };
+  const signing = ringState.keys;
   // @spec #831 B2: each role signs under its active generation's `kid`; the
   // jwks_uri publishes every role's live set (pending, active and overlap
   // generations), and the AS's own verifiers accept a role's active and
@@ -1880,6 +1886,7 @@ export async function buildAuthorizationServer(opts: {
       ] as never,
     },
     publicJwks,
+    ...(ringState.revision !== undefined ? { jwksRevision: ringState.revision } : {}),
     accessTokenJwks: { keys: tokenVerification },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),

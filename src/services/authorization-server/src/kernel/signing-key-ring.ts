@@ -38,7 +38,17 @@
  *
  * The operations edit the file; a running AS reads it only at boot, so an
  * operation takes effect at the AS's next start, and a consumer that
- * fetched the key set once sees the change only when it fetches again.
+ * fetched the key set once sees the change only when it fetches again. A
+ * successful edit is therefore not a completed change. Each change follows
+ * one procedure: stop the AS, edit the ring, start the AS, and verify
+ * ({@link verifySigningKeyRing}). Every edit advances the ring's
+ * `revision`, the AS serves the revision it loaded as its `/jwks` `ETag`,
+ * and verification records, from the running AS's own `/jwks`, when a
+ * generation was first published (`published_at`), when the AS was
+ * confirmed to have stopped signing under it (`stop_confirmed_at`), and when
+ * it was confirmed withdrawn (`withdrawal_confirmed_at`). The floors read
+ * only those confirmed times. One operator edits a ring at a time: the
+ * operations take no lock.
  */
 
 import { randomBytes } from "node:crypto";
@@ -211,6 +221,9 @@ interface StoredGeneration {
   retired_at?: string;
   revoked_at?: string;
   compromised_at?: string;
+  published_at?: string;
+  stop_confirmed_at?: string;
+  withdrawal_confirmed_at?: string;
   public_jwk: Record<string, unknown>;
   private_jwk?: Record<string, unknown>;
 }
@@ -218,6 +231,7 @@ interface StoredGeneration {
 interface StoredRing {
   format: typeof SIGNING_KEY_RING_FORMAT;
   issuer: string;
+  revision: number;
   created_at: string;
   updated_at: string;
   roles: Record<AsSigningRole, { alg: string; generations: StoredGeneration[] }>;
@@ -257,6 +271,7 @@ export async function initSigningKeyRing(
   const ring: StoredRing = {
     format: SIGNING_KEY_RING_FORMAT,
     issuer,
+    revision: 1,
     created_at: created,
     updated_at: created,
     roles: {} as StoredRing["roles"],
@@ -379,13 +394,36 @@ const isTime = (v: unknown): v is string => typeof v === "string" && !Number.isN
 
 /** The times each state carries (required) and may carry (optional); every other time is refused. */
 const STATE_TIMES: Record<SigningKeyState, { required: readonly string[]; optional: readonly string[] }> = {
-  pending: { required: [], optional: [] },
-  active: { required: ["activated_at"], optional: [] },
-  overlap: { required: ["activated_at", "stopped_at"], optional: [] },
-  retired: { required: ["retired_at"], optional: ["activated_at", "stopped_at"] },
-  compromised: { required: ["revoked_at"], optional: ["activated_at", "stopped_at", "retired_at", "compromised_at"] },
+  pending: { required: [], optional: ["published_at"] },
+  active: { required: ["activated_at"], optional: ["published_at"] },
+  overlap: { required: ["activated_at", "stopped_at"], optional: ["published_at", "stop_confirmed_at"] },
+  retired: {
+    required: ["retired_at"],
+    optional: ["activated_at", "stopped_at", "published_at", "stop_confirmed_at", "withdrawal_confirmed_at"],
+  },
+  compromised: {
+    required: ["revoked_at"],
+    optional: [
+      "activated_at",
+      "stopped_at",
+      "retired_at",
+      "compromised_at",
+      "published_at",
+      "stop_confirmed_at",
+      "withdrawal_confirmed_at",
+    ],
+  },
 };
-const LIFECYCLE_TIMES = ["activated_at", "stopped_at", "retired_at", "revoked_at", "compromised_at"] as const;
+const LIFECYCLE_TIMES = [
+  "activated_at",
+  "stopped_at",
+  "retired_at",
+  "revoked_at",
+  "compromised_at",
+  "published_at",
+  "stop_confirmed_at",
+  "withdrawal_confirmed_at",
+] as const;
 
 /**
  * A `/2` ring, checked whole before anything is used: every role at its
@@ -513,9 +551,33 @@ export async function loadSigningKeyRing(
   issuer: string,
   roles: Record<AsSigningRole, SigningRoleConfig>,
 ): Promise<AsSigningKeys> {
+  return (await loadSigningKeyRingState(file, issuer, roles)).keys;
+}
+
+/** A `/2` ring's revision: a positive integer every key-state operation advances. */
+function revisionOf(file: string, ring: Record<string, unknown>): number {
+  const revision = ring.revision;
+  if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 1) {
+    throw new SigningKeyRingError(`${file} has no revision`);
+  }
+  return revision;
+}
+
+/**
+ * {@link loadSigningKeyRing}, with the ring's revision: what the AS serves
+ * as its `/jwks` `ETag`, so verification can tell which revision a running
+ * AS loaded. A slice 1 ring has none.
+ */
+export async function loadSigningKeyRingState(
+  file: string,
+  issuer: string,
+  roles: Record<AsSigningRole, SigningRoleConfig>,
+): Promise<{ keys: AsSigningKeys; revision?: number }> {
   const { ring } = readRing(file, issuer);
   const stored = checkHeader(file, ring, issuer);
-  return ring.format === SIGNING_KEY_RING_FORMAT_V1 ? resolveV1(file, stored, roles) : resolveV2(file, stored, roles);
+  if (ring.format === SIGNING_KEY_RING_FORMAT_V1) return { keys: await resolveV1(file, stored, roles) };
+  const revision = revisionOf(file, ring);
+  return { keys: await resolveV2(file, stored, roles), revision };
 }
 
 /**
@@ -568,6 +630,7 @@ export async function migrateSigningKeyRing(
   const next: StoredRing = {
     format: SIGNING_KEY_RING_FORMAT,
     issuer,
+    revision: 1,
     created_at: created,
     updated_at: now().toISOString(),
     roles: {} as StoredRing["roles"],
@@ -598,8 +661,10 @@ export async function migrateSigningKeyRing(
 
 /**
  * Apply `change` to the `/2` ring at `file`, checking the ring whole before
- * and after, and replace the file only when both checks pass. A `/1` ring is
- * refused with the migration step to run first.
+ * and after, and replace the file only when both checks pass. A key-state
+ * change advances the revision; a verification only records confirmations,
+ * so the running AS still serves the ring's revision. A `/1` ring is refused
+ * with the migration step to run first.
  */
 async function updateRing<R>(
   file: string,
@@ -607,6 +672,7 @@ async function updateRing<R>(
   roles: Record<AsSigningRole, SigningRoleConfig>,
   now: () => Date,
   change: (ring: StoredRing, at: string) => Promise<R>,
+  advance = true,
 ): Promise<R> {
   const { raw, ring } = readRing(file, issuer);
   const stored = checkHeader(file, ring, issuer);
@@ -615,11 +681,13 @@ async function updateRing<R>(
       `${file} is a ${SIGNING_KEY_RING_FORMAT_V1} ring; convert it first with \`pnpm keys migrate --ring ${file} --issuer ${issuer}\``,
     );
   }
+  const revision = revisionOf(file, ring);
   await resolveV2(file, stored, roles);
   const next = structuredClone(ring) as unknown as StoredRing;
   const at = now().toISOString();
   const result = await change(next, at);
   next.updated_at = at;
+  if (advance) next.revision = revision + 1;
   await resolveV2(file, next.roles as unknown as Record<string, Record<string, unknown>>, roles);
   replaceRing(file, raw, next);
   return result;
@@ -683,9 +751,11 @@ export async function stageSigningKeyGeneration(
  * Rotation, second step: the pending generation of `role` becomes `active`,
  * and the active one moves to `overlap`, where it signs nothing, loses its
  * private key, and stays published and accepted. Refuses until the pending
- * generation has been published for `minPublishedS` seconds, so a consumer
+ * generation has been confirmed published by the running AS
+ * ({@link verifySigningKeyRing}) for `minPublishedS` seconds, so a consumer
  * honoring the `/jwks` freshness lifetime ({@link JWKS_MAX_AGE_SECONDS})
- * holds it before anything is signed under it.
+ * holds it before anything is signed under it. Staging alone publishes
+ * nothing.
  */
 export async function activateSigningKeyGeneration(
   file: string,
@@ -701,10 +771,15 @@ export async function activateSigningKeyGeneration(
     if (!pending) {
       throw new SigningKeyRingError(`${name} has no pending generation; stage one with \`pnpm keys rotate --role ${name}\``);
     }
-    const published = secondsBetween(pending.created_at, at);
+    if (!pending.published_at) {
+      throw new SigningKeyRingError(
+        `${pending.kid} is not confirmed published: start the AS with this ring, then run \`pnpm keys verify\``,
+      );
+    }
+    const published = secondsBetween(pending.published_at, at);
     if (published < opts.minPublishedS) {
       throw new SigningKeyRingError(
-        `${pending.kid} has been published for ${published}s; activation needs ${opts.minPublishedS}s, ${opts.minPublishedS - published}s more`,
+        `${pending.kid} has been confirmed published for ${published}s; activation needs ${opts.minPublishedS}s, ${opts.minPublishedS - published}s more`,
       );
     }
     const active = generations.find((g) => g.state === "active") as StoredGeneration;
@@ -717,14 +792,37 @@ export async function activateSigningKeyGeneration(
   });
 }
 
+/** What retiring a generation must outlast: the deployment's horizons, and the standing consents attested under it. */
+export interface SigningKeyRetention {
+  /** The deployment's audit horizon (`policy.audit_horizon_s`), in seconds. */
+  auditHorizonS: number;
+  /** The longest Mission lifetime (`policy.max_mission_lifetime_s`), or null when unbounded. */
+  maxMissionLifetimeS: number | null;
+  /**
+   * For an `asStatus` generation: the governed-policy consents not withdrawn
+   * whose attestation names its `kid`. Undefined when unknown.
+   */
+  standingConsents?: number;
+}
+
 /**
  * Remove generation `kid` of `role` from the live set: it leaves `/jwks` and
  * the AS's own verifiers, keeping only its public key in the ring's record.
- * An `overlap` generation retires only once `minRetentionS` (the audit
- * horizon) has passed since it stopped signing, so everything it signed stays
- * verifiable for that long. A `pending` generation never signed, so retiring
- * it needs no wait; that is how a staged rotation is abandoned. The active
- * generation is refused: activate a successor first.
+ *
+ * An `overlap` generation retires only after its retention deadline: the
+ * time the running AS was confirmed to have stopped signing under it
+ * (`stop_confirmed_at`), plus the longer of the audit horizon and the
+ * longest Mission lifetime. A Mission whose artifacts it signed was created
+ * no later than that, and its record is retained for its audit horizon,
+ * which covers its lifetime. With no Mission lifetime bound, or no confirmed
+ * stop, no deadline can be established, and retirement is refused. An
+ * `asStatus` generation is also refused while any standing governed-policy
+ * consent is attested under it: retirement does not expire a consent. After
+ * the AS stopped signing under a generation, that count only falls.
+ *
+ * A `pending` generation never signed, so retiring it needs no wait; that is
+ * how a staged rotation is abandoned. The active generation is refused:
+ * activate a successor first.
  */
 export async function retireSigningKeyGeneration(
   file: string,
@@ -732,7 +830,7 @@ export async function retireSigningKeyGeneration(
   roles: Record<AsSigningRole, SigningRoleConfig>,
   role: string,
   kid: string,
-  opts: { minRetentionS: number; now?: () => Date },
+  opts: { retention: SigningKeyRetention; now?: () => Date },
 ): Promise<{ kid: string }> {
   const name = roleOf(role);
   return updateRing(file, issuer, roles, opts.now ?? (() => new Date()), async (ring, at) => {
@@ -743,11 +841,33 @@ export async function retireSigningKeyGeneration(
     }
     if (g.state === "retired" || g.state === "compromised") throw new SigningKeyRingError(`${kid} is already ${g.state}`);
     if (g.state === "overlap") {
-      const since = secondsBetween(g.stopped_at as string, at);
-      if (since < opts.minRetentionS) {
+      const { auditHorizonS, maxMissionLifetimeS, standingConsents } = opts.retention;
+      if (!g.stop_confirmed_at) {
         throw new SigningKeyRingError(
-          `${kid} stopped signing at ${g.stopped_at}; it stays published for the audit horizon (${opts.minRetentionS}s), ${opts.minRetentionS - since}s more`,
+          `${kid} is not confirmed to have stopped signing: start the AS with this ring, then run \`pnpm keys verify\``,
         );
+      }
+      if (maxMissionLifetimeS === null) {
+        throw new SigningKeyRingError(
+          `no retention deadline can be established for ${kid}: the Mission lifetime is unbounded (policy.max_mission_lifetime_s is null)`,
+        );
+      }
+      const retainS = Math.max(auditHorizonS, maxMissionLifetimeS);
+      const since = secondsBetween(g.stop_confirmed_at, at);
+      if (since < retainS) {
+        throw new SigningKeyRingError(
+          `${kid} was confirmed to have stopped signing at ${g.stop_confirmed_at}; it stays published for ${retainS}s (the audit horizon, covering the longest Mission lifetime), ${retainS - since}s more`,
+        );
+      }
+      if (name === "asStatus") {
+        if (standingConsents === undefined) {
+          throw new SigningKeyRingError(`the standing governed-policy consents attested under ${kid} are unknown; name the kernel store`);
+        }
+        if (standingConsents > 0) {
+          throw new SigningKeyRingError(
+            `${standingConsents} standing governed-policy consent(s) are attested under ${kid}; retirement does not expire a consent`,
+          );
+        }
       }
     }
     g.state = "retired";
@@ -800,6 +920,102 @@ export async function compromiseSigningKeyGeneration(
     if (replacement) ring.roles[name].generations.push(replacement);
     return { kid, ...(replacement ? { replacement: replacement.kid } : {}) };
   });
+}
+
+/** What a verification of the running AS confirmed. */
+export interface SigningKeyRingVerification {
+  revision: number;
+  /** Generations first confirmed published by this verification. */
+  published: string[];
+  /** Generations first confirmed no longer signing. */
+  stopped: string[];
+  /** Generations first confirmed withdrawn from `/jwks`. */
+  withdrawn: string[];
+}
+
+/**
+ * The procedure's last step: confirm, from the running AS's own published
+ * key set, that it loaded this ring, and record what that confirms. The
+ * `jwks_uri` comes from the issuer's metadata. Refuses, recording nothing,
+ * unless that `/jwks` carries this ring's revision as its `ETag` and
+ * publishes exactly the ring's pending, active and overlap generations. Then
+ * it records, where not yet recorded: `published_at` for each generation
+ * published; `stop_confirmed_at` for each that has signed and is no longer
+ * active; and `withdrawal_confirmed_at` for each retired or compromised one.
+ * It does not advance the revision.
+ */
+export async function verifySigningKeyRing(
+  file: string,
+  issuer: string,
+  roles: Record<AsSigningRole, SigningRoleConfig>,
+  opts: { fetch?: (url: string) => Promise<Response>; now?: () => Date } = {},
+): Promise<SigningKeyRingVerification> {
+  const get = opts.fetch ?? ((url: string) => fetch(url));
+  const metadataUrl = `${issuer.replace(/\/$/, "")}/.well-known/openid-configuration`;
+  let metadata: Record<string, unknown>;
+  try {
+    const res = await get(metadataUrl);
+    if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
+    metadata = (await res.json()) as Record<string, unknown>;
+  } catch (e) {
+    throw new SigningKeyRingError(`cannot read the AS's metadata at ${metadataUrl}: ${(e as Error).message}`);
+  }
+  if (metadata.issuer !== issuer || typeof metadata.jwks_uri !== "string") {
+    throw new SigningKeyRingError(`${metadataUrl} is not ${issuer}'s metadata with a jwks_uri`);
+  }
+  const jwksUri = metadata.jwks_uri;
+  let etag: string | null;
+  let liveKids: string[];
+  try {
+    const res = await get(jwksUri);
+    if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
+    etag = res.headers.get("etag");
+    const body = (await res.json()) as { keys?: Record<string, unknown>[] };
+    liveKids = (body.keys ?? []).map((k) => String(k.kid)).sort();
+  } catch (e) {
+    throw new SigningKeyRingError(`cannot read ${jwksUri}: ${(e as Error).message}`);
+  }
+  return updateRing(
+    file,
+    issuer,
+    roles,
+    opts.now ?? (() => new Date()),
+    async (ring, at) => {
+      if (etag !== `"${ring.revision}"`) {
+        throw new SigningKeyRingError(
+          `the running AS serves revision ${etag ?? "(none)"}, not this ring's "${ring.revision}": restart it with this ring, then verify again`,
+        );
+      }
+      const generations = AS_SIGNING_ROLES.flatMap((r) => ring.roles[r].generations);
+      const expected = generations
+        .filter((g) => g.state === "pending" || g.state === "active" || g.state === "overlap")
+        .map((g) => g.kid)
+        .sort();
+      if (JSON.stringify(liveKids) !== JSON.stringify(expected)) {
+        throw new SigningKeyRingError(
+          `${jwksUri} publishes ${liveKids.join(", ")}, not this ring's live set ${expected.join(", ")}`,
+        );
+      }
+      const confirmed: SigningKeyRingVerification = { revision: ring.revision, published: [], stopped: [], withdrawn: [] };
+      for (const g of generations) {
+        const live = g.state === "pending" || g.state === "active" || g.state === "overlap";
+        if (live && !g.published_at) {
+          g.published_at = at;
+          confirmed.published.push(g.kid);
+        }
+        if (g.state !== "active" && g.activated_at && !g.stop_confirmed_at) {
+          g.stop_confirmed_at = at;
+          confirmed.stopped.push(g.kid);
+        }
+        if ((g.state === "retired" || g.state === "compromised") && !g.withdrawal_confirmed_at) {
+          g.withdrawal_confirmed_at = at;
+          confirmed.withdrawn.push(g.kid);
+        }
+      }
+      return confirmed;
+    },
+    false,
+  );
 }
 
 /** How the AS obtains its signing keys. */
