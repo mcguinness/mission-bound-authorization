@@ -3467,5 +3467,45 @@ describe("a requested family set the projection cannot issue whole is refused, n
       "payments:remittance.send",
     ]);
   });
-});
 
+  // @spec mission#subset (#1513 review): an entry the projection drops is
+  // refused even beside an entry for the same action that is issued and covers
+  // it once bindings are set aside; the binding the Mission records is issued.
+  it("an entry the projection drops is refused beside an overlapping entry that is issued; the recorded binding is issued", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const action = "payments:invoice.read";
+    const binding = (as.kernel.get(missionId)?.authority_set ?? [])
+      .flatMap((e) => e.capability_sources ?? [])
+      .find((b) => b.action === action);
+    expect(binding, "the base Mission records a binding for the read action").toBeDefined();
+    const recorded = binding as NonNullable<typeof binding>;
+    const kept = entryOf([action]);
+    const narrower = { ...LIMITS, max_amount: { amount: "100.00", currency: "USD" } };
+    const cases = [
+      // The recorded binding with another definition's digest.
+      { ...entryOf([action], narrower), capability_sources: [{ ...recorded, source_digest: `sha-256:${"A".repeat(43)}` }] },
+      // An empty vendor list, which the kept entry's vendors cover.
+      entryOf([action], { ...LIMITS, vendors: [] }),
+    ];
+    for (const poisoned of cases) {
+      for (const details of [[poisoned], [kept, poisoned]]) {
+        const handle = await delegationHandle(baseAccessToken);
+        const countBefore = as.kernel.get(missionId)?.derivation_count;
+        const res = await asyncDelegate(handle, { rawSubject: true, authorizationDetails: details });
+        const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+        expect(res.status, JSON.stringify({ details, body })).toBe(400);
+        expect(body.error).toBe("invalid_authorization_details");
+        expect(body.error_description).toBe("requested authorization_details cannot be issued whole");
+        expect(body.access_token).toBeUndefined();
+        expect(as.delegationFamilyStore.familiesForMission(missionId)).toEqual([]);
+        expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+      }
+    }
+    const named = { ...entryOf([action], narrower), capability_sources: [recorded] };
+    const ok = await asyncDelegate(baseAccessToken, { authorizationDetails: [kept, named] });
+    const okBody = (await ok.json()) as { authorization_details?: Array<{ capability_sources?: unknown[] }> };
+    expect(ok.status, JSON.stringify(okBody)).toBe(200);
+    expect(okBody.authorization_details).toHaveLength(2);
+    expect(okBody.authorization_details?.every((e) => JSON.stringify(e.capability_sources) === JSON.stringify([recorded]))).toBe(true);
+  });
+});

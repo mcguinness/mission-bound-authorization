@@ -18,7 +18,7 @@ import { errors, type KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import { malformedMatcherInRequest, refusedMemberInRequest } from "../kernel/authorization-details-metadata.js";
-import { projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
+import { issuedWhole, projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { GateError } from "../kernel/kernel.js";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
@@ -287,10 +287,8 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
     }
     authority = projectThroughEffective(requested, effective);
     // @spec mission#subset, mission#error-mapping (#1513; #1508, D625): every
-    // requested entry is issued whole, or the request is refused. The
-    // comparison sets `capability_sources` aside, as the checks above do: an
-    // issued entry carries the Mission's bindings where the request names none.
-    if (!isSubsetSetIgnoringCapabilitySources(requested, authority)) {
+    // requested entry is issued whole, or the request is refused.
+    if (!issuedWhole(requested, effective)) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details cannot be issued whole");
       return;
     }
