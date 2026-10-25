@@ -279,6 +279,38 @@ export function lifecycleMissionError(
 }
 
 /**
+ * @spec derivation-limits#counted-operations (#935, D772): the derivations a
+ * token request counted without a reservation, by request, for
+ * {@link settleCountedDerivations}.
+ */
+const derivationsCountedBy = new WeakMap<object, string[]>();
+
+/** Record that the token request `ctx` counted one derivation against `missionId`; nothing outside a request. */
+export function noteCountedDerivation(ctx: unknown, missionId: string): void {
+  if (!ctx || typeof ctx !== "object") return;
+  const counted = derivationsCountedBy.get(ctx);
+  if (counted) counted.push(missionId);
+  else derivationsCountedBy.set(ctx, [missionId]);
+}
+
+/**
+ * @spec derivation-limits#counted-operations (#935, D772): settle the
+ * derivations `ctx` counted: a response other than 200, or an exception that
+ * escaped the request after its response was prepared (Koa then answers 500),
+ * delivered no token, so each one failed in process before any artifact left
+ * and is returned. A 200 that completed settles nothing, a 200 the release
+ * fence then refuses included: that Mission has ended, and the fence refunds
+ * nothing (D771).
+ */
+function settleCountedDerivations(kernel: MissionKernel, ctx: { status: number }, threw: boolean): void {
+  const counted = derivationsCountedBy.get(ctx);
+  if (!counted) return;
+  derivationsCountedBy.delete(ctx);
+  if (ctx.status === 200 && !threw) return;
+  for (const missionId of counted) kernel.refundDerivation(missionId);
+}
+
+/**
  * @spec mission#issuance-gating, status#mission-lifecycle-endpoint — map a
  * kernel {@link GateError} onto the `mission_error` diagnostic value, where
  * one applies. `reason` alone is not enough: `mission_not_active` covers
@@ -538,6 +570,7 @@ import {
   DispatchMismatchError,
   findDispatch,
   pinDispatchPolicy,
+  recordDispatchDelivery,
   TemplateError,
   type CreateTemplateInput,
   type DispatchInput,
@@ -2412,8 +2445,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // MissionKernel.reserveDerivation}). The conditional write still
         // prevents cap overshoot; coupling the count to THIS artifact needs the
         // provider's issuance state recorded transactionally before delivery,
-        // which this slice does not build.
+        // which this slice does not build. A failure this request observes
+        // before the token leaves returns the count (#935, D772); a crash or
+        // a lost response does not, and stays counted.
         const gated = missionGate(target, "issue");
+        noteCountedDerivation(_ctx, record.id);
         // @spec child-delegation#parent-member + expansion#predecessor-member — a
         // Child Mission projects the `parent` lineage member; a successor Mission
         // projects the `predecessor` lineage member (its predecessor's mission_id),
@@ -2746,6 +2782,23 @@ export function buildProvider(opts: AdapterOptions): Provider {
     }
   });
 
+  // @spec derivation-limits#counted-operations (#935, D772): settles the
+  // derivations a request counted without a reservation. Registered after the
+  // fence, so it runs inside it: its code after `next()` sees the response the
+  // grant produced, or the exception that escaped it, before the fence
+  // decides, and awaits nothing.
+  provider.use(async (ctx, next) => {
+    let threw = false;
+    try {
+      await next();
+    } catch (e) {
+      threw = true;
+      throw e;
+    } finally {
+      settleCountedDerivations(kernel, ctx, threw);
+    }
+  });
+
   // @spec device-authorization#request (#1202): the device authorization
   // intake, before the provider parses the request (Provider#use splices it
   // ahead of the route dispatcher).
@@ -2818,7 +2871,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
   if (grantEnabled.get(MISSION_DISPATCH_GRANT_TYPE)) {
     provider.registerGrantType(
       MISSION_DISPATCH_GRANT_TYPE,
-      (ctx) => handleMissionDispatchGrant(provider, opts, ctx),
+      (ctx) => serializeDispatch(opts.kernel, ctx, () => handleMissionDispatchGrant(provider, opts, ctx)),
       // `authorization_details` carries the dispatcher's authority proposal
       // (@spec mission#authority-proposal), the same standard carriage as PAR
       // and the child/expansion exchanges; it MUST be declared here or
@@ -6295,6 +6348,41 @@ function dispatchErrorCode(reason: DispatchReason): "invalid_request" | "access_
  * oidc-provider's err_out renderer would otherwise strip any member other
  * than error/error_description (same technique as handleChildCreationExchange).
  */
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery (#250): the
+ * Dispatches in flight, by reservation key (authenticated Dispatcher,
+ * dispatch_event_id), per kernel.
+ */
+const dispatchesInFlight = new WeakMap<MissionKernel, Map<string, Promise<void>>>();
+
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery (#250): one
+ * Dispatch per reservation key runs at a time. A concurrent request with the
+ * same key waits for the one in flight, then looks the key up again and
+ * reads the delivery it recorded, so concurrent retries recover one token
+ * and count it once. Instance-level serialization for the declared
+ * one-process topology, as the kernel's exclusive derivations are;
+ * multi-process claiming stays behind #641.
+ */
+async function serializeDispatch(kernel: MissionKernel, ctx: KoaContextWithOIDC, run: () => Promise<void>): Promise<void> {
+  const eventId = (ctx.oidc.params as Record<string, unknown>).dispatch_event_id;
+  const clientId = ctx.oidc.client?.clientId;
+  if (typeof eventId !== "string" || !eventId || !clientId) return run();
+  const key = `${clientId}\u0000${eventId}`;
+  let inFlight = dispatchesInFlight.get(kernel);
+  if (!inFlight) dispatchesInFlight.set(kernel, (inFlight = new Map()));
+  for (let held = inFlight.get(key); held; held = inFlight.get(key)) {
+    await held.catch(() => undefined);
+  }
+  const attempt = run();
+  inFlight.set(key, attempt);
+  try {
+    await attempt;
+  } finally {
+    if (inFlight.get(key) === attempt) inFlight.delete(key);
+  }
+}
+
 async function handleMissionDispatchGrant(
   provider: Provider,
   opts: AdapterOptions,
@@ -6448,8 +6536,11 @@ async function handleMissionDispatchGrant(
   // the completed-operation recovery lookup runs after possession verification
   // and BEFORE evidence re-verification and the gates.
   let record: MissionRecord | undefined;
+  let recovery: { delivery?: Record<string, unknown> } | undefined;
   try {
-    record = findDispatch(kernel, store, dispatchInput)?.mission;
+    const found = findDispatch(kernel, store, dispatchInput);
+    record = found?.mission;
+    recovery = found?.recovered;
   } catch (e) {
     if (dispatchFailure(e)) return;
     ctx.status = 400;
@@ -6504,6 +6595,16 @@ async function handleMissionDispatchGrant(
   // details projects the EFFECTIVE set (approved minus containment overlay).
   const effective = kernel.effectiveAuthoritySet(record);
   const resource = effective[0]?.resource ?? opts.issuer;
+  // @spec mission-template#grant-type, expansion#creation-recovery: a repeated
+  // dispatch_event_id is gated to the previously committed instance rather
+  // than derived again: the retry recovers the token the Dispatch delivered,
+  // counting nothing. A retry that cannot recover it falls through to the
+  // gated mint below: an inactive instance is refused by its own gate, and an
+  // expired or narrowed delivery is re-minted as a delivery event, never as a
+  // second Dispatch.
+  if (recovery && replayDispatchDelivery(ctx, kernel, record, recovery.delivery, audienceCarriedEntries(record, [resource], effective))) {
+    return;
+  }
   let grantId: string;
   if (record.grant_id) {
     grantId = record.grant_id;
@@ -6540,6 +6641,13 @@ async function handleMissionDispatchGrant(
   at.jkt = jkt; // sender-constrain to the dispatcher's DPoP key (tokenType -> DPoP)
   ctx.oidc.entity("AccessToken", at);
   const jwt = await at.save();
+  // @spec mission-template#grant-type: recorded under the reservation key, so
+  // a lost-response retry recovers this token rather than deriving again.
+  recordDispatchDelivery(kernel, dispatchInput, {
+    access_token: jwt,
+    exp: decodeJwt(jwt).exp,
+    authorization_details: carried,
+  });
 
   ctx.status = 200;
   ctx.body = {
@@ -6555,6 +6663,44 @@ async function handleMissionDispatchGrant(
     authorization_details: carried,
   };
   ctx.set("cache-control", "no-store");
+}
+
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery: answer a
+ * Dispatch retry with the access token the Dispatch already delivered. True
+ * when it answered; false when the retry must mint instead: no delivery is
+ * recorded, the token has expired, the instance is no longer active, or the
+ * token carries other authority than the instance's token would carry now.
+ */
+function replayDispatchDelivery(
+  ctx: KoaContextWithOIDC,
+  kernel: MissionKernel,
+  record: MissionRecord,
+  stored: Record<string, unknown> | undefined,
+  carriedNow: unknown[],
+): boolean {
+  const token = stored?.access_token;
+  const exp = stored?.exp;
+  if (typeof token !== "string" || typeof exp !== "number") return false;
+  const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
+  if (exp <= nowS) return false;
+  if (kernel.applyExpiry(record).state !== "active") return false;
+  if (JSON.stringify(stored?.authorization_details) !== JSON.stringify(carriedNow)) return false;
+  const scope = decodeJwt(token).scope;
+  ctx.status = 200;
+  ctx.body = {
+    access_token: token,
+    token_type: "DPoP",
+    expires_in: exp - nowS,
+    // @spec mission#scope-projection: the stored token's own projected scope.
+    ...(typeof scope === "string" ? { scope } : {}),
+    mission_id: record.id,
+    // @spec mission#grant-binding: the committed effective expiry, verbatim.
+    mission_expires_at: record.expires_at,
+    authorization_details: carriedNow,
+  };
+  ctx.set("cache-control", "no-store");
+  return true;
 }
 
 /**

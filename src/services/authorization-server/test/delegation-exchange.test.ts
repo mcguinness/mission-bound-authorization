@@ -1021,7 +1021,7 @@ describe("one counting and settlement path (@spec mission#delegation, derivation
     expect(derivations(on, missionId)).toBe(before);
   });
 
-  it("a save refused after the count leaves the count spent with no token and no record (the recorded residual)", async () => {
+  it("a save refused after the count fails the request, which returns the count, with no token and no record (#935, D772)", async () => {
     const { missionId, accessToken } = await baseMission(on);
     const designation = (await designate(on, accessToken, SUBAGENT)).body.access_token as string;
     const before = derivations(on, missionId);
@@ -1037,7 +1037,7 @@ describe("one counting and settlement path (@spec mission#delegation, derivation
     const jti = (recorded.mock.calls[0]?.[0] as { jti: string }).jti;
     recorded.mockRestore();
     expect(on.as.tokenIssuanceStore.resolve(on.issuer, jti)).toBeUndefined();
-    expect(derivations(on, missionId)).toBe(before + 1);
+    expect(derivations(on, missionId)).toBe(before);
   });
 });
 

@@ -8413,7 +8413,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a failed or refused derivation leaves the derivation count unchanged",
-    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); and a failure AFTER admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back. NOT covered, because the reference does not meet the clause there (#914 ruling 1; #250): the provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint) commits the count before signing with no rollback, reservation or acceptance callback, so a failure after the count stays counted (documented by derivation-counting.test.ts > residual: the provider access-token hook counts before signing ...); and the ID-JAG continuation reserves before minting, so a grant that fails after admission (a state change between the exchange's audience-scoped authority check, which refuses before admission and counts nothing, and the gate) stays counted under an unreleased jti-keyed reservation until an authoritative non-acceptance returns it (continuation-grant.test.ts > residual: a continuation grant that fails after admission ..., driven at issueCrossDomainGrant). Partial until those paths stop counting a failed derivation"
+    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200 or fails by an exception after its response was prepared; the ID-JAG continuation settles its own fresh reservation as not accepted. NOT covered: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted (#250 step 3); a replayed reservation that fails again stays counted, since an earlier attempt's artifact may have been accepted; and a Dispatch Handoff redemption that fails after its reservation keeps it for the retry that replays it. Partial on those."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -8441,9 +8441,39 @@
      "name": "one counting and settlement path (@spec mission#delegation, derivation-limits#counted-operations) > an accounting record that cannot be written refuses, with nothing counted and no token",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > the provider access-token hook: a code exchange that fails after the count, before the token leaves, returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > the delegation handle exchange: a save that fails after the count, before the handle leaves, returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "one counting and settlement path (@spec mission#delegation, derivation-limits#counted-operations) > a save refused after the count fails the request, which returns the count, with no token and no record (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "a continuation ID-JAG that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a continuation grant that fails after admission settles its own reservation as not accepted: the count returns (#935, D772)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a failure that escapes the request after its response was prepared (the request-path drain throws) answers 500 and returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869: a delegated exchange whose accounting cannot be recorded counts nothing; a save refused after the count still spends it (the uncoupled counter)."
+   "notes": "#869: a delegated exchange whose accounting cannot be recorded counts nothing; a save refused after the count is settled (#935, D772)."
   },
   {
    "id": "derivation-limits.counting.async-family-refreshes-uncounted",
@@ -9139,7 +9169,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "after a revocation is acknowledged, a Token Exchange is refused `invalid_request` and any other grant, refresh included, `invalid_grant`, and nothing is issued",
-    "local": "the reference re-reads Mission state at release (the release fence, #1498), after the save-time gate, the signature and the request-path drain, on every 200 that releases an access token naming a Mission this AS issues, a stored result served again included; it orders a revocation against an issuance within one process only (#641). Every fenced path is witnessed with the fence disabled delivering a token: the code exchange, refresh and the async family's refresh, the device code grant, the deferred grant (AROP, Mission approval and expansion deferrals), the JWT-bearer grant (child and Dispatch Handoff redemption), the Mission dispatch grant, the delegation-handle, async-delegation, designation, delegated-redemption, child-creation, ceiling-drawdown and Dispatch Handoff exchanges, and the async-delegation and expansion stored results. A refusal carries mission_error with the released Mission's own termination reason (parent_terminated for a child whose parent was revoked). The ICA continuation exchange answers ICA's codes (core.issuance-gating.profile-code-override) and the transaction endpoint access_denied. Work committed before the fence stays spent: the Dispatch Handoff redemption's counted derivation and consumed grant, the designation and delegated redemption's counted derivation, the AROP and Mission approval deferrals' redemption, and an expansion successor's recorded delivery, which recovery never serves because it refuses the terminated successor first (#250)"
+    "local": "the reference re-reads Mission state at release (the release fence, #1498), after the save-time gate, the signature and the request-path drain, on every 200 that releases an access token naming a Mission this AS issues, a stored result served again included; it orders a revocation against an issuance within one process only (#641). Every fenced path is witnessed with the fence disabled delivering a token: the code exchange, refresh and the async family's refresh, the device code grant, the deferred grant (AROP, Mission approval and expansion deferrals), the JWT-bearer grant (child and Dispatch Handoff redemption), the Mission dispatch grant, the delegation-handle, async-delegation, designation, delegated-redemption, child-creation, ceiling-drawdown and Dispatch Handoff exchanges, and the async-delegation, expansion and Mission dispatch stored results. A refusal carries mission_error with the released Mission's own termination reason (parent_terminated for a child whose parent was revoked). The ICA continuation exchange answers ICA's codes (core.issuance-gating.profile-code-override) and the transaction endpoint access_denied. Work committed before the fence stays spent: the Dispatch Handoff redemption's counted derivation and consumed grant, the designation and delegated redemption's counted derivation, the AROP and Mission approval deferrals' redemption, and an expansion successor's recorded delivery, which recovery never serves because it refuses the terminated successor first (#250)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -9315,6 +9345,12 @@
     {
      "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
      "name": "the release fence on the delegation paths (@spec mission#issuance-gating, #250) > a stored result served again: the stored family replayed to a retry is refused invalid_request with mission_error revoked and no token member when the Mission is revoked while the replay's request-path drain runs",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "the release fence on the Mission dispatch grant (@spec mission#issuance-gating, #250) > a recovered delivery: a Dispatch retry whose instance is revoked while the retry's request-path drain runs is refused invalid_grant with mission_error revoked and no token member",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -43303,9 +43339,74 @@
      "name": "Dispatch idempotency at /token (@spec mission-template#dispatch, mission#intent-submission-evidence) > a completed Dispatch recovers before evidence re-verification; a new Dispatch still verifies",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a lost-response retry while the delivered token is valid returns that same token, saving no token and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
    "notes": "Tested at the endpoint for the same-fingerprint retry, including a retry whose Intent Submission Evidence lapsed after completion (recovered before re-verification; proved by skipping the early lookup). Fingerprint mismatch and tombstone retention have their own rows (template.dispatch.fingerprint-mismatch-refusal, template.dispatch.approval-event-id-per-dispatch). Concurrent-duplicate recovery (the reservation's primary-key race) is not exercised, so the row stays partial."
+  },
+  {
+   "id": "template.dispatch.retry-gated-not-derived",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "grant-type",
+   "text": "a repeated identifier is gated to the previously committed instance rather than a fresh derivation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a repeated dispatch_event_id whose delivered access token is still valid returns that same token, saving no token and leaving derivation_count unchanged; a retry against an instance no longer active is refused by that instance's gate with invalid_grant and its mission_error, counting nothing; a retry after containment narrowed the instance never returns the delivered token; concurrent requests under one dispatch_event_id recover one delivery, counted once"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a lost-response retry while the delivered token is valid returns that same token, saving no token and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a retry against an instance %s after its Dispatch is refused by the instance's own gate: invalid_grant, no token, nothing counted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a retry after containment narrowed the instance mints a token carrying only the narrowed authority, never the delivered one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a retry after the delivered token expired mints a fresh token for the same instance, counted once as a delivery and never as a second Dispatch; a further retry recovers the fresh token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > concurrent retries after the delivered token expired recover one fresh delivery, counted once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > concurrent first Dispatches under one dispatch_event_id create one instance and deliver one token, counted once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Partial on one reading for the owner: once the delivered token has expired, or containment has narrowed the instance, the retry re-mints for the same instance and counts that delivery once, following the expansion profile's recovery rule that Template adopts (a fresh delivery credential carries ordinary issuance accounting and no creation accounting). Whether that re-mint is the fresh derivation this sentence excludes is open (#250). Proved by disabling the replay, the delivery record and each replay guard (expiry, active state, carried authority) in turn. Without the active check a revoked instance is still refused, by the release fence instead of the gate; the suspended case witnesses the check. One Dispatch per (authenticated Dispatcher, dispatch_event_id) runs at a time, so concurrent retries recover one delivery; single process only (#641). Proved by removing that serialization (both concurrency witnesses fail)."
   },
   {
    "id": "template.dispatch.fingerprint-mismatch-refusal",
