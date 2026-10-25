@@ -63,8 +63,8 @@
     "content_sha256": "483287bedfb2209de40290df596ca9bc2ea3178e485e6eaa226a46e903e1d6c2"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "f69c9b4a80d569f1a30c76860ddf70a9a2dde5ec",
-    "content_sha256": "8b944e1f959321364a841f6788e4a7b62682b239f2a2c6a1c13f647490297fb1"
+    "revision": "0a8d989f52e000a391fa2653fb7df1446b906a08",
+    "content_sha256": "7b240ade339ad7221372fdb6def5df21b4b7d18e0f3e8ce90ae07eab473c9f69"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
@@ -115,8 +115,8 @@
     "content_sha256": "c9636bdc3bc0a3b7baffd573b69e56708887aacb5b9fecdd0d35516a4d1d69d5"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "0c7677a870b2d9a40af7bbafc5e04792ea63fa99",
-    "content_sha256": "07e01880187e375f571aa1a1afeccbd73901610ee6cb31bbc6d039756c360b07"
+    "revision": "ec82149461dec8f4a5955f1a12f236366de06047",
+    "content_sha256": "6d69c4cbcdff9c4eb7aca3f81ff0d1dd9c247ad097beabb300c6fbc85e9da6ec"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -43983,7 +43983,7 @@
    "id": "template.dispatch.retry-gated-not-derived",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
-   "text": "a repeated identifier is gated to the previously committed instance rather than a fresh derivation",
+   "text": "a repeated identifier is gated to the previously committed instance rather than a fresh creation",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -44766,7 +44766,7 @@
    "id": "template.dispatch.one-derivation",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
-   "text": "This grant performs exactly one derivation per `dispatch_event_id`",
+   "text": "This grant performs exactly one creation derivation per `dispatch_event_id`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -44777,8 +44777,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Dispatch increments the derivation_count of the instance it creates by exactly one, and a repeated dispatch_event_id, gated to the committed instance, counts nothing more",
-    "local": "the reference counts a new Dispatch once, which the cited test witnesses; a retry with the same dispatch_event_id currently counts again, the defect #1661 owns (first recorded in PR #1635), so the second clause has no witness"
+    "normative": "a Dispatch's creation increments the derivation_count of the instance it creates by exactly one, and a repeated dispatch_event_id never creates another instance or repeats creation accounting; a retry returning the delivered token, valid and still authorized, counts nothing; a retry minting a replacement delivery, after expiry or narrowing, counts once; concurrent retries recover one replacement",
+    "local": "the cited test witnesses the creation count; the retry witnesses (replay, replacement after expiry and narrowing, concurrent retries) merged with PR #1653 and are cited by template.dispatch.retry-gated-not-derived"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -44790,7 +44790,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1647, D764. Partial until a retried Dispatch stops counting again: #1661, linked to #250 (first recorded in PR #1635). The instance's limit is at least 1, so the Dispatch's own derivation never meets the limit, and no limit refusal applies. Mutation: counting an approval-bound grant as uncounted fails the cited test."
+   "notes": "#1647, D764; re-quoted for #1661 (D793), which separates creation from delivery. Partial, as D793 directs, until the clarified text and the retry witnesses agree on main: today only the creation count is witnessed here. Mutation: counting an approval-bound grant as uncounted fails the cited test."
   },
   {
    "id": "template.handoff.selector-refusal",
