@@ -334,6 +334,33 @@ describe("recovery witness: one writer and every write guarded (@spec control-pl
     kernel.close();
   });
 
+  it("a witnessed store does not open without its witness, so nothing writes to it unwitnessed; a store that never had a witness still opens", () => {
+    const { p, missionId } = started();
+    const unwitnessed = (file: string) =>
+      new MissionKernel({
+        issuer: ISSUER,
+        policy: DERIVATION_POLICY as never,
+        authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["agent"], ["bob"]),
+        statusKey,
+        statusKid: "status",
+        now: () => new Date(T0),
+        store: { file },
+      });
+    let refused: unknown;
+    try {
+      unwitnessed(p.store).close();
+    } catch (e) {
+      refused = e;
+    }
+    expect(refused).toBeInstanceOf(RecoveryUncertainError);
+    expect((refused as RecoveryUncertainError).reason).toBe("witness_missing");
+    // The refused open wrote nothing and released the store: it opens with its witness, unchanged.
+    const kernel = open(p);
+    expect(kernel.get(missionId)?.state).toBe("active");
+    kernel.close();
+    unwitnessed(paths().store).close();
+  });
+
   it("a recovery witness needs a file-backed store", () => {
     expect(
       () =>
