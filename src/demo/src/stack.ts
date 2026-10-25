@@ -8,7 +8,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { IssuerKeys } from "@mission/core";
-import { createLocalJWKSet, createRemoteJWKSet, exportJWK, generateKeyPair, type JWSHeaderParameters } from "jose";
+import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
   APPROVER_LOGIN_CALLBACK_PATH,
   ApprovalSessionStore,
@@ -32,6 +32,7 @@ import {
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
+import { composedTrustAnchor } from "./ras-trust-anchor.js";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   type BoundaryEvidenceKey,
@@ -751,9 +752,7 @@ export async function composeStack(opts: {
       jwksUri: `${asUrl}/jwks`,
       roles: { continuation: { kids: trustedKids(asContinuationKey), algs: [asContinuationKey.alg] } },
     }).resolver("continuation");
-    const crossDomainLocal = createLocalJWKSet({ keys: [xdPub as never] });
-    const rasAnchorKey = (header: JWSHeaderParameters) =>
-      header.kid === crossDomainKey.kid ? crossDomainLocal(header, undefined as never) : asContinuationKeys(header);
+    const rasAnchorKey = composedTrustAnchor([xdPub as never], asContinuationKeys);
     const saas = new SaasMcpServer({
       rasIssuer: RAS_ISS,
       rasJwks: { keys: [rasPub as never] },
