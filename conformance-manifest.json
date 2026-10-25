@@ -487,16 +487,34 @@
     "normative": "adopting the extension leaves the approval-to-decision, transaction-token, parameter, and operation-idempotency bindings intact, so no earlier approval or operation identity authorizes changed effect parameters"
    },
    "level": "cross-component",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
      "name": "claim applicability: covered, uncovered and non-claiming (@spec runtime#evaluation-context-binding, authzen#response-context, #773) > the parameter digest, the operation key and so the approval and transaction-token bindings are unchanged by the claim",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context-bindings.test.ts",
+     "name": "adoption keeps the approval and transaction-token bindings (@spec runtime#evaluation-context-binding, #773) > an action-bound approval bound to parameter_digest satisfies the gate under the claim, and stops satisfying it once the record moves before the decision",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context-bindings.test.ts",
+     "name": "adoption keeps the approval and transaction-token bindings (@spec runtime#evaluation-context-binding, #773) > a transaction token bound to the challenged operation's parameter_digest verifies and executes once under the claim",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context-bindings.test.ts",
+     "name": "adoption keeps the approval and transaction-token bindings (@spec runtime#evaluation-context-binding, #773) > a transaction token issued before the record moved is refused under the claim, with no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#773. Additive binding: the claimed and unclaimed deployments send byte-identical parameter_digest and derive the same operation key for one wire, so every consumer keyed on them (action-bound approvals, transaction challenges and tokens, operation idempotency) is unchanged. partial: the parameter and operation-idempotency clauses are witnessed directly; the approval-to-decision and transaction-token clauses rest on those unchanged bytes and are not separately witnessed under the claim. Mutation M30 (a covered crossing's parameter digest dropping the facts the context now binds) fails the equality."
+   "notes": "#773, additive binding. Each clause is witnessed under the claim. Parameter and operation-idempotency: the claimed and unclaimed deployments send byte-identical parameter_digest and derive the same operation key (M30, a covered crossing's digest dropping the facts the context binds, fails it). Approval-to-decision: an action-bound approval bound to parameter_digest satisfies the wire's approval gate beside the context members, and once the record moves before the decision the same approval no longer does (M30 fails the first half; disabling the PDP's approval digest comparison fails the second). Transaction token: a token bound to the challenged operation's digest verifies and executes once, and one issued before the record moved is refused txn_parameter_mismatch with no effect (M30 fails the first; skipping the token's parameter recomputation fails the second, whose zero-effect assertion also fails alone). So no earlier approval or operation identity authorizes changed effect parameters after a fresh context capture."
   },
   {
    "id": "runtime.evaluation-context.salt-recovery",
@@ -569,7 +587,7 @@
     "normative": "a covered permit carries as its context condition the digest the request supplied, echoed from the PEP's observation rather than recomputed by the PDP; the salt remains unavailable to the PDP, while authoritative facts remain available wherever its policy needs their values"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
@@ -581,10 +599,16 @@
      "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
      "name": "the PDP validates the evaluation-context inputs of a covered operation before evaluation (@spec authzen#context-evaluation-binding, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #773) > the remote PDP refuses unusable inputs before evaluation with a signed Refusal Record, and a caller's options cannot remove its declaration",
      "level": "endpoint",
-     "surface": "evidence-emission"
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "the PDP echoes the validated context digest and records the binding (@spec authzen#response-context, runtime#evaluation-context-binding, runtime-evidence#decision-evidence-object, #773) > evaluates policy on the amount and target facts the request carries, never on the echoed digest",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#773. A covered permit's conditions.evaluation_context_digest is the request's digest, echoed verbatim (an arbitrary well-formed value the PDP could not compute), over the in-process and remote decision paths; the signed record carries no salt. partial: the clause that authoritative facts remain available to policy rests on the unchanged parameter and attribute inputs and is not separately witnessed. The remote test is titled for the refusal; its second half serves a well-formed request and asserts the echoed condition. Mutation P14 (no echo) fails that echo assertion cleanly; in process it trips the emitter's equality guard."
+   "notes": "#773. A covered permit's conditions.evaluation_context_digest is the request's digest echoed verbatim, an arbitrary well-formed value the PDP could not compute without the PEP's salt, over the in-process and remote paths; the signed record carries no salt. Facts stay available to policy: with the same valid context inputs, an amount over the entry's cap, an absent amount and a vendor outside the entry are each denied parameter_violation, while the in-cap request permits and queries Resource policy. The remote test is titled for the refusal; its second half serves a well-formed request and asserts the echoed condition. Mutations: P14 (no echo) fails the remote echo assertion cleanly and trips the emitter's equality guard in process; F2 (the amount cap skipped when a context binding is established) fails the facts test."
   },
   {
    "id": "runtime.evaluation-context.reverify-and-fail-closed",
@@ -696,7 +720,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#773 ruling 5. Each crossing of payments:payment.execute captures its own context with its own phase committed (one parameter digest, three context digests) and is checked at its own use on its own dispatch path (read, write, transaction), as is payments:remittance.send; a commit permit carrying the prepare crossing's context binding is refused. partial: the prepare-stable SHOULD is not implemented, and the descriptor reader refuses any member it does not implement, so no fact can be declared prepare-stable. Mutations: M23 (phase not committed) fails the distinct-digest and prepare-on-commit tests; M1 fails the read-path test and M2 the write and transaction tests. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
+   "notes": "#773 ruling 5. Each crossing of payments:payment.execute captures its own context with its own phase committed (one parameter digest, three context digests) and is checked at its own use on its own dispatch path (read, write, transaction), as is payments:remittance.send; a commit permit carrying the prepare crossing's context binding is refused. partial only for the prepare-stable SHOULD: no shipped descriptor declares a prepare-stable fact (the descriptor reader refuses any member it does not implement, so none can be declared), so that branch is inapplicable to the shipped claim and is not implemented. Mutations: M23 (phase not committed) fails the distinct-digest and prepare-on-commit tests; M1 fails the read-path test and M2 the write and transaction tests. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
   },
   {
    "id": "runtime.evaluation-context.atomic-enforced-property",
@@ -718,7 +742,7 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "#773 ruling 5: the enforced property is not claimed; the shipped declaration publishes verified for both operations. The loader refuses an enforced declaration whose operation asserts no evaluation_context_enforced execution capability (witnessed on runtime.execution-capabilities.enforced-context-needs-conditional-effect); no atomic resource-side comparison exists in the reference, so this row has no witness."
+   "notes": "#773 ruling 5: the enforced property is not claimed; the shipped declaration publishes verified for both operations, and no atomic resource-side comparison exists in the reference, so this PEP row has no witness. The loader's refusal of an enforced declaration without an evaluation_context_enforced execution capability is a deployment-documentation witness of the statement (it is cited on runtime.execution-capabilities.enforced-context-needs-conditional-effect), not of this PEP row's resource-operation clause, so it is not cited here."
   },
   {
    "id": "authzen.profiles.transaction-assurance-required-for-bound-classes",
@@ -1253,9 +1277,28 @@
     "normative": "an audit consumer reading Execution Evidence reports a divergent parameter pair and a divergent evaluation-context pair each, whichever the record's error names"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 ruling 3. The PEP records both pairs (witnessed on evidence.execution.context-drift-primary-error); no reference audit consumer classifies Execution Evidence pairs, and the Mission Receipt verifier does not check the context pair. The TOCTOU and parameter binding paragraph restates the same duty."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "the receipt verifier reports each divergent digest pair whatever the record's error (@spec runtime-evidence#context-drift-classification, #773) > reports a context-only divergence on a suppressed target_drift record, without an unauthorized-execution flag",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "the receipt verifier reports each divergent digest pair whatever the record's error (@spec runtime-evidence#context-drift-classification, #773) > reports both pairs diverging whichever single error the record names",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "the receipt verifier reports each divergent digest pair whatever the record's error (@spec runtime-evidence#context-drift-classification, #773) > does not report an unavailable context as a divergence, and holds the authorized context digest to the linked Decision Evidence",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#773. The Mission Receipt verifier, the reference consumer of Execution Evidence, reports divergence.parameter and divergence.evaluation_context each on its own, from the digests, on any outcome and whatever the record's single error; an absent effective digest is not reported; an executed record with either pair diverging is also flagged an unauthorized execution, as a parameter deviation already was. Mutations: V1 (context divergence never reported) fails the context-only and both-pairs tests; V2 (the parameter pair reported only when the error names it) fails the both-pairs test; V3 (absence read as divergence) fails the unavailable test; V5 (an executed context divergence not flagged) fails the context-only test; V4 (the authorized context digest not mirrored) fails the join assertions."
   },
   {
    "id": "authzen.failure-condition-coverage.evaluation-context-unresolvable",
