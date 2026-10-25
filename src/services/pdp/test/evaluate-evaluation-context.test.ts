@@ -268,6 +268,43 @@ describe("the PDP echoes the validated context digest and records the binding (@
     expect(o.policyQueries).toBeGreaterThan(0);
   });
 
+  it("evaluates policy on the amount and target facts the request carries, never on the echoed digest", async () => {
+    const constrained: MissionView = {
+      ...view(),
+      authority_set: [
+        {
+          type: MISSION_RESOURCE_ACCESS_TYPE,
+          resource: AUDIENCE,
+          actions: [PAY],
+          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+        },
+      ],
+    };
+    const covered = (amount: { amount: string; currency: string } | undefined, vendor = "acme"): EvaluationRequest => {
+      const req = request({ digest: DIGEST, binding: DECLARED });
+      (req.resource.properties as Record<string, unknown>).vendor_id = vendor;
+      if (amount) req.context.amount = amount;
+      return req;
+    };
+    const within = await inProcess(covered({ amount: "125.00", currency: "USD" }), {}, constrained);
+    const permit = (within.outcome as { decision: { decision: boolean; context: Record<string, unknown> } }).decision;
+    expect(permit.decision, JSON.stringify(permit.context)).toBe(true);
+    expect((permit.context.conditions as Record<string, unknown>).evaluation_context_digest).toBe(DIGEST);
+    expect(within.policyQueries).toBeGreaterThan(0);
+    // The same valid context inputs never stand in for a fact policy needs.
+    for (const [label, req] of [
+      ["over the cap", covered({ amount: "900.00", currency: "USD" })],
+      ["no amount", covered(undefined)],
+      ["a vendor outside the entry", covered({ amount: "125.00", currency: "USD" }, "globex")],
+    ] as const) {
+      const o = await inProcess(req, {}, constrained);
+      const denied = (o.outcome as { decision: { decision: boolean; context: Record<string, unknown> } }).decision;
+      expect(denied?.decision, label).toBe(false);
+      expect(denied?.context.denial_reason, label).toBe("parameter_violation");
+      expect(denied?.context.conditions, label).toBeUndefined();
+    }
+  });
+
   it("records the validated inputs on a denial for a covered operation, where no condition exists", async () => {
     const o = await inProcess(request({ digest: DIGEST, binding: DECLARED }), {}, view([READ]));
     const decision = (o.outcome as { decision: { decision: boolean; context: Record<string, unknown> } }).decision;
