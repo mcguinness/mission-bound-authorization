@@ -18334,6 +18334,70 @@
    "notes": "#1535 finding 17, item 4 (D805): a normative constraint on the Mission Status request; Error Responses already refused a malformed nonce at both endpoints, and the only syntax was Lifecycle's idempotency rule. Boundary witnesses at 0, 1, 255 and 256 code points, ASCII and outside the Basic Multilingual Plane (#1689 review: the bound counts code points, not UTF-16 units). Mutations of the shared bound (adapters/lifecycle-endpoint.ts wellFormedNonce): counting UTF-16 units instead of code points, an upper bound of 256 or 254 code points, and a lower bound admitting the empty string or refusing one code point, each fail the cited test at both endpoints."
   },
   {
+   "id": "status.response.authority-hash-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "disclosed at the AS's discretion to a caller it authorizes for audit or correlation use",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Status Response, a Status read or a lifecycle confirmation, carries mission.authority_hash only for a caller the AS authorizes for audit or correlation use: a caller holding only the Status-read grant, the Status-read and lifecycle grants, or Join Disclosure enrollment receives none, an authorized caller receives the Mission's committed anchor, and a retransmitted confirmation replays the bytes first sent",
+    "local": "discloseProvenance (adapters/provider.ts) reads the client's configured disclose list for provenance; observeInCallerTx (kernel.ts) includes the member only when that option is set; both Status routes, the lifecycle confirmation and the discharge envelope pass it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > omits authority_hash from a Status read by a client holding the read grant, or the read and lifecycle grants, without the disclosure privilege",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > carries authority_hash, the Mission's committed anchor, on a Status read by a client holding the provenance privilege",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > gives a PDP enrolled for Join Disclosure its subject and client_id but not authority_hash, absent the privilege",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > omits authority_hash from a lifecycle confirmation to a client without the privilege, and its retransmit replays the same bytes",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > carries authority_hash on a lifecycle confirmation to a client with the privilege, and its retransmit replays the same bytes",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > discharges over HTTP, returning the signed discharge_result beside `mission`",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1682 (D795): the reference disclosed authority_hash on every Mission Status Response; it now honors a per-client provenance disclosure privilege and nothing else. Mutations: always disclosing fails the three omission tests and the discharge envelope's; never disclosing fails both carry tests; deriving it from the Status-read grant fails the omission tests; deriving it from the lifecycle grant fails the two tests whose caller holds that grant without the privilege; adding Join Disclosure enrollment fails only the enrolled-PDP test; dropping it at the lifecycle confirmation fails the lifecycle carry test. The discharge envelope is witnessed for the omission only."
+  },
+  {
    "id": "status.response.served-audience-aud",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
