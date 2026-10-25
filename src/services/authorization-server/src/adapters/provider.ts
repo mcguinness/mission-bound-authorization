@@ -375,10 +375,12 @@ import {
   DeferralError,
   type DeferralReview,
   type DeferralStore,
+  type PendingDeferral,
   type DeferredToken,
   EXPANSION_DEFERRAL_PREFIX,
   type ExpansionDeferralStore,
 } from "../kernel/deferred.js";
+import { bindingDisclosures, renderBindingDisclosures } from "./capability-disclosure.js";
 import {
   deciding,
   type DeferralContext,
@@ -3848,21 +3850,29 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   };
 
   /**
-   * @spec expansion#completion-modes (#1558): who may review and decide an
-   * expansion deferral. The successor's Subject is its predecessor's, so a
-   * Subject the principal selected is that one, and the Approver is that
-   * Subject or holds approve-for authority over it; write-bearing authority
-   * needs a distinct Approver with the approver role (D37), as at the Mission
-   * approval. The reason, or undefined when the principal may.
+   * @spec expansion#completion-modes (#1558): who may decide an expansion
+   * deferral. The successor's Subject is its predecessor's, so a Subject the
+   * principal selected is that one, and the Approver is that Subject or holds
+   * approve-for authority over it. Read from the stored request alone, so a
+   * denial is authorized without deriving anything (#1633 review). The
+   * reason, or undefined when the principal may.
    */
-  const deferralApproverRefusal = (review: DeferralReview, approver: string, selected: string | undefined): string | undefined => {
-    const subject = review.predecessor.subject.sub;
+  const deferralSubjectRefusal = (request: PendingDeferral, approver: string, selected: string | undefined): string | undefined => {
+    const subject = request.predecessor.subject.sub;
     if (selected !== undefined && selected !== subject) return "the Subject of an expansion is its predecessor's";
     if (!opts.knownSubjects.has(subject) || (approver !== subject && !opts.approverApprovesFor.get(approver)?.has(subject))) {
       return "this Approver may not approve for the expansion's Subject";
     }
+    return undefined;
+  };
+  /**
+   * Who may approve, beyond {@link deferralSubjectRefusal}: write-bearing
+   * authority needs a distinct Approver with the approver role (D37), as at the
+   * Mission approval, read from the successor's derived authority.
+   */
+  const deferralWriteRefusal = (review: DeferralReview, approver: string): string | undefined => {
     const writeBearing = review.successor.some((e) => e.actions.some((a) => WRITE_ACTIONS.has(a)));
-    if (writeBearing && (approver === subject || !opts.approverRoleSubs.has(approver))) {
+    if (writeBearing && (approver === review.predecessor.subject.sub || !opts.approverRoleSubs.has(approver))) {
       return "write-bearing authority requires a distinct approver";
     }
     return undefined;
@@ -4051,9 +4061,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // (or the client's own proposal) derives no Authority Set from is a
       // refusal at render time too, not only at decide(): surface it the same
       // way (400, the mapped error code) rather than let it propagate uncaught.
+      // @spec capability-binding#capability-approval (#1447, D584): the
+      // candidate is bound from the trusted catalog before the rendering, so
+      // the Approver consents to the concrete tool each catalog-sourced action
+      // invokes, and the rendering presents what each binding means.
       let authority: ReturnType<typeof kernel.derive>;
+      let bindings: string;
       try {
-        authority = kernel.derive(intent, proposal, requestedScopeKey(opts.scopeProjection, params, intent));
+        authority = kernel.resolveFreshCapabilities(kernel.derive(intent, proposal, requestedScopeKey(opts.scopeProjection, params, intent)));
+        bindings = renderBindingDisclosures(bindingDisclosures(authority));
       } catch (e) {
         if (e instanceof IntentError) {
           ctx.status = 400;
@@ -4214,7 +4230,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           : undefined,
         derivation,
         ceilingOffer,
-        { ...(revision ? { revision } : {}), changed: ctx.query.changed === "1", expiresAt },
+        { ...(revision ? { revision } : {}), changed: ctx.query.changed === "1", expiresAt, bindings },
       );
       return;
     }
@@ -5808,10 +5824,22 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.body = deferralNoticePage("No expansion request with this code is pending.");
         return;
       }
-      const refusal = deferralApproverRefusal(review, viewer.sub, viewer.selected);
+      const refusal = deferralSubjectRefusal(review, viewer.sub, viewer.selected) ?? deferralWriteRefusal(review, viewer.sub);
       if (refusal) {
         ctx.status = 403;
         ctx.body = deferralNoticePage(refusal);
+        return;
+      }
+      // @spec capability-binding#capability-approval (#1447): what each
+      // binding of the successor means; one kept from the predecessor was
+      // approved there.
+      let bindings: string;
+      try {
+        bindings = renderBindingDisclosures(bindingDisclosures(review.successor, review.predecessor.authority_set));
+      } catch (e) {
+        if (!(e instanceof IntentError)) throw e;
+        ctx.status = 400;
+        ctx.body = deferralNoticePage(e.message);
         return;
       }
       const rendered = deferralContext(review, shownExpiry(kernel, review));
@@ -5828,6 +5856,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       ctx.status = 200;
       ctx.body = renderDeferralPage(review, rendered.context, {
         revision,
+        bindings,
         ...(csrf ? { csrf } : {}),
         changed: ctx.query.changed === "1",
         ...(client?.clientName ? { clientName: String(client.clientName) } : {}),
@@ -5891,6 +5920,26 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // pending check, the comparison with the rendering and the commit run as
       // one synchronous step against the synchronous store, so no other
       // decision on this deferral can come between them.
+      // A denial creates nothing, so it is authorized from the stored request
+      // alone: no derivation or catalog resolution can stand in its way.
+      const request = deferrals.pendingRequest(code);
+      if (!request) {
+        refuse(400, "invalid_request", "no expansion request with this code is pending");
+        return;
+      }
+      const subjectRefusal = deferralSubjectRefusal(request, principal.sub, principal.subject);
+      if (subjectRefusal) {
+        refuse(403, "approval_forbidden", subjectRefusal);
+        return;
+      }
+      if (body.decision !== "approve") {
+        if (!deferrals.denyPending(code)) {
+          refuse(400, "invalid_request", "no expansion request with this code is pending");
+          return;
+        }
+        answer(200, { deferral_code: code, state: "access_denied" }, "Denied. No successor is created, and the Mission is unchanged.");
+        return;
+      }
       let review: DeferralReview | undefined;
       try {
         review = deferrals.pendingReview(code);
@@ -5903,17 +5952,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         refuse(400, "invalid_request", "no expansion request with this code is pending");
         return;
       }
-      const refusal = deferralApproverRefusal(review, principal.sub, principal.subject);
-      if (refusal) {
-        refuse(403, "approval_forbidden", refusal);
-        return;
-      }
-      if (body.decision !== "approve") {
-        if (!deferrals.denyPending(code)) {
-          refuse(400, "invalid_request", "no expansion request with this code is pending");
-          return;
-        }
-        answer(200, { deferral_code: code, state: "access_denied" }, "Denied. No successor is created, and the Mission is unchanged.");
+      const writeRefusal = deferralWriteRefusal(review, principal.sub);
+      if (writeRefusal) {
+        refuse(403, "approval_forbidden", writeRefusal);
         return;
       }
       const principalKey = interactive
@@ -6830,7 +6871,10 @@ async function decide(
     authority = opts.kernel.effectiveAuthoritySet(committedEarlier);
   } else {
     try {
-      authority = opts.kernel.derive(intent, proposedAuthority, scopeKey);
+      // @spec capability-binding#capability-approval (#1447, D584): the bound
+      // candidate, as the rendering bound it; a changed binding is a changed
+      // derived set, and the scope check below projects this candidate.
+      authority = opts.kernel.resolveFreshCapabilities(opts.kernel.derive(intent, proposedAuthority, scopeKey));
     } catch (e) {
       if (e instanceof IntentError) {
         await finish({
@@ -7171,7 +7215,7 @@ async function decide(
       const held = rendered as RenderRevision;
       let changed: string[] | undefined;
       try {
-        const now = currentContext(opts.kernel.derive(intent, proposedAuthority, scopeKey), held);
+        const now = currentContext(opts.kernel.resolveFreshCapabilities(opts.kernel.derive(intent, proposedAuthority, scopeKey)), held);
         const again = opts.kernel.prepareApproval(approveInput);
         const parts = changedParts(held.context, now.context);
         if (now.commitment !== held.commitment) changed = parts;
@@ -7479,7 +7523,7 @@ function renderApprovalPage(
    * whether the request changed since the last, and the effective `expires_at`
    * an approval on it commits.
    */
-  render: { revision?: string; changed?: boolean; expiresAt?: string } = {},
+  render: { revision?: string; changed?: boolean; expiresAt?: string; bindings?: string } = {},
 ): string {
   // @spec mission#approval-event — the rendering distinguishes the submitted
   // proposal (untrusted client input) from the derived Authority Set (what
@@ -7574,7 +7618,7 @@ ${sourceSection}
 ${proposalSection}
 ${provenanceSection}
 <h2>Derived authority (what approval grants)</h2><pre>${escapeHtml(JSON.stringify(authority, null, 2))}</pre>
-${render.expiresAt ? `<h2>Mission expiry (when the approved authority ends)</h2><p><time class="mission-expires-at" datetime="${escapeHtml(render.expiresAt)}">${escapeHtml(render.expiresAt)}</time></p>\n` : ""}${render.changed ? "<p><strong>The request changed since you last reviewed it. Review it again before deciding.</strong></p>\n" : ""}${limitNotice}${derivationSection}${ceilingSection}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
+${render.bindings ? `${render.bindings}\n` : ""}${render.expiresAt ? `<h2>Mission expiry (when the approved authority ends)</h2><p><time class="mission-expires-at" datetime="${escapeHtml(render.expiresAt)}">${escapeHtml(render.expiresAt)}</time></p>\n` : ""}${render.changed ? "<p><strong>The request changed since you last reviewed it. Review it again before deciding.</strong></p>\n" : ""}${limitNotice}${derivationSection}${ceilingSection}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
 ${render.revision ? `<input type="hidden" name="render_revision" value="${escapeHtml(render.revision)}">\n` : ""}${deviceConfirmations}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`;
 }

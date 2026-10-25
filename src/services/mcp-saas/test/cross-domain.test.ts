@@ -540,3 +540,56 @@ describe("Resource AS issues no renewal authority on the grant (#1180)", () => {
     }
   });
 });
+
+describe("the grant carries the Mission's expires_at to the local token unchanged (@spec cross-domain#cross-domain-grant, #validation-at-resource-as, #1630)", () => {
+  const claimsOf = (jwt: string) => JSON.parse(Buffer.from(jwt.split(".")[1] as string, "base64url").toString());
+  const grantFor = (missionId: string) =>
+    issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      missionId,
+      targetAs: RAS_ISS,
+      clientId: AGENT_AT_RAS,
+      cnfJkt: agentJkt,
+      resourceToAs: RESOURCE_TO_AS,
+    });
+
+  it("the grant's mission claim carries the Mission's expires_at, never the grant's exp, and the local token preserves the whole claim", async () => {
+    const mission = approve(14);
+    const expiresAt = kernel.get(mission.id)?.expires_at;
+    expect(expiresAt).toBeTruthy();
+    const { grant } = await grantFor(mission.id);
+    const grantClaims = claimsOf(grant);
+    expect(grantClaims.mission.id).toBe(mission.id);
+    expect(grantClaims.mission.issuer).toBe(AS_ISS);
+    expect(grantClaims.mission.expires_at).toBe(expiresAt);
+    expect(grantClaims.mission.expires_at).not.toBe(new Date(grantClaims.exp * 1000).toISOString());
+
+    const { access_token } = await ras.redeem(grant, agentJkt);
+    const local = claimsOf(access_token);
+    expect(local.mission.expires_at).toBe(expiresAt);
+    expect(local.mission).toEqual(grantClaims.mission);
+  });
+
+  it("carrying it extends no lifetime: redeemed just before the grant's exp, the local token still expires by the grant's exp, far inside the Mission's expiry, with no refresh_token", async () => {
+    const mission = approve(15);
+    const { grant } = await grantFor(mission.id);
+    const grantClaims = claimsOf(grant);
+    const grantExp = grantClaims.exp as number;
+    const missionExpS = Math.floor(Date.parse(grantClaims.mission.expires_at as string) / 1000);
+
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const redeemedAtS = grantExp - 5;
+      vi.setSystemTime(redeemedAtS * 1000);
+      const response = await ras.redeem(grant, agentJkt);
+      const local = claimsOf(response.access_token);
+      // The Mission's expiry would admit the RAS's full 120 s local lifetime;
+      // only the grant's exp holds the local token.
+      expect(missionExpS).toBeGreaterThan(redeemedAtS + 120);
+      expect(local.exp).toBeLessThanOrEqual(grantExp);
+      expect(local.mission.expires_at).toBe(grantClaims.mission.expires_at);
+      expect(Object.keys(response).sort()).toEqual(["access_token", "expires_in"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

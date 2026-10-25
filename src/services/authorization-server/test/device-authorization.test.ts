@@ -28,6 +28,7 @@ import {
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
 import { browserApprovalHeaders, renderedRevision } from "./approval-fixture.js";
+import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
 
 const PORT = 14763;
 const ISSUER = `http://localhost:${PORT}`;
@@ -1109,5 +1110,24 @@ describe("a device decision on a request that no longer validates (@spec mission
     expect(decided.status, page).toBe(200);
     expect(missionOf(s.uid)).toBeUndefined();
     expect((await poll(PUBLIC, s.deviceCode)).body.error).toBe("access_denied");
+  });
+});
+
+describe("the release fence on the device_code grant (@spec mission#issuance-gating, #250)", () => {
+  it("device_code: a revocation committed after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member", async () => {
+    const s = await approvedSession();
+    const record = missionOf(s.uid);
+    expect(record?.state).toBe("active");
+    // Commits from inside the device grant's AccessToken#save(), after its gate.
+    const committed = commitAtNextIssue(as, "revoke");
+    let res: Awaited<ReturnType<typeof poll>>;
+    try {
+      res = await poll(PUBLIC, s.deviceCode, await newKeys());
+    } finally {
+      committed.disarm();
+    }
+    expect(committed.missionId()).toBe(record?.id);
+    expect(as.kernel.get(record?.id as string)?.termination?.reason).toBe("revoked");
+    expectFenceRefusal(res, "invalid_grant");
   });
 });

@@ -1128,8 +1128,11 @@ describe("authority source on the approval surface (@spec mission#authority-sour
     expect(html).toContain("organizational");
     expect(html).toContain("acme-accounts-payable-controls");
     expect(html).toContain("2026-09-01");
-    // The policy digest is record detail, never consent context.
-    expect(html).not.toContain("digest");
+    // The policy digest is record detail, never consent context. (A bound
+    // action's own source_digest is the retained machine binding, #1447.)
+    const source = html.match(/<h2>Authority source \(whose authority this draws on\)<\/h2><pre>([\s\S]*?)<\/pre>/)?.[1];
+    expect(source).toContain("acme-accounts-payable-controls");
+    expect(source).not.toContain("digest");
   });
 
   it("refuses access_denied at the decision when the subject discipline fails", async () => {
