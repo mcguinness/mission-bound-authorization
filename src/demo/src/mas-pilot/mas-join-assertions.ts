@@ -33,6 +33,11 @@
  *   `mapping_version`: the subject and client the contract maps the token's
  *   to, against the Mission's own; a delegate under the contract's delegate
  *   policy, at its depth from this MAS's actor records.
+ * - Those actor records are the one source of a delegate's standing (#1561):
+ *   the endpoint's visibility set takes its recorded delegates from them, the
+ *   join takes a delegate's depth from them, and the PEP carries no depth of
+ *   its own beside an assertion. An operator records an edge at the MAS's
+ *   operator console (`POST /missions/{id}/delegates`).
  */
 
 import type { ActingToken, ActingTokenResult, JoinAssertionDeployment, JoinEvaluation } from "@mission/authorization-server";
@@ -169,5 +174,13 @@ export function pilotJoinAssertions(config: MasPilotConfig, opts: PilotJoinAsser
     return { clientId: mapped.clientId, disposition: "delegate", depth, mappingVersion };
   };
 
-  return { establishActingToken, evaluateJoin };
+  // @spec authority-server#join-assertion-request (#1561): the visibility
+  // set's recorded delegates, from the same actor records the join's depth
+  // comes from: a client those records place under the Mission, through a
+  // chain that reaches the Mission's own client.
+  const recordedDelegate = (mission: MissionRecordLike, clientId: string): boolean =>
+    clientId !== mission.client_id &&
+    opts.actorRecords.resolveDepth({ id: mission.id, issuer: mission.issuer }, clientId, mission.client_id) !== undefined;
+
+  return { establishActingToken, evaluateJoin, recordedDelegate };
 }

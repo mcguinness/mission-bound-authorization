@@ -2072,6 +2072,12 @@ export class Pep {
         const assertion = await source.obtain({ mission: missionAnchor, accessToken });
         if (assertion !== undefined) {
           joinAssertion = { assertion, token_sha256: accessTokenHash(accessToken), token_jkt: token.cnfJkt };
+          // @spec authority-server#join-authzen, #join-assertion-pdp (#1561):
+          // on the assertion path the assertion's `join` claim governs, and
+          // its depth comes from the MAS's actor records. This PEP carries no
+          // depth of its own beside it, so a second record store cannot
+          // contradict the MAS's.
+          delegateDepth = undefined;
         }
       }
     }
