@@ -19,12 +19,14 @@
  *   by the authenticated caller) holds the PEP role, the PDP role, or both,
  *   and its enforcement scopes. Visibility takes either role; the `audience`
  *   takes the PDP role. Visibility alone does not establish a caller's role.
- * - Visibility. A Mission is visible to its `client_id` and to the clients
+ * - Visibility. A Mission is visible to its `client_id`, to its recorded
+ *   delegates (#1561: the deployment's actor records,
+ *   `JoinAssertionDeployment.recordedDelegate`, the same records its join
+ *   evaluation reads a delegate's depth from), and to the clients
  *   enrolled, in either role, for the Mission's
  *   enforcement scope: an enrolled scope that some entry of the Mission's
  *   Authority Set overlaps, under the matcher Mission Status scopes its
- *   entries with. The reference MAS holds no delegate actor records, so no
- *   delegate is in the set. Any other caller, and an unknown Mission, get
+ *   entries with. Any other caller, and an unknown Mission, get
  *   one `not_found`.
  * - Minting checks (`join_failed`, 403): the Mission is `active`; the
  *   `audience` names a client enrolled in the PDP role for its enforcement
@@ -52,14 +54,22 @@
  *   minting check pass again, and only while the join it carries is the join
  *   evaluated now.
  * - Rate limit. Per authenticated caller (`rate_limited`, 429).
- * - Each minting is a join evidence event, held in process memory.
+ * - Join evidence (#1560). Each minting is a join evidence event, written to
+ *   the kernel's store (`MissionKernel.joinEvidence`) and retained for its
+ *   Mission's audit horizon, after the last re-read and before the assertion
+ *   is cached or returned. A write that fails answers `unavailable` (503),
+ *   with nothing returned or cached. With the file-backed kernel store the
+ *   events survive a restart.
  */
 
 import { entryOverlapsResource } from "@mission/core";
 import { accessTokenHash } from "@mission/mcp-payments";
 import { ExpansionRateLimiter } from "../kernel/expansion.js";
+import type { JoinAssertionEvent } from "../kernel/join-evidence-store.js";
 import type { MissionKernel } from "../kernel/kernel.js";
 import type { MissionRecord } from "../kernel/types.js";
+
+export type { JoinAssertionEvent } from "../kernel/join-evidence-store.js";
 
 /** The advertised endpoint's path, published as `mission_join_assertion_endpoint`. */
 export const JOIN_ASSERTION_ENDPOINT_PATH = "/mission/join-assertion";
@@ -109,20 +119,16 @@ export interface JoinEvaluation {
 export interface JoinAssertionDeployment {
   establishActingToken(form: { accessToken: string } | { tokenSha256: string }): Promise<ActingTokenResult>;
   evaluateJoin(token: ActingToken, mission: MissionRecord): JoinEvaluation | undefined;
+  /**
+   * @spec authority-server#join-assertion-request (#1561): whether the
+   * deployment's actor records record `clientId` as a delegate acting under
+   * the Mission: the visibility set's "recorded delegates", read from the
+   * records `evaluateJoin` takes a delegate's depth from. Absent: no delegate
+   * is in the set.
+   */
+  recordedDelegate?(mission: MissionRecord, clientId: string): boolean;
   maxLifetimeSeconds?: number;
   rateLimit?: { max: number; windowSeconds: number };
-}
-
-/** A join evidence event: one minting. */
-export interface JoinAssertionEvent {
-  mission: { issuer: string; id: string };
-  token: { sha256: string } & TokenConfirmation;
-  join: { client_id: string; disposition: "client" | "delegate"; depth?: number };
-  caller: string;
-  audience: string;
-  mapping_version?: string;
-  iat: number;
-  exp: number;
 }
 
 export type JoinAssertionAnswer = { status: number; body: Record<string, unknown> };
@@ -243,16 +249,15 @@ export interface JoinAssertionServiceDeps {
 export class JoinAssertionService {
   private readonly cache = new Map<string, CachedAssertion>();
   private readonly limiter: ExpansionRateLimiter;
-  private readonly minted: JoinAssertionEvent[] = [];
 
   constructor(private readonly deps: JoinAssertionServiceDeps) {
     const limit = deps.deployment.rateLimit ?? DEFAULT_JOIN_ASSERTION_RATE_LIMIT;
     this.limiter = new ExpansionRateLimiter(limit.max, limit.windowSeconds, () => deps.kernel.nowDate().getTime());
   }
 
-  /** The join evidence events this MAS has recorded, oldest first. */
+  /** The join evidence events the kernel's store retains, oldest first (#1560). */
   events(): readonly JoinAssertionEvent[] {
-    return this.minted;
+    return this.deps.kernel.joinEvidence.all().map((r) => r.event);
   }
 
   /**
@@ -325,10 +330,16 @@ export class JoinAssertionService {
     const request = parseJoinAssertionRequest(json);
     if (typeof request === "string") return err(400, "invalid_join_request", request);
 
-    // Visibility: the Mission's client and the clients enrolled for its
-    // enforcement scope. Unknown and invisible answer alike.
+    // Visibility: the Mission's client, its recorded delegates, and the
+    // clients enrolled for its enforcement scope. Unknown and invisible
+    // answer alike.
     const record = this.deps.kernel.currentRecord(request.missionId);
-    if (!record || (caller !== record.client_id && !this.enrolledFor(caller, record))) {
+    const visible =
+      record !== undefined &&
+      (caller === record.client_id ||
+        this.deps.deployment.recordedDelegate?.(record, caller) === true ||
+        this.enrolledFor(caller, record));
+    if (!record || !visible) {
       return err(404, "not_found", "Mission reference is not found or not visible.");
     }
 
@@ -392,17 +403,26 @@ export class JoinAssertionService {
     // nor recorded as a join evidence event.
     const afterSigning = this.recheck(record, request.audience);
     if (afterSigning) return afterSigning;
+    // @spec authority-server#join-assertion-artifact (#1560): "Each minting is
+    // a join evidence event. The MAS records the following, retained for the
+    // audit horizon." Written before the assertion is cached or returned: an
+    // event that cannot be retained returns nothing and caches nothing, so no
+    // later request is served an assertion that has no event.
+    try {
+      this.deps.kernel.joinEvidence.record(record, {
+        mission: { issuer: record.issuer, id: record.id },
+        token: tokenClaim,
+        join: joinClaim,
+        caller,
+        audience: request.audience,
+        ...(join.mappingVersion !== undefined ? { mapping_version: join.mappingVersion } : {}),
+        iat: nowS,
+        exp,
+      });
+    } catch {
+      return err(503, "unavailable", "the join evidence event could not be recorded");
+    }
     this.cache.set(key, { jws, exp, join });
-    this.minted.push({
-      mission: { issuer: record.issuer, id: record.id },
-      token: tokenClaim,
-      join: joinClaim,
-      caller,
-      audience: request.audience,
-      ...(join.mappingVersion !== undefined ? { mapping_version: join.mappingVersion } : {}),
-      iat: nowS,
-      exp,
-    });
     return { status: 200, body: { assertion: jws } };
   }
 }

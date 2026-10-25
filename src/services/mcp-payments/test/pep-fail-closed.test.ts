@@ -563,7 +563,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     expect(evidence.forMission(missionId).some((e) => e.kind === "refusal")).toBe(false);
   });
 
-  it("a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition", async () => {
+  it("a permit carrying an obligation type this PEP does not implement is refused as unfulfillable_obligation: the obligation is unsupported, an effective deny distinct from an unrecognized condition", async () => {
     const { pep, evidence } = build();
     decide.mockResolvedValueOnce({
       decision: true,
@@ -580,7 +580,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     // "one object per attached obligation", each identifying itself, so the
     // failing entry is named rather than merely implied by the error value.
     expect(execution?.content.obligation_outcomes).toEqual([
-      { id: "obl_1", type: "step_up", outcome: "unsupported", error: "no obligation type is implemented at this PEP" },
+      { id: "obl_1", type: "step_up", outcome: "unsupported", error: "obligation type not implemented at this PEP" },
     ]);
   });
 
@@ -612,7 +612,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     // reordered list each fails.
     expect(execution?.content.obligation_outcomes).toEqual([
       { type: "notify", outcome: "unsupported", error: "the obligation lacks a non-empty id or type" },
-      { id: "obl_1", type: "step_up", outcome: "unsupported", error: "no obligation type is implemented at this PEP" },
+      { id: "obl_1", type: "step_up", outcome: "unsupported", error: "obligation type not implemented at this PEP" },
       { id: "obl_3", outcome: "unsupported", error: "the obligation lacks a non-empty id or type" },
     ]);
   });

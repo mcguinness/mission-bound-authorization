@@ -419,7 +419,13 @@ describe("each PEP establishes its boundary from configuration, and every consum
     const ledger = buildPep(d, "ledger-pep");
     for (const aud of [[LEDGER_ALIAS, ALIAS], [ALIAS, LEDGER_ALIAS]]) {
       expect((await call(payments, "get_invoice", { invoice_id: "inv-1" }, await mint(aud))).ok).toBe(true);
-      expect((await call(ledger, "get_invoice", { invoice_id: "inv-1" }, await mint(aud))).ok).toBe(true);
+      // The ledger boundary authorizes only the PDP's key, so this PEP cannot
+      // sign the read's completed disposition there: the read is permitted at
+      // the ledger and its result withheld (#1640, D770 ruling 4).
+      expect(await call(ledger, "get_invoice", { invoice_id: "inv-1" }, await mint(aud))).toEqual({
+        ok: false,
+        refusal_reason: "evidence_unavailable",
+      });
     }
     expect(payments.decided.map((r) => r.resource.properties.audience)).toEqual([CANONICAL_RESOURCE, CANONICAL_RESOURCE]);
     expect(ledger.decided.map((r) => r.resource.properties.audience)).toEqual([LEDGER, LEDGER]);
@@ -652,13 +658,15 @@ describe("a declared change of boundary identifier (@spec runtime#boundary-ident
       const used = await x.pep.verifyPermitAtUse(p.attempt as NonNullable<typeof p.attempt>);
       expect(used).toMatchObject({ ok: false, error: BOUNDARY_CUTOVER_ERROR });
     }
-    // Their dispositions keep the original identifier and verify as historical evidence.
-    const suppressed = executions(x);
-    expect(suppressed.map((r) => [r.audience, r.outcome, r.error])).toEqual([
+    // Their dispositions, like the first read's completed one, keep the
+    // original identifier and verify as historical evidence.
+    const dispositions = executions(x);
+    expect(dispositions.map((r) => [r.audience, r.outcome, r.error])).toEqual([
+      [LEGACY, "completed", undefined],
       [LEGACY, "suppressed", BOUNDARY_CUTOVER_ERROR],
       [LEGACY, "suppressed", BOUNDARY_CUTOVER_ERROR],
     ]);
-    for (const r of suppressed) expect(await verifyEvidenceEnvelope(r, EXECUTION_EVIDENCE_MEDIA_TYPE, d.resolver)).toEqual({ valid: true });
+    for (const r of dispositions) expect(await verifyEvidenceEnvelope(r, EXECUTION_EVIDENCE_MEDIA_TYPE, d.resolver)).toEqual({ valid: true });
 
     // After it: the same token is accepted through the declared alias, and every new decision carries the new identifier.
     expect((await call(x, "get_invoice", { invoice_id: "inv-1" }, token)).ok).toBe(true);

@@ -347,8 +347,9 @@ effective authority narrowed even though `state` did not change.
 
 ## Subset Rule {#subset-extension}
 
-Because `terminal_when` is a Common Constraint, the issuance profile's
-subset comparison ({{I-D.draft-mcguinness-oauth-mission}}) applies its
+Because `terminal_when` is a Common Constraint, the Mission Resource
+Access Profile's subset comparison
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}) applies its
 defined subset rule with no new clause: for a key present in the
 reference entry's `constraints`, the same key MUST be present in the
 candidate entry and its value MUST be no broader under the key's
@@ -371,11 +372,11 @@ change discharges earlier or later from opaque `event_type` values.
 ## Forward Compatibility {#forward-compat}
 
 Because `terminal_when` is a `constraints` member, a consumer that does
-not recognize it fails closed by the issuance profile's resource server
-enforcement rule directly: a consumer MUST fail closed on any
+not recognize it fails closed by the Mission Resource Access Profile's
+resource server enforcement rule directly: a consumer MUST fail closed on any
 `constraints` key it does not understand, or understands but cannot
 enforce, refusing the request rather than granting access while ignoring
-the key ({{I-D.draft-mcguinness-oauth-mission}}). Discharge is
+the key ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Discharge is
 load-bearing narrowing, so ignoring `terminal_when` would silently widen
 the grant. That enforcement rule is the honest basis of discharge's
 safety: an unrecognized `terminal_when` is refused, never dropped.
