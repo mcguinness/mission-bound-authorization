@@ -142,6 +142,7 @@ export {
   GateError,
   LifecycleConflictError,
   MissionNotFoundError,
+  MissionStateUnavailableError,
   ObservationWatermarkError,
   StaleVersionError,
   STATUS_SIGNING_ALG,
@@ -1413,9 +1414,6 @@ export async function buildAuthorizationServer(opts: {
   const statusKeys = { privateKey: signing.asStatus.privateKey };
   const txnKeys = { privateKey: signing.asTxn.privateKey };
   const continuationKeys = { privateKey: signing.asContinuation.privateKey };
-  const statusJwkPriv = signing.asStatus.privateJwk;
-  const txnJwkPriv = signing.asTxn.privateJwk;
-  const continuationJwkPriv = signing.asContinuation.privateJwk;
   const statusJwkPub = signing.asStatus.publicJwk;
   const txnJwkPub = signing.asTxn.publicJwk;
   const continuationJwkPub = signing.asContinuation.publicJwk;
@@ -1846,7 +1844,10 @@ export async function buildAuthorizationServer(opts: {
     creationIdempotency,
     statusListPublisher,
     clients: clientRegistrations,
-    jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
+    // @spec #831 (role binding): the provider signs with the access-token key
+    // alone; every role's public key is still published on the jwks_uri
+    // (`publicJwks`, served by the adapter).
+    jwks: { keys: [tokenJwk] },
     publicJwks,
     accessTokenJwks: { keys: [tokenJwkPub] },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,

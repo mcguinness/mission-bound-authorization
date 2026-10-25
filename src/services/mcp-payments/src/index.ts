@@ -155,6 +155,8 @@ export {
 } from "./write-reservations.js";
 export { type RedemptionStatus, recordRedeemingAttempt, redemptionStatusFor } from "./redemption-status.js";
 export {
+  MALFORMED_OBLIGATION,
+  malformedObligationOutcome,
   NotificationOutbox,
   type ObligationNotification,
   type ObligationNotifier,

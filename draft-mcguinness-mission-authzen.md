@@ -2543,6 +2543,7 @@ rule.
 | Permit's bound phase differs from the crossing, is missing or malformed where a phase is required, or cannot be established at use | Execution Evidence | `phase_mismatch` |
 | A claimed evaluation-context binding differs or cannot be established at use | Execution Evidence | `target_drift` |
 | Operation target at use differs from the request's `operation_target`, or cannot be established at use | Execution Evidence | `target_drift` |
+| Named target object the permit was evaluated for, or the effective parameters it determines, not establishable at use | Execution Evidence | `target_drift` |
 | Permit validity window passed at execution | Execution Evidence | `permit_expired` |
 | Consumed single-use identifier presented again | Execution Evidence | `permit_consumed` |
 | Different evaluation identifier presented for an operation identity already claimed | Execution Evidence | `operation_already_claimed` |
@@ -3122,6 +3123,10 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
   `compensation_link_invalid`, and Failure-Condition Coverage maps it and
   the PEP's `compensation_link_unavailable`.
 
+- Failure-Condition Coverage maps a named target object, or the
+  effective parameters it determines, not establishable at use to
+  Execution Evidence `target_drift`, the post-permit counterpart of the
+  pre-decision `target_unresolvable` (#786).
 - Owner-ruled follow-ups to the editorial pass (#1629). A PDP claiming
   the Obligations feature publishes its supported obligation types; a
   PEP's `supported_obligations` declaration is optional and its
