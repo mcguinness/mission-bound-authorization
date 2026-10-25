@@ -47,32 +47,32 @@
     "content_sha256": "3e76453c13322a3586481cd021766799a75f5cbe1f9517cb2698dd5a2942e868"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "213893760b7c447ff475d568bc8a54be8a85176b",
-    "content_sha256": "0cf9c0c15240b62a32a5bd9bf0dddbb93cfe86d6390685e3c5c5fd7858b87a4f"
+    "revision": "552acb8c415969604ed2053786be955198d52785",
+    "content_sha256": "001ce4ec9ebaafee625fab3271656ff873d2073739b14e1d0e338ae57bce5943"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
     "revision": "b4f67b35b7798a15ebb876f488100282291e98c9",
     "content_sha256": "7045896b9dcf4574459f31fb8725faaf5d4520290b49d751ee028d2c958e8cd2"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "cb8fb904b1870d8d9b94816536376cd13b1c1f3c",
-    "content_sha256": "00aa0cfae2693ee89e19ec6edf3a8d7826da8c37d6120b600fee96f4297f6371"
+    "revision": "d9be6a8f39befa8f541da77debfb3b49c8e387e8",
+    "content_sha256": "16576c6430fa1676978886c705942f91da72c897801a9dbfb8ecd564981ab95e"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
     "content_sha256": "483287bedfb2209de40290df596ca9bc2ea3178e485e6eaa226a46e903e1d6c2"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "f69c9b4a80d569f1a30c76860ddf70a9a2dde5ec",
-    "content_sha256": "8b944e1f959321364a841f6788e4a7b62682b239f2a2c6a1c13f647490297fb1"
+    "revision": "0a8d989f52e000a391fa2653fb7df1446b906a08",
+    "content_sha256": "7b240ade339ad7221372fdb6def5df21b4b7d18e0f3e8ce90ae07eab473c9f69"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "17b6376ac96984daa915333276b76648b9543606",
-    "content_sha256": "a697e41043f5036dc1115e753f79c00767fa05c89afba57e5f72dc57da83f7e2"
+    "revision": "552acb8c415969604ed2053786be955198d52785",
+    "content_sha256": "9b28ebc8ab66892ab2387a801ecda192cbf802cd34c2ded22cd4d4e07bbe081d"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -115,8 +115,8 @@
     "content_sha256": "c9636bdc3bc0a3b7baffd573b69e56708887aacb5b9fecdd0d35516a4d1d69d5"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "0c7677a870b2d9a40af7bbafc5e04792ea63fa99",
-    "content_sha256": "07e01880187e375f571aa1a1afeccbd73901610ee6cb31bbc6d039756c360b07"
+    "revision": "ec82149461dec8f4a5955f1a12f236366de06047",
+    "content_sha256": "6d69c4cbcdff9c4eb7aca3f81ff0d1dd9c247ad097beabb300c6fbc85e9da6ec"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -44900,10 +44900,11 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Dispatch redemption bearing a dispatch_event_id already committed returns the same mission_id, never a second Mission"
+    "normative": "a Dispatch redemption bearing a dispatch_event_id already committed returns the same mission_id, never a second Mission",
+    "local": "Not solved by this row: serialization is per process (serializeDispatch), so concurrent retries across processes are not covered (multi-process claiming is #641); and the derivation is counted at token save while the delivery is recorded after it, so a crash in that window leaves no delivery to recover and the next retry mints and counts again, the ambiguous-delivery gap #250's authoritative issuance commit and #935 own."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
@@ -44922,15 +44923,21 @@
      "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a lost-response retry while the delivered token is valid returns that same token, saving no token and counting nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > concurrent first Dispatches under one dispatch_event_id create one instance and deliver one token, counted once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Tested at the endpoint for the same-fingerprint retry, including a retry whose Intent Submission Evidence lapsed after completion (recovered before re-verification; proved by skipping the early lookup). Fingerprint mismatch and tombstone retention have their own rows (template.dispatch.fingerprint-mismatch-refusal, template.dispatch.approval-event-id-per-dispatch). Concurrent-duplicate recovery (the reservation's primary-key race) is not exercised, so the row stays partial."
+   "notes": "Tested at the endpoint for the same-fingerprint retry, including a retry whose Intent Submission Evidence lapsed after completion (recovered before re-verification; proved by skipping the early lookup). Fingerprint mismatch and tombstone retention have their own rows (template.dispatch.fingerprint-mismatch-refusal, template.dispatch.approval-event-id-per-dispatch). Concurrent duplicates are witnessed in process: concurrent first Dispatches under one dispatch_event_id create one instance, and removing the serialization fails that witness. Promoted on the owner's go (D801). The reservation's primary-key race across processes is not exercised; see the local observation."
   },
   {
    "id": "template.dispatch.retry-gated-not-derived",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
-   "text": "a repeated identifier is gated to the previously committed instance rather than a fresh derivation",
+   "text": "a repeated identifier is gated to the previously committed instance rather than a fresh creation",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -44941,10 +44948,11 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a repeated dispatch_event_id whose delivered access token is still valid returns that same token, saving no token and leaving derivation_count unchanged; a retry against an instance no longer active is refused by that instance's gate with invalid_grant and its mission_error, counting nothing; a retry after containment narrowed the instance never returns the delivered token; concurrent requests under one dispatch_event_id recover one delivery, counted once"
+    "normative": "a repeated dispatch_event_id whose most recently recorded delivery is still valid and still authorized returns that same token, saving no token and leaving derivation_count unchanged; after expiry, or after containment narrowed the instance, the retry mints one replacement for the same instance, counted once and never as a second Dispatch, and a further retry recovers that replacement; a retry against an instance no longer active is refused by that instance's gate with invalid_grant and its mission_error, counting nothing; concurrent requests under one dispatch_event_id recover one delivery, counted once",
+    "local": "Not solved by this row: serialization is per process (serializeDispatch), so concurrent retries across processes are not covered (multi-process claiming is #641); and the derivation is counted at token save while the delivery is recorded after it, so a crash in that window leaves no delivery to recover and the next retry mints and counts again, the ambiguous-delivery gap #250's authoritative issuance commit and #935 own."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
@@ -44983,7 +44991,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Partial on one reading for the owner: once the delivered token has expired, or containment has narrowed the instance, the retry re-mints for the same instance and counts that delivery once, following the expansion profile's recovery rule that Template adopts (a fresh delivery credential carries ordinary issuance accounting and no creation accounting). Whether that re-mint is the fresh derivation this sentence excludes is open (#250). Proved by disabling the replay, the delivery record and each replay guard (expiry, active state, carried authority) in turn. Without the active check a revoked instance is still refused, by the release fence instead of the gate; the suspended case witnesses the check. One Dispatch per (authenticated Dispatcher, dispatch_event_id) runs at a time, so concurrent retries recover one delivery; single process only (#641). Proved by removing that serialization (both concurrency witnesses fail)."
+   "notes": "#250 (PR #1653); the reading is settled by #1661 (D793, Template clarified in #1679): a replacement after expiry or narrowing is an ordinary delivery counted once, not the fresh creation this sentence excludes. Promoted on the owner's go (D801). Mutation, fresh on main after #1679: disabling the replay or the delivery record fails the replay and further-retry witnesses; removing the expiry guard fails the expiry witness; removing the authority guard fails the narrowing witness; removing the active guard fails the suspended case (a revoked instance is still refused, by the release fence instead of the gate); removing the serialization fails both concurrency witnesses."
   },
   {
    "id": "template.dispatch.fingerprint-mismatch-refusal",
@@ -45713,7 +45721,7 @@
    "id": "template.dispatch.one-derivation",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
-   "text": "This grant performs exactly one derivation per `dispatch_event_id`",
+   "text": "This grant performs exactly one creation derivation per `dispatch_event_id`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -45724,20 +45732,50 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Dispatch increments the derivation_count of the instance it creates by exactly one, and a repeated dispatch_event_id, gated to the committed instance, counts nothing more",
-    "local": "the reference counts a new Dispatch once, which the cited test witnesses; a retry with the same dispatch_event_id currently counts again, the defect #1661 owns (first recorded in PR #1635), so the second clause has no witness"
+    "normative": "a Dispatch's creation increments the derivation_count of the instance it creates by exactly one, and a repeated dispatch_event_id never creates another instance or repeats creation accounting; a retry returning the delivered token, valid and still authorized, counts nothing; a retry minting a replacement delivery, after expiry or narrowing, counts once; concurrent retries recover one replacement",
+    "local": "the reference counts the creation at the Dispatch's token save; a replay answers from the recorded delivery and saves no token; a replacement is an ordinary counted save that repeats no creation accounting. Not solved by this row: serialization is per process (serializeDispatch), so concurrent retries across processes are not covered (multi-process claiming is #641); and the derivation is counted at token save while the delivery is recorded after it, so a crash in that window leaves no delivery to recover and the next retry mints and counts again, the ambiguous-delivery gap #250's authoritative issuance commit and #935 own."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
      "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a Dispatch under a Dispatch Policy stating a per-instance maximum records it, capping a larger request, each instance counting its own",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a lost-response retry while the delivered token is valid returns that same token, saving no token and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a retry after the delivered token expired mints a fresh token for the same instance, counted once as a delivery and never as a second Dispatch; a further retry recovers the fresh token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a retry after containment narrowed the instance mints a token carrying only the narrowed authority, never the delivered one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > concurrent retries after the delivered token expired recover one fresh delivery, counted once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > concurrent first Dispatches under one dispatch_event_id create one instance and deliver one token, counted once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1647, D764. Partial until a retried Dispatch stops counting again: #1661, linked to #250 (first recorded in PR #1635). The instance's limit is at least 1, so the Dispatch's own derivation never meets the limit, and no limit refusal applies. Mutation: counting an approval-bound grant as uncounted fails the cited test."
+   "notes": "#1647, D764; re-quoted for #1661 (D793), which separates creation from delivery; promoted on the owner's go (D801). Witnesses: the creation count, the replay (counts nothing), the expiry and narrowing replacements (each counts once, and a further retry recovers the replacement), concurrent retries (one replacement) and concurrent first Dispatches (one instance). Mutation, fresh on main after #1679: counting an approval-bound grant as uncounted fails the creation and both replacement counts; disabling the replay or the delivery record fails the replay and further-retry witnesses; removing the expiry guard fails the expiry witness; removing the serialization fails both concurrency witnesses."
   },
   {
    "id": "template.handoff.selector-refusal",
@@ -62973,9 +63011,21 @@
      "name": "discharge state at a carryover's completion (@spec child-delegation#carryover-cas, child-delegation#carryover-no-reset, #919) > refuses it even where the plan commits a state change as an exclusion: the child's effective authority moved, which the plan did not commit",
      "level": "cross-component",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover compositions in the reference deployment (@spec child-delegation#carryover, child-delegation#carryover-cas, #919) > refuses a batch when a carried child's own expiry arrives before completion: no replacement can outlive it",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a carried child's own expiry at completion (@spec child-delegation#carryover-cas, child-delegation#child-state, #1674) > is excluded and recorded expired under a plan committing state changes, while its sibling carries",
+     "level": "cross-component",
+     "surface": "derivation"
     }
    ],
-   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses. #919 adds a suspension and a resume after rendering, containment after approval, a rendered record gone at completion, and a discharge after rendering. Containment and discharge are compared by the membership pass (the committed `containment_version` and `effective_authority_hash`); the conditional UPDATE's containment and discharge terms are bound to the row as read in that transaction, so they add nothing beside it, and dropping the discharge term changes no result. Proved by mutation: disabling the membership pass and the UPDATE check together fails the suspension, resume, record and state-only discharge witnesses; dropping only the `record_missing` divergence fails the record witness; dropping only the effective-authority comparison fails the state-only discharge witness, where the plan excludes the discharge's state change but not its narrowed authority. With both halves off, the containment and all-or-nothing discharge witnesses are still refused by another check, so they are not the halves' discriminating witnesses."
+   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses. #919 adds a suspension and a resume after rendering, containment after approval, a rendered record gone at completion, and a discharge after rendering. Containment and discharge are compared by the membership pass (the committed `containment_version` and `effective_authority_hash`); the conditional UPDATE's containment and discharge terms are bound to the row as read in that transaction, so they add nothing beside it, and dropping the discharge term changes no result. Proved by mutation: disabling the membership pass and the UPDATE check together fails the suspension, resume, record and state-only discharge witnesses; dropping only the `record_missing` divergence fails the record witness; dropping only the effective-authority comparison fails the state-only discharge witness, where the plan excludes the discharge's state change but not its narrowed authority. With both halves off, the containment and all-or-nothing discharge witnesses are still refused by another check, so they are not the halves' discriminating witnesses. #1674: a carried row is compared as observed through the expiry clock, so an old child whose own expiry arrived before completion diverges as `state_changed` though no transition was persisted: refused under all-or-nothing, excluded and recorded `expired` under a plan committing that class. A cascade row is compared as stored, since its outcome does not change. Proved by mutation: comparing carried rows as stored fails the exclusion witness; comparing every row as observed fails the rendered-cascade own-expiry witness."
   },
   {
    "id": "child-delegation.carryover.generation-order",
@@ -63108,15 +63158,9 @@
      "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses to extend a carried child under a successor whose approved extension outlives the predecessor",
      "level": "cross-component",
      "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/carryover.test.ts",
-     "name": "Child Mission Carryover compositions in the reference deployment (@spec child-delegation#carryover, child-delegation#carryover-cas, #919) > refuses a batch when a carried child's own expiry arrives before completion: no replacement can outlive it",
-     "level": "cross-component",
-     "surface": "derivation"
     }
    ],
-   "notes": "The replacement's expiry runs through the one effective-expiry hook with the old child's `expires_at` as an INDEPENDENT bound beside the new parent's, so a successor carrying a disclosed, policy-permitted extension that outlives the predecessor still cannot extend a replacement. #919: where the old child's own expiry passes between rendering and completion, the bound leaves the replacement no lifetime, and creation refuses it (an effective expiry not later than the creation instant), so the batch is refused rather than a replacement extended; disabling that creation check fails the witness."
+   "notes": "The replacement's expiry runs through the one effective-expiry hook with the old child's `expires_at` as an INDEPENDENT bound beside the new parent's, so a successor carrying a disclosed, policy-permitted extension that outlives the predecessor still cannot extend a replacement. #1674: a carried child whose own expiry passes before completion is refused as a state change before any replacement is created, so creation's expiry check is a backstop there; that witness is cited on completion-cas."
   },
   {
    "id": "child-delegation.carryover.budget-transfer",
@@ -63753,8 +63797,15 @@
      "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > a rendered excluded child whose own expires_at arrives at completion terminates expired, not parent_terminated, in its record and in the authenticated map",
      "level": "unit",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a carried child's own expiry at completion (@spec child-delegation#carryover-cas, child-delegation#child-state, #1674) > is excluded and recorded expired under a plan committing state changes, while its sibling carries",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
     }
-   ]
+   ],
+   "notes": "#1674: a carried row whose own expiry arrives before the completion commit is excluded and recorded `expired` under a plan committing state changes."
   },
   {
    "id": "child-delegation.child-state.projection-before-materialization",
