@@ -267,7 +267,11 @@ export function stateSourcePlacement(posture: RuntimePosture): StateSourcePlacem
 }
 
 export function postureStalenessBound(posture: RuntimePosture, actionClass: string | undefined): StalenessBound {
-  const name = actionClass ?? "consequential_read";
+  // @spec runtime#classification (#956, D814): no class is not a class. A
+  // missing one is never read as `consequential_read`; it resolves to
+  // `undeclared`, which the PDP refuses.
+  if (actionClass === undefined) return { kind: "undeclared" };
+  const name = actionClass;
   if (!Object.hasOwn(posture.state_source.per_class, name)) return { kind: "undeclared" };
   const declared = posture.state_source.per_class[name as ActionClass];
   return declared.freshness_posture === "none"

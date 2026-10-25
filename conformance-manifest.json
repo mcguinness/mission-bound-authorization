@@ -28656,7 +28656,7 @@
     },
     {
      "file": "src/services/pdp/test/runtime-freshness-floor.test.ts",
-     "name": "consequential freshness floor (@spec runtime#state-freshness) > refuses an injected no-freshness posture for consequential, undeclared and default classes",
+     "name": "consequential freshness floor (@spec runtime#state-freshness) > refuses an injected no-freshness posture for consequential and undeclared classes, and a request with no class before evaluation",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -32240,6 +32240,52 @@
    "tests": []
   },
   {
+   "id": "authzen.pdp-consistency-checks.action-class-missing-refused",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-consistency-checks",
+   "text": "the PDP MUST refuse it before evaluation, MUST NOT evaluate it under a default class or record a class in Decision Evidence, and MUST record the refusal as a Refusal Record with `denial_reason` `action_class_missing`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mediated request reaching the PDP with no action class established is refused before evaluation, in process and over the remote decision channel, with no decision, no evaluation_id, no Decision Evidence and no class consulted or recorded; the refusal is a PDP-signed Refusal Record `action_class_missing`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "an unclassified mediated request is a request fault (@spec runtime#classification, authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #956) > records the refusal as a PDP-signed Refusal Record action_class_missing over the request as submitted, naming no class, no Mission and no evaluation",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "an unclassified mediated request is a request fault (@spec runtime#classification, authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #956) > the remote PDP refuses an unclassified mediated request before evaluation as action_class_missing, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > a mediated request with no action_class is refused before evaluation as action_class_missing: no decision, no Decision Evidence, never consequential_read (@spec runtime#classification, authzen#pdp-consistency-checks, #956)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > refuses to sign a record that names no action class, never defaulting one",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#956, D814 Q1. Every Enforcement Scope Statement the loader accepts declares action classes, so the reference refuses any missing class. Mutation: removing the pre-evaluation check fails all four (the emitter refuses to sign); restoring the consequential_read default in postureStalenessBound or the emitter fails the GAP 2 and emitter witnesses."
+  },
+  {
    "id": "authzen.pdp-request.consistency-state-active-and-pdp-precedence",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
@@ -34937,7 +34983,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the PDP's evaluation_request_digest is the canonical-object digest of the request body as submitted, extension members included, computed before any receiver-side default (the PDP's default action class does not enter it); a remote decision channel's envelope and MAC header fields do not enter it"
+    "normative": "the PDP's evaluation_request_digest is the canonical-object digest of the request body as submitted, extension members included, computed before any receiver-side default; a remote decision channel's envelope and MAC header fields do not enter it"
    },
    "level": "unit",
    "coverage": "tested",
@@ -34950,7 +34996,7 @@
     },
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > covers the whole submitted body: order-independent, extension members and explicit null included, receiver defaults excluded",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > covers the whole submitted body as submitted: order-independent, extension members and explicit null included",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -34960,7 +35006,8 @@
      "level": "cross-component",
      "surface": "evidence-emission"
     }
-   ]
+   ],
+   "notes": "#956 (D814) removed the PDP's default action class, the one receiver-side default the reference applied; with none left, the before-any-default clause holds without a reference default to exclude, and the witness covers the body as submitted."
   },
   {
    "id": "authzen.evaluation-request-digest-input.jcs-sha256-encoding",
@@ -34985,7 +35032,7 @@
    "tests": [
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > covers the whole submitted body: order-independent, extension members and explicit null included, receiver defaults excluded",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > covers the whole submitted body as submitted: order-independent, extension members and explicit null included",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -39960,6 +40007,40 @@
     }
    ],
    "notes": "#1629 (D744 ruling 3). The PDP signs a pdp-role Refusal Record phase_invalid over the request as submitted, naming no Mission and no evaluation, for an out-of-set phase and for a missing phase its declaration requires; the remote PDP retains one verifiable record per refusal (endpoint). phase_invalid joins the evidence store's PDP closed set, and a PEP-side store refuses to sign it. Mutations: recording the refusal as operation_target_invalid fails the signed-record and remote witnesses; removing phase_invalid from the PDP set fails the closed-set witness; adding it to the PEP set fails it too."
+  },
+  {
+   "id": "evidence.refusal.pdp-action-class-missing",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for a mediated request with no action class established, where the runtime Enforcement Scope Statement declares action classes, `action_class_missing`, recorded with no class",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PDP's Refusal Record for an unclassified mediated request carries denial_reason action_class_missing and no action_class or class_source, and verifies under the PDP's evidence key; a PEP-side store never signs that reason"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "an unclassified mediated request is a request fault (@spec runtime#classification, authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #956) > records the refusal as a PDP-signed Refusal Record action_class_missing over the request as submitted, naming no class, no Mission and no evaluation",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-denial-reason.test.ts",
+     "name": "the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > action_class_missing is the PDP's alone, and a PEP-side store never signs it (#956)",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#956, D814. Mutation: dropping action_class_missing from the PDP closed set fails the signed-record witness at signing."
   },
   {
    "id": "evidence.refusal.pep-compensation-link-unavailable",
@@ -67915,6 +67996,178 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
+  },
+  {
+   "id": "runtime.classification.unclassified-mediated-request-refused",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "A request that does reach the PDP within a mediated scope with no action class established, where the Enforcement Scope Statement declares action classes, is a request fault",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "such a request is refused before evaluation, never evaluated under a class it was not assigned, and no class is recorded for it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > a mediated request with no action_class is refused before evaluation as action_class_missing: no decision, no Decision Evidence, never consequential_read (@spec runtime#classification, authzen#pdp-consistency-checks, #956)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "an unclassified mediated request is a request fault (@spec runtime#classification, authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #956) > records the refusal as a PDP-signed Refusal Record action_class_missing over the request as submitted, naming no class, no Mission and no evaluation",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#956, D814 Q1. Fully constrained reads outside the mediated gate never reach the PDP and are unaffected; the declared argument-dependent classifier rule (runtime.classification.unclassifiable-defaults-to-widest) is separate and unchanged."
+  },
+  {
+   "id": "runtime.mission-binding.establishment-mode-values",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "mission-binding",
+   "text": "Each enforcement scope declares the modes it serves as `mission_establishment_mode` in its Enforcement Scope Statement",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Enforcement Scope Statement's mission_establishment_mode is credential_carried, externally_established, or a non-empty duplicate-free list of them; an empty list, a repeated mode or any other value is refused at load"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > credential_carried is accepted",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > externally_established is accepted",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > a list naming both modes is accepted",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > an empty list is refused",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > a list repeating a mode is refused",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > a free-string value outside the two modes (token-claim) is refused",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > a list carrying a value outside the two modes is refused",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#956, D814 Q2. Mutation: accepting any non-empty string fails the four refusal cases."
+  },
+  {
+   "id": "runtime.mission-binding.declare-only-served-modes",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "mission-binding",
+   "text": "A scope declares only the modes it actually serves.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the reference stack declares both modes only where the MAS baseline Join governs the payments resource; the AS-native target, which excludes the MAS, publishes credential_carried alone"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/establishment-modes.test.ts",
+     "name": "the stack declares the Mission-establishment modes it serves (@spec runtime#mission-binding, #956) > declares both modes where the MAS Join governs the payments resource, and credential_carried alone where it does not",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/establishment-modes.test.ts",
+     "name": "the stack declares the Mission-establishment modes it serves (@spec runtime#mission-binding, #956) > the published statement declares both modes, for the full reference stack that serves the MAS baseline Join",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > publishes credential_carried as its only Mission-establishment mode: the AS-native target serves no externally established mode (@spec runtime#mission-binding, #956)",
+     "level": "cross-component",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#956, D814 Q2. Mutation: declaring both modes unconditionally fails the AS-native publication witness and the served-modes witness."
+  },
+  {
+   "id": "runtime.mission-binding.both-modes-no-fallback",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "mission-binding",
+   "text": "Declaring both creates no fallback: the binding profile's precedence decides which reference establishes the Mission",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where a scope serves both modes, a credential-carried reference governs, and a propagated reference naming a different Mission or issuer is refused rather than establishing the Mission; an invalid credential is not rescued by an externally established reference"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "Mission-Reference propagation (gateway PEP) > a propagated reference naming a different Mission is refused with mission_reference_conflict",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "Mission-Reference propagation (gateway PEP) > a propagated reference naming a different issuer is refused with mission_reference_conflict",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#956, D814 Q2. Partial: the conflicting-selector half is witnessed (also cited by mas.reference.conflict-deny); no witness yet shows an invalid credential refused despite a valid propagated reference."
   },
   {
    "id": "mas.instance-join.no-coarse-fallback",

@@ -33,6 +33,7 @@ import {
   stalenessBound,
 } from "../src/index.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { withActionClass } from "./with-credential.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const ACTION = "payments:invoice.read";
@@ -74,7 +75,7 @@ async function decide(
   v: MissionView = view,
   context: Partial<EvaluationRequest["context"]> = {},
 ) {
-  const req: EvaluationRequest = {
+  const req: EvaluationRequest = withActionClass({
     subject: { id: "alice" },
     resource: {
       type: "invoice",
@@ -88,7 +89,7 @@ async function decide(
       ...(amount ? { amount } : {}),
       ...context,
     },
-  };
+  });
   const d = await evaluate(req, {
     view: v,
     fga: alwaysAllowFga,

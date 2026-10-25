@@ -332,6 +332,25 @@ function withJoinAudienceAlias(statement: RuntimePosture, join: { issuer: string
   };
 }
 
+/**
+ * @spec runtime#mission-binding (#956, D814): `statement` declaring exactly the
+ * Mission-establishment modes this stack serves for the payments scope. The
+ * credential-carried mode is always served; the externally established mode
+ * only where the MAS-governed channel's baseline Join governs the payments
+ * resource. Declaring both creates no fallback: the MAS profile's precedence
+ * still lets a credential-carried reference govern. The AS-native target,
+ * which excludes the MAS, therefore declares `credential_carried` only.
+ */
+export function withServedEstablishmentModes(statement: RuntimePosture, servesExternal: boolean): RuntimePosture {
+  return {
+    ...statement,
+    mediated_scope: {
+      ...statement.mediated_scope,
+      mission_establishment_mode: servesExternal ? ["credential_carried", "externally_established"] : "credential_carried",
+    },
+  };
+}
+
 export async function composeStack(opts: {
   openfgaUrl: string;
   presharedKey: string;
@@ -919,9 +938,12 @@ export async function composeStack(opts: {
   // identifier as an audience alias scoped to this issuer and the `at+jwt`
   // token profile (runtime-oauth#boundary-audience), declared in the
   // statement every consumer here reads and the resource publishes.
-  const statement = withJoinAudienceAlias(
-    opts.statement ?? RUNTIME_POSTURE,
-    masGovernedResources.includes(CANONICAL_RESOURCE) ? { issuer, alias: masJoin.join_resource } : undefined,
+  const statement = withServedEstablishmentModes(
+    withJoinAudienceAlias(
+      opts.statement ?? RUNTIME_POSTURE,
+      masGovernedResources.includes(CANONICAL_RESOURCE) ? { issuer, alias: masJoin.join_resource } : undefined,
+    ),
+    masGovernedResources.includes(CANONICAL_RESOURCE),
   );
   const boundary = paymentsBoundaryContext(statement);
   const pdpBoundary = (): string | undefined => {
