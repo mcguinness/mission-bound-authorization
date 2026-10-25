@@ -301,6 +301,42 @@ describe("Evaluation-Context Binding at the PEP (@spec runtime#evaluation-contex
     expect(h.connectors.committedEffects()).toHaveLength(1);
   });
 
+  it("the decision request of a covered crossing carries the context digest and the descriptor reference, built by the PEP alone", async () => {
+    const payments = new PaymentsStore();
+    payments.seed(
+      [{ id: "acme", name: "Acme", status: "approved" }],
+      [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
+    );
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
+    const asked: EvaluationRequest[] = [];
+    // A decision function that records the request and decides nothing: the
+    // members are the PEP's own construction, before any PDP sees them.
+    const pep = new Pep({
+      decide: async (req) => {
+        asked.push(req);
+        throw new Error("no decision in this test");
+      },
+      payments,
+      evidence: new EvidenceStore(keys.signing, keys.resolver),
+      fga: alwaysAllowFga,
+      modelId: "model-773",
+      loadView: (ref) =>
+        ref.id === "msn_773" && ref.issuer === ISSUER
+          ? { view: view("msn_773"), observation: { state: "active", version: 1, mode: "fresh", freshness_at: new Date(BASE_MS).toISOString() } }
+          : undefined,
+      instanceEpoch: "epoch-773-unit",
+      now: () => new Date(BASE_MS),
+      evaluationContextBinding: () => CLAIMED,
+    });
+    await pep.enforce("hold_transfer", { invoice_id: "inv-1" }, TOKEN);
+    await pep.enforce("get_invoice", { invoice_id: "inv-1" }, TOKEN);
+    const [covered, uncovered] = asked.map((r) => r.context as unknown as Record<string, unknown>);
+    expect(covered?.evaluation_context_digest).toMatch(/^sha-256:[A-Za-z0-9_-]{43}$/);
+    expect(covered?.evaluation_context_binding).toEqual(CLAIMED.operation("payments:payment.execute", "prepare")?.descriptor);
+    expect(uncovered).not.toHaveProperty("evaluation_context_digest");
+    expect(uncovered).not.toHaveProperty("evaluation_context_binding");
+  });
+
   it("the descriptor reference is committed inside the digest with the Mission, the operation, the targets, the facts and the salt", () => {
     const payments = new PaymentsStore();
     payments.seed(
@@ -449,6 +485,19 @@ describe("the primary error of a context failure at use, with every available di
     expect(record?.effective_parameter_digest).toBeDefined();
     expect(record?.effective_parameter_digest).not.toBe(record?.authorized_parameter_digest);
     expect(record?.authorized_evaluation_context_digest).toBeDefined();
+    expect(record).not.toHaveProperty("effective_evaluation_context_digest");
+  });
+
+  it("a declared fact that stops resolving at use is target_drift with no effective context digest, though the parameters still resolve", async () => {
+    const h = harness();
+    const refused = await cross(h, COMMIT, () =>
+      h.payments.db.prepare("UPDATE invoices SET payee_account = '' WHERE id = ?").run("inv-1"),
+    );
+    expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
+    expect(h.connectors.committedEffects()).toHaveLength(0);
+    const [record] = executions(h);
+    expect(record?.error).toBe("target_drift");
+    expect(record?.effective_parameter_digest).toBeDefined();
     expect(record).not.toHaveProperty("effective_evaluation_context_digest");
   });
 
