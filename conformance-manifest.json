@@ -49539,7 +49539,7 @@
     "normative": "an RS enforcing more than one applicable mission_resource_access entry treats them as alternative grants, not a conjunctive filter."
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
@@ -49564,9 +49564,27 @@
      "name": "PDP Mission bound: applicable entries are alternative grants (#1375) > binds the permit to the entry that authorized it, not the first applicable entry",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > a vendor-scoped list read authorizes through a later entry whose vendors admit the vendor, returning only that vendor's invoices",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > an unscoped list read narrows to the first entry the resource can fully enforce, never to one carrying an unknown member",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > a read authorizes through a later unconstrained entry beside one whose tenant fact the record lacks",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed at the SaaS resource (review on PR #1298): an unconstrained entry authorizes beside one SaaS cannot enforce, and each of two entries authorizes its own action. In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone."
+   "notes": "Witnessed at the SaaS resource (review on PR #1298): an unconstrained entry authorizes beside one SaaS cannot enforce, and each of two entries authorizes its own action. In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646: at the payments resource the alternative-grant behavior is witnessed for reads (a vendor-scoped list read relies on an entry that admits the vendor, at decision and reverification; a read relies on an unconstrained entry beside one missing its tenant fact; a vendor from one entry and a tenant from another never combine) and at the PDP, not across every operation the resource serves (writes, transaction-assured operations)."
   },
   {
    "id": "resource-access.rs-enforcement.resource-match-unrecognized-fail-closed",
@@ -49888,9 +49906,15 @@
      "name": "PDP Mission bound: applicable entries are alternative grants (#1375) > permits through an independently sufficient later entry beside one whose fact is absent",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > a read authorizes through a later unconstrained entry beside one whose tenant fact the record lacks",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1375. The payments resource refuses a lone entry whose fact is missing. That such an entry leaves another applicable entry free to authorize is witnessed at the helper the payments PEP calls (coveringCredentialEntries) and, as a PDP witness, at the PDP credential bound (evaluate-constraint-satisfaction.test.ts). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. #1266 round 2: a list read whose member lacks the fact, or that returns no member, refuses whole."
+   "notes": "#1375. The payments resource refuses a lone entry whose fact is missing. That such an entry leaves another applicable entry free to authorize is witnessed at the helper the payments PEP calls (coveringCredentialEntries) and, as a PDP witness, at the PDP credential bound (evaluate-constraint-satisfaction.test.ts). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. #1266 round 2: a list read whose member lacks the fact, or that returns no member, refuses whole. At the payments resource (#1375 review): a read relies on an unconstrained entry beside one whose tenant fact the record lacks, so an entry missing its fact authorizes nothing without blocking another."
   },
   {
    "id": "resource-access.common-constraints.unsatisfiable-entry-no-authority",
@@ -49955,9 +49979,15 @@
      "name": "PDP Mission bound: applicable entries are alternative grants (#1375) > permits through an independently sufficient later entry beside one whose fact is absent",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > a read authorizes through a later unconstrained entry beside one whose tenant fact the record lacks",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1375. Witnessed at the helper the payments PEP calls (coveringCredentialEntries, credentialAuthorityPermits) and at the payments resource for a key it cannot evaluate; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone."
+   "notes": "#1375. Witnessed at the helper the payments PEP calls (coveringCredentialEntries, credentialAuthorityPermits) and at the payments resource for a key it cannot evaluate; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. At the payments resource (#1375 review): an entry whose tenant predicate cannot be satisfied for the record contributes nothing, and an unconstrained entry beside it authorizes the read."
   },
   {
    "id": "resource-access.common-constraints.refuse-unless-independent-entry",
@@ -49979,7 +50009,7 @@
     "normative": "a request is authorized only through one applicable entry that covers it whole with every constraint satisfied; an independently sufficient alternative entry authorizes, none refuses, and parts of entries never combine"
    },
    "level": "unit",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
@@ -50016,9 +50046,27 @@
      "name": "PDP Mission bound: applicable entries are alternative grants (#1375) > never combines fragments: one entry's tenant and another's amount, or another entry's action, do not permit",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > a vendor-scoped list read authorizes through a later entry whose vendors admit the vendor, returning only that vendor's invoices",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > a read authorizes through a later unconstrained entry beside one whose tenant fact the record lacks",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > never combines parts of two entries: one admitting the vendor and another the tenant authorize nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1375. Witnessed at the helper the payments PEP calls; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Vector cases cc-satisfaction-* still skip: the case reader has no rs-authorize executor. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone."
+   "notes": "#1375. Witnessed at the helper the payments PEP calls; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Vector cases cc-satisfaction-* still skip: the case reader has no rs-authorize executor. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646: at the payments resource the alternative-grant behavior is witnessed for reads (a vendor-scoped list read relies on an entry that admits the vendor, at decision and reverification; a read relies on an unconstrained entry beside one missing its tenant fact; a vendor from one entry and a tenant from another never combine) and at the PDP, not across every operation the resource serves (writes, transaction-assured operations)."
   },
   {
    "id": "resource-access.common-constraints.max-amount-currency-no-intersection",
@@ -54774,6 +54822,12 @@
      "name": "PDP Mission bound: applicable entries are alternative grants (#1375) > never combines fragments: one entry's tenant and another's amount, or another entry's action, do not permit",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > never combines parts of two entries: one admitting the vendor and another the tenant authorize nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
    "notes": "#1258 item 2. Witnessed at the SaaS resource (review on PR #1298): a write whose action is in one entry and whose vendor is in another is refused, and an entry SaaS cannot enforce lends its action to no other entry. The payments policy decision point's Mission bound (since #1375) and its credential bound each judge entries whole, so neither combines entries. Cases fc-01..03 stay skipped: the case reader has no rs-authorize executor."
@@ -54922,9 +54976,15 @@
      "name": "an entry SaaS cannot fully enforce lends no authority, and a clean entry still authorizes beside it (@spec resource-access#rs-enforcement, #1362) > refuses a request that only the entry carrying a member it does not recognize covers, while a clean entry still authorizes its own action",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-constraint-satisfaction.test.ts",
+     "name": "PDP Mission bound: applicable entries are alternative grants (#1375) > an entry carrying an unknown member or locations provides no authority, alone or as the fallback for a failing entry",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1258 item 4, #1277 review finding 1 (D454). #1362: witnessed at the SaaS resource, which enforces type, resource, resource_match, actions and constraints, disregards delegation, and implements no extension member. An entry carrying a member SaaS does not recognize, whatever its value, or `capability_sources`, an extension member whose obligations SaaS cannot fulfill, provides no authority: a write only that entry covers is refused with no journal entry, and its action is lent to no clean entry beside it. Proved by mutation: dropping the member-role check, treating a null or false member as absent, disregarding `capability_sources`, and pooling actions across entries each fail these tests. The reference credential bound refuses any unknown member for the whole token (credential-authority tests), which is stricter than this per-entry rule, and sets aside `delegation` and `capability_sources`. Cases fc-05 and fc-10 in vectors/mission-resource-access/fail-closed.json stay skipped: the payments policy decision point's Mission bound weighs every applicable entry since #1375 but does not treat a Mission entry carrying a member it does not enforce as providing no authority (the authorization server refuses such an entry at intake, so a record never carries one), and the case reader has no rs-authorize executor; fc-10 also requires rs.extension-members."
+   "notes": "#1258 item 4, #1277 review finding 1 (D454). #1362: witnessed at the SaaS resource, which enforces type, resource, resource_match, actions and constraints, disregards delegation, and implements no extension member. An entry carrying a member SaaS does not recognize, whatever its value, or `capability_sources`, an extension member whose obligations SaaS cannot fulfill, provides no authority: a write only that entry covers is refused with no journal entry, and its action is lent to no clean entry beside it. Proved by mutation: dropping the member-role check, treating a null or false member as absent, disregarding `capability_sources`, and pooling actions across entries each fail these tests. The reference credential bound refuses any unknown member for the whole token (credential-authority tests), which is stricter than this per-entry rule, and sets aside `delegation` and `capability_sources`. Cases fc-05 and fc-10 in vectors/mission-resource-access/fail-closed.json stay skipped: the case reader has no rs-authorize executor. Since #1375 the payments policy decision point treats a Mission entry carrying a member outside the supported set, or locations, as providing no authority, alone or as the fallback for a failing entry (judged on the committed entry, so a PDP-local join_delegation is not mistaken for one; delegation is disregarded), and its list-scope selection skips such an entry; fc-10 also requires rs.extension-members."
   },
   {
    "id": "resource-access.rs-enforcement.defined-extension-enforceable",
@@ -54985,9 +55045,15 @@
      "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry carrying the RFC 9396 locations field, whatever its value",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-constraint-satisfaction.test.ts",
+     "name": "PDP Mission bound: applicable entries are alternative grants (#1375) > an entry carrying an unknown member or locations provides no authority, alone or as the fallback for a failing entry",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1258 item 4, kept separate from the member rule (D454). #1362: witnessed at the SaaS resource: an entry carrying `locations`, populated or empty, provides no authority, and a write only that entry covers is refused with no journal entry. The RAS refuses a grant whose entry carries it (#1283), so the witness mints the RAS-issued token directly. Proved by mutation: dropping the member-role check, disregarding `locations`, and treating an empty `locations` as absent each fail the test. Case fc-07 stays skipped: the payments policy decision point's Mission bound weighs every applicable entry since #1375 but does not treat a Mission entry carrying a member it does not enforce as providing no authority (the authorization server refuses such an entry at intake, so a record never carries one), and the case reader has no rs-authorize executor."
+   "notes": "#1258 item 4, kept separate from the member rule (D454). #1362: witnessed at the SaaS resource: an entry carrying `locations`, populated or empty, provides no authority, and a write only that entry covers is refused with no journal entry. The RAS refuses a grant whose entry carries it (#1283), so the witness mints the RAS-issued token directly. Proved by mutation: dropping the member-role check, disregarding `locations`, and treating an empty `locations` as absent each fail the test. Case fc-07 stays skipped: the case reader has no rs-authorize executor. Since #1375 the payments policy decision point treats a Mission entry carrying a member outside the supported set, or locations, as providing no authority, alone or as the fallback for a failing entry (judged on the committed entry, so a PDP-local join_delegation is not mistaken for one; delegation is disregarded), and its list-scope selection skips such an entry."
   },
   {
    "id": "resource-access.entry-validation.locations-refused",
