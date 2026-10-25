@@ -43,6 +43,8 @@ const REFUSAL_RECORD_DIAGNOSTICS = [
   "credential_boundary_changed",
   // #1629: the operation is a phase of a compound action and its phase is not establishable.
   "phase_unavailable",
+  // #252: a compensate crossing whose committed original the PEP cannot establish from verified evidence.
+  "compensation_link_unavailable",
 ];
 
 const refusalInput = (denial_reason: string) => ({
@@ -107,7 +109,12 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
   });
 
   it("operation_target_invalid is the PDP's alone, and a PEP-side store never signs it (#1276)", async () => {
-    expect(REFUSAL_DENIAL_REASONS.pdp).toEqual(["mission_context_missing", "operation_target_invalid", "phase_invalid"]);
+    expect(REFUSAL_DENIAL_REASONS.pdp).toEqual([
+      "mission_context_missing",
+      "operation_target_invalid",
+      "phase_invalid",
+      "compensation_link_invalid",
+    ]);
     expect(isRefusalDenialReason("pdp", "operation_target_invalid")).toBe(true);
     expect(isRefusalDenialReason("pep", "operation_target_invalid")).toBe(false);
     const keys = createEphemeralEvidenceKeys();
@@ -128,6 +135,22 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
     expect(evidence.all()).toHaveLength(0);
     const record = await evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput("phase_unavailable"));
     expect(record.content.denial_reason).toBe("phase_unavailable");
+    expect(evidence.all()).toHaveLength(1);
+  });
+
+  it("compensation_link_invalid is the PDP's alone and compensation_link_unavailable the PEP's alone: a PEP-side store signs compensation_link_unavailable and never compensation_link_invalid (#252)", async () => {
+    expect(isRefusalDenialReason("pdp", "compensation_link_invalid")).toBe(true);
+    expect(isRefusalDenialReason("pep", "compensation_link_invalid")).toBe(false);
+    expect(isRefusalDenialReason("pep", "compensation_link_unavailable")).toBe(true);
+    expect(isRefusalDenialReason("pdp", "compensation_link_unavailable")).toBe(false);
+    const keys = createEphemeralEvidenceKeys();
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    await expect(
+      evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput("compensation_link_invalid")),
+    ).rejects.toThrow(/not in the closed set/);
+    expect(evidence.all()).toHaveLength(0);
+    const record = await evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput("compensation_link_unavailable"));
+    expect(record.content.denial_reason).toBe("compensation_link_unavailable");
     expect(evidence.all()).toHaveLength(1);
   });
 });

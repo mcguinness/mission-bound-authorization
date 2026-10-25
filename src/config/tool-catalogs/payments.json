@@ -89,6 +89,19 @@
       }
     },
     {
+      "name": "reverse_wire_transfer",
+      "description": "Reverse a committed wire transfer",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoice_id": { "type": "string" },
+          "idempotency_key": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" }
+        },
+        "required": ["invoice_id", "idempotency_key"],
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "send_remittance_email",
       "description": "Send remittance advice",
       "inputSchema": {
