@@ -47,10 +47,12 @@ import {
   type PrincipalMappingResolver,
   type ResourceContractDeclarations,
   type ResourceContractRef,
+  refusedEntryMember,
   resourceContractOf,
   sameResourceContract,
   SUPPORTED_CONSTRAINT_KEYS,
   timeWindowEndMs,
+  unsupportedEntryMember,
 } from "@mission/core";
 import { RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { randomUUID } from "node:crypto";
@@ -81,6 +83,7 @@ import { type DelegatePolicy, type JoinMappingContract, resolveAssertedJoin, res
 import { decisionCacheKey, idempotencyScopeOf, operationIdentity } from "./projections.js";
 import {
   type AuthorityEntry,
+  committedEntry,
   committedEntryDigest,
   deriveContextualTuples,
   joinViewId,
@@ -1720,6 +1723,22 @@ async function evaluateInner(
     candidates = kept;
     return true;
   };
+  // @spec resource-access#rs-enforcement (#1258 item 4, #1375): an entry
+  // carrying `locations`, or a member outside the set this implementation
+  // supports (the type's members, `capability_sources` and
+  // `resource_contract`), is one this resource server cannot fully enforce,
+  // so it provides no authority and lends nothing to another entry. Decided
+  // by presence, never by value. `delegation` is disregarded here, whatever
+  // it carries: it governs issuance, not the use of this token. Judged on
+  // the committed entry, so a PDP-local member a loader adds (today
+  // `join_delegation`) is never mistaken for one the entry carries.
+  const fullyEnforceable = (e: AuthorityEntry): boolean => {
+    const committed = committedEntry(e);
+    return refusedEntryMember(committed) === undefined && unsupportedEntryMember(committed) === undefined;
+  };
+  if (!narrow(fullyEnforceable)) {
+    return deny("out_of_authority", "mission");
+  }
   if (contractApplies) {
     if (requestContract === undefined) return deny("resource_contract_drift");
     const resolved = contracts.resolve(requestContract, { target: operationTarget, action: req.action.name, now: now() });
