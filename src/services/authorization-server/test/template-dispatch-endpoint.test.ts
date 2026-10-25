@@ -37,7 +37,7 @@ import {
   jwtVerify,
   SignJWT,
 } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import { commitAtNextIssue, commitDuringDrain, expectFenceRefusal } from "./release-fence.helper.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
@@ -1094,6 +1094,64 @@ describe("a Dispatch retry recovers its delivery (@spec mission-template#grant-t
     expect(retry.body.access_token).toBeUndefined();
     expect(issued).toBe(0);
     expect(as.kernel.get(id)?.derivation_count).toBe(1);
+  });
+
+  /**
+   * Two identical requests, the first held inside its token save until the
+   * second has had time to reach the handler; then both are released.
+   */
+  const concurrently = async (templateId: string, evt: string): Promise<[Awaited<ReturnType<typeof send>>, Awaited<ReturnType<typeof send>>]> => {
+    let entered!: () => void;
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const save = as.provider.AccessToken.prototype.save;
+    const spy = vi.spyOn(as.provider.AccessToken.prototype, "save").mockImplementationOnce(async function (this: unknown, ...args: unknown[]) {
+      entered();
+      await hold;
+      return (save as (...a: unknown[]) => Promise<string>).apply(this, args);
+    });
+    try {
+      const first = send(templateId, evt);
+      await ready;
+      const second = send(templateId, evt);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      release();
+      return await Promise.all([first, second]);
+    } finally {
+      release();
+      spy.mockRestore();
+    }
+  };
+
+  it("concurrent retries after the delivered token expired recover one fresh delivery, counted once", async () => {
+    const { templateId, evt, id } = await dispatched();
+    const recorded = as.creationIdempotency.find("ap-agent", evt);
+    as.creationIdempotency.recordDelivery("ap-agent", evt, { ...recorded?.delivery, exp: Math.floor(Date.now() / 1000) - 1 });
+
+    const [first, second] = await concurrently(templateId, evt);
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    expect(second.status, JSON.stringify(second.body)).toBe(200);
+    expect(second.body.access_token).toBe(first.body.access_token);
+    expect(as.kernel.get(id)?.derivation_count).toBe(2);
+  });
+
+  it("concurrent first Dispatches under one dispatch_event_id create one instance and deliver one token, counted once", async () => {
+    const templateId = await newTemplate();
+    const evt = `evt-recover-${seq++}`;
+    const missions = as.kernel.allMissions().length;
+
+    const [first, second] = await concurrently(templateId, evt);
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    expect(second.status, JSON.stringify(second.body)).toBe(200);
+    expect(second.body.mission_id).toBe(first.body.mission_id);
+    expect(second.body.access_token).toBe(first.body.access_token);
+    expect(as.kernel.allMissions().length).toBe(missions + 1);
+    expect(as.kernel.get(first.body.mission_id as string)?.derivation_count).toBe(1);
   });
 
   it("a retry after containment narrowed the instance mints a token carrying only the narrowed authority, never the delivered one", async () => {

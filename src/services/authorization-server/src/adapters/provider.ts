@@ -2819,7 +2819,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
   if (grantEnabled.get(MISSION_DISPATCH_GRANT_TYPE)) {
     provider.registerGrantType(
       MISSION_DISPATCH_GRANT_TYPE,
-      (ctx) => handleMissionDispatchGrant(provider, opts, ctx),
+      (ctx) => serializeDispatch(opts.kernel, ctx, () => handleMissionDispatchGrant(provider, opts, ctx)),
       // `authorization_details` carries the dispatcher's authority proposal
       // (@spec mission#authority-proposal), the same standard carriage as PAR
       // and the child/expansion exchanges; it MUST be declared here or
@@ -6296,6 +6296,41 @@ function dispatchErrorCode(reason: DispatchReason): "invalid_request" | "access_
  * oidc-provider's err_out renderer would otherwise strip any member other
  * than error/error_description (same technique as handleChildCreationExchange).
  */
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery (#250): the
+ * Dispatches in flight, by reservation key (authenticated Dispatcher,
+ * dispatch_event_id), per kernel.
+ */
+const dispatchesInFlight = new WeakMap<MissionKernel, Map<string, Promise<void>>>();
+
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery (#250): one
+ * Dispatch per reservation key runs at a time. A concurrent request with the
+ * same key waits for the one in flight, then looks the key up again and
+ * reads the delivery it recorded, so concurrent retries recover one token
+ * and count it once. Instance-level serialization for the declared
+ * one-process topology, as the kernel's exclusive derivations are;
+ * multi-process claiming stays behind #641.
+ */
+async function serializeDispatch(kernel: MissionKernel, ctx: KoaContextWithOIDC, run: () => Promise<void>): Promise<void> {
+  const eventId = (ctx.oidc.params as Record<string, unknown>).dispatch_event_id;
+  const clientId = ctx.oidc.client?.clientId;
+  if (typeof eventId !== "string" || !eventId || !clientId) return run();
+  const key = `${clientId}\u0000${eventId}`;
+  let inFlight = dispatchesInFlight.get(kernel);
+  if (!inFlight) dispatchesInFlight.set(kernel, (inFlight = new Map()));
+  for (let held = inFlight.get(key); held; held = inFlight.get(key)) {
+    await held.catch(() => undefined);
+  }
+  const attempt = run();
+  inFlight.set(key, attempt);
+  try {
+    await attempt;
+  } finally {
+    if (inFlight.get(key) === attempt) inFlight.delete(key);
+  }
+}
+
 async function handleMissionDispatchGrant(
   provider: Provider,
   opts: AdapterOptions,
