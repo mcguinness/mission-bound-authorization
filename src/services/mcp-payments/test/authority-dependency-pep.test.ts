@@ -11,7 +11,16 @@
  * before anything is released, and the deployment's dependency evidence
  * keeps the cause: a known withdrawal, an observed invalidation, a stale
  * observation, or no acceptable observation (an unavailable source).
+ *
+ * The step's dependency ceiling travels with the permit into execution
+ * admission (D813): on every dispatch path (a read, an unkeyed and a keyed
+ * reversible write, and the transaction tier) a permit admitted while the
+ * observation was valid releases no effect once that validity has passed,
+ * and a known withdrawal reaching the PEP between admission and release
+ * stops the release too.
  */
+
+import { randomUUID } from "node:crypto";
 
 import {
   type AuthorityDependencyDeclaration,
@@ -26,6 +35,7 @@ import {
   type Fga,
   loadRuntimePosture,
   type MissionView,
+  openEphemeralClaimDomain,
   relationForAction,
   RUNTIME_POSTURE,
   stalenessBound,
@@ -41,6 +51,7 @@ import {
   openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
+  TOOLS,
   type TokenFacts,
   TransactionEngine,
 } from "../src/index.js";
@@ -55,7 +66,14 @@ const view: MissionView = {
   state: "active",
   version: 1,
   authority_hash: "sha-256:dep-pep",
-  authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }],
+  authority_set: [
+    {
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: [...new Set(TOOLS.map((t) => t.action))],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
 };
@@ -89,17 +107,33 @@ async function build() {
     parse: (raw) => parseIdentityState(raw),
     now: () => nowMs,
   });
+  // The resolver the enforcement reads: the test can hand it a different one
+  // between admission and release, as a read completing in that window would.
+  let viewing = resolver;
+  // The transaction tier's high-consequence class needs the PDP's claim
+  // domain; settlement verifies against this resource's evidence keys.
+  let pepKeys: ((params: never) => unknown) | undefined;
   const point = createEphemeralDecisionPoint({
     emitterId: CANONICAL_RESOURCE,
     audience: CANONICAL_RESOURCE,
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+    claims: openEphemeralClaimDomain({
+      owner: RUNTIME_POSTURE.pdps[0] as string,
+      statement: RUNTIME_POSTURE,
+      now: () => new Date(nowMs),
+      settlementKeys: ((params: never) => pepKeys?.(params)) as never,
+    }),
   });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
+  pepKeys = keys.resolver as never;
   const records = new EvidenceStore(keys.signing, keys.resolver);
   const payments = new PaymentsStore();
   payments.seed(
     [{ id: "acme", name: "Acme", status: "approved" }],
-    [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
+    [
+      { id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" },
+      { id: "inv-2", vendor_id: "acme", amount: "75.00", currency: "USD", payee_account: "acct-acme", status: "payable" },
+    ],
   );
   const missionFga = { checkWithContext: async () => true } as unknown as Fga;
   const loadView = (ref: { id: string; issuer: string }) =>
@@ -128,13 +162,13 @@ async function build() {
     claims: channel.claims,
     authorityDependency: {
       declaration: routedToPep(),
-      resolver,
+      resolver: { view: (principal: { iss: string; sub: string }) => viewing.view(principal) } as unknown as AuthorityDependencyResolver,
       evidence,
       now: () => nowMs,
       governed: (mission) => (mission.id === view.id ? { subject: { iss: ISSUER, sub: "alice" }, clientId: "ap-agent" } : undefined),
     },
   });
-  const connectors = new Connectors();
+  const connectors = new Connectors(() => new Date(nowMs));
   const server = new McpPaymentsServer({
     pep,
     payments,
@@ -143,15 +177,31 @@ async function build() {
     jwks: { keys: [] },
     keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     enforcementScopeStatement: loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: channel.remoteDecisionChannels }),
-    transaction: { engine: new TransactionEngine("epoch-830"), connectors, evidence: records },
-    writeReservations: openEphemeralWriteReservationStore({ owner: RUNTIME_POSTURE.mediated_scope.pep_locations[0] as string }),
+    transaction: { engine: new TransactionEngine("epoch-830", () => new Date(nowMs)), connectors, evidence: records },
+    writeReservations: openEphemeralWriteReservationStore({ owner: RUNTIME_POSTURE.mediated_scope.pep_locations[0] as string, now: () => new Date(nowMs) }),
   });
   return {
     server,
     resolver,
     evidence,
     decisions,
-    read: () => server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN),
+    read: (hook?: () => void) => server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN, hook),
+    /** Every dispatch path, each called with a hook that runs between admission and release. */
+    paths: {
+      read: (hook?: () => void, invoice = "inv-1") => server.callReadTool("get_invoice", { invoice_id: invoice }, TOKEN, hook),
+      "unkeyed write": (hook?: () => void, invoice = "inv-1") => server.callWriteTool("hold_transfer", { invoice_id: invoice }, TOKEN, hook),
+      "keyed write": (hook?: () => void, invoice = "inv-1") =>
+        server.callWriteTool("schedule_payment", { invoice_id: invoice, idempotency_key: `idem_${randomUUID()}` }, TOKEN, hook),
+      "transaction tier": (hook?: () => void, invoice = "inv-1") =>
+        server.callTransactionTool("execute_wire_transfer", { invoice_id: invoice, idempotency_key: `idem_${randomUUID()}` }, TOKEN, hook),
+    } as Record<string, (hook?: () => void, invoice?: string) => Promise<{ ok: boolean; refusal_reason?: string; result?: unknown }>>,
+    ledger: () => connectors.ledgerEntries(view.id),
+    /** From now on the enforcement reads `next` (a resolver the test refreshed). */
+    observeWith: (next: AuthorityDependencyResolver) => {
+      viewing = next;
+    },
+    newResolver: (records: unknown) =>
+      new AuthorityDependencyResolver({ issuer: ISSUER, read: async () => records, parse: (raw) => parseIdentityState(raw), now: () => nowMs }),
     executions: () => records.forMission(view.id).filter((e) => e.kind === "execution").map((e) => (e as { content: Record<string, unknown> }).content),
     set: (next: unknown) => {
       source = next;
@@ -245,6 +295,72 @@ describe("a declared authority dependency enforced as a composed resource-policy
       x.after(200);
       const res = await x.read();
       expect(res.ok, JSON.stringify(res)).toBe(true);
+    } finally {
+      await x.close();
+    }
+  });
+});
+
+describe("the composed step's dependency ceiling and recheck hold at release on every dispatch path (@spec runtime#input-authority-dependency, #830, D813)", () => {
+  it("releases no effect once the observation the step relied on has passed its validity, on a read, an unkeyed write, a keyed write and the transaction tier", async () => {
+    const x = await build();
+    try {
+      for (const [path, call] of Object.entries(x.paths)) {
+        // An observation 299 s old at admission, of its 300 s validity; released 1 s later.
+        x.after(-299);
+        await x.resolver.refresh();
+        x.after(0);
+        const crossed = await call(() => x.after(1));
+        expect(crossed.ok, `${path}: ${JSON.stringify(crossed)}`).toBe(false);
+        expect(crossed.refusal_reason, `${path}: ${JSON.stringify(crossed)}`).toBe("resource_policy");
+        expect(crossed.result, path).toBeUndefined();
+        expect(x.executions().at(-1), path).toMatchObject({ outcome: "suppressed", error: "resource_policy" });
+        expect(x.evidence.entries().at(-1), path).toMatchObject({ enforcer: "pep", failure: "stale", mission: { id: view.id } });
+        expect(x.ledger(), path).toHaveLength(0);
+        // The same path on another invoice, admitted and released within a
+        // fresh observation's validity (the refused operation's key stays
+        // claimed for its lease).
+        await x.resolver.refresh();
+        const released = await call(() => x.after(2), "inv-2");
+        expect(released.ok, `${path}: ${JSON.stringify(released)}`).toBe(true);
+      }
+      expect(x.ledger()).toHaveLength(1);
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("releases no effect when a known withdrawal reaches the PEP between admission and release, on every dispatch path", async () => {
+    const x = await build();
+    try {
+      await x.resolver.refresh();
+      const withdrawn = x.newResolver([{ sub: "alice", withdrawn_delegations: ["ap-agent"] }]);
+      await withdrawn.refresh();
+      for (const [path, call] of Object.entries(x.paths)) {
+        x.observeWith(x.resolver);
+        const refused = await call(() => x.observeWith(withdrawn));
+        expect(refused.ok, `${path}: ${JSON.stringify(refused)}`).toBe(false);
+        expect(refused.refusal_reason, path).toBe("resource_policy");
+        expect(x.executions().at(-1), path).toMatchObject({ outcome: "suppressed", error: "resource_policy" });
+        expect(x.evidence.entries().at(-1), path).toMatchObject({ enforcer: "pep", failure: "withdrawn" });
+      }
+      expect(x.ledger()).toHaveLength(0);
+    } finally {
+      await x.close();
+    }
+  });
+});
+
+describe("the composed step's ceiling on a read admitted at the edge of the observation's validity (@spec runtime#input-authority-dependency, #830, D813)", () => {
+  it("refuses a read admitted at 299 s of a 300 s validity and reaching release at 300 s", async () => {
+    const x = await build();
+    try {
+      await x.resolver.refresh();
+      x.after(299);
+      const result = await x.read(() => x.after(300));
+      expect(result.ok, JSON.stringify(result)).toBe(false);
+      expect(result.refusal_reason).toBe("resource_policy");
+      expect(x.executions().at(-1)).toMatchObject({ outcome: "suppressed", error: "resource_policy" });
     } finally {
       await x.close();
     }

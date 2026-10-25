@@ -75,7 +75,11 @@ the file without a restart.
   unknown status, a malformed list or instant, and a principal listed twice.
 - **Updating.** The declaration: edit, review, and restart. The identity
   source: edit it in place; the next resolver read observes the change, and
-  an observation stays acceptable for `max_staleness_seconds` from the read.
+  an observation stays acceptable for `max_staleness_seconds` from when its
+  read was issued. Overlapping reads publish in the order they were issued,
+  so an older read never replaces a newer one. A PEP holding the dependency
+  rechecks it at release, and a permit its composed step admitted releases
+  no effect after the observation's validity ends.
 
 ## `delegation.json`
 
