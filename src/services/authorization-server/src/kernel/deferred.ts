@@ -1349,10 +1349,13 @@ export class ExpansionDeferralStore {
     // Record a refusal: `access_denied`, the deferred substrate's outcome for a
     // request that resolved with an error (DTR -00 Section 5.5.1 step 4), with
     // the reconciliation status when a reconciliation check failed.
+    // A refused deferral can never complete, so its carryover plan is
+    // cancelled whatever the cause, as a denial cancels it (#1674).
     const refuse = (status?: ReconciliationStatus): { error: "access_denied"; status?: ReconciliationStatus } => {
       this.db
         .prepare("UPDATE expansion_deferrals SET state = 'access_denied', refusal_status = ? WHERE deferral_code = ?")
         .run(status ?? null, deferralCode);
+      this.cancelCarryoverPlan(deferralCode);
       return { error: "access_denied", ...(status ? { status } : {}) };
     };
 
@@ -1413,7 +1416,6 @@ export class ExpansionDeferralStore {
       // and no cascade. The approval is stale, so the completion fails and a
       // fresh render and approval are required.
       if (e instanceof CarryoverError) {
-        this.cancelCarryoverPlan(row.deferral_code as string);
         txOut = undefined;
       } else if (e instanceof IntentError) {
         txOut = undefined;

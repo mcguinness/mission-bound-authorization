@@ -1667,3 +1667,76 @@ describe("Child Mission Carryover compositions in the reference deployment (@spe
     expect(kernel.get(pred.id)?.state).toBe("active");
   });
 });
+
+describe("a carried child's own expiry at completion (@spec child-delegation#carryover-cas, child-delegation#child-state, #1674)", () => {
+  /** A child of `parentId` whose own expiry falls inside the expansion's deferral window. */
+  const expiringChild = (parentId: string, actor: string) =>
+    createChildMission(kernel, {
+      parentId,
+      intent: kernel.validateIntent(
+        JSON.stringify({ goal: "Pay Acme invoices", target_resources: [RESOURCE], expires_at: "2026-07-01T00:05:00Z" }),
+      ),
+      proposedAuthority: proposed(["payments:invoice.read"]),
+      childActor: { sub: actor, sub_profile: "ai_agent" },
+    }).child;
+  const reservationStates = (run: Run): string[] =>
+    (
+      run.store.db
+        .prepare(
+          "SELECT state FROM carryover_reservations WHERE plan_id = (SELECT carryover_plan_id FROM expansion_deferrals WHERE deferral_code = ?)",
+        )
+        .all(run.code) as Array<{ state: string }>
+    ).map((r) => r.state);
+
+  it("is excluded and recorded expired under a plan committing state changes, while its sibling carries", () => {
+    const stateOnly: CarryoverExclusionPolicy = {
+      mode: "disclosed_exclusions",
+      change_classes: ["state_changed"],
+      dependent_descendant_exclusion: true,
+      unrendered_child_cascade: true,
+    };
+    const pred = approvePredecessor();
+    const expiring = expiringChild(pred.id, "child-a");
+    const sibling = addChild(pred.id, "child-b");
+    const run = openApproved(pred.id, { config: config({ exclusionPolicy: stateOnly }) });
+    expect(manifestOf(run).entries.find((e) => e.child_id === expiring.id)?.outcome).toBe("carry");
+    // Inside the deferral's lifetime, past the child's own expiry, which no
+    // transition has persisted.
+    clock = new Date("2026-07-01T00:06:00Z");
+    expect(kernel.get(expiring.id)?.state).toBe("active");
+    const out = redeem(run);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    if ("error" in out) return;
+    expect(kernel.get(expiring.id)?.termination).toMatchObject({ reason: "expired", terminated_at: expiring.expires_at });
+    expect(kernel.get(expiring.id)?.termination?.carried_to).toBeUndefined();
+    expect(kernel.get(sibling.id)?.termination?.carried_to).toBeDefined();
+    const row = run.store.carryoverResultFor(run.code)?.map.find((r) => r.old_child.mission_id === expiring.id);
+    expect(row).toMatchObject({
+      outcome: "excluded",
+      reason: "state_changed",
+      terminal_state: "terminated",
+      termination: { reason: "expired", terminated_at: expiring.expires_at },
+    });
+  });
+
+  it("refuses the batch under all-or-nothing, and a refused completion cancels the plan's reservations whatever its cause", () => {
+    const pred = approvePredecessor();
+    expiringChild(pred.id, "child-a");
+    const run = openApproved(pred.id);
+    expect(reservationStates(run).every((s) => s === "held")).toBe(true);
+    clock = new Date("2026-07-01T00:06:00Z");
+    expect(redeem(run)).toEqual({ error: "access_denied" });
+    expect(reservationStates(run).length).toBeGreaterThan(0);
+    expect(reservationStates(run).every((s) => s === "cancelled")).toBe(true);
+
+    // A refusal with no carryover cause: the predecessor revoked in the window.
+    clock = new Date("2026-07-01T00:00:00Z");
+    const other = approvePredecessor();
+    addChild(other.id, "child-b");
+    const run2 = openApproved(other.id);
+    kernel.transition(other.id, "revoke");
+    expect(redeem(run2)).toMatchObject({ error: "access_denied" });
+    expect(reservationStates(run2).length).toBeGreaterThan(0);
+    expect(reservationStates(run2).every((s) => s === "cancelled")).toBe(true);
+  });
+});
