@@ -280,7 +280,9 @@ export class OutcomeReconciler {
         }
       }
       for (const opKey of joined.evidenceWithoutLedger) {
-        const record = executions.find((e) => e.op_key === opKey && e.content.outcome === "completed");
+        const record = executions.find(
+          (e) => e.op_key === opKey && e.content.outcome === "completed" && e.content.emitter.role === "executor",
+        );
         if (this.raiseOnce(`evidence:${opKey}`, { kind: "orphaned_evidence", ...(record ? { evaluation_id: record.content.evaluation_id } : {}), mission_id: missionId, cause: "execution_evidence_without_effect" })) {
           report.orphaned.evidence.push(opKey);
         }

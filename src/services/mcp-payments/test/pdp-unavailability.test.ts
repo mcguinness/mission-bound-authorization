@@ -47,7 +47,8 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
       expect(x.observe).toHaveBeenCalledTimes(1);
       const records = x.evidence.forMission(x.view.id);
       expect(records.filter(e => e.kind === "decision")).toHaveLength(1);
-      expect(records.filter(e => e.kind === "execution")).toHaveLength(0);
+      // The permitted read's completed disposition; the refusal adds none.
+      expect(records.flatMap(e => (e.kind === "execution" ? [e.content.outcome] : []))).toEqual(["completed"]);
       const refusals = records.filter(e => e.kind === "refusal");
       expect(refusals).toHaveLength(1);
       expect(refusals[0]!.content).toMatchObject({ emitter: { role: "pep" }, denial_reason: "pdp_unreachable", decision: "deny" });
