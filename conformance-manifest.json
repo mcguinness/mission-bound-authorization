@@ -30608,7 +30608,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
+   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation)."
   },
   {
    "id": "runtime.authority-dependency.permit-cap",
@@ -30674,7 +30674,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
+   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation)."
   },
   {
    "id": "runtime.authority-dependency.mechanism-refusal-kept",
@@ -30718,7 +30718,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
+   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation)."
   },
   {
    "id": "runtime.state-freshness.external-change-bound",
