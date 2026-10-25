@@ -30,6 +30,7 @@ import { CATALOG_TOOL_BINDINGS } from "@mission/demo-data";
 import { type Decision, DecisionRequestRefused, type EvaluationRequest, type Fga, type MissionView } from "@mission/pdp";
 import {
   buildEffectiveParams,
+  buildReversalParams,
   CANONICAL_RESOURCE,
   Connectors,
   CONNECTOR_TOOLS,
@@ -69,6 +70,25 @@ const AUTHORITY = [
     // #252: the compensation's own authority, beside the commit's.
     actions: ["payments:payment.execute", "payments:payment.reverse", "payments:payment.schedule", "payments:invoice.read"],
     constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+  },
+];
+
+/**
+ * The wire's authority under its own ceiling, and the compensation's under a
+ * USD 10 reversal ceiling (#252, the owner's regression).
+ */
+const AUTHORITY_REVERSAL_CEILING_10 = [
+  {
+    type: "mission_resource_access",
+    resource: CANONICAL_RESOURCE,
+    actions: ["payments:payment.execute", "payments:payment.schedule", "payments:invoice.read"],
+    constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+  },
+  {
+    type: "mission_resource_access",
+    resource: CANONICAL_RESOURCE,
+    actions: ["payments:payment.reverse"],
+    constraints: { max_amount: { amount: "10.00", currency: "USD" }, vendors: ["acme"] },
   },
 ];
 
@@ -242,6 +262,7 @@ function harness(
     },
     payments,
     evidence,
+    committedEffects: connectors,
     fga: alwaysAllowFga,
     modelId: "unit-test-model",
     loadView,
@@ -753,6 +774,59 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     expect(reconcile("msn_252", h.evidence, h.connectors).ok).toBe(true);
   });
 
+  it("denies a reversal of a committed USD 125 wire under a USD 10 reversal ceiling after the invoice changed to USD 1, with zero connector effects", async () => {
+    // The owner's regression: the reversal ceiling is evaluated against what
+    // the compensation will actually offset, the committed wire's amount,
+    // never the invoice as it reads now.
+    const h = harness({ authority: AUTHORITY_REVERSAL_CEILING_10 });
+    expect((await cross(h, crossings[2])).ok).toBe(true);
+    h.payments.bumpInvoiceAmount("inv-1", "1.00");
+    const denied = await reverse(h);
+    expect(denied).toMatchObject({ ok: false, denial_reason: "parameter_violation" });
+    // The decision request carried the committed amount, and the denial's
+    // evidence binds the committed-effect form.
+    expect(h.lastEnvelope()?.amount).toEqual({ amount: "125.00", currency: "USD" });
+    expect(h.connectors.reversalEntries("msn_252")).toHaveLength(0);
+    expect(h.connectors.ledgerEntries("msn_252")).toHaveLength(1);
+  });
+
+  it("reverses exactly the committed amount whatever the invoice now reads, and the Decision Evidence and Execution Evidence carry the committed-effect parameters' digest", async () => {
+    const h = harness();
+    const committed = await cross(h, crossings[2]);
+    expect(committed.ok, JSON.stringify(committed)).toBe(true);
+    const wireOpKey = (committed.result as { op_key: string }).op_key;
+    h.payments.bumpInvoiceAmount("inv-1", "1.00");
+    const reversed = await reverse(h);
+    expect(reversed.ok, JSON.stringify(reversed)).toBe(true);
+    // The form the compensating Decision bound: the committed wire's own
+    // record, and the key of the wire it offsets.
+    const expected = parameterDigest(
+      buildReversalParams({
+        action: "payments:payment.reverse",
+        wire: { invoiceId: "inv-1", vendorId: "acme", payeeAccount: "acct-acme", amount: "125.00", currency: "USD" },
+        resource: CANONICAL_RESOURCE,
+        reverses: wireOpKey,
+      }),
+    );
+    expect(h.lastEnvelope()?.amount).toEqual({ amount: "125.00", currency: "USD" });
+    expect(h.lastEnvelope()?.parameter_digest).toBe(expected);
+    const record = compensating(h)[0]?.content;
+    expect(record?.decision).toBe("permit");
+    expect(record?.parameter_digest).toBe(expected);
+    const reverseOpKey = (reversed.result as { op_key: string }).op_key;
+    expect(reverseOpKey).toBe(operationKey("msn_252", "payments:payment.reverse", expected, "compensate"));
+    const execution = executions(h).find((e) => e.op_key === reverseOpKey)?.content;
+    expect(execution).toMatchObject({
+      outcome: "completed",
+      evaluation_id: record?.evaluation_id,
+      authorized_parameter_digest: expected,
+      effective_parameter_digest: expected,
+    });
+    expect(h.connectors.reversalEntries("msn_252")).toEqual([
+      expect.objectContaining({ reversed_op_key: wireOpKey, amount: "125.00", currency: "USD" }),
+    ]);
+  });
+
   it("the PDP refuses a compensate request without compensates_evaluation_id, or with a malformed one, before evaluation", async () => {
     // A requester that drops or garbles the link: the PDP never evaluates the
     // request, so no compensate Decision exists without its required link.
@@ -926,11 +1000,28 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     expect(h.connectors.reversalEntries("msn_252")).toHaveLength(1);
   });
 
-  it("the reference connector offsets a committed wire once, and refuses an unknown or uncommitted one", () => {
+  it("the reference connector offsets a committed wire once, only with the wire's recorded amount, currency and payee, and refuses an unknown or uncommitted one", () => {
     const connectors = new Connectors();
-    const wire = { invoiceId: "inv-1", payeeAccount: "acct-acme", amount: "125.00", currency: "USD", missionId: "msn_252" };
+    const wire = { invoiceId: "inv-1", vendorId: "acme", payeeAccount: "acct-acme", amount: "125.00", currency: "USD", missionId: "msn_252" };
     expect(connectors.postWire({ ...wire, opKey: "op:wire", permitId: "dec_wire" })).toEqual({ committed: true, deduped: false });
-    const reversal = { reversedOpKey: "op:wire", reversedPermitId: "dec_wire", missionId: "msn_252" };
+    const reversal = {
+      reversedOpKey: "op:wire",
+      reversedPermitId: "dec_wire",
+      amount: "125.00",
+      currency: "USD",
+      payeeAccount: "acct-acme",
+      missionId: "msn_252",
+    };
+    // Reversal parameters that differ from the committed wire's record are
+    // refused, whatever the caller presents, before anything is offset.
+    for (const differing of [{ amount: "1.00" }, { amount: "125.01" }, { currency: "EUR" }, { payeeAccount: "acct-other" }]) {
+      expect(connectors.reverseWire({ ...reversal, ...differing, opKey: "op:rev-x", permitId: "dec_rev_x" }), JSON.stringify(differing)).toEqual({
+        committed: false,
+        deduped: false,
+        refusal: "reversal_mismatch",
+      });
+    }
+    expect(connectors.reversalEntries()).toEqual([]);
     expect(connectors.reverseWire({ ...reversal, opKey: "op:rev-1", permitId: "dec_rev_1" })).toEqual({ committed: true, deduped: false });
     // A retry under the same operation key is deduped, not a second offset.
     expect(connectors.reverseWire({ ...reversal, opKey: "op:rev-1", permitId: "dec_rev_1" })).toEqual({ committed: true, deduped: true });
@@ -945,7 +1036,7 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
       { reversedOpKey: "op:unknown", reversedPermitId: "dec_wire" },
       { reversedOpKey: "op:wire", reversedPermitId: "dec_other" },
     ]) {
-      expect(connectors.reverseWire({ ...named, missionId: "msn_252", opKey: "op:rev-3", permitId: "dec_rev_3" })).toEqual({
+      expect(connectors.reverseWire({ ...reversal, ...named, opKey: "op:rev-3", permitId: "dec_rev_3" })).toEqual({
         committed: false,
         deduped: false,
         refusal: "wire_not_committed",
