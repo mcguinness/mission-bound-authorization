@@ -66090,7 +66090,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "every minted assertion leaves a join evidence event recording the Mission reference, the token digest and thumbprint, the join result, the authenticated caller, the mapping version where one is published, and the validity window, and the event is retained for the audit horizon",
-    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, kernel/join-evidence-store.ts): each minting writes its event (mission issuer and id, token sha256 and its one confirmation, join, caller, audience, mapping_version, iat, exp) to the kernel database after the last Mission re-read and before the assertion is cached or returned; a write that fails answers unavailable (503) with nothing returned or cached, so a retry mints anew. Each event is kept until its Mission's expires_at plus the declared audit retention (7776000 seconds, the value the terminal tombstones and the activation policy snapshots compose), and boot recovery deletes only events past that horizon. Durable only on the file-backed kernel store with a key ring (restart witnessed in process and for the separated MAS process, demo/src/mas-pilot/mas-serve.ts); the in-memory default does not survive a restart. Events read back oldest first, so a mapping change is attributable through each event's mapping_version. An operator reads a Mission's events through the operator console's MAS half (GET /missions/{id}/join-evidence, behind its bearer); the MAS serves them on no route of its own. The reference MAS validates no Instance Context as a Context Consumer, so that member is never recorded."
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, kernel/join-evidence-store.ts) and the MAS pilot (demo/src/mas-pilot/mas-as.ts): each minting writes its event (mission issuer and id, token sha256 and its one confirmation, join, caller, audience, mapping_version, iat, exp) to the kernel database after the last Mission re-read and before the assertion is cached or returned; a write that fails answers unavailable (503) with nothing returned or cached, so a retry mints anew. Each event is kept until a retain_until written when it is recorded: its Mission's expires_at plus the kernel's declared audit retention, the one value its terminal tombstones and activation policy snapshots compose. The pilot's MAS declares the deployment's audit horizon, AUDIT_HORIZON_SECONDS (config/policy.json audit_horizon_s, 31536000 seconds: one year after Mission expiry, D770); the reusable kernel's default (7776000 seconds) applies only where a deployment declares none. Boot recovery deletes only events whose stored retain_until has passed, and a reboot under another declaration neither recomputes nor shortens it. Durable only on the file-backed kernel store with a key ring: restart is witnessed in process and for the separated MAS process started directly (demo/src/mas-pilot/mas-serve.ts through startMasProcess); a relaunch through the launcher (launchMasPilot) is not witnessed. The in-memory default does not survive a restart. Events read back oldest first, so a mapping change is attributable through each event's mapping_version. An operator reads a Mission's events through the operator console's MAS half (GET /missions/{id}/join-evidence, behind its bearer); the MAS serves them on no route of its own. The reference MAS validates no Instance Context as a Context Consumer, so that member is never recorded."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -66126,9 +66126,27 @@
      "surface": "evidence-emission"
     },
     {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > a declared audit retention is the one horizon the kernel's join evidence and tombstones compose (#1560, D770); absent, the reusable kernel's 90-day default",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > keeps an event's stored horizon across a reboot (#1560, D770): a kernel rebooted under the 90-day default neither recomputes nor shortens the one-year retain_until it was recorded with, and prunes the event only once that stored horizon passes",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
      "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
      "name": "Join Assertion artifact (@spec authority-server#join-assertion-artifact, #1454) > mints a sender-bound assertion for an enrolled PDP: typ, a listed alg, iss, mission, token with its one confirmation, join, aud, mapping_version",
      "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-evidence.test.ts",
+     "name": "the pilot's kernel keeps join evidence for the deployment's audit horizon (@spec authority-server#join-assertion-artifact, #1560, D770) > keeps an event for one year after its Mission's expiry, the horizon its tombstones share: past the reusable 90-day default and at its retain_until it is kept across a restart, and only a boot after retain_until prunes it",
+     "level": "unit",
      "surface": "evidence-emission"
     },
     {
@@ -66144,7 +66162,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#1560 (join evidence retention, from #1454): the MAS side. Proved by defects that skip the event write, cache the assertion before the write, let a failed write propagate instead of answering unavailable, drop mapping_version from the event, compute the horizon from the assertion's exp or without the audit retention, prune at the horizon (<=) or prune every event, drop the boot-recovery prune, read events newest first, read every Mission's events for one Mission (store and console route), keep the events in a process-memory database instead of the kernel's, have mas-serve.ts ignore the kernel store, return no events from the service, write the event before the post-signing re-read, serve the events on the MAS's own route, skip the console's bearer check, and drop each of the store's three input guards. The Instance Context member is not applicable: the reference MAS validates none."
+   "notes": "#1560 (join evidence retention, from #1454): the MAS side. D770 item 2: the pilot's kernel keeps join evidence (with its tombstones and activation policy snapshots) for the deployment's declared audit horizon, AUDIT_HORIZON_SECONDS, one year after Mission expiry, not the reusable kernel's 90-day default; the one-year boundary is witnessed by the pilot horizon test (kept past the 90-day default and at retain_until across restarts, pruned only after). Restart scope: in process, and the separated MAS process started directly (mas-serve.ts through startMasProcess); a relaunch through the launcher (launchMasPilot) is not witnessed. Proved by defects that skip the event write, cache the assertion before the write, let a failed write propagate instead of answering unavailable, drop mapping_version from the event, compute the horizon from the assertion's exp or without the audit retention, prune at the horizon (<=) or prune every event, drop the boot-recovery prune, read events newest first, read every Mission's events for one Mission (store and console route), keep the events in a process-memory database instead of the kernel's, have mas-serve.ts ignore the kernel store, return no events from the service, write the event before the post-signing re-read, serve the events on the MAS's own route, skip the console's bearer check, drop each of the store's three input guards, have the pilot fall back to the kernel default, have the authorization server ignore the declared retention, and recompute retain_until at a reboot (in the boot prune, and by rewriting the stored value). The Instance Context member is not applicable: the reference MAS validates none."
   },
   {
    "id": "mas.join-assertion.pdp-rejects-unlisted-alg",
