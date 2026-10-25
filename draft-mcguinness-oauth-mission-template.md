@@ -1089,18 +1089,20 @@ all apply, since no Mission yet exists for the retry to recover
 
 Recovery is delivery of the already-dispatched Mission, never a
 second instantiation and never a second count against `max_active` or
-`dispatch_rate`. A retry recovered while the original access token
-remains valid, and carries no authority the instance has since lost,
-returns that token and counts nothing. A retry recovered after the
-token has expired, or after the instance's authority has narrowed
-below what it carries, is answered by minting a replacement access
-token for the same, still-`active` instance: an ordinary delivery
-event, counted once under ordinary issuance accounting, that repeats
-no creation accounting, as the expansion profile's recovery defines
-for an expired delivery credential
+`dispatch_rate`. A retry recovered while the most recently recorded
+delivery token remains valid, and carries no authority the instance
+has since lost, returns that token and counts nothing. A retry
+recovered after that token has expired, or after the instance's
+authority has narrowed below what it carries, is answered by minting a
+replacement access token for the same, still-`active` instance: an
+ordinary delivery event, counted once under ordinary issuance
+accounting, that repeats no creation accounting, as the expansion
+profile's recovery defines for an expired delivery credential
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Recovery
-Is Delivery"). Concurrent retries recover the same replacement
-delivery: the Mission Issuer mints one and returns it to each. Tombstone retention follows the expansion profile's
+Is Delivery"). Recording a replacement makes it the delivery that
+subsequent retries recover. Concurrent retries recover the same
+replacement delivery: the Mission Issuer mints one and returns it to
+each. Tombstone retention follows the expansion profile's
 rule, against the deployment's published retry horizon
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Tombstone
 Retention"). This makes retry safe at machine speed and keeps
