@@ -65730,7 +65730,8 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a joined decision request carries context.mission_join, with the actor-record depth as delegate_depth for a delegate"
+    "normative": "a joined decision request carries context.mission_join: on the mapping join, with the actor-record depth as delegate_depth for a delegate; on the assertion path, with the assertion it obtained, the assertion's join claim governing the depth (a separate delegate_depth is optional there)",
+    "local": "the reference PEP omits delegate_depth beside an obtained assertion, so a second actor-record store cannot contradict the MAS's; this is reference behavior (D770), not a protocol prohibition, and the PDP's disagreement check still applies to a caller that reports one"
    },
    "level": "unit",
    "coverage": "tested",
@@ -65740,8 +65741,15 @@
      "name": "baseline MAS Join: context.mission_join carriage (@spec authority-server#join-authzen) > carries context.mission_join on a joined delegate decision, with the actor-record depth as delegate_depth",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join-assertion-pep.test.ts",
+     "name": "on the assertion path the assertion's depth is the only depth (@spec authority-server#join-authzen, #join-assertion-pdp, #1561) > carries no delegate_depth of its own beside an assertion it obtained, though its own actor records give one; with no assertion it carries its own",
+     "level": "unit",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "#1561: on the assertion path the PEP carries no depth of its own beside the assertion, so a second actor-record store cannot contradict the MAS's. Proved by restoring the PEP's own depth beside an obtained assertion: the cited #1561 test then sees delegate_depth 2. D770: the omission is reference behavior, recorded in the local observation; the member is optional on the assertion path (#972 clarifies the draft)."
   },
   {
    "id": "mas.join-inputs.mission-bound-never-carries",
@@ -65989,7 +65997,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "on the assertion path, rule 5 narrowing and the rule 9 commitment use the join claim",
-    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: under a mapping contract that resolves nothing, a verified assertion joins; rule 5 narrows a delegate by join.client_id and join.depth, and the join_view_id commitment is computed over the join claim's client and disposition; in the pilot, a delegate joins at the MAS's recorded depth"
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: under a mapping contract that resolves nothing, a verified assertion joins; rule 5 narrows a delegate by join.client_id and join.depth, and the join_view_id commitment is computed over the join claim's client and disposition; in the pilot, a delegate joins at the depth the MAS's actor records give, with no depth of the PEP's own beside the assertion (#1561)"
    },
    "level": "unit",
    "coverage": "tested",
@@ -66002,7 +66010,7 @@
     },
     {
      "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
-     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a delegate at the depth the MAS's actor records give, and denies when the PEP's actor records report another depth",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a delegate at the depth the MAS's actor records give, recorded at the MAS's operator console; the PEP keeps no records and carries no depth of its own, so nothing contradicts the MAS (#1561)",
      "level": "cross-component",
      "surface": "decision-request"
     }
@@ -66025,7 +66033,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a PEP-reported delegate_depth that disagrees with join.depth is denied mission_binding_failed",
-    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: a reported delegate_depth that differs from join.depth is denied mission_binding_failed; one that agrees permits; in the pilot, the PEP's actor records put the delegate at depth 2 where the MAS's say 1"
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key: a reported delegate_depth that differs from join.depth is denied mission_binding_failed; one that agrees permits. In the MAS pilot the PEP carries no delegate_depth of its own beside an assertion and keeps no actor records on that path (#1561), so no disagreement arises there"
    },
    "level": "unit",
    "coverage": "tested",
@@ -66035,15 +66043,9 @@
      "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies a reported delegate_depth that differs from join.depth, and permits one that agrees",
      "level": "unit",
      "surface": "decision-request"
-    },
-    {
-     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
-     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a delegate at the depth the MAS's actor records give, and denies when the PEP's actor records report another depth",
-     "level": "cross-component",
-     "surface": "decision-request"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect that drops the comparison. The client-join case is mas.join-assertion.client-join-depth-zero (#1592)."
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect that drops the comparison. The client-join case is mas.join-assertion.client-join-depth-zero (#1592). #1561: the pilot witness, where the PEP's separate records put a delegate at depth 2 against the MAS's 1, is retired: the PEP no longer keeps a second store or carries a depth beside an assertion."
   },
   {
    "id": "mas.join-assertion.client-join-depth-zero",
@@ -67266,7 +67268,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a caller that is neither the Mission's client, a recorded delegate, nor an enrollee for the Mission's enforcement scope receives not_found, the same answer as for an unknown Mission",
-    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both; the reference MAS holds no delegate actor records (follow-up: #1561), so its visibility set is the Mission's client and the enrollees of either role"
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both, and its deployment's actor records (JoinAssertionDeployment.recordedDelegate): in the MAS pilot, the separated MAS's own records (demo/src/mas-pilot/mas-join-assertions.ts), the same records the asserted join takes a delegate's depth from, an edge recorded only at the MAS's operator console (#1561). A recorded delegate is a client those records place under the Mission through a chain reaching the Mission's own client"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -67288,9 +67290,21 @@
      "name": "the separated MAS pilot's Join Assertion path (#1454) > takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion visibility takes recorded delegates (@spec authority-server#join-assertion-request, #1561) > admits a caller the deployment's actor records record as the Mission's delegate, and answers it not_found for a Mission it is not recorded under, as an unknown Mission",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > takes the visibility set's recorded delegates from the MAS's actor records (#1561): a client recorded as a Mission's delegate may request for it, and is not_found for a Mission it is not recorded under",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "#1591 (D708). Proved by defects that drop the visibility check (the invisible caller and the enrolled-for-nothing caller are served) and that admit any registered caller."
+   "notes": "#1591 (D708). Proved by defects that drop the visibility check (the invisible caller and the enrolled-for-nothing caller are served) and that admit any registered caller. #1561: recorded delegates join the visibility set, from the MAS's actor records. Proved by defects that drop the recorded-delegate check (the recorded delegate is then not_found, in the unit and at the live MAS) and that read the visibility from a store other than the MAS's actor records (the delegate recorded at the console is then not_found)."
   },
   {
    "id": "mas.join-assertion.pep-carries-assertion",
