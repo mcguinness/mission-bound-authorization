@@ -4906,7 +4906,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain. A retaining consumer MUST key its high-water mark by the canonical (issuer, mission_id) tuple, reject a lower version, and retain the high-water mark across its own recovery. A legitimate higher-version resume to active is accepted under the other validity checks; state names are not ordered by severity. Issuer durability is required even when a consumer has never seen the pre-restore version."
+    "normative": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain. A legitimate higher-version resume to active is accepted under the other validity checks; state names are not ordered by severity. Issuer durability is required even when a consumer has never seen the pre-restore version."
    },
    "level": "cross-component",
    "coverage": "partial",
@@ -5050,7 +5050,49 @@
      "surface": "verification"
     }
    ],
-   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. With a recovery witness configured (#250 step 3, slice A), the kernel holds its store and its witness's lock exclusively (so a copied store cannot share the witness), and opens only when the store's recovery marker matches the witness, a file outside the database restore unit that every write transaction advances (intent before the commit, finalized after it): a restored older store, a lost, unreadable or foreign witness and an unresolved intent refuse to open, a witnessed store refuses to open without its witness, and a run-time witness or commit failure, a witness changed underneath it, or a write that bypassed the guard (every statement API that can write is guarded), stops every further write and is recorded in the witness, so a restart refuses until reconciled. Offline reconciliation under both locks acknowledges or abandons an intent, or accepts a store with a recorded uncertainty under a new generation, and never lowers the witness. The Authorization Server builds only on an admitted store (a shipped launcher requires the witness with MISSION_KERNEL_STORE, and `pnpm as-native` refuses to start on a restored older store), and while a running kernel is uncertain it answers every request but discovery metadata and the key set with 503 temporarily_unavailable, a request already in flight included (the release fence checks again after every await). The transaction inventory (control-plane-deployment.md) names every kernel table and how its writes are witnessed, and a test fails on a table it does not name. Not yet covered: a way back from an older store other than restoring the witnessed one, by invalidating authority under a new generation (slice B); the retaining-consumer high-water mark; and any topology beyond one writer on one host. The escape detector notices a bypassing write only at the next guarded transaction, after that write committed. No waiver of existing binding-level requirements."
+   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. With a recovery witness configured (#250 step 3, slice A), the kernel holds its store and its witness's lock exclusively (so a copied store cannot share the witness), and opens only when the store's recovery marker matches the witness, a file outside the database restore unit that every write transaction advances (intent before the commit, finalized after it): a restored older store, a lost, unreadable or foreign witness and an unresolved intent refuse to open, a witnessed store refuses to open without its witness, and a run-time witness or commit failure, a witness changed underneath it, or a write that bypassed the guard (every statement API that can write is guarded), stops every further write and is recorded in the witness, so a restart refuses until reconciled. Offline reconciliation under both locks acknowledges or abandons an intent, or accepts a store with a recorded uncertainty under a new generation, and never lowers the witness. The Authorization Server builds only on an admitted store (a shipped launcher requires the witness with MISSION_KERNEL_STORE, and `pnpm as-native` refuses to start on a restored older store), and while a running kernel is uncertain it answers every request but discovery metadata and the key set with 503 temporarily_unavailable, a request already in flight included (the release fence checks again after every await). The transaction inventory (control-plane-deployment.md) names every kernel table and how its writes are witnessed, and a test fails on a table it does not name. Not yet covered: a way back from an older store other than restoring the witnessed one, by invalidating authority under a new generation (slice B); and any topology beyond one writer on one host. The escape detector notices a bypassing write only at the next guarded transaction, after that write committed. No waiver of existing binding-level requirements. The retaining consumer's high-water obligation is its own row, control-plane.consistency.rollback-retaining-consumer."
+  },
+  {
+   "id": "control-plane.consistency.rollback-retaining-consumer",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "rollback",
+   "text": "A retaining consumer MUST key its high-water mark by the canonical (issuer, mission_id) tuple, reject a lower version, and retain the high-water mark across its own recovery.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a retaining consumer keeps its high-water mark per (issuer, mission_id), refuses an event at an equal or lower version as stale, and still refuses it after its own restart",
+    "local": "the Signals receiver (#1323) keys its state by (issuer, audience, mission_id), finer than the tuple, and keeps it in the consumer's store: a SET at an equal or lower version is stale before and after a restart, and the same Mission identifier at another issuer keeps its own sequence"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
+     "name": "Signals receiver state in the consumer's store (#250) > never regresses on a lower or equal version, before or after a restart, and keeps a retained termination",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
+     "name": "Signals receiver state in the consumer's store (#250) > keeps the high-water, the observation, the gap and rematerialization markers, the retained SET and the seen jti values across a restart",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
+     "name": "Signals receiver state in the consumer's store (#250) > keeps receivers for different issuers and audiences apart in one shared file",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."
   },
   {
    "id": "control-plane.consistency.tombstones",
