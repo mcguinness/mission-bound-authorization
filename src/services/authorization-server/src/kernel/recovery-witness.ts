@@ -192,6 +192,23 @@ function admit(db: Database, witnessFile: string): RecoveryWitnessRecord {
 }
 
 /**
+ * Refuse a store that has a recovery marker when it is opened WITHOUT its
+ * witness: its writes would go unwitnessed, and the next witnessed boot would
+ * admit changes nothing recorded. A store that never had a marker opens.
+ */
+export function refuseUnwitnessedOpen(db: Database): void {
+  const table = db
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'recovery_marker'")
+    .get();
+  if (table && readMarker(db)) {
+    throw new RecoveryUncertainError(
+      "witness_missing",
+      "the store has a recovery marker, so it opens only with its recovery witness",
+    );
+  }
+}
+
+/**
  * The commit guard for one admitted kernel database. Fail-stop: any anomaly
  * (a write that bypassed the guard, a witness write that failed, a commit that
  * failed after its intent) leaves the kernel uncertain, and every later

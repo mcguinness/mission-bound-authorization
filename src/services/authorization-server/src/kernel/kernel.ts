@@ -172,7 +172,12 @@ import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { ContinuationStore } from "./continuation-store.js";
 import { DelegationFamilyStore } from "./delegation-family-store.js";
-import { guardKernelStore, type RecoveryGuard, type RecoveryUncertainError } from "./recovery-witness.js";
+import {
+  guardKernelStore,
+  type RecoveryGuard,
+  type RecoveryUncertainError,
+  refuseUnwitnessedOpen,
+} from "./recovery-witness.js";
 import { newMissionId } from "./mission-id.js";
 import {
   assembleResourceContracts,
@@ -811,9 +816,9 @@ export interface KernelOptions {
    * default stays in-memory and single-process; a `file` names the OPT-IN
    * file-backed SINGLE-WRITER store that makes restart recovery of the durable
    * lifecycle outbox and the terminal tombstones observable. It authorizes no
-   * second writer: multi-process claiming and fencing stay behind #641's
-   * deployment trigger, and `packages/store` adds no busy timeout and no
-   * IMMEDIATE transaction mode.
+   * second writer: multi-process claiming stays behind #641's deployment
+   * trigger. Without a {@link recoveryWitness} the file takes no lock and no
+   * busy timeout; with one it is held exclusively (#250 step 3).
    */
   store?: StoreOptions;
   /**
@@ -1039,13 +1044,12 @@ export class MissionKernel {
       throw new Error("recoveryWitness needs a file-backed kernel store");
     }
     this.db = openStore(SCHEMA, opts.recoveryWitness ? { ...opts.store, exclusive: true } : (opts.store ?? {}));
-    if (opts.recoveryWitness) {
-      try {
-        this.recovery = guardKernelStore(this.db, opts.recoveryWitness.file);
-      } catch (e) {
-        this.db.close();
-        throw e;
-      }
+    try {
+      if (opts.recoveryWitness) this.recovery = guardKernelStore(this.db, opts.recoveryWitness.file);
+      else if (opts.store?.file) refuseUnwitnessedOpen(this.db);
+    } catch (e) {
+      this.db.close();
+      throw e;
     }
     migrateMissions(this.db);
     this.sourceBindings = new SourceBindingStore(this.db);
