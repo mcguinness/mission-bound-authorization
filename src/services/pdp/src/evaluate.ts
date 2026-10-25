@@ -111,6 +111,7 @@ import {
 } from "./runtime-posture.js";
 import { type MissionStateObservation, parseStateObservation, rfc3339Ms, verifyStateAssertion } from "./state-observation.js";
 import { ownReadCeiling } from "./own-read-ceiling.js";
+import { parseWorkItem } from "./work-item.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -316,6 +317,15 @@ export interface EvaluationRequest {
     credential?: RuntimeCredentialRef & { authority?: unknown };
     capability_source?: RuntimeCapabilitySource;
     /**
+     * @spec authzen#context-work-item (#815): OPTIONAL, the qualified
+     * work-item identifier `{issuer, id}` the PEP took from the harness's
+     * authenticated attachment, never from tool arguments. Typed `unknown`
+     * deliberately: a malformed value denies `work_item_context_missing`,
+     * never admitted by the type system, and only a value `parseWorkItem`
+     * accepts reaches the permit or Decision Evidence.
+     */
+    work_item?: unknown;
+    /**
      * @spec authzen#context-audience-freshness: CONDITIONAL, present where
      * the deployment's declared state-source placement has the PEP supply
      * state, absent where it places state establishment with the PDP.
@@ -417,6 +427,13 @@ export type DenialReason =
   | "view_inconsistent"
   | "mission_inactive"
   | "actor_invalid"
+  /**
+   * @spec authzen#context-work-item, authzen#runtime-denial-classification
+   * (#815): "the decision request carries a `context.work_item` that is not
+   * well-formed, or the deployment claims work-item attribution for the
+   * action's class and the request carries none."
+   */
+  | "work_item_context_missing"
   /**
    * @spec authzen#pdp-request rule 6, authzen#context-credential (#825, D312) —
    * the PEP-supplied credential facts are expired, inconsistent, or otherwise
@@ -751,6 +768,16 @@ export interface EvaluateOptions {
    */
   joinAssertion?: JoinAssertionPolicy;
   /**
+   * @spec authzen#context-work-item, harness#work-item-identity (#815): the
+   * action classes this PDP's trusted Enforcement Scope Statement claims
+   * work-item attribution for. A request in one with no `context.work_item`
+   * denies `work_item_context_missing`. A PDP-side binding, like
+   * `phasedActions`: an enforcement component that could supply it could
+   * drop its own claim. Absent: no class is claimed, and a work item is
+   * carried where present but never required.
+   */
+  workItemAttributedClasses?: ReadonlySet<string>;
+  /**
    * @spec runtime#idempotency (#917): this PDP's Exact idempotency claim
    * domain, bound at decision-point construction exactly as `evidence` is.
    * Absent, no high-consequence class has a declared domain, and a request in
@@ -852,6 +879,9 @@ export type DecisionOptions = Omit<
   EvaluateOptions,
   | "evidence"
   | "claims"
+  // @spec authzen#context-work-item (#815): so are the classes the statement
+  // claims work-item attribution for, for the reason the phased actions are.
+  | "workItemAttributedClasses"
   | "requester"
   | "consumptionStatus"
   | "resourcePolicy"
@@ -1070,6 +1100,11 @@ async function emitDecisionEvidence(
     // denial included. A failed join or a direct Mission-bound decision
     // never set it.
     ...(join.viewId !== undefined ? { join_view_id: join.viewId } : {}),
+    // @spec runtime-evidence#evidence-extensions `work_item` (#815): REQUIRED
+    // "when the decision request carried a well-formed work-item context,
+    // recorded as presented", permit or denial; a malformed one is never
+    // signed into the record.
+    ...((w) => (w !== undefined ? { work_item: w } : {}))(parseWorkItem(req.context.work_item)),
     subject: {
       id: req.subject.id,
       ...(req.subject.properties?.iss !== undefined ? { properties: { iss: req.subject.properties.iss } } : {}),
@@ -1141,6 +1176,9 @@ async function evaluateInner(
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
+  // @spec authzen#context-work-item (#815): the request's work item as this
+  // PDP reads it; only this value reaches the permit condition.
+  const workItem = parseWorkItem(req.context.work_item);
   // @spec authzen#context-audience-freshness: the PEP's audience, the
   // token-validation and permit-boundary input. Read once and validated
   // below; never the entry-match operand (#1276, D457).
@@ -1271,6 +1309,19 @@ async function evaluateInner(
     credentialAuthority = parseCredentialAuthority(req.context.credential?.authority);
   } catch {
     return deny("credential_invalid");
+  }
+
+  // 1b. Work-item context (@spec authzen#context-work-item, #815): "The PDP
+  // MUST deny with `work_item_context_missing` a decision whose
+  // `context.work_item` is present but not of that shape, and, where the
+  // deployment's Enforcement Scope Statement claims work-item attribution for
+  // the action's class, one from which it is absent." The class is the
+  // deployment class the trusted PEP supplied; the claim is this PDP's own
+  // binding, never a request member. Elsewhere an absent member relaxes
+  // nothing: Mission-level attribution only.
+  if (req.context.work_item !== undefined && workItem === undefined) return deny("work_item_context_missing");
+  if (workItem === undefined && actionClass !== undefined && opts.workItemAttributedClasses?.has(actionClass)) {
+    return deny("work_item_context_missing");
   }
 
   // 2. Mission state (@spec: mission_inactive).
@@ -2462,6 +2513,10 @@ async function evaluateInner(
       conditions: {
         valid_until: validUntil,
         ...(highConsequence || singleUseDefault ? { use_limit: 1 } : {}),
+        // @spec authzen#decision-conditions `work_item` (#815): "REQUIRED on a
+        // permit for a decision whose request carried `context.work_item`,
+        // and equal to it." The executing PEP compares it at every use.
+        ...(workItem !== undefined ? { work_item: workItem } : {}),
         ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
         // @spec authzen#response-context `action_phase` — the LIVE permit
         // binding: the validated request phase, echoed so the executing PEP

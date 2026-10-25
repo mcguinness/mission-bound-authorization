@@ -27,6 +27,7 @@ import {
   type EvidenceSigningKey,
   signEvidenceEnvelope,
 } from "./runtime-evidence-integrity.js";
+import { parseWorkItem, type WorkItemRef } from "./work-item.js";
 
 /** @spec runtime-evidence#decision-evidence-object mission sub-object (REQUIRES `policy_view_id`). */
 export interface RuntimeMissionRef {
@@ -197,6 +198,14 @@ export interface DecisionEvidenceObject {
    * of the record; never echoed in the AuthZEN response context.
    */
   join_view_id?: string;
+  /**
+   * @spec runtime-evidence#evidence-extensions `work_item` (#815): the
+   * qualified work-item identifier the decision request carried, a top-level
+   * coordinated extension member the harness profile owns, recorded as
+   * presented on a permit or a denial; absent when the request carried none
+   * or a malformed one.
+   */
+  work_item?: WorkItemRef;
   subject: RuntimeSubjectRef;
   resource: RuntimeResourceRef;
   action: RuntimeActionRef;
@@ -293,6 +302,8 @@ export interface DecisionEvidenceEmissionInput {
   mission: RuntimeMissionRef;
   /** The PDP's joined-view commitment, set only when this decision rode a successful join. */
   join_view_id?: string;
+  /** @spec runtime-evidence#evidence-extensions `work_item` (#815): the request's well-formed work item. */
+  work_item?: WorkItemRef;
   subject: RuntimeSubjectRef;
   resource: RuntimeResourceRef;
   action: RuntimeActionRef;
@@ -445,6 +456,8 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         evaluation_id: input.evaluation_id,
         mission,
         ...(input.join_view_id !== undefined ? { join_view_id: requiredString(input.join_view_id) } : {}),
+        // Runtime allowlist, not a cast: exactly `issuer` and `id`, or nothing.
+        ...((w) => (w !== undefined ? { work_item: w } : {}))(parseWorkItem(input.work_item)),
         subject: { id: requiredString(input.subject.id),
           ...(typeof input.subject.type === "string" ? { type: input.subject.type } : {}),
           ...(typeof input.subject.properties?.iss === "string" ? { properties: { iss: input.subject.properties.iss } } : {}),

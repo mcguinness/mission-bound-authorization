@@ -258,3 +258,12 @@ export {
   type JoinMappingContract,
   type KernelDelegationPolicy,
 } from "./mas-join.js";
+export {
+  NO_WORK_ITEM_ATTRIBUTION,
+  parseWorkItem,
+  readWorkItemAttribution,
+  sameWorkItem,
+  WORK_ITEM_ATTRIBUTION_EXTENSION,
+  type WorkItemAttribution,
+  type WorkItemRef,
+} from "./work-item.js";
