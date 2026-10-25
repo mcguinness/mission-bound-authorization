@@ -427,12 +427,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
-     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are target_drift: the parameter pair equal, the context pair present and unequal",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are refused by the descriptor-change check, with the effective context digest computed under the retained original and equal to the authorized one",
      "level": "cross-component",
      "surface": "resource-operation"
     }
    ],
-   "notes": "#773. The committed object is reconstructed member for member (descriptor reference, Mission, operation and phase, targets, facts, salt and version) and its canonical-object digest equals the one sent; a republished descriptor over unchanged facts commits a different digest, and a permit decided under the earlier reference is refused target_drift at use. Mutation M5 (reference not committed) fails both."
+   "notes": "#773. The committed object is reconstructed member for member (descriptor reference, Mission, operation and phase, targets, facts, salt and version) and its canonical-object digest equals the one sent; a republished descriptor over unchanged facts commits a different digest at capture. A permit decided under the earlier reference is never reinterpreted: at use the context is recomputed under the committed reference (so unchanged facts give an equal digest) and the descriptor change is refused on its own, target_drift. Mutations: M5 (reference not committed) fails the composition test; X1 (recompute under the live descriptor) and X2 (descriptor-change check removed) fail the changed-descriptor test."
   },
   {
    "id": "runtime.evaluation-context.capture-authoritative",
@@ -567,7 +567,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#773 ruling 1. Per-epoch salt: each version is in-memory random material under a random identifier, so a restarted keeper holds none of an earlier one's versions and the binding is never recomputed under a substitute; it is refused target_drift with the effective context digest absent on every covered dispatch path. A descriptor that no longer applies at use (the declaration withdrawn) is the same refusal. Mutations: M4 (recompute under the current salt) fails the absent-digest assertion of all four restart tests and the unrecoverable test; removing the context check at use (M1+M2) fails them outright. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
+   "notes": "#773 ruling 1. Per-epoch salt: each version is in-memory random material under a random identifier, so a restarted keeper holds none of an earlier one's versions and the binding is never recomputed under a substitute; it is refused target_drift with the effective context digest absent on every covered dispatch path. A committed descriptor the declaration no longer publishes is the same refusal, with no comparison under the live descriptor (X3). Mutations: M4 (recompute under the current salt) fails the absent-digest assertion of all four restart tests and the unrecoverable test; removing the context check at use (M1+M2) fails them outright. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
   },
   {
    "id": "runtime.evaluation-context.pdp-returns-supplied-digest",
@@ -638,7 +638,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
-     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are target_drift: the parameter pair equal, the context pair present and unequal",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are refused by the descriptor-change check, with the effective context digest computed under the retained original and equal to the authorized one",
      "level": "cross-component",
      "surface": "resource-operation"
     },
@@ -661,7 +661,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#773. Each clause refuses before any effect: a permit lacking the condition (M9), a changed descriptor (M5, M1+M2), an unequal digest after a moved fact (M2), and an unavailable fact while the parameters still resolve (M1+M2 turns it into parameter_mismatch) or an unrecoverable salt or descriptor (M4, M1+M2). Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
+   "notes": "#773. Each clause refuses before any effect: a permit lacking the condition (M9); a changed descriptor, refused by its own check with the context recomputed under the committed descriptor and equal (X2, M1+M2); an unequal digest after a moved fact (M2); and an unavailable fact while the parameters still resolve (M1+M2 turns it into parameter_mismatch) or an unrecoverable salt or committed descriptor (M4, X3, M1+M2). Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
   },
   {
    "id": "runtime.evaluation-context.per-phase-capture",
@@ -999,7 +999,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#773, unblocked by #786's suppression representation. A context the PEP cannot establish (a lost salt version on every covered dispatch path, a descriptor that no longer applies, a declared fact that stops resolving, a deleted invoice) leaves effective_evaluation_context_digest absent, never copied or invented, with error target_drift. Mutations: M4 fails the restart and unrecoverable tests on the absent-digest assertion; M1+M2 fails the fact-stops-resolving test (parameter_mismatch instead)."
+   "notes": "#773, unblocked by #786's suppression representation. A context the PEP cannot establish (a lost salt version on every covered dispatch path, a committed descriptor no longer published, a declared fact that stops resolving, a deleted invoice) leaves effective_evaluation_context_digest absent, never copied or invented, with error target_drift. Mutations: M4 fails the restart and unrecoverable tests on the absent-digest assertion; M1+M2 fails the fact-stops-resolving test (parameter_mismatch instead). Mutation X3 (an unrecoverable committed descriptor replaced by the live one) fails the unrecoverable test's absent-digest assertion."
   },
   {
    "id": "runtime.evaluation-context.salt-rotation",
@@ -1152,12 +1152,18 @@
     },
     {
      "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
-     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are target_drift: the parameter pair equal, the context pair present and unequal",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are refused by the descriptor-change check, with the effective context digest computed under the retained original and equal to the authorized one",
      "level": "cross-component",
-     "surface": "resource-operation"
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a fact that moved under a changed descriptor diverges under the retained original and is target_drift",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773 ruling 3, Runtime's pointer to Runtime Evidence's Context Drift and Parameter Deviation. Witnesses and mutations as evidence.execution.context-drift-primary-error. The agent-supplied deviation is constructed at the PEP's own API (the parameter object the executor uses is changed between the permit and verifyPermitAtUse); the reference re-derives the parameters from the bound invoice, so no request through the server can change an agent-supplied parameter at use."
+   "notes": "#773 ruling 3, Runtime's pointer to Runtime Evidence's Context Drift and Parameter Deviation. Witnesses and mutations as evidence.execution.context-drift-primary-error, the changed-descriptor rows included (X1, X2). The agent-supplied deviation is constructed at the PEP's own API (the parameter object the executor uses is changed between the permit and verifyPermitAtUse); the reference re-derives the parameters from the bound invoice, so no request through the server can change an agent-supplied parameter at use."
   },
   {
    "id": "evidence.refusal.pep-evaluation-context-unresolvable",
@@ -1246,9 +1252,15 @@
     },
     {
      "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
-     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are target_drift: the parameter pair equal, the context pair present and unequal",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are refused by the descriptor-change check, with the effective context digest computed under the retained original and equal to the authorized one",
      "level": "cross-component",
-     "surface": "resource-operation"
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a fact that moved under a changed descriptor diverges under the retained original and is target_drift",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     },
     {
      "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
@@ -1257,7 +1269,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#773 ruling 3. Each table row is witnessed with the digest pairs the record keeps: a moved declared fact (both pairs unequal, target_drift), an agent-supplied change (parameter_mismatch, both pairs unequal), both (parameter_mismatch, the context divergence kept), an unavailable context with an agent change (target_drift, the parameter divergence kept), an unavailable fact (both effective digests absent), a changed descriptor (parameter pair equal, context pair unequal), and an unrecoverable salt or descriptor (parameter pair kept, effective context absent). The agent-supplied deviation is constructed at the PEP's own API; see runtime.evaluation-context.primary-error. Mutations: M2, M3, M26, M5 and M10 each fail the rows they target."
+   "notes": "#773 ruling 3, with the owner's P2 correction. Each table row is witnessed with the digest pairs the record keeps: a moved declared fact (both pairs unequal, target_drift), an agent-supplied change (parameter_mismatch, both pairs unequal), both (parameter_mismatch, the context divergence kept), an unavailable context with an agent change (target_drift, the parameter divergence kept), an unavailable fact (both effective digests absent), unchanged facts under a changed descriptor (target_drift by the descriptor-change check, both pairs equal, no divergence), a fact moved under a changed descriptor (target_drift, the context digest diverging under the committed descriptor), and an unrecoverable salt or committed descriptor (parameter pair kept, effective context absent). The agent-supplied deviation is constructed at the PEP's own API; see runtime.evaluation-context.primary-error. Mutations: M2, M3, M26, M10, X1 (recompute under the live descriptor), X2 (descriptor-change check removed) and X3 (an unrecoverable committed descriptor replaced by the live one) each fail the rows they target."
   },
   {
    "id": "evidence.execution.context-drift-audit-reports-each-pair",
@@ -1296,9 +1308,15 @@
      "name": "the receipt verifier reports each divergent digest pair whatever the record's error (@spec runtime-evidence#context-drift-classification, #773) > does not report an unavailable context as a divergence, and holds the authorized context digest to the linked Decision Evidence",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are refused by the descriptor-change check, with the effective context digest computed under the retained original and equal to the authorized one",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "#773. The Mission Receipt verifier, the reference consumer of Execution Evidence, reports divergence.parameter and divergence.evaluation_context each on its own, from the digests, on any outcome and whatever the record's single error; an absent effective digest is not reported; an executed record with either pair diverging is also flagged an unauthorized execution, as a parameter deviation already was. Mutations: V1 (context divergence never reported) fails the context-only and both-pairs tests; V2 (the parameter pair reported only when the error names it) fails the both-pairs test; V3 (absence read as divergence) fails the unavailable test; V5 (an executed context divergence not flagged) fails the context-only test; V4 (the authorized context digest not mirrored) fails the join assertions."
+   "notes": "#773. The Mission Receipt verifier, the reference consumer of Execution Evidence, reports divergence.parameter and divergence.evaluation_context each on its own, from the digests, on any outcome and whatever the record's single error; an absent effective digest is not reported; an executed record with either pair diverging is also flagged an unauthorized execution, as a parameter deviation already was. Mutations: V1 (context divergence never reported) fails the context-only and both-pairs tests; V2 (the parameter pair reported only when the error names it) fails the both-pairs test; V3 (absence read as divergence) fails the unavailable test; V5 (an executed context divergence not flagged) fails the context-only test; V4 (the authorized context digest not mirrored) fails the join assertions. The classification is exported as executionDivergence and applied to the PEP's own suppressed record: unchanged facts under a changed descriptor report no divergence, since the effective context digest is computed under the committed descriptor (X1 fails it)."
   },
   {
    "id": "authzen.failure-condition-coverage.evaluation-context-unresolvable",
