@@ -1083,10 +1083,10 @@ current: when upstream observation or reconciliation exceeds its
 declared bound, the deployment MUST refuse the actions the dependency
 governs until it is current again.
 
-The PDP MUST refuse an action a declared dependency governs when the
-dependency is known to be withdrawn, when an applicable invalidation
-has been observed, or when no acceptable authoritative observation of
-it remains. Unless the deployment requires an online check, an outage
+The deployment MUST refuse an action governed by a declared dependency,
+through its declared enforcement route, when the dependency is known
+to be withdrawn, when an applicable invalidation has been observed, or
+when no acceptable authoritative observation remains. Unless the deployment requires an online check, an outage
 alone does not invalidate an observation still within its accepted
 validity. That validity runs from the time the observation represents,
 never from a later re-issue or re-signing
@@ -1094,8 +1094,9 @@ never from a later re-issue or re-signing
 reliance on a dependency observation MUST expire no later than that
 observation's accepted validity.
 
-Retained decision evidence distinguishes a known withdrawal, a stale
-observation and an unavailable source. A dependency enforced through
+Retained evidence of such a refusal, from whichever component enforces
+the dependency, distinguishes a known withdrawal, a stale observation
+and an unavailable source. A dependency enforced through
 an existing mechanism keeps that mechanism's refusal: an inactive
 Mission, contained authority, or a failed resource-policy condition.
 

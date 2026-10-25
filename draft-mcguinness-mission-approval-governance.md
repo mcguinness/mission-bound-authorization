@@ -1209,13 +1209,15 @@ changes depends on each deployment's policy:
 - **A personal delegation.** `M17` delegates the officer's own
   purchasing authority, and the deployment declares a dependency on
   her holding it. When the authoritative directory records her
-  transfer, the dependency is withdrawn, and further orders under
-  `M17` are refused.
+  transfer, the dependency is withdrawn at its source; within the
+  deployment's declared bound, further orders under `M17` are
+  refused.
 - **A required accountable owner.** The deployment requires an
   eligible owner for the work. Her transfer suspends `M17` until a
   successor accepts responsibility through an authorized process,
-  recorded separately from `G42`; the successor does not become the
-  approver of `E42`.
+  recorded separately from `G42`. That acceptance permits an
+  authorized resumption, subject to the remaining checks; the
+  successor does not become the approver of `E42`.
 
 # Governed Policy Approval {#governed-policy}
 
