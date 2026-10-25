@@ -56,6 +56,8 @@ interface Harness {
   /** Whether the PEP asked the PDP for a decision at all on the last call. */
   decisions: () => number;
   connectors: Connectors;
+  /** The evidence the resource retained. */
+  evidence: EvidenceStore;
   /** The permit conditions of the last decision. */
   lastConditions: () => Record<string, unknown> | undefined;
   /** Advance the one clock the PEP, the PDP and the connectors read. */
@@ -180,6 +182,7 @@ function harness(opts: {
     payments,
     token,
     connectors,
+    evidence,
     lastResource: () => resource,
     lastAction: () => action,
     lastConditions: () => conditions,
@@ -855,6 +858,28 @@ describe("the payments resource relies on whichever applicable entry covers the 
     const res = await listAll(harness(opts));
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect(ids(res.result)).toEqual(["inv-early", "inv-edge", "inv-late", "inv-none", "inv-q3"]);
+  });
+
+  it("a list read refused at release records the effective digest observed from the entry that admits the vendor, as that entry alone does", async () => {
+    // tenant reads a member fact, so a member added after the decision is a mismatch at release.
+    const acme = { vendors: ["acme"], tenant: "payments-demo" };
+    const globex = { vendors: ["globex"], tenant: "other-tenant" };
+    const effectiveOf = async (entries: Array<Record<string, unknown>>) => {
+      const h = harness({ entries });
+      const grow = () =>
+        h.payments.seed([], [
+          { id: "inv-globex-2", vendor_id: "globex", amount: "10.00", currency: "USD", payee_account: "acct", status: "payable" },
+        ]);
+      const res = await h.server.callReadTool("list_invoices", { vendor_id: "globex" }, h.token, grow);
+      expect(res.refusal_reason, JSON.stringify(res)).toBe("parameter_mismatch");
+      const execution = h.evidence.forMission(MISSION).find((r) => r.kind === "execution") as
+        | { content: { effective_parameter_digest?: string } }
+        | undefined;
+      return execution?.content.effective_parameter_digest;
+    };
+    const alone = await effectiveOf([globex]);
+    expect(alone).toBeDefined();
+    expect(await effectiveOf([acme, globex])).toBe(alone);
   });
 
   it("a read authorizes through a later unconstrained entry beside one whose tenant fact the record lacks", async () => {
