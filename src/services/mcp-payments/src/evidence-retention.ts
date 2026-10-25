@@ -22,9 +22,8 @@
  *  - the per-(Mission, emitter, role) `sequence` counter, so a restart
  *    continues an emitter's stream instead of restarting it at zero. This
  *    covers the records the PEP EMITS. Decision Evidence carries the PDP's
- *    own counter, allocated on the PDP's emission path and still in process:
- *    making that one durable is the decision point's own work, not this
- *    store's.
+ *    own counter, allocated on the PDP's emission path: the shipped PDP
+ *    keeps it durable in its own claim file (#821), never in this store.
  *  - the deployment's published verification key sets: which location
  *    publishes a `kid`, which emitter, role and audience it authenticates, and
  *    for a retired key the instant it stops being resolvable, measured from

@@ -360,7 +360,7 @@ the connector effect, then evidence, then claim settlement.
 
 | Store | Backing as shipped | Atomic unit | Restart |
 |---|---|---|---|
-| PDP idempotency claims | SQLite file `var/pdp-idempotency-claims.sqlite`, exclusive lock, WAL, `synchronous=FULL` (`stack.ts:836-849`) | lookup and insert in one transaction; the decision is persisted before the response | a prior boot's `permit_issued` becomes `unresolved`; an unpersisted `claimed` is adoptable; `unresolved` closes `indeterminate` at `valid_until` plus 30 s plus PT15M, raises the declared operator alert and is never purged |
+| PDP idempotency claims and Decision Evidence sequences | SQLite file `var/pdp-idempotency-claims.sqlite`, exclusive lock, WAL, `synchronous=FULL` (`stack.ts:836-849`) | lookup and insert in one transaction; the decision is persisted before the response; a Decision Evidence sequence position is committed before its record is signed (#821) | a prior boot's `permit_issued` becomes `unresolved`; an unpersisted `claimed` is adoptable; `unresolved` closes `indeterminate` at `valid_until` plus 30 s plus PT15M, raises the declared operator alert and is never purged; each per-Mission Decision Evidence sequence continues past its last committed position |
 | PEP write reservations | SQLite file `var/pep-write-reservations.sqlite` (`stack.ts:897-902`) | reservation, effect and completion in one transaction; a single-use permit's consumed identifier is one insert on the unkeyed path and on a keyed retrieval, and joins that transaction on keyed admission | survives; completed rows read absent after P7D; a consumed identifier is kept until its permit's `valid_until` plus 30 s (`CONSUMED_PERMIT_RETENTION_MARGIN_MS`), which realizes the published `permit_acceptance_window` posture: the PEP accepts a permit only until `valid_until` on its own clock, with no skew; the declared reconciler runs `sweep()` and `sweepConsumedPermits()` on every run |
 | `TransactionEngine` | in memory (`services/mcp-payments/src/transaction.ts:41`) | redemption is three statements, not one transaction | lost, with every redemption record. Every process reuses the constant epoch `demo-epoch` (`demo/src/stack.ts:1055`), so D39's prior-epoch rejection (`transaction.ts:60-61`) never fires: a restarted engine has no record of earlier redemptions. The PEP's `instanceEpoch` is also `demo-epoch` (`stack.ts:1092`) and is never read |
 | Connectors, txn stores, evidence retention | in memory | one insert per operation key; atomic first use of a `txn` | lost |
@@ -371,6 +371,8 @@ the connector effect, then evidence, then claim settlement.
 
 Witnesses for the durable stores:
 `PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a persisted permit is unknown after restart: suppressed, never returned, never fresh`
+and
+`the composed stack's PDP keeps its Decision Evidence counters in its claim file (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > a PDP restarted on the shipped stack's claim file continues a Mission's Decision Evidence sequence where the stack left it`
 and
 `the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the persisted store reopens with the record > a key scheduled before the store closed resolves against its record from a new server on the same file`,
 and

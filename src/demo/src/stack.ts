@@ -985,6 +985,11 @@ export async function composeStack(opts: {
       audience: CANONICAL_RESOURCE,
       authorizesAudience: (audience) =>
         boundary.authorizesEvidence({ audience, kid: decisionEvidenceKey.kid, emitter: CANONICAL_RESOURCE, role: "pdp" }, "current"),
+      // @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+      // (#821, D814): the per-Mission Decision Evidence counters live in the
+      // PDP's own durable claim file, so a restarted PDP continues each
+      // stream rather than re-issuing a sequence a retained record carries.
+      sequences: pdpClaims.evidenceSequences(),
     },
     claims: pdpClaims,
     resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer), clients: issuerLocalClients(issuer) }),
