@@ -16,6 +16,33 @@ snapshot: a lifecycle transition compares and sets on `(version, state)`, and
 a transition whose expiry clock materialized the expiry (`terminated`, reason
 `expired`) first is refused rather than overwritten.
 
+Child Mission Carryover (`child-delegation.carryover`; `child_mission_carryover`
+in `policy.json`, on in the reference deployment) widens that expansion
+transaction rather than adding a second one. The plan is rendered, its
+identifiers reserved and its manifest committed on the deferral row at
+approval. Completion runs the whole batch in the expansion completion
+transaction, between successor activation and predecessor supersession:
+- the descendant-set membership pass;
+- one compare-and-set per carried row against its rendered snapshot;
+- every replacement record, in generation order, each keeping the old child's
+  `derivation_limit` and `derivation_count`;
+- the cascade of the whole old subtree;
+- the complete final map and the signed Carryover Evidence;
+- the terminal tombstones and the durable outbox payloads.
+
+A failure anywhere rolls all of it back, so no partial successor, replacement or
+cascade survives, and publication runs after the commit, as for every other
+transition. The consistency domain is therefore the predecessor, its whole live
+subtree and the successor, together with their budget state and their durable
+publication, in one issuer's kernel database with its single writer. A
+deployment that shards Mission state per Mission cannot offer carryover without
+a transaction spanning that domain. No external meter or latch participates:
+the deployment declares none (`noApplicableExternalState`), so a carried budget
+is the kernel's own counters. The domain is bounded at intake by
+`carryover_max_rows` (8 in `policy.json`): a larger plan is refused
+`carryover_plan_too_large` before any approval names it. A deployment that
+omits carryover keeps the ordinary cascade, and the specification is unchanged.
+
 Every committed transition writes one immutable event row on the kernel handle
 in the same transaction as the state write, with its event identity assigned
 inside that transaction. Publication runs after the commit. Managed
@@ -225,6 +252,7 @@ Namespace inventory for the changed seams:
 | Mutable seam | Namespace boundary |
 |---|---|
 | Mission state/version, counters, child accounting and expansion deferrals | One issuer owns the kernel database |
+| Carryover plans and manifests, identifier reservations, results and replacement evidence | One issuer owns the kernel database; reservations and replacements are keyed on issuer and Mission identity |
 | Suspension schedules and their generations | The Mission's own row in the kernel database |
 | Durable lifecycle events and per-subscriber delivery rows | One issuer owns the kernel database; each event row records the issuer it committed under |
 | Terminal tombstones | Keyed on the canonical issuer and Mission identity pair |

@@ -1534,3 +1534,136 @@ describe("a carryover replacement keeps the old child's original approved audien
     expect(kernel.get(replacementId)?.approved_audiences).toEqual([["https://rs-a.test/"]]);
   });
 });
+
+describe("Child Mission Carryover compositions in the reference deployment (@spec child-delegation#carryover, child-delegation#carryover-cas, #919)", () => {
+  /** The carryover columns a deferral row holds. */
+  const planOf = (run: Run) =>
+    run.store.db
+      .prepare("SELECT carryover_plan_id, carryover_manifest_json FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(run.code);
+
+  it("prepares no plan for a predecessor with no live descendant and completes an ordinary expansion", () => {
+    const pred = approvePredecessor();
+    const run = openApproved(pred.id);
+    expect(planOf(run)).toEqual({ carryover_plan_id: null, carryover_manifest_json: null });
+    const out = redeem(run);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    if ("error" in out) return;
+    expect(out.carryover).toBeUndefined();
+    expect(run.store.carryoverResultFor(run.code)).toBeUndefined();
+    expect(kernel.get(pred.id)?.termination?.reason).toBe("superseded");
+  });
+
+  it("with the switch off when the expansion opens, prepares no plan and cascades the live subtree ordinarily, carrying nothing", () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    const grandchild = addChild(child.id, "grandchild-a");
+    const run = openApproved(pred.id, { config: config({ enabled: false }) });
+    expect(planOf(run)).toEqual({ carryover_plan_id: null, carryover_manifest_json: null });
+    const out = redeem(run);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    if ("error" in out) return;
+    expect(out.carryover).toBeUndefined();
+    expect(kernel.get(child.id)?.termination).toMatchObject({ reason: "parent_terminated", parent: pred.id });
+    expect(kernel.get(grandchild.id)?.termination).toMatchObject({ reason: "parent_terminated", parent: child.id });
+    expect(kernel.get(child.id)?.termination?.carried_to).toBeUndefined();
+    expect(kernel.get(grandchild.id)?.termination?.carried_to).toBeUndefined();
+    expect(kernel.descendantsOf(out.successor.id)).toEqual([]);
+  });
+
+  it("carries a child suspended and resumed before rendering; one suspended at rendering and resumed before completion refuses the batch", () => {
+    const pred = approvePredecessor();
+    const resumed = addChild(pred.id, "child-a");
+    kernel.transition(resumed.id, "suspend");
+    kernel.transition(resumed.id, "resume");
+    const run = openApproved(pred.id);
+    expect(manifestOf(run).entries.find((e) => e.child_id === resumed.id)?.outcome).toBe("carry");
+    const out = redeem(run);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    expect(kernel.get(resumed.id)?.termination?.carried_to).toBeDefined();
+
+    const later = approvePredecessor();
+    const child = addChild(later.id, "child-b");
+    kernel.transition(child.id, "suspend");
+    const run2 = openApproved(later.id);
+    const manifest = manifestOf(run2);
+    expect(manifest.entries.find((e) => e.child_id === child.id)).toMatchObject({
+      outcome: "cascade",
+      reason: "suspended_not_resumed",
+    });
+    kernel.transition(child.id, "resume");
+    expect(redeem(run2)).toEqual({ error: "access_denied" });
+    expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
+    expect(kernel.get(child.id)?.state).toBe("active");
+    expect(kernel.get(later.id)?.state).toBe("active");
+  });
+
+  it("refuses a batch when a rendered child was suspended after approval", () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    const run = openApproved(pred.id);
+    const manifest = manifestOf(run);
+    expect(manifest.entries.find((e) => e.child_id === child.id)?.outcome).toBe("carry");
+    kernel.transition(child.id, "suspend");
+    expect(redeem(run)).toEqual({ error: "access_denied" });
+    expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
+    expect(kernel.get(child.id)?.state).toBe("suspended");
+    expect(kernel.get(pred.id)?.state).toBe("active");
+  });
+
+  it("refuses a batch when a rendered child was contained after approval", () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a", ["payments:invoice.read", "payments:invoice.list"]);
+    const run = openApproved(pred.id);
+    const manifest = manifestOf(run);
+    kernel.contain(child.id, {
+      event: {
+        type: "anomaly.detected",
+        source: "svc:soc",
+        observed_at: clock.toISOString(),
+        event_id: "ev-contain-919",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:invoice.list"] }],
+    });
+    expect(redeem(run)).toEqual({ error: "access_denied" });
+    expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
+    expect(kernel.get(child.id)?.state).toBe("active");
+    expect(kernel.get(pred.id)?.state).toBe("active");
+  });
+
+  it("refuses a batch when a rendered child's record is gone at completion", () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    const sibling = addChild(pred.id, "child-b");
+    const run = openApproved(pred.id);
+    const manifest = manifestOf(run);
+    // A row removed out of band, as a purge would.
+    kernel.db.prepare("DELETE FROM missions WHERE id = ?").run(child.id);
+    expect(redeem(run)).toEqual({ error: "access_denied" });
+    expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
+    expect(kernel.get(sibling.id)?.state).toBe("active");
+    expect(kernel.get(pred.id)?.state).toBe("active");
+  });
+
+  it("refuses a batch when a carried child's own expiry arrives before completion: no replacement can outlive it", () => {
+    const pred = approvePredecessor();
+    const expiring = createChildMission(kernel, {
+      parentId: pred.id,
+      intent: kernel.validateIntent(
+        JSON.stringify({ goal: "Pay Acme invoices", target_resources: [RESOURCE], expires_at: "2026-07-01T00:05:00Z" }),
+      ),
+      proposedAuthority: proposed(["payments:invoice.read"]),
+      childActor: { sub: "child-a", sub_profile: "ai_agent" },
+    }).child;
+    const run = openApproved(pred.id);
+    const manifest = manifestOf(run);
+    const entry = manifest.entries.find((e) => e.child_id === expiring.id);
+    expect(entry?.outcome).toBe("carry");
+    // Inside the deferral's lifetime, past the child's own expiry.
+    clock = new Date("2026-07-01T00:06:00Z");
+    expect(redeem(run)).toEqual({ error: "access_denied" });
+    expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
+    expect(kernel.get(entry?.replacement?.replacement_id as string)).toBeUndefined();
+    expect(kernel.get(pred.id)?.state).toBe("active");
+  });
+});
