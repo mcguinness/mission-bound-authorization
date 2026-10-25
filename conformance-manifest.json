@@ -1269,9 +1269,15 @@
      "name": "compound-action phases (@spec runtime#compound-actions) > refuses at use a compensation whose committed wire record no longer matches the form its permit bound, with zero connector effects",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > suppresses a compensation whose committed wire record no longer answers at use as target_drift, keeping the authorized digest and omitting the effective one",
+     "level": "unit",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Owner review of PR #1656 (P1). Committing USD 125, changing the invoice to USD 1 and requesting a reversal under a USD 10 reversal ceiling is denied parameter_violation, the request carrying USD 125, with zero connector effects; within the ceiling the reversal offsets exactly USD 125, and the request, Decision Evidence, operation key and completed Execution Evidence carry the digest of the wire's reversal form; a wire record that changes after the Decision is refused at use parameter_mismatch. Mutations: binding the invoice as it reads now fails the denial assertion (the permit is then refused at use); doing so with the at-use comparison and the connector check also off reverses USD 125 (the zero-effect assertion fails on its own); binding the current amount into the reversal form with both downstream guards off fails the committed-amount assertion; skipping the at-use comparison fails the at-use refusal, and with the connector check also off the zero-effect assertion fails on its own."
+   "notes": "Owner review of PR #1656 (P1). Committing USD 125, changing the invoice to USD 1 and requesting a reversal under a USD 10 reversal ceiling is denied parameter_violation, the request carrying USD 125, with zero connector effects; within the ceiling the reversal offsets exactly USD 125, and the request, Decision Evidence, operation key and completed Execution Evidence carry the digest of the wire's reversal form; a wire record that changes after the Decision is refused at use parameter_mismatch. Mutations: binding the invoice as it reads now fails the denial assertion (the permit is then refused at use); doing so with the at-use comparison and the connector check also off reverses USD 125 (the zero-effect assertion fails on its own); binding the current amount into the reversal form with both downstream guards off fails the committed-amount assertion; skipping the at-use comparison fails the at-use refusal, and with the connector check also off the zero-effect assertion fails on its own. After #786: a wire record that no longer answers at use leaves the effective parameters unestablished, suppressed target_drift with the authorized digest kept and the effective one absent. Mutation: recording that case as parameter_mismatch fails the target_drift witness."
   },
   {
    "id": "runtime.compound-actions.offset-refuses-differing-parameters",
