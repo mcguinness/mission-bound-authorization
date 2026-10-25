@@ -3313,6 +3313,36 @@ tombstone, retained for at least the declared idempotency horizon and
 released only by an evidence-recorded operational resolution, never
 by expiry into a fresh claim.
 
+## Local Accountability Minimum {#local-accountability}
+
+A deployment whose relying parties need local audit and
+reconciliation, rather than portable verification, meets this section
+with a proportional local minimum: the mandatory records of the
+composition it selects, from authenticated producers, carrying stable
+correlation identifiers, held in durable storage each producer owns,
+integrity-protected by a mechanism {{record-integrity}} permits, under
+the declared retention and access controls, with per-emitter
+sequencing recoverable after a restart. Replicas of one emitter
+coordinate its sequence; no sequence spans emitters. Per-record
+portable signatures, a Mission Mandate, transparency registration and
+selective disclosure are added for a named relying party or verifier,
+and a record a selected companion requires to be individually signed
+stays individually signed.
+
+Durability is ordered around the effect. Before an effect is
+released, the deployment MUST durably preserve the authorization
+evidence the effect relies on and the operation identity needed to
+recover its disposition; a storage failure before execution prevents
+the effect. The actual execution outcome is recorded when it becomes
+knowable. A crash after an irreversible external effect is released
+and before its outcome is recorded leaves an indeterminate operation
+that requires reconciliation under the rules above: the deployment
+MUST NOT record a fabricated failure or success for it, and MUST NOT
+retry it automatically. Export, transparency submission and signing
+MAY run asynchronously from that durable store only where the selected
+profiles permit it and durable recovery preserves every required
+record ({{agent-isolated-evidence-emission}}).
+
 ## Mission Receipt {#mission-receipt}
 
 A **Mission Receipt** is the portable, tamper-evident projection of
@@ -4149,6 +4179,17 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Changes a requirement (#821, D814): Local Accountability Minimum
+  states the proportional local minimum a deployment needing local
+  audit and reconciliation meets, and orders durability around the
+  effect: authorization evidence and operation identity are durably
+  preserved before release, a storage failure before execution prevents
+  the effect, and a crash before an irreversible external effect's
+  outcome is recorded leaves an indeterminate operation for
+  reconciliation, never a fabricated outcome or an automatic retry.
+  Asynchronous export, transparency submission and signing are allowed
+  only where the selected profiles permit it and durable recovery keeps
+  every required record.
 - Evaluation-Context Binding (#773): the salt survives restart and is
   available to every replica that can use its bindings, or is held per
   epoch, so that a restart or a replica without the version loses those
