@@ -31806,6 +31806,123 @@
    "tests": []
   },
   {
+   "id": "runtime.local-accountability.minimum",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "local-accountability",
+   "text": "meets this section with a proportional local minimum",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment claiming the local minimum holds the selected composition's mandatory records from authenticated producers, with stable correlation, in durable producer-owned storage, integrity-protected, under declared retention and access controls, with per-emitter sequencing recoverable after a restart"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#821, D814. src/docs/initial-runtime-deployment.md (Local accountability minimum) inventories the AS-native composition: the PDP's records are durable, while the PEP's retention store is in memory in the shipped launcher, so the target does not yet meet the durable-storage and recoverable-sequencing elements for PEP-side records."
+  },
+  {
+   "id": "runtime.local-accountability.durable-before-effect",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "local-accountability",
+   "text": "Before an effect is released, the deployment MUST durably preserve the authorization evidence the effect relies on and the operation identity needed to recover its disposition",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "before an irreversible effect is released, the decision with its Decision Evidence and the operation's idempotency identity are in durable storage, so a restart recovers the disposition rather than losing it"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a persisted permit is unknown after restart: suppressed, never returned, never fresh",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#821, D814. Partial: the PDP persists the decision and its Decision Evidence in its durable claim row before returning it, and the PEP's retention store recovers its records on a file; in the shipped launcher the PEP's copy is in memory, so the durable copy is the PDP's (see the inventory)."
+  },
+  {
+   "id": "runtime.local-accountability.storage-failure-prevents-effect",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "local-accountability",
+   "text": "a storage failure before execution prevents the effect",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "when the authorization evidence cannot be verified and retained before execution, the effect is never released: the call is refused or rejected before redemption and the connector records no effect"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#821, D814. The unverifiable-record refusal is witnessed; the retention-write-failure path is witnessed by the #821 implementation's test."
+  },
+  {
+   "id": "runtime.local-accountability.indeterminate-not-fabricated",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "local-accountability",
+   "text": "the deployment MUST NOT record a fabricated failure or success for it, and MUST NOT retry it automatically",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a claim whose outcome a crash left unrecorded is never listed by the restarted process, closes indeterminate at its window with the declared alert, is never recorded failed or completed, and a retry under its key executes nothing"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the indeterminate alert hook (#1103) > fires for a prior boot's claim, which no current requester can list, when its window closes",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#821, D814. Restates, for the local minimum, the reconciliation rule of Runtime Enforcement Evidence; the existing #1103 witnesses cover it."
+  },
+  {
    "id": "runtime.trifecta-containment.eat-selections-required",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "trifecta-containment",

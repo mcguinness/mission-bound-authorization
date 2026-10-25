@@ -353,6 +353,31 @@ Deployment-administered gates that do exist: the action-bound approval for
   records from before the change, follow
   [boundary-identifier-change.md](boundary-identifier-change.md) (#853).
 
+### Local accountability minimum (#821, D814)
+
+Runtime's Local Accountability Minimum, mapped onto this composition.
+Each row names what meets the element, or the gap, and how far the gap
+reaches. No portable export, transparency registration, Mission Mandate
+or selective disclosure is part of this target; no relying party here
+needs them.
+
+| Element | This composition | Status |
+|---|---|---|
+| Mandatory records | Decision Evidence (PDP), Refusal Records (PEP; PDP for its pre-evaluation refusals), Execution Evidence (`suppressed` and local `completed` by the PEP, transaction-tier `completed` by the executor), as the table above | met |
+| Authenticated producers | every record is signed by its own emitter under a key the Enforcement Scope Statement authorizes for the boundary; keys are generated per boot (#831) | met; key history across restarts is #831's |
+| Stable correlation | `evaluation_id`, the decision identifier, `execution_id` and the Mission reference join a decision to its execution | met |
+| Durable producer-owned storage | the PDP's idempotency claim file holds each decision with its Decision Evidence (`decision_json`), persisted before the decision returns; the PEP's `EvidenceRetentionStore` is built without a file (`stack.ts`), so PEP-side records live in memory; the transaction engine, connectors and their records are in memory (§7) | gap: PEP-side records do not survive a restart in the shipped launcher; a deployment adopting this minimum passes a retention file |
+| Integrity protection | each record is an individually signed evidence envelope | met |
+| Retention and access controls | a 31,536,000 s window from the audit horizon; retained records are readable only through the store | met within a process; lost at restart where held in memory (above) |
+| Recoverable per-emitter sequencing | the PEP's per-(Mission, emitter, role) sequence is durable when the retention store has a file, so in memory as shipped; the PDP's Decision Evidence sequence (#821) | gap for the PEP as shipped (above) |
+
+Durability around the effect:
+
+- **Before the effect.** The PDP persists the decision, Decision Evidence included, in its durable claim row before returning it, and the PEP verifies and retains the record before redemption: `PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a persisted permit is unknown after restart: suppressed, never returned, never fresh`.
+- **A storage failure before execution prevents the effect.** A record that cannot be verified and retained is refused `decision_evidence_unverifiable` (§6), and a retention write that fails rejects the call before redemption, so the wire never reaches the connector (#821).
+- **A crash before the outcome is recorded.** A prior process's claim is never listed, moves to `unresolved`, and closes `indeterminate` at its window with the declared alert; it is never retried and never recorded `failed`: `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing`.
+- **Asynchronous work.** Signing is synchronous at emission, and nothing is exported or registered; an emitter that cannot sign fails closed (§6, Emission failure).
+
 ## 7. Persistence and restart
 
 No transaction spans two stores. The transaction tier writes redemption, then
