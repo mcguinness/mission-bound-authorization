@@ -60424,7 +60424,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the Intent Submission Evidence a deferred submission presented is verified again at the activation, which creates no Mission when the evidence no longer verifies, and the verified facts are recorded on the Mission as submission_evidence, as at a synchronous approval",
-    "local": "The whole Submission envelope (intent and evidence) is carried through the deferral. The evidence is verified at the governed_policy activation before any derivation, and again after the model call with nothing awaited before the commit, so evidence that expires while the model is consulted authorizes nothing; both checks use the deployment's current required types for the client, and the recorded facts are the last check's. A failure resolves the approval (denied under this assembly's refusal setting) with the reason invalid_mission_intent_evidence recorded issuer-side, and the poll answers access_denied, the deferred substrate's outcome for a denied deferral. The unwired human path (approveDirect) refuses to commit when the approval carries evidence and no verified facts are supplied."
+    "local": "The whole Submission envelope (intent and evidence) is carried through the deferral. The evidence is verified at the governed_policy activation before any derivation, and again after the model call with nothing awaited before the commit, so evidence that expires while the model is consulted authorizes nothing; both checks use the deployment's current required types for the client, and the recorded facts are the last check's. A failure resolves the approval (denied under this assembly's refusal setting) with the reason invalid_mission_intent_evidence recorded issuer-side, and the poll answers access_denied, the deferred substrate's outcome for a denied deferral. The unwired human path (approveDirect) refuses to commit when the approval carries evidence and no verified facts are supplied. Where no model advisor is configured, the check before derivation is the only one."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -60446,9 +60446,27 @@
      "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > verifies submission evidence again after a delayed model call, so evidence that expires meanwhile creates no Mission",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-approval-evidence-no-advisor.test.ts",
+     "name": "deferred Mission approval evidence check with no model advisor (@spec deferred-approval#deferred-sequencing, mission#submission-processing, #1300, #1313) > refuses evidence that verified at PAR and lapsed before the activation: access_denied, with no Mission, no record and no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-approval-evidence-no-advisor.test.ts",
+     "name": "deferred Mission approval evidence check with no model advisor (@spec deferred-approval#deferred-sequencing, mission#submission-processing, #1300, #1313) > checks the evidence before selecting a policy or deriving: lapsed evidence under a root that admits no such client is refused for the evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-approval-evidence-no-advisor.test.ts",
+     "name": "deferred Mission approval evidence check with no model advisor (@spec deferred-approval#deferred-sequencing, mission#submission-processing, #1300, #1313) > records on the Mission the facts its one evidence check verified at the activation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1300 review (D474). #1300 second review."
+   "notes": "#1300 review (D474). #1300 second review. #1313 item 3: the check before derivation is witnessed on the wire on an assembly with no model advisor, where it is the only check: evidence that lapsed while the approval pended gives access_denied with no Mission, record or token; lapsed evidence under a root that admits no such client is refused for the evidence (invalid_mission_intent_evidence), not for the policy; and evidence that still verifies is recorded with the activation's instant. Proofs: removing the check before derivation (M44) fails all three no-advisor tests and the unit test, while the advisor assembly's two wire tests still pass (its post-advisor check refuses); moving that check after policy selection and derivation fails only the ordering test."
   },
   {
    "id": "deferred-approval.deferral.substrate-discovery",
