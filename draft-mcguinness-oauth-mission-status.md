@@ -429,6 +429,10 @@ In the ERP examples in this document, the operation contract identifies
 `https://erp.example.com` as the operation target
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
 constraints determine the permitted operations within that service.
+In the Mission Status examples, the consumer is the ERP resource
+server, client `erp-rs`, which the Mission Issuer's configuration
+authorizes for that audience; its client identifier is the
+response's `sub`.
 
 The signed payload reports the Mission's current state and the
 audience-scoped evidence the consumer needs.
@@ -458,7 +462,7 @@ Decoded JWS payload:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "sub": "s6BhdRkqt3",
+  "sub": "erp-rs",
   "nonce": "nonce_K9pV4nT2sR7mB1xQ",
   "iat": 1793606400,
   "exp": 1793606460,

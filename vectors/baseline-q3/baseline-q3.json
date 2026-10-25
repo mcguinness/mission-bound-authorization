@@ -20,7 +20,8 @@
       "sub": "user_3p2q8mN1a0kV7tR"
     },
     "identity_provider": "https://idp.example.com",
-    "resource": "https://erp.example.com"
+    "resource": "https://erp.example.com",
+    "resource_server_client_id": "erp-rs"
   },
   "expiry": {
     "requested": "2026-12-31T23:59:59Z",

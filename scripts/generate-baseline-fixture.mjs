@@ -271,6 +271,7 @@ function build() {
       approver: ALICE,
       identity_provider: "https://idp.example.com",
       resource: "https://erp.example.com",
+      resource_server_client_id: "erp-rs",
     },
     expiry: { requested: EXPIRES_AT, effective: EXPIRES_AT, numeric_date: numericDate(EXPIRES_AT) },
     anchors: {

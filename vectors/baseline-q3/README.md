@@ -9,7 +9,7 @@
 | Member | Meaning |
 |---|---|
 | `mission` | The full reference (`issuer`, `id`) |
-| `cast` | Client `s6BhdRkqt3`; Alice (`https://idp.example.com` / `user_3p2q8mN1a0kV7tR`) as Subject and direct Approver; the resource `https://erp.example.com` |
+| `cast` | Client `s6BhdRkqt3`; Alice (`https://idp.example.com` / `user_3p2q8mN1a0kV7tR`) as Subject and direct Approver; the resource `https://erp.example.com`, and its resource server, client `erp-rs`, as the Mission Status consumer |
 | `expiry` | Requested and effective `expires_at`, `2026-12-31T23:59:59Z`, and its NumericDate |
 | `anchors` | `intent_hash`, `proposal_hash` and `authority_hash` over the record's objects, and `root_commitment` (for a direct approval, the Mission's own `authority_hash`) |
 | `record` | The Mission Record the core's Worked Example displays |
