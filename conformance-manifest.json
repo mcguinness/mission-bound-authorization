@@ -6825,7 +6825,7 @@
     "normative": "under a `service_owned` or `organizational` source, as under `user_delegated`, a derived token's `client_id` names the Agent and the Subject stays in `sub`; a delegate appears in `act`, never in `sub` or in place of the Subject"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
@@ -6844,9 +6844,21 @@
      "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/organizational-principal-agent.test.ts",
+     "name": "an agent acting for an organizational principal (@spec mission#authority-sources, mission#mission-bound-tokens, mission#designation, #1313) > step 2 (token): the access token's sub is the organizational principal, not the Approver, its client_id the Agent, and it carries no act",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/organizational-principal-agent.test.ts",
+     "name": "an agent acting for an organizational principal (@spec mission#authority-sources, mission#mission-bound-tokens, mission#designation, #1313) > step 3 (same-Mission delegation): the Agent designates a sub-agent, and the sub-agent's redeemed token keeps the organizational principal as sub, names the sub-agent in act and carries the sub-agent as client_id",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1194. Witnessed for a service_owned source (the agent ledger-reconciler, workload Subject agt_ledger_reconciler): client_id names the Agent and the Subject stays in sub (step 3), and a delegate the agent designates appears in act with sub unchanged (step 5); and for user_delegated by the delegation-exchange witness. Partial: the organizational source is not exercised for client_id or for a delegate in act. Proofs: overwriting client_id with the Subject in the JWT customizer fails step 3; omitting act at redemption fails step 5; taking sub from the delegate fails step 5 only with both the redemption's account and the customizer's Subject assignment disabled (either alone keeps sub)."
+   "notes": "#1194, #1313 item 1. Witnessed for a service_owned source (the agent ledger-reconciler, workload Subject agt_ledger_reconciler): client_id names the Agent and the Subject stays in sub (step 3), and a delegate the agent designates appears in act with sub unchanged (step 5); for user_delegated by the delegation-exchange witness; and for an organizational source (Subject acme-accounts-payable under the shipped acme-accounts-payable source and its governed policy, approved headlessly by bob) by the organizational-principal-agent witness: the access token's sub is the organizational principal, not the Approver, its client_id the Agent, with no act (step 2); the designation keeps the Agent as client_id and the Subject in sub, and the sub-agent's redeemed token keeps the Subject in sub and names the sub-agent in act and as client_id (step 3). The organizational Agent is a test registration added to that source: the shipped governed-agent holds no Token Exchange grant (its exchange is refused, requested grant type is not allowed for this client), although the governed policy's ceiling admits ai_agent delegates. Proofs: overwriting client_id with the Subject in the JWT customizer fails step 3 (service_owned) and the organizational step 2; omitting act at redemption fails step 5 and the organizational step 3; taking sub from the delegate fails step 5 only with both the redemption's account and the customizer's Subject assignment disabled (either alone keeps sub), and fails the organizational step 3 under that double mutant or under a customizer that writes act.sub into sub; a customizer writing the Agent into sub for organizational Missions only fails the organizational steps 2 and 3 while the service_owned and user_delegated witnesses pass; removing the customizer's Subject assignment fails the organizational step 2 (sub becomes the Approver); naming the designee as a designation's client_id or sub, or the Mission's Agent as a delegated token's client_id, fails the organizational step 3."
   },
   {
    "id": "core.approval-event.approver-establishment-not-from-client-input",
