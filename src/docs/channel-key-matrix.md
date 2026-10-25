@@ -30,6 +30,21 @@ The AS's four role keys come from a key ring or are generated at each boot
 (#831): a key ring, created once by `pnpm keys init`, keeps them under the
 same `kid` across restarts. Every other key below is generated at each boot.
 
+A ring keeps each role's generations. Generation 1 is under the `kid` below,
+generation `n` under `<kid>-<n>`, and a role signs under its one `active`
+generation. `pnpm keys rotate` stages a `pending` generation, published but
+not signing; `pnpm keys rotate --activate` makes it the signer once it has
+been published for the `/jwks` freshness lifetime (`Cache-Control: max-age`,
+300 seconds), and the previous one moves to `overlap`, still published and
+accepted. `pnpm keys retire` removes an `overlap` generation once the audit
+horizon (`policy.audit_horizon_s`) has passed since it stopped signing.
+`pnpm keys compromise` withdraws a generation at once, from `/jwks` and from
+every verifier the AS runs, recording its revocation time and any
+established compromise time; compromising the active generation activates a
+fresh replacement in the same write. Each change takes effect when the AS
+next starts, since it reads the ring only at boot. `pnpm keys migrate`
+converts a slice 1 ring, which still loads, before any of these.
+
 | `kid` | Holder | Signs | Source |
 |---|---|---|---|
 | `as-token` | AS | access tokens and ID Tokens, child grants, Dispatch Handoff grants, cross-org access tokens, the dev ordinary token | key ring or per boot |
@@ -47,12 +62,15 @@ same `kid` across restarts. Every other key below is generated at each boot.
 | `*-auth` client keys | each client (the demo AS generates them) | `private_key_jwt` client assertions | per boot |
 | per-instance | each agent instance | DPoP proofs and the instance assertion `cnf` | per instance |
 
-The AS publishes `as-token`, `as-status`, `as-txn` and `as-continuation`
-at `/jwks`. The payments resource takes its copy once, at assembly
-(`stack.ts:555`), and accepts per role only the `kid`s it pins
-(`services/mcp-payments/src/key-roles.ts`). With a key ring, an AS restart
-changes nothing the resource holds. Rotation and resource-side refresh are
-#831's next slice.
+The AS publishes every live generation of `as-token`, `as-status`,
+`as-txn` and `as-continuation` at `/jwks`. The payments resource takes its
+copy once, at assembly (`stack.ts:555`), and accepts per role only the
+`kid`s it pins (`services/mcp-payments/src/key-roles.ts`); the PDP accepts
+Status responses only under the `kid`s it declares. With a key ring, an AS
+restart changes nothing the resource holds, but a rotation does: the
+resource and the PDP keep the key set they took and the `kid`s they pin, so
+after one they refuse what the AS signs under the new generation. Refreshing
+verifiers bound to each role's current generations are #831's part C.
 
 A per-boot key under a fixed `kid` breaks anything that outlives the
 process. A file-backed evidence store refuses its second boot, because the
