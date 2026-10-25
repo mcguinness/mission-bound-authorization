@@ -31947,7 +31947,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "under lifecycle-mediated enforcement, an action the dependency governs is refused while upstream observation or reconciliation exceeds its declared bound, even though the Mission state reads `active`",
-    "local": "the reference's declared dependency (config/authority-dependencies.json, subject-delegation) under lifecycle-mediated enforcement: the authorization server's reconciler (services/authorization-server/src/adapters/authority-reconciler.ts) commits suspend or revoke through the lifecycle operations and records its progress, the time the observation its last complete pass acted on represents; a failed source read, or a pass whose transitions do not all commit, does not advance it. The PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) refuses resource_policy once that progress is absent or older than reconciliation_max_lag_seconds (60 s), whatever the Mission's state reads, records reconciliation_overdue in the dependency evidence, and caps a permit at the progress plus the lag bound. The reference composition gives the PDP the progress in process (BuiltAs.authorityDependency.reconciliation); a PDP without it refuses every governed action. The issuance gates evaluate the observation directly and do not apply the lag refusal. Fresh progress does not authorize reliance on a dependency the reconciliation could not resolve: a pass records the governed Missions whose Subject the source holds no record of, and the PDP refuses them unresolved, with no suspension or revocation. The reconciler's progress is dated from when its read was issued, so a slow read does not make an overdue reconciliation current, and a pass over a kernel whose durable state is uncertain neither commits nor counts as current (D813)."
+    "local": "the reference's declared dependency (config/authority-dependencies.json, subject-delegation) under lifecycle-mediated enforcement: the authorization server's reconciler (services/authorization-server/src/adapters/authority-reconciler.ts) commits suspend or revoke through the lifecycle operations and records its progress, the time the observation its last complete pass acted on represents; a failed source read, or a pass whose transitions do not all commit, does not advance it. The PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) refuses resource_policy once that progress is absent or older than reconciliation_max_lag_seconds (60 s), whatever the Mission's state reads, records reconciliation_overdue in the dependency evidence, and caps a permit at the progress plus the lag bound, or earlier at the staleness bound of the reconciliation's observation under lifecycle-only enforcement. The reference composition gives the PDP the progress in process (BuiltAs.authorityDependency.reconciliation); a PDP without it refuses every governed action. The issuance gates evaluate the observation directly and do not apply the lag refusal. Fresh progress does not authorize reliance on a dependency the reconciliation could not resolve: a pass records the governed Missions whose Subject the source holds no record of, and the PDP refuses them unresolved, with no suspension or revocation. The reconciler's progress is dated from when its read was issued, so a slow read does not make an overdue reconciliation current, and a pass over a kernel whose durable state is uncertain neither commits nor counts as current (D813)."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -32025,7 +32025,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "where the PDP enforces a declared dependency, an action it governs is refused on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage",
-    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated in the PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) where the declaration routes direct evaluation to the PDP; a stale observation and a source that never answered are each a case of no acceptable observation remaining. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813)."
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated in the PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) where the declaration routes direct evaluation to the PDP; a stale observation and a source that never answered are each a case of no acceptable observation remaining. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813). Under lifecycle-only enforcement (no direct route) the PDP keeps the declared observation limits: the observation the last complete reconciliation acted on, older than max_staleness_seconds, refuses stale, and a failed latest read under a declared online check refuses unavailable; withdrawal and invalidation stay the reconciler's to commit."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -32083,9 +32083,33 @@
      "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > publishes reads that complete in issue order in that order, the newer last",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "lifecycle-only enforcement at the PDP keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > refuses stale once the reconciliation's observation is older than max_staleness_seconds, though the reconciliation is within its lag bound, and caps the permit at that staleness",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "lifecycle-only enforcement at the PDP keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > refuses unavailable on a failed latest read where the declaration requires an online check, though the reconciliation is current",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-lifecycle-limits.test.ts",
+     "name": "lifecycle-only enforcement keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > refuses stale once the reconciliation's observation is older than max_staleness_seconds, though the lag bound is longer",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-lifecycle-limits.test.ts",
+     "name": "lifecycle-only enforcement keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > refuses unavailable on a failed latest read where the declaration requires an online check, though the reconciliation is current",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: dropping the PDP's check, the withdrawal check, the invalidation check, the staleness check, or the online check, accepting no observation, and letting an outage invalidate a still-valid observation, each failed its witness. D813 review (PR A): publishing an older read over a newer one failed the ordering witness."
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: dropping the PDP's check, the withdrawal check, the invalidation check, the staleness check, or the online check, accepting no observation, and letting an outage invalidate a still-valid observation, each failed its witness. D813 review (PR A): publishing an older read over a newer one failed the ordering witness. Owner review of #1695: ignoring the staleness bound or the online check under lifecycle-only enforcement each failed its witness, at the shared check and at the PDP."
   },
   {
    "id": "runtime.authority-dependency.refuse-when-not-established-local",
@@ -32103,7 +32127,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "where a composed resource-policy step at the PEP or resource server enforces a declared dependency, an action it governs is refused there on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains, even when the PDP permits within Mission authority; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage",
-    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated as a composed resource-policy step in the payments PEP (services/mcp-payments/src/pep.ts) after the PDP's permit and before any obligation or effect, where the declaration routes direct evaluation to the PEP; the decision point evaluates no dependency then and permits within Mission authority. The PEP rechecks the dependency at every use of the permit, release included, on every dispatch path (reads, unkeyed and keyed reversible writes, the transaction tier): the `authority_dependency` use check refuses resource_policy once the ceiling the composed step carried from admission is reached, whatever a later read shows, and once a known withdrawal, an observed invalidation or a lost observation reaches the PEP; routed to the PDP, a PEP holding the dependency rechecks it at release too (D813)."
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated as a composed resource-policy step in the payments PEP (services/mcp-payments/src/pep.ts) after the PDP's permit and before any obligation or effect, where the declaration routes direct evaluation to the PEP; the decision point evaluates no dependency then and permits within Mission authority. The PEP rechecks the dependency at every use of the permit, release included, on every dispatch path (reads, unkeyed and keyed reversible writes, the transaction tier): the `authority_dependency` use check refuses resource_policy once the ceiling the composed step carried from admission is reached, whatever a later read shows, and once a known withdrawal, an observed invalidation or a lost observation reaches the PEP; routed to the PDP, a PEP holding the dependency rechecks it at release too (D813). Under lifecycle-only enforcement the release recheck applies that route's checks (the reconciliation's currency, an unresolved Subject, the staleness bound and a declared online check) rather than none."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -32161,9 +32185,15 @@
      "name": "the composed step's ceiling on a read admitted at the edge of the observation's validity (@spec runtime#input-authority-dependency, #830, D813) > refuses a read admitted at 299 s of a 300 s validity and reaching release at 300 s",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "lifecycle-only enforcement keeps the declaration's observation limits at release (@spec runtime#input-authority-dependency, #830) > refuses at release, on every dispatch path, a permit whose source read failed after the decision where the declaration requires an online check",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation). #830 Q-d reference PR A (D798). Mutation-proved: dropping the PEP's composed step failed the refusal witnesses, and letting an outage invalidate a still-valid observation failed the outage witness. D813 review (PR A): removing the release check, skipping it on any one dispatch path (each of the four separately), not carrying the admission ceiling, refusing only past the ceiling rather than at it, not rechecking known invalidations at release, and not rechecking a PDP-routed dependency, each failed its witness."
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation). #830 Q-d reference PR A (D798). Mutation-proved: dropping the PEP's composed step failed the refusal witnesses, and letting an outage invalidate a still-valid observation failed the outage witness. D813 review (PR A): removing the release check, skipping it on any one dispatch path (each of the four separately), not carrying the admission ceiling, refusing only past the ceiling rather than at it, not rechecking known invalidations at release, and not rechecking a PDP-routed dependency, each failed its witness. Owner review of #1695: a release recheck that applies no lifecycle-only check failed the witness."
   },
   {
    "id": "runtime.authority-dependency.permit-cap",
@@ -32181,7 +32211,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a permit issued in reliance on a dependency observation expires no later than the observation's accepted validity, measured from the time the observation represents",
-    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the observation's validity is a ceiling of the PDP's one permit-deadline calculation (authority_dependency_valid_until), measured from the time the observation represents; under lifecycle-mediated enforcement (#830 Q-d PR B) the ceiling is the earlier of that validity and the reconciliation's currency, the reconciler's last complete pass plus the declared lag bound. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813)."
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the observation's validity is a ceiling of the PDP's one permit-deadline calculation (authority_dependency_valid_until), measured from the time the observation represents; under lifecycle-mediated enforcement (#830 Q-d PR B) the ceiling is the earlier of that validity and the reconciliation's currency, the reconciler's last complete pass plus the declared lag bound; under lifecycle-only enforcement (no direct route) it is the earlier of the lag deadline and max_staleness_seconds after the time the reconciliation's observation represents. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813)."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -32197,9 +32227,21 @@
      "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > dates an observation from when its read was issued, so a slow read does not renew an old state's validity",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-lifecycle-limits.test.ts",
+     "name": "lifecycle-only enforcement keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > caps the permit at the earlier of the staleness and lag deadlines, measured from the time the reconciliation's observation represents",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "lifecycle-only enforcement at the PDP keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > refuses stale once the reconciliation's observation is older than max_staleness_seconds, though the reconciliation is within its lag bound, and caps the permit at that staleness",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#830 (D789): specification slice. #830 Q-d reference PR A (D798). Mutation-proved: dropping the ceiling, and measuring the validity from the decision instant instead of the observation, each failed the witness. D813 review (PR A): dating an observation from its read's completion failed the slow-read witness."
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR A (D798). Mutation-proved: dropping the ceiling, and measuring the validity from the decision instant instead of the observation, each failed the witness. D813 review (PR A): dating an observation from its read's completion failed the slow-read witness. Owner review of #1695: returning the lag deadline alone, and measuring the staleness deadline from the decision instant, each failed the lifecycle-only ceiling witnesses."
   },
   {
    "id": "runtime.authority-dependency.evidence-distinguishes",
