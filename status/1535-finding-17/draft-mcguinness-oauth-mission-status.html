@@ -1505,8 +1505,8 @@ for a specific audience <span class="bcp14">MUST</span> send it.<a href="#sectio
 <dt id="section-3.1-2.5">
 <code>nonce</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-2.6">
-            <p id="section-3.1-2.6.1"><span class="bcp14">REQUIRED</span>. A string of 1 to 255 characters. A client-generated
-nonce binding the
+            <p id="section-3.1-2.6.1"><span class="bcp14">REQUIRED</span>. A string of 1 to 255 Unicode code points. A
+client-generated nonce binding the
 response to this request. It <span class="bcp14">MUST</span> be unique per request within the
 response lifetime. A consumer <span class="bcp14">MUST</span> reject a response whose <code>nonce</code>
 does not equal the one it sent. This is a standard client challenge:
@@ -2459,8 +2459,9 @@ The AS applies it as <a href="#idempotency" class="auto internal xref">Section 5
 <dt id="section-5.1-2.13">
 <code>nonce</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.1-2.14">
-            <p id="section-5.1-2.14.1"><span class="bcp14">REQUIRED</span>. A string of 1 to 255 characters. A client-generated
-nonce, the request's idempotency key (<a href="#idempotency" class="auto internal xref">Section 5.6</a>).<a href="#section-5.1-2.14.1" class="pilcrow">¶</a></p>
+            <p id="section-5.1-2.14.1"><span class="bcp14">REQUIRED</span>. A string of 1 to 255 Unicode code points. A
+client-generated nonce, the request's idempotency key
+(<a href="#idempotency" class="auto internal xref">Section 5.6</a>).<a href="#section-5.1-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2900,7 +2901,8 @@ and <code>on_expiry</code> in <code>mission</code> alongside <code>state</code>.
 <a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-idempotency-and-conflicts" class="section-name selfRef">Idempotency and Conflicts</a>
         </h3>
 <p id="section-5.6-1">The request <code>nonce</code> (<a href="#lifecycle-operations" class="auto internal xref">Section 5.1</a>) is
-the idempotency key: an opaque string of 1 to 255 characters. The AS
+the idempotency key: an opaque string of 1 to 255 Unicode code points.
+The AS
 treats an absent, empty, longer, or non-string <code>nonce</code> as malformed
 (<code>invalid_request</code>, with no <code>nonce</code> echoed).<a href="#section-5.6-1" class="pilcrow">¶</a></p>
 <p id="section-5.6-2">The AS <span class="bcp14">MUST</span> deduplicate
@@ -4123,8 +4125,9 @@ show holding its disclosure privilege; and the revocation's <code>reason</code>
 describes a revocation, not a completion (#1535).<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.5">
-          <p id="appendix-A-3.5.1">The <code>nonce</code> is a string of 1 to 255 characters at both endpoints, a
-constraint the Mission Status request now states (#1535).<a href="#appendix-A-3.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.5.1">The <code>nonce</code> is a string of 1 to 255 Unicode code points at both
+endpoints, a constraint the Mission Status request now states
+(#1535).<a href="#appendix-A-3.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.6">
           <p id="appendix-A-3.6.1">Conformance's introspection-signing and TTL-sizing items defer to

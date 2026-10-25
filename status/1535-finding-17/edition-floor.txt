@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-25T20:52:18Z
-Source repository commit: 9eb9eaa7ff0f515fcc2331bd7b71d2f4718bec5b
+Generated: 2026-10-25T21:37:35Z
+Source repository commit: b1f974f9d61067ef752bf485e87cd38aa956a111
 Member count: 7
 
 Reading order:
@@ -16201,12 +16201,13 @@ Table of Contents
       authorization_details (Section 3.5).  A resource server resolving
       authority for a specific audience MUST send it.
 
-   nonce:  REQUIRED.  A string of 1 to 255 characters.  A client-
-      generated nonce binding the response to this request.  It MUST be
-      unique per request within the response lifetime.  A consumer MUST
-      reject a response whose nonce does not equal the one it sent.
-      This is a standard client challenge: echoing it in the signed
-      response anti-replay-binds that response to this specific request.
+   nonce:  REQUIRED.  A string of 1 to 255 Unicode code points.  A
+      client-generated nonce binding the response to this request.  It
+      MUST be unique per request within the response lifetime.  A
+      consumer MUST reject a response whose nonce does not equal the one
+      it sent.  This is a standard client challenge: echoing it in the
+      signed response anti-replay-binds that response to this specific
+      request.
 
    The request also carries the client authentication parameters of the
    mechanism it uses (Section 3.2): client_id, REQUIRED with mTLS client
@@ -16969,8 +16970,9 @@ Table of Contents
       version (Section 3.5): the version the caller last observed.  The
       AS applies it as Section 5.6 describes.
 
-   nonce:  REQUIRED.  A string of 1 to 255 characters.  A client-
-      generated nonce, the request's idempotency key (Section 5.6).
+   nonce:  REQUIRED.  A string of 1 to 255 Unicode code points.  A
+      client-generated nonce, the request's idempotency key
+      (Section 5.6).
 
    The request also carries the client authentication parameters of the
    mechanism it uses, as at the Mission Status endpoint (Section 3.1).
@@ -17326,9 +17328,9 @@ Table of Contents
 5.6.  Idempotency and Conflicts
 
    The request nonce (Section 5.1) is the idempotency key: an opaque
-   string of 1 to 255 characters.  The AS treats an absent, empty,
-   longer, or non-string nonce as malformed (invalid_request, with no
-   nonce echoed).
+   string of 1 to 255 Unicode code points.  The AS treats an absent,
+   empty, longer, or non-string nonce as malformed (invalid_request,
+   with no nonce echoed).
 
    The AS MUST deduplicate lifecycle requests by the triple (client,
    mission_id, nonce) for a bounded window.  On a retransmit carrying a
@@ -18296,8 +18298,9 @@ Appendix A.  Document History
       not show holding its disclosure privilege; and the revocation's
       reason describes a revocation, not a completion (#1535).
 
-   *  The nonce is a string of 1 to 255 characters at both endpoints, a
-      constraint the Mission Status request now states (#1535).
+   *  The nonce is a string of 1 to 255 Unicode code points at both
+      endpoints, a constraint the Mission Status request now states
+      (#1535).
 
    *  Conformance's introspection-signing and TTL-sizing items defer to
       the sections that state those rules, resolving language that
