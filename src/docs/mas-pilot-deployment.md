@@ -578,6 +578,19 @@ their recorded `delegation` for every caller, as before:
 `Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > serves a caller not enrolled the observation the kernel signs for that caller without Join Disclosure, byte for byte`,
 `Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > binds sub to each caller: two clients read their own identifiers, and the Mission's client reaches only the client enrolled for Join Disclosure`.
 
+**`authority_hash` on Mission Status** (Status §mission-status-response; #1682,
+D795). The reference authorization server includes `mission.authority_hash`
+on a Mission Status Response, a read or a lifecycle confirmation, only for a
+client the deployment binds the `provenance` disclosure privilege to: the
+`disclose` list on its `lifecycleClients` registration or
+`lifecycleClientGrants` policy (`discloseProvenance` in
+`services/authorization-server/src/adapters/provider.ts`). The
+`mission_status` and `mission_lifecycle` grants and Join Disclosure
+enrollment confer none. The pilot binds it to each Status client enrolled in
+the PDP role, whose policy view commits `authority_hash` (`mas-as.ts`). A
+deployment that binds it to no client serves no `authority_hash` on Status
+responses.
+
 **The PDP's remote Mission Status resolver** (MAS §join-rules rule 2):
 `MissionStatusResolver` (`services/pdp/src/mission-status-resolver.ts`), one
 per Mission issuer and enforcement scope, with no handle on the issuer's

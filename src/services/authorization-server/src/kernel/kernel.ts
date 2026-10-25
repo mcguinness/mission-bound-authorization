@@ -572,6 +572,15 @@ export interface StatusObservationOptions {
    * absent, neither member is included and the response is unchanged.
    */
   joinDisclosure?: boolean;
+  /**
+   * @spec status#mission-status-response (#1682, D795): the authenticated
+   * caller holds the deployment's audit-or-correlation disclosure privilege,
+   * so the `mission` object also carries `authority_hash`. The provider
+   * decides it from the client's configured disclosure privileges, never from
+   * a Status-read or lifecycle grant or from join enrollment; absent, the
+   * member is omitted.
+   */
+  discloseProvenance?: boolean;
   nonce?: string;
   freshnessSeconds?: number;
   /**
@@ -4769,11 +4778,11 @@ export class MissionKernel {
         ...(opts.joinDisclosure
           ? { subject: { iss: record.subject.iss, sub: record.subject.sub }, client_id: record.client_id }
           : {}),
-        // @spec mission-status#mission-status-response (#702) — OPTIONAL,
-        // disclosed at the AS's discretion (issuance profile's introspection
-        // disclosure footing); this reference AS discloses it on every
-        // Status response.
-        authority_hash: record.authority_hash,
+        // @spec status#mission-status-response (#702; #1682, D795): OPTIONAL,
+        // disclosed only to a caller the AS authorizes for audit or
+        // correlation use, on the issuance profile's introspection
+        // disclosure footing.
+        ...(opts.discloseProvenance ? { authority_hash: record.authority_hash } : {}),
         state: record.state,
         // @spec status#mission-status-response: CONDITIONAL `termination`,
         // present exactly when `state` is `terminated`: its `reason`,

@@ -139,11 +139,17 @@ export async function buildPilotMas(config: MasPilotConfig, opts: PilotMasOption
       approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) },
     },
   };
+  // @spec status#mission-status-response (#1682, D795): a PDP enrolled for
+  // Join Disclosure commits `authority_hash` in its `policy_view_id`, the
+  // correlation use the Status profile authorizes, so only a client enrolled
+  // with the PDP role holds the `provenance` disclosure privilege.
+  const pdpClients = new Set(separated.enrollment.filter((e) => e.roles.includes("pdp")).map((e) => e.client_id));
   const statusClients: LifecycleClientRegistration[] = (opts.statusClients ?? []).map((c) => ({
     client_id: c.client_id,
     client_name: `${c.client_id} (MAS pilot Status client)`,
     jwks: c.jwks,
     grants: [MISSION_STATUS_SCOPE],
+    ...(pdpClients.has(c.client_id) ? { disclose: ["provenance"] } : {}),
   }));
   const built = await buildAuthorizationServer({
     issuer,
