@@ -4489,7 +4489,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // members: `nonce` REQUIRED and well formed (a malformed one is refused
       // and never echoed), `mission_id` REQUIRED, `audience` non-empty when sent.
       if (echo === undefined) {
-        refuse(400, "invalid_request", "nonce is required: a string of 1 to 255 characters", undefined);
+        refuse(400, "invalid_request", "nonce is required: a string of 1 to 255 Unicode code points", undefined);
         return;
       }
       const missionId = form.params.mission_id;
@@ -4707,7 +4707,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (nonce === undefined) {
         deliver(400, {
           error: "invalid_request",
-          error_description: "nonce is REQUIRED: a string of 1 to 255 characters",
+          error_description: "nonce is REQUIRED: a string of 1 to 255 Unicode code points",
         });
         return;
       }

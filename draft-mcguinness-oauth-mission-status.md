@@ -238,8 +238,8 @@ The request is an HTTPS POST with an
   for a specific audience MUST send it.
 
 `nonce`:
-: REQUIRED. A string of 1 to 255 characters. A client-generated
-  nonce binding the
+: REQUIRED. A string of 1 to 255 Unicode code points. A
+  client-generated nonce binding the
   response to this request. It MUST be unique per request within the
   response lifetime. A consumer MUST reject a response whose `nonce`
   does not equal the one it sent. This is a standard client challenge:
@@ -981,8 +981,9 @@ form-urlencoded body:
   The AS applies it as {{idempotency}} describes.
 
 `nonce`:
-: REQUIRED. A string of 1 to 255 characters. A client-generated
-  nonce, the request's idempotency key ({{idempotency}}).
+: REQUIRED. A string of 1 to 255 Unicode code points. A
+  client-generated nonce, the request's idempotency key
+  ({{idempotency}}).
 
 The request also carries the client authentication parameters of the
 mechanism it uses, as at the Mission Status endpoint
@@ -1343,7 +1344,8 @@ When `suspend_until` passes without a `resume`, the AS applies
 ## Idempotency and Conflicts {#idempotency}
 
 The request `nonce` ({{lifecycle-operations}}) is
-the idempotency key: an opaque string of 1 to 255 characters. The AS
+the idempotency key: an opaque string of 1 to 255 Unicode code points.
+The AS
 treats an absent, empty, longer, or non-string `nonce` as malformed
 (`invalid_request`, with no `nonce` echoed).
 
@@ -2096,8 +2098,9 @@ Mission Termination Reasons registry
   response shows `authority_hash` to a caller the example does not
   show holding its disclosure privilege; and the revocation's `reason`
   describes a revocation, not a completion (#1535).
-- The `nonce` is a string of 1 to 255 characters at both endpoints, a
-  constraint the Mission Status request now states (#1535).
+- The `nonce` is a string of 1 to 255 Unicode code points at both
+  endpoints, a constraint the Mission Status request now states
+  (#1535).
 - Conformance's introspection-signing and TTL-sizing items defer to
   the sections that state those rules, resolving language that
   conflicted with them; each lifecycle value arrives with the

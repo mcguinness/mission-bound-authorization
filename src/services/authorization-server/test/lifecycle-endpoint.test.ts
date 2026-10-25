@@ -34,7 +34,7 @@
 
 import type { Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
-import { createLocalJWKSet, generateKeyPair, type JWK, jwtVerify } from "jose";
+import { createLocalJWKSet, decodeJwt, generateKeyPair, type JWK, jwtVerify } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { LIFECYCLE_ENDPOINT_PATH, parseTransitionMembers } from "../src/adapters/lifecycle-endpoint.js";
 import {
@@ -467,25 +467,32 @@ describe("Mission Lifecycle endpoint authorization and request members (@spec st
     expect(as.kernel.get(m.id)?.state).toBe("active");
   });
 
-  it("accepts a nonce of 1 and of 255 characters, and refuses an empty one and one of 256 invalid_request with none echoed, after authentication (@spec status#lifecycle-operations, status#idempotency, #1535 finding 17, D805)", async () => {
+  it("accepts a nonce of 1 and of 255 code points, inside or outside the Basic Multilingual Plane, echoing it exactly, and refuses an empty one and one of 256 invalid_request with none echoed, after authentication (@spec status#lifecycle-operations, status#idempotency, #1535 finding 17, D805, #1689 review)", async () => {
     const m = approve();
-    for (const refused of ["", "n".repeat(256)]) {
+    // U+1F600 is one code point and two UTF-16 units.
+    const astral = "\u{1F600}";
+    for (const refused of ["", "n".repeat(256), astral.repeat(256), `n${astral.repeat(255)}`]) {
       const answer = await op({ mission_id: m.id, operation: "suspend", nonce: refused });
       expect(answer.status, answer.text).toBe(400);
       expect(answer.json?.error).toBe("invalid_request");
       expect(Object.hasOwn(answer.json ?? {}, "nonce")).toBe(false);
     }
     expect(as.kernel.get(m.id)?.state).toBe("active");
-    const suspended = await op({ mission_id: m.id, operation: "suspend", nonce: "s" });
-    expect(suspended.status, suspended.text).toBe(200);
-    const resumed = await op({ mission_id: m.id, operation: "resume", nonce: "r".repeat(255) });
-    expect(resumed.status, resumed.text).toBe(200);
+    // Alternate suspend and resume, so each accepted nonce commits a transition.
+    const accepted = ["s", "r".repeat(255), astral, astral.repeat(128), astral.repeat(255), `n${astral.repeat(254)}`];
+    for (const [i, n] of accepted.entries()) {
+      const answer = await op({ mission_id: m.id, operation: i % 2 === 0 ? "suspend" : "resume", nonce: n });
+      expect(answer.status, answer.text).toBe(200);
+      expect(decodeJwt(answer.text).nonce).toBe(n);
+    }
     expect(as.kernel.get(m.id)?.state).toBe("active");
-    // Authentication precedes member validation: unauthenticated, the
-    // 256-character nonce is the authentication failure's to answer.
-    const unauthenticated = await postLifecycleForm(ISSUER, { mission_id: m.id, operation: "revoke", nonce: "n".repeat(256) });
-    expect(unauthenticated.status, unauthenticated.text).toBe(400);
-    expect(unauthenticated.json?.error).toBe("invalid_client");
+    // Authentication precedes member validation: unauthenticated, an
+    // over-long nonce is the authentication failure's to answer.
+    for (const overLong of ["n".repeat(256), astral.repeat(256)]) {
+      const unauthenticated = await postLifecycleForm(ISSUER, { mission_id: m.id, operation: "revoke", nonce: overLong });
+      expect(unauthenticated.status, unauthenticated.text).toBe(400);
+      expect(unauthenticated.json?.error).toBe("invalid_client");
+    }
     expect(as.kernel.get(m.id)?.state).toBe("active");
   });
 
