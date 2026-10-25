@@ -25954,12 +25954,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation type this PEP does not implement is refused as unfulfillable_obligation: the obligation is unsupported, an effective deny distinct from an unrecognized condition",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "#610 GAP 2 fixed the CONDITION half only, against the obsolete flat response shape (parameter_digest/permit_expires_at/single_use as flat top-level members, and the whole top-level context enumerated for unrecognized members). #612 finding 2 migrates the PDP and PEP to the current draft lanes: evaluate.ts emits a NESTED conditions object ({parameter_digest, valid_until, use_limit}), and pep.ts's unrecognized-member check is scoped to decision.context.conditions ONLY (a top-level member outside conditions, e.g. a future response-context extension, is accepted without enumeration; proven by a dedicated test so the scoping is not accidental). The OBLIGATIONS half is now also proven: this PEP implements no obligation type, so obligations.length > 0 is, by definition, unfulfillable and is refused as unfulfillable_obligation (a distinct refusal_reason from unrecognized_condition, so evidence never conflates which rule fired)."
+   "notes": "#610 GAP 2 fixed the CONDITION half only, against the obsolete flat response shape (parameter_digest/permit_expires_at/single_use as flat top-level members, and the whole top-level context enumerated for unrecognized members). #612 finding 2 migrates the PDP and PEP to the current draft lanes: evaluate.ts emits a NESTED conditions object ({parameter_digest, valid_until, use_limit}), and pep.ts's unrecognized-member check is scoped to decision.context.conditions ONLY (a top-level member outside conditions, e.g. a future response-context extension, is accepted without enumeration; proven by a dedicated test so the scoping is not accidental). The OBLIGATIONS half is now also proven: an obligation type this PEP does not implement is unfulfillable and is refused as unfulfillable_obligation (a distinct refusal_reason from unrecognized_condition, so evidence never conflates which rule fired); the one type it performs, notification, is witnessed on the authzen.obligation-processing rows (#1640)."
   },
   {
    "id": "runtime.decision-inputs.authority-entry-and-subset-required",
@@ -33413,10 +33413,10 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PEP fulfills every attached obligation before releasing a permitted action's effect; on a denial the PEP still denies and additionally executes every returned obligation"
+    "normative": "the PEP fulfills every attached obligation before releasing a permitted action's effect; on a denial the PEP still denies and additionally executes every returned obligation it can perform. The obligations are those of the authenticated decision response: a denial whose Decision Evidence does not verify still executes them and says its evidence is missing, and a response that fails channel authentication or integrity supplies none (D770 ruling 6)"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/token-profile.test.ts",
@@ -33429,9 +33429,45 @@
      "name": "an obligation the PEP does not recognize or cannot fulfill is an effective deny at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1629) > a permit carrying an unrecognized or unfulfillable obligation releases no protected effect over HTTP with DPoP: the write is refused unfulfillable_obligation, nothing is scheduled, and the permit's disposition is suppressed obligation_unfulfilled; the same permit with no obligation schedules",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit carrying a notification obligation over HTTP with DPoP completes the transmission before the write is released, then schedules, and the completed record names the obligation fulfilled",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit for an irreversible commit (execute_wire_transfer) carrying a notification obligation over HTTP with DPoP completes the transmission before the wire is posted, and the executor's completed record names the obligation fulfilled",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit whose notification cannot be performed over HTTP with DPoP releases no protected effect: a failed transmission, a malformed obligation and an absent transport each refuse the write unfulfillable_obligation with nothing scheduled, and the suppressed record names the obligation failed or unsupported",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a denial carrying a notification obligation over HTTP with DPoP stays a denial and transmits the notification, beside an obligation the PEP does not recognize: nothing is scheduled and no Execution Evidence is recorded",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a denial whose Decision Evidence does not verify over HTTP with DPoP still stands and still transmits its notification, and the response says its evidence is missing: nothing is scheduled and no evidence is retained or recorded",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a denial whose response fails channel authentication over HTTP with DPoP executes none of the obligations it carries: the request is refused channel_failure, nothing is transmitted and nothing is scheduled",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Re-quoted at #1629 (D744 ruling 8): the effective-deny clause is its own row, authzen.obligation-processing.effective-deny. partial: 'on a denial the PEP MUST still deny' is witnessed (a denial carrying an obligation stays out_of_authority with no effect and no Execution Evidence, over HTTP with DPoP), and no effect is released while an attached obligation is unfulfilled. Fulfilling an obligation before release and executing a denial's obligations have no witness: the payments PEP implements no obligation type. Mutations: letting a denial carrying obligations take the permit path fails the denial witness; skipping the obligation check fails the permit witness."
+   "notes": "Re-quoted at #1629 (D744 ruling 8): the effective-deny clause is its own row, authzen.obligation-processing.effective-deny. Tested at #1640: the payments PEP performs the AuthZEN Obligations Profile's notification through its configured transport, every witness over HTTP with DPoP. On a permit it completes the transmission before releasing the effect: for a keyed write and for an irreversible commit, no schedule or wire exists when the transmission completes, and the completed record names the obligation fulfilled. A notification it cannot fulfill (a failed transmission, a malformed instance, no transport configured) releases nothing. On a denial it still denies (out_of_authority, nothing scheduled, no Execution Evidence) and transmits the returned notification. Mutations: treating the permit's obligations as fulfilled without performing them fails the fulfilment, irreversible-commit and cannot-perform witnesses; not awaiting the transmission fails both before-release witnesses; counting a failed transmission as fulfilled fails the cannot-perform witness; skipping the denial's obligations fails the denial witness; letting a denial carrying obligations take the permit path fails both denial witnesses. D770 ruling 6: a denial whose Decision Evidence does not verify still stands, still transmits its notification and carries evidence_gap decision_evidence_unverifiable, with nothing retained or recorded; a denial carried by a response that fails channel authentication is refused channel_failure and transmits nothing. Mutations: skipping the denial's obligations when its evidence did not verify fails the unverifiable-evidence witness; dropping the evidence gap fails it too, and reporting the gap on every denial fails the verified denial witness; accepting an unauthenticated channel response fails the channel witness, and with its refusal assertion removed the nothing-transmitted assertion alone fails."
   },
   {
    "id": "authzen.obligation-processing.pdp-publishes-supported-obligations",
@@ -33496,10 +33532,10 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a permit carrying an obligation the PEP does not recognize or cannot fulfill releases no effect, and the PEP still executes the other obligations it understands and can perform"
+    "normative": "a permit carrying an obligation the PEP does not recognize or cannot fulfill releases no effect, and the PEP still executes the other obligations it understands and can perform; a present obligations member that is not an array is malformed and refuses the permit with no fabricated outcome list, while an absent member or an empty array does not (D770 ruling 5)"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/token-profile.test.ts",
@@ -33509,12 +33545,30 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation type this PEP does not implement is refused as unfulfillable_obligation: the obligation is unsupported, an effective deny distinct from an unrecognized condition",
      "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit whose notification cannot be performed over HTTP with DPoP releases no protected effect: a failed transmission, a malformed obligation and an absent transport each refuse the write unfulfillable_obligation with nothing scheduled, and the suppressed record names the obligation failed or unsupported",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit carrying a notification beside an obligation the PEP does not recognize over HTTP with DPoP still transmits the notification and releases no protected effect: the write is refused unfulfillable_obligation, nothing is scheduled, and the outcomes are fulfilled and unsupported",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit whose obligations member is present but not an array (null, an object, a string) over HTTP with DPoP releases no protected effect: the write is refused unfulfillable_obligation, nothing is transmitted, and the suppressed record carries no outcome list; an absent member or an empty array schedules",
+     "level": "endpoint",
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1629 (D744 ruling 8). partial: the effective-deny clause is witnessed: a permit carrying an obligation type the PEP does not recognize, a step-up obligation it cannot perform, or both, is refused unfulfillable_obligation over HTTP with DPoP with no protected effect (nothing scheduled, no reservation, no consumed permit) and a suppressed obligation_unfulfilled Execution Evidence record; the same permit with no obligation schedules. The 'still executes every obligation it understands and can perform' clause has no witness: the payments PEP implements no obligation type, so every obligation is unfulfillable. Mutation: skipping the PEP's obligation check fails both witnesses."
+   "notes": "#1629 (D744 ruling 8); tested at #1640. Over HTTP with DPoP, a permit carrying an obligation type the PEP does not implement, a step-up it cannot perform, a notification it cannot fulfill (a failed transmission, a malformed instance, no transport configured), or a notification beside an unrecognized obligation is refused unfulfillable_obligation with no protected effect (nothing scheduled, no reservation, no consumed permit) and a suppressed obligation_unfulfilled record naming each outcome; the same permit with no obligation schedules. The PEP still performs every obligation it understands and can perform: the notification beside an unrecognized obligation is transmitted, with outcomes fulfilled and unsupported. Mutations: skipping the obligation check fails the three endpoint permit witnesses and the unit witness, and with the refusal assertions removed the no-effect assertions alone fail; stopping at the first unfulfillable obligation fails the mixed witness; counting a failed transmission as fulfilled fails the cannot-perform witness. D770 ruling 5: an obligations member of null, an object or a string refuses the write unfulfillable_obligation with nothing scheduled, nothing transmitted and no obligation_outcomes member; absent or empty, the write schedules. Mutations: ignoring a non-array member fails the witness, and with the refusal assertion removed the no-effect assertion alone fails; giving a non-array member an empty outcome list fails it."
   },
   {
    "id": "authzen.obligations.no-authority-and-no-remediation-content",
@@ -34070,7 +34124,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1629 (D744 ruling 5): the AuthZEN profile's copy (authzen.transport.no-double-charge-on-retry) is removed in favor of this home. partial: the reference's one metered bound is the duration-lease reservation (#1440). A keyed request retried under the same idempotency key, sequentially or concurrently, opens one activity leased by one permit, and a keyed renewal retried under its key extends the lease once, settled or not (decision point with a real Exact claim domain, in process). Not witnessed: the single-use decision identifier half, any accumulated bound (max_duration accumulation, max_budget and counters are not built, D606), and a retry over the remote channel. Mutations: committing the lease on a retransmission fails all three witnesses; committing it on a suppressed duplicate fails the first two."
+   "notes": "#1629 (D744 ruling 5): the AuthZEN profile's copy (authzen.transport.no-double-charge-on-retry) is removed in favor of this home. partial: the reference's one metered bound is the duration-lease reservation (#1440). A keyed request retried under the same idempotency key, sequentially or concurrently, opens one activity leased by one permit, and a keyed renewal retried under its key extends the lease once, settled or not (decision point with a real Exact claim domain, in process). Not witnessed, and not closable without what D606 leaves out of scope (#1640): (1) the single-use decision identifier half has no PDP surface. The PDP issues a fresh evaluation identifier for every evaluation and draws the lease at that decision; the only PDP inputs naming an earlier identifier are a renewal's prior_evaluation_id, which may continue a live activity more than once by design, and the idempotency claim's Execution Evidence settlement, which commits no metered consumption. A re-presented single-use identifier is refused at the PEP (the runtime.single-use rows); the PDP draws on it twice only through a metering settlement intake (measured_duration committed idempotently on evaluation_id, metering#settlement-contract), which is not built. (2) No accumulated bound is metered: max_duration accumulation, max_budget, max_calls and max_egress_volume are not built (D606). A retry over the remote channel is also not witnessed. Mutations: committing the lease on a retransmission fails all three witnesses; committing it on a suppressed duplicate fails the first two. D770 ruling 3: D606's scope stays, so neither gap is closed here; the deferred settlement intake and accumulated bounds are owned by #1660 (parked)."
   },
   {
    "id": "metering.lease-renewal.continuity-with-renewed-evaluation",
@@ -34747,10 +34801,10 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a PEP claiming the Runtime Evidence profile emits a Refusal Record for every pre-decision refusal and an Execution Evidence Object for the final disposition of every consequential permit, whatever its class; a PEP claiming only the Decision Base is not required to (#703)"
+    "normative": "a PEP claiming the Runtime Evidence profile emits a Refusal Record for every pre-decision refusal and an Execution Evidence Object for the final disposition of every consequential permit, whatever its class; a PEP claiming only the Decision Base is not required to (#703); a result whose completed record cannot be recorded is not disclosed, so a read or a hold is recorded suppressed and returns no protected data (D770 ruling 4)"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/token-profile.test.ts",
@@ -34765,13 +34819,43 @@
      "surface": "resource-operation"
     },
     {
-     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
-     "name": "compound-action phases (@spec runtime#compound-actions) > keys the operation on the phase where two tools share an action identifier",
-     "level": "unit",
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a completed consequential read (get_invoice, list_invoices, lookup_vendor) over HTTP with DPoP releases its result with exactly one signed completed Execution Evidence record linked to the permit's evaluation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a completed reversible write under a single-use permit (hold_transfer) over HTTP with DPoP releases the hold with exactly one signed completed Execution Evidence record linked to the permit's evaluation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a completed keyed reversible write (schedule_payment) over HTTP with DPoP schedules once with exactly one signed completed Execution Evidence record linked to the permit's evaluation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a completed irreversible commit (execute_wire_transfer) or external commitment (send_remittance_email) over HTTP with DPoP commits one connector effect with exactly one signed completed Execution Evidence record linked to the permit's evaluation, recorded by the executor at the commit point",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a read or a hold whose completed record cannot be recorded over HTTP with DPoP returns no protected data: no response byte carries the result, the refusal is evidence_unavailable, and the permit's disposition is recorded suppressed",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640) > a keyed write whose effect committed but whose completed record cannot be recorded over HTTP with DPoP reports the emission_failed gap with no result on the wire: the schedule stands once, and a retry under the same key retrieves it under its own permit",
+     "level": "endpoint",
      "surface": "resource-operation"
     }
    ],
-   "notes": "Re-quoted at #1629 (D744 ruling 2): the transaction-assurance-class restriction is removed, an expansion, so earlier coverage does not transfer. partial: a pre-decision refusal emits a signed Refusal Record (phase_unavailable, endpoint); a suppressed consequential write (schedule_payment) emits Execution Evidence (endpoint); a completed irreversible commit (execute_wire_transfer) emits completed Execution Evidence (unit). Gap: a completed consequential read (callReadTool) and a completed reversible consequential write (callWriteTool and callKeyedReversibleWrite) release the effect with no Execution Evidence, so 'every consequential permit' is not met by the reference PEP. Mutations: skipping the phase check fails the refusal witness; skipping the obligation check fails the suppression witness; failing the completed record's emission fails the completion witness."
+   "notes": "Re-quoted at #1629 (D744 ruling 2): the transaction-assurance-class restriction is removed, an expansion, so earlier coverage does not transfer. Tested at #1640, every witness over HTTP with DPoP: a pre-decision refusal emits a signed Refusal Record (phase_unavailable). A completed consequential read (get_invoice, list_invoices, lookup_vendor), a completed reversible write (hold_transfer under a single-use permit, schedule_payment under an idempotency key) and a completed irreversible commit or external commitment (execute_wire_transfer, send_remittance_email) each emit exactly one signed completed record linked to the permit's evaluation, carrying both parameter digests where the permit binds one; a suppressed consequential write emits a suppressed record (obligation_unfulfilled). The reference emits no failed outcome. The Decision Base exemption is a permission with no observable duty. Durable evidence reservation stays the transaction-assurance requirement's (D744 ruling 2). Mutations: skipping the phase check fails the refusal witness; dropping the completed record on the read path, the unkeyed write path, the keyed write path or the transaction path fails that path's witness and no other completed-record witness; skipping the obligation check fails the suppression witness. D770 ruling 4: when the completed record cannot be recorded, a read or a hold, which disclosed nothing, is refused evidence_unavailable with its disposition recorded suppressed under a deployment error name, and no response byte over HTTP with DPoP carries the result; a keyed write whose local transaction committed reports gap emission_failed with no result on the wire, and a retry under its key retrieves the result. Mutations: releasing the result on the read path or the unkeyed write path fails the withholding witness, and with the parsed-response assertion removed the response-bytes assertion alone fails; returning the keyed write's result with the gap fails the keyed witness, again on the bytes alone; not recording the withheld result's suppression fails the withholding witness."
   },
   {
    "id": "authzen.conformance.pdp-checklist",
@@ -38807,7 +38891,7 @@
    "tests": [
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation is refused as unfulfillable_obligation: this PEP implements no obligation type, so presence alone is a deny, distinct from an unrecognized condition",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a permit carrying an obligation type this PEP does not implement is refused as unfulfillable_obligation: the obligation is unsupported, an effective deny distinct from an unrecognized condition",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -38822,9 +38906,33 @@
      "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a mixed obligation set with one unidentifiable member names none of them, rather than a partial list that reads as complete",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit carrying a notification obligation over HTTP with DPoP completes the transmission before the write is released, then schedules, and the completed record names the obligation fulfilled",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit whose notification cannot be performed over HTTP with DPoP releases no protected effect: a failed transmission, a malformed obligation and an absent transport each refuse the write unfulfillable_obligation with nothing scheduled, and the suppressed record names the obligation failed or unsupported",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit carrying a notification beside an obligation the PEP does not recognize over HTTP with DPoP still transmits the notification and releases no protected effect: the write is refused unfulfillable_obligation, nothing is scheduled, and the outcomes are fulfilled and unsupported",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640) > a permit whose obligations member is present but not an array (null, an object, a string) over HTTP with DPoP releases no protected effect: the write is refused unfulfillable_obligation, nothing is transmitted, and the suppressed record carries no outcome list; an absent member or an empty array schedules",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "One entry per attached obligation that identifies itself, with id, type and outcome unsupported (this PEP implements no obligation type). OUTSTANDING, #786 review point 2: an obligation the decision returns WITHOUT a required id or type cannot be represented at all, so the member is omitted entirely rather than fabricated or emitted as a partial list that would read as complete; and this deployment's PDP does not implement Decision Evidence's own obligations member, so the conditional that makes obligation_outcomes REQUIRED cannot fire from the linked record. Both remain open."
+   "notes": "One entry per attached obligation that identifies itself, with id, type and outcome: unsupported for a type this PEP does not implement (#1640 adds fulfilled and failed for the notification type it performs). OUTSTANDING, #786 review point 2: an obligation the decision returns WITHOUT a required id or type cannot be represented at all, so the member is omitted entirely rather than fabricated or emitted as a partial list that would read as complete; and this deployment's PDP does not implement Decision Evidence's own obligations member, so the conditional that makes obligation_outcomes REQUIRED cannot fire from the linked record. Both remain open. #1640 witnesses over HTTP with DPoP: a completed record naming a transmitted notification fulfilled, a suppressed record naming a failed, malformed or untransportable notification failed or unsupported, and a mixed set named fulfilled and unsupported. Mutations: treating the permit's obligations as fulfilled without performing them fails the fulfilled witness; counting a failed transmission as fulfilled fails the failed witness; stopping at the first unfulfillable obligation fails the mixed witness. A non-array obligations member names no obligation and the record carries no outcome list (D770 ruling 5); giving it an empty list fails the non-array witness."
   },
   {
    "id": "evidence.execution.result-summary-no-user-content",
