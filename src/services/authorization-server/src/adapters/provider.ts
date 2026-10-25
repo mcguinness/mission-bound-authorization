@@ -6484,7 +6484,7 @@ async function handleMissionDispatchGrant(
   // details projects the EFFECTIVE set (approved minus containment overlay).
   const effective = kernel.effectiveAuthoritySet(record);
   const resource = effective[0]?.resource ?? opts.issuer;
-  // @spec mission-template#grant-type, expansion#creation-recovery — a repeated
+  // @spec mission-template#grant-type, expansion#creation-recovery: a repeated
   // dispatch_event_id is gated to the previously committed instance rather
   // than derived again: the retry recovers the token the Dispatch delivered,
   // counting nothing. A retry that cannot recover it falls through to the
@@ -6530,7 +6530,7 @@ async function handleMissionDispatchGrant(
   at.jkt = jkt; // sender-constrain to the dispatcher's DPoP key (tokenType -> DPoP)
   ctx.oidc.entity("AccessToken", at);
   const jwt = await at.save();
-  // @spec mission-template#grant-type — recorded under the reservation key, so
+  // @spec mission-template#grant-type: recorded under the reservation key, so
   // a lost-response retry recovers this token rather than deriving again.
   recordDispatchDelivery(kernel, dispatchInput, {
     access_token: jwt,
@@ -6555,7 +6555,7 @@ async function handleMissionDispatchGrant(
 }
 
 /**
- * @spec mission-template#grant-type, expansion#creation-recovery — answer a
+ * @spec mission-template#grant-type, expansion#creation-recovery: answer a
  * Dispatch retry with the access token the Dispatch already delivered. True
  * when it answered; false when the retry must mint instead: no delivery is
  * recorded, the token has expired, the instance is no longer active, or the
@@ -6581,10 +6581,10 @@ function replayDispatchDelivery(
     access_token: token,
     token_type: "DPoP",
     expires_in: exp - nowS,
-    // @spec mission#scope-projection — the stored token's own projected scope.
+    // @spec mission#scope-projection: the stored token's own projected scope.
     ...(typeof scope === "string" ? { scope } : {}),
     mission_id: record.id,
-    // @spec mission#grant-binding — the committed effective expiry, verbatim.
+    // @spec mission#grant-binding: the committed effective expiry, verbatim.
     mission_expires_at: record.expires_at,
     authorization_details: carriedNow,
   };

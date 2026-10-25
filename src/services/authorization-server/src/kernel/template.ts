@@ -724,7 +724,7 @@ export function findDispatch(kernel: MissionKernel, store: TemplateStore, input:
 }
 
 /**
- * @spec mission-template#grant-type, expansion#creation-recovery — record the
+ * @spec mission-template#grant-type, expansion#creation-recovery: record the
  * access token a Dispatch delivered under its reservation key (authenticated
  * Dispatcher, dispatch_event_id), so a retry recovers that delivery instead of
  * deriving again.
