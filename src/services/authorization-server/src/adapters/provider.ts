@@ -354,15 +354,17 @@ export function gateErrorToMissionError(
  * token whose Mission ended after the save-time gate is refused here, at the
  * last synchronous point before the response leaves. Only an ended Mission
  * refuses: `terminated` by any cause, its own expiry or an ancestor's
- * termination included, as {@link MissionKernel.observedRecord} observes it.
- * A suspension committed after the gate still releases. The check is a read
- * and commits nothing, not even an expiry it observes.
+ * termination included, and a revocation schedule of the Mission or an
+ * ancestor whose deadline has passed (#1659, D771), as
+ * {@link MissionKernel.observedForRelease} projects it. A suspension committed
+ * after the gate still releases, and so does a due `resume`. The check is a
+ * read and commits nothing, not even an expiry or a due schedule it observes.
  *
  * A refusal here leaves the derivation the gate counted spent. Whether such a
  * refusal returns the count is #935's, and nothing here returns it.
  */
 export function releaseFenceRefusal(kernel: MissionKernel, missionId: string): GateError | undefined {
-  const observed = kernel.observedRecord(missionId);
+  const observed = kernel.observedForRelease(missionId);
   if (!observed) return new GateError("mission_not_active", `mission ${missionId} does not resolve at release`);
   if (observed.state !== "terminated") return undefined;
   return new GateError(
@@ -507,6 +509,7 @@ import {
   type ApproveInput,
   type MissionKernel,
   MissionNotFoundError,
+  MissionStateUnavailableError,
   type PreparedApproval,
   StaleVersionError,
   STATUS_SIGNING_ALG,
@@ -1421,12 +1424,16 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * `mission_error` where a value applies. `ctx` is the token request; the
    * refresh pre-check passes none, so it refuses `invalid_grant`.
    */
-  function missionGateRefusal(e: unknown, missionId: string, ctx?: unknown): unknown {
+  function missionGateRefusal(e: unknown, missionId: string, ctx?: unknown, observed?: MissionRecord): unknown {
+    // @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): a
+    // due schedule whose transition could not be persisted fails closed as a
+    // transient refusal, never as the pre-deadline state.
+    if (e instanceof MissionStateUnavailableError) return sourceUnavailableError(e.message);
     return e instanceof GateError
       ? tokenEndpointGateRefusal(
           e.reason,
           e.message,
-          gateErrorToMissionError(e.reason, kernel.observedRecord(missionId)),
+          gateErrorToMissionError(e.reason, observed ?? kernel.observedRecord(missionId)),
           isTokenExchangeRequest(ctx),
         )
       : e;
@@ -1541,6 +1548,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           exchange,
         );
       }
+      if (e instanceof MissionStateUnavailableError) throw sourceUnavailableError(e.message);
       throw e;
     }
     throw expiring();
@@ -2724,15 +2732,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
     }
     if (!refused) return;
     const { missionId, refusal } = refused;
+    // The fence's own observation (#1659): a due revocation it projected is the
+    // refusal's `mission_error`, never the stored `suspended`.
+    const observed = kernel.observedForRelease(missionId);
     if (ctx.oidc?.route !== "token") {
       // The transaction endpoint's own refusal for a Mission that is not active.
       ctx.status = 400;
       ctx.body = { error: "access_denied", error_description: refusal.message };
     } else if (isTokenExchangeRequest(ctx) && body.issued_token_type === ID_JAG_TOKEN_TYPE) {
       // @spec id-continuation-assertion: ICA -02 5.5.6's codes, as at the gate.
-      refuseContinuationGate(ctx as unknown as KoaContextWithOIDC, refusal.reason, kernel.observedRecord(missionId));
+      refuseContinuationGate(ctx as unknown as KoaContextWithOIDC, refusal.reason, observed);
     } else {
-      const err = missionGateRefusal(refusal, missionId, ctx) as MissionGrantError | MissionExchangeError;
+      const err = missionGateRefusal(refusal, missionId, ctx, observed) as MissionGrantError | MissionExchangeError;
       ctx.status = err.statusCode;
       ctx.body = {
         error: err.error,
@@ -4388,12 +4399,24 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
         ctx.set("cache-control", "no-store");
         ctx.body = jws;
-      } catch {
+      } catch (e) {
+        ctx.set("cache-control", "no-store");
+        if (e instanceof MissionStateUnavailableError) {
+          // @spec status#mission-status-errors (#1659, D771): a due schedule
+          // whose transition could not be persisted is `unavailable`, never a
+          // signed pre-deadline state.
+          ctx.status = 503;
+          ctx.body = {
+            error: "unavailable",
+            error_description: "Mission state is temporarily unavailable.",
+            ...(statusNonce ? { nonce: statusNonce } : {}),
+          };
+          return;
+        }
         // @spec status#mission-status-errors, status#mission-status-anti-oracle
         // — one not-found shape for the unknown and the invisible reference,
         // echoing the request's `nonce` when it carried one.
         ctx.status = 404;
-        ctx.set("cache-control", "no-store");
         ctx.body = {
           error: "not_found",
           error_description: "Mission reference is not found or not visible.",
@@ -4494,8 +4517,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
         ctx.set("cache-control", "no-store");
         ctx.body = jws;
-      } catch {
-        refuse(404, "not_found", "Mission reference is not found or not visible.", echo);
+      } catch (e) {
+        // @spec status#mission-status-errors (#1659, D771): a due schedule whose
+        // transition could not be persisted is `unavailable`, never a signed
+        // pre-deadline state; every other failure is the one not-found shape.
+        if (e instanceof MissionStateUnavailableError) {
+          refuse(503, "unavailable", "Mission state is temporarily unavailable.", echo);
+        } else {
+          refuse(404, "not_found", "Mission reference is not found or not visible.", echo);
+        }
       }
       return;
     }

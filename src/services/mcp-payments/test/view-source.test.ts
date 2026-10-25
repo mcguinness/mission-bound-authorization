@@ -150,9 +150,15 @@ describe("a remote Mission view source at the PEP (#818, D560)", () => {
     });
     expect(res).toMatchObject({ ok: false, refusal_reason: "target_drift" });
     expect(h.state.decisions).toBe(1);
-    // The suppression could not observe the effective parameters, so no
-    // Execution Evidence asserts an observation.
-    expect(h.evidence.all().filter((e) => e.kind === "execution")).toEqual([]);
+    // @spec runtime-evidence#execution-evidence-object (#786): the suppression
+    // could not observe the effective parameters, so its one record keeps the
+    // authorized digest and asserts no effective one, and nothing is recorded
+    // as a Refusal Record.
+    const executions = h.evidence.all().flatMap((e) => (e.kind === "execution" ? [e.content] : []));
+    expect(executions.map((e) => [e.outcome, e.error])).toEqual([["suppressed", "target_drift"]]);
+    expect(executions[0]?.authorized_parameter_digest).toBeDefined();
+    expect(executions[0]).not.toHaveProperty("effective_parameter_digest");
+    expect(h.evidence.all().some((e) => e.kind === "refusal")).toBe(false);
     // Control: the same read with the view still in place executes.
     const ok = harness({ source: () => ({ ok: true }) });
     expect(await ok.server.callReadTool("list_invoices", {}, ok.token)).toMatchObject({ ok: true });

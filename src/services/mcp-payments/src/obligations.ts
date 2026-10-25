@@ -81,13 +81,41 @@ export interface ObligationProcessing {
   /** Every attached obligation was fulfilled. */
   fulfilled: boolean;
   /**
-   * @spec runtime-evidence#execution-evidence-object `obligation_outcomes`:
-   * one entry per attached obligation, in the order the decision returned
-   * them. Absent when any attached obligation does not identify itself:
-   * `id` and `type` are REQUIRED and cannot be invented, and a list missing
-   * that entry would still read as complete (#786).
+   * @spec runtime-evidence#execution-evidence-object `obligation_outcomes`
+   * (#786): "One object per attached obligation, in the order the decision
+   * returned them ... `id` and `type` are each REQUIRED when the decision
+   * supplied that member as a non-empty string, and absent otherwise, never
+   * invented. An obligation lacking either is malformed, and its `outcome`
+   * is `unsupported`." {@link processObligations} always sets it, one entry
+   * per attached obligation, a malformed one included, so the list is
+   * complete whatever the obligations look like. It is absent only for a
+   * present `obligations` member that is not a list, which names no
+   * obligation: refused, with no fabricated outcome list (D770 ruling 5).
    */
   outcomes?: ObligationOutcome[];
+}
+
+/** The `error` detail of an attached obligation that does not identify itself. */
+export const MALFORMED_OBLIGATION = "the obligation lacks a non-empty id or type";
+
+/**
+ * @spec runtime-evidence#execution-evidence-object `obligation_outcomes`
+ * (#786): the entry for a malformed obligation. `id` and `type` are copied
+ * only when supplied as non-empty strings and omitted otherwise, never
+ * invented; the outcome is `unsupported`. Nothing in it is performed. Only
+ * the record's representation is relaxed: the obligation stays malformed,
+ * and the permit it rides on stays unusable.
+ */
+export function malformedObligationOutcome(raw: unknown, error: string): ObligationOutcome {
+  const supplied = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as { id?: unknown; type?: unknown }) : {};
+  const id = typeof supplied.id === "string" && supplied.id.length > 0 ? supplied.id : undefined;
+  const type = typeof supplied.type === "string" && supplied.type.length > 0 ? supplied.type : undefined;
+  return {
+    ...(id !== undefined ? { id } : {}),
+    ...(type !== undefined ? { type } : {}),
+    outcome: "unsupported",
+    error,
+  };
 }
 
 /** The `notification` members this PEP transmits, or undefined when the instance is malformed. */
@@ -103,7 +131,8 @@ function notificationMembers(properties: unknown): { to: string; body: string; t
  * Perform every obligation this PEP understands and can perform, in the order
  * the decision returned them, and classify each. An obligation that does not
  * identify itself is performed by no one: without its `type` nothing is
- * understood, and without its `id` it is not a well-formed obligation.
+ * understood, and without its `id` it is not a well-formed obligation. It
+ * still keeps its positional entry, with nothing invented (#786).
  */
 export async function processObligations(
   obligations: readonly unknown[],
@@ -111,25 +140,22 @@ export async function processObligations(
   evaluationId: string | undefined,
 ): Promise<ObligationProcessing> {
   const outcomes: ObligationOutcome[] = [];
-  let named = true;
   let fulfilled = true;
   for (const raw of obligations) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-      named = false;
-      fulfilled = false;
-      continue;
-    }
-    const { id, type, properties } = raw as { id?: unknown; type?: unknown; properties?: unknown };
+    const { id, type, properties } =
+      raw && typeof raw === "object" && !Array.isArray(raw)
+        ? (raw as { id?: unknown; type?: unknown; properties?: unknown })
+        : {};
     if (typeof id !== "string" || id.length === 0 || typeof type !== "string" || type.length === 0) {
-      named = false;
       fulfilled = false;
+      outcomes.push(malformedObligationOutcome(raw, MALFORMED_OBLIGATION));
       continue;
     }
     const outcome = await performOne(id, type, properties, notifier, evaluationId);
     if (outcome.outcome !== "fulfilled") fulfilled = false;
     outcomes.push(outcome);
   }
-  return { fulfilled, ...(named ? { outcomes } : {}) };
+  return { fulfilled, outcomes };
 }
 
 async function performOne(
