@@ -46,7 +46,7 @@ It is enforced by both routes:
 
 The enforcers split the failure cases:
 
-- The PDP alone applies the lag refusal. It refuses a governed Mission's
+- The PDP applies the lag refusal. It refuses a governed Mission's
   actions once the reconciler's last complete pass rests on an observation
   older than `reconciliation_max_lag_seconds` (60 s), even while the
   Mission's state reads `active`. It does so only where the composition
@@ -54,6 +54,15 @@ The enforcers split the failure cases:
   evaluation to the PEP under lifecycle-mediated enforcement must still
   bind the PDP, because the PEP's composed step evaluates the observation
   and not the reconciler's progress.
+- Lifecycle-only enforcement (no direct route) keeps the declaration's
+  observation limits. The observation relied on is the one the last
+  complete reconciliation acted on, dated from the time it represents. Once
+  it is older than `max_staleness_seconds` the PDP refuses `stale`, and
+  where an online check is declared a failed latest read refuses
+  `unavailable`. A permit expires at the earlier of the staleness and lag
+  deadlines. A PEP holding a lifecycle-only dependency applies the same
+  checks at release: the reconciliation's currency, an unresolved Subject,
+  the staleness bound and any online check.
 - A Mission the reconciler restricted carries no cause on its record. The
   reconciler's last outcome (`AuthorityReconciler.last()`) and the
   lifecycle commit stream show which Missions it suspended or revoked.

@@ -223,7 +223,9 @@ describe("the external-change bound, measured end to end (@spec runtime#state-fr
         expect((await reconciler.reconcile()).ok).toBe(true);
         at(detectionPhase - DETECTION_S);
         await resolver.refresh();
-        // Already-started work: a permit decided just before the change.
+        // A permit decided just before the change. Permit issuance is not
+        // already-started work: its validity is capped at the observation it
+        // relied on, and its release is rechecked below.
         at(-1);
         const permit = await decide(as, mission.id, nowMs);
         expect(permit.decision, JSON.stringify(permit.context)).toBe(true);

@@ -643,7 +643,11 @@ export interface AuthorityDependencyEnforcement {
  *   whatever the Mission's state reads. Fresh progress does not authorize
  *   reliance on a dependency the reconciliation could not resolve: a Mission
  *   whose Subject the last complete reconciliation found no record of is
- *   refused `unresolved`.
+ *   refused `unresolved`. With `lag` alone (lifecycle-only), the declared
+ *   observation limits still hold: the reconciliation's observation older
+ *   than `max_staleness_seconds` is refused `stale`, a failed latest read
+ *   under a declared online check `unavailable`, and the ceiling is the
+ *   earlier of the staleness and lag deadlines.
  * - `direct` (direct evaluation): the observation itself must establish the
  *   dependency.
  */
@@ -687,6 +691,25 @@ export function checkAuthorityDependency(
       return refuse("unresolved", new Date(last).toISOString());
     }
     reconciledUntilMs = last + lagBound * 1000;
+    if (!apply.direct) {
+      // Lifecycle-only: the declared observation limits hold on this route
+      // too. The observation relied on is the one the last complete
+      // reconciliation acted on, dated from the time it represents: past
+      // `max_staleness_seconds` it no longer establishes reliance (`stale`),
+      // and where the declaration requires an online check, a failed latest
+      // read refuses (`unavailable`). Withdrawal and invalidation stay the
+      // reconciler's to classify and commit.
+      const observedAt = new Date(last).toISOString();
+      const staleUntilMs = last + enforcement.declaration.max_staleness_seconds * 1000;
+      if (nowMs >= staleUntilMs) return refuse("stale", observedAt);
+      if (
+        enforcement.declaration.online_check &&
+        !enforcement.resolver.view(governed.subject).sourceAvailable
+      ) {
+        return refuse("unavailable", observedAt);
+      }
+      return { ok: true, validUntilMs: Math.min(reconciledUntilMs, staleUntilMs) };
+    }
   }
   if (!apply.direct)
     return {

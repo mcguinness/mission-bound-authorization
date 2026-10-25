@@ -68,7 +68,10 @@ Subject or a withdrawn delegation and `revoke` for a deprovisioned Subject.
 The PDP refuses the governed Missions' actions once the reconciler's last
 complete pass rests on an observation older than the lag bound, and refuses
 a Mission whose Subject that pass found no record of (`unresolved`, never a
-revocation).
+revocation). Without a direct route, the declared observation limits still
+hold: the pass's observation older than `max_staleness_seconds` refuses
+`stale`, a declared online check refuses on a failed latest read, and a
+permit expires at the earlier of the staleness and lag deadlines.
 `external_change_bound` is the deployment's claimed bound from an external
 change (`@spec runtime#state-freshness`): its `seconds`, start, end, work
 already started, the path, and the two periods the path names,
