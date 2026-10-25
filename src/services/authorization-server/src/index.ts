@@ -87,6 +87,7 @@ import {
   type ServiceTokenPrincipal,
   type TxnArs,
 } from "./adapters/provider.js";
+import { VerifyOnlySigningKey } from "./adapters/verify-only-signing-key.js";
 import type { CrossOrgOptions } from "./adapters/cross-org-grant.js";
 import { bindAuthoritySourceCatalog } from "./kernel/authority-source.js";
 import { mappedAudiences } from "./kernel/approved-audience.js";
@@ -1868,8 +1869,16 @@ export async function buildAuthorizationServer(opts: {
     clients: clientRegistrations,
     // @spec #831 (role binding): the provider signs with the access-token key
     // alone; every role's public key is still published on the jwks_uri
-    // (`publicJwks`, served by the adapter).
-    jwks: { keys: [tokenJwk] },
+    // (`publicJwks`, served by the adapter). @spec #831 B2: it also verifies
+    // its own JWTs (an `id_token_hint`) under the access-token role's overlap
+    // generations, held verify-only and ahead of the signer, so `key_ops`
+    // alone keeps them out of signing; no other role's key is held.
+    jwks: {
+      keys: [
+        ...tokenVerification.filter((k) => k.kid !== tokenKid).map((k) => new VerifyOnlySigningKey(k)),
+        tokenJwk,
+      ] as never,
+    },
     publicJwks,
     accessTokenJwks: { keys: tokenVerification },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,

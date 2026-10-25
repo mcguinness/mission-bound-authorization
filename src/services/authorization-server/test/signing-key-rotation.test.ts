@@ -397,8 +397,12 @@ async function tokenRequest(as: As, params: Record<string, string>): Promise<{ s
   return { status: res.status, body: (await res.json()) as Record<string, unknown> };
 }
 
-/** PAR, approval and code exchange as ap-agent against the running AS: a Mission-bound access token. */
-async function mintAccessToken(as: As): Promise<string> {
+/**
+ * PAR, approval and code exchange as ap-agent against the running AS: a
+ * Mission-bound access token, and with `openid` an ID Token too (Alice
+ * approves for herself, since openid needs the Subject).
+ */
+async function signIn(as: As, openid = false): Promise<{ accessToken: string; idToken?: string }> {
   const jar = new Map<string, string>();
   const verifier = "signing-key-rotation-verifier-0123456789-0123456789-0123456789";
   const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))).toString("base64url");
@@ -409,6 +413,7 @@ async function mintAccessToken(as: As): Promise<string> {
       client_id: "ap-agent",
       response_type: "code",
       redirect_uri: REDIRECT_URI,
+      ...(openid ? { scope: "openid" } : {}),
       resource: CANONICAL_RESOURCE,
       code_challenge: challenge,
       code_challenge_method: "S256",
@@ -429,7 +434,8 @@ async function mintAccessToken(as: As): Promise<string> {
   storeCookies(res, jar);
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
-  const decideHeaders = { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)), "content-type": "application/json" };
+  const approver = openid ? { sub: "alice", subject: null } : undefined;
+  const decideHeaders = { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar), approver), "content-type": "application/json" };
   const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
@@ -453,7 +459,26 @@ async function mintAccessToken(as: As): Promise<string> {
     resource: CANONICAL_RESOURCE,
   });
   expect(tok.status, JSON.stringify(tok.body)).toBe(200);
-  return tok.body.access_token as string;
+  return {
+    accessToken: tok.body.access_token as string,
+    ...(typeof tok.body.id_token === "string" ? { idToken: tok.body.id_token } : {}),
+  };
+}
+
+const mintAccessToken = async (as: As): Promise<string> => (await signIn(as)).accessToken;
+
+/** The provider's own check of an ID Token presented as `id_token_hint`, against its keystore. */
+async function validatesAsHint(as: As, idToken: string): Promise<boolean> {
+  const provider = as.provider as unknown as {
+    IdToken: { validate(jwt: string, client: unknown): Promise<unknown> };
+    Client: { find(id: string): Promise<unknown> };
+  };
+  try {
+    await provider.IdToken.validate(idToken, await provider.Client.find("ap-agent"));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -479,11 +504,14 @@ describe("an AS across a rotation, a retirement and a compromise (@spec #831 B2)
     const later = (s: number) => () => new Date(start.getTime() + s * 1000);
     await initSigningKeyRing(file, ISSUER, ROLES, later(0));
 
-    const first = await withAs(file, async (as) => {
+    const { accessToken: first, idToken: firstId } = await withAs(file, async (as) => {
       expect(await publishedKids()).toEqual(KIDS);
-      return mintAccessToken(as);
+      const signed = await signIn(as, true);
+      expect(await validatesAsHint(as, signed.idToken as string)).toBe(true);
+      return signed;
     });
     expect(kidOf(first)).toBe("as-token");
+    expect(kidOf(firstId as string)).toBe("as-token");
 
     // Staged: published, not yet signing. The Status role rotates alongside.
     await stageSigningKeyGeneration(file, ISSUER, ROLES, "asToken", later(0));
@@ -504,6 +532,9 @@ describe("an AS across a rotation, a retirement and a compromise (@spec #831 B2)
     const second = await withAs(file, async (as) => {
       expect(await publishedKids()).toEqual([...KIDS, "as-token-2", "as-status-2"].sort());
       expect(await exchangeRefusal(as, first)).toBe(SIGNATURE_ACCEPTED);
+      // The provider still verifies its own ID Token from generation 1, and signs a new one only under generation 2.
+      expect(await validatesAsHint(as, firstId as string)).toBe(true);
+      expect(kidOf((await signIn(as, true)).idToken as string)).toBe("as-token-2");
       expect(as.kernel.statusSigner().kid).toBe("as-status-2");
       expect(as.kernel.statusVerificationKeyFor("as-status")).toBeDefined();
       return mintAccessToken(as);
@@ -523,6 +554,7 @@ describe("an AS across a rotation, a retirement and a compromise (@spec #831 B2)
     await withAs(file, async (as) => {
       expect(await publishedKids()).toEqual(live("as-token-2", "as-status-2"));
       expect(await exchangeRefusal(as, first)).toBe(WRONG_KEY);
+      expect(await validatesAsHint(as, firstId as string)).toBe(false);
       expect(await exchangeRefusal(as, second)).toBe(SIGNATURE_ACCEPTED);
       expect(as.kernel.statusVerificationKeyFor("as-status")).toBeUndefined();
     });

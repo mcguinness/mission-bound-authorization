@@ -2043,6 +2043,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
     features: {
       // We serve our own approval interaction (the mission-kernel adapter).
       devInteractions: { enabled: false },
+      // @spec #831 B2: admits the verify-only keys for the access-token
+      // role's overlap generations (VerifyOnlySigningKey) in `jwks`.
+      externalSigningSupport: { enabled: true, ack: "experimental-01" },
       pushedAuthorizationRequests: { enabled: true, requirePushedAuthorizationRequests: true },
       // @spec mission#submission-via-par (#1503): the second carriage of the
       // Submission envelope, a `mission_intent` claim in a signed Request
