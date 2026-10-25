@@ -134,6 +134,10 @@ async function fromLedger(
     execution_id: newRecordId("exe"),
     evaluation_id: evaluationId,
     mission_id: decision.content.mission.id,
+    // @spec runtime-evidence#evidence-extensions `work_item` (#815): a late
+    // record carries the work item the linked Decision Evidence recorded,
+    // which a released effect's request carried (the `work_item` use check).
+    ...(decision.content.work_item !== undefined ? { work_item: decision.content.work_item } : {}),
     // @spec runtime#permit-binding (#853, D487): a late record keeps its
     // operation's original boundary, never the one in force when it is made.
     audience: decision.content.audience,
