@@ -641,9 +641,9 @@ canonicalization, and integrity envelope a deployment emits.
 A Decision Evidence Object is closed to uncoordinated extension; see
 {{evidence-extensions}} for the extension rule and the coordinated
 extension members a deployment following the AuthZEN profile
-commonly carries (`taint`, `mission_history`, `authority_bound`,
-`capability_source`, `hop_reference`, `principal_mapping`,
-`join_view_id`).
+commonly carries (`taint`, `work_item`, `mission_history`,
+`authority_bound`, `capability_source`, `hop_reference`,
+`principal_mapping`, `join_view_id`).
 
 ## Refusal Record {#pre-decision-refusal}
 
@@ -1281,8 +1281,11 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   contract the operation would be performed under),
   `obligation_unfulfilled` (a permit suppressed before release because
   an attached obligation could not be fulfilled; the failing entry is
-  named in `obligation_outcomes`), and `kill_switch` (execution
-  suppressed by an operator or safety control). A deployment MAY
+  named in `obligation_outcomes`), `work_item_mismatch` (the
+  permit's work-item condition differs from the work item the
+  executing PEP attributes to the request, or one is present without
+  the other), and `kill_switch` (execution suppressed by an operator
+  or safety control). A deployment MAY
   define additional values, which MUST be collision-resistant names
   (a short name within a namespace the deployment controls, following
   the Collision-Resistant Name guidance of {{RFC7519}} Section 4.2) so
@@ -2195,6 +2198,19 @@ a common wire carrier.
   ({{I-D.draft-mcguinness-mission-authority-server}}), which defines
   what the commitment distinguishes.
 
+`work_item`:
+: OPTIONAL. An object with `issuer` and `id`, recorded at the top
+  level of Decision Evidence and Execution Evidence: the qualified
+  work-item identifier of the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}), which owns this member.
+  REQUIRED on Decision Evidence when the decision request carried a
+  well-formed work-item context, recorded as presented, and on
+  Execution Evidence when the request the disposition concerns carried
+  one, recorded as the executing PEP attributed it. It joins the
+  Harness Evidence of the same work item, whose `work_item_issuer` and
+  `work_item` carry the same pair. The AuthZEN profile is one wire
+  carrier ({{I-D.draft-mcguinness-mission-authzen}}).
+
 # Conformance {#conformance}
 
 This document defines conformance for four roles: a PRODUCER that
@@ -2632,6 +2648,13 @@ evidence representation their shared envelope carries (using the
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Extension Members and Execution Evidence: `work_item`, owned by the
+  harness profile, records the qualified work-item identifier on
+  Decision and Execution Evidence, joining Harness Evidence, and the
+  Execution Evidence `error` `work_item_mismatch` records a permit
+  whose work-item condition differs from the request it would execute
+  (#815).
 
 - Execution Evidence: a PEP that cannot establish the effective
   parameters suppresses execution and omits
