@@ -23,6 +23,7 @@ import {
   type JSONWebKeySet,
   type JWK,
   type JWTPayload,
+  type JWTVerifyGetKey,
   jwtVerify,
 } from "jose";
 
@@ -65,9 +66,17 @@ export interface PlainRsOptions {
   issuer: string;
   /** This server's audience identifier; the token's `aud` must contain it. */
   audience: string;
-  /** The Authorization Server's JWKS, by URI or inline. One is required. */
+  /** The Authorization Server's JWKS, by URI or inline, or a key resolver; exactly one. */
   jwksUri?: string;
   jwks?: JSONWebKeySet;
+  /**
+   * #831 C2: a key resolver the deployment supplies in place of a JWKS: the
+   * access-token `kid`s it trusts, held within the freshness the issuer
+   * declares (the deployment's shared issuer-keys holder). With `jwksUri`
+   * alone, keys come from jose's remote set, which neither binds roles nor
+   * honors the issuer's declared freshness.
+   */
+  keys?: JWTVerifyGetKey;
   /**
    * The external base URL requests arrive at (scheme, host, port), used to
    * rebuild the DPoP `htu`. Defaults to the audience's origin.
@@ -117,8 +126,10 @@ const b64url = (buf: Buffer) => buf.toString("base64url");
 
 /** Build the request handler for a plain Resource Server. */
 export function plainResourceServer(opts: PlainRsOptions): PlainRsHandler {
-  if (!opts.jwks && !opts.jwksUri) throw new Error("plain-rs: jwks or jwksUri is required");
-  const keys = opts.jwks ? createLocalJWKSet(opts.jwks) : createRemoteJWKSet(new URL(opts.jwksUri as string));
+  const given = [opts.jwks, opts.jwksUri, opts.keys].filter((k) => k !== undefined).length;
+  if (given !== 1) throw new Error("plain-rs: give exactly one of jwks, jwksUri and keys");
+  const keys =
+    opts.keys ?? (opts.jwks ? createLocalJWKSet(opts.jwks) : createRemoteJWKSet(new URL(opts.jwksUri as string)));
   const operations = opts.operations ?? OPERATIONS;
   const algorithms = opts.algorithms ?? DEFAULT_ALGS;
   const baseUrl = (opts.baseUrl ?? new URL(opts.audience).origin).replace(/\/$/, "");

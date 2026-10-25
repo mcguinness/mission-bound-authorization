@@ -1,4 +1,5 @@
 import { createHash, createPublicKey, type JsonWebKey as NodeJwk } from "node:crypto";
+import { IssuerKeys, type IssuerKeysFetch } from "@mission/core";
 import { createLocalJWKSet, type JWTHeaderParameters } from "jose";
 
 /**
@@ -131,5 +132,57 @@ export function roleKeyResolvers(
     accessToken: pinned("accessToken"),
     attenuationRoot: pinned("attenuationRoot"),
     transactionToken: pinned("transactionToken"),
+  };
+}
+
+/** The asymmetric algorithms a role's key may sign with; the `kid` pin, not this list, binds the key. */
+const REFRESHING_ALGS = ["RS256", "PS256", "ES256", "ES384", "EdDSA"];
+
+/**
+ * @spec #831 C2: {@link roleKeyResolvers} over the issuers' published key
+ * sets rather than a snapshot: each role resolves only its pinned `kid`s,
+ * held through `IssuerKeys`, which follows a rotation within the freshness
+ * the issuer declares and refuses rather than falls back. The startup checks
+ * a snapshot allows (every pinned `kid` names a key; one key, one role) run
+ * on each fetch instead: an unpublished pinned `kid` is refused when used,
+ * and a set giving one key to two roles is refused whole. A `kid` pinned to
+ * two roles still fails at startup.
+ */
+export function refreshingRoleKeyResolvers(
+  roles: KeyRoles,
+  sources: { jwksUri: string; txnTokenJwksUri?: string | undefined },
+  opts: { now?: () => number; fetch?: IssuerKeysFetch } = {},
+): Record<KeyRole, KeyResolver> {
+  const order = ["accessToken", "attenuationRoot", "transactionToken"] as const;
+  const seen = new Map<string, KeyRole>();
+  for (const role of order) {
+    for (const kid of roles[role]) {
+      const other = seen.get(kid);
+      if (other) throw new Error(`key role pin: kid ${kid} is configured for both ${other} and ${role}`);
+      seen.set(kid, role);
+    }
+  }
+  const role = (r: KeyRole) => ({ kids: roles[r], algs: REFRESHING_ALGS });
+  const shared = sources.txnTokenJwksUri === undefined || sources.txnTokenJwksUri === sources.jwksUri;
+  const access = new IssuerKeys({
+    jwksUri: sources.jwksUri,
+    roles: {
+      accessToken: role("accessToken"),
+      attenuationRoot: role("attenuationRoot"),
+      ...(shared ? { transactionToken: role("transactionToken") } : {}),
+    },
+    ...opts,
+  });
+  const txn = shared
+    ? access
+    : new IssuerKeys({ jwksUri: sources.txnTokenJwksUri as string, roles: { transactionToken: role("transactionToken") }, ...opts });
+  const resolverOf = (keys: IssuerKeys, r: KeyRole): KeyResolver => {
+    const resolve = keys.resolver(r);
+    return ((header: JWTHeaderParameters) => resolve(header)) as unknown as KeyResolver;
+  };
+  return {
+    accessToken: resolverOf(access, "accessToken"),
+    attenuationRoot: resolverOf(access, "attenuationRoot"),
+    transactionToken: resolverOf(txn, "transactionToken"),
   };
 }

@@ -189,6 +189,18 @@ function reqNumber(file: string, obj: Record<string, unknown>, key: string, ctx:
 export interface TopologyKey {
   kid: string;
   alg: string;
+  /**
+   * @spec #831 C: the `kid`s this deployment's consumers trust for the key's
+   * role, when they differ from `kid` alone: during a rotation the operator
+   * adds the next generation's `kid` here before activating it, and removes a
+   * withdrawn one. The signer never reads it. Read through {@link trustedKids}.
+   */
+  trusted?: readonly string[];
+}
+
+/** The `kid`s consumers trust for a key's role: its `trusted` list, or its `kid` alone. */
+export function trustedKids(key: TopologyKey): readonly string[] {
+  return key.trusted ?? [key.kid];
 }
 
 /**
@@ -314,9 +326,15 @@ function reqTxnChallenge(
 
 function reqKey(file: string, obj: Record<string, unknown>, key: string, ctx: string): TopologyKey {
   const k = asObject(file, obj[key], `${ctx}.${key}`);
+  const trusted =
+    k.trusted === undefined ? undefined : reqStringArray(file, k, "trusted", `${ctx}.${key}`);
+  if (trusted && (trusted.length === 0 || trusted.some((t) => t.length === 0))) {
+    throw new ConfigError(file, `${ctx}.${key}.trusted must list at least one non-empty kid`);
+  }
   return {
     kid: reqString(file, k, "kid", `${ctx}.${key}`),
     alg: reqString(file, k, "alg", `${ctx}.${key}`),
+    ...(trusted ? { trusted } : {}),
   };
 }
 

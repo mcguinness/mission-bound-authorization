@@ -7,7 +7,7 @@
  */
 import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
-import { calculateJwkThumbprint, exportJWK, generateKeyPair, type JWK, SignJWT } from "jose";
+import { calculateJwkThumbprint, createLocalJWKSet, exportJWK, generateKeyPair, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type PlainRsHandler, type PlainRsOptions, plainResourceServer, startPlainResourceServer } from "../src/index.js";
 
@@ -433,5 +433,38 @@ describe("plain-rs configuration validation", () => {
       ).toThrow(/timeoutMs/);
     }
     expect(() => plainResourceServer({ ...base, clockToleranceSeconds: 0 })).not.toThrow();
+  });
+
+  it("takes exactly one of jwks, jwksUri and a key resolver (#831 C2)", () => {
+    const keys = createLocalJWKSet(jwks);
+    const id = { issuer: ISSUER, audience: AUDIENCE };
+    expect(() => plainResourceServer(id)).toThrow(/exactly one of jwks, jwksUri and keys/);
+    expect(() => plainResourceServer({ ...id, jwks, keys })).toThrow(/exactly one of jwks, jwksUri and keys/);
+    expect(() => plainResourceServer({ ...id, jwksUri: "https://as.test/jwks", keys })).toThrow(/exactly one of jwks, jwksUri and keys/);
+    expect(() => plainResourceServer({ ...id, keys })).not.toThrow();
+  });
+});
+
+describe("plain-rs with a key resolver the deployment supplies (#831 C2)", () => {
+  it("verifies under the keys the resolver returns, and refuses what it refuses", async () => {
+    const served: string[] = [];
+    const resolver = async (header: { kid?: string }) => {
+      served.push(String(header.kid));
+      if (header.kid !== "k1") throw new Error("untrusted");
+      return createLocalJWKSet(jwks)(header as never, undefined as never);
+    };
+    const port = PORT + 20;
+    const { server } = await serve(port, { issuer: ISSUER, audience: AUDIENCE, keys: resolver as never, baseUrl: `http://localhost:${port}` });
+    try {
+      const token = await accessToken();
+      expect((await call("GET", token, { base: `http://localhost:${port}` })).status).toBe(200);
+      const other = await new SignJWT({ iss: ISSUER, aud: AUDIENCE, sub: "alice", cnf: { jkt }, scope: "reports.read", exp: Math.floor(Date.now() / 1000) + 300 })
+        .setProtectedHeader({ alg: "ES256", kid: "k2", typ: "at+jwt" })
+        .sign(asKey);
+      expect((await call("GET", other, { base: `http://localhost:${port}` })).status).toBe(401);
+      expect(served).toEqual(["k1", "k2"]);
+    } finally {
+      await new Promise<void>((r) => server.close(() => r()));
+    }
   });
 });

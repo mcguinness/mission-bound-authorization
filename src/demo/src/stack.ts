@@ -7,7 +7,8 @@
 
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
+import { IssuerKeys } from "@mission/core";
+import { createLocalJWKSet, createRemoteJWKSet, exportJWK, generateKeyPair, type JWSHeaderParameters } from "jose";
 import {
   APPROVER_LOGIN_CALLBACK_PATH,
   ApprovalSessionStore,
@@ -30,7 +31,7 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   type BoundaryEvidenceKey,
@@ -486,7 +487,9 @@ export async function composeStack(opts: {
   // and the AS txn public JWKS + issuer the RS validates a presented txn-token
   // against.
   let challengeSigner: PepDeps["challengeSigner"];
-  let txnTokenJwks: { keys: Record<string, unknown>[] } | undefined;
+  // @spec #831 C2: with the auth server, the RS holds the AS's keys through
+  // its jwks_uri (IssuerKeys) rather than a snapshot taken at assembly.
+  let serverJwksUri: string | undefined;
   let rsAsIssuer: string | undefined;
   // @spec txn-authorization#two-phase-expiry — the resource's PUBLISHED
   // txn-challenge key material: served over real HTTP at the resource's
@@ -701,9 +704,12 @@ export async function composeStack(opts: {
     kernel = as.kernel;
     issuer = asUrl;
     issuerEvidenceStore = as.issuerEvidence;
-    // The RS verifies real tokens against the AS's published public JWKS (the
-    // as-txn public key is published there too; createLocalJWKSet resolves by kid).
-    serverJwks = (await (await fetch(`${asUrl}/jwks`)).json()) as { keys: Record<string, unknown>[] };
+    // @spec #831 C2: the RS verifies real tokens under the AS's jwks_uri,
+    // held through IssuerKeys: the trusted kids of each role only, refreshed
+    // within the freshness the AS declares (the as-txn key is published
+    // there too), so an AS key rotation is followed without a restart.
+    serverJwksUri = `${asUrl}/jwks`;
+    serverJwks = { keys: [] };
     challengeSigner = {
       sign: rsTxnKeys.privateKey,
       kid: rsTxnKey.kid,
@@ -711,15 +717,15 @@ export async function composeStack(opts: {
       asIssuer: asUrl,
       lifetimeSeconds: txnTopo.challengeLifetimeSeconds,
     };
-    txnTokenJwks = serverJwks;
     rsAsIssuer = asUrl;
     // Access tokens verify only under the AS token key and transaction
     // tokens only under its txn key, though both come from one JWKS. The
-    // AS issues no attenuation roots, so that class is refused here.
+    // AS issues no attenuation roots, so that class is refused here. Each
+    // role's kids are the ones the topology's consumers trust (#831 C2).
     rsKeyRoles = {
-      accessToken: [TOPOLOGY.keys.asToken.kid],
+      accessToken: trustedKids(TOPOLOGY.keys.asToken),
       attenuationRoot: [],
-      transactionToken: [TOPOLOGY.keys.asTxn.kid],
+      transactionToken: trustedKids(TOPOLOGY.keys.asTxn),
     };
 
     // Cross-domain (M9): a dedicated ES256 grant key the RAS trusts under the AS
@@ -734,14 +740,20 @@ export async function composeStack(opts: {
     const rasKeys = await generateKeyPair(rasTokenKey.alg, { extractable: true });
     const rasPub = { ...(await exportJWK(rasKeys.publicKey)), kid: rasTokenKey.kid, alg: rasTokenKey.alg };
     // @spec id-continuation-assertion — the continuation ID-JAG is signed by the
-    // dedicated as-continuation key the AS generates per boot and publishes on
-    // its jwks_uri (fetched above). The RAS trusts it under the AS issuer too, so
-    // a continuation ID-JAG redeems into a local token (D39 per-purpose keys).
+    // dedicated as-continuation key the AS publishes on its jwks_uri. The RAS
+    // trusts it under the AS issuer too, so a continuation ID-JAG redeems into a
+    // local token (D39 per-purpose keys). @spec #831 C2: held through IssuerKeys
+    // (the trusted continuation kids only), beside the stack's own cross-domain
+    // key: a grant naming the cross-domain kid resolves locally, and any other
+    // kid resolves only through the AS's continuation role, never falling back.
     const asContinuationKey = TOPOLOGY.keys.asContinuation;
-    const asContinuationPub = serverJwks.keys.find((k) => k.kid === asContinuationKey.kid);
-    if (!asContinuationPub) {
-      throw new Error(`AS jwks_uri is missing the ${asContinuationKey.kid} continuation key`);
-    }
+    const asContinuationKeys = new IssuerKeys({
+      jwksUri: `${asUrl}/jwks`,
+      roles: { continuation: { kids: trustedKids(asContinuationKey), algs: [asContinuationKey.alg] } },
+    }).resolver("continuation");
+    const crossDomainLocal = createLocalJWKSet({ keys: [xdPub as never] });
+    const rasAnchorKey = (header: JWSHeaderParameters) =>
+      header.kid === crossDomainKey.kid ? crossDomainLocal(header, undefined as never) : asContinuationKeys(header);
     const saas = new SaasMcpServer({
       rasIssuer: RAS_ISS,
       rasJwks: { keys: [rasPub as never] },
@@ -760,7 +772,7 @@ export async function composeStack(opts: {
       localCeiling: RAS_LOCAL_POLICY.ceiling,
       localPolicyVersion: RAS_LOCAL_POLICY.policy_version,
       issuer: RAS_ISS,
-      trustedIssuers: { [asUrl]: { keys: [xdPub as never, asContinuationPub as never] } },
+      trustedIssuers: { [asUrl]: { resolveKey: rasAnchorKey } },
       signKey: rasKeys.privateKey,
       signKid: rasTokenKey.kid,
       localTokenTtlSeconds: TOPOLOGY.ttls.rasLocalTokenSeconds,
@@ -1275,14 +1287,13 @@ export async function composeStack(opts: {
     pep,
     payments,
     loadView,
-    jwks: serverJwks,
+    ...(serverJwksUri ? { jwksUri: serverJwksUri, txnTokenJwksUri: serverJwksUri } : { jwks: serverJwks }),
     keyRoles: rsKeyRoles,
     issuer,
     transaction: { engine, connectors, evidence },
     writeReservations,
     // AROP (RS side): validate a presented txn-token against the AS txn public
     // JWKS (published on /jwks under the as-txn kid) and issuer.
-    ...(txnTokenJwks ? { txnTokenJwks } : {}),
     ...(rsAsIssuer ? { asIssuer: rsAsIssuer } : {}),
     ...(txnChallengePublication ? { txnChallenge: txnChallengePublication } : {}),
   });

@@ -25,7 +25,8 @@ import {
   type SigningKeySource,
   startupRemediationNotices,
 } from "@mission/authorization-server";
-import { DEV_SERVICE_TOKEN, INTROSPECTION_PRINCIPALS, TOPOLOGY } from "@mission/demo-data";
+import { IssuerKeys } from "@mission/core";
+import { DEV_SERVICE_TOKEN, INTROSPECTION_PRINCIPALS, TOPOLOGY, trustedKids } from "@mission/demo-data";
 import { startPlainResourceServer } from "@mission/plain-rs";
 import { renderApproval } from "./approval-console.js";
 import { type LifecycleConsoleCredentials, newLifecycleConsole, requestLifecycle } from "./lifecycle-client.js";
@@ -155,7 +156,12 @@ export async function startIssuanceOnly(opts: IssuanceOnlyOptions): Promise<Issu
     {
       issuer: asUrl,
       audience: PLAIN_RS_AUDIENCE,
-      jwksUri: `${asUrl}/jwks`,
+      // @spec #831 C2: the AS's access-token keys through its jwks_uri, the
+      // trusted kids only, refreshed within the freshness the AS declares.
+      keys: new IssuerKeys({
+        jwksUri: `${asUrl}/jwks`,
+        roles: { accessToken: { kids: trustedKids(TOPOLOGY.keys.asToken), algs: [TOPOLOGY.keys.asToken.alg] } },
+      }).resolver("accessToken") as never,
       baseUrl: rsUrl,
       ...(opts.introspection && principal
         ? {
