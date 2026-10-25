@@ -2,7 +2,7 @@ import { postureStalenessBound, RUNTIME_POSTURE, type StalenessBound } from "./r
 
 /**
  * Deployment policy for the payments estate: action -> FGA relation mapping
- * and per-class staleness bounds (payments-runtime-profile-v13; O-8 numbers).
+ * and per-class staleness bounds (payments-runtime-profile-v14; O-8 numbers).
  */
 
 /**
@@ -23,6 +23,7 @@ export const PAYMENTS_RELATIONS: Record<string, { relation: "payer" | "reader"; 
   "payments:payment.schedule": { relation: "payer", needsAmount: true },
   "payments:payment.schedule.cancel": { relation: "payer", needsAmount: true },
   "payments:payment.execute": { relation: "payer", needsAmount: true },
+  "payments:payment.reverse": { relation: "payer", needsAmount: true },
   "payments:remittance.send": { relation: "payer", needsAmount: true },
 };
 

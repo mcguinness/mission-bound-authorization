@@ -272,6 +272,21 @@ describe("the payments resource declares its contract versions (@spec runtime#re
     }
   });
 
+  it("performs the superseded 2026-10-20 version under the retained v13 profile: each crossing it names as the live profile does, and not the compensate crossing it lacks (#252)", () => {
+    const superseded = shipped?.versions.find((v) => v.state === "superseded");
+    expect(superseded?.version).toBe("2026-10-20");
+    expect(superseded?.operation_profile).toBe("payments-runtime-profile-v13");
+    const named = Object.keys((superseded?.document as { operations: Record<string, unknown> }).operations).sort();
+    expect(named).toEqual(Object.keys(TOOL_ACTIONS).filter((tool) => tool !== "reverse_wire_transfer").sort());
+    // No deployment-supplied retained profiles: the shipped default applies.
+    const pep = new Pep({} as never);
+    for (const tool of Object.keys(TOOL_ACTIONS)) {
+      const retained = pep.toolActionUnder(tool, superseded?.operation_profile);
+      if (named.includes(tool)) expect(retained, tool).toEqual(TOOL_ACTIONS[tool]);
+      else expect(retained, tool).toBeUndefined();
+    }
+  });
+
   it("refuses at load a statement whose declared document no longer hashes to its digest: published bytes are immutable for a reference", () => {
     const stmt = structuredClone(RUNTIME_SCOPE_CONFIG) as { extensions: { resource_contracts: Array<{ versions: Array<{ document: Record<string, unknown> }> }> } };
     const version = stmt.extensions.resource_contracts[0]?.versions[0];

@@ -1294,6 +1294,12 @@ semantics remain the orchestration profile's
 identifier itself supplies no authority. A compensation is a new
 operation with a new idempotency key and obtains fresh action-bound
 approval where its class requires it.
+Its parameters are those of the committed effect it offsets: the PEP
+MUST establish them from that effect's retained record before
+requesting the Decision, never from current resource state or an
+agent-supplied argument, and bind them through `parameter_digest`. The
+executing resource MUST refuse an offset whose parameters differ from
+the committed effect's.
 
 For a compound action, the transaction-authorization companion's
 single-use token authorizes one commit-phase operation, not a permit
@@ -4209,6 +4215,11 @@ worked example shows the concrete record
   observation remains, and a permit does not outlive the observation.
   Mission State and Freshness states how a bound from an external
   authority change is measured (#830).
+- Compound Actions: a compensation's parameters are those of the
+  committed effect it offsets, established from that effect's retained
+  record before the Decision and bound through `parameter_digest`, and
+  the executing resource refuses an offset whose parameters differ
+  (#252).
 - Deployment Considerations: a gated action waits for its gate in
   every class; whether the decision waits on the network depends on
   where the state it consults is held. The Mission is the partition

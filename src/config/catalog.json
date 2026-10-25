@@ -23,6 +23,11 @@
           { "tool_name": "execute_wire_transfer", "action_phase": "commit" }
         ]
       },
+      {
+        "id": "payments:payment.reverse",
+        "amount_bearing": true,
+        "tools": [{ "tool_name": "reverse_wire_transfer", "action_phase": "compensate" }]
+      },
       { "id": "payments:remittance.send", "amount_bearing": true, "tool_name": "send_remittance_email" }
     ],
     "connection": { "profile": "oauth", "type": "authorization_code" },

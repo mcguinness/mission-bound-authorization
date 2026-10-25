@@ -838,3 +838,78 @@ describe("the release fence on the AROP deferral's deferred grant (@spec mission
     expect(againBody.access_token).toBeUndefined();
   });
 });
+
+describe("the AROP deferred grant against a Mission that is not active (@spec mission#issuance-gating, #250)", () => {
+  type PollBody = { error?: string; mission_error?: string; access_token?: string };
+  /** A deferral for invoice.read on a Mission of its own (the shared base Mission stays active); approved when `approve` is set. */
+  const openOn = async (approve: boolean): Promise<{ id: string; code: string }> => {
+    const own = await issueBaseMissionToken();
+    const base = (as.kernel.get(own.missionId) as { authority_set: AuthorityEntry[] }).authority_set;
+    const requested = base
+      .filter((e) => e.actions.includes("payments:invoice.read"))
+      .map((e) => ({ ...e, actions: ["payments:invoice.read"] }));
+    const init = await tokenRequest({
+      grant_type: DEFERRED_GRANT_TYPE,
+      deferred_authorization: JSON.stringify({ mission_id: own.missionId, requested }),
+    });
+    const { deferral_code: code } = (await init.json()) as { deferral_code: string };
+    expect(code).toMatch(/^dfr_/);
+    if (approve) as.deferrals.approve(code, new Date((Math.floor(Date.now() / 1000) + 120) * 1000).toISOString());
+    return { id: own.missionId, code };
+  };
+  const count = (id: string): number => (as.kernel.get(id) as { derivation_count: number }).derivation_count;
+  const pollBody = async (code: string): Promise<{ status: number; body: PollBody }> => {
+    const res = await poll(code);
+    return { status: res.status, body: (await res.json()) as PollBody };
+  };
+
+  it.each([
+    ["revoked", "revoke"],
+    ["suspended", "suspend"],
+  ] as const)("an approved deferral whose Mission is %s before the poll is refused invalid_grant with that mission_error, issuing nothing and counting nothing", async (state, op) => {
+    const { id, code } = await openOn(true);
+    const before = count(id);
+    as.kernel.transition(id, op);
+    const r = await pollBody(code);
+    expect(r.status, JSON.stringify(r.body)).toBe(400);
+    expect(r.body.error).toBe("invalid_grant");
+    expect(r.body.mission_error).toBe(state);
+    expect(r.body.access_token).toBeUndefined();
+    expect(count(id)).toBe(before);
+  });
+
+  it("an approved deferral refused under a suspended Mission stays redeemable: after resume the poll delivers, counted once", async () => {
+    const { id, code } = await openOn(true);
+    const before = count(id);
+    as.kernel.transition(id, "suspend");
+    expect((await pollBody(code)).body.error).toBe("invalid_grant");
+    as.kernel.transition(id, "resume");
+    const r = await pollBody(code);
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body.access_token).toBeTruthy();
+    expect(count(id)).toBe(before + 1);
+  });
+
+  it.each([
+    ["revoked", "revoke"],
+    ["suspended", "suspend"],
+  ] as const)("a pending deferral whose Mission is %s is refused invalid_grant with that mission_error, not authorization_pending", async (state, op) => {
+    const { id, code } = await openOn(false);
+    as.kernel.transition(id, op);
+    const r = await pollBody(code);
+    expect(r.status, JSON.stringify(r.body)).toBe(400);
+    expect(r.body.error).toBe("invalid_grant");
+    expect(r.body.mission_error).toBe(state);
+    expect(r.body.access_token).toBeUndefined();
+  });
+
+  it("a pending deferral refused under a suspended Mission pends again after resume", async () => {
+    const { id, code } = await openOn(false);
+    as.kernel.transition(id, "suspend");
+    expect((await pollBody(code)).body.error).toBe("invalid_grant");
+    as.kernel.transition(id, "resume");
+    const r = await pollBody(code);
+    expect(r.status, JSON.stringify(r.body)).toBe(400);
+    expect(r.body.error).toBe("authorization_pending");
+  });
+});
