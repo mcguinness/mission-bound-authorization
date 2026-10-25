@@ -904,3 +904,54 @@ describe("the payments resource relies on whichever applicable entry covers the 
     expect((await read(harness({ entries: [...halves, whole] }), "inv-q3")).ok).toBe(true);
   });
 });
+
+// @spec resource-access#common-constraints, resource-access#rs-enforcement
+// (#1375): the same rule for writes and transaction-assured operations. No
+// PEP path selects an entry for them; the decision weighs every applicable
+// entry, so a later entry that covers the whole operation authorizes it, and
+// parts of two entries never combine. inv-q3 is acme's 125.00 USD invoice,
+// and acme's tenant is payments-demo.
+describe("writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375)", () => {
+  const cap = (amount: string) => ({ max_amount: { amount, currency: "USD" } });
+  const schedule = (h: Harness) =>
+    h.server.callWriteTool("schedule_payment", { invoice_id: "inv-q3", idempotency_key: `idem_${randomUUID()}` }, h.token);
+  const transfer = (h: Harness) =>
+    h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-q3", idempotency_key: `idem_${randomUUID()}` }, h.token);
+
+  it("a write authorizes through a later entry whose max_amount admits the amount", async () => {
+    const refused = await schedule(harness({ entries: [cap("100.00")] }));
+    expect(refused.ok).toBe(false);
+    expect(refused.denial_reason).toBe("parameter_violation");
+    const res = await schedule(harness({ entries: [cap("100.00"), cap("500.00")] }));
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+  });
+
+  it("a transaction-assured operation authorizes and commits through a later entry whose max_amount admits the amount", async () => {
+    const lone = harness({ entries: [cap("100.00")] });
+    const refused = await transfer(lone);
+    expect(refused.ok).toBe(false);
+    expect(refused.denial_reason).toBe("parameter_violation");
+    expect(lone.connectors.ledgerEntries(MISSION)).toHaveLength(0);
+    const h = harness({ entries: [cap("100.00"), cap("500.00")] });
+    const res = await transfer(h);
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect(h.connectors.ledgerEntries(MISSION)).toHaveLength(1);
+  });
+
+  it("never combines parts of two entries for a write or a transaction-assured operation: one admitting the amount and another the tenant authorize nothing", async () => {
+    const halves = [
+      { ...cap("500.00"), tenant: "other-tenant" },
+      { ...cap("100.00"), tenant: "payments-demo" },
+    ];
+    expect((await schedule(harness({ entries: halves }))).ok).toBe(false);
+    const h = harness({ entries: halves });
+    expect((await transfer(h)).ok).toBe(false);
+    expect(h.connectors.ledgerEntries(MISSION)).toHaveLength(0);
+    // Positive control: one entry admitting both authorizes.
+    const whole = { ...cap("500.00"), tenant: "payments-demo" };
+    expect((await schedule(harness({ entries: [...halves, whole] }))).ok).toBe(true);
+    const w = harness({ entries: [...halves, whole] });
+    expect((await transfer(w)).ok).toBe(true);
+    expect(w.connectors.ledgerEntries(MISSION)).toHaveLength(1);
+  });
+});
