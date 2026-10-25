@@ -43662,7 +43662,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a Dispatch increments the derivation_count of the instance it creates by exactly one, and a repeated dispatch_event_id, gated to the committed instance, counts nothing more",
-    "local": "the reference counts a new Dispatch once, which the cited test witnesses; a retry with the same dispatch_event_id currently counts again, the defect PR #1635 recorded, so the second clause has no witness"
+    "local": "the reference counts a new Dispatch once, which the cited test witnesses; a retry with the same dispatch_event_id currently counts again, the defect #1661 owns (first recorded in PR #1635), so the second clause has no witness"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -43674,7 +43674,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1647, D764. Partial until a retried Dispatch stops counting again (recorded in PR #1635 for an owner call). The instance's limit is at least 1, so the Dispatch's own derivation never meets the limit, and no limit refusal applies. Mutation: counting an approval-bound grant as uncounted fails the cited test."
+   "notes": "#1647, D764. Partial until a retried Dispatch stops counting again: #1661, linked to #250 (first recorded in PR #1635). The instance's limit is at least 1, so the Dispatch's own derivation never meets the limit, and no limit refusal applies. Mutation: counting an approval-bound grant as uncounted fails the cited test."
   },
   {
    "id": "template.handoff.selector-refusal",
