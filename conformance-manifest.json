@@ -11,20 +11,20 @@
     "content_sha256": "abc6086f27dc02ea41a48bccb7408faa0aeafdd8464d78a79af5c370084a70e5"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "d32da54c5957197b6a58a0afc954c0c3c68fb532",
-    "content_sha256": "80d0b4206e2ff928e869e5362a58ca6ef0d1dfab8bc01744d1fdfb16392b0b07"
+    "revision": "3fe02bb99d7af08693a9271f120d59b09dda9e33",
+    "content_sha256": "bb428c1f95b933c2fb772f986cb5f737a1544ef249aabbf2d3719406ea56bdd5"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
     "content_sha256": "e0466f26a42dc89f7f1637996066ed8de81addad3a6190db9b7f814e21525036"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "d32da54c5957197b6a58a0afc954c0c3c68fb532",
-    "content_sha256": "0b0a65e4ad1b12bfd083a22370b0a0d891543193c4065b63c497c565dd98ce7c"
+    "revision": "3fe02bb99d7af08693a9271f120d59b09dda9e33",
+    "content_sha256": "bec950a5521172afc7913272def674fbdff17f06e615e2983b34019fca1a7b9a"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "d32da54c5957197b6a58a0afc954c0c3c68fb532",
-    "content_sha256": "62db7ed7a1f90db961842de8e0eb587be4bf67a56078946b9ec1aa5e6d056133"
+    "revision": "3fe02bb99d7af08693a9271f120d59b09dda9e33",
+    "content_sha256": "bb00796ace60ff40c4eb3a35a2619f26db15279ed39f1cf8a245feb73927b3e9"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -32283,7 +32283,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#956, D814 Q1. Every Enforcement Scope Statement the loader accepts declares action classes, so the reference refuses any missing class. Mutation: removing the pre-evaluation check fails all four (the emitter refuses to sign); restoring the consequential_read default in postureStalenessBound or the emitter fails the GAP 2 and emitter witnesses."
+   "notes": "#956, D814 Q1. Every Enforcement Scope Statement the loader accepts declares action classes, so the reference refuses any missing class. Mutation: removing the pre-evaluation check fails both action-class witnesses and the GAP 2 witness; restoring the emitter's consequential_read default fails the emitter witness. The posture's old default is unreachable behind the check, so it is not separately mutated."
   },
   {
    "id": "authzen.pdp-request.consistency-state-active-and-pdp-precedence",
@@ -40040,7 +40040,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#956, D814. Mutation: dropping action_class_missing from the PDP closed set fails the signed-record witness at signing."
+   "notes": "#956, D814. The PDP recorder takes the reason by type; the evidence store's closed sets hold it at runtime. Mutation: removing action_class_missing from the store's PDP set, or admitting it to the PEP set, fails the closed-set witness."
   },
   {
    "id": "evidence.refusal.pep-compensation-link-unavailable",
