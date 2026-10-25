@@ -3282,7 +3282,7 @@ declared, and a consumer sizes reliance to token lifetime alone.<a href="#sectio
 <dt id="section-8-2.17">
 <code>mission_historical_jwks_uri</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-2.18">
-          <p id="section-8-2.18.1">CONDITIONAL. A string containing a URL. The URL of the AS's
+          <p id="section-8-2.18.1">CONDITIONAL. A string containing an <code>https</code> URL. The URL of the AS's
 historical key set (<a href="#historical-key-set" class="auto internal xref">Section 8.1</a>). <span class="bcp14">REQUIRED</span> while that set
 lists a key.<a href="#section-8-2.18.1" class="pilcrow">¶</a></p>
 </dd>
@@ -3343,28 +3343,39 @@ Cache-Control: max-age=3600
 <p id="section-8.1-1">The historical key set holds the public keys the AS has withdrawn as
 compromised (<a href="#signing-key-retention" class="auto internal xref">Section 10.5</a>), so that responses signed
 under them stay verifiable for audit. It is a JWT <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> with
-<code>typ</code> <code>jwk-set+jwt</code>, served at <code>mission_historical_jwks_uri</code>, whose
-claims are <code>iss</code> (the AS's issuer identifier), <code>iat</code>, and <code>keys</code>: a JWK
-Set's <code>keys</code> array <span>[<a href="#RFC7517" class="cite xref">RFC7517</a>]</span> holding each such key's public JWK,
-under its original <code>kid</code>, for at least the audit horizon of every
-Mission whose responses it signed. The AS signs the set under a key
-in its current <code>jwks_uri</code>, never under a key the set lists.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
-<p id="section-8.1-2">Each listed JWK carries the <code>revoked</code> member <span>[<a href="#OpenID.Federation" class="cite xref">OpenID.Federation</a>]</span>
-(Section 8.7.2) with <code>reason</code> <code>compromised</code> and these times:<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+<code>typ</code> <code>jwk-set+jwt</code>, served at <code>mission_historical_jwks_uri</code>, which a
+consumer takes only from authorization server metadata it has
+validated (<span><a href="https://rfc-editor.org/rfc/rfc8414#section-3.3" class="relref">Section 3.3</a> of [<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>). Its claims are <code>iss</code> (the AS's
+issuer identifier), <code>iat</code>, and <code>keys</code>: a JWK Set's <code>keys</code> array
+<span>[<a href="#RFC7517" class="cite xref">RFC7517</a>]</span> holding each such key's public JWK, under its original
+<code>kid</code>, for at least the audit horizon of every Mission whose responses
+it signed.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">The AS signs the set under its active Mission Status signing key: the
+key that the consumer's trusted configuration authorizes to sign the
+AS's Mission Status responses. A key's presence in the <code>jwks_uri</code> is
+not that authorization, since the <code>jwks_uri</code> also carries other roles'
+keys and retired keys. The AS never signs the set under a key the set
+lists. When the Mission Status signing key is itself compromised, the
+AS signs the set under its replacement once the consumer's trusted
+configuration authorizes that replacement, and never under another
+published key. A consumer <span class="bcp14">MUST NOT</span> accept a historical key set whose
+signature does not verify under that authorized key.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
+<p id="section-8.1-3">Each listed JWK carries the <code>revoked</code> member <span>[<a href="#OpenID.Federation" class="cite xref">OpenID.Federation</a>]</span>
+(Section 8.7.2) with <code>reason</code> <code>compromised</code> and these times:<a href="#section-8.1-3" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-8.1-3.1">
-            <p id="section-8.1-3.1.1"><code>revoked_at</code>: the time the AS revoked the key; and<a href="#section-8.1-3.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-8.1-4.1">
+            <p id="section-8.1-4.1.1"><code>revoked_at</code>: the time the AS revoked the key; and<a href="#section-8.1-4.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-8.1-3.2">
-            <p id="section-8.1-3.2.1"><code>compromised_at</code>: an added member of <code>revoked</code>, the established
+          <li class="normal" id="section-8.1-4.2">
+            <p id="section-8.1-4.2.1"><code>compromised_at</code>: an added member of <code>revoked</code>, the established
 compromise time, the earliest time from which a signature under the
 key is not trusted. It is absent when no compromise time is
-established.<a href="#section-8.1-3.2.1" class="pilcrow">¶</a></p>
+established.<a href="#section-8.1-4.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-8.1-4">Both are NumericDate values <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>. The set reuses OpenID
+<p id="section-8.1-5">Both are NumericDate values <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>. The set reuses OpenID
 Federation's <code>revoked</code> encoding only; this document defines no
-OpenID Federation endpoint and claims no conformance to it.<a href="#section-8.1-4" class="pilcrow">¶</a></p>
+OpenID Federation endpoint and claims no conformance to it.<a href="#section-8.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3548,12 +3559,18 @@ under a key the AS has published as compromised. A consumer <span class="bcp14">
 use a key from the historical key set to verify a response for a
 current reliance decision. A consumer <span class="bcp14">MUST NOT</span> rely on a cached copy
 of the AS's <code>jwks_uri</code> beyond the freshness lifetime its response
-declares (<span><a href="https://rfc-editor.org/rfc/rfc9111#section-4.2" class="relref">Section 4.2</a> of [<a href="#RFC9111" class="cite xref">RFC9111</a>]</span>), and replaces its cached key set
-with each one it fetches rather than adding to it, so a removed key
-stops verifying within that lifetime. An auditor examining an archived
-response signed under a compromised key classifies it by the
-published compromise information, <code>compromised_at</code> or its absence;
-the Mandate profile's compromise-time rule is one such classification
+explicitly declares (<span><a href="https://rfc-editor.org/rfc/rfc9111#section-4.2.1" class="relref">Section 4.2.1</a> of [<a href="#RFC9111" class="cite xref">RFC9111</a>]</span>). A response without
+valid explicit freshness information is stale when received, and is
+never given a heuristic lifetime (<span><a href="https://rfc-editor.org/rfc/rfc9111#section-4.2.2" class="relref">Section 4.2.2</a> of [<a href="#RFC9111" class="cite xref">RFC9111</a>]</span>): the
+consumer revalidates it before reuse. The consumer replaces its cached
+key set with each one it fetches rather than adding to it, so a
+removed key stops verifying within that lifetime. When the cached set
+is stale and revalidation fails, the consumer <span class="bcp14">MUST NOT</span> accept a
+response for a current reliance decision until revalidation succeeds.
+An auditor examining an archived response signed under a compromised
+key classifies it by the published compromise information,
+<code>compromised_at</code> or its absence; the Mandate profile's compromise-time
+rule is one such classification
 (<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>).<a href="#section-10.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -4172,11 +4189,14 @@ Mission Termination Reasons registry
 <li class="normal" id="appendix-A-3.1">
           <p id="appendix-A-3.1.1">A key known or suspected compromised leaves the <code>jwks_uri</code> and is
 no longer used for signing. It stays resolvable for the audit
-horizon in a signed historical key set (<code>mission_historical_jwks_uri</code>),
+horizon in a historical key set (<code>mission_historical_jwks_uri</code>, an
+<code>https</code> URL from validated metadata), signed by the active Mission
+Status signing key the consumer's configuration authorizes, and
 marked with OpenID Federation's <code>revoked</code> member: its revocation
-time and, where established, its compromise time. Consumers bound
-their <code>jwks_uri</code> cache to its declared lifetime and never verify a
-current reliance decision under a historical key (#831, D774).<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+time and, where established, its compromise time. Consumers use only
+explicit <code>jwks_uri</code> freshness, revalidate a stale set, refuse current
+reliance when that fails, and never verify a current reliance
+decision under a historical key (#831, D774, D780).<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.2">
           <p id="appendix-A-3.2.1">A transition is durably committed before any response acknowledges
