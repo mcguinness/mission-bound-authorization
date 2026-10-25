@@ -1322,11 +1322,17 @@ export function applyCarryoverInCallerTx(
       divergences.push({ childId: entry.child_id, class: "record_missing", detail: "rendered row is gone" });
       continue;
     }
-    if (record.state !== entry.state || record.version !== entry.version) {
+    // @spec child-delegation#carryover-cas (#1674): a carried row is compared as
+    // observed. An old child whose own `expires_at` is at or before the
+    // completion commit is terminated whether or not that transition was
+    // persisted, so it can no longer be carried. A cascade row's outcome does
+    // not depend on it, and the traversal records its own expiry.
+    const observed = entry.outcome === "carry" ? kernel.observe(record) : record;
+    if (observed.state !== entry.state || observed.version !== entry.version) {
       divergences.push({
         childId: entry.child_id,
         class: "state_changed",
-        detail: `state/version moved from ${entry.state}/${entry.version} to ${record.state}/${record.version}`,
+        detail: `state/version moved from ${entry.state}/${entry.version} to ${observed.state}/${observed.version}`,
       });
     }
     if (record.derivation_count !== entry.derivation_count) {

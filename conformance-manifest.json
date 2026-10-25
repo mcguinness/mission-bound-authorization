@@ -62026,9 +62026,21 @@
      "name": "discharge state at a carryover's completion (@spec child-delegation#carryover-cas, child-delegation#carryover-no-reset, #919) > refuses it even where the plan commits a state change as an exclusion: the child's effective authority moved, which the plan did not commit",
      "level": "cross-component",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover compositions in the reference deployment (@spec child-delegation#carryover, child-delegation#carryover-cas, #919) > refuses a batch when a carried child's own expiry arrives before completion: no replacement can outlive it",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a carried child's own expiry at completion (@spec child-delegation#carryover-cas, child-delegation#child-state, #1674) > is excluded and recorded expired under a plan committing state changes, while its sibling carries",
+     "level": "cross-component",
+     "surface": "derivation"
     }
    ],
-   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses. #919 adds a suspension and a resume after rendering, containment after approval, a rendered record gone at completion, and a discharge after rendering. Containment and discharge are compared by the membership pass (the committed `containment_version` and `effective_authority_hash`); the conditional UPDATE's containment and discharge terms are bound to the row as read in that transaction, so they add nothing beside it, and dropping the discharge term changes no result. Proved by mutation: disabling the membership pass and the UPDATE check together fails the suspension, resume, record and state-only discharge witnesses; dropping only the `record_missing` divergence fails the record witness; dropping only the effective-authority comparison fails the state-only discharge witness, where the plan excludes the discharge's state change but not its narrowed authority. With both halves off, the containment and all-or-nothing discharge witnesses are still refused by another check, so they are not the halves' discriminating witnesses."
+   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses. #919 adds a suspension and a resume after rendering, containment after approval, a rendered record gone at completion, and a discharge after rendering. Containment and discharge are compared by the membership pass (the committed `containment_version` and `effective_authority_hash`); the conditional UPDATE's containment and discharge terms are bound to the row as read in that transaction, so they add nothing beside it, and dropping the discharge term changes no result. Proved by mutation: disabling the membership pass and the UPDATE check together fails the suspension, resume, record and state-only discharge witnesses; dropping only the `record_missing` divergence fails the record witness; dropping only the effective-authority comparison fails the state-only discharge witness, where the plan excludes the discharge's state change but not its narrowed authority. With both halves off, the containment and all-or-nothing discharge witnesses are still refused by another check, so they are not the halves' discriminating witnesses. #1674: a carried row is compared as observed through the expiry clock, so an old child whose own expiry arrived before completion diverges as `state_changed` though no transition was persisted: refused under all-or-nothing, excluded and recorded `expired` under a plan committing that class. A cascade row is compared as stored, since its outcome does not change. Proved by mutation: comparing carried rows as stored fails the exclusion witness; comparing every row as observed fails the rendered-cascade own-expiry witness."
   },
   {
    "id": "child-delegation.carryover.generation-order",
@@ -62161,15 +62173,9 @@
      "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses to extend a carried child under a successor whose approved extension outlives the predecessor",
      "level": "cross-component",
      "surface": "derivation"
-    },
-    {
-     "file": "src/services/authorization-server/test/carryover.test.ts",
-     "name": "Child Mission Carryover compositions in the reference deployment (@spec child-delegation#carryover, child-delegation#carryover-cas, #919) > refuses a batch when a carried child's own expiry arrives before completion: no replacement can outlive it",
-     "level": "cross-component",
-     "surface": "derivation"
     }
    ],
-   "notes": "The replacement's expiry runs through the one effective-expiry hook with the old child's `expires_at` as an INDEPENDENT bound beside the new parent's, so a successor carrying a disclosed, policy-permitted extension that outlives the predecessor still cannot extend a replacement. #919: where the old child's own expiry passes between rendering and completion, the bound leaves the replacement no lifetime, and creation refuses it (an effective expiry not later than the creation instant), so the batch is refused rather than a replacement extended; disabling that creation check fails the witness."
+   "notes": "The replacement's expiry runs through the one effective-expiry hook with the old child's `expires_at` as an INDEPENDENT bound beside the new parent's, so a successor carrying a disclosed, policy-permitted extension that outlives the predecessor still cannot extend a replacement. #1674: a carried child whose own expiry passes before completion is refused as a state change before any replacement is created, so creation's expiry check is a backstop there; that witness is cited on completion-cas."
   },
   {
    "id": "child-delegation.carryover.budget-transfer",
@@ -62806,8 +62812,15 @@
      "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > a rendered excluded child whose own expires_at arrives at completion terminates expired, not parent_terminated, in its record and in the authenticated map",
      "level": "unit",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a carried child's own expiry at completion (@spec child-delegation#carryover-cas, child-delegation#child-state, #1674) > is excluded and recorded expired under a plan committing state changes, while its sibling carries",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
     }
-   ]
+   ],
+   "notes": "#1674: a carried row whose own expiry arrives before the completion commit is excluded and recorded `expired` under a plan committing state changes."
   },
   {
    "id": "child-delegation.child-state.projection-before-materialization",
