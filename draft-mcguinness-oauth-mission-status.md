@@ -1004,7 +1004,9 @@ A companion profile MAY register a further `operation` value on this
 endpoint that changes no Mission-level state, provided it defines the
 value's request members, authorization, anti-oracle behavior,
 idempotency and outcome vocabulary, result shape, and conformance
-requirements completely.
+requirements completely. It registers the value by defining it in
+its own specification; no IANA registry holds `operation` values
+({{iana}}).
 
 A `suspend` MAY carry `suspend_until` with a REQUIRED `on_expiry`; the
 pair is the Mission's schedule. When the `suspend_until` of a current
