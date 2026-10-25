@@ -2941,39 +2941,51 @@ Table of Contents
    vendor/target identity, amount/currency and destination facts where
    applicable.
 
-   The salt MUST be unpredictable, secret, qualified by Mission and
-   version, and retained for the lifetime of every outstanding binding
-   that uses it.  It never appears in decision requests or evidence.  It
-   MUST survive restart and be consistently available to the PEP
-   replicas that can use those bindings, on the terms Section 9.2 sets
-   for the consumed-identifier store; a deployment MUST fail closed for
-   a binding whose salt or descriptor cannot be recovered, rather than
-   silently replacing either.  This is persistent secret-state
-   coordination, not a stateless digest scheme.  Salting limits guessing
-   of low-entropy values; digest-only evidence still exposes equality
-   and linkability.
+   The salt MUST be unpredictable, secret, and qualified by Mission and
+   version.  It never appears in decision requests or evidence.  On the
+   terms Section 9.2 sets for the consumed-identifier store, the salt
+   either survives restart and is consistently available to the PEP
+   replicas that can use its bindings, or is held per epoch: a restart,
+   or a replica that does not hold a version, then loses every binding
+   made under it.  Rotation MUST retain a version for the lifetime of
+   every outstanding binding that uses it, or explicitly invalidate
+   those bindings.  Under either posture, a deployment MUST fail closed
+   for a binding whose salt or descriptor cannot be recovered, rather
+   than silently replacing either.  Every execution path that can use
+   such a binding refuses it before any effect.  Neither posture is a
+   stateless digest scheme.  Salting limits guessing of low-entropy
+   values; digest-only evidence still exposes equality and linkability.
 
    The PDP MUST return the supplied context digest as a permit condition
    for a covered operation.  The executing PEP MUST re-resolve the
-   declared facts and recompute the bound context with its own
-   applicable descriptor immediately before releasing the effect, in the
-   same step as the parameter_digest recomputation of Section 9.4.  A
-   missing binding, changed descriptor, unequal digest, or unavailable
-   fact MUST cause refusal before any effect.  A condition on an
-   operation outside the declared binding is invalid there.  The normal
-   invalid-condition and permit-binding rules still apply; the request
-   or retrospective evidence cannot replace the permit condition.
+   declared facts and recompute the bound context under the descriptor
+   and salt version the binding committed immediately before releasing
+   the effect, in the same step as the parameter_digest recomputation of
+   Section 9.4.  A missing binding, changed descriptor, unequal digest,
+   or unavailable fact MUST cause refusal before any effect.  A changed
+   descriptor is one the operation's declaration no longer names,
+   refused even where the facts are unchanged; a committed descriptor
+   that cannot be recovered leaves the context unavailable.  A condition
+   on an operation outside the declared binding is invalid there.  The
+   normal invalid-condition and permit-binding rules still apply; the
+   request or retrospective evidence cannot replace the permit
+   condition.
 
    An inability to capture context before requesting a Decision produces
-   a pre-decision Refusal Record.  After a permit exists, failure to re-
-   resolve or match the context produces Execution Evidence with outcome
-   suppressed and error target_drift, not a new PDP denial reason.  The
-   extension composes with the single-use rule (Section 9.2) and never
-   substitutes for it, changing neither single-use consumption nor
-   retained-permit retry semantics.  Every consequential phase captures
-   and checks its own context; a fact declared prepare-stable SHOULD
-   also be compared across prepare and commit, without reusing either
-   phase's permit.
+   a pre-decision Refusal Record, evaluation_context_unresolvable
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).  After a permit
+   exists, failure to re-resolve or match the context produces Execution
+   Evidence with outcome suppressed, not a new PDP denial reason.  Its
+   error is target_drift unless the context is established and an agent-
+   supplied parameter demonstrably changed, which is parameter_mismatch;
+   the record keeps every digest pair the PEP can observe and the audit
+   consumer reports each divergence
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).  The extension
+   composes with the single-use rule (Section 9.2) and never substitutes
+   for it, changing neither single-use consumption nor retained-permit
+   retry semantics.  Every consequential phase captures and checks its
+   own context; a fact declared prepare-stable SHOULD also be compared
+   across prepare and commit, without reusing either phase's permit.
 
    The *verified* property is a successful reread and comparison.  It
    leaves a possible resource change between that comparison and the
@@ -4873,6 +4885,19 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Evaluation-Context Binding (#773): the salt survives restart and
+      is available to every replica that can use its bindings, or is
+      held per epoch, so that a restart or a replica without the version
+      loses those bindings; rotation retains a version for its
+      outstanding bindings or invalidates them explicitly, and every
+      execution path refuses an unrecoverable binding before any effect.
+      A capture failure before the decision request is the Refusal
+      Record evaluation_context_unresolvable; after a permit, the error
+      is target_drift unless the context is established and an agent-
+      supplied parameter changed, with every observable digest pair
+      kept.  The context is recomputed under the descriptor the binding
+      committed, and a changed descriptor is refused on its own.
 
    *  Compound Actions: a compensation's parameters are those of the
       committed effect it offsets, established from that effect's
