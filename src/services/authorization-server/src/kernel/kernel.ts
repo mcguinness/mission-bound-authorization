@@ -5205,7 +5205,9 @@ export class MissionKernel {
         issuer: record.issuer,
         missionId: record.id,
         terminalState: record.state,
-        ...(record.termination ? { terminationReason: record.termination.reason } : {}),
+        ...(record.termination
+          ? { terminationReason: record.termination.reason, termination: record.termination }
+          : {}),
         finalVersion: record.version,
         transitionAt: persisted.committed_at,
         commitEventId: persisted.event_id,
