@@ -2024,7 +2024,19 @@ export class Pep {
    * longer resolves, so no parameters "actually attempted" can be
    * established.
    */
-  private freshEffectiveParams(effective: EffectiveParams): EffectiveParams | undefined {
+  private freshEffectiveParams(
+    effective: EffectiveParams,
+    compensates?: { opKey: string; evaluationId: string },
+  ): EffectiveParams | undefined {
+    // @spec runtime#compound-actions (#252): a compensation's parameters are
+    // the committed wire's reversal form, re-derived from that wire's ledger
+    // record, never the invoice as it reads now.
+    if (compensates) {
+      const wire = this.deps.committedEffects?.committedWire(compensates.opKey, compensates.evaluationId);
+      return wire
+        ? buildReversalParams({ action: effective.action, wire, resource: effective.resource, reverses: compensates.opKey })
+        : undefined;
+    }
     const invoice = this.deps.payments.getInvoice(effective.invoice_id);
     const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
     if (!invoice || !vendor) return undefined;
@@ -2055,6 +2067,7 @@ export class Pep {
       salts: this.contextSalts(),
       invoiceId: bound.effective.invoice_id,
       payments: this.deps.payments,
+      ...(this.deps.committedEffects ? { committedEffects: this.deps.committedEffects } : {}),
     });
     return fresh.ok ? fresh.digest : undefined;
   }
@@ -2096,7 +2109,7 @@ export class Pep {
     }
     const observed = this.observeEffectiveContextDigest(attempt);
     if (observed === undefined) return "target_drift";
-    const current = this.freshEffectiveParams(bound.effective);
+    const current = this.freshEffectiveParams(bound.effective, bound.held.compensates);
     if (current && deviatingParameterMembers(bound.decided as EffectiveParams, current).some((m) => !bound.declaredParameters.has(m))) {
       return "parameter_mismatch";
     }
@@ -2523,8 +2536,10 @@ export class Pep {
       // invoice resolves to. "An inability to capture context before
       // requesting a Decision produces a pre-decision Refusal Record":
       // `evaluation_context_unresolvable`, never a phaseless or contextless
-      // request to the PDP.
-      if (contextCovered) {
+      // request to the PDP. A compensate crossing's facts are the committed
+      // wire's, not the invoice's (#252): it captures below, once its link is
+      // established.
+      if (contextCovered && !mapping.compensates) {
         const captured = captureEvaluationContext({
           declarations: contextDeclarations,
           salts: this.contextSalts(),
@@ -2702,6 +2717,32 @@ export class Pep {
       });
       amount = effective.amount;
       resourceObj = { ...resourceObj, properties: { ...resourceObj.properties, vendor_id: effective.vendor_id } };
+      // @spec runtime#evaluation-context-binding, runtime#compound-actions
+      // (#773, #252): a covered compensate crossing captures its own context,
+      // and its facts describe the reversal it would perform: the committed
+      // wire's own ledger record through the link just established (the
+      // vendor, amount and currency, and payee that wire paid, and the
+      // operation key it committed under), never the invoice as it reads
+      // now. With the link established, a context this PEP still cannot
+      // capture is refused before the decision request, as any other.
+      if (contextCovered) {
+        const captured = captureEvaluationContext({
+          declarations: contextDeclarations,
+          salts: this.contextSalts(),
+          mission: { issuer: missionAnchor.issuer, id: missionAnchor.id },
+          operation: { action: mapping.action, phase: mapping.phase },
+          invoiceId: established.wire.invoiceId,
+          payments: this.deps.payments,
+          compensates: { opKey: established.link.opKey, evaluationId: established.link.evaluationId },
+          ...(this.deps.committedEffects ? { committedEffects: this.deps.committedEffects } : {}),
+        });
+        if (!captured.ok) {
+          return await this.refuse(boundary, token, "evaluation_context_unresolvable", mapping.action, view, undefined, {
+            resource: resourceObj,
+          });
+        }
+        contextCapture = { held: captured.held, declaredParameters: captured.declaredParameters };
+      }
     }
 
     // @spec runtime#evaluation-context-binding (#773): a covered crossing that
@@ -3485,6 +3526,16 @@ export class Pep {
   ): Promise<ReverifyOutcome> {
     const capability = await this.reverifyCapability(effective.capability_snapshot, token, effective.action, attempt);
     if (!capability.ok) return capability;
+    // @spec runtime#evaluation-context-binding, runtime-evidence#execution-evidence-object
+    // (#773): on a covered compensate crossing the context check runs in the
+    // same step and classifies first, as in {@link reverify}: a moved fact of
+    // the committed wire's record is `target_drift` though it also moves the
+    // reversal form's digest.
+    const context = this.evaluationContextFailure(attempt);
+    if (context !== undefined) {
+      const disposition = await this.suppressExecution(attempt, context);
+      return { ok: false, error: context, disposition };
+    }
     const freshDigest = this.observeReversalDigest(effective, link);
     if (freshDigest === undefined) {
       const disposition = await this.suppressExecution(attempt, "target_drift");
@@ -3494,7 +3545,12 @@ export class Pep {
       const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
       return { ok: false, error: "parameter_mismatch", disposition };
     }
-    return { ok: true, effectiveParameterDigest: freshDigest };
+    const contextDigest = this.observeEffectiveContextDigest(attempt);
+    return {
+      ok: true,
+      effectiveParameterDigest: freshDigest,
+      ...(contextDigest !== undefined ? { effectiveEvaluationContextDigest: contextDigest } : {}),
+    };
   }
 
   /** The reversal form's digest, re-derived now from the committed wire's ledger record (#252). */

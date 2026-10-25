@@ -7,10 +7,12 @@
  * the decision depended on." The bound object "contains that reference, the
  * qualified Mission identity, operation and resolved target identities, the
  * normalized facts, and a secret salt with its version", committed with the
- * canonical-object digest of {{parameter-digest}}. The facts come from the
- * payments store, this resource's authoritative interface, never from an
- * agent argument: the agent names the invoice, and every fact is read from
- * the invoice and vendor records that name resolves to.
+ * canonical-object digest of {{parameter-digest}}. The facts come from this
+ * resource's authoritative interfaces, never from an agent argument: the
+ * agent names the invoice, and every fact is read from the invoice and vendor
+ * records that name resolves to in the payments store, or, for a compensate
+ * crossing (#252), from the committed wire's own ledger record, the effect
+ * the reversal offsets, never from the invoice as it reads now.
  *
  * Salt posture: per-epoch secret material, with an explicit
  * restart-loses-bindings posture. Each version is fresh random material
@@ -33,6 +35,7 @@ import {
   type EvaluationContextGranularity,
   type JsonValue,
 } from "@mission/core";
+import type { CommittedEffectSource, CommittedWire } from "./connectors.js";
 import type { EffectiveParams } from "./effective-params.js";
 import type { Invoice, PaymentsStore, Vendor } from "./payments-store.js";
 
@@ -94,11 +97,25 @@ export class EvaluationContextSalts {
   }
 }
 
-/** The records a fact or target is resolved from: this resource's own store. */
-interface ResolutionSources {
-  invoice: Invoice;
-  vendor: Vendor;
-  payments: PaymentsStore;
+/**
+ * The records a fact or target is resolved from: the invoice and vendor in
+ * this resource's store, or, for a compensate crossing (#252), the committed
+ * wire's ledger record and the operation key it committed under. A crossing
+ * reads exactly one of the two, so a fact whose resolver reads the other does
+ * not resolve.
+ */
+type ResolutionSources =
+  | { kind: "store"; invoice: Invoice; vendor: Vendor; payments: PaymentsStore }
+  | { kind: "committed_wire"; wire: CommittedWire; reverses: string };
+
+type SourceKind = ResolutionSources["kind"];
+
+interface FactResolver<K extends SourceKind> {
+  /** The records this resolver reads. */
+  source: K;
+  granularity: EvaluationContextGranularity;
+  normalization: string;
+  resolve: (s: Extract<ResolutionSources, { kind: K }>) => JsonValue | undefined;
 }
 
 /**
@@ -108,32 +125,27 @@ interface ResolutionSources {
  * normalization differs from these does not resolve, so a descriptor this
  * resource cannot honor is never captured under.
  */
-export const PAYMENTS_FACT_RESOLVERS: Readonly<
-  Record<
-    string,
-    {
-      granularity: EvaluationContextGranularity;
-      normalization: string;
-      resolve: (s: ResolutionSources) => JsonValue | undefined;
-    }
-  >
-> = Object.freeze({
+export const PAYMENTS_FACT_RESOLVERS: Readonly<Record<string, FactResolver<"store"> | FactResolver<"committed_wire">>> = Object.freeze({
   "payments-store:invoice.version": {
+    source: "store",
     granularity: "revision",
     normalization: "integer",
     resolve: ({ invoice }) => (Number.isSafeInteger(invoice.version) ? invoice.version : undefined),
   },
   "payments-store:invoice.vendor_id": {
+    source: "store",
     granularity: "effective_values",
     normalization: "string",
     resolve: ({ invoice }) => (typeof invoice.vendor_id === "string" && invoice.vendor_id.length > 0 ? invoice.vendor_id : undefined),
   },
   "payments-store:vendor.version": {
+    source: "store",
     granularity: "revision",
     normalization: "integer",
     resolve: ({ vendor }) => (Number.isSafeInteger(vendor.version) ? vendor.version : undefined),
   },
   "payments-store:invoice.amount": {
+    source: "store",
     granularity: "effective_values",
     normalization: "decimal-string-and-currency",
     resolve: ({ invoice }) =>
@@ -142,25 +154,69 @@ export const PAYMENTS_FACT_RESOLVERS: Readonly<
         : undefined,
   },
   "payments-store:invoice.payee_account": {
+    source: "store",
     granularity: "effective_values",
     normalization: "string",
     resolve: ({ invoice }) =>
       typeof invoice.payee_account === "string" && invoice.payee_account.length > 0 ? invoice.payee_account : undefined,
   },
   "payments-store:vendor.remittance_recipients": {
+    source: "store",
     granularity: "effective_values",
     normalization: "sorted-distinct-strings",
     // An enumerated target set: every final recipient, sorted and distinct,
     // the routed set or the vendor's default address alike.
     resolve: ({ vendor, payments }) => payments.remittanceRecipients(vendor.id)?.recipients,
   },
+  // @spec runtime#compound-actions (#252): a compensate crossing's facts, read
+  // from the committed wire's own ledger record: the vendor it paid, its
+  // amount and currency, its payee, and the operation key it committed under.
+  "ledger:wire.vendor_id": {
+    source: "committed_wire",
+    granularity: "effective_values",
+    normalization: "string",
+    resolve: ({ wire }) => (wire.vendorId.length > 0 ? wire.vendorId : undefined),
+  },
+  "ledger:wire.amount": {
+    source: "committed_wire",
+    granularity: "effective_values",
+    normalization: "decimal-string-and-currency",
+    resolve: ({ wire }) => ({ amount: wire.amount, currency: wire.currency }),
+  },
+  "ledger:wire.payee_account": {
+    source: "committed_wire",
+    granularity: "effective_values",
+    normalization: "string",
+    resolve: ({ wire }) => (wire.payeeAccount.length > 0 ? wire.payeeAccount : undefined),
+  },
+  "ledger:wire.op_key": {
+    source: "committed_wire",
+    granularity: "effective_values",
+    normalization: "string",
+    resolve: ({ reverses }) => reverses,
+  },
 });
 
-/** The target identities this resource resolves, by declared target type. */
+/**
+ * The target identities this resource resolves, by declared target type: from
+ * the store records, or from the committed wire's record for a compensate
+ * crossing (the invoice and vendor that wire paid).
+ */
 const TARGET_RESOLVERS: Readonly<Record<string, (s: ResolutionSources) => string>> = Object.freeze({
-  invoice: ({ invoice }) => invoice.id,
-  vendor: ({ vendor }) => vendor.id,
+  invoice: (s) => (s.kind === "store" ? s.invoice.id : s.wire.invoiceId),
+  vendor: (s) => (s.kind === "store" ? s.vendor.id : s.wire.vendorId),
 });
+
+/**
+ * @spec runtime#compound-actions (#252): the committed effect a compensate
+ * crossing offsets, as the PEP established it from verified evidence: the
+ * operation key it committed under and its Decision's `evaluation_id`, which
+ * together name its ledger record.
+ */
+export interface CompensatedWireRef {
+  opKey: string;
+  evaluationId: string;
+}
 
 /** The crossing a context is captured for: an action, and its phase where it has one. */
 export interface ContextOperation {
@@ -180,6 +236,30 @@ export interface HeldEvaluationContext {
   saltVersion: string;
   mission: { issuer: string; id: string };
   operation: ContextOperation;
+  /** For a compensate crossing: the committed wire its facts are read from (#252). */
+  compensates?: CompensatedWireRef;
+}
+
+/**
+ * Where a context's facts are read. The invoice the request names, in the
+ * payments store; or, with `compensates`, the committed wire's ledger record
+ * through `committedEffects`, and nothing from the store.
+ */
+interface ContextSubject {
+  invoiceId: string;
+  payments: PaymentsStore;
+  compensates?: CompensatedWireRef;
+  committedEffects?: CommittedEffectSource;
+}
+
+function resolutionSources(subject: ContextSubject): ResolutionSources | undefined {
+  if (subject.compensates) {
+    const wire = subject.committedEffects?.committedWire(subject.compensates.opKey, subject.compensates.evaluationId);
+    return wire ? { kind: "committed_wire", wire, reverses: subject.compensates.opKey } : undefined;
+  }
+  const invoice = subject.payments.getInvoice(subject.invoiceId);
+  const vendor = invoice ? subject.payments.getVendor(invoice.vendor_id) : undefined;
+  return invoice && vendor ? { kind: "store", invoice, vendor, payments: subject.payments } : undefined;
 }
 
 /** Why a capture or recomputation could not establish the context. */
@@ -195,25 +275,24 @@ export type ContextCapture =
   | { ok: false; reason: ContextUnavailable };
 
 /**
- * Resolve the declared facts and targets for one invoice-scoped operation
- * from the store, under `descriptor`, and commit them with the reference,
- * the Mission, the operation and the salt. Every value comes from the store
- * records `invoiceId` resolves to; nothing comes from an agent argument.
+ * Resolve the declared facts and targets for one operation under
+ * `descriptor`, and commit them with the reference, the Mission, the
+ * operation and the salt. Every value comes from the records the subject
+ * resolves to (the store's, or a compensate crossing's committed wire);
+ * nothing comes from an agent argument.
  */
-function commit(input: {
-  descriptor: EvaluationContextDescriptor;
-  reference: EvaluationContextBindingRef;
-  mission: { issuer: string; id: string };
-  operation: ContextOperation;
-  invoiceId: string;
-  payments: PaymentsStore;
-  salt: string;
-  saltVersion: string;
-}): { ok: true; digest: string } | { ok: false; reason: ContextUnavailable } {
-  const invoice = input.payments.getInvoice(input.invoiceId);
-  const vendor = invoice ? input.payments.getVendor(invoice.vendor_id) : undefined;
-  if (!invoice || !vendor) return { ok: false, reason: "target_unresolvable" };
-  const sources: ResolutionSources = { invoice, vendor, payments: input.payments };
+function commit(
+  input: ContextSubject & {
+    descriptor: EvaluationContextDescriptor;
+    reference: EvaluationContextBindingRef;
+    mission: { issuer: string; id: string };
+    operation: ContextOperation;
+    salt: string;
+    saltVersion: string;
+  },
+): { ok: true; digest: string } | { ok: false; reason: ContextUnavailable } {
+  const sources = resolutionSources(input);
+  if (!sources) return { ok: false, reason: "target_unresolvable" };
   const targets: Array<{ type: string; id: string }> = [];
   for (const type of input.descriptor.targets) {
     const resolve = TARGET_RESOLVERS[type];
@@ -223,10 +302,15 @@ function commit(input: {
   const facts: Record<string, JsonValue> = {};
   for (const fact of input.descriptor.facts) {
     const resolver = PAYMENTS_FACT_RESOLVERS[fact.resolver];
-    if (!resolver || resolver.granularity !== fact.granularity || resolver.normalization !== fact.normalization) {
+    if (
+      !resolver ||
+      resolver.source !== sources.kind ||
+      resolver.granularity !== fact.granularity ||
+      resolver.normalization !== fact.normalization
+    ) {
       return { ok: false, reason: "fact_unresolvable" };
     }
-    const value = resolver.resolve(sources);
+    const value = (resolver.resolve as (s: ResolutionSources) => JsonValue | undefined)(sources);
     if (value === undefined) return { ok: false, reason: "fact_unresolvable" };
     facts[fact.name] = value;
   }
@@ -250,14 +334,14 @@ function commit(input: {
  * the caller to skip; any other failure means the context cannot be captured,
  * which refuses before the decision request.
  */
-export function captureEvaluationContext(input: {
-  declarations: EvaluationContextBindingDeclarations;
-  salts: EvaluationContextSalts;
-  mission: { issuer: string; id: string };
-  operation: ContextOperation;
-  invoiceId: string;
-  payments: PaymentsStore;
-}): ContextCapture {
+export function captureEvaluationContext(
+  input: ContextSubject & {
+    declarations: EvaluationContextBindingDeclarations;
+    salts: EvaluationContextSalts;
+    mission: { issuer: string; id: string };
+    operation: ContextOperation;
+  },
+): ContextCapture {
   const entry = input.declarations.operation(input.operation.action, input.operation.phase);
   if (!entry) return { ok: false, reason: "not_covered" };
   const resolved = input.declarations.descriptor(entry.descriptor);
@@ -272,6 +356,8 @@ export function captureEvaluationContext(input: {
     operation: input.operation,
     invoiceId: input.invoiceId,
     payments: input.payments,
+    ...(input.compensates ? { compensates: input.compensates } : {}),
+    ...(input.committedEffects ? { committedEffects: input.committedEffects } : {}),
     salt,
     saltVersion,
   });
@@ -285,6 +371,7 @@ export function captureEvaluationContext(input: {
       saltVersion,
       mission: { issuer: input.mission.issuer, id: input.mission.id },
       operation: { ...input.operation },
+      ...(input.compensates ? { compensates: { ...input.compensates } } : {}),
     },
     declaredParameters: declaredParameterMembers(resolved.document),
   };
@@ -311,6 +398,8 @@ export function recomputeEvaluationContext(input: {
   salts: EvaluationContextSalts;
   invoiceId: string;
   payments: PaymentsStore;
+  /** The committed-effect records a compensate crossing's binding re-reads (#252). */
+  committedEffects?: CommittedEffectSource;
 }): { ok: true; digest: string } | { ok: false; reason: ContextUnavailable } {
   const resolved = input.declarations.descriptor(input.held.reference);
   if (!resolved.ok) return { ok: false, reason: "descriptor_unrecoverable" };
@@ -325,6 +414,10 @@ export function recomputeEvaluationContext(input: {
     operation: input.held.operation,
     invoiceId: input.invoiceId,
     payments: input.payments,
+    // A compensate crossing's binding re-reads the committed wire it was
+    // captured from; a record that no longer answers leaves it unestablished.
+    ...(input.held.compensates ? { compensates: input.held.compensates } : {}),
+    ...(input.committedEffects ? { committedEffects: input.committedEffects } : {}),
     salt,
     saltVersion: input.held.saltVersion,
   });
