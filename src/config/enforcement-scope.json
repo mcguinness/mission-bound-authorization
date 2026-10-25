@@ -98,7 +98,7 @@
           "action_class": "irreversible_action",
           "phases": ["compensate"],
           "property": "verified",
-          "descriptor": {"id": "https://payments.example/evaluation-context/payment-reverse", "version": "2026-10-25", "digest": "sha-256:59hVD3hXNRsM26mC0Ex1yxKnHEbL7RKCO_84vndTg5U"}
+          "descriptor": {"id": "https://payments.example/evaluation-context/payment-reverse", "version": "2026-10-25", "digest": "sha-256:_Lrssy2jXGLmYZEqNl5UIiWQ5WTBvUMt9TN_wFGn-8E"}
         }
       ],
       "descriptors": [
@@ -140,7 +140,7 @@
         {
           "id": "https://payments.example/evaluation-context/payment-reverse",
           "version": "2026-10-25",
-          "digest": "sha-256:59hVD3hXNRsM26mC0Ex1yxKnHEbL7RKCO_84vndTg5U",
+          "digest": "sha-256:_Lrssy2jXGLmYZEqNl5UIiWQ5WTBvUMt9TN_wFGn-8E",
           "document": {
             "id": "https://payments.example/evaluation-context/payment-reverse",
             "version": "2026-10-25",
@@ -149,7 +149,10 @@
               {"name": "vendor_id", "resolver": "ledger:wire.vendor_id", "granularity": "effective_values", "normalization": "string", "parameter": "vendor_id"},
               {"name": "amount", "resolver": "ledger:wire.amount", "granularity": "effective_values", "normalization": "decimal-string-and-currency", "parameter": "amount"},
               {"name": "payee_account", "resolver": "ledger:wire.payee_account", "granularity": "effective_values", "normalization": "string", "parameter": "payee_account"},
-              {"name": "reversed_operation", "resolver": "ledger:wire.op_key", "granularity": "effective_values", "normalization": "string", "parameter": "reverses"}
+              {"name": "reversed_operation", "resolver": "ledger:wire.op_key", "granularity": "effective_values", "normalization": "string", "parameter": "reverses"},
+              {"name": "invoice_issued_at", "resolver": "payments-store:invoice.issued_at", "granularity": "effective_values", "normalization": "string-or-null"},
+              {"name": "invoice_classification", "resolver": "payments-store:invoice.classification", "granularity": "effective_values", "normalization": "string-or-null"},
+              {"name": "vendor_tenant", "resolver": "payments-store:vendor.tenant", "granularity": "effective_values", "normalization": "string-or-null"}
             ]
           }
         }

@@ -10,9 +10,11 @@
  * canonical-object digest of {{parameter-digest}}. The facts come from this
  * resource's authoritative interfaces, never from an agent argument: the
  * agent names the invoice, and every fact is read from the invoice and vendor
- * records that name resolves to in the payments store, or, for a compensate
- * crossing (#252), from the committed wire's own ledger record, the effect
- * the reversal offsets, never from the invoice as it reads now.
+ * records that name resolves to in the payments store. A compensate crossing
+ * (#252) reads its effect facts from the committed wire's own ledger record,
+ * the effect the reversal offsets, never from the invoice as it reads now,
+ * and reads from the store only the live resource facts its decision also
+ * evaluates (the invoice's issuance and classification, its vendor's tenant).
  *
  * Salt posture: per-epoch secret material, with an explicit
  * restart-loses-bindings posture. Each version is fresh random material
@@ -97,26 +99,47 @@ export class EvaluationContextSalts {
   }
 }
 
+/** The store records a crossing's invoice names: the invoice, and the vendor it names now. */
+interface StoreRecords {
+  invoice: Invoice;
+  vendor: Vendor;
+  payments: PaymentsStore;
+}
+
 /**
- * The records a fact or target is resolved from: the invoice and vendor in
- * this resource's store, or, for a compensate crossing (#252), the committed
- * wire's ledger record and the operation key it committed under. A crossing
- * reads exactly one of the two, so a fact whose resolver reads the other does
- * not resolve.
+ * The records a fact or target is resolved from. An ordinary crossing reads
+ * the invoice and vendor in this resource's store. A compensate crossing
+ * (#252) reads the committed wire's ledger record and the operation key it
+ * committed under, and beside them the store records of the invoice that
+ * wire paid, for the live facts its decision also evaluates.
  */
 type ResolutionSources =
-  | { kind: "store"; invoice: Invoice; vendor: Vendor; payments: PaymentsStore }
-  | { kind: "committed_wire"; wire: CommittedWire; reverses: string };
+  | ({ kind: "store" } & StoreRecords)
+  | ({ kind: "committed_wire"; wire: CommittedWire; reverses: string } & StoreRecords);
 
 type SourceKind = ResolutionSources["kind"];
 
-interface FactResolver<K extends SourceKind> {
-  /** The records this resolver reads. */
-  source: K;
+/**
+ * One authoritative resolver. `sources` names the crossings it serves, so
+ * the restriction is per fact: a compensate crossing reads its effect facts
+ * (vendor, amount, payee, reversed operation) only from the wire record,
+ * since no store resolver of those values serves it, and reads from the store
+ * only the live resource facts its decision evaluates.
+ */
+interface FactResolver {
+  sources: readonly SourceKind[];
   granularity: EvaluationContextGranularity;
   normalization: string;
-  resolve: (s: Extract<ResolutionSources, { kind: K }>) => JsonValue | undefined;
+  resolve: (s: ResolutionSources) => JsonValue | undefined;
 }
+
+const STORE_ONLY: readonly SourceKind[] = Object.freeze(["store"]);
+const WIRE_ONLY: readonly SourceKind[] = Object.freeze(["committed_wire"]);
+/** A live resource fact a compensating decision evaluates as well (#252). */
+const STORE_AND_COMPENSATE: readonly SourceKind[] = Object.freeze(["store", "committed_wire"]);
+
+/** A string fact the record may omit: its value, or `null` when it carries none. */
+const stringOrNull = (v: unknown): JsonValue => (typeof v === "string" ? v : null);
 
 /**
  * The authoritative resolvers this resource implements, keyed by the
@@ -125,27 +148,27 @@ interface FactResolver<K extends SourceKind> {
  * normalization differs from these does not resolve, so a descriptor this
  * resource cannot honor is never captured under.
  */
-export const PAYMENTS_FACT_RESOLVERS: Readonly<Record<string, FactResolver<"store"> | FactResolver<"committed_wire">>> = Object.freeze({
+export const PAYMENTS_FACT_RESOLVERS: Readonly<Record<string, FactResolver>> = Object.freeze({
   "payments-store:invoice.version": {
-    source: "store",
+    sources: STORE_ONLY,
     granularity: "revision",
     normalization: "integer",
     resolve: ({ invoice }) => (Number.isSafeInteger(invoice.version) ? invoice.version : undefined),
   },
   "payments-store:invoice.vendor_id": {
-    source: "store",
+    sources: STORE_ONLY,
     granularity: "effective_values",
     normalization: "string",
     resolve: ({ invoice }) => (typeof invoice.vendor_id === "string" && invoice.vendor_id.length > 0 ? invoice.vendor_id : undefined),
   },
   "payments-store:vendor.version": {
-    source: "store",
+    sources: STORE_ONLY,
     granularity: "revision",
     normalization: "integer",
     resolve: ({ vendor }) => (Number.isSafeInteger(vendor.version) ? vendor.version : undefined),
   },
   "payments-store:invoice.amount": {
-    source: "store",
+    sources: STORE_ONLY,
     granularity: "effective_values",
     normalization: "decimal-string-and-currency",
     resolve: ({ invoice }) =>
@@ -154,46 +177,70 @@ export const PAYMENTS_FACT_RESOLVERS: Readonly<Record<string, FactResolver<"stor
         : undefined,
   },
   "payments-store:invoice.payee_account": {
-    source: "store",
+    sources: STORE_ONLY,
     granularity: "effective_values",
     normalization: "string",
     resolve: ({ invoice }) =>
       typeof invoice.payee_account === "string" && invoice.payee_account.length > 0 ? invoice.payee_account : undefined,
   },
   "payments-store:vendor.remittance_recipients": {
-    source: "store",
+    sources: STORE_ONLY,
     granularity: "effective_values",
     normalization: "sorted-distinct-strings",
     // An enumerated target set: every final recipient, sorted and distinct,
     // the routed set or the vendor's default address alike.
     resolve: ({ vendor, payments }) => payments.remittanceRecipients(vendor.id)?.recipients,
   },
+  // @spec resource-access#initial-common-constraints, runtime#compound-actions
+  // (#1266, #252): the live resource facts the implemented Common Constraints
+  // read (`resource_issued_after` and `_before`, `data_classification`,
+  // `tenant`), exactly as the decision request carries them: the value, or
+  // `null` when the record names none. On a compensate crossing they are the
+  // only store facts, read for the invoice the committed wire paid.
+  "payments-store:invoice.issued_at": {
+    sources: STORE_AND_COMPENSATE,
+    granularity: "effective_values",
+    normalization: "string-or-null",
+    resolve: ({ invoice }) => stringOrNull(invoice.issued_at),
+  },
+  "payments-store:invoice.classification": {
+    sources: STORE_AND_COMPENSATE,
+    granularity: "effective_values",
+    normalization: "string-or-null",
+    resolve: ({ invoice }) => stringOrNull(invoice.classification),
+  },
+  "payments-store:vendor.tenant": {
+    sources: STORE_AND_COMPENSATE,
+    granularity: "effective_values",
+    normalization: "string-or-null",
+    resolve: ({ vendor }) => stringOrNull(vendor.tenant),
+  },
   // @spec runtime#compound-actions (#252): a compensate crossing's facts, read
   // from the committed wire's own ledger record: the vendor it paid, its
   // amount and currency, its payee, and the operation key it committed under.
   "ledger:wire.vendor_id": {
-    source: "committed_wire",
+    sources: WIRE_ONLY,
     granularity: "effective_values",
     normalization: "string",
-    resolve: ({ wire }) => (wire.vendorId.length > 0 ? wire.vendorId : undefined),
+    resolve: (s) => (s.kind === "committed_wire" && s.wire.vendorId.length > 0 ? s.wire.vendorId : undefined),
   },
   "ledger:wire.amount": {
-    source: "committed_wire",
+    sources: WIRE_ONLY,
     granularity: "effective_values",
     normalization: "decimal-string-and-currency",
-    resolve: ({ wire }) => ({ amount: wire.amount, currency: wire.currency }),
+    resolve: (s) => (s.kind === "committed_wire" ? { amount: s.wire.amount, currency: s.wire.currency } : undefined),
   },
   "ledger:wire.payee_account": {
-    source: "committed_wire",
+    sources: WIRE_ONLY,
     granularity: "effective_values",
     normalization: "string",
-    resolve: ({ wire }) => (wire.payeeAccount.length > 0 ? wire.payeeAccount : undefined),
+    resolve: (s) => (s.kind === "committed_wire" && s.wire.payeeAccount.length > 0 ? s.wire.payeeAccount : undefined),
   },
   "ledger:wire.op_key": {
-    source: "committed_wire",
+    sources: WIRE_ONLY,
     granularity: "effective_values",
     normalization: "string",
-    resolve: ({ reverses }) => reverses,
+    resolve: (s) => (s.kind === "committed_wire" ? s.reverses : undefined),
   },
 });
 
@@ -252,14 +299,22 @@ interface ContextSubject {
   committedEffects?: CommittedEffectSource;
 }
 
+function storeRecords(payments: PaymentsStore, invoiceId: string): StoreRecords | undefined {
+  const invoice = payments.getInvoice(invoiceId);
+  const vendor = invoice ? payments.getVendor(invoice.vendor_id) : undefined;
+  return invoice && vendor ? { invoice, vendor, payments } : undefined;
+}
+
 function resolutionSources(subject: ContextSubject): ResolutionSources | undefined {
   if (subject.compensates) {
     const wire = subject.committedEffects?.committedWire(subject.compensates.opKey, subject.compensates.evaluationId);
-    return wire ? { kind: "committed_wire", wire, reverses: subject.compensates.opKey } : undefined;
+    // The live facts are the invoice the committed wire paid, and the vendor
+    // that invoice names now, as the compensating decision reads them.
+    const records = wire ? storeRecords(subject.payments, wire.invoiceId) : undefined;
+    return wire && records ? { kind: "committed_wire", wire, reverses: subject.compensates.opKey, ...records } : undefined;
   }
-  const invoice = subject.payments.getInvoice(subject.invoiceId);
-  const vendor = invoice ? subject.payments.getVendor(invoice.vendor_id) : undefined;
-  return invoice && vendor ? { kind: "store", invoice, vendor, payments: subject.payments } : undefined;
+  const records = storeRecords(subject.payments, subject.invoiceId);
+  return records ? { kind: "store", ...records } : undefined;
 }
 
 /** Why a capture or recomputation could not establish the context. */
@@ -304,13 +359,13 @@ function commit(
     const resolver = PAYMENTS_FACT_RESOLVERS[fact.resolver];
     if (
       !resolver ||
-      resolver.source !== sources.kind ||
+      !resolver.sources.includes(sources.kind) ||
       resolver.granularity !== fact.granularity ||
       resolver.normalization !== fact.normalization
     ) {
       return { ok: false, reason: "fact_unresolvable" };
     }
-    const value = (resolver.resolve as (s: ResolutionSources) => JsonValue | undefined)(sources);
+    const value = resolver.resolve(sources);
     if (value === undefined) return { ok: false, reason: "fact_unresolvable" };
     facts[fact.name] = value;
   }
