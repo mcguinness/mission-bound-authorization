@@ -1131,3 +1131,22 @@ describe("the release fence on the device_code grant (@spec mission#issuance-gat
     expectFenceRefusal(res, "invalid_grant");
   });
 });
+
+describe("the first device_code redemption is a counted derivation (@spec device-authorization#issuance, derivation-limits#counting, #1647)", () => {
+  it("counts the first redemption once against the Mission; the decision, a pending poll and a refused repeat count nothing", async () => {
+    const s = await pendingSession();
+    const pending = await poll(PUBLIC, s.deviceCode, await newKeys());
+    expect(pending.body.error).toBe("authorization_pending");
+    expect((await decide(s.uid, s.headers, CONFIRMED)).status).toBe(200);
+    const id = missionOf(s.uid)?.id as string;
+    // The decision creates the Mission; it is not itself a derivation.
+    expect(as.kernel.get(id)?.derivation_count).toBe(0);
+    const keys = await newKeys();
+    const first = await poll(PUBLIC, s.deviceCode, keys);
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    expect(as.kernel.get(id)?.derivation_count).toBe(1);
+    const repeat = await poll(PUBLIC, s.deviceCode, keys);
+    expect(repeat.body.error).toBe("invalid_grant");
+    expect(as.kernel.get(id)?.derivation_count).toBe(1);
+  });
+});
