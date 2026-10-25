@@ -2148,6 +2148,11 @@ governance evaluation to the Mission's approval event. It does not,
 by itself, establish a separate business decision for each subsequent
 action.
 
+Authenticating approval evidence does not, by itself, establish that
+conditions governing later reliance remain satisfied. Whether
+subsequent changes to an Approver's role, a delegation, or governing
+policy affect an existing Mission depends on the deployment's policy.
+
 # Mission Lifecycle {#lifecycle}
 
 A Mission is in one of two states:
@@ -7467,6 +7472,11 @@ Cross-Domain:
   a grant binding resolves the Mission for the operations using it,
   and a profile-defined grant can instead resolve it through its
   authenticated `mission` reference (#1631, D751).
+- Editorial, no requirement change: Single Accountable Approver states
+  that authenticating approval evidence does not establish that
+  conditions governing later reliance remain satisfied, and that the
+  effect of later changes to an Approver's role, a delegation, or
+  governing policy on an existing Mission is deployment policy (#830).
 
 -01
 
