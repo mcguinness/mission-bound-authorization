@@ -8401,7 +8401,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a failed or refused derivation leaves the derivation count unchanged",
-    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); and a failure AFTER admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back. NOT covered, because the reference does not meet the clause there (#914 ruling 1; #250): the provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint) commits the count before signing with no rollback, reservation or acceptance callback, so a failure after the count stays counted (documented by derivation-counting.test.ts > residual: the provider access-token hook counts before signing ...); and the ID-JAG continuation reserves before minting, so a grant that fails after admission (a state change between the exchange's audience-scoped authority check, which refuses before admission and counts nothing, and the gate) stays counted under an unreleased jti-keyed reservation until an authoritative non-acceptance returns it (continuation-grant.test.ts > residual: a continuation grant that fails after admission ..., driven at issueCrossDomainGrant). Partial until those paths stop counting a failed derivation"
+    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200; the ID-JAG continuation settles its own fresh reservation as not accepted. NOT covered: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted (#250 step 3); a replayed reservation that fails again stays counted, since an earlier attempt's artifact may have been accepted; and a Dispatch Handoff redemption that fails after its reservation keeps it for the retry that replays it. Partial on those."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -8429,9 +8429,33 @@
      "name": "one counting and settlement path (@spec mission#delegation, derivation-limits#counted-operations) > an accounting record that cannot be written refuses, with nothing counted and no token",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > the provider access-token hook: a code exchange that fails after the count, before the token leaves, returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > the delegation handle exchange: a save that fails after the count, before the handle leaves, returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "one counting and settlement path (@spec mission#delegation, derivation-limits#counted-operations) > a save refused after the count fails the request, which returns the count, with no token and no record (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "a continuation ID-JAG that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a continuation grant that fails after admission settles its own reservation as not accepted: the count returns (#935, D772)",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869: a delegated exchange whose accounting cannot be recorded counts nothing; a save refused after the count still spends it (the uncoupled counter)."
+   "notes": "#869: a delegated exchange whose accounting cannot be recorded counts nothing; a save refused after the count is settled (#935, D772)."
   },
   {
    "id": "derivation-limits.counting.async-family-refreshes-uncounted",
