@@ -827,6 +827,24 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     ]);
   });
 
+  it("refuses at use a compensation whose committed wire record no longer matches the form its permit bound, with zero connector effects", async () => {
+    const h = harness();
+    expect((await cross(h, crossings[2])).ok).toBe(true);
+    // The wire's record changes after the Decision and before the effect:
+    // the form re-derived from it no longer has the digest the permit bound.
+    const refused = await h.server.callTransactionTool(
+      "reverse_wire_transfer",
+      { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+      TOKEN,
+      () => {
+        h.connectors.db.prepare("UPDATE ledger SET amount = '99.00' WHERE invoice_id = 'inv-1'").run();
+      },
+    );
+    expect(refused).toMatchObject({ ok: false, refusal_reason: "parameter_mismatch" });
+    expect(executions(h).filter((e) => e.content.outcome === "suppressed").map((e) => e.content.error)).toEqual(["parameter_mismatch"]);
+    expect(h.connectors.reversalEntries("msn_252")).toHaveLength(0);
+  });
+
   it("the PDP refuses a compensate request without compensates_evaluation_id, or with a malformed one, before evaluation", async () => {
     // A requester that drops or garbles the link: the PDP never evaluates the
     // request, so no compensate Decision exists without its required link.
