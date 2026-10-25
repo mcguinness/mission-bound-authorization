@@ -675,7 +675,9 @@ the store.
   `POST /mission/lifecycle` in `makeRoutes`: a form body carrying
   `mission_id`, the caller authenticated by private-key JWT and authorized by
   the lifecycle grant the deployment binds to that client
-  (`lifecycleClients`, `lifecycleClientGrants`). The dev-only, unadvertised
+  (`lifecycleClients`, `lifecycleClientGrants`). A client's `disclose` list
+  binds the `provenance` privilege, without which its Mission Status
+  Responses omit `authority_hash` (#1682). The dev-only, unadvertised
   `POST /missions/{id}/lifecycle` route, authenticated by a service token,
   runs the same engine. `kernel.materializeExpiry` commits any expiry first,
   in its own transaction. One `withTransaction(kernel.db, ...)` then commits

@@ -323,7 +323,9 @@ describe("authority_hash immutability + projections", () => {
     expect(fresh.authority_hash).toBe(hashBefore); // immutable approval anchor
 
     // The contained entry is omitted from the audience-scoped Status surface.
-    const jwsFile = await kernel.signedStatus(m.id, { audience: RES_FILE, requester: "svc:test" });
+    // The caller holds the provenance disclosure privilege, so the response
+    // carries `authority_hash` (#1682).
+    const jwsFile = await kernel.signedStatus(m.id, { audience: RES_FILE, requester: "svc:test", discloseProvenance: true });
     const { payload: pFile } = await jwtVerify(jwsFile, statusKeys.publicKey, {
       issuer: ISS,
       audience: RES_FILE,
