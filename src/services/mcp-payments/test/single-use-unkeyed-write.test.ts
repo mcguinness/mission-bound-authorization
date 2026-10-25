@@ -192,6 +192,7 @@ describe("single-use permits on the unkeyed write path (@spec runtime#single-use
     const again = await hold(h);
     expect(again).toEqual({ ok: false, refusal_reason: "permit_consumed" });
     expect(h.executions().map((e) => [e.content.outcome, e.content.error, e.content.evaluation_id, e.content.emitter.role])).toEqual([
+      ["completed", undefined, evaluationId, "pep"],
       ["suppressed", "permit_consumed", evaluationId, "pep"],
     ]);
     expect(h.store?.consumedPermits().map((c) => c.evaluationId)).toEqual([evaluationId]);
@@ -229,7 +230,11 @@ describe("single-use permits on the unkeyed write path (@spec runtime#single-use
     expect(arrived).toBe(2);
     expect(results.filter((r) => r.ok)).toEqual([{ ok: true, result: HELD }]);
     expect(results.filter((r) => !r.ok)).toEqual([{ ok: false, refusal_reason: "permit_consumed" }]);
-    expect(h.executions().map((e) => e.content.error)).toEqual(["permit_expired", "permit_consumed"]);
+    expect(h.executions().map((e) => `${e.content.outcome}:${e.content.error ?? ""}`).sort()).toEqual([
+      "completed:",
+      "suppressed:permit_consumed",
+      "suppressed:permit_expired",
+    ]);
     expect(h.store?.consumedPermits()).toHaveLength(1);
     h.store?.close();
   });

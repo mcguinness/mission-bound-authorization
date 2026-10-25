@@ -259,6 +259,7 @@ remain #250's restore and fencing step.
 |---|---|---|
 | Mission records, lifecycle events and deliveries, tombstones, creation idempotency, lifecycle responses | Kernel database | Durable on the file-backed kernel |
 | Continuation anchors and handles, delegation families | Kernel database | Durable on the file-backed kernel; a lineage terminated before the restart stays terminal |
+| Join evidence events, one per Join Assertion minted (#1560) | Kernel database, written before the assertion is returned | Durable on the file-backed kernel; each is kept until the `retain_until` written when it was recorded (its Mission's expiry plus the declared audit retention: `auditRetentionSeconds`, else 7776000 seconds), which a reboot never recomputes, and boot recovery deletes only events past it |
 | Provider Grants, refresh tokens, authorization codes, sessions, interactions | oidc-provider's memory adapter (no adapter is configured) | Lost, and not reconstructible from the kernel: refresh continuity is not established. A recovered family whose grant is gone is refused `invalid_grant` |
 | `missions.grant_id` (the approval binding) | Kernel database | Durable, but names a provider Grant that is gone |
 | Mission-bound grant index | Its own in-memory database, deliberately off the kernel's | Lost with the grants it classifies |

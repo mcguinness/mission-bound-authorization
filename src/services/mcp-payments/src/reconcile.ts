@@ -8,6 +8,12 @@
  * without evidence, or evidence of an effect that never committed). A
  * `failed` or `suppressed` record asserts no effect, so it has no ledger
  * counterpart and is never an anomaly (#1103).
+ *
+ * Only the executor's `completed` records assert a connector effect: the
+ * transaction-assurance path records its completed disposition under the
+ * `executor` role at the connector commit point. A completed read or
+ * reversible write is recorded by the PEP under the `pep` role (#1640); its
+ * effect is local, with no connector counterpart, so it is never joined here.
  */
 
 import type { Connectors } from "./connectors.js";
@@ -25,7 +31,9 @@ export interface ReconciliationReport {
 export function reconcile(missionId: string, evidence: EvidenceStore, connectors: Connectors): ReconciliationReport {
   const execEvidence = evidence
     .forMission(missionId)
-    .flatMap((e) => (e.kind === "execution" && e.content.outcome === "completed" ? [e] : []));
+    .flatMap((e) =>
+      e.kind === "execution" && e.content.outcome === "completed" && e.content.emitter.role === "executor" ? [e] : [],
+    );
   const ledger = connectors.committedEffects(missionId);
 
   const ledgerByKey = new Map(ledger.map((l) => [l.opKey, l]));
