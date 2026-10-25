@@ -559,7 +559,8 @@ Table of Contents
       primary rendering.  A deployment MAY offer one as a detail layer
       (Section 4.4).
 
-   *  A Common Constraint ([I-D.draft-mcguinness-oauth-mission]) has
+   *  A Common Constraint
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]) has
       registered semantics, and its rendered form MUST state them.  A
       constraint key the template cannot translate MUST be rendered and
       identified as untranslated, never omitted: an Approver shown an
@@ -1545,6 +1546,12 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
