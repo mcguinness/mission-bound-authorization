@@ -670,9 +670,33 @@ describe("deferred Mission approval wire path (@spec deferred-approval#deferred-
     if (done?.outcome !== "approved") throw new Error(String(done?.outcome));
     as.kernel.transition(done.mission.id, "revoke");
     const r = await poll(deferralCode, keys);
+    // @spec mission#issuance-gating (#250): refused as issuance gating refuses
+    // any grant other than a Token Exchange, with the Mission's mission_error.
     expect(r.status).toBe(400);
-    expect(r.body.error).toBe("access_denied");
+    expect(r.body.error).toBe("invalid_grant");
+    expect(r.body.mission_error).toBe("revoked");
     expect(r.body).not.toHaveProperty("access_token");
+  });
+
+  it("refuses a resolving poll for a Mission suspended after the approval decision with invalid_grant and mission_error suspended, delivering nothing; after resume the poll delivers (@spec mission#issuance-gating, #250)", async () => {
+    useRoot(rootDoc());
+    const keys = await newKeys();
+    const deferralCode = await openDeferral(keys);
+    const done = await as.missionApprovalDeferrals?.completeByPolicy(deferralCode);
+    if (done?.outcome !== "approved") throw new Error(String(done?.outcome));
+    const counted = as.kernel.get(done.mission.id)?.derivation_count;
+    as.kernel.transition(done.mission.id, "suspend");
+    const r = await resolve(deferralCode, keys);
+    expect(r.status).toBe(400);
+    expect(r.body.error).toBe("invalid_grant");
+    expect(r.body.mission_error).toBe("suspended");
+    expect(r.body).not.toHaveProperty("access_token");
+    expect(as.kernel.get(done.mission.id)?.derivation_count).toBe(counted);
+    // The approval is left deliverable: once the Mission resumes, the poll delivers.
+    as.kernel.transition(done.mission.id, "resume");
+    const delivered = await resolve(deferralCode, keys);
+    expect(delivered.status, JSON.stringify(delivered.body)).toBe(200);
+    expect((decodeJwt(delivered.body.access_token as string).mission as { id?: string }).id).toBe(done.mission.id);
   });
 });
 
@@ -1346,10 +1370,12 @@ describe("the release fence on the Mission approval deferral's deferred grant (@
       .prepare("SELECT redeemed, delivery_claim, mission_id FROM mission_approval_deferrals WHERE deferral_code = ?")
       .get(deferralCode) as { redeemed: number; delivery_claim: string | null; mission_id: string };
     expect(row).toEqual({ redeemed: 1, delivery_claim: null, mission_id: missionId });
-    // A later poll sees the ended Mission before the redemption: access_denied.
+    // A later poll sees the ended Mission before the redemption: refused as
+    // issuance gating refuses, with the Mission's mission_error.
     const again = await resolve(deferralCode, keys);
     expect(again.status).toBe(400);
-    expect(again.body.error).toBe("access_denied");
+    expect(again.body.error).toBe("invalid_grant");
+    expect(again.body.mission_error).toBe("revoked");
     expect(again.body).not.toHaveProperty("access_token");
     expect(missionCount()).toBe(before + 1);
   });

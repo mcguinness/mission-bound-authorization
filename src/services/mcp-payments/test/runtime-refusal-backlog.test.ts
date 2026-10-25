@@ -432,6 +432,8 @@ describe("every mediated crossing carries the class the deployment assigns it (@
       check_transfer: "consequential_read",
       hold_transfer: "consequential_write",
       execute_wire_transfer: "irreversible_action",
+      // #252: the compound action's compensate crossing, its own irreversible effect.
+      reverse_wire_transfer: "irreversible_action",
       send_remittance_email: "external_commitment",
     });
   });

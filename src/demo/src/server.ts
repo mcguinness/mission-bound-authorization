@@ -35,7 +35,7 @@ import { installConsoleSessionBoundary } from "./console-session-boundary.js";
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
 
-const TX_TOOLS = new Set(["execute_wire_transfer", "send_remittance_email"]);
+const TX_TOOLS = new Set(["execute_wire_transfer", "reverse_wire_transfer", "send_remittance_email"]);
 /** @spec runtime#idempotency (#917, #918): every tool whose Operation Profile defines a key. */
 const KEYED_TOOLS = new Set([...TX_TOOLS, "schedule_payment", "cancel_scheduled_payment"]);
 

@@ -217,9 +217,11 @@ export class DeferralStore {
 
   /**
    * Poll/redeem the deferred grant. A poll after the advertised lifetime ->
-   * expired_token; a poll faster than the advertised interval -> slow_down
-   * (RFC 8628). While pending -> authorization_pending; an approver denial ->
-   * access_denied. On approval, gate a derivation on the active Mission and
+   * expired_token. A Mission that is not active -> mission_not_active, pending
+   * or approved alike: the poll is a request to derive a token from it
+   * (@spec mission#issuance-gating). A poll faster than the advertised interval
+   * -> slow_down (RFC 8628). While pending -> authorization_pending; an
+   * approver denial -> access_denied. On approval, gate a derivation on the active Mission and
    * issue a token whose authority is the requested subset, carrying the active
    * Mission's claim unchanged (D42). The handle is single-use: an unknown or
    * already-redeemed deferral_code is a malformed grant, so it returns
@@ -233,6 +235,7 @@ export class DeferralStore {
     | { error: "expired_token" }
     | { error: "access_denied" }
     | { error: "invalid_grant" }
+    | { error: "mission_not_active"; observed: MissionRecord | undefined }
     | DeferredToken {
     const row = this.db.prepare("SELECT * FROM deferrals WHERE deferral_code = ?").get(deferralCode) as
       | Record<string, unknown>
@@ -242,6 +245,18 @@ export class DeferralStore {
     // The deferral_code outlived its advertised expires_in: expired_token.
     if (now > (row.created_at as number) + DEFERRAL_EXPIRES_IN * 1000) {
       return { error: "expired_token" };
+    }
+    // Read-only state check: revocation or suspension before redemption
+    // reaches AROP issuance, so a Mission that is not active is refused here,
+    // and the deferral itself is left as it is (a resumed Mission's deferral
+    // is pollable again). The AUTHORITATIVE derivation gate (active/cap check
+    // + derivation_count increment) runs once at mint time via
+    // extraTokenClaims (keyed on grant_id). redeem() must NOT gate here as
+    // well: gating in both places double-counts derivations (O-36).
+    const stored = this.kernel.get(row.mission_id as string);
+    const mission = stored ? this.kernel.applyExpiry(stored) : undefined;
+    if (!mission || mission.state !== "active") {
+      return { error: "mission_not_active", observed: mission };
     }
     if (row.state === "authorization_pending") {
       // RFC 8628: a poll faster than the advertised interval -> slow_down; the
@@ -262,15 +277,6 @@ export class DeferralStore {
     if (row.redeemed === 1) return { error: "invalid_grant" }; // already redeemed
 
     const parsed = JSON.parse(row.requested_json as string) as { m: string; r: AuthorityEntry[]; c?: string };
-    // Read-only active check: revocation between approval and redemption reaches
-    // AROP issuance, so a non-active Mission is refused here. The AUTHORITATIVE
-    // derivation gate (active/cap check + derivation_count increment) runs once
-    // at mint time via extraTokenClaims (keyed on grant_id). redeem() must NOT
-    // gate here as well: gating in both places double-counts derivations (O-36).
-    const mission = this.kernel.get(row.mission_id as string);
-    if (!mission || this.kernel.applyExpiry(mission).state !== "active") {
-      return { error: "access_denied" };
-    }
     // Re-verify subset at redemption (the Mission may have changed) against the
     // EFFECTIVE set: containment applied between approval and redemption refuses.
     if (!isSubsetSetIgnoringCapabilitySources(parsed.r, this.kernel.effectiveAuthoritySet(mission))) {
@@ -1349,10 +1355,13 @@ export class ExpansionDeferralStore {
     // Record a refusal: `access_denied`, the deferred substrate's outcome for a
     // request that resolved with an error (DTR -00 Section 5.5.1 step 4), with
     // the reconciliation status when a reconciliation check failed.
+    // A refused deferral can never complete, so its carryover plan is
+    // cancelled whatever the cause, as a denial cancels it (#1674).
     const refuse = (status?: ReconciliationStatus): { error: "access_denied"; status?: ReconciliationStatus } => {
       this.db
         .prepare("UPDATE expansion_deferrals SET state = 'access_denied', refusal_status = ? WHERE deferral_code = ?")
         .run(status ?? null, deferralCode);
+      this.cancelCarryoverPlan(deferralCode);
       return { error: "access_denied", ...(status ? { status } : {}) };
     };
 
@@ -1413,7 +1422,6 @@ export class ExpansionDeferralStore {
       // and no cascade. The approval is stale, so the completion fails and a
       // fresh render and approval are required.
       if (e instanceof CarryoverError) {
-        this.cancelCarryoverPlan(row.deferral_code as string);
         txOut = undefined;
       } else if (e instanceof IntentError) {
         txOut = undefined;

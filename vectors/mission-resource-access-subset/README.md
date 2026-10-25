@@ -8,8 +8,10 @@ This directory freezes the initial interoperable implementation subset of `missi
 |---|---|---|
 | `payments-contract-2026-10-20.json` | `mission-resource-contract/1` | The payments resource contract, version `2026-10-20`: its reference (`id`, `version`, `digest`) and the contract document the digest commits |
 | `supported-subset.json` | `mission-resource-access-subset/1` | The subset: resource matching, actions, entry members, constraint keys, and the capability set a consumer declares |
+| `payments-contract-2026-10-24.json` | `mission-resource-contract/1` | The payments resource contract, version `2026-10-24`, which supersedes `2026-10-20` by adding the compensate operation `reverse_wire_transfer` (`payments:payment.reverse`, #252) |
+| `supported-subset-2026-10-24.json` | `mission-resource-access-subset/1` | The same subset, `payments-exact-explicit/2026-10-24`, frozen against version `2026-10-24`: its actions add `payments:payment.reverse` |
 
-Both files are frozen. A changed contract is a new contract version with its own digest, and a changed subset is a new subset file with its own `id`; neither file is edited in place. The reference implementation's tests compare both files with the contract the payments resource declares and with the sets its engine supports (`src/services/authorization-server/test/resource-access-subset.test.ts`).
+Every file is frozen. A changed contract is a new contract version with its own digest, and a changed subset is a new subset file with its own `id`; no file is edited in place. The reference implementation's tests compare the newest pair with the contract the payments resource declares as current and with the sets its engine supports, and check that the superseded `2026-10-20` version stays declared as it was frozen (`src/services/authorization-server/test/resource-access-subset.test.ts`). The second consumer below runs under `supported-subset.json`, whose capabilities the newer subset keeps unchanged.
 
 ## The contract
 

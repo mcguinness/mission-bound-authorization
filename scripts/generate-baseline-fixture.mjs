@@ -170,7 +170,7 @@ const REVOCATION = {
   actor: "s6BhdRkqt3",
   operation: "revoke",
   authorization: "mission_lifecycle grant for this Mission",
-  reason: "Quarterly reconcile completed early",
+  reason: "Quarterly reconcile cancelled",
 };
 
 // Named variants: flows that need a different Mission than the baseline's
@@ -271,6 +271,7 @@ function build() {
       approver: ALICE,
       identity_provider: "https://idp.example.com",
       resource: "https://erp.example.com",
+      resource_server_client_id: "erp-rs",
     },
     expiry: { requested: EXPIRES_AT, effective: EXPIRES_AT, numeric_date: numericDate(EXPIRES_AT) },
     anchors: {
