@@ -6,10 +6,16 @@
  * the operator console's MAS half (`GET /missions/{id}/join-evidence`, behind
  * the console's bearer) and served on no route of the MAS's own. The separated
  * MAS process (`mas-serve.ts`), started with a key ring and a kernel store,
- * keeps the events across a restart.
+ * keeps the events across a restart. The pilot's kernel keeps each event for
+ * the deployment's declared audit horizon (`AUDIT_HORIZON_SECONDS`, one year
+ * after Mission expiry; D770), not the reusable kernel's 90-day default.
  *
- * No OpenFGA: the first block drives the MAS's service with a deployment
- * double; the second runs the MAS process and the estate it introspects, with
+ * Restart scope: the MAS process is started directly (`startMasProcess`, the
+ * entry point the launcher spawns); a relaunch through the launcher
+ * (`launchMasPilot`) is not witnessed here.
+ *
+ * No OpenFGA: the first two blocks drive the MAS's service with a deployment
+ * double; the third runs the MAS process and the estate it introspects, with
  * no gateway or decision point. The MAS process binds `127.0.0.1:14917` and
  * the estate `14918`.
  */
@@ -20,7 +26,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type ActingToken, DEFAULT_AUDIT_RETENTION_S, initSigningKeyRing, type JoinAssertionDeployment, validateMissionIntent } from "@mission/authorization-server";
-import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
+import { AUDIT_HORIZON_SECONDS, CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { accessTokenHash } from "@mission/mcp-payments";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
 import { afterAll, describe, expect, it } from "vitest";
@@ -37,8 +43,8 @@ const MAS_URL = `http://127.0.0.1:${MAS_PORT}`;
 const ESTATE_PORT = 14918;
 const ENDPOINT = `${MAS_URL}/mission/join-assertion`;
 const INTROSPECTOR = "mas-join-introspector";
-/** The declared audit retention the kernel composes, past the Mission's expiry. */
-const AUDIT_RETENTION_MS = DEFAULT_AUDIT_RETENTION_S * 1000;
+/** The pilot kernel's audit retention past the Mission's expiry: the deployment's one-year declaration (D770). */
+const AUDIT_RETENTION_MS = AUDIT_HORIZON_SECONDS * 1000;
 
 const dirs: string[] = [];
 const closers: Array<() => Promise<void>> = [];
@@ -154,6 +160,84 @@ describe("the MAS operator console reads join evidence (@spec authority-server#j
       const res = await fetch(`${masBase}${path}`, { headers: bearer ? { authorization: `Bearer ${bearer}` } : {} });
       expect(res.status, bearer ? "with the bearer" : "without").toBe(404);
       expect(await res.text()).not.toContain(accessTokenHash(first.token));
+    }
+  });
+});
+
+describe("the pilot's kernel keeps join evidence for the deployment's audit horizon (@spec authority-server#join-assertion-artifact, #1560, D770)", { timeout: 60_000 }, () => {
+  it("keeps an event for one year after its Mission's expiry, the horizon its tombstones share: past the reusable 90-day default and at its retain_until it is kept across a restart, and only a boot after retain_until prunes it", async () => {
+    const config = loadMasPilotConfig();
+    const pdpClient = config.separated_mas.pdp_client_id;
+    const pdp = await newStatusClientKey(pdpClient);
+    const dir = mkdtempSync(join(tmpdir(), "mas-pilot-join-horizon-"));
+    dirs.push(dir);
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    const keyRing = join(dir, "keys", "ring.json");
+    const issuer = `http://${config.separated_mas.host}:${config.separated_mas.port}`;
+    await initSigningKeyRing(keyRing, issuer, { asToken, asStatus, asTxn, asContinuation });
+    let clockMs = Date.now();
+    const known = new Map<string, ActingToken>();
+    const deployment: JoinAssertionDeployment = {
+      async establishActingToken(form) {
+        const token = "accessToken" in form ? known.get(form.accessToken) : undefined;
+        return token ? { ok: true, token } : { ok: false, reason: "inactive" };
+      },
+      evaluateJoin: (token, mission) =>
+        token.subject === "u-1001" && mission.subject.sub === "alice" ? { clientId: mission.client_id, disposition: "client", mappingVersion: "mas-pilot-identity@1" } : undefined,
+    };
+    const boot = () =>
+      buildPilotMas(config, {
+        statusClients: [pdp.registration],
+        signingKeys: { ring: keyRing },
+        kernelStore: { file: join(dir, "kernel.db") },
+        joinAssertions: deployment,
+        now: () => new Date(clockMs),
+      });
+
+    const first = await boot();
+    expect(first.built.kernel.tombstones.horizons().audit_retention_seconds).toBe(AUDIT_HORIZON_SECONDS);
+    const record = first.built.kernel.approve({
+      intent: validateMissionIntent(intentFor("horizon")),
+      proposedAuthority: readAuthority as never,
+      subject: { iss: first.issuer, sub: "alice" },
+      approver: { iss: first.issuer, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: `apev-join-evidence-horizon-${crypto.randomUUID()}`,
+    });
+    const token = `estate-token-${crypto.randomUUID()}`;
+    known.set(token, { issuer: config.estate.issuer, subject: "u-1001", clientId: "estate-ap-bot-7f3", exp: Math.floor(Date.now() / 1000) + 600, cnf: { jkt: "jkt-horizon" } });
+    const answer = await first.built.joinAssertions?.handle(
+      JSON.stringify({
+        mission_id: record.id,
+        audience: pdpClient,
+        access_token: token,
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        client_assertion: await clientAssertion(pdpClient, pdp.privateJwk, first.issuer),
+      }),
+      "application/json",
+      "",
+    );
+    expect(answer?.status, JSON.stringify(answer?.body)).toBe(200);
+    first.built.kernel.close();
+
+    const expiry = Date.parse(record.expires_at);
+    const retainUntil = expiry + AUDIT_HORIZON_SECONDS * 1000;
+    const retained = (mas: Awaited<ReturnType<typeof boot>>) => mas.built.kernel.joinEvidence.forMission(record).map((r) => r.retain_until);
+    for (const at of [expiry + DEFAULT_AUDIT_RETENTION_S * 1000 + 1, retainUntil]) {
+      clockMs = at;
+      const rebooted = await boot();
+      try {
+        expect(retained(rebooted), new Date(at).toISOString()).toEqual([new Date(retainUntil).toISOString()]);
+      } finally {
+        rebooted.built.kernel.close();
+      }
+    }
+    clockMs = retainUntil + 1;
+    const past = await boot();
+    try {
+      expect(retained(past)).toEqual([]);
+    } finally {
+      past.built.kernel.close();
     }
   });
 });

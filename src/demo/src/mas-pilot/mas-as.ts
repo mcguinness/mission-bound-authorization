@@ -20,6 +20,12 @@
  * - a Lifecycle client (`private_key_jwt`, `mission_lifecycle`) for the
  *   advertised `mission_lifecycle_endpoint`: revoke and contain.
  *
+ * Its kernel's audit retention is the deployment's declared audit horizon
+ * (`AUDIT_HORIZON_SECONDS`, `config/policy.json` `audit_horizon_s`: one year
+ * after Mission expiry; #1560, D770), shared by the join evidence events, the
+ * terminal tombstones and the activation policy snapshots, never the reusable
+ * kernel's shorter default.
+ *
  * The operator console (`operator-console.ts`) holds both and the submitting
  * agent's per-boot key (`BuiltAs.agentClientJwk`).
  */
@@ -34,6 +40,7 @@ import {
   type ServiceTokenPrincipal,
   type SigningKeySource,
 } from "@mission/authorization-server";
+import { AUDIT_HORIZON_SECONDS } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, type JWK } from "jose";
 import { newLifecycleConsole } from "../lifecycle-client.js";
 import type { LifecycleConsoleCredentials } from "../lifecycle-client.js";
@@ -143,6 +150,9 @@ export async function buildPilotMas(config: MasPilotConfig, opts: PilotMasOption
     allowHeadlessAdjudication: true,
     ...(opts.signingKeys ? { signingKeys: opts.signingKeys } : {}),
     ...(opts.kernelStore ? { kernelStore: opts.kernelStore } : {}),
+    // @spec authority-server#join-assertion-artifact (#1560, D770): the
+    // deployment's one-year declaration, not the kernel's 90-day default.
+    auditRetentionSeconds: AUDIT_HORIZON_SECONDS,
     derivationPolicy: policy as never,
     authoritySources: authoritySources as never,
     serviceTokenPrincipals: principals,

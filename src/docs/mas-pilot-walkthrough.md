@@ -323,8 +323,10 @@ console "$MAS_CONSOLE/missions/$MISSION/join-evidence"
 The answer lists them oldest first, each with the Mission, the token's
 `sha256` and `jkt`, the `join` result, the `caller` (the PEP's client), the
 `audience` (the PDP), the `mapping_version` it was minted under, `iat` and
-`exp`, and `retain_until`: the Mission's expiry plus the declared audit
-retention (90 days), past which the MAS's next boot prunes it. With
+`exp`, and `retain_until`: the Mission's expiry plus the deployment's
+declared audit horizon (`audit_horizon_s` in `config/policy.json`, one
+year), fixed when the event is recorded, past which the MAS's next boot
+prunes it. With
 `MISSION_KERNEL_STORE` and a key ring the events survive a restart of the
 MAS; without them they are lost at shutdown with the Missions. The MAS
 serves them on no route of its own.

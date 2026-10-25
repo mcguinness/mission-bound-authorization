@@ -17,7 +17,11 @@
  *   deployment's declared post-expiry audit retention
  *   (`audit_retention_seconds`, the declaration the terminal tombstones and
  *   the activation policy snapshots compose): the audit horizon, "at least
- *   the Mission's lifetime plus a declared post-expiry period".
+ *   the Mission's lifetime plus a declared post-expiry period". A deployment
+ *   declares it (`auditRetentionSeconds`; the MAS pilot declares one year,
+ *   D770); the reusable default is 90 days. `retain_until` is fixed when the
+ *   event is recorded: a later boot under another declaration compares the
+ *   stored instant and never recomputes or shortens it.
  * - Deletion: {@link JoinEvidenceStore.pruneExpired} deletes an event only
  *   once its horizon has passed, at boot recovery or when an operator calls
  *   it. Nothing else deletes, and no write updates a recorded event.

@@ -351,10 +351,17 @@ contract alone, unchanged. By party:
   (`MissionKernel.joinEvidence`) before the assertion is cached or
   returned; a write that fails answers `unavailable` (503), with nothing
   returned or cached. An event is retained until its Mission's expiry
-  plus the kernel's declared audit retention (90 days, the value the
-  terminal tombstones compose) and pruned at boot only past that horizon.
-  With `MISSION_KERNEL_STORE` and a key ring the events survive a MAS
-  restart; the in-memory default loses them with the Missions. The
+  plus the pilot kernel's audit retention, and pruned at boot only after
+  that instant. The pilot's MAS (`buildPilotMas`) sets that retention to
+  the deployment's declared audit horizon, `audit_horizon_s` in
+  `config/policy.json` (`AUDIT_HORIZON_SECONDS`, one year; D770), which
+  its terminal tombstones and activation policy snapshots share; the
+  reusable kernel's default, 90 days, does not apply to the pilot. Each
+  event's `retain_until` is written when it is recorded and a reboot
+  never recomputes or shortens it. With `MISSION_KERNEL_STORE` and a key
+  ring the events survive a restart of the MAS process (witnessed by
+  starting `mas-serve.ts` directly; a relaunch through the launcher is
+  not witnessed); the in-memory default loses them with the Missions. The
   operator console's MAS half reads a Mission's events
   (`GET /missions/{id}/join-evidence`, behind its bearer); the MAS serves
   them on no route of its own. Witnesses:

@@ -18,7 +18,7 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
+import { AUDIT_HORIZON_SECONDS, CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { openStore } from "@mission/store";
 import { decodeJwt } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -90,11 +90,16 @@ async function deploymentFiles(): Promise<{ ring: string; file: string }> {
   return { ring, file: join(dir, "kernel.db") };
 }
 
-/** One boot of the MAS on the deployment's files (none: the in-memory default), its kernel clock `now`. */
-function boot(files?: { ring: string; file: string }, now?: () => Date): Promise<BuiltAs> {
+/**
+ * One boot of the MAS on the deployment's files (none: the in-memory default),
+ * its kernel clock `now`, and its declared audit retention (none: the reusable
+ * kernel's default).
+ */
+function boot(files?: { ring: string; file: string }, now?: () => Date, auditRetentionSeconds?: number): Promise<BuiltAs> {
   return buildAuthorizationServer({
     issuer: ISSUER,
     ...(files ? { signingKeys: { ring: files.ring }, kernelStore: { file: files.file } } : {}),
+    ...(auditRetentionSeconds !== undefined ? { auditRetentionSeconds } : {}),
     testClients: [pep.metadata, pdp.metadata],
     joinEnrollment: {
       [pep.clientId]: { roles: ["pep"], enforcementScopes: [CANONICAL_RESOURCE] },
@@ -155,7 +160,8 @@ const eventOf = (claims: Record<string, unknown>, record: MissionRecord): JoinAs
 
 const horizonOf = (record: MissionRecord) => Date.parse(record.expires_at) + DEFAULT_AUDIT_RETENTION_S * 1000;
 
-describe("Join evidence retention (@spec authority-server#join-assertion-artifact, #1560)", () => {
+// Each restart builds the authorization server again: allow for a loaded machine.
+describe("Join evidence retention (@spec authority-server#join-assertion-artifact, #1560)", { timeout: 60_000 }, () => {
   it("records each minting on the kernel store, and the event survives a restart with the key ring and the kernel file: the Mission reference, the token digest and thumbprint, the join, the caller, the audience, mapping_version and the validity window", async () => {
     const files = await deploymentFiles();
     const first = await boot(files);
@@ -259,6 +265,58 @@ describe("Join evidence retention (@spec authority-server#join-assertion-artifac
       expect(built.kernel.joinEvidence.forMission(record).map((r) => r.event)).toEqual([eventOf(claims, record)]);
     } finally {
       built.kernel.close();
+    }
+  });
+
+  it("a declared audit retention is the one horizon the kernel's join evidence and tombstones compose (#1560, D770); absent, the reusable kernel's 90-day default", async () => {
+    const declared = await boot(undefined, undefined, AUDIT_HORIZON_SECONDS);
+    const reusable = await boot();
+    try {
+      expect(AUDIT_HORIZON_SECONDS).toBe(31_536_000);
+      expect(declared.kernel.tombstones.horizons().audit_retention_seconds).toBe(AUDIT_HORIZON_SECONDS);
+      expect(reusable.kernel.tombstones.horizons().audit_retention_seconds).toBe(DEFAULT_AUDIT_RETENTION_S);
+      const year = approve(declared.kernel);
+      const days = approve(reusable.kernel);
+      await minted(declared, year.id, actingToken());
+      await minted(reusable, days.id, actingToken());
+      expect(declared.kernel.joinEvidence.forMission(year).map((r) => r.retain_until)).toEqual([
+        new Date(Date.parse(year.expires_at) + AUDIT_HORIZON_SECONDS * 1000).toISOString(),
+      ]);
+      expect(reusable.kernel.joinEvidence.forMission(days).map((r) => r.retain_until)).toEqual([new Date(horizonOf(days)).toISOString()]);
+    } finally {
+      declared.kernel.close();
+      reusable.kernel.close();
+    }
+  });
+
+  it("keeps an event's stored horizon across a reboot (#1560, D770): a kernel rebooted under the 90-day default neither recomputes nor shortens the one-year retain_until it was recorded with, and prunes the event only once that stored horizon passes", async () => {
+    let clockMs = Date.now();
+    const now = () => new Date(clockMs);
+    const files = await deploymentFiles();
+    const first = await boot(files, now, AUDIT_HORIZON_SECONDS);
+    const record = approve(first.kernel);
+    await minted(first, record.id, actingToken());
+    first.kernel.close();
+    const stored = Date.parse(record.expires_at) + AUDIT_HORIZON_SECONDS * 1000;
+    const retained = (built: BuiltAs) => built.kernel.joinEvidence.forMission(record).map((r) => r.retain_until);
+
+    // Past the default horizon, on a kernel that declares only the default.
+    for (const at of [horizonOf(record) + 1, stored]) {
+      clockMs = at;
+      const rebooted = await boot(files, now);
+      try {
+        expect(rebooted.kernel.tombstones.horizons().audit_retention_seconds).toBe(DEFAULT_AUDIT_RETENTION_S);
+        expect(retained(rebooted), new Date(at).toISOString()).toEqual([new Date(stored).toISOString()]);
+      } finally {
+        rebooted.kernel.close();
+      }
+    }
+    clockMs = stored + 1;
+    const past = await boot(files, now);
+    try {
+      expect(retained(past)).toEqual([]);
+    } finally {
+      past.kernel.close();
     }
   });
 
