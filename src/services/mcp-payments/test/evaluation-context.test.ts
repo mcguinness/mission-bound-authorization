@@ -6,9 +6,11 @@
  * decision point bound to the same claimed declaration.
  *
  * The covered operations are `payments:payment.execute` (its preflight,
- * prepare and commit crossings take the read, write and transaction paths) and
- * `payments:remittance.send` (the transaction path). Every other operation is
- * uncovered and keeps its existing behavior.
+ * prepare and commit crossings take the read, write and transaction paths),
+ * `payments:remittance.send` (the transaction path) and the compensate
+ * crossing `payments:payment.reverse` (the transaction path, #252), whose
+ * facts are the committed wire's. Every other operation is uncovered and
+ * keeps its existing behavior.
  *
  * The FGA layer is a stub that always permits, so this file never skips.
  */
@@ -121,6 +123,7 @@ const view = (id: string): MissionView => ({
       resource: CANONICAL_RESOURCE,
       actions: [
         "payments:payment.execute",
+        "payments:payment.reverse",
         "payments:remittance.send",
         "payments:payment.schedule",
         "payments:invoice.read",
@@ -201,6 +204,8 @@ function harness(o: { pep?: EvaluationContextBindingDeclarations; pdp?: Evaluati
     },
     payments,
     evidence,
+    // #252: the committed-effect records a compensate crossing reads.
+    committedEffects: connectors,
     fga: alwaysAllowFga,
     modelId: "model-773",
     loadView,
@@ -666,6 +671,134 @@ describe("a completed disposition carries the context pair, or is the reported g
   });
 });
 
+/** The compensate crossing (#252): it offsets the wire `COMMIT` released. */
+const REVERSE = "reverse_wire_transfer";
+const reverseOperation = { action: "payments:payment.reverse", phase: "compensate" };
+
+/** Commit the wire, then cross the compensation with `hook` in its decision-to-commit window. */
+async function reverse(
+  h: Harness,
+  hook?: () => void,
+): Promise<{ ok: boolean; refusal_reason?: string; denial_reason?: string; result?: unknown }> {
+  const committed = await cross(h, COMMIT);
+  if (!committed.ok) throw new Error(JSON.stringify(committed));
+  return h.server.callTransactionTool(REVERSE, { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, TOKEN, hook);
+}
+
+/** The compensation's own Decision Evidence: the one carrying the link. */
+const compensating = (h: Harness): DecisionEvidence["content"] | undefined =>
+  decisions(h).find((d) => d.compensates_evaluation_id !== undefined);
+
+/** A capture of the compensate crossing computed independently from the committed wire's ledger record. */
+function captureFromWire(h: Harness, decision: DecisionEvidence["content"] | undefined) {
+  const wire = decisions(h).find((d) => d.evaluation_id === decision?.compensates_evaluation_id);
+  if (!wire || typeof wire.parameter_digest !== "string") throw new Error("no committed wire decision");
+  const opKey = operationKey("msn_773", "payments:payment.execute", wire.parameter_digest, "commit");
+  return captureEvaluationContext({
+    declarations: CLAIMED,
+    salts: h.salts(),
+    mission: { issuer: ISSUER, id: "msn_773" },
+    operation: reverseOperation,
+    invoiceId: "inv-1",
+    payments: h.payments,
+    compensates: { opKey, evaluationId: wire.evaluation_id },
+    committedEffects: h.connectors,
+  });
+}
+
+describe("the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252)", () => {
+  it("captures at the compensate crossing: the request carries compensates_evaluation_id beside the context digest and descriptor, and the completed record carries the pair", async () => {
+    const h = harness();
+    const done = await reverse(h);
+    expect(done.ok, JSON.stringify(done)).toBe(true);
+    const context = h.lastContext() ?? {};
+    expect(context.action_phase).toBe("compensate");
+    expect(context.compensates_evaluation_id).toMatch(/\S/);
+    expect(context.evaluation_context_digest).toMatch(/^sha-256:[A-Za-z0-9_-]{43}$/);
+    expect(context.evaluation_context_binding).toEqual(CLAIMED.operation("payments:payment.reverse", "compensate")?.descriptor);
+    const decision = compensating(h);
+    expect(decision?.evaluation_context_digest).toBe(context.evaluation_context_digest);
+    expect(decision?.compensates_evaluation_id).toBe(context.compensates_evaluation_id);
+    // The completed reversal record carries the pair, observed and equal.
+    const completed = executions(h).filter((r) => r.outcome === "completed" && r.evaluation_id === decision?.evaluation_id);
+    expect(completed).toHaveLength(1);
+    expect(completed[0]?.authorized_evaluation_context_digest).toBe(context.evaluation_context_digest);
+    expect(completed[0]?.effective_evaluation_context_digest).toBe(context.evaluation_context_digest);
+    expect(h.connectors.reversalEntries("msn_773")).toHaveLength(1);
+  });
+
+  it("the descriptor's facts are the committed wire's, not the invoice as it reads now: an invoice that moved after the wire, and again before release, leaves the context unchanged", async () => {
+    const h = harness();
+    expect((await cross(h, COMMIT)).ok).toBe(true);
+    // The invoice moves after its wire committed, before the compensation.
+    h.payments.bumpInvoiceAmount("inv-1", "1.00");
+    const done = await h.server.callTransactionTool(
+      REVERSE,
+      { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+      TOKEN,
+      () => h.payments.bumpInvoiceAmount("inv-1", "2.00"),
+    );
+    expect(done.ok, JSON.stringify(done)).toBe(true);
+    const decision = compensating(h);
+    const fromWire = captureFromWire(h, decision);
+    if (!fromWire.ok) throw new Error(JSON.stringify(fromWire));
+    // The digest sent is the committed wire's facts, committed under the same
+    // salt version: the USD 125 the wire paid, not the invoice's USD 1 or 2.
+    expect(decision?.evaluation_context_digest).toBe(fromWire.digest);
+    const completed = executions(h).find((r) => r.outcome === "completed" && r.evaluation_id === decision?.evaluation_id);
+    expect(completed?.effective_evaluation_context_digest).toBe(fromWire.digest);
+    expect(h.connectors.reversalEntries("msn_773")).toEqual([expect.objectContaining({ amount: "125.00", currency: "USD" })]);
+  });
+
+  it("a moved fact of the committed wire's record is target_drift with zero effects, both digest pairs recorded and each unequal", async () => {
+    const h = harness();
+    const refused = await reverse(h, () => {
+      h.connectors.db.prepare("UPDATE ledger SET amount = '99.00' WHERE invoice_id = 'inv-1'").run();
+    });
+    expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
+    expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+    const decision = compensating(h);
+    const [record] = executions(h).filter((r) => r.outcome === "suppressed");
+    expect(record?.error).toBe("target_drift");
+    expect(record?.authorized_parameter_digest).toBe(decision?.parameter_digest);
+    expect(record?.effective_parameter_digest).toBeDefined();
+    expect(record?.effective_parameter_digest).not.toBe(record?.authorized_parameter_digest);
+    expect(record?.authorized_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+    expect(record?.effective_evaluation_context_digest).toBeDefined();
+    expect(record?.effective_evaluation_context_digest).not.toBe(record?.authorized_evaluation_context_digest);
+    expect(executionDivergence(record as ExecutionEvidence["content"])).toEqual({ parameter: true, evaluation_context: true });
+  });
+
+  it("a committed wire record that no longer answers is target_drift, with both effective digests absent and both authorized digests kept", async () => {
+    const h = harness();
+    const refused = await reverse(h, () => {
+      h.connectors.db.prepare("DELETE FROM ledger WHERE invoice_id = 'inv-1'").run();
+    });
+    expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
+    expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+    const [record] = executions(h).filter((r) => r.outcome === "suppressed");
+    expect(record?.error).toBe("target_drift");
+    expect(record?.authorized_parameter_digest).toBeDefined();
+    expect(record?.authorized_evaluation_context_digest).toBeDefined();
+    expect(record).not.toHaveProperty("effective_parameter_digest");
+    expect(record).not.toHaveProperty("effective_evaluation_context_digest");
+  });
+
+  it("a deployment that does not claim the extension is unchanged at the compensate crossing: no context members, and a moved fact of the wire's record stays parameter_mismatch", async () => {
+    const h = harness({ pep: UNCLAIMED, pdp: UNCLAIMED });
+    const refused = await reverse(h, () => {
+      h.connectors.db.prepare("UPDATE ledger SET amount = '99.00' WHERE invoice_id = 'inv-1'").run();
+    });
+    expect(refused).toEqual({ ok: false, refusal_reason: "parameter_mismatch" });
+    expect(h.lastContext()).not.toHaveProperty("evaluation_context_digest");
+    expect(h.lastContext()?.compensates_evaluation_id).toMatch(/\S/);
+    expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+    const [record] = executions(h).filter((r) => r.outcome === "suppressed");
+    expect(record?.error).toBe("parameter_mismatch");
+    expect(record).not.toHaveProperty("authorized_evaluation_context_digest");
+  });
+});
+
 describe("restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773)", () => {
   for (const c of COVERED) {
     it(`a binding made before a restart is refused before any effect on ${c.tool} (${c.path} path): target_drift, no effective context digest`, async () => {
@@ -792,17 +925,38 @@ describe("the shipped declaration and the Operation Profile agree (@spec runtime
       expect(declared.covers(mapping.action, mapping.phase), tool).toBe(true);
     }
     const salts = new EvaluationContextSalts();
+    // A compensate crossing's facts are a committed wire's ledger record.
+    const connectors = new Connectors(() => new Date(BASE_MS));
+    connectors.postWire({
+      opKey: "op-wire",
+      invoiceId: "inv-1",
+      vendorId: "acme",
+      payeeAccount: "acct-acme",
+      amount: "125.00",
+      currency: "USD",
+      permitId: "evl-wire",
+      missionId: "msn_773",
+    });
+    const compensated = { opKey: "op-wire", evaluationId: "evl-wire" };
     for (const [tool, mapping] of Object.entries(TOOL_ACTIONS)) {
       if (!declared.covers(mapping.action, mapping.phase)) continue;
-      const captured = captureEvaluationContext({
+      const base = {
         declarations: declared,
         salts,
         mission: { issuer: ISSUER, id: "msn_773" },
         operation: { action: mapping.action, ...(mapping.phase !== undefined ? { phase: mapping.phase } : {}) },
         invoiceId: "inv-1",
         payments,
-      });
+      };
+      const captured = mapping.compensates
+        ? captureEvaluationContext({ ...base, compensates: compensated, committedEffects: connectors })
+        : captureEvaluationContext(base);
       expect(captured.ok, tool).toBe(true);
+      if (mapping.compensates) {
+        // Its descriptor's facts do not resolve from the invoice.
+        expect(captureEvaluationContext(base), tool).toEqual({ ok: false, reason: "fact_unresolvable" });
+      }
     }
+    expect(Object.values(TOOL_ACTIONS).some((m) => m.compensates && declared.covers(m.action, m.phase))).toBe(true);
   });
 });

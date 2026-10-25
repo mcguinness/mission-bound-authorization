@@ -848,8 +848,17 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
         h.connectors.db.prepare("UPDATE ledger SET amount = '99.00' WHERE invoice_id = 'inv-1'").run();
       },
     );
-    expect(refused).toMatchObject({ ok: false, refusal_reason: "parameter_mismatch" });
-    expect(executions(h).filter((e) => e.content.outcome === "suppressed").map((e) => e.content.error)).toEqual(["parameter_mismatch"]);
+    // @spec runtime-evidence#context-drift-classification (#773): the shipped
+    // statement covers the compensate crossing, and the amount is a declared
+    // fact of the wire's record, so the moved fact is `target_drift`, with
+    // the parameter pair still recorded and unequal. A deployment that does
+    // not claim the binding records `parameter_mismatch` (witnessed in
+    // evaluation-context.test.ts).
+    expect(refused).toMatchObject({ ok: false, refusal_reason: "target_drift" });
+    const suppressed = executions(h).filter((e) => e.content.outcome === "suppressed");
+    expect(suppressed.map((e) => e.content.error)).toEqual(["target_drift"]);
+    expect(suppressed[0]?.content.effective_parameter_digest).toBeDefined();
+    expect(suppressed[0]?.content.effective_parameter_digest).not.toBe(suppressed[0]?.content.authorized_parameter_digest);
     expect(h.connectors.reversalEntries("msn_252")).toHaveLength(0);
   });
 
