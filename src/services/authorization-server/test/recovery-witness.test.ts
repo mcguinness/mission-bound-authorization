@@ -477,6 +477,25 @@ describe("recovery witness: review fixes (@spec control-plane#rollback, #250 ste
     expect(() => reconcileKernelRecovery({ storeFile: p.store, witnessFile: p.witness, action: "accept" })).toThrow(/older than the witnessed/);
   });
 
+  it("a kernel stays stopped even when its uncertainty could not be recorded in the witness", () => {
+    const { p, missionId } = started();
+    const kernel = open(p);
+    const guard = kernel.recovery as unknown as { persist(record: RecoveryWitnessRecord): void };
+    // The intent and then the recording of the failure cannot be written; later writes could be.
+    vi.spyOn(guard, "persist")
+      .mockImplementationOnce(() => {
+        throw new Error("injected: the witness cannot be written");
+      })
+      .mockImplementationOnce(() => {
+        throw new Error("injected: the failure cannot be recorded");
+      });
+    expect(() => kernel.transition(missionId, "suspend")).toThrow(RecoveryUncertainError);
+    expect(readRecoveryWitness(p.witness)?.uncertain).toBeUndefined();
+    expect(() => kernel.transition(missionId, "suspend")).toThrow(RecoveryUncertainError);
+    expect(kernel.get(missionId)?.state).toBe("active");
+    kernel.close();
+  });
+
   it("accept refuses with nothing recorded, and with an intent pending", () => {
     const { p, witness } = started();
     expect(() => reconcileKernelRecovery({ storeFile: p.store, witnessFile: p.witness, action: "accept" })).toThrow(/no uncertainty is recorded/);
