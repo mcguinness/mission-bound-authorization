@@ -243,6 +243,15 @@ export {
   MissionTombstoneStore,
   type TombstoneRetentionInputs,
 } from "./kernel/tombstones.js";
+export {
+  readRecoveryWitness,
+  reconcileKernelRecovery,
+  RecoveryReconciliationError,
+  RecoveryUncertainError,
+  type RecoveryReconciliation,
+  type RecoveryUncertainReason,
+  type RecoveryWitnessRecord,
+} from "./kernel/recovery-witness.js";
 export type { ProtectedEventSource } from "./adapters/provider.js";
 export {
   ALL_PROVIDER_CAPABILITIES,

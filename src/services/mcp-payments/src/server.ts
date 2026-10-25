@@ -507,7 +507,8 @@ export interface WriteToolResult {
 /**
  * Why a released effect's `completed` Execution Evidence does not exist: its
  * emission failed after one retry, or no effective parameter digest could be
- * observed for a parameter-bound permit.
+ * observed for a parameter-bound permit, or no effective context digest for a
+ * context-bound one (#773).
  */
 export type DispositionGap = Extract<SuppressOutcome, { recorded: false }>["gap"];
 
@@ -1524,10 +1525,15 @@ export class McpPaymentsServer {
     // write's completed disposition, over the parameters reverification just
     // confirmed. The hold stores nothing, so a record that cannot be written
     // withholds the result (D770 ruling 4); the single use stays consumed.
-    const recorded = await this.deps.pep.completeExecution(
-      attempt,
-      bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {},
-    );
+    const recorded = await this.deps.pep.completeExecution(attempt, {
+      ...(bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {}),
+      // @spec runtime-evidence#execution-evidence-object (#773): the context
+      // reverification re-established before the effect, never one recomputed
+      // after it, when the effect itself can move a declared fact.
+      ...(bound.effectiveEvaluationContextDigest !== undefined
+        ? { effectiveEvaluationContextDigest: bound.effectiveEvaluationContextDigest }
+        : {}),
+    });
     if (!recorded.recorded) return this.withholdUnevidenced(attempt);
     return { ok: true, result };
   }
@@ -1847,10 +1853,15 @@ export class McpPaymentsServer {
     // emission does, so a record that cannot be written is reported as a gap,
     // never a refusal, and its result is withheld (D770 ruling 4): a retry
     // under the key retrieves it under that retry's own permit and record.
-    const recorded = await this.deps.pep.completeExecution(
-      attempt,
-      bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {},
-    );
+    const recorded = await this.deps.pep.completeExecution(attempt, {
+      ...(bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {}),
+      // @spec runtime-evidence#execution-evidence-object (#773): the context
+      // reverification re-established before the effect, never one recomputed
+      // after it, when the effect itself can move a declared fact.
+      ...(bound.effectiveEvaluationContextDigest !== undefined
+        ? { effectiveEvaluationContextDigest: bound.effectiveEvaluationContextDigest }
+        : {}),
+    });
     if (!recorded.recorded) return { ok: false, gap: recorded.gap };
     return { ok: true, result: outcome.result };
   }
@@ -2172,6 +2183,19 @@ export class McpPaymentsServer {
       audience: attempt.audience,
       authorized_parameter_digest: digest,
       effective_parameter_digest: digest,
+      // @spec runtime-evidence#execution-evidence-object (#773): the context
+      // pair of a covered crossing. The authorized member mirrors the linked
+      // Decision Evidence; the effective one is the context `reverify()`
+      // re-established and found equal before this commit point, an
+      // observation it made, never a copy of the authorized digest.
+      ...(attempt.authorizedEvaluationContextDigest !== undefined
+        ? {
+            authorized_evaluation_context_digest: attempt.authorizedEvaluationContextDigest,
+            ...(bound.effectiveEvaluationContextDigest !== undefined
+              ? { effective_evaluation_context_digest: bound.effectiveEvaluationContextDigest }
+              : {}),
+          }
+        : {}),
       outcome: "completed",
       // @spec authzen#obligation-processing (#1640): the obligations this
       // permit's PEP fulfilled before release.

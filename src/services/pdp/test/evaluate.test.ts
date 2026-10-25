@@ -12,7 +12,7 @@ import { evaluate as evaluateRequest, type EvaluationRequest } from "../src/eval
 import { type MissionView, policyViewId } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -106,6 +106,10 @@ const opts = (v: MissionView) => ({
   resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   stateSourcePlacement: "pep" as const,
   claims: CLAIMS,
+  // #773: a deployment that does not claim Evaluation-Context Binding; this
+  // file's subject is another input, and the claimed path has its own
+  // witnesses (evaluate-evaluation-context.test.ts).
+  evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
 });
 
 d("PDP decisions against OpenFGA (@spec authzen)", () => {

@@ -177,6 +177,7 @@ export { channelDeadlineMs, createDecisionChannel } from "./decision-channel.js"
 export {
   claimsWithinScope,
   evidenceDeclarationFindings,
+  evaluationContextBindingFindings,
   executionCapabilityFindings,
   resourceDispositions,
   retentionWindowSeconds,

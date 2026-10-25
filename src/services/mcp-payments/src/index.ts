@@ -11,6 +11,13 @@ export {
   type ListEffectiveParams,
 } from "./effective-params.js";
 export {
+  captureEvaluationContext,
+  EvaluationContextSalts,
+  type HeldEvaluationContext,
+  PAYMENTS_FACT_RESOLVERS,
+  recomputeEvaluationContext,
+} from "./evaluation-context.js";
+export {
   boundaryEvidenceAuthorization,
   type EvidenceBoundaryAuthorization,
   EvidenceStore,
@@ -52,6 +59,7 @@ export {
   type TxnCredential,
   type EnforceResult,
   type ExecutionAttempt,
+  type AttemptEvaluationContext,
   type WriteReservationScope,
   type ReverifyOutcome,
   type SuppressOutcome,
@@ -202,6 +210,8 @@ export {
   type ReceiptIssuerScope,
   type ReceiptResolvedRecord,
   type ReceiptVerifyFailure,
+  executionDivergence,
+  type ReceiptDivergence,
   type ReceiptVerifyResult,
 } from "./mission-receipt.js";
 export {

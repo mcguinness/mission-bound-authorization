@@ -2011,11 +2011,14 @@ relying on the permit, each evaluated at every use. Members:
 : CONDITIONAL. A string. REQUIRED on a permit for an operation
   covered by {{context-evaluation-binding}}; MUST equal the
   validated request's context digest. The executing PEP MUST
-  recompute it with its own applicable descriptor and authoritative
-  facts, and MUST refuse before an effect on a missing or unequal
-  binding, an unknown descriptor, or an unavailable fact. A mismatch
+  recompute it under the descriptor the binding committed, from
+  authoritative facts, and MUST refuse before an effect on a missing or
+  unequal binding, a descriptor the operation's declaration no longer
+  names, an unrecoverable descriptor, or an unavailable fact. A mismatch
   or inability to re-resolve after a permit is Execution Evidence
-  `suppressed` with `target_drift`, not a PDP denial reason.
+  `suppressed`, not a PDP denial reason, with the `error` the runtime
+  evidence profile's classification names
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 `action_phase`:
 : CONDITIONAL. A string from `preflight`, `prepare`, `commit`, or
@@ -2548,6 +2551,7 @@ rule.
 | Mission state not establishable at the PEP | Refusal Record | `state_unavailable` |
 | Required phase not establishable at the PEP before the decision request | Refusal Record | `phase_unavailable` |
 | Committed effect a compensation offsets, or the Decision it executed under, not establishable at the PEP from retained, verified evidence before the decision request | Refusal Record | `compensation_link_unavailable` |
+| Authoritative evaluation context of a covered operation not capturable at the PEP before the decision request | Refusal Record | `evaluation_context_unresolvable` |
 | Presented credential's own authority does not cover the request, established before any decision request | Refusal Record | `credential_authority_insufficient` |
 | Enforcement surface implements no such action | Refusal Record | `request_unsupported` |
 | Supplied arguments fail the PEP-established action's required input schema | Refusal Record | `request_invalid` |
@@ -2589,7 +2593,7 @@ rule.
 | Resource contract reference missing where required, or not resolvable, established by the PDP | PDP denial | `resource_contract_drift` |
 | Presented approval bound to a resource contract reference other than the request's | PDP denial | ARAP's `out_of_scope` ({{ARAP}}) |
 | Policy-required history predicate unsatisfied or not establishable | PDP denial | `history_not_satisfied` |
-| Effective parameters differ at the executing PEP | Execution Evidence | `parameter_mismatch` |
+| Effective parameters differ at the executing PEP in a parameter no claimed evaluation-context binding declares as a fact | Execution Evidence | `parameter_mismatch` |
 | Permit's bound phase differs from the crossing, is missing or malformed where a phase is required, or cannot be established at use | Execution Evidence | `phase_mismatch` |
 | A claimed evaluation-context binding differs or cannot be established at use | Execution Evidence | `target_drift` |
 | Operation target at use differs from the request's `operation_target`, or cannot be established at use | Execution Evidence | `target_drift` |
@@ -2634,6 +2638,14 @@ identifier:
   parameter-bound permit is a parameter deviation, `parameter_mismatch`;
   `target_drift` records an operation target that differs while the
   bound parameters do not.
+- Context: under a claimed Evaluation-Context Binding a moved declared
+  fact can change the parameter digest too. The recorded `error` is
+  `target_drift` unless the context is established and an agent-supplied
+  parameter changed, and every observable digest pair is kept
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+  `evaluation_context_unresolvable` is the PEP's capture failure before
+  the decision request, and `evaluation_context_invalid` the PDP's
+  refusal of the inputs it received.
 - Duplicates: The `duplicate_suppressed` and `idempotency_conflict` rows
   key on the same (idempotency scope, `idempotency_key`) claim
   ({{idempotency-claim}}), and whether the new request's operation
@@ -3179,6 +3191,14 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
   binding and the cache key, a permit binds it as the `work_item`
   condition, and a permit for another work item is Execution Evidence
   `suppressed` / `work_item_mismatch` (#815).
+
+- Failure-Condition Coverage maps a covered operation's evaluation
+  context not capturable at the PEP to the Refusal Record
+  `evaluation_context_unresolvable`, and limits the `parameter_mismatch`
+  row to a parameter no claimed binding declares as a fact; a context
+  failure at use carries the `error` the runtime evidence profile's
+  classification names; the context digest condition is recomputed under
+  the descriptor the binding committed (#773).
 
 - Compensation link (#252). `context.compensates_evaluation_id` is
   REQUIRED on a compensate-phase request, established by the PEP from

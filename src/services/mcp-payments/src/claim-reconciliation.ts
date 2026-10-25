@@ -142,6 +142,13 @@ async function fromLedger(
     // operation's original boundary, never the one in force when it is made.
     audience: decision.content.audience,
     ...(digest !== undefined ? { authorized_parameter_digest: digest, effective_parameter_digest: digest } : {}),
+    // @spec runtime-evidence#execution-evidence-object (#773): a late record
+    // mirrors the linked Decision Evidence's context digest. It makes no
+    // re-resolution of its own, so it records no effective context digest
+    // rather than copying the authorized one.
+    ...(typeof decision.content.evaluation_context_digest === "string"
+      ? { authorized_evaluation_context_digest: decision.content.evaluation_context_digest }
+      : {}),
     outcome: "completed",
   });
   return offer(input.claims, evaluationId, [executed.content]);
