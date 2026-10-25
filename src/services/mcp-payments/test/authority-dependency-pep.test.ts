@@ -120,6 +120,8 @@ async function build(route: "pep" | "pdp" = "pep") {
     resolver: { view: (principal: { iss: string; sub: string }) => viewing.view(principal) } as unknown as AuthorityDependencyResolver,
     evidence,
     now: () => nowMs,
+    // The declaration is lifecycle-mediated too; its reconciler is current here.
+    reconciliation: () => ({ lastReconciledAtMs: nowMs }),
     governed: (mission: { id: string }) => (mission.id === view.id ? { subject: { iss: ISSUER, sub: "alice" }, clientId: "ap-agent" } : undefined),
   };
   // The transaction tier's high-consequence class needs the PDP's claim

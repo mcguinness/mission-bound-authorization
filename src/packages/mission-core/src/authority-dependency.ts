@@ -49,15 +49,19 @@ export type InvalidatingChange =
 export type GovernedAuthoritySource = "user_delegated" | "service_owned" | "organizational";
 
 /**
- * Why reliance on a dependency stopped. `reconciliation_overdue`: under
- * lifecycle-mediated enforcement, the last reconciliation that completed rests
- * on an observation older than the declared lag bound.
+ * Why reliance on a dependency stopped. `unresolved`: the source answered but
+ * holds no record of the principal, an uncertainty kept apart from a
+ * confirmed withdrawal; it never establishes deprovisioning.
+ * `reconciliation_overdue`: under lifecycle-mediated enforcement, the last
+ * reconciliation that completed rests on an observation older than the
+ * declared lag bound.
  */
 export type DependencyFailure =
   | "withdrawn"
   | "invalidated"
   | "stale"
   | "unavailable"
+  | "unresolved"
   | "reconciliation_overdue";
 
 /** The lifecycle operation a reconciler commits for an invalidating change. */
@@ -528,9 +532,10 @@ export type DependencyEvaluation =
  *   either way).
  * - The source unreachable where the declaration requires an online check:
  *   `unavailable`, whatever the observation's validity.
- * - A Subject the source holds no record of, or one that withdrew the
- *   delegation: `withdrawn`. A Subject disabled or deprovisioned, where the
- *   declaration names that change: `invalidated`.
+ * - A Subject the source holds no record of: `unresolved`, an uncertainty
+ *   that refuses but is not recorded as a withdrawal. A Subject that withdrew
+ *   the delegation: `withdrawn`. A Subject disabled or deprovisioned, where
+ *   the declaration names that change: `invalidated`.
  * - Otherwise reliance holds until the observation's validity ends.
  */
 export function evaluateAuthorityDependency(
@@ -549,7 +554,7 @@ export function evaluateAuthorityDependency(
   if (declaration.online_check && !view.sourceAvailable)
     return { ok: false, failure: "unavailable", observedAt };
   const changes = declaration.invalidating_changes;
-  if (!observation.known) return { ok: false, failure: "withdrawn", observedAt };
+  if (!observation.known) return { ok: false, failure: "unresolved", observedAt };
   if (observation.status === "disabled" && changes.includes("subject_disabled"))
     return { ok: false, failure: "invalidated", observedAt };
   if (observation.status === "deprovisioned" && changes.includes("subject_deprovisioned")) {
@@ -618,10 +623,11 @@ export interface AuthorityDependencyEnforcement {
   now?: () => number;
   /**
    * Under lifecycle-mediated enforcement, the reconciler's progress: the time
-   * the observation its last complete reconciliation acted on represents.
+   * the observation its last complete reconciliation acted on represents, and
+   * the governed Missions whose Subject that observation could not resolve.
    * Absent where no reconciler runs.
    */
-  reconciliation?: () => { lastReconciledAtMs?: number };
+  reconciliation?: () => { lastReconciledAtMs?: number; unresolved?: ReadonlySet<string> };
 }
 
 /**
@@ -634,7 +640,10 @@ export interface AuthorityDependencyEnforcement {
  *   not show that this reconciliation is current": while the last complete
  *   reconciliation rests on an observation older than the declared lag bound,
  *   or none has completed, the action is refused `reconciliation_overdue`,
- *   whatever the Mission's state reads.
+ *   whatever the Mission's state reads. Fresh progress does not authorize
+ *   reliance on a dependency the reconciliation could not resolve: a Mission
+ *   whose Subject the last complete reconciliation found no record of is
+ *   refused `unresolved`.
  * - `direct` (direct evaluation): the observation itself must establish the
  *   dependency.
  */
@@ -666,12 +675,16 @@ export function checkAuthorityDependency(
   // bound would refuse it.
   let reconciledUntilMs: number | undefined;
   if (apply.lag && enforcement.declaration.enforcement.lifecycle && lagBound !== undefined) {
-    const last = enforcement.reconciliation?.().lastReconciledAtMs;
+    const progress = enforcement.reconciliation?.();
+    const last = progress?.lastReconciledAtMs;
     if (last === undefined || nowMs - last >= lagBound * 1000) {
       return refuse(
         "reconciliation_overdue",
         last !== undefined ? new Date(last).toISOString() : undefined,
       );
+    }
+    if (progress?.unresolved?.has(mission.id)) {
+      return refuse("unresolved", new Date(last).toISOString());
     }
     reconciledUntilMs = last + lagBound * 1000;
   }

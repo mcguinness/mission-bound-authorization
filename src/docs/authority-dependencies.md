@@ -15,7 +15,12 @@ withdrawn its delegation from the Mission's client. The source is
 and `changed_at`), read by the identity-state resolver
 (`packages/mission-core/src/authority-dependency.ts`) and re-read without a
 restart. An observation stays acceptable for `max_staleness_seconds` (300 s)
-from the read it came from.
+from when its read was issued, not when the read completed, so a slow read
+never renews old state. Overlapping reads (a scheduled refresh and a
+reconciliation pass) publish in the order they were issued, so an older read
+never replaces a newer one. A Subject the source answers without is
+unresolved: an uncertainty that refuses dependent actions and is recorded
+as `unresolved`, never as a withdrawal and never as deprovisioning.
 
 It is enforced by both routes:
 
@@ -25,6 +30,13 @@ It is enforced by both routes:
   refused `invalid_grant`. The PDP evaluates it in its Resource-policy step
   and refuses `resource_policy`. A deployment can route this step to the PEP
   instead (`enforcement.direct: "pep"`).
+- **At release.** A PEP holding the dependency rechecks it at every use of a
+  permit, release included, on every dispatch path: reads, unkeyed and keyed
+  reversible writes, and the transaction tier. Routed to the PEP, its
+  composed step's ceiling (the admission observation's validity) travels
+  with the permit, and no effect is released once it is reached. Either way,
+  a known withdrawal, an observed invalidation or a lost observation that
+  reaches the PEP after the decision stops the release (`resource_policy`).
 - **Lifecycle-mediated enforcement.** The authorization server's reconciler
   (`services/authorization-server/src/adapters/authority-reconciler.ts`)
   commits `suspend` for a disabled Subject or a withdrawn delegation and
@@ -49,6 +61,10 @@ The enforcers split the failure cases:
   process (`BuiltAs.authorityDependency.reconciliation`). A PDP without that
   progress refuses every governed action, so a lost or never-started
   reconciler fails closed.
+- Fresh progress does not authorize reliance on a dependency the
+  reconciliation could not resolve. A pass records the governed Missions
+  whose Subject the source holds no record of, and the PDP refuses their
+  actions as `unresolved`. The reconciler does not suspend or revoke them.
 - The issuance gates do not rely on reconciled state. They evaluate the
   observation itself and fail closed once it passes `max_staleness_seconds`.
 
@@ -66,8 +82,9 @@ The declaration's `external_change_bound` states the claim:
 
 - **Start:** the identity source records the change (`changed_at`).
 - **End:** no action under a governed Mission can begin an effect. Every
-  issuance gate and every PDP decision under it refuses, and the reconciler
-  has suspended or revoked the Mission.
+  issuance gate and every PDP decision under it refuses, a PEP holding the
+  dependency releases no effect under a permit issued before the change,
+  and the reconciler has suspended or revoked the Mission.
 - **Bound:** 60 s, covering one detection period (30 s) and one
   reconciliation period (30 s) in sequence. The reader refuses a bound that
   does not cover them. The authorization server refuses to start with a
@@ -75,18 +92,21 @@ The declaration's `external_change_bound` states the claim:
   period.
 - **Measured** (`services/authorization-server/test/authority-dependency-bound.test.ts`):
   the reference composition, run at the declared periods from every phase
-  of the two schedules against the change in 5 s steps. The worst case is
-  30 s for the first gate refusal, 30 s for the first PDP refusal and 30 s
-  for the suspension, which is a read and a pass that both land just before
-  the change.
-- **Already-started work:** an action whose PDP permit was issued before the
-  change completes within that request. A permit relied on beyond the
-  request expires no later than its `valid_until`: at most
+  of the two schedules against the change in 5 s steps, with the payments
+  PEP holding a permit issued just before the change. The worst case is 30 s
+  for the first gate refusal, the first PDP refusal, the held permit's
+  refusal at release and the suspension, which is a read and a pass that
+  both land just before the change. The held permit is refused while its
+  own `valid_until` still runs.
+- **Already-started work:** work whose effect began before the change
+  completes within that request. Permit issuance is not already-started
+  work: a permit issued before the change and not yet used is rechecked at
+  release and releases no effect after the cutoff. A permit relied on beyond
+  its request expires no later than its `valid_until`: at most
   `max_staleness_seconds` after the observation it relied on, and at most
   `reconciliation_max_lag_seconds` after the observation the last complete
-  reconciliation acted on. Access tokens
-  already issued run to their expiry, but every issuance and every decision
-  they reach refuses.
+  reconciliation acted on. Access tokens already issued run to their expiry,
+  but every issuance and every decision they reach refuses.
 
 The bound holds for a successful observation path. Under failure:
 
@@ -96,6 +116,8 @@ The bound holds for a successful observation path. Under failure:
 | Disconnected feed (the source cannot be read) | The PDP's lag refusal. The issuance gates keep serving a cached observation still within its validity, then fail closed. | PDP: `reconciliation_max_lag_seconds` after the last good read. Gates: `max_staleness_seconds`. |
 | Failed reconciliation (a transition does not commit) | The pass does not advance its progress, so the PDP's lag refusal applies. The next pass commits the remainder. | `reconciliation_max_lag_seconds` |
 | Reconciler restart | Its progress starts absent, so the PDP refuses until the first complete pass. That pass commits nothing it already committed. | Until the first pass |
+| Overlapping or slow read | An older read completing late is not published over a newer one; a slow read is dated from when it was issued, so it renews neither the observation's validity nor the reconciler's progress. | No extension |
+| Subject unresolved (the source answers without the Subject) | The gates and direct evaluation refuse `unresolved`; under lifecycle-only enforcement the PDP refuses the Missions the last pass could not resolve. Nothing is suspended or revoked. | One detection period |
 
 A source outage commits no lifecycle change. If a deprovisioning's
 transition fails and an outage follows, the Mission stays unrevoked until
@@ -137,7 +159,7 @@ Mission and for credentials already issued.
 | Consequence | Effect | Owner | Source | Bound |
 |---|---|---|---|---|
 | New issuance | Gates refuse | Identity owner | `identity.json` `status` | One detection period |
-| Existing Mission | `revoke` by the reconciler, for any non-terminal Mission, a suspended one included. A source with no record of the principal, an outage and a disabled Subject never revoke. | Security owner | Same | 60 s declared, 30 s measured |
+| Existing Mission | `revoke` by the reconciler, for any non-terminal Mission, a suspended one included. A source with no record of the principal, an outage and a disabled Subject never revoke; an unresolved Subject's actions are refused as `unresolved`. | Security owner | Same | 60 s declared, 30 s measured |
 | Already-issued credentials | Unusable at every enforcing PEP once the Mission is terminated | Security owner | Same | As the existing Mission |
 
 The core's Subject-deprovisioning SHOULD (#830 Q-e, open as #1683) is not

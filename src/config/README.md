@@ -66,7 +66,9 @@ declaration also states `reconciliation_max_lag_seconds` and
 commits for each invalidating change: as shipped, `suspend` for a disabled
 Subject or a withdrawn delegation and `revoke` for a deprovisioned Subject.
 The PDP refuses the governed Missions' actions once the reconciler's last
-complete pass rests on an observation older than the lag bound.
+complete pass rests on an observation older than the lag bound, and refuses
+a Mission whose Subject that pass found no record of (`unresolved`, never a
+revocation).
 `external_change_bound` is the deployment's claimed bound from an external
 change (`@spec runtime#state-freshness`): its `seconds`, start, end, work
 already started, the path, and the two periods the path names,

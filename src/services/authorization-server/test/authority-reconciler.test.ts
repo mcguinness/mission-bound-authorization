@@ -85,7 +85,13 @@ function sourceWith(changes: Record<string, Omit<SourceRecord, "sub"> | null> = 
 
 let source: unknown = sourceWith();
 let nowMs = Date.now();
+/** While set, each read waits for the test to complete it (`held[i](records)`), as a slow read does. */
+let held: Array<(records: unknown) => void> | undefined;
 const read = async () => {
+  if (held) {
+    const waiting = held;
+    return new Promise((resolve) => waiting.push(resolve));
+  }
   if (source instanceof Error) throw source;
   return source;
 };
@@ -480,5 +486,110 @@ describe("the reconciler across a restart of a file-backed authorization server 
     expect((await restarted.reconcile()).transitions).toEqual([]);
     after.suspensionScheduler?.stop();
     after.kernel.close();
+  });
+});
+
+describe("an unresolved Subject under lifecycle-only enforcement is an uncertainty that refuses, never a revocation (@spec runtime#input-authority-dependency, #830, D813)", () => {
+  it("refuses dependent actions once the source no longer holds the Subject, though the reconciliation is current and the Mission active, records the uncertainty apart from a withdrawal, and revokes nothing", async () => {
+    const LIFECYCLE_ISSUER = "http://localhost:15325";
+    const { direct: _direct, ...lifecycleOnly } = DECLARATION.enforcement;
+    const declaration = { ...DECLARATION, enforcement: lifecycleOnly } as AuthorityDependencyDeclaration;
+    let records: unknown = [{ sub: "alice" }, { sub: "bob" }];
+    nowMs = Date.now();
+    const lifecycleEvidence = new AuthorityDependencyEvidence();
+    const lifecycleResolver = new AuthorityDependencyResolver({
+      issuer: LIFECYCLE_ISSUER,
+      read: async () => records,
+      parse: (raw) => parseIdentityState(raw),
+      now: () => nowMs,
+    });
+    await lifecycleResolver.refresh();
+    const lifecycleAs = await buildAuthorizationServer({
+      issuer: LIFECYCLE_ISSUER,
+      authorityDependency: { declaration, resolver: lifecycleResolver, evidence: lifecycleEvidence, now: () => nowMs },
+    });
+    try {
+      const mission = lifecycleAs.kernel.approve({
+        intent: validateMissionIntent(JSON.stringify({ goal: "Read Acme invoices for alice", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
+        proposedAuthority: [{ type: "mission_resource_access", resource: RESOURCE, actions: [READ, SEND], constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] } }],
+        subject: { iss: LIFECYCLE_ISSUER, sub: "alice" },
+        approver: { iss: LIFECYCLE_ISSUER, sub: "bob" },
+        clientId: "ap-agent",
+        approvalEventId: `apev-rec-unresolved-${crypto.randomUUID()}`,
+      });
+      const reconciler = built(lifecycleAs.authorityReconciler, "the reconciler");
+      const dependency = built(lifecycleAs.authorityDependency, "the dependency enforcement");
+      expect((await reconciler.reconcile()).ok).toBe(true);
+      expect((await decide(mission.id, READ, dependency, lifecycleAs)).decision).toBe(true);
+      // The source answers without the Subject, past the previous observation's validity.
+      records = [{ sub: "bob" }];
+      nowMs += 301_000;
+      const pass = await reconciler.reconcile();
+      expect(pass.ok).toBe(true);
+      expect(pass.unresolved).toEqual([mission.id]);
+      expect(pass.transitions).toEqual([]);
+      expect(stateOf(mission.id, lifecycleAs)).toMatchObject({ state: "active", reason: undefined });
+      expect(lifecycleResolver.view({ iss: LIFECYCLE_ISSUER, sub: "alice" }).observation?.known).toBe(false);
+      const refused = await decide(mission.id, READ, dependency, lifecycleAs);
+      expect(refused.decision).toBe(false);
+      expect(refused.context.denial_reason).toBe("resource_policy");
+      expect(lifecycleEvidence.entries().at(-1)).toMatchObject({ enforcer: "pdp", failure: "unresolved", mission: { id: mission.id } });
+      // The issuance gates record the same uncertainty, never a withdrawal.
+      expect(() => lifecycleAs.kernel.checkDerivation(mission.id)).toThrow(/declared authority dependency is not established/);
+      expect(lifecycleEvidence.entries().at(-1)).toMatchObject({ enforcer: "as", failure: "unresolved" });
+      expect(lifecycleEvidence.entries().map((e) => e.failure)).not.toContain("withdrawn");
+      // The Subject resolves again: the next pass clears the uncertainty.
+      records = [{ sub: "alice" }, { sub: "bob" }];
+      expect((await reconciler.reconcile()).unresolved).toEqual([]);
+      expect((await decide(mission.id, READ, dependency, lifecycleAs)).decision).toBe(true);
+    } finally {
+      lifecycleAs.kernel.close();
+    }
+  });
+});
+
+describe("the reconciler's reads are ordered with the scheduled refreshes and dated from issue (@spec runtime#input-authority-dependency, #830, D813)", () => {
+  it("acts on a newer scheduled read that overtook its own, so an older read cannot undo the Subject's disablement", async () => {
+    nowMs = Date.now();
+    await observe(sourceWith());
+    const m = approve(as, "lena");
+    held = [];
+    const pending = held;
+    try {
+      // The pass issues its read first; a scheduled refresh issued later completes first.
+      const pass = reconciler().reconcile();
+      nowMs += 1000;
+      const scheduled = resolver.refresh();
+      pending[1]?.(sourceWith({ lena: { status: "disabled" } }));
+      await scheduled;
+      pending[0]?.(sourceWith());
+      const outcome = await pass;
+      expect(outcome.ok).toBe(true);
+      expect(mine(outcome, m)).toEqual([{ mission: m.id, operation: "suspend", change: "subject_disabled" }]);
+      expect(reconciler().lag().lastReconciledAtMs).toBe(nowMs);
+    } finally {
+      held = undefined;
+    }
+  });
+
+  it("dates its progress from when its read was issued, so a slow read does not make an overdue reconciliation current", async () => {
+    nowMs = Date.now();
+    await observe(sourceWith());
+    const m = approve(as, "omar");
+    held = [];
+    const pending = held;
+    const issuedAt = nowMs;
+    try {
+      const pass = reconciler().reconcile();
+      nowMs = issuedAt + LAG_MS + 10_000;
+      pending[0]?.(sourceWith());
+      expect((await pass).ok).toBe(true);
+    } finally {
+      held = undefined;
+    }
+    expect(reconciler().lag().lastReconciledAtMs).toBe(issuedAt);
+    const dec = await decide(m.id);
+    expect(dec.decision).toBe(false);
+    expect(evidence.entries().at(-1)).toMatchObject({ enforcer: "pdp", failure: "reconciliation_overdue", mission: { id: m.id } });
   });
 });

@@ -91,8 +91,8 @@ describe("the deployment's Enforcement Scope Statement declares its authority de
       seconds: 60,
       start: expect.stringContaining("identity source records the change"),
       end: expect.stringContaining("can begin an effect"),
-      already_started: expect.stringContaining("valid_until"),
-      path: expect.stringMatching(/Detection.*Evaluation.*State change.*Downstream reliance.*Permit validity/s),
+      already_started: expect.stringMatching(/Permit issuance is not already-started work.*valid_until/s),
+      path: expect.stringMatching(/Detection.*Evaluation.*State change.*Downstream reliance.*Permit validity.*Release/s),
       // The periods the path names, covered by the bound in sequence.
       detection_period_seconds: 30,
       reconciliation_period_seconds: 30,

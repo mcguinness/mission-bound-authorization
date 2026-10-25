@@ -1,9 +1,10 @@
 /**
- * @spec runtime#state-freshness (#830, D798): the external-change bound,
- * measured end to end: from the identity source recording the change (its
- * `changed_at`) to no action under the governed Mission being able to begin an
- * effect, which is the issuance gate refusing, the PDP refusing and the
- * reconciler having suspended the Mission.
+ * @spec runtime#state-freshness (#830, D798, D813): the external-change
+ * bound, measured end to end: from the identity source recording the change
+ * (its `changed_at`) to no action under the governed Mission being able to
+ * begin an effect, which is the issuance gate refusing, the PDP refusing, the
+ * payments PEP releasing no effect under a permit it was issued before the
+ * change and has not used, and the reconciler having suspended the Mission.
  *
  * The measurement runs the reference composition (the AS's resolver, issuance
  * gates and reconciler, and the PDP's `evaluate()` given the AS's dependency
@@ -13,9 +14,14 @@
  * a read and a pass that both land just before the change. Each figure is in
  * declared seconds, and every one is within the declared `seconds`.
  *
- * Work already started is stated separately in the declaration: a permit
- * decided before the change expires no later than its observation's validity
- * (asserted here, and witnessed on its own in the PDP's permit-cap test).
+ * Permit issuance is not already-started work. A permit issued before the
+ * change and not yet used is held across the cutoff: from the first read
+ * showing the change, the PEP's release check refuses it, while its own
+ * `valid_until` has not passed, and no effect is released under it. Work
+ * whose effect had begun is stated separately in the declaration; a permit
+ * decided before the change also expires no later than its observation's
+ * validity (asserted here, and witnessed on its own in the PDP's permit-cap
+ * test).
  *
  * A second run drives the same composition with real timers through the AS's
  * own `refreshIntervalMs` and `reconcileIntervalMs`, scaled down, over a
@@ -28,6 +34,15 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type AuthorityDependencyDeclaration, AuthorityDependencyResolver } from "@mission/core";
+import {
+  createEphemeralEvidenceKeys,
+  credentialAuthorityFrom,
+  EvidenceStore,
+  type ExecutionAttempt,
+  PaymentsStore,
+  Pep,
+  type TokenFacts,
+} from "@mission/mcp-payments";
 import { AUTHORITY_DEPENDENCIES, CANONICAL_RESOURCE, parseIdentityState, readIdentitySource } from "@mission/demo-data";
 import { evaluate as evaluateRequest, type EvaluationRequest, type Fga, relationForAction, stalenessBound } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
@@ -112,12 +127,72 @@ interface Measured {
   reconciliationPhase: number;
   gate: number;
   pdp: number;
+  /** The first time a permit issued before the change, and not yet used, can no longer release an effect. */
+  effect: number;
   suspended: number;
   end: number;
 }
 
+/**
+ * The payments PEP composed with the authorization server's dependency: the
+ * decision point evaluates it (direct evaluation routed to the PDP) and the
+ * PEP, holding it too, rechecks it at release. One clock throughout.
+ */
+function paymentsPep(as: BuiltAs, clock: () => number) {
+  const dependency = built(as.authorityDependency, "the dependency enforcement");
+  const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, authorityDependency: dependency });
+  const payments = new PaymentsStore();
+  payments.seed(
+    [{ id: "acme", name: "Acme", status: "approved" }],
+    [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
+  );
+  const pep = new Pep({
+    now: () => new Date(clock()),
+    payments,
+    evidence: new EvidenceStore(keys.signing, keys.resolver),
+    fga: allowAll,
+    modelId: "unit-test-model",
+    decide: keys.decide,
+    claims: keys.claims,
+    instanceEpoch: "epoch-830-bound",
+    loadView: (ref: { id: string; issuer: string }) => {
+      const r = as.kernel.get(ref.id);
+      if (!r || r.issuer !== ref.issuer) return undefined;
+      const view = {
+        id: r.id,
+        issuer: r.issuer,
+        state: r.state,
+        version: r.version,
+        authority_hash: r.authority_hash,
+        authority_set: r.authority_set,
+        subject: r.subject,
+        client_id: r.client_id,
+      };
+      return { view, observation: { state: r.state, version: r.version, mode: "fresh", freshness_at: new Date(clock()).toISOString() } };
+    },
+    authorityDependency: dependency,
+  });
+  /** A permit for the Mission's read, issued now and held unused. */
+  const issue = async (mission: MissionRecord): Promise<{ attempt: ExecutionAttempt; validUntilMs: number }> => {
+    const token: TokenFacts = {
+      sub: mission.subject.sub,
+      iss: ISSUER,
+      clientId: "ap-agent",
+      cnfJkt: "jkt-830-bound",
+      mission: { id: mission.id, issuer: mission.issuer, authority_hash: mission.authority_hash },
+      credentialAuthority: credentialAuthorityFrom([{ type: "mission_resource_access", resource: RESOURCE, actions: [READ] }]),
+    };
+    const intake = await pep.intake("get_invoice", { invoice_id: "inv-1" }, token);
+    if (!intake.ok) throw new Error(`intake refused: ${intake.refusal_reason}`);
+    const res = await pep.enforce("get_invoice", intake.args, token);
+    if (!res.permitted || !res.attempt) throw new Error(`no permit: ${JSON.stringify(res)}`);
+    return { attempt: res.attempt, validUntilMs: Date.parse(res.attempt.permitValidUntil as string) };
+  };
+  return { pep, issue };
+}
+
 describe("the external-change bound, measured end to end (@spec runtime#state-freshness, #830)", () => {
-  it("stops every dependent action within the declared bound from the source recording the change, from every phase of the declared schedules; a permit decided before the change expires within its observation's validity", async () => {
+  it("stops every dependent action within the declared bound from the source recording the change, from every phase of the declared schedules, a permit issued before the change and held unused included; a permit decided before the change expires within its observation's validity", async () => {
     const PHASES = [5, 10, 15, 20, 25, 30];
     const subjects = PHASES.flatMap((d) => PHASES.map((c) => `phase-${d}-${c}`));
     let records: { sub: string; status?: string; changed_at?: string }[] = [{ sub: "bob" }, ...subjects.map((sub) => ({ sub }))];
@@ -131,6 +206,7 @@ describe("the external-change bound, measured end to end (@spec runtime#state-fr
     await resolver.refresh();
     const as = await buildAuthorizationServer({ issuer: ISSUER, authorityDependency: { declaration: DECLARATION, resolver, now: () => nowMs } });
     const reconciler = built(as.authorityReconciler, "the reconciler");
+    const payments = paymentsPep(as, () => nowMs);
     const measured: Measured[] = [];
     for (const detectionPhase of PHASES) {
       for (const reconciliationPhase of PHASES) {
@@ -154,10 +230,13 @@ describe("the external-change bound, measured end to end (@spec runtime#state-fr
         const observedAt = Date.parse(built(resolver.view({ iss: ISSUER, sub }).observation, "the observation").observedAt);
         const validUntil = Date.parse((permit.context.conditions as { valid_until: string }).valid_until);
         expect(validUntil).toBeLessThanOrEqual(observedAt + DECLARATION.max_staleness_seconds * 1000);
+        // A permit the PEP was issued just before the change, held unused across it.
+        const held = await payments.issue(mission);
+        expect(payments.pep.permitUseFailure(held.attempt), sub).toBeUndefined();
         // The source records the change.
         at(0);
         records = records.map((r) => (r.sub === sub ? { sub, status: "disabled", changed_at: new Date(nowMs).toISOString() } : r));
-        const first: Partial<Record<"gate" | "pdp" | "suspended", number>> = {};
+        const first: Partial<Record<"gate" | "pdp" | "effect" | "suspended", number>> = {};
         let start: number | undefined;
         for (let t = 0; t <= BOUND.seconds; t += 1) {
           at(t);
@@ -170,28 +249,42 @@ describe("the external-change bound, measured end to end (@spec runtime#state-fr
           const elapsed = start !== undefined ? (nowMs - start) / 1000 : t;
           if (first.gate === undefined && gateRefuses(as, mission.id)) first.gate = elapsed;
           if (first.pdp === undefined && !(await decide(as, mission.id, nowMs)).decision) first.pdp = elapsed;
+          if (first.effect === undefined) {
+            const failure = payments.pep.permitUseFailure(held.attempt);
+            if (failure !== undefined) {
+              // Refused by the dependency recheck while the permit's own validity still ran.
+              expect(failure, sub).toBe("resource_policy");
+              expect(nowMs, sub).toBeLessThan(held.validUntilMs);
+              first.effect = elapsed;
+            }
+          }
           if (first.suspended === undefined && as.kernel.get(mission.id)?.state === "suspended") first.suspended = elapsed;
-          if (first.gate !== undefined && first.pdp !== undefined && first.suspended !== undefined) break;
+          if (first.gate !== undefined && first.pdp !== undefined && first.effect !== undefined && first.suspended !== undefined) break;
         }
         expect(start, sub).toBe(base);
         const gate = built(first.gate, `${sub}: the gate refusal`);
         const pdp = built(first.pdp, `${sub}: the PDP refusal`);
+        const effect = built(first.effect, `${sub}: the held permit's refusal at release`);
         const suspended = built(first.suspended, `${sub}: the suspension`);
-        measured.push({ detectionPhase, reconciliationPhase, gate, pdp, suspended, end: Math.max(gate, pdp, suspended) });
+        // Released after the cutoff, the held permit releases no effect.
+        expect(await payments.pep.verifyPermitAtUse(held.attempt), sub).toMatchObject({ ok: false, error: "resource_policy" });
+        measured.push({ detectionPhase, reconciliationPhase, gate, pdp, effect, suspended, end: Math.max(gate, pdp, effect, suspended) });
       }
     }
     for (const m of measured) expect(m.end, JSON.stringify(m)).toBeLessThanOrEqual(BOUND.seconds);
     // Each figure's worst case over the phases: a read and a pass both just before the change.
-    const worst = (figure: "gate" | "pdp" | "suspended" | "end") => Math.max(...measured.map((m) => m[figure]));
-    expect({ gate: worst("gate"), pdp: worst("pdp"), suspended: worst("suspended"), end: worst("end") }).toEqual({
+    const worst = (figure: "gate" | "pdp" | "effect" | "suspended" | "end") => Math.max(...measured.map((m) => m[figure]));
+    expect({ gate: worst("gate"), pdp: worst("pdp"), effect: worst("effect"), suspended: worst("suspended"), end: worst("end") }).toEqual({
       gate: RECONCILIATION_S,
       pdp: RECONCILIATION_S,
+      effect: RECONCILIATION_S,
       suspended: RECONCILIATION_S,
       end: RECONCILIATION_S,
     });
     expect(measured.find((m) => m.detectionPhase === DETECTION_S && m.reconciliationPhase === RECONCILIATION_S)).toMatchObject({
       gate: DETECTION_S,
       pdp: DETECTION_S,
+      effect: DETECTION_S,
       suspended: RECONCILIATION_S,
     });
     as.kernel.close();
