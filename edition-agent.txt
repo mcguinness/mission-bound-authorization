@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-25T04:21:14Z
-Source repository commit: e85d7836f786b78e375a5a62918b6824c60a01b9
+Generated: 2026-10-25T05:26:41Z
+Source repository commit: b8ba30b520b34960765bc7d2c815da5696c0adeb
 Member count: 9
 
 Reading order:
@@ -32530,7 +32530,8 @@ Table of Contents
       primary rendering.  A deployment MAY offer one as a detail layer
       (Section 4.4).
 
-   *  A Common Constraint ([I-D.draft-mcguinness-oauth-mission]) has
+   *  A Common Constraint
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]) has
       registered semantics, and its rendered form MUST state them.  A
       constraint key the template cannot translate MUST be rendered and
       identified as untranslated, never omitted: an Approver shown an
@@ -33516,6 +33517,12 @@ Table of Contents
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
