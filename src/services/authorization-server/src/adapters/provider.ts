@@ -538,6 +538,7 @@ import {
   DispatchMismatchError,
   findDispatch,
   pinDispatchPolicy,
+  recordDispatchDelivery,
   TemplateError,
   type CreateTemplateInput,
   type DispatchInput,
@@ -2818,7 +2819,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
   if (grantEnabled.get(MISSION_DISPATCH_GRANT_TYPE)) {
     provider.registerGrantType(
       MISSION_DISPATCH_GRANT_TYPE,
-      (ctx) => handleMissionDispatchGrant(provider, opts, ctx),
+      (ctx) => serializeDispatch(opts.kernel, ctx, () => handleMissionDispatchGrant(provider, opts, ctx)),
       // `authorization_details` carries the dispatcher's authority proposal
       // (@spec mission#authority-proposal), the same standard carriage as PAR
       // and the child/expansion exchanges; it MUST be declared here or
@@ -6295,6 +6296,41 @@ function dispatchErrorCode(reason: DispatchReason): "invalid_request" | "access_
  * oidc-provider's err_out renderer would otherwise strip any member other
  * than error/error_description (same technique as handleChildCreationExchange).
  */
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery (#250): the
+ * Dispatches in flight, by reservation key (authenticated Dispatcher,
+ * dispatch_event_id), per kernel.
+ */
+const dispatchesInFlight = new WeakMap<MissionKernel, Map<string, Promise<void>>>();
+
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery (#250): one
+ * Dispatch per reservation key runs at a time. A concurrent request with the
+ * same key waits for the one in flight, then looks the key up again and
+ * reads the delivery it recorded, so concurrent retries recover one token
+ * and count it once. Instance-level serialization for the declared
+ * one-process topology, as the kernel's exclusive derivations are;
+ * multi-process claiming stays behind #641.
+ */
+async function serializeDispatch(kernel: MissionKernel, ctx: KoaContextWithOIDC, run: () => Promise<void>): Promise<void> {
+  const eventId = (ctx.oidc.params as Record<string, unknown>).dispatch_event_id;
+  const clientId = ctx.oidc.client?.clientId;
+  if (typeof eventId !== "string" || !eventId || !clientId) return run();
+  const key = `${clientId}\u0000${eventId}`;
+  let inFlight = dispatchesInFlight.get(kernel);
+  if (!inFlight) dispatchesInFlight.set(kernel, (inFlight = new Map()));
+  for (let held = inFlight.get(key); held; held = inFlight.get(key)) {
+    await held.catch(() => undefined);
+  }
+  const attempt = run();
+  inFlight.set(key, attempt);
+  try {
+    await attempt;
+  } finally {
+    if (inFlight.get(key) === attempt) inFlight.delete(key);
+  }
+}
+
 async function handleMissionDispatchGrant(
   provider: Provider,
   opts: AdapterOptions,
@@ -6448,8 +6484,11 @@ async function handleMissionDispatchGrant(
   // the completed-operation recovery lookup runs after possession verification
   // and BEFORE evidence re-verification and the gates.
   let record: MissionRecord | undefined;
+  let recovery: { delivery?: Record<string, unknown> } | undefined;
   try {
-    record = findDispatch(kernel, store, dispatchInput)?.mission;
+    const found = findDispatch(kernel, store, dispatchInput);
+    record = found?.mission;
+    recovery = found?.recovered;
   } catch (e) {
     if (dispatchFailure(e)) return;
     ctx.status = 400;
@@ -6504,6 +6543,16 @@ async function handleMissionDispatchGrant(
   // details projects the EFFECTIVE set (approved minus containment overlay).
   const effective = kernel.effectiveAuthoritySet(record);
   const resource = effective[0]?.resource ?? opts.issuer;
+  // @spec mission-template#grant-type, expansion#creation-recovery: a repeated
+  // dispatch_event_id is gated to the previously committed instance rather
+  // than derived again: the retry recovers the token the Dispatch delivered,
+  // counting nothing. A retry that cannot recover it falls through to the
+  // gated mint below: an inactive instance is refused by its own gate, and an
+  // expired or narrowed delivery is re-minted as a delivery event, never as a
+  // second Dispatch.
+  if (recovery && replayDispatchDelivery(ctx, kernel, record, recovery.delivery, audienceCarriedEntries(record, [resource], effective))) {
+    return;
+  }
   let grantId: string;
   if (record.grant_id) {
     grantId = record.grant_id;
@@ -6540,6 +6589,13 @@ async function handleMissionDispatchGrant(
   at.jkt = jkt; // sender-constrain to the dispatcher's DPoP key (tokenType -> DPoP)
   ctx.oidc.entity("AccessToken", at);
   const jwt = await at.save();
+  // @spec mission-template#grant-type: recorded under the reservation key, so
+  // a lost-response retry recovers this token rather than deriving again.
+  recordDispatchDelivery(kernel, dispatchInput, {
+    access_token: jwt,
+    exp: decodeJwt(jwt).exp,
+    authorization_details: carried,
+  });
 
   ctx.status = 200;
   ctx.body = {
@@ -6555,6 +6611,44 @@ async function handleMissionDispatchGrant(
     authorization_details: carried,
   };
   ctx.set("cache-control", "no-store");
+}
+
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery: answer a
+ * Dispatch retry with the access token the Dispatch already delivered. True
+ * when it answered; false when the retry must mint instead: no delivery is
+ * recorded, the token has expired, the instance is no longer active, or the
+ * token carries other authority than the instance's token would carry now.
+ */
+function replayDispatchDelivery(
+  ctx: KoaContextWithOIDC,
+  kernel: MissionKernel,
+  record: MissionRecord,
+  stored: Record<string, unknown> | undefined,
+  carriedNow: unknown[],
+): boolean {
+  const token = stored?.access_token;
+  const exp = stored?.exp;
+  if (typeof token !== "string" || typeof exp !== "number") return false;
+  const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
+  if (exp <= nowS) return false;
+  if (kernel.applyExpiry(record).state !== "active") return false;
+  if (JSON.stringify(stored?.authorization_details) !== JSON.stringify(carriedNow)) return false;
+  const scope = decodeJwt(token).scope;
+  ctx.status = 200;
+  ctx.body = {
+    access_token: token,
+    token_type: "DPoP",
+    expires_in: exp - nowS,
+    // @spec mission#scope-projection: the stored token's own projected scope.
+    ...(typeof scope === "string" ? { scope } : {}),
+    mission_id: record.id,
+    // @spec mission#grant-binding: the committed effective expiry, verbatim.
+    mission_expires_at: record.expires_at,
+    authorization_details: carriedNow,
+  };
+  ctx.set("cache-control", "no-store");
+  return true;
 }
 
 /**
