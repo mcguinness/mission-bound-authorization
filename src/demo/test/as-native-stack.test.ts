@@ -1033,7 +1033,10 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
 
     async remittanceApproval(): Promise<void> {
       const remitMissionId = missionIdOf(remit.accessToken);
-      const executions = () => stack.evidence.forMission(remitMissionId).filter((e) => e.kind === "execution");
+      // Counted from here: an earlier test's permitted read under this Mission
+      // already holds its own completed disposition (#1640).
+      const earlier = stack.evidence.forMission(remitMissionId).filter((e) => e.kind === "execution").length;
+      const executions = () => stack.evidence.forMission(remitMissionId).filter((e) => e.kind === "execution").slice(earlier);
       // @spec runtime#idempotency (#917): one intended execution, one key: the
       // challenged attempt and its retry under the transaction token carry the same.
       const args = { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` };
@@ -1155,7 +1158,10 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       expect(decisions.slice(before.decisions)).toEqual([{ audience: CANONICAL_RESOURCE, permit: false }]);
       const last = stack.evidence.forMission(spareId).filter((e) => e.kind === "decision").at(-1)?.content;
       expect(last).toMatchObject({ decision: "deny", denial_reason: "mission_inactive" });
-      expect(stack.evidence.forMission(spareId).filter((e) => e.kind === "execution")).toHaveLength(0);
+      // The permitted read's completed disposition (#1640); the refused read adds none.
+      expect(stack.evidence.forMission(spareId).flatMap((e) => (e.kind === "execution" ? [e.content.outcome] : []))).toEqual([
+        "completed",
+      ]);
     },
 
     // @spec runtime#compound-actions (#253 acceptance): each phase is its own
@@ -1189,7 +1195,11 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
         expect(decisions.slice(before.decisions)).toEqual([{ audience: CANONICAL_RESOURCE, permit: false }]);
         expect(stack.connectors.ledgerEntries().length).toBe(before.ledger);
         expect(stack.connectors.ledgerEntries(payId)).toHaveLength(0);
-        expect(stack.evidence.forMission(payId).filter((e) => e.kind === "execution")).toHaveLength(0);
+        // The preflight's and the prepare's completed dispositions (#1640); the refused commit adds none.
+        expect(stack.evidence.forMission(payId).flatMap((e) => (e.kind === "execution" ? [e.content.outcome] : []))).toEqual([
+          "completed",
+          "completed",
+        ]);
       } finally {
         await close();
       }
@@ -2056,12 +2066,14 @@ dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a 
       TOPOLOGY.openfga,
     );
 
-  // A read claims no Execution Evidence (§8 of the deployment contract): a
-  // permitted read is its result and its permit, a refused one neither.
+  // A permitted read is its result, its permit and one completed Execution
+  // Evidence record (§8 of the deployment contract, #1640); a refused one is
+  // none of them.
   const expectPermitted = (x: Awaited<ReturnType<typeof read>>, label: string) => {
     expect(x.res.ok, `${label} ${JSON.stringify(x.res)}`).toBe(true);
     expect(x.res.result, label).toMatchObject({ id: "inv-1" });
     expect(x.decision, label).toMatchObject({ decision: "permit" });
+    expect(x.executed, label).toBe(1);
   };
   const expectRefused = (x: Awaited<ReturnType<typeof read>>, label: string) => {
     expect(x.res.ok, label).toBe(false);

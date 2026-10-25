@@ -33,8 +33,14 @@ import {
   type ListToolsResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import { MCP_REFERENCE_META_KEY, parseMcpReferenceMeta } from "@mission/core";
-import { type InsufficientAuthorization, type RequestSignals, TOOL_ACTIONS, type TokenFacts } from "./pep.js";
-import { dispatchPathFor, type McpPaymentsServer, type TransactionToolResult } from "./server.js";
+import {
+  type DecisionEvidenceGap,
+  type InsufficientAuthorization,
+  type RequestSignals,
+  TOOL_ACTIONS,
+  type TokenFacts,
+} from "./pep.js";
+import { type DispositionGap, dispatchPathFor, type McpPaymentsServer, type TransactionToolResult } from "./server.js";
 
 /**
  * The namespaced `_meta` key that carries the mission access token (JWT) across
@@ -60,8 +66,10 @@ export interface MediatedToolResult {
    */
   error?: string;
   transaction_challenge?: string;
-  /** Present only when an effect committed and its evidence is missing (#1104); never a refusal. */
-  gap?: TransactionToolResult["gap"];
+  /** Present only when an effect committed and its evidence is missing (#1104, #1640); never a refusal. */
+  gap?: TransactionToolResult["gap"] | DispositionGap;
+  /** Present on a denial whose Decision Evidence did not verify (#1640, D770 ruling 6). */
+  evidence_gap?: DecisionEvidenceGap;
 }
 
 

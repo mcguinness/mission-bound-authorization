@@ -582,6 +582,32 @@ describe("the declared outcome reconciler runs the reconciliation (@spec runtime
       await h.close();
     }
   });
+
+  it("never alerts a completed read or reversible write the PEP recorded: its effect is local, with no connector counterpart, while the executor's completed record of no effect still alerts (#1640)", async () => {
+    const h = await harness();
+    try {
+      const op = (name: string) => `op:${MISSION}:${name}`;
+      const completed = (evaluationId: string, opKey: string, role: "pep" | "executor") =>
+        h.evidence.recordExecution(CANONICAL_RESOURCE, role, {
+          permitId: evaluationId,
+          opKey,
+          execution_id: newRecordId("exe"),
+          evaluation_id: evaluationId,
+          mission_id: MISSION,
+          audience: CANONICAL_RESOURCE,
+          outcome: "completed",
+        });
+      await completed("eval-read", op("read"), "pep");
+      await completed("eval-schedule", op("schedule"), "pep");
+      await completed("eval-phantom", op("phantom"), "executor");
+      const run = await h.reconciler.runOnce();
+      expect(run.failed).toEqual([]);
+      expect(run.orphaned).toEqual({ effects: [], evidence: [op("phantom")] });
+      expect(h.alerts.alerts.map((a) => [a.kind, a.evaluation_id])).toEqual([["orphaned_evidence", "eval-phantom"]]);
+    } finally {
+      await h.close();
+    }
+  });
 });
 
 describe("the declared outcome reconciler's loop (@spec runtime#runtime-conformance, #1103)", () => {
