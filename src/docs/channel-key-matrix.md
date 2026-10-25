@@ -32,18 +32,43 @@ same `kid` across restarts. Every other key below is generated at each boot.
 
 A ring keeps each role's generations. Generation 1 is under the `kid` below,
 generation `n` under `<kid>-<n>`, and a role signs under its one `active`
-generation. `pnpm keys rotate` stages a `pending` generation, published but
-not signing; `pnpm keys rotate --activate` makes it the signer once it has
-been published for the `/jwks` freshness lifetime (`Cache-Control: max-age`,
-300 seconds), and the previous one moves to `overlap`, still published and
-accepted. `pnpm keys retire` removes an `overlap` generation once the audit
-horizon (`policy.audit_horizon_s`) has passed since it stopped signing.
-`pnpm keys compromise` withdraws a generation at once, from `/jwks` and from
-every verifier the AS runs, recording its revocation time and any
-established compromise time; compromising the active generation activates a
-fresh replacement in the same write. Each change takes effect when the AS
-next starts, since it reads the ring only at boot. `pnpm keys migrate`
-converts a slice 1 ring, which still loads, before any of these.
+generation.
+
+The AS reads the ring only at boot, so a successful edit is not a completed
+change. Every change follows one procedure: stop the AS, edit the ring
+(`pnpm keys`), start the AS, then `pnpm keys verify`. Each edit advances the
+ring's `revision`, and the AS serves the revision it loaded as its `/jwks`
+`ETag`. `verify` reads the running AS's metadata and `/jwks`, refuses unless
+they carry this revision and exactly the ring's pending, active and overlap
+generations, and records what that confirms: when a generation was first
+published, when the AS stopped signing under it, and when it was withdrawn.
+One operator edits a ring at a time; nothing locks it.
+
+- `pnpm keys rotate` stages a `pending` generation, published once the AS
+  restarts, not signing.
+- `pnpm keys rotate --activate` makes it the signer once it has been
+  confirmed published for the `/jwks` freshness lifetime
+  (`Cache-Control: max-age`, 300 seconds). The previous generation moves to
+  `overlap`: still published, accepted by the AS's verifiers (the
+  provider's `id_token_hint` check included, as a verify-only key), and
+  without its private key.
+- `pnpm keys retire` removes an `overlap` generation after its retention
+  deadline: the confirmed stop, plus the longer of the audit horizon
+  (`policy.audit_horizon_s`) and the longest Mission lifetime
+  (`policy.max_mission_lifetime_s`). With no Mission lifetime bound, which is
+  the shipped policy, no deadline can be established and retirement is
+  refused. A Status generation is also refused while a standing
+  governed-policy consent is attested under it, counted from the kernel
+  store (`--kernel-store`, or `MISSION_KERNEL_STORE`); `--in-memory-kernel`
+  asserts there is none to count. A `pending` generation retires at once.
+- `pnpm keys compromise` withdraws a generation, from `/jwks` and from every
+  verifier the AS runs, recording its revocation time and any established
+  compromise time. Compromising the active generation activates a fresh
+  replacement in the same write, with no pre-publication; a consumer
+  authorizes that replacement only through its own trusted rotation, since
+  publication alone grants no trust.
+- `pnpm keys migrate` converts a slice 1 ring, which still loads, before any
+  of these.
 
 | `kid` | Holder | Signs | Source |
 |---|---|---|---|
