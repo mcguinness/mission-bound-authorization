@@ -20040,8 +20040,8 @@
   {
    "id": "status.signing-keys.compromise-published",
    "spec": "draft-mcguinness-oauth-mission-status.md",
-   "anchor": "security-considerations",
-   "text": "the AS publishes it as revoked, or marks it with a compromise time, rather than only rotating it out.",
+   "anchor": "signing-key-retention",
+   "text": "publishes it as revoked in its historical key set",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -20056,17 +20056,17 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a key the AS signed Mission Status or Lifecycle responses under that is known or suspected compromised is published in its `jwks_uri` as revoked, or marked with a compromise time, rather than only rotated out or removed, so the archived responses it signed stay verifiable and classifiable"
+    "normative": "a key the AS signed Mission Status or Lifecycle responses under that is known or suspected compromised is published as revoked in the AS's historical key set, so the archived responses it signed stay verifiable and classifiable"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice. D405: specified, not implemented."
+   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice. D405: specified, not implemented. #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri."
   },
   {
    "id": "status.signing-keys.compromised-not-relied-on",
    "spec": "draft-mcguinness-oauth-mission-status.md",
-   "anchor": "security-considerations",
+   "anchor": "signing-key-retention",
    "text": "A consumer MUST NOT accept, for a current reliance decision, a response signed under a key the AS has published as compromised.",
    "role": "verifier",
    "strength": "MUST NOT",
@@ -20077,12 +20077,184 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as revoked or marked with a compromise time, although the key stays resolvable in the `jwks_uri` and the signature still verifies for audit"
+    "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as compromised, although the archived response still verifies for audit under the key's historical public JWK"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice, and the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check compromise. D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty."
+   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice, and the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check compromise. D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section."
+  },
+  {
+   "id": "status.signing-keys.retention-audit-horizon",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "The AS MUST keep the public JWK for every `kid` it has signed such a response under resolvable for at least the Mission's audit horizon",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every key the AS signed a Mission Status or Lifecycle response under stays resolvable for the Mission's audit horizon: a retired key in its jwks_uri, a compromised key in its historical key set"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3."
+  },
+  {
+   "id": "status.signing-keys.compromised-withdrawn",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "the AS stops signing with it and removes it from its `jwks_uri`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a key known or suspected compromised signs no further response and is absent from the AS's jwks_uri"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3."
+  },
+  {
+   "id": "status.signing-keys.no-historical-fallback",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "A consumer MUST NOT use a key from the historical key set to verify a response for a current reliance decision.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer never verifies a response for a current reliance decision under a key it found only in the historical key set, whatever the key's state"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+  },
+  {
+   "id": "status.signing-keys.bounded-jwks-cache",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "A consumer MUST NOT rely on a cached copy of the AS's `jwks_uri` beyond the freshness lifetime its response declares",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer re-fetches the AS's jwks_uri once the cached copy's declared freshness lifetime ends and replaces its cached key set with the fetched one, never adding to it, so a removed key stops verifying within that lifetime"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+  },
+  {
+   "id": "status.historical-key-set.signed",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "The AS signs the set under a key in its current `jwks_uri`, never under a key the set lists.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the historical key set is a jwk-set+jwt signed under a key in the AS's current jwks_uri and never under a key it lists as revoked"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3."
+  },
+  {
+   "id": "status.historical-key-set.revoked-member",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "Each listed JWK carries the `revoked` member",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each JWK in the historical key set carries revoked with reason compromised, revoked_at as the revocation time, and compromised_at as the established compromise time when one is established"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3."
+  },
+  {
+   "id": "status.metadata.historical-jwks-uri",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "REQUIRED while that set\n  lists a key.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "while the historical key set lists a key, the AS advertises its URL as mission_historical_jwks_uri in its authorization server metadata"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3."
   },
   {
    "id": "management.bulk.scheduled-resume-grant-dry-run",
