@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         24 October 2026
-Expires: 27 April 2027
+Intended status: Standards Track                         25 October 2026
+Expires: 28 April 2027
 
 
                  Mission Entry Discharge for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 27 April 2027.
+   This Internet-Draft will expire on 28 April 2027.
 
 Copyright Notice
 
@@ -330,8 +330,9 @@ Table of Contents
 
 3.4.  Subset Rule
 
-   Because terminal_when is a Common Constraint, the issuance profile's
-   subset comparison ([I-D.draft-mcguinness-oauth-mission]) applies its
+   Because terminal_when is a Common Constraint, the Mission Resource
+   Access Profile's subset comparison
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]) applies its
    defined subset rule with no new clause: for a key present in the
    reference entry's constraints, the same key MUST be present in the
    candidate entry and its value MUST be no broader under the key's
@@ -354,12 +355,13 @@ Table of Contents
 3.5.  Forward Compatibility
 
    Because terminal_when is a constraints member, a consumer that does
-   not recognize it fails closed by the issuance profile's resource
-   server enforcement rule directly: a consumer MUST fail closed on any
-   constraints key it does not understand, or understands but cannot
-   enforce, refusing the request rather than granting access while
-   ignoring the key ([I-D.draft-mcguinness-oauth-mission]).  Discharge
-   is load-bearing narrowing, so ignoring terminal_when would silently
+   not recognize it fails closed by the Mission Resource Access
+   Profile's resource server enforcement rule directly: a consumer MUST
+   fail closed on any constraints key it does not understand, or
+   understands but cannot enforce, refusing the request rather than
+   granting access while ignoring the key
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).  Discharge is
+   load-bearing narrowing, so ignoring terminal_when would silently
    widen the grant.  That enforcement rule is the honest basis of
    discharge's safety: an unrecognized terminal_when is refused, never
    dropped.
