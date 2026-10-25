@@ -126,7 +126,7 @@ that build on the issuance profile. The capabilities are:
   holding a `mission_id` resolves, with responses signed as a JWS
   {{RFC7515}}.
 - An extension to OAuth token introspection that carries a Mission
-  projection, which a deployment MAY return as a {{RFC9701}}-signed
+  projection, which a deployment can return as a {{RFC9701}}-signed
   response ({{introspection-projection}}).
 - A **Mission Lifecycle endpoint** ({{mission-lifecycle-endpoint}})
   for explicit `revoke`, `suspend`, `resume`, and `complete`
@@ -1731,9 +1731,8 @@ An implementation claiming an extension MUST meet its requirements:
   `private_key_jwt`,
   `mission_status_endpoint_auth_signing_alg_values_supported`.
 - **Introspection projection**: carry the Mission projection on the
-  introspection response ({{introspection-projection}}), returning it
-  as a {{RFC9701}}-signed response where end-to-end integrity is
-  required.
+  introspection response ({{introspection-projection}}), signing it
+  with {{RFC9701}} as that section provides.
 - **Mission Lifecycle**: serve the Mission Lifecycle endpoint
   ({{mission-lifecycle-endpoint}}), gate the `suspended` state and the
   `completed` termination it introduces exactly as the issuance profile
