@@ -1103,15 +1103,15 @@ that digest immediately before acting
 
 - `parameter_digest` is `sha-256:` followed by the base64url, no
   padding, SHA-256 {{RFC6234}} of the JCS {{RFC8785}} serialization of
-  the normalized parameter object. It MUST be computed under the same
-  canonicalization rules the issuance profile defines (duplicate
-  member rejection, significant array order, byte-for-byte URI
-  comparison); this document does not define a second canonicalization.
-  It is a canonical-object digest under the substrate's default
-  commitment construction, which this document imports normatively
-  ({{I-D.draft-mcguinness-mission-substrate}}): the I-JSON
-  requirement and the reject-unknown-prefix rule apply to computing
-  and verifying it unchanged.
+  the normalized parameter object. It MUST be computed under the
+  substrate's default commitment construction, which this document
+  imports normatively ({{I-D.draft-mcguinness-mission-substrate}}): a
+  duplicate member is rejected at parse time, array order is
+  significant because JCS preserves it, URI-valued parameters are
+  compared byte-for-byte, and this document defines no second
+  canonicalization. It is a canonical-object digest under that
+  construction: the I-JSON requirement and the reject-unknown-prefix
+  rule apply to computing and verifying it unchanged.
 - Every parameter that influences the action's external effect (for
   example, the recipient, destination, amount, or target object) MUST
   enter the `parameter_digest`. A field the deployment excludes MUST be
@@ -2452,8 +2452,8 @@ The materialized policy view MUST satisfy three properties:
 
 - Reproducible: identical manifest inputs, including the compiler
   identity, produce a byte-identical manifest, and therefore an
-  identical `policy_view_id`, under the canonicalization rules of
-  {{I-D.draft-mcguinness-oauth-mission}}.
+  identical `policy_view_id`, under the substrate's default commitment
+  construction ({{I-D.draft-mcguinness-mission-substrate}}).
 - Identifiable: the view carries a `policy_view_id`, so PDP cache
   entries are addressable.
 - Bounded: materialization is faithful and does not enlarge the
@@ -2463,10 +2463,10 @@ The materialized policy view MUST satisfy three properties:
 The committed object is a canonical JSON manifest, never the engine
 binary itself: JCS canonicalization applies to the manifest, and an
 engine-native artifact enters the manifest only by digest, never
-directly. `policy_view_id` is the integrity-anchor encoded form
-({{I-D.draft-mcguinness-oauth-mission}}) of the SHA-256 {{RFC6234}} of
-the JCS {{RFC8785}} canonical bytes of that profile's domain-separated,
-issuer-bound integrity-anchor envelope with `typ` `mission-policy-view`:
+directly. `policy_view_id` is the `sha-256:` encoded SHA-256
+{{RFC6234}} of the JCS {{RFC8785}} canonical bytes of a
+domain-separated, issuer-bound envelope with `typ`
+`mission-policy-view`:
 
 ~~~
 SHA-256(JCS({
@@ -2573,7 +2573,7 @@ implementers of the same operation bind the same bytes:
 - default insertion and omitted-optional-field rules applied before
   canonicalization;
 - set-like array handling and any other canonicalization beyond the
-  issuance profile's rules;
+  substrate's default commitment construction;
 - exactly which fields enter the `parameter_digest`;
 - where Evaluation-Context Binding is claimed, the versioned descriptor
   of decision-relevant resource-resolved facts and their granularity
@@ -3348,7 +3348,8 @@ The following requirements apply to every record:
 - The Resource Server runtime profile MUST define the record's
   concrete serialization and canonicalization before storage and
   integrity protection. JSON records SHOULD use JCS {{RFC8785}} under
-  the issuance profile's canonicalization rules.
+  the substrate's default commitment construction
+  ({{I-D.draft-mcguinness-mission-substrate}}).
 - It MUST be append-only and integrity-protected; the enforcement
   scope MUST name the mechanism (a hash-linked log, signed segments, a
   transparency anchor, or equivalent). Where a JSON record is
@@ -3379,8 +3380,8 @@ The following requirements apply to every record:
 
 Digest encoding is uniform across this document family: every digest a
 family document defines uses the `sha-256:` prefixed base64url,
-no-padding encoding of the issuance profile's integrity-anchor rules
-({{I-D.draft-mcguinness-oauth-mission}}). The exceptions are externally
+no-padding encoding of the substrate's default commitment construction
+({{I-D.draft-mcguinness-mission-substrate}}). The exceptions are externally
 fixed encodings: the COSE hashed payload of the audit companion's
 Signed Statements ({{I-D.draft-mcguinness-mission-audit}}) carries the
 raw digest bytes the COSE hash-envelope mechanism requires, and the
@@ -4020,7 +4021,7 @@ the normalized parameter object is:
 
 The `parameter_digest` is `sha-256:` followed by the base64url,
 no-padding SHA-256 of the JCS {{RFC8785}} serialization of that object,
-under the issuance profile's canonicalization rules (no envelope; the
+under the substrate's default commitment construction (no envelope; the
 normalized parameter object is digested directly). The JCS canonical
 bytes are a single line with sorted member names and no whitespace:
 
