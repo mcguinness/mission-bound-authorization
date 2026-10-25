@@ -60994,9 +60994,45 @@
      "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > excludes only a committed change class under disclosed exclusions and carries the rest",
      "level": "cross-component",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover compositions in the reference deployment (@spec child-delegation#carryover, child-delegation#carryover-cas, #919) > refuses a batch when a rendered child was suspended after approval",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover compositions in the reference deployment (@spec child-delegation#carryover, child-delegation#carryover-cas, #919) > carries a child suspended and resumed before rendering; one suspended at rendering and resumed before completion refuses the batch",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover compositions in the reference deployment (@spec child-delegation#carryover, child-delegation#carryover-cas, #919) > refuses a batch when a rendered child was contained after approval",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover compositions in the reference deployment (@spec child-delegation#carryover, child-delegation#carryover-cas, #919) > refuses a batch when a rendered child's record is gone at completion",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge state at a carryover's completion (@spec child-delegation#carryover-cas, child-delegation#carryover-no-reset, #919) > refuses a batch whose child entry was discharged after rendering, creating nothing",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge state at a carryover's completion (@spec child-delegation#carryover-cas, child-delegation#carryover-no-reset, #919) > refuses it even where the plan commits a state change as an exclusion: the child's effective authority moved, which the plan did not commit",
+     "level": "cross-component",
+     "surface": "derivation"
     }
    ],
-   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses."
+   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses. #919 adds a suspension and a resume after rendering, containment after approval, a rendered record gone at completion, and a discharge after rendering. Containment and discharge are compared by the membership pass (the committed `containment_version` and `effective_authority_hash`); the conditional UPDATE's containment and discharge terms are bound to the row as read in that transaction, so they add nothing beside it, and dropping the discharge term changes no result. Proved by mutation: disabling the membership pass and the UPDATE check together fails the suspension, resume, record and state-only discharge witnesses; dropping only the `record_missing` divergence fails the record witness; dropping only the effective-authority comparison fails the state-only discharge witness, where the plan excludes the discharge's state change but not its narrowed authority. With both halves off, the containment and all-or-nothing discharge witnesses are still refused by another check, so they are not the halves' discriminating witnesses."
   },
   {
    "id": "child-delegation.carryover.generation-order",
@@ -61094,9 +61130,15 @@
      "name": "Child Mission Carryover (@spec child-delegation#carryover) > excludes a suspended child and never resumes it",
      "level": "cross-component",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge state at a carryover's completion (@spec child-delegation#carryover-cas, child-delegation#carryover-no-reset, #919) > does not restore an entry discharged on the old child: the replacement carries only the remaining entry, though its new parent holds both",
+     "level": "cross-component",
+     "surface": "derivation"
     }
    ],
-   "notes": "The replacement's approved set is the old child's RECHECKED effective set, so a contained action is absent from the replacement and its overlay is not carried; an independent ceiling check against that effective set is asserted in the completion path. Only an effectively `active` child is eligible: a suspended child is rendered a cascade with reason `suspended_not_resumed`, terminated, and never restored."
+   "notes": "The replacement's approved set is the old child's RECHECKED effective set, so a contained action is absent from the replacement and its overlay is not carried; an independent ceiling check against that effective set is asserted in the completion path. Only an effectively `active` child is eligible: a suspended child is rendered a cascade with reason `suspended_not_resumed`, terminated, and never restored. #919 witnesses the discharge half: an entry discharged on the old child is not restored on its replacement although the new parent holds it, and the replacement holds no latch of its own. Proved by mutation: keeping discharged entries in the effective set fails it, and deriving the replacement from the old child's approved set fails it (the independent ceiling then refuses). Weakening only the independent ceiling to the approved set changes no result, since the replacement is derived from the same effective set it is checked against."
   },
   {
    "id": "child-delegation.carryover.no-expiry-extension",
@@ -61123,9 +61165,15 @@
      "name": "Child Mission Carryover (@spec child-delegation#carryover) > refuses to extend a carried child under a successor whose approved extension outlives the predecessor",
      "level": "cross-component",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover compositions in the reference deployment (@spec child-delegation#carryover, child-delegation#carryover-cas, #919) > refuses a batch when a carried child's own expiry arrives before completion: no replacement can outlive it",
+     "level": "cross-component",
+     "surface": "derivation"
     }
    ],
-   "notes": "The replacement's expiry runs through the one effective-expiry hook with the old child's `expires_at` as an INDEPENDENT bound beside the new parent's, so a successor carrying a disclosed, policy-permitted extension that outlives the predecessor still cannot extend a replacement."
+   "notes": "The replacement's expiry runs through the one effective-expiry hook with the old child's `expires_at` as an INDEPENDENT bound beside the new parent's, so a successor carrying a disclosed, policy-permitted extension that outlives the predecessor still cannot extend a replacement. #919: where the old child's own expiry passes between rendering and completion, the bound leaves the replacement no lifetime, and creation refuses it (an effective expiry not later than the creation instant), so the batch is refused rather than a replacement extended; disabling that creation check fails the witness."
   },
   {
    "id": "child-delegation.carryover.budget-transfer",
