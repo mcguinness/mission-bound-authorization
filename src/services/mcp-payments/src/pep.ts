@@ -75,6 +75,8 @@ import {
   type OriginPrincipal,
   type PrincipalMappingResolver,
   RUNTIME_POSTURE,
+  sameWorkItem,
+  type WorkItemRef,
   relationForAction,
   stalenessBound,
   stateSourcePlacement,
@@ -682,6 +684,9 @@ const RECOGNIZED_CONDITIONS: ReadonlySet<string> = new Set([
   "parameter_digest",
   "valid_until",
   "use_limit",
+  // @spec authzen#decision-conditions `work_item` (#815): recognized because
+  // it is enforced (the `work_item` row of PERMIT_USE_CHECKS).
+  "work_item",
   // @spec authzen#response-context `resource_contract` (#249, D553): this PEP
   // recognizes and enforces the contract condition (the `resource_contract`
   // row of PERMIT_USE_CHECKS), so a permit carrying it is usable here.
@@ -759,6 +764,17 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
       boundary.ok && boundary.boundary === attempt.audience && boundary.version === attempt.boundaryVersion
         ? undefined
         : BOUNDARY_CUTOVER_ERROR,
+  },
+  {
+    // @spec authzen#decision-conditions `work_item` (#815): "At every use,
+    // the executing PEP MUST compare it with the work item it attributes to
+    // the request it is executing, and MUST NOT release an effect when they
+    // differ or when either is present without the other. Such a refusal is
+    // Execution Evidence `suppressed` / `work_item_mismatch`." A permit for
+    // one work item never executes for another, a cached, retransmitted or
+    // resumed permit included. Both values are in hand, so this is synchronous.
+    name: "work_item",
+    failure: (attempt) => (sameWorkItem(attempt.permitWorkItem, attempt.workItem) ? undefined : "work_item_mismatch"),
   },
   {
     // @spec runtime#resource-contract rule 5, authzen#response-context
@@ -1211,6 +1227,16 @@ export interface PepDeps {
    */
   authorityDependency?: AuthorityDependencyEnforcement;
   /**
+   * @spec harness#work-item-identity (#815): the work-item attachers the
+   * Enforcement Scope Statement names, each authenticated client mapped to
+   * the harness URI that attaches its work items
+   * (`readWorkItemAttribution(statement).attachers`). A work item rides a
+   * decision request only where the reference that carried it verified and
+   * its `work_item_issuer` is the harness named for the client this request
+   * authenticated. Absent, no work item is ever carried.
+   */
+  workItemAttachers?: ReadonlyMap<string, string>;
+  /**
    * @spec authzen#obligation-processing (#1640): the transport this PEP
    * performs the AuthZEN Obligations Profile's `notification` obligation
    * through, on a permit before release and on a denial. Absent, a
@@ -1231,6 +1257,26 @@ export interface PepDeps {
     decision: Decision;
     effective?: EffectiveParams;
   }) => void;
+}
+
+/**
+ * @spec harness#work-item-identity (#815): "A PEP implementing this profile
+ * MUST take a work item only from these members, once the reference itself
+ * verifies, and only where the statement names the harness that
+ * `work_item_issuer` identifies as the attacher for the client the PEP
+ * authenticated on that request. It MUST NOT read a work item from tool
+ * arguments or any other value the agent supplies, and MUST NOT carry one it
+ * cannot attribute to that attacher." The caller passes the reference only
+ * after verifying it; the tool arguments are never an input here.
+ */
+function attributedWorkItem(
+  reference: PropagatedMissionReference | undefined,
+  clientId: string | undefined,
+  attachers: ReadonlyMap<string, string> | undefined,
+): WorkItemRef | undefined {
+  if (reference === undefined || "malformed" in reference || reference.workItem === undefined) return undefined;
+  if (clientId === undefined || attachers?.get(clientId) !== reference.workItem.issuer) return undefined;
+  return { issuer: reference.workItem.issuer, id: reference.workItem.id };
 }
 
 /**
@@ -1535,6 +1581,20 @@ export interface ExecutionAttempt {
    * observation it relied on, which the effect is never released after.
    */
   authorityDependency?: { validUntilMs?: number };
+  /**
+   * @spec authzen#decision-conditions `work_item` (#815): the permit's
+   * `conditions.work_item` EXACTLY as the verified decision carried it,
+   * unnarrowed, so a malformed value stays distinguishable at the comparison.
+   */
+  permitWorkItem?: unknown;
+  /**
+   * @spec harness#work-item-identity (#815): the work item this PEP
+   * attributes to the request the attempt executes, from the harness's
+   * verified attachment only. Absent when the request carried none this PEP
+   * could attribute. Execution Evidence records it
+   * (@spec runtime-evidence#evidence-extensions `work_item`).
+   */
+  workItem?: WorkItemRef;
   /**
    * @spec runtime-evidence#execution-evidence-object
    * `authorized_parameter_digest`: taken from the RETAINED Decision Evidence,
@@ -2903,6 +2963,14 @@ export class Pep {
       return await this.refuse(boundary, token, "out_of_authority", mapping.action, view);
     }
 
+    // @spec harness#work-item-identity, authzen#context-work-item (#815): the
+    // harness's work item, taken only from the propagated reference that
+    // carried it (already verified above: on the Mission-bound path it names
+    // the credential's own Mission, on the Join path it is the reference the
+    // join verifies) and only for the attacher the statement names for this
+    // request's authenticated client. `args` is never read for it.
+    const workItem = attributedWorkItem(signals?.missionReference, token.clientId, this.deps.workItemAttachers);
+
     // Actor facts and capability presentation originate at the enforcement surface.
     const contextActor = buildContextActor({
       ...(token.clientId !== undefined ? { clientId: token.clientId } : {}),
@@ -3004,6 +3072,10 @@ export class Pep {
         // from its own read.
         ...(this.placement === "pep" ? { mission_state_observation: observation } : {}),
         actor: contextActor,
+        // @spec authzen#context-work-item (#815): "The PEP populates
+        // `context.work_item` only from the harness's authenticated
+        // attachment, never from tool arguments."
+        ...(workItem !== undefined ? { work_item: workItem } : {}),
         // @spec authzen#context-credential (#825, D312): verified facts only,
         // and the credential's own authority on every decision, so the PDP
         // enforces the credential bound itself.
@@ -3338,6 +3410,11 @@ export class Pep {
       ...(conditionsOf(decision)?.valid_until !== undefined
         ? { permitValidUntil: conditionsOf(decision)?.valid_until }
         : {}),
+      // @spec authzen#decision-conditions `work_item` (#815): the permit's
+      // condition as the verified decision carried it, and the work item this
+      // PEP attributes to the request it is executing.
+      ...(conditionsOf(decision)?.work_item !== undefined ? { permitWorkItem: conditionsOf(decision)?.work_item } : {}),
+      ...(workItem !== undefined ? { workItem } : {}),
       ...(retained?.parameter_digest !== undefined
         ? { authorizedParameterDigest: retained.parameter_digest }
         : {}),
@@ -3816,6 +3893,9 @@ export class Pep {
       ...(disposition.outcome === "suppressed" ? { error: disposition.error } : {}),
       ...(obligationOutcomes ? { obligation_outcomes: obligationOutcomes } : {}),
       ...(attempt.hopReference ? { hop_reference: attempt.hopReference } : {}),
+      // @spec runtime-evidence#evidence-extensions `work_item` (#815):
+      // "recorded as the executing PEP attributed it".
+      ...(attempt.workItem ? { work_item: attempt.workItem } : {}),
     };
     for (let tries = 0; tries < 2; tries += 1) {
       try {

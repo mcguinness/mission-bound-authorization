@@ -268,6 +268,7 @@ export {
   MCP_REFERENCE_META_KEY,
   MISSION_REFERENCE_HEADER,
   type PropagatedMissionReference,
+  type PropagatedWorkItem,
   parseMcpReferenceMeta,
   parseMissionReferenceField,
 } from "./mission-reference.js";
