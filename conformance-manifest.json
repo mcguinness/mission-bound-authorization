@@ -115,8 +115,8 @@
     "content_sha256": "c9636bdc3bc0a3b7baffd573b69e56708887aacb5b9fecdd0d35516a4d1d69d5"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "eda90f1adc97cb7ba190e0ff407894a5a7d83d81",
-    "content_sha256": "c20667c9cf5df054afac0f8b4596796d6fc4829235b48e2862e449b7ee0dd63c"
+    "revision": "0c7677a870b2d9a40af7bbafc5e04792ea63fa99",
+    "content_sha256": "07e01880187e375f571aa1a1afeccbd73901610ee6cb31bbc6d039756c360b07"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -43647,6 +43647,36 @@
    "notes": "#1325 (D495). Two permitted Dispatchers, ap-agent and a test-registered erp-scheduler, each dispatch from one template. Proved by mutation: recording the template approver's sub, a constant client_id, the template's first listed Dispatcher, or the client_id as iss each fails the witness."
   },
   {
+   "id": "template.dispatch.one-derivation",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "grant-type",
+   "text": "This grant performs exactly one derivation per `dispatch_event_id`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Dispatch increments the derivation_count of the instance it creates by exactly one, and a repeated dispatch_event_id, gated to the committed instance, counts nothing more",
+    "local": "the reference counts a new Dispatch once, which the cited test witnesses; a retry with the same dispatch_event_id currently counts again, the defect #1661 owns (first recorded in PR #1635), so the second clause has no witness"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a Dispatch under a Dispatch Policy stating a per-instance maximum records it, capping a larger request, each instance counting its own",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1647, D764. Partial until a retried Dispatch stops counting again: #1661, linked to #250 (first recorded in PR #1635). The instance's limit is at least 1, so the Dispatch's own derivation never meets the limit, and no limit refusal applies. Mutation: counting an approval-bound grant as uncounted fails the cited test."
+  },
+  {
    "id": "template.handoff.selector-refusal",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "dispatch-handoff",
@@ -71939,6 +71969,47 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1202: the reference AS side is built (opt-in device-authorization capability); no reference Mission client implements this profile's client rules, so this row stays todo."
+  },
+  {
+   "id": "device-authorization.issuance.first-redemption-gated",
+   "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
+   "anchor": "issuance",
+   "text": "Issuance gating applies to the first redemption as to any later derivation.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "device-authorization.carriage"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the first device_code redemption is a derivation: it is refused with the issuance-gating refusal once the Mission is revoked or expired after approval, and a successful one increments the Mission's derivation_count by exactly one, while the approval decision, a pending poll and a refused repeat count nothing"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the first device_code redemption is a counted derivation (@spec device-authorization#issuance, derivation-limits#counting, #1647) > counts the first redemption once against the Mission; the decision, a pending poll and a refused repeat count nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > refuses redemption with the issuance-gating refusal once the Mission was revoked after approval",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization polling (@spec device-authorization#polling, #1202) > refuses redemption with the issuance-gating refusal once the Mission expired after approval",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1647, D764. The counting witness is new; the two refusal witnesses are also cited by device-authorization.outcomes.redemption-gates. Mutation: counting an approval-bound grant as uncounted fails the counting witness."
   },
   {
    "id": "device-authorization.conformance.as-advertises",
