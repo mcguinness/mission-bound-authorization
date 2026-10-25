@@ -909,8 +909,9 @@ deployment that
 needs a prompt cutoff on outstanding tokens uses the propagation
 mechanisms of {{revocation-enforcement-classes}}.
 
-Suspension is reversible, so a refresh refused for it should not spend
-the client's ability to refresh after a `resume`. After validating a
+Suspension is reversible. Consuming or invalidating a refresh token
+solely because of suspension can prevent refresh after a `resume`.
+After validating a
 refresh request and before consuming or rotating its refresh token,
 the AS SHOULD check whether the Mission, or another Mission whose
 state a companion profile makes gate its derivation, is suspended.
@@ -1541,8 +1542,9 @@ bound: the advertisement is the ceiling on every reliance window
 built from these surfaces. The 60-second value in this document's
 examples is a tight deployment's choice, not a floor.
 
-Where Mission revocation must take effect but only the baseline
-derivation-time check is in use, Mission-bound access tokens SHOULD use
+Where a deployment needs Mission revocation to take effect but only
+the baseline derivation-time check is in use, Mission-bound access
+tokens SHOULD use
 TTLs no longer than the declared `mission_max_stale_seconds`.
 Deployments where revocation propagates out of band (token
 introspection, per-request status checks, or a companion profile's
