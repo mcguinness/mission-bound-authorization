@@ -46,9 +46,11 @@ import {
 } from "./kernel/signing-key-ring.js";
 import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
+import { AuthorityReconciler } from "./adapters/authority-reconciler.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
 export { RENDER_REVISION_HEADER } from "./adapters/approval-render-revision.js";
+export { AuthorityReconciler, type ReconcileOutcome } from "./adapters/authority-reconciler.js";
 export {
   governedResourceRefusal,
   isMissionGovernedResource,
@@ -883,6 +885,14 @@ export interface BuiltAs {
    */
   authorityDependency?: AuthorityDependencyEnforcement;
   /**
+   * @spec runtime#input-authority-dependency (#830, D798): the reconciler
+   * of a declared dependency under lifecycle-mediated enforcement. Present
+   * exactly where the declaration declares it.
+   */
+  authorityReconciler?: AuthorityReconciler;
+  /** Stops the declared dependency's scheduled source reads and reconciliation passes; present with the dependency. */
+  stopAuthorityDependency?: () => void;
+  /**
    * @spec expansion#creation-idempotency — the creation-idempotency store
    * (observe recorded operations; perturb delivery artifacts in tests).
    */
@@ -1267,6 +1277,13 @@ export async function buildAuthorizationServer(opts: {
     evidence?: AuthorityDependencyEvidence;
     now?: () => number;
     refreshIntervalMs?: number;
+    /**
+     * Under lifecycle-mediated enforcement (the declaration's
+     * `enforcement.lifecycle`), the reconciler's period: a pass reads the
+     * source and commits `suspend` or `revoke` through the lifecycle
+     * operations (`AuthorityReconciler`). Absent, the caller runs passes.
+     */
+    reconcileIntervalMs?: number;
   };
   /**
    * @spec discharge#discharge-authority — additional service-token principals and
@@ -1583,6 +1600,21 @@ export async function buildAuthorizationServer(opts: {
   // gates' dependency check, over the resolver's cached observation.
   const dependency = opts.authorityDependency;
   const dependencyNow = dependency?.now ?? (() => Date.now());
+  // @spec runtime#state-freshness (#830): a composition may run the declared
+  // observation path faster than its external-change bound states, never
+  // slower.
+  const declaredBound = dependency?.declaration.external_change_bound;
+  if (declaredBound) {
+    const periods = [
+      ["refreshIntervalMs", dependency?.refreshIntervalMs, declaredBound.detection_period_seconds],
+      ["reconcileIntervalMs", dependency?.reconcileIntervalMs, declaredBound.reconciliation_period_seconds],
+    ] as const;
+    for (const [option, intervalMs, periodSeconds] of periods) {
+      if (intervalMs !== undefined && periodSeconds !== undefined && intervalMs > periodSeconds * 1000) {
+        throw new Error(`authorityDependency.${option} ${intervalMs} exceeds the declared period of ${periodSeconds} s`);
+      }
+    }
+  }
   const authorityDependencyGate: ConstructorParameters<typeof MissionKernel>[0]["authorityDependencyGate"] = dependency
     ? (candidate, surface) => {
         if (!(dependency.declaration.governs.authority_sources as readonly string[]).includes(candidate.authoritySource)) return undefined;
@@ -1606,11 +1638,14 @@ export async function buildAuthorizationServer(opts: {
         return { failure: evaluated.failure };
       }
     : undefined;
+  // The observation path's schedules, stopped together (`stopAuthorityDependency`).
+  const dependencyTimers: ReturnType<typeof setInterval>[] = [];
   if (dependency?.refreshIntervalMs !== undefined) {
     // Re-read the source on its period, outside any store transaction; an
     // unref'd timer never keeps the process alive.
     const timer = setInterval(() => void dependency.resolver.refresh(), dependency.refreshIntervalMs);
     timer.unref();
+    dependencyTimers.push(timer);
   }
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
@@ -1720,6 +1755,17 @@ export async function buildAuthorizationServer(opts: {
   // kernel's database and are written in its committing transactions; the
   // adapters reach them through these names.
   const continuationStore = kernel.continuations;
+  // @spec runtime#input-authority-dependency (#830, D798): lifecycle-mediated
+  // enforcement of the declared dependency, where the declaration declares it.
+  const authorityReconciler =
+    dependency?.declaration.enforcement.lifecycle === true
+      ? new AuthorityReconciler({ kernel, declaration: dependency.declaration, resolver: dependency.resolver })
+      : undefined;
+  if (authorityReconciler && dependency?.reconcileIntervalMs !== undefined) {
+    const timer = setInterval(() => void authorityReconciler.reconcile(), dependency.reconcileIntervalMs);
+    timer.unref();
+    dependencyTimers.push(timer);
+  }
   const delegationFamilyStore = kernel.delegationFamilies;
   if (schedulesAdopted) {
     suspensionScheduler = new SuspensionScheduler(kernel, {
@@ -2084,6 +2130,8 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
     ...(suspensionScheduler ? { suspensionScheduler } : {}),
     ...(joinAssertionService ? { joinAssertions: joinAssertionService } : {}),
+    ...(authorityReconciler ? { authorityReconciler } : {}),
+    ...(dependency ? { stopAuthorityDependency: () => dependencyTimers.forEach((timer) => clearInterval(timer)) } : {}),
     ...(dependency
       ? {
           authorityDependency: {
@@ -2091,6 +2139,7 @@ export async function buildAuthorizationServer(opts: {
             resolver: dependency.resolver,
             ...(dependency.evidence ? { evidence: dependency.evidence } : {}),
             ...(dependency.now ? { now: dependency.now } : {}),
+            ...(authorityReconciler ? { reconciliation: () => authorityReconciler.lag() } : {}),
             // The principal and client a Mission's dependency is evaluated for,
             // from this kernel's record: only a Mission this AS holds, under an
             // authority source the declaration governs.

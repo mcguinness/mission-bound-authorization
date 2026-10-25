@@ -74,6 +74,7 @@ export {
   type PrincipalStateView,
   type PrincipalStatus,
   parseAuthorityDependencyDeclarations,
+  type ReconcilerOperation,
 } from "./authority-dependency.js";
 export type {
   AuthorityEntry,

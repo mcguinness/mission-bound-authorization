@@ -32,7 +32,12 @@ describe("the deployment's Enforcement Scope Statement declares its authority de
       invalidating_changes: ["subject_disabled", "subject_deprovisioned", "delegation_withdrawn"],
       max_staleness_seconds: 300,
       online_check: false,
-      enforcement: { direct: "pdp", lifecycle: false },
+      enforcement: {
+        direct: "pdp",
+        lifecycle: true,
+        reconciliation_max_lag_seconds: 60,
+        lifecycle_operations: { subject_disabled: "suspend", delegation_withdrawn: "suspend", subject_deprovisioned: "revoke" },
+      },
       recovery: expect.stringContaining("revives no terminated Mission"),
       responsibility_transfer: expect.stringContaining("attribution is unchanged"),
     });
@@ -68,5 +73,60 @@ describe("the deployment's Enforcement Scope Statement declares its authority de
     expect(() => load({ ...shipped(), governs: { authority_sources: [], scope: "x" } })).toThrow(/authority_sources/);
     expect(() => load({ ...shipped(), invalidating_changes: ["approver_departed"] })).toThrow(/invalidating_changes/);
     expect(() => load({ ...shipped(), extra: true })).toThrow(/unknown member extra/);
+    // Lifecycle-mediated enforcement states its lag bound and its operations.
+    const enforcement = shipped().enforcement as Record<string, unknown>;
+    const { reconciliation_max_lag_seconds: _lag, ...noLag } = enforcement;
+    expect(() => load({ ...shipped(), enforcement: noLag })).toThrow(/reconciliation_max_lag_seconds/);
+    const { lifecycle_operations: _ops, ...noOps } = enforcement;
+    expect(() => load({ ...shipped(), enforcement: noOps })).toThrow(/lifecycle_operations/);
+    expect(() => load({ ...shipped(), enforcement: { ...enforcement, lifecycle_operations: { subject_disabled: "delete" } } })).toThrow(
+      /must be suspend or revoke/,
+    );
+  });
+
+  it("@spec runtime#state-freshness (#830): states its bound from an external authority change from start to end, work already started separately, and the path the claim accounts for", () => {
+    const statement = withAuthorityDependencies(RUNTIME_POSTURE, AUTHORITY_DEPENDENCIES);
+    const [declared] = (statement.extensions?.authority_dependencies ?? []) as { external_change_bound?: Record<string, unknown> }[];
+    expect(declared?.external_change_bound).toMatchObject({
+      seconds: 60,
+      start: expect.stringContaining("identity source records the change"),
+      end: expect.stringContaining("can begin an effect"),
+      already_started: expect.stringContaining("valid_until"),
+      path: expect.stringMatching(/Detection.*Evaluation.*State change.*Downstream reliance.*Permit validity/s),
+      // The periods the path names, covered by the bound in sequence.
+      detection_period_seconds: 30,
+      reconciliation_period_seconds: 30,
+    });
+    // The claim states its failure behavior too: a measured success is not the bound under failure.
+    expect(declared?.external_change_bound?.path).toEqual(expect.stringContaining("when the source cannot be read or a reconciliation fails"));
+    const load = (bound: Record<string, unknown>) =>
+      loadRuntimePosture({
+        ...RUNTIME_POSTURE,
+        extensions: { ...RUNTIME_POSTURE.extensions, authority_dependencies: [{ ...shipped(), external_change_bound: bound }] },
+      });
+    const bound = shipped().external_change_bound as Record<string, unknown>;
+    for (const member of ["seconds", "start", "end", "already_started", "path", "detection_period_seconds"]) {
+      const { [member]: _dropped, ...partial } = bound;
+      expect(() => load(partial), member).toThrow(new RegExp(`external_change_bound is missing ${member}`));
+    }
+    expect(() => load({ ...bound, seconds: 0 })).toThrow(/external_change_bound.seconds must be a positive integer/);
+    // A bound that does not cover one detection period and one reconciliation period in sequence is refused.
+    expect(() => load({ ...bound, seconds: 59 })).toThrow(/must cover one detection period and one reconciliation period/);
+    expect(() => load({ ...bound, detection_period_seconds: 31 })).toThrow(/must cover one detection period and one reconciliation period/);
+    // A reconciler runs on a declared period shorter than its lag bound, and only where one runs.
+    const { reconciliation_period_seconds: _period, ...noPeriod } = bound;
+    expect(() => load(noPeriod)).toThrow(/reconciliation_period_seconds must be a positive integer under lifecycle-mediated enforcement/);
+    expect(() => load({ ...bound, seconds: 120, reconciliation_period_seconds: 60 })).toThrow(
+      /reconciliation_period_seconds must be shorter than enforcement.reconciliation_max_lag_seconds/,
+    );
+    expect(() =>
+      loadRuntimePosture({
+        ...RUNTIME_POSTURE,
+        extensions: {
+          ...RUNTIME_POSTURE.extensions,
+          authority_dependencies: [{ ...shipped(), enforcement: { direct: "pdp", lifecycle: false }, external_change_bound: bound }],
+        },
+      }),
+    ).toThrow(/reconciliation_period_seconds applies to lifecycle-mediated enforcement only/);
   });
 });

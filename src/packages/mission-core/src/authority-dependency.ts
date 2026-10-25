@@ -48,8 +48,20 @@ export type InvalidatingChange =
 /** The authority source types a declaration may govern (@spec mission#authority-sources). */
 export type GovernedAuthoritySource = "user_delegated" | "service_owned" | "organizational";
 
-/** Why reliance on a dependency stopped. */
-export type DependencyFailure = "withdrawn" | "invalidated" | "stale" | "unavailable";
+/**
+ * Why reliance on a dependency stopped. `reconciliation_overdue`: under
+ * lifecycle-mediated enforcement, the last reconciliation that completed rests
+ * on an observation older than the declared lag bound.
+ */
+export type DependencyFailure =
+  | "withdrawn"
+  | "invalidated"
+  | "stale"
+  | "unavailable"
+  | "reconciliation_overdue";
+
+/** The lifecycle operation a reconciler commits for an invalidating change. */
+export type ReconcilerOperation = "suspend" | "revoke";
 
 /** @spec runtime#input-authority-dependency: one declared authority dependency. */
 export interface AuthorityDependencyDeclaration {
@@ -81,6 +93,29 @@ export interface AuthorityDependencyDeclaration {
     lifecycle: boolean;
     /** Under lifecycle-mediated enforcement, the bound on upstream observation and reconciliation lag. */
     reconciliation_max_lag_seconds?: number;
+    /**
+     * Under lifecycle-mediated enforcement, the operation the reconciler
+     * commits for each invalidating change it acts on: `suspend` for a
+     * recoverable change, `revoke` for deprovisioning. A change it names no
+     * operation for is enforced by refusal alone.
+     */
+    lifecycle_operations?: Partial<Record<InvalidatingChange, ReconcilerOperation>>;
+  };
+  /**
+   * @spec runtime#state-freshness (#830): the deployment's claimed bound from
+   * an external authority change, stated from start to end, with work already
+   * started stated separately and the path it accounts for.
+   */
+  external_change_bound?: {
+    seconds: number;
+    start: string;
+    end: string;
+    already_started: string;
+    path: string;
+    /** The longest interval between two reads of the source. */
+    detection_period_seconds: number;
+    /** Under lifecycle-mediated enforcement, the longest interval between two reconciliation passes. */
+    reconciliation_period_seconds?: number;
   };
   /** What restores reliance after it fails. */
   recovery: string;
@@ -114,6 +149,18 @@ const DECLARATION_MEMBERS = [
   "recovery",
   "responsibility_transfer",
 ] as const;
+/** Members a declaration may carry beside the required ones. */
+const OPTIONAL_DECLARATION_MEMBERS = ["external_change_bound"] as const;
+const BOUND_MEMBERS = [
+  "seconds",
+  "start",
+  "end",
+  "already_started",
+  "path",
+  "detection_period_seconds",
+] as const;
+const positiveInteger = (v: unknown): v is number =>
+  typeof v === "number" && Number.isInteger(v) && v > 0;
 
 const objectOf = (v: unknown): Record<string, unknown> | undefined =>
   v !== null && typeof v === "object" && !Array.isArray(v)
@@ -150,7 +197,7 @@ export function parseAuthorityDependencyDeclarations(
     const ctx = `authority_dependencies[${i}]`;
     const o = objectOf(entry);
     if (!o) throw new AuthorityDependencyConfigError(`${ctx} must be an object`);
-    onlyMembers(ctx, o, DECLARATION_MEMBERS);
+    onlyMembers(ctx, o, [...DECLARATION_MEMBERS, ...OPTIONAL_DECLARATION_MEMBERS]);
     for (const member of DECLARATION_MEMBERS) {
       if (o[member] === undefined)
         throw new AuthorityDependencyConfigError(`${ctx} is missing ${member}`);
@@ -199,6 +246,7 @@ export function parseAuthorityDependencyDeclarations(
       "direct",
       "lifecycle",
       "reconciliation_max_lag_seconds",
+      "lifecycle_operations",
     ]);
     const direct = enforcement.direct;
     if (direct !== undefined && direct !== "pdp" && direct !== "pep") {
@@ -223,6 +271,94 @@ export function parseAuthorityDependencyDeclarations(
         `${ctx}.enforcement.reconciliation_max_lag_seconds applies to lifecycle-mediated enforcement only`,
       );
     }
+    const operationsRaw = enforcement.lifecycle_operations;
+    const operations: Partial<Record<InvalidatingChange, ReconcilerOperation>> = {};
+    if (enforcement.lifecycle === true) {
+      const ops = objectOf(operationsRaw);
+      if (!ops || Object.keys(ops).length === 0) {
+        throw new AuthorityDependencyConfigError(
+          `${ctx}.enforcement.lifecycle_operations must map one or more invalidating changes to suspend or revoke under lifecycle-mediated enforcement`,
+        );
+      }
+      for (const [change, op] of Object.entries(ops)) {
+        if (!(changes as string[]).includes(change)) {
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.enforcement.lifecycle_operations names ${change}, which is not one of its invalidating changes`,
+          );
+        }
+        if (op !== "suspend" && op !== "revoke") {
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.enforcement.lifecycle_operations.${change} must be suspend or revoke`,
+          );
+        }
+        operations[change as InvalidatingChange] = op;
+      }
+    } else if (operationsRaw !== undefined) {
+      throw new AuthorityDependencyConfigError(
+        `${ctx}.enforcement.lifecycle_operations applies to lifecycle-mediated enforcement only`,
+      );
+    }
+    let bound: AuthorityDependencyDeclaration["external_change_bound"];
+    if (o.external_change_bound !== undefined) {
+      const b = objectOf(o.external_change_bound);
+      if (!b)
+        throw new AuthorityDependencyConfigError(`${ctx}.external_change_bound must be an object`);
+      onlyMembers(`${ctx}.external_change_bound`, b, [
+        ...BOUND_MEMBERS,
+        "reconciliation_period_seconds",
+      ]);
+      for (const member of BOUND_MEMBERS) {
+        if (b[member] === undefined)
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.external_change_bound is missing ${member}`,
+          );
+      }
+      for (const member of ["seconds", "detection_period_seconds"] as const) {
+        if (!positiveInteger(b[member])) {
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.external_change_bound.${member} must be a positive integer`,
+          );
+        }
+      }
+      // The path the claim accounts for: a reconciliation period exactly
+      // where a reconciler runs, shorter than its lag bound so a current
+      // reconciler is never refused, and the bound covering one detection
+      // period and one reconciliation period in sequence.
+      const period = b.reconciliation_period_seconds;
+      if (enforcement.lifecycle === true) {
+        if (!positiveInteger(period)) {
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.external_change_bound.reconciliation_period_seconds must be a positive integer under lifecycle-mediated enforcement`,
+          );
+        }
+        if (period >= (lag as number)) {
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.external_change_bound.reconciliation_period_seconds must be shorter than enforcement.reconciliation_max_lag_seconds`,
+          );
+        }
+      } else if (period !== undefined) {
+        throw new AuthorityDependencyConfigError(
+          `${ctx}.external_change_bound.reconciliation_period_seconds applies to lifecycle-mediated enforcement only`,
+        );
+      }
+      if (
+        (b.detection_period_seconds as number) + ((period as number | undefined) ?? 0) >
+        (b.seconds as number)
+      ) {
+        throw new AuthorityDependencyConfigError(
+          `${ctx}.external_change_bound.seconds must cover one detection period and one reconciliation period`,
+        );
+      }
+      bound = {
+        seconds: b.seconds as number,
+        start: text(`${ctx}.external_change_bound.start`, b.start),
+        end: text(`${ctx}.external_change_bound.end`, b.end),
+        already_started: text(`${ctx}.external_change_bound.already_started`, b.already_started),
+        path: text(`${ctx}.external_change_bound.path`, b.path),
+        detection_period_seconds: b.detection_period_seconds as number,
+        ...(period !== undefined ? { reconciliation_period_seconds: period as number } : {}),
+      };
+    }
     return {
       id,
       dependency: text(`${ctx}.dependency`, o.dependency),
@@ -242,9 +378,11 @@ export function parseAuthorityDependencyDeclarations(
         ...(direct !== undefined ? { direct } : {}),
         lifecycle: enforcement.lifecycle,
         ...(lag !== undefined ? { reconciliation_max_lag_seconds: lag as number } : {}),
+        ...(enforcement.lifecycle === true ? { lifecycle_operations: operations } : {}),
       },
       recovery: text(`${ctx}.recovery`, o.recovery),
       responsibility_transfer: text(`${ctx}.responsibility_transfer`, o.responsibility_transfer),
+      ...(bound !== undefined ? { external_change_bound: bound } : {}),
     };
   });
 }
@@ -455,6 +593,12 @@ export interface AuthorityDependencyEnforcement {
   }) => { subject: DependencyPrincipal; clientId: string } | undefined;
   evidence?: AuthorityDependencyEvidence;
   now?: () => number;
+  /**
+   * Under lifecycle-mediated enforcement, the reconciler's progress: the time
+   * the observation its last complete reconciliation acted on represents.
+   * Absent where no reconciler runs.
+   */
+  reconciliation?: () => { lastReconciledAtMs?: number };
 }
 
 /**
@@ -462,15 +606,57 @@ export interface AuthorityDependencyEnforcement {
  * `mission`: ungoverned Missions pass with no ceiling; a governed one passes
  * with the observation's validity as a ceiling, or is refused and the refusal
  * retained.
+ *
+ * - `lag` (lifecycle-mediated enforcement): "A current `active` state does
+ *   not show that this reconciliation is current": while the last complete
+ *   reconciliation rests on an observation older than the declared lag bound,
+ *   or none has completed, the action is refused `reconciliation_overdue`,
+ *   whatever the Mission's state reads.
+ * - `direct` (direct evaluation): the observation itself must establish the
+ *   dependency.
  */
 export function checkAuthorityDependency(
   enforcement: AuthorityDependencyEnforcement,
   mission: { id: string; issuer: string },
   context: { enforcer: AuthorityDependencyRefusal["enforcer"]; action: string },
+  apply: { direct: boolean; lag: boolean } = { direct: true, lag: false },
 ): { ok: true; validUntilMs?: number } | { ok: false; failure: DependencyFailure } {
   const governed = enforcement.governed(mission);
   if (!governed) return { ok: true };
   const nowMs = (enforcement.now ?? (() => Date.now()))();
+  const refuse = (failure: DependencyFailure, observedAt?: string) => {
+    enforcement.evidence?.record({
+      enforcer: context.enforcer,
+      dependency: enforcement.declaration.id,
+      failure,
+      mission: { id: mission.id, issuer: mission.issuer },
+      subject: governed.subject,
+      client: governed.clientId,
+      action: context.action,
+      ...(observedAt !== undefined ? { observed_at: observedAt } : {}),
+      at: new Date(nowMs).toISOString(),
+    });
+    return { ok: false as const, failure };
+  };
+  const lagBound = enforcement.declaration.enforcement.reconciliation_max_lag_seconds;
+  // A permit relying on the reconciliation's currency expires when the lag
+  // bound would refuse it.
+  let reconciledUntilMs: number | undefined;
+  if (apply.lag && enforcement.declaration.enforcement.lifecycle && lagBound !== undefined) {
+    const last = enforcement.reconciliation?.().lastReconciledAtMs;
+    if (last === undefined || nowMs - last >= lagBound * 1000) {
+      return refuse(
+        "reconciliation_overdue",
+        last !== undefined ? new Date(last).toISOString() : undefined,
+      );
+    }
+    reconciledUntilMs = last + lagBound * 1000;
+  }
+  if (!apply.direct)
+    return {
+      ok: true,
+      ...(reconciledUntilMs !== undefined ? { validUntilMs: reconciledUntilMs } : {}),
+    };
   const evaluated = evaluateAuthorityDependency(
     enforcement.declaration,
     enforcement.resolver.view(governed.subject),
@@ -479,17 +665,11 @@ export function checkAuthorityDependency(
       nowMs,
     },
   );
-  if (evaluated.ok) return { ok: true, validUntilMs: evaluated.validUntilMs };
-  enforcement.evidence?.record({
-    enforcer: context.enforcer,
-    dependency: enforcement.declaration.id,
-    failure: evaluated.failure,
-    mission: { id: mission.id, issuer: mission.issuer },
-    subject: governed.subject,
-    client: governed.clientId,
-    action: context.action,
-    ...(evaluated.observedAt !== undefined ? { observed_at: evaluated.observedAt } : {}),
-    at: new Date(nowMs).toISOString(),
-  });
-  return { ok: false, failure: evaluated.failure };
+  if (evaluated.ok) {
+    return {
+      ok: true,
+      validUntilMs: Math.min(evaluated.validUntilMs, reconciledUntilMs ?? Number.POSITIVE_INFINITY),
+    };
+  }
+  return refuse(evaluated.failure, evaluated.observedAt);
 }
