@@ -43894,9 +43894,15 @@
      "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > a requested set the projection cannot issue whole is refused invalid_authorization_details, issuing no handoff grant; the whole set is issued",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an entry the projection drops is refused beside an overlapping entry that is issued; the recorded binding is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "D357 acceptance bar item 3 at the exchange (cannot exceed the presented token's or the current effective authority). The down-scoped and unreadable subject tokens are AS-signed by the test. Proved by disabling the check (dispatch-handoff mutation harness, #1158). #1513: a request naming a capability_sources binding the instance does not record, beyond both sets under the Subset Rule, is refused rather than handed off without the entry; disabling the exchange's whole-issue check fails that witness alone, and disabling either subset check still fails only its own witness."
+   "notes": "D357 acceptance bar item 3 at the exchange (cannot exceed the presented token's or the current effective authority). The down-scoped and unreadable subject tokens are AS-signed by the test. Proved by disabling the check (dispatch-handoff mutation harness, #1158). #1513: a request naming a capability_sources binding the instance does not record, beyond both sets under the Subset Rule, is refused rather than handed off without the entry; the check compares each requested entry with its own projection, so a sibling entry for the same action cannot cover a dropped one (a recorded binding with another digest, vendors: []); disabling it fails the two #1513 witnesses alone, and comparing the whole set instead fails only the overlap witness, and disabling either subset check still fails only its own witness."
   },
   {
    "id": "template.handoff.grant-members",
@@ -64084,9 +64090,15 @@
      "name": "a requested family set the projection cannot issue whole is refused, never trimmed (@spec mission#subset, mission#error-mapping, #1513) > each vector is refused invalid_authorization_details, creating no family and counting nothing; the whole request still creates the family",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "a requested family set the projection cannot issue whole is refused, never trimmed (@spec mission#subset, mission#error-mapping, #1513) > an entry the projection drops is refused beside an overlapping entry that is issued; the recorded binding is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness. #1513: the async-delegation exchange also refuses a request its projection cannot issue whole, such as an entry naming a capability_sources binding the Mission does not record (beyond the grant under the Subset Rule), which it had opened as a narrower family; disabling that check fails the #1513 witness alone, and the whole-issue refusal carries its own description, so the containment witness still catches the Mission check alone."
+   "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness. #1513: the async-delegation exchange also refuses a request its projection cannot issue whole, such as an entry naming a capability_sources binding the Mission does not record (beyond the grant under the Subset Rule), which it had opened as a narrower family; the check compares each requested entry with its own projection, so a sibling entry for the same action cannot cover a dropped one; disabling it fails the two #1513 witnesses alone, and comparing the whole set instead fails only the overlap witness, and the whole-issue refusal carries its own description, so the containment witness still catches the Mission check alone."
   },
   {
    "id": "core.error-mapping.original-audience-invalid-target",
@@ -64731,7 +64743,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a refresh whose requested authorization_details cannot be issued whole issues no token rather than a token carrying fewer or narrower entries than requested: an entry beyond the grant is not intersected down to what the grant carries, and an entry the issuer's projection cannot carry whole does not leave the remaining entries issued",
-    "local": "the reference refuses invalid_authorization_details unless every requested entry is a subset of the issued set; its projection drops an entry carrying a capability_sources binding the grant does not record (an entry beyond the grant under the subset rule) or a max_amount that is not a decimal (an incomparable value, refused conservatively per the subset rule)"
+    "local": "the reference refuses invalid_authorization_details unless every requested entry is a subset of its own projection, so a sibling entry for the same action does not cover one the projection drops; its projection drops an entry carrying a capability_sources binding the grant does not record (an entry beyond the grant under the subset rule) or a max_amount that is not a decimal (an incomparable value, refused conservatively per the subset rule)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -64759,9 +64771,15 @@
      "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > an entry the projection cannot issue whole is refused beside an overlapping entry that is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 (D620 finding 6). Proved by mutation: comparing only the issued set's size to zero, instead of requiring every requested entry within it, fails the issued-whole witness on each of its two vectors alone (each was run as the only case); projecting with neither the subset check nor the issued-whole check fails the narrower-family, excess and relaxation witnesses, each issued a trimmed token. The same check serves the authorization code exchange, which shares the narrowing function; no code-exchange witness is cited."
+   "notes": "#1503 (D620 finding 6). Proved by mutation: comparing only the issued set's size to zero, instead of requiring every requested entry within it, fails the issued-whole witness on each of its two vectors alone (each was run as the only case); projecting with neither the subset check nor the issued-whole check fails the narrower-family, excess and relaxation witnesses, each issued a trimmed token. The same check serves the authorization code exchange, which shares the narrowing function; no code-exchange witness is cited. #1513 review: comparing the whole requested set with the whole issued set let a sibling entry for the same action cover a dropped one (an unrecorded binding, vendors: []), issuing the remainder; the per-entry check (issuedWhole, shared with family creation and the Dispatch Handoff) fails the overlap witness when it compares the whole set instead, and removing it fails the issued-whole and overlap witnesses."
   },
   {
    "id": "core.subset.widening-request-refused",
