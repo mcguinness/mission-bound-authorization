@@ -396,6 +396,7 @@ import {
   childMissionClaim,
 } from "../kernel/child-delegation.js";
 import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
+import { JWKS_MAX_AGE_SECONDS } from "../kernel/signing-key-ring.js";
 import { type DpopProofReplay, newDpopProofReplay, refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
   handleTransactionAuthorization,
@@ -2728,10 +2729,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // jwks_uri still publishes every role's public key: the provider serves the
   // route, with its CORS handling and content type, and only the key set it
   // answered with is replaced by `publicJwks`.
+  // @spec #831 B2: the response declares an explicit freshness lifetime, the
+  // interval a pending generation is published before it activates.
   provider.use(async (ctx, next) => {
     await next();
     if (ctx.method === "GET" && ctx.path === "/jwks" && ctx.status === 200) {
       ctx.body = { keys: opts.publicJwks.keys };
+      ctx.set("cache-control", `max-age=${JWKS_MAX_AGE_SECONDS}`);
     }
   });
 

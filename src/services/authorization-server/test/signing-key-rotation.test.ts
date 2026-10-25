@@ -328,10 +328,11 @@ async function proof(keys: Keys, extra: Record<string, unknown> = {}): Promise<s
     .sign(keys.privateKey);
 }
 
-/** The kids the AS publishes at /jwks; asserts no private member is published. */
+/** The kids the AS publishes at /jwks, with its declared freshness; asserts no private member is published. */
 async function publishedKids(): Promise<string[]> {
   const res = await fetch(`${ISSUER}/jwks`);
   expect(res.status).toBe(200);
+  expect(res.headers.get("cache-control")).toBe(`max-age=${JWKS_MAX_AGE_SECONDS}`);
   const { keys } = (await res.json()) as { keys: Record<string, unknown>[] };
   for (const k of keys) for (const m of PRIVATE_MEMBERS) expect(k[m], `${String(k.kid)} publishes ${m}`).toBeUndefined();
   return kidsOf(keys);
