@@ -6418,7 +6418,7 @@ Companion variations:
   profile's lifecycle operations, and the AS derives nothing in
   between ({{lifecycle}}). The revocation at 08:53:20 is the agent's
   own `revoke` operation, with the reason "Quarterly reconcile
-  completed early", under an explicit lifecycle authorization the
+  cancelled", under an explicit lifecycle authorization the
   deployment grants it for this Mission; its resource tokens and
   refresh token confer no such authority. The AS commits it as state
   version 4.
@@ -7472,6 +7472,9 @@ Cross-Domain:
   a grant binding resolves the Mission for the operations using it,
   and a profile-defined grant can instead resolve it through its
   authenticated `mission` reference (#1631, D751).
+- Editorial, no requirement change: the Mission Status variation's
+  revocation `reason` describes a revocation, not a completion
+  (#1535).
 - Editorial, no requirement change: Single Accountable Approver states
   that authenticating approval evidence does not establish that
   conditions governing later reliance remain satisfied, and that the

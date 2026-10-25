@@ -49,6 +49,7 @@ import {
   type ActionApprovalInput,
   type ActionMapping,
   CANONICAL_RESOURCE,
+  type CompensatedEffect,
   type DecisionEvidenceGap,
   type EnforceResult,
   type ExecutionAttempt,
@@ -229,6 +230,7 @@ export const TOOLS: ToolDef[] = [
   { name: "check_transfer", description: "Check whether a wire transfer is feasible, reserving nothing", action: "payments:payment.execute" },
   { name: "hold_transfer", description: "Place a hold for a wire transfer", action: "payments:payment.execute" },
   { name: "execute_wire_transfer", description: "Execute a wire transfer", action: "payments:payment.execute" },
+  { name: "reverse_wire_transfer", description: "Reverse a committed wire transfer", action: "payments:payment.reverse" },
   { name: "send_remittance_email", description: "Send remittance advice", action: "payments:remittance.send" },
 ];
 
@@ -251,18 +253,44 @@ const CONNECTOR_OPERATIONS: Record<
     effective: EffectiveParams;
     permitId: string;
     missionId: string;
+    /**
+     * @spec runtime#compound-actions (#252): the committed effect a
+     * compensate crossing offsets, as the PEP established it from verified
+     * evidence before the decision request. Absent on every other crossing.
+     */
+    compensates?: CompensatedEffect;
   }) => CommitResult
 > = {
   execute_wire_transfer: ({ connectors, opKey, effective, permitId, missionId }) =>
     connectors.postWire({
       opKey,
       invoiceId: effective.invoice_id,
+      vendorId: effective.vendor_id,
       payeeAccount: effective.payee_account,
       amount: effective.amount.amount,
       currency: effective.amount.currency,
       permitId,
       missionId,
     }),
+  // @spec runtime#compound-actions (#252): the compensate crossing offsets the
+  // one committed wire its Decision linked, named by the wire's operation key
+  // (bound in the reversal's parameter digest) and evaluation identifier, with
+  // the amount, currency and payee the Decision evaluated and bound; the
+  // connector refuses them unless they equal the wire's record. Never an agent
+  // argument. With no established link there is nothing to offset.
+  reverse_wire_transfer: ({ connectors, opKey, effective, permitId, missionId, compensates }) =>
+    compensates && effective.reverses !== undefined
+      ? connectors.reverseWire({
+          opKey,
+          reversedOpKey: effective.reverses,
+          reversedPermitId: compensates.evaluationId,
+          amount: effective.amount.amount,
+          currency: effective.amount.currency,
+          payeeAccount: effective.payee_account,
+          permitId,
+          missionId,
+        })
+      : { committed: false, deduped: false, refusal: "wire_not_committed" },
   send_remittance_email: ({ connectors, opKey, effective, permitId, missionId }) =>
     connectors.sendEmail({
       opKey,
@@ -389,6 +417,21 @@ export const REVERSIBLE_WRITE_REFUSAL_ERRORS: Readonly<Record<string, string>> =
  * is `already_settled`.
  */
 export const SETTLEMENT_REFUSAL_ERROR = "https://payments.demo/execution-errors/already_settled";
+
+/**
+ * @spec runtime#compound-actions (#252): the Execution Evidence `error` for a
+ * reversal the ledger refused with no effect, by the connector's refusal: the
+ * linked wire is not a committed entry, the reversal's amount, currency or
+ * payee differs from the wire's record, or it is already reversed. Each is a
+ * collision-resistant name for the reason {@link SETTLEMENT_REFUSAL_ERROR} is;
+ * the caller-visible diagnostic is the short name.
+ */
+export const CONNECTOR_REFUSAL_ERRORS: Readonly<Record<NonNullable<CommitResult["refusal"]>, string>> = Object.freeze({
+  already_settled: SETTLEMENT_REFUSAL_ERROR,
+  wire_not_committed: "https://payments.demo/execution-errors/wire_not_committed",
+  reversal_mismatch: "https://payments.demo/execution-errors/reversal_mismatch",
+  already_reversed: "https://payments.demo/execution-errors/already_reversed",
+});
 
 /**
  * @spec authzen#execution-evidence-requirement (#1640, D770 ruling 4): the
@@ -1991,8 +2034,12 @@ export class McpPaymentsServer {
       tx.engine.advance(opKey, "abandoned");
       return { ok: false, refusal_reason: "permit_expired" };
     }
-    // TOCTOU re-verify inside the lease, before commit.
-    const bound = await this.deps.pep.reverify(res.effective, digest, token, attempt);
+    // TOCTOU re-verify inside the lease, before commit. A compensate crossing
+    // (#252) re-derives its form from the committed wire's record, not the
+    // invoice as it reads now.
+    const bound = res.compensates
+      ? await this.deps.pep.reverifyCompensation(res.effective, digest, token, attempt, res.compensates)
+      : await this.deps.pep.reverify(res.effective, digest, token, attempt);
     if (!bound.ok) {
       tx.engine.advance(opKey, "abandoned");
       return { ok: false, refusal_reason: bound.error };
@@ -2067,15 +2114,19 @@ export class McpPaymentsServer {
       effective: res.effective,
       permitId,
       missionId: resolvedMission.id,
+      ...(res.compensates ? { compensates: res.compensates } : {}),
     });
     // @spec runtime#security-considerations (#1270): the resource refused a
     // second settlement of the invoice with no effect, so this is affirmative
     // non-execution under the deployment's collision-resistant error, the
-    // same disposition as the reversible writes' `schedule_exists`.
+    // same disposition as the reversible writes' `schedule_exists`. A
+    // reversal the ledger refused (#252) disposes the same way, under its own
+    // error.
     if (!commit.committed) {
-      await this.deps.pep.suppressExecution(attempt, SETTLEMENT_REFUSAL_ERROR);
+      const refusal = commit.refusal ?? "already_settled";
+      await this.deps.pep.suppressExecution(attempt, CONNECTOR_REFUSAL_ERRORS[refusal]);
       tx.engine.advance(opKey, "abandoned");
-      return { ok: false, refusal_reason: commit.refusal ?? "already_settled" };
+      return { ok: false, refusal_reason: refusal };
     }
     tx.engine.advance(opKey, "connector_committed");
     // The effect is durable, so the consumption row says so. A failure to write

@@ -556,7 +556,12 @@ canonicalization, and integrity envelope a deployment emits.
   execution path MUST establish this link from retained, verified
   evidence of the original evaluation, never merely copy an
   agent-supplied identifier. The link confers no authority and does
-  not authorize compensation under the original action's permit.
+  not authorize compensation under the original action's permit. The
+  producer records the value it validated on the request, on a permit
+  or a denial, and omits malformed input; a compensate-phase request
+  without a usable value is refused before evaluation, so no
+  compensate-phase decision lacks this member
+  ({{I-D.draft-mcguinness-mission-authzen}}).
 
 `decision`:
 : REQUIRED. A string. One of `permit` or `deny`.
@@ -731,18 +736,25 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   has the PEP supply state, and it cannot establish it), or
   `phase_unavailable` (the operation is a phase of a compound action
   and the PEP cannot establish the phase before requesting a
-  decision). For a PDP refusal of an in-scope request that reaches it
+  decision), or `compensation_link_unavailable` (the operation is a
+  compensate phase and the PEP cannot establish, from retained and
+  verified evidence, the committed effect it offsets and the Decision
+  that effect executed under). For a PDP refusal of an in-scope
+  request that reaches it
   without the Mission decision context a runtime enforcement scope
   requires, `mission_context_missing`; for one whose operation target
   is absent, malformed, or outside the enforcement scope the requesting
   PEP is authorized for ({{I-D.draft-mcguinness-mission-authzen}}),
   `operation_target_invalid`; for one whose action phase is outside
   the defined set, or is absent where the PDP's trusted operation
-  declaration requires a phase, `phase_invalid`; and for one whose
+  declaration requires a phase, `phase_invalid`; for a compensate-phase
+  request with no `compensates_evaluation_id`, or a request whose
+  `compensates_evaluation_id` is malformed, `compensation_link_invalid`;
+  and for one whose
   evaluation-context binding inputs are missing, malformed, or
   incompatible with the declared binding, for an operation the runtime
   profile's Evaluation-Context Binding extension covers,
-  `evaluation_context_invalid`. The last two describe decision inputs
+  `evaluation_context_invalid`. The last three describe decision inputs
   the PDP cannot use, not an evaluated policy denial. These name
   pre-evaluation conditions,
   PEP-side or PDP-side, and are disjoint from the runtime profile's
@@ -1202,17 +1214,29 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 
 `effective_parameter_digest`:
 : CONDITIONAL. A string. REQUIRED whenever
-  `authorized_parameter_digest` is present. The digest, in the same
-  form, over the normalized parameters actually attempted or
-  executed. Equality with `authorized_parameter_digest` is the
-  binding-held case. Inequality is a parameter deviation, and the
-  record REMAINS VALID: evidence of an unauthorized execution is
-  still evidence, never grounds to discard the record. A deviation
-  recorded against `outcome` `suppressed` carries `error`
-  `parameter_mismatch`. A deviation recorded against `outcome`
-  `completed` or `failed`, a buggy or compromised executor having
-  gone ahead despite the mismatch, is equally representable, and a
-  consumer MUST flag it as an unauthorized execution.
+  `authorized_parameter_digest` is present, except on a `suppressed`
+  record whose executing PEP could not establish the effective
+  parameters. The digest, in the same form, over the normalized
+  parameters actually attempted or executed. Equality with
+  `authorized_parameter_digest` is the binding-held case. Inequality
+  is a parameter deviation, and the record REMAINS VALID: evidence of
+  an unauthorized execution is still evidence, never grounds to
+  discard the record. A deviation recorded against `outcome`
+  `suppressed` carries `error` `parameter_mismatch`. A deviation
+  recorded against `outcome` `completed` or `failed`, a buggy or
+  compromised executor having gone ahead despite the mismatch, is
+  equally representable, and a consumer MUST flag it as an
+  unauthorized execution.
+
+  If the executing PEP cannot establish the effective parameters,
+  this member MUST be absent rather than copied from
+  `authorized_parameter_digest` or populated with a fabricated digest,
+  and execution MUST be suppressed. The `error` names the condition
+  that prevented it, `target_drift` when the target the permit was
+  evaluated for cannot be established at use, and is never
+  `parameter_mismatch`: no comparison was made. The absence means the
+  comparison is unavailable, and a consumer MUST NOT read it as
+  equality or as a parameter deviation.
 
 `authorized_evaluation_context_digest`:
 : CONDITIONAL. A string. REQUIRED when the linked Decision Evidence
@@ -1305,12 +1329,17 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
 `obligation_outcomes`:
 : CONDITIONAL. An array of objects. REQUIRED when the linked Decision
   Evidence carried obligations and a permit disposition exists. One
-  object per attached obligation, with `id` (REQUIRED, a string, the
-  obligation's identifier as returned by the decision), `type`
-  (REQUIRED, a string, the obligation type), `outcome` (REQUIRED, a
-  string, one of `fulfilled`, `failed`, or `unsupported`), and `error`
-  (OPTIONAL, a string, an implementation-specific detail on a
-  non-`fulfilled` outcome).
+  object per attached obligation, in the order the decision returned
+  them, with `id` (a string, the obligation's identifier as returned
+  by the decision), `type` (a string, the obligation type), `outcome`
+  (REQUIRED, a string, one of `fulfilled`, `failed`, or
+  `unsupported`), and `error` (OPTIONAL, a string, an
+  implementation-specific detail on a non-`fulfilled` outcome). `id`
+  and `type` are each REQUIRED when the decision supplied that member
+  as a non-empty string, and absent otherwise, never invented. An
+  obligation lacking either is malformed, and its `outcome` is
+  `unsupported`. This relaxes the record's representation, not the
+  obligation's own validity requirements.
 
 `sequence`:
 : REQUIRED. An integer. The per-Mission sequence indicator the runtime
@@ -2616,6 +2645,21 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- Refusal Record and Decision Evidence: `compensation_link_unavailable`
+  records a PEP that cannot establish, from retained and verified
+  evidence, the committed effect a compensation offsets;
+  `compensation_link_invalid` records a PDP refusal, before evaluation,
+  of a compensate-phase request without a usable
+  `compensates_evaluation_id`. Decision Evidence records the validated
+  link and omits malformed input (#252).
+- Execution Evidence: a PEP that cannot establish the effective
+  parameters suppresses execution and omits
+  `effective_parameter_digest`, never copying or fabricating it; the
+  absence means the comparison is unavailable, and a target that
+  cannot be established at use is `target_drift`. `obligation_outcomes`
+  keeps one entry per attached obligation, in decision order, omitting
+  an `id` or `type` the decision did not supply, with `outcome`
+  `unsupported` (#786).
 - Refusal Record: `phase_unavailable` records a PEP that cannot
   establish a compound action's phase before requesting a decision;
   `phase_invalid` and `evaluation_context_invalid` record a PDP refusal,

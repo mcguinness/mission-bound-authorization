@@ -429,6 +429,10 @@ In the ERP examples in this document, the operation contract identifies
 `https://erp.example.com` as the operation target
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
 constraints determine the permitted operations within that service.
+In the audience-scoped Mission Status example below, the consumer is
+the ERP resource server, client `erp-rs`, which the Mission Issuer's
+configuration authorizes for that audience; its client identifier is
+the response's `sub`.
 
 The signed payload reports the Mission's current state and the
 audience-scoped evidence the consumer needs.
@@ -458,15 +462,13 @@ Decoded JWS payload:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "sub": "s6BhdRkqt3",
+  "sub": "erp-rs",
   "nonce": "nonce_K9pV4nT2sR7mB1xQ",
   "iat": 1793606400,
   "exp": 1793606460,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "active",
     "version": 1,
     "expires_at":  "2026-12-31T23:59:59Z",
@@ -847,8 +849,6 @@ for a token whose Mission is `active`:
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
-      "authority_hash":
-        "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
       "state":   "active",
       "fresh_until": "2026-11-02T08:00:55Z"
     }
@@ -1219,7 +1219,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &operation=revoke
-&reason=Quarterly+reconcile+completed+early
+&reason=Quarterly+reconcile+cancelled
 &nonce=nonce_8Y3vN0sM6tP1xR9bQ5
 ~~~
 
@@ -1255,8 +1255,6 @@ Decoded JWS payload:
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "terminated",
     "termination": {
       "reason": "revoked",
@@ -1311,8 +1309,6 @@ and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
   "mission": {
     "id": "msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "suspended",
     "version": 2,
     "suspend_until": "2026-11-09T08:15:00Z",
@@ -2078,6 +2074,11 @@ Mission Termination Reasons registry
 - An RFC 7009 revocation does not by itself revoke a Mission, and a
   revocation that a deployment's policy couples to it commits the same
   `revoke` transition, state version and event.
+- Editorial, no requirement change: in the audience-scoped Mission
+  Status example, the consumer is the ERP resource server; no example
+  response shows `authority_hash` to a caller the example does not
+  show holding its disclosure privilege; and the revocation's `reason`
+  describes a revocation, not a completion (#1535).
 
 -00
 

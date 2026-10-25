@@ -11,20 +11,20 @@
     "content_sha256": "abc6086f27dc02ea41a48bccb7408faa0aeafdd8464d78a79af5c370084a70e5"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "c4cc5c57d4c8eb004a7fa1b19cc17e4122553684",
-    "content_sha256": "3436a62e45903dd2ce5ebcd988fd3342c8b1911cec42636cd7329ec7bc14652b"
+    "revision": "d46b85a642723a7cc5c9949adb307d118abb19e3",
+    "content_sha256": "3b5b78ef542b3c1013bfeb34875aa7083e5d1d5f6816eeeedcb6382b05f5e6ad"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
     "content_sha256": "e0466f26a42dc89f7f1637996066ed8de81addad3a6190db9b7f814e21525036"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "c4cc5c57d4c8eb004a7fa1b19cc17e4122553684",
-    "content_sha256": "79f74a6ae36470c96c7395824c11cc1c2bc6ebbb555e4364942a16f0f1515f30"
+    "revision": "d46b85a642723a7cc5c9949adb307d118abb19e3",
+    "content_sha256": "d9a0a73af6dece54f62ef548f83d2176732351dd0e1e193a1f3b7fe7e9a1871e"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "dbac886ac676052de539355a0e7f8603131508e3",
-    "content_sha256": "91de0345c72ae5f637034266fdf058356730432bbcb138db59fbabe07d988c1e"
+    "revision": "b89421141eb93ccbaf1497fcec876f281ae91816",
+    "content_sha256": "883507515c0e910d98c46e57d0178923aa33125c95d1c3b18491e6e58cc3ea21"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -47,32 +47,32 @@
     "content_sha256": "3e76453c13322a3586481cd021766799a75f5cbe1f9517cb2698dd5a2942e868"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "213893760b7c447ff475d568bc8a54be8a85176b",
-    "content_sha256": "0cf9c0c15240b62a32a5bd9bf0dddbb93cfe86d6390685e3c5c5fd7858b87a4f"
+    "revision": "552acb8c415969604ed2053786be955198d52785",
+    "content_sha256": "001ce4ec9ebaafee625fab3271656ff873d2073739b14e1d0e338ae57bce5943"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
     "revision": "b4f67b35b7798a15ebb876f488100282291e98c9",
     "content_sha256": "7045896b9dcf4574459f31fb8725faaf5d4520290b49d751ee028d2c958e8cd2"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "cb8fb904b1870d8d9b94816536376cd13b1c1f3c",
-    "content_sha256": "00aa0cfae2693ee89e19ec6edf3a8d7826da8c37d6120b600fee96f4297f6371"
+    "revision": "d9be6a8f39befa8f541da77debfb3b49c8e387e8",
+    "content_sha256": "16576c6430fa1676978886c705942f91da72c897801a9dbfb8ecd564981ab95e"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
     "content_sha256": "483287bedfb2209de40290df596ca9bc2ea3178e485e6eaa226a46e903e1d6c2"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "f69c9b4a80d569f1a30c76860ddf70a9a2dde5ec",
-    "content_sha256": "8b944e1f959321364a841f6788e4a7b62682b239f2a2c6a1c13f647490297fb1"
+    "revision": "0a8d989f52e000a391fa2653fb7df1446b906a08",
+    "content_sha256": "7b240ade339ad7221372fdb6def5df21b4b7d18e0f3e8ce90ae07eab473c9f69"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "c477e8f07a7a71d920467eea9a0ccef01752c4a5",
-    "content_sha256": "3bbb47275a5c790d5044879d268970c3fe9e165de2c637b8a5ca1b367050cb6d"
+    "revision": "552acb8c415969604ed2053786be955198d52785",
+    "content_sha256": "9b28ebc8ab66892ab2387a801ecda192cbf802cd34c2ded22cd4d4e07bbe081d"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -115,8 +115,8 @@
     "content_sha256": "c9636bdc3bc0a3b7baffd573b69e56708887aacb5b9fecdd0d35516a4d1d69d5"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "0c7677a870b2d9a40af7bbafc5e04792ea63fa99",
-    "content_sha256": "07e01880187e375f571aa1a1afeccbd73901610ee6cb31bbc6d039756c360b07"
+    "revision": "ec82149461dec8f4a5955f1a12f236366de06047",
+    "content_sha256": "6d69c4cbcdff9c4eb7aca3f81ff0d1dd9c247ad097beabb300c6fbc85e9da6ec"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -1000,8 +1000,34 @@
     "normative": "a compensate-phase Decision carries the evaluation identifier of the committed effect it offsets"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > offsets a committed wire through the reference connector under a fresh compensate Decision whose evidence links the original commit's evaluation_id",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > reverses exactly the committed amount whatever the invoice now reads, and the Decision Evidence and Execution Evidence carry the committed-effect parameters' digest",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > ignores an agent-supplied compensates_evaluation_id argument and links the verified original",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/compensation-link-stack.test.ts",
+     "name": "the composed stack links a compensation to its committed original (@spec authzen#context-compensation-link, runtime#compound-actions, #252) > re-verifies the committed wire's retained records through the stack's resolver and carries the link to the PDP, which denies a compensation the Mission does not authorize",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#252 PR C2 (owner rulings 2026-10-24, D762). The compensate crossing reverse_wire_transfer (payments:payment.reverse) offsets a wire execute_wire_transfer committed, through the reference ledger connector, under its own single-use compensate Decision whose signed Decision Evidence carries compensates_evaluation_id equal to the commit's evaluation_id; the reversal entry names the wire's operation key and the compensation's own permit, the wire entry is unchanged, and reconciliation joins both effects to completed Execution Evidence. The PEP establishes the link from its own retained records, which it re-verifies, never from an argument: an argument naming another evaluation is not read past the tool boundary and is refused at intake on it. In the composed stack the records re-verify through the boundary-bound resolver and the link reaches the PDP, whose denial records it. Mutations: recording another value as the link fails the Decision Evidence assertion; a reversal that inserts nothing fails the connector assertion; reconciliation without reversal entries fails the reconcile assertion; a request carrying another link, or the agent-supplied one, fails the envelope assertion; a stack resolver without the executor's key fails the stack's verification assertion. A simulated connector establishes reference behavior, not real bank reversal semantics. Owner review of PR #1656: the compensating Decision binds the committed wire's own parameters (the reversal form read from the wire's ledger record), and the offset is exactly the committed amount even after the invoice changed; its Decision Evidence and Execution Evidence carry that form's digest."
   },
   {
    "id": "runtime.compound-actions.compensate-not-under-original-permit",
@@ -1022,8 +1048,34 @@
     "normative": "a compensation is separately authorized, never authorized by the permit of the action it offsets, and its correlation link supplies no authority"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses the original commit permit presented at the compensating crossing: zero effects, one suppressed Execution Evidence record, no Refusal Record",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > denies a compensation the Mission's authority does not cover, though its link to the committed original is established",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > denies a reversal of a committed USD 125 wire under a USD 10 reversal ceiling after the invoice changed to USD 1, with zero connector effects",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > offsets a committed wire through the reference connector under a fresh compensate Decision whose evidence links the original commit's evaluation_id",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#252 PR C2. The commit's own permit presented at the compensating crossing is refused at admission by the phase binding (phase_mismatch): zero reversal entries, the wire ledger unchanged, exactly one suppressed Execution Evidence record linked to that permit, and no Refusal Record. A compensation the Mission does not authorize is denied out_of_authority though its link to the committed original is established, and the denial records the link. The authorized compensation obtains its own Decision for its own action, with a fresh evaluation_id, use_limit 1 and its own operation key. Mutations: disabling the phase comparison makes the refusal parameter_mismatch (the reason assertion fails), and disabling the digest comparison as well lets the commit's permit offset the wire (the zero-reversal assertion fails on its own); evaluating the compensation under the compensated action identifier permits it (the denial assertion fails, and the zero-reversal assertion fails on its own). Owner review of PR #1656: the compensation is authorized under its own authority on what it will offset: a USD 10 reversal ceiling denies the reversal of a committed USD 125 wire (parameter_violation) though the invoice now reads USD 1, with zero connector effects."
   },
   {
    "id": "runtime.compound-actions.permit-binds-phase",
@@ -1177,6 +1229,92 @@
      "surface": "resource-operation"
     }
    ]
+  },
+  {
+   "id": "runtime.compound-actions.compensation-parameters-from-committed-effect",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "the PEP MUST establish them from that effect's retained record before requesting the Decision, never from current resource state or an agent-supplied argument, and bind them through `parameter_digest`",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a compensation is decided and bound on the committed effect's parameters, read from that effect's retained record before the Decision, never from the resource as it reads now or an argument: constraints are evaluated against what will be offset, and parameter_digest binds it",
+    "local": "the reversal form: the invoice and vendor the wire paid, its amount, currency and payee, the operation target, and the wire's operation key, read from the ledger connector's entry joined to the re-verified Decision and Execution Evidence (PepDeps.committedEffects)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > denies a reversal of a committed USD 125 wire under a USD 10 reversal ceiling after the invoice changed to USD 1, with zero connector effects",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > reverses exactly the committed amount whatever the invoice now reads, and the Decision Evidence and Execution Evidence carry the committed-effect parameters' digest",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses at use a compensation whose committed wire record no longer matches the form its permit bound, with zero connector effects",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > suppresses a compensation whose committed wire record no longer answers at use as target_drift, keeping the authorized digest and omitting the effective one",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Owner review of PR #1656 (P1). Committing USD 125, changing the invoice to USD 1 and requesting a reversal under a USD 10 reversal ceiling is denied parameter_violation, the request carrying USD 125, with zero connector effects; within the ceiling the reversal offsets exactly USD 125, and the request, Decision Evidence, operation key and completed Execution Evidence carry the digest of the wire's reversal form; a wire record that changes after the Decision is refused at use parameter_mismatch. Mutations: binding the invoice as it reads now fails the denial assertion (the permit is then refused at use); doing so with the at-use comparison and the connector check also off reverses USD 125 (the zero-effect assertion fails on its own); binding the current amount into the reversal form with both downstream guards off fails the committed-amount assertion; skipping the at-use comparison fails the at-use refusal, and with the connector check also off the zero-effect assertion fails on its own. After #786: a wire record that no longer answers at use leaves the effective parameters unestablished, suppressed target_drift with the authorized digest kept and the effective one absent. Mutation: recording that case as parameter_mismatch fails the target_drift witness."
+  },
+  {
+   "id": "runtime.compound-actions.offset-refuses-differing-parameters",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "The executing resource MUST refuse an offset whose parameters differ from the committed effect's.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an offset whose parameters differ from the committed effect's record is refused with no effect, whatever the caller presents",
+    "local": "the ledger connector refuses reversal_mismatch when the amount, currency or payee differs from the wire's entry, and the PEP re-derives the reversal form from that entry before the effect"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > the reference connector offsets a committed wire once, only with the wire's recorded amount, currency and payee, and refuses an unknown or uncommitted one",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses at use a compensation whose committed wire record no longer matches the form its permit bound, with zero connector effects",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Owner review of PR #1656. Mutations: removing the connector check, or dropping the currency from it, fails the connector witness, and the zero-reversal assertion fails on its own; skipping the at-use comparison fails the at-use witness."
   },
   {
    "id": "runtime.idempotency.phase-in-scope",
@@ -8413,7 +8551,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a failed or refused derivation leaves the derivation count unchanged",
-    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); and a failure AFTER admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back. NOT covered, because the reference does not meet the clause there (#914 ruling 1; #250): the provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint) commits the count before signing with no rollback, reservation or acceptance callback, so a failure after the count stays counted (documented by derivation-counting.test.ts > residual: the provider access-token hook counts before signing ...); and the ID-JAG continuation reserves before minting, so a grant that fails after admission (a state change between the exchange's audience-scoped authority check, which refuses before admission and counts nothing, and the gate) stays counted under an unreleased jti-keyed reservation until an authoritative non-acceptance returns it (continuation-grant.test.ts > residual: a continuation grant that fails after admission ..., driven at issueCrossDomainGrant). Partial until those paths stop counting a failed derivation"
+    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200 or fails by an exception after its response was prepared; the ID-JAG continuation settles its own fresh reservation as not accepted. NOT covered: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted (#250 step 3); a replayed reservation that fails again stays counted, since an earlier attempt's artifact may have been accepted; and a Dispatch Handoff redemption that fails after its reservation keeps it for the retry that replays it. Partial on those."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -8441,9 +8579,39 @@
      "name": "one counting and settlement path (@spec mission#delegation, derivation-limits#counted-operations) > an accounting record that cannot be written refuses, with nothing counted and no token",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > the provider access-token hook: a code exchange that fails after the count, before the token leaves, returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > the delegation handle exchange: a save that fails after the count, before the handle leaves, returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "one counting and settlement path (@spec mission#delegation, derivation-limits#counted-operations) > a save refused after the count fails the request, which returns the count, with no token and no record (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "a continuation ID-JAG that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a continuation grant that fails after admission settles its own reservation as not accepted: the count returns (#935, D772)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a failure that escapes the request after its response was prepared (the request-path drain throws) answers 500 and returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869: a delegated exchange whose accounting cannot be recorded counts nothing; a save refused after the count still spends it (the uncoupled counter)."
+   "notes": "#869: a delegated exchange whose accounting cannot be recorded counts nothing; a save refused after the count is settled (#935, D772)."
   },
   {
    "id": "derivation-limits.counting.async-family-refreshes-uncounted",
@@ -9059,7 +9227,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a derivation from a Mission that is not `active` issues nothing: a Token Exchange is refused `invalid_request` and a refresh `invalid_grant`, on the explicit state checks and on the save-time gate and lifetime clamp alike",
-    "local": "Token Exchange witnessed on async delegation (explicit check and lifetime clamp), expansion and child creation; refresh on the async-delegation family. The authorization-code and JWT-bearer paths keep invalid_grant through the same refusal mapping, pinned by its unit test."
+    "local": "Token Exchange witnessed on async delegation (explicit check and lifetime clamp), expansion and child creation; refresh on the async-delegation family; the deferred grant on the AROP poll, pending or approved, and the Mission approval poll, each with the Mission's own mission_error and the deferral left pollable after a resume. The authorization-code and JWT-bearer paths keep invalid_grant through the same refusal mapping, pinned by its unit test."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -9117,9 +9285,33 @@
      "name": "token-endpoint Mission gate refusal by grant (@spec mission#issuance-gating, #1154) > identifies a Token Exchange request by its grant_type alone",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "the AROP deferred grant against a Mission that is not active (@spec mission#issuance-gating, #250) > an approved deferral whose Mission is %s before the poll is refused invalid_grant with that mission_error, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "the AROP deferred grant against a Mission that is not active (@spec mission#issuance-gating, #250) > a pending deferral whose Mission is %s is refused invalid_grant with that mission_error, not authorization_pending",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > yields no token for a Mission revoked between the approval decision and the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > refuses a resolving poll for a Mission suspended after the approval decision with invalid_grant and mission_error suspended, delivering nothing; after resume the poll delivers (@spec mission#issuance-gating, #250)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1154 (D369)."
+   "notes": "#1154 (D369). Deferred polls aligned to invalid_grant (#250)."
   },
   {
    "id": "core.issuance-gating.after-acknowledged-revocation",
@@ -9139,7 +9331,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "after a revocation is acknowledged, a Token Exchange is refused `invalid_request` and any other grant, refresh included, `invalid_grant`, and nothing is issued",
-    "local": "the reference re-reads Mission state at release (the release fence, #1498), after the save-time gate, the signature and the request-path drain, on every 200 that releases an access token naming a Mission this AS issues, a stored result served again included; it orders a revocation against an issuance within one process only (#641). Every fenced path is witnessed with the fence disabled delivering a token: the code exchange, refresh and the async family's refresh, the device code grant, the deferred grant (AROP, Mission approval and expansion deferrals), the JWT-bearer grant (child and Dispatch Handoff redemption), the Mission dispatch grant, the delegation-handle, async-delegation, designation, delegated-redemption, child-creation, ceiling-drawdown and Dispatch Handoff exchanges, and the async-delegation and expansion stored results. A refusal carries mission_error with the released Mission's own termination reason (parent_terminated for a child whose parent was revoked). The ICA continuation exchange answers ICA's codes (core.issuance-gating.profile-code-override) and the transaction endpoint access_denied. Work committed before the fence stays spent: the Dispatch Handoff redemption's counted derivation and consumed grant, the designation and delegated redemption's counted derivation, the AROP and Mission approval deferrals' redemption, and an expansion successor's recorded delivery, which recovery never serves because it refuses the terminated successor first (#250)"
+    "local": "the reference re-reads Mission state at release (the release fence, #1498), after the save-time gate, the signature and the request-path drain, on every 200 that releases an access token naming a Mission this AS issues, a stored result served again included; it orders a revocation against an issuance within one process only (#641). Every fenced path is witnessed with the fence disabled delivering a token: the code exchange, refresh and the async family's refresh, the device code grant, the deferred grant (AROP, Mission approval and expansion deferrals), the JWT-bearer grant (child and Dispatch Handoff redemption), the Mission dispatch grant, the delegation-handle, async-delegation, designation, delegated-redemption, child-creation, ceiling-drawdown and Dispatch Handoff exchanges, and the async-delegation, expansion and Mission dispatch stored results. A refusal carries mission_error with the released Mission's own termination reason (parent_terminated for a child whose parent was revoked). The ICA continuation exchange answers ICA's codes (core.issuance-gating.profile-code-override) and the transaction endpoint access_denied. Work committed before the fence stays spent: the Dispatch Handoff redemption's counted derivation and consumed grant, the designation and delegated redemption's counted derivation, the AROP and Mission approval deferrals' redemption, and an expansion successor's recorded delivery, which recovery never serves because it refuses the terminated successor first (#250)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -9315,6 +9507,12 @@
     {
      "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
      "name": "the release fence on the delegation paths (@spec mission#issuance-gating, #250) > a stored result served again: the stored family replayed to a retry is refused invalid_request with mission_error revoked and no token member when the Mission is revoked while the replay's request-path drain runs",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "the release fence on the Mission dispatch grant (@spec mission#issuance-gating, #250) > a recovered delivery: a Dispatch retry whose instance is revoked while the retry's request-path drain runs is refused invalid_grant with mission_error revoked and no token member",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -32818,6 +33016,210 @@
    "notes": "#1629 (D744 ruling 3). The PDP checks action_phase in evaluate(), after the operation target: an out-of-set value (unknown, case, padding, empty, null, number, array, object) and a missing phase for an action its trusted operation declaration places at phases are refused before evaluation as phase_invalid, with no decision, no Decision Evidence, no FGA check and no Resource policy query, in process and over the remote channel. The trusted declaration is the PDP-side phasedActions binding (EvaluateOptions, the decision point and the remote server), stripped from a caller's options. The shipped demo stack binds no phasedActions, so its PDP declares no phased action and refuses only an out-of-set phase; binding the catalog's compound actions there is a deployment follow-up. Mutations: not refusing an out-of-set phase fails the out-of-set, signed-record, remote and evaluate-decision witnesses; ignoring the declaration fails the missing-phase, signed-record, decision-point and remote witnesses; keeping a caller's declaration at the decision point fails the decision-point witness; the remote server not applying its own declaration fails the remote witness."
   },
   {
+   "id": "authzen.context-compensation-link.pep-establishes-from-verified-evidence",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-compensation-link",
+   "text": "The PEP MUST establish the value from retained, verified evidence of that committed effect and of the Decision it executed under, taking that Decision's `evaluation_id`, and MUST NOT take it from an agent-supplied argument.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a compensate-phase request carries in context.compensates_evaluation_id the evaluation_id of the Decision whose committed effect the PEP found in its retained evidence and re-verified, never a value an agent argument supplies"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > offsets a committed wire through the reference connector under a fresh compensate Decision whose evidence links the original commit's evaluation_id",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > ignores an agent-supplied compensates_evaluation_id argument and links the verified original",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a compensation whose original record does not verify before any decision request",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/compensation-link-stack.test.ts",
+     "name": "the composed stack links a compensation to its committed original (@spec authzen#context-compensation-link, runtime#compound-actions, #252) > re-verifies the committed wire's retained records through the stack's resolver and carries the link to the PDP, which denies a compensation the Mission does not authorize",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#252 PR C2. The PEP finds the one commit-phase permit Decision Evidence for the invoice with completed Execution Evidence, joined on the signed evaluation_id, re-verifies both envelopes, and sends that evaluation_id; the wire's operation key is derived from the verified Decision, never a retention row's unsigned join key. An argument naming another evaluation (the prepare permit) is not read; a record changed at rest links nothing. Mutations: reading the argument, sending another value, and skipping either re-verification each fail a witness; a stack resolver without the executor's key fails the stack witness."
+  },
+  {
+   "id": "authzen.context-compensation-link.pep-refuses-unestablishable",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-compensation-link",
+   "text": "A PEP that cannot establish the link MUST refuse before requesting a decision",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a compensate crossing whose committed original the PEP cannot establish (none, only prepared, held or refused, or a record that does not verify) is refused with no decision request"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a compensation whose original is unknown before any decision request",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a compensation whose original was only prepared, held or refused before any decision request",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a compensation whose original record does not verify before any decision request",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#252 PR C2. Each case is refused compensation_link_unavailable with no decision request, no compensating Decision Evidence, no reversal and one verifiable signed PEP Refusal Record: no evidence at all, a wire for another invoice, a preflight, a hold and a commit permit that expired before its wire, and an altered Decision Evidence or Execution Evidence row recovered unverified from a durable backend. Mutations: removing the refusal fails each case, and the zero-decision-request assertion fails on its own; accepting an original without completed Execution Evidence fails the uncommitted case; skipping each re-verification fails its altered case."
+  },
+  {
+   "id": "authzen.context-compensation-link.decision-evidence-records-validated-link",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-compensation-link",
+   "text": "The PDP checks the member ({{pdp-consistency-checks}}) and records the validated value as Decision Evidence's `compensates_evaluation_id`, on a permit or a denial, omitting malformed input",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PDP records the validated link as Decision Evidence compensates_evaluation_id on a compensate-phase permit and denial, and never signs a malformed value"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "Decision Evidence records the validated compensation link (@spec runtime-evidence#decision-evidence-object, authzen#context-compensation-link, #252) > records compensates_evaluation_id on a compensate-phase permit and denial, signed, and never as a permit condition",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "Decision Evidence records the validated compensation link (@spec runtime-evidence#decision-evidence-object, authzen#context-compensation-link, #252) > the emitter never signs a compensate-phase record without a well-formed link, and never signs a malformed one",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#252 PR C2. The signed record of a compensate-phase permit and of an out_of_authority denial both carry the link; the emitter refuses to sign a compensate-phase record without a well-formed one, and omits a malformed value elsewhere. Mutations: recording another value fails the permit assertion; removing the emitter guard and recording a malformed value each fail the emitter witness."
+  },
+  {
+   "id": "authzen.context-compensation-link.link-confers-no-authority",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-compensation-link",
+   "text": "The member is not a permit condition and confers no authority",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a well-formed link is never echoed as a permit condition, and a compensate-phase request whose action the Mission's authority does not cover is denied despite it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "Decision Evidence records the validated compensation link (@spec runtime-evidence#decision-evidence-object, authzen#context-compensation-link, #252) > records compensates_evaluation_id on a compensate-phase permit and denial, signed, and never as a permit condition",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#252 PR C2. The permit carries no compensates_evaluation_id condition, and the same linked request against an Authority Set without payments:payment.reverse is denied out_of_authority. The PEP-side witnesses of the compensated action's permit are on runtime.compound-actions.compensate-not-under-original-permit."
+  },
+  {
+   "id": "authzen.pdp-consistency-checks.compensation-link-invalid",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-consistency-checks",
+   "text": "`context.compensates_evaluation_id`, when present, is a string with the syntax of `evaluation_id` ({{response-context}}), and it is present when `context.action_phase` is `compensate` ({{context-compensation-link}}). Otherwise the PDP MUST refuse the request before evaluation and MUST record the refusal as a Refusal Record with `denial_reason` `compensation_link_invalid`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request carrying a malformed compensates_evaluation_id, or a compensate-phase request carrying none, is refused before evaluation and recorded as a Refusal Record compensation_link_invalid, never evaluated into a permit or a policy denial"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "the PDP refuses an unusable compensation link before evaluation (@spec authzen#context-compensation-link, authzen#pdp-consistency-checks, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #252) > refuses a compensate-phase request with no compensates_evaluation_id, or a malformed one, before evaluation as compensation_link_invalid: no decision, no Decision Evidence, no FGA check and no Resource policy query",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "the PDP refuses an unusable compensation link before evaluation (@spec authzen#context-compensation-link, authzen#pdp-consistency-checks, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #252) > refuses a malformed compensates_evaluation_id on a request of another phase, and evaluates one of another phase that carries none",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "the PDP refuses an unusable compensation link before evaluation (@spec authzen#context-compensation-link, authzen#pdp-consistency-checks, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #252) > records the refusal as a PDP-signed Refusal Record over the request as submitted, naming no Mission and no evaluation",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "the PDP refuses an unusable compensation link before evaluation (@spec authzen#context-compensation-link, authzen#pdp-consistency-checks, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #252) > the remote PDP refuses a compensate-phase request with no link, or a malformed one, before evaluation as compensation_link_invalid, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#252 PR C2. evaluate() checks the link after the phase: absent on a compensate-phase request, or present and outside 1*64( ALPHA / DIGIT / \"-\" / \"_\" ) (empty, a space, a reserved character, over 64 characters, null, a number, an array, an object), on any phase, is refused with no decision, no Decision Evidence, no FGA check and no Resource policy query, in process and over the remote channel, with a PDP-signed Refusal Record naming no Mission and no evaluation. Mutations: skipping the check fails the in-process, other-phase, signed-record and remote witnesses; checking malformed links on the compensate phase only fails the other-phase witness; recording the refusal as phase_invalid fails the signed-record and remote witnesses."
+  },
+  {
    "id": "authzen.failure-condition-coverage.unusable-inputs-not-denials",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "failure-condition-coverage",
@@ -32833,7 +33235,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "`phase_invalid` and `evaluation_context_invalid` refusals are pre-evaluation records, never a `decision` with a `denial_reason`; a Decision-Base-only PDP keeps them in its internal form"
+    "normative": "`phase_invalid`, `compensation_link_invalid` and `evaluation_context_invalid` refusals are pre-evaluation records, never a `decision` with a `denial_reason`; a Decision-Base-only PDP keeps them in its internal form"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -32849,9 +33251,57 @@
      "name": "the PDP refuses an unusable action phase before evaluation (@spec authzen#context-action-phase, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #1629) > refuses an action_phase outside the closed set before evaluation as phase_invalid: no decision, no Decision Evidence, no FGA check and no Resource policy query",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "the PDP refuses an unusable compensation link before evaluation (@spec authzen#context-compensation-link, authzen#pdp-consistency-checks, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #252) > the remote PDP refuses a compensate-phase request with no link, or a malformed one, before evaluation as compensation_link_invalid, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "the PDP refuses an unusable compensation link before evaluation (@spec authzen#context-compensation-link, authzen#pdp-consistency-checks, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #252) > refuses a compensate-phase request with no compensates_evaluation_id, or a malformed one, before evaluation as compensation_link_invalid: no decision, no Decision Evidence, no FGA check and no Resource policy query",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1629 (D744 ruling 3). partial: the phase_invalid half is witnessed: the refusal is a pre-evaluation Refusal Record, never a decision with a denial_reason (no Decision Evidence, no evaluation_id, the remote channel answers a refusal, not a signed decision). evaluation_context_invalid has no reference surface (Evaluation-Context Binding at the PDP, #773, is unclaimed), and the Decision-Base-only clause (internal form) has none either: the reference PDP signs the portable Refusal Record. Mutation: not refusing an out-of-set phase fails both witnesses."
+   "notes": "#1629 (D744 ruling 3). partial: the phase_invalid half is witnessed: the refusal is a pre-evaluation Refusal Record, never a decision with a denial_reason (no Decision Evidence, no evaluation_id, the remote channel answers a refusal, not a signed decision). evaluation_context_invalid has no reference surface (Evaluation-Context Binding at the PDP, #773, is unclaimed), and the Decision-Base-only clause (internal form) has none either: the reference PDP signs the portable Refusal Record. Mutation: not refusing an out-of-set phase fails both witnesses. #252: the compensation_link_invalid half is witnessed the same way: a pre-evaluation Refusal Record, never a decision with a denial_reason, in process and over the remote channel. Mutation: skipping the link check fails both witnesses. Still partial for evaluation_context_invalid and the Decision-Base-only clause."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.compensation-carriers",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "A PEP that cannot establish the committed effect a compensation offsets refuses before any decision request, with `compensation_link_unavailable`. The compensated action's permit presented at a compensating crossing is a post-permit failure of its phase binding, `phase_mismatch` as Execution Evidence, never a Refusal Record.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an unestablishable compensation link is a pre-decision Refusal Record compensation_link_unavailable; the compensated action's permit at a compensating crossing is suppressed Execution Evidence phase_mismatch with no Refusal Record"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a compensation whose original is unknown before any decision request",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses the original commit permit presented at the compensating crossing: zero effects, one suppressed Execution Evidence record, no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#252 PR C2. Mutations: removing the PEP refusal fails the Refusal Record assertions; disabling the phase comparison changes the recorded error (parameter_mismatch), failing the phase_mismatch assertion."
   },
   {
    "id": "authzen.runtime-denial-classification.stale-state-scope",
@@ -33760,7 +34210,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#786 made the carrier split observable for the conditions this deployment reaches: one reason string (capability_source_unresolvable) lands on a Refusal Record pre-decision and on Execution Evidence at use, chosen by call site, and a post-permit duplicate lands on Execution Evidence while the wire keeps the mandated duplicate_suppressed diagnostic. kill_switch, phase_mismatch and target_drift are ungated in this deployment (#252 C, #773), and the obligation carrier is only reached as a deny, so full coverage of the table stays open."
+   "notes": "#786 made the carrier split observable for the conditions this deployment reaches: one reason string (capability_source_unresolvable) lands on a Refusal Record pre-decision and on Execution Evidence at use, chosen by call site, and a post-permit duplicate lands on Execution Evidence while the wire keeps the mandated duplicate_suppressed diagnostic. The two exits #786 kept open are closed on the Execution Evidence carrier: a target that cannot be established at use is a suppressed target_drift record with no Refusal Record (witnessed on evidence.execution.effective-digest-absent-when-parameters-unestablishable), and a permit carrying a malformed obligation is a suppressed obligation_unfulfilled record with one obligation_outcomes entry per attached obligation (evidence.execution.obligation-outcomes-malformed-entry). phase_mismatch (#252 C), the operation-target target_drift (#1276) and kill_switch (a declared boundary cutover, #853) are reached. Full coverage of the table stays open: the evaluation-context rows are #773's, and the permit-obligation carrier is only reached as a deny, since this PEP fulfills no obligation type. This row's role is AS while its cited witnesses are PEP tests; the #786 PEP witnesses are cited on their own PEP rows instead of here."
   },
   {
    "id": "authzen.failure-condition-coverage.post-permit-duplicate-carrier",
@@ -33951,6 +34401,42 @@
     }
    ],
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). target_drift at use is witnessed (T7). The parameter_mismatch precedence branch cannot arise under the reference's service-level contracts, which derive no target from arguments."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.target-object-unestablishable-at-use",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "Named target object the permit was evaluated for, or the effective parameters it determines, not establishable at use | Execution Evidence | `target_drift`",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit whose target object, or the effective parameters that object determines, cannot be established at use is carried as Execution Evidence, suppressed with error target_drift, never as a Refusal Record (target_unresolvable is the pre-decision carrier) and never as a parameter_mismatch"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a send whose routing stops resolving between decision and commit is suppressed target_drift, keeping the authorized digest with no effective one, and sends nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24: reuse target_drift; no post-permit target_unresolvable). The invoice deleted after the decision and the recipient routing that stops resolving each land on Execution Evidence, suppressed target_drift, with no Refusal Record and no second decision. Mutations: relabelling the invoice exit parameter_mismatch fails the record-error assertion on its own; adding a Refusal Record at that exit fails the no-Refusal-Record assertion on its own; relabelling the routing exit parameter_mismatch fails the routing test. The pre-decision row (a named target object not resolvable before the decision request, target_unresolvable) is evidence.refusal.denial-reason-enum-and-boundary's."
   },
   {
    "id": "authzen.failure-condition-coverage.lease-renewal-out-of-authority",
@@ -37915,6 +38401,132 @@
    "notes": "#594 W4-1: runtime projection and signed-byte assertions, with the reference audit allowlist declared in src/docs/decision-evidence-audit-policy.md."
   },
   {
+   "id": "evidence.decision.compensates-link-from-verified-evidence",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "The trusted execution path MUST establish this link from retained, verified evidence of the original evaluation, never merely copy an agent-supplied identifier.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the compensation link the decision records is the evaluation_id the PEP established from re-verified retained evidence of the committed original, never an agent-supplied identifier"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > offsets a committed wire through the reference connector under a fresh compensate Decision whose evidence links the original commit's evaluation_id",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > ignores an agent-supplied compensates_evaluation_id argument and links the verified original",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a compensation whose original record does not verify before any decision request",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/compensation-link-stack.test.ts",
+     "name": "the composed stack links a compensation to its committed original (@spec authzen#context-compensation-link, runtime#compound-actions, #252) > re-verifies the committed wire's retained records through the stack's resolver and carries the link to the PDP, which denies a compensation the Mission does not authorize",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#252 PR C2. The same witnesses as authzen.context-compensation-link.pep-establishes-from-verified-evidence: the link equals the commit's evaluation_id, an agent-supplied identifier is not read, an unverifiable record links nothing, and the composed stack verifies the retained records through its own resolver."
+  },
+  {
+   "id": "evidence.decision.compensates-link-validated-only",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "The producer records the value it validated on the request, on a permit or a denial, and omits malformed input; a compensate-phase request without a usable value is refused before evaluation, so no compensate-phase decision lacks this member",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Decision Evidence carries the validated compensates_evaluation_id on a compensate-phase permit and denial, omits a malformed value, and no compensate-phase decision is issued without the member"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "Decision Evidence records the validated compensation link (@spec runtime-evidence#decision-evidence-object, authzen#context-compensation-link, #252) > records compensates_evaluation_id on a compensate-phase permit and denial, signed, and never as a permit condition",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "Decision Evidence records the validated compensation link (@spec runtime-evidence#decision-evidence-object, authzen#context-compensation-link, #252) > the emitter never signs a compensate-phase record without a well-formed link, and never signs a malformed one",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "the PDP refuses an unusable compensation link before evaluation (@spec authzen#context-compensation-link, authzen#pdp-consistency-checks, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #252) > refuses a compensate-phase request with no compensates_evaluation_id, or a malformed one, before evaluation as compensation_link_invalid: no decision, no Decision Evidence, no FGA check and no Resource policy query",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#252 PR C2. Mutations: recording another value fails the permit witness; removing the emitter guard or recording a malformed value fails the emitter witness; skipping the pre-evaluation check fails the refusal witness."
+  },
+  {
+   "id": "evidence.decision.compensates-link-confers-no-authority",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-object",
+   "text": "The link confers no authority and does not authorize compensation under the original action's permit.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a compensation is neither authorized by its link nor executed under the original action's permit"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses the original commit permit presented at the compensating crossing: zero effects, one suppressed Execution Evidence record, no Refusal Record",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > denies a compensation the Mission's authority does not cover, though its link to the committed original is established",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#252 PR C2. The same witnesses as runtime.compound-actions.compensate-not-under-original-permit: the commit permit at the compensating crossing is suppressed with zero effects, and a linked compensation the Mission does not authorize is denied."
+  },
+  {
    "id": "evidence.refusal.refusal-id-entropy-and-format",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
@@ -37952,7 +38564,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, resource_contract_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable, phase_unavailable; PDP-side: mission_context_missing, operation_target_invalid, phase_invalid), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
+    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, resource_contract_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable, phase_unavailable, compensation_link_unavailable; PDP-side: mission_context_missing, operation_target_invalid, phase_invalid, compensation_link_invalid), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
    "coverage": "partial",
@@ -38078,7 +38690,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it; #1329, D496: a Mission-bound schedule_payment whose Mission the loader does not hold is refused at the HTTP endpoint with DPoP with one verifiable signed Refusal Record carrying that value, no decision request, no Resource-policy query and no business effect, while the same write under the held Mission schedules; treating the unknown Mission as an empty active view lets the request reach the PDP, and a different refusal reason, each fails the witness), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). target_unresolvable (the unknown_vendor diagnostic, #1251, D484): a lookup_vendor naming a vendor the store does not hold is refused with one verifiable signed Refusal Record carrying that value, no decision request and no Resource-policy query, under an unconstrained credential and under one that names the vendor, at the PEP over both decision channels and over the HTTP endpoint with DPoP; with D324's server fallback restored, the unconstrained lookup reaches the PDP and the named one signs credential_authority_insufficient, and each assertion fails. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither #1276 clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet. #1629: the closed sets gain phase_unavailable (PEP) and phase_invalid (PDP); the refusal-denial-reason closed-set tests assert both. evaluation_context_invalid has no reference surface (#773) and is not listed as witnessed."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it; #1329, D496: a Mission-bound schedule_payment whose Mission the loader does not hold is refused at the HTTP endpoint with DPoP with one verifiable signed Refusal Record carrying that value, no decision request, no Resource-policy query and no business effect, while the same write under the held Mission schedules; treating the unknown Mission as an empty active view lets the request reach the PDP, and a different refusal reason, each fails the witness), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). target_unresolvable (the unknown_vendor diagnostic, #1251, D484): a lookup_vendor naming a vendor the store does not hold is refused with one verifiable signed Refusal Record carrying that value, no decision request and no Resource-policy query, under an unconstrained credential and under one that names the vendor, at the PEP over both decision channels and over the HTTP endpoint with DPoP; with D324's server fallback restored, the unconstrained lookup reaches the PDP and the named one signs credential_authority_insufficient, and each assertion fails. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither #1276 clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet. #1629: the closed sets gain phase_unavailable (PEP) and phase_invalid (PDP); the refusal-denial-reason closed-set tests assert both. evaluation_context_invalid has no reference surface (#773) and is not listed as witnessed. #252: the closed sets gain compensation_link_unavailable (PEP) and compensation_link_invalid (PDP); their own rows (evidence.refusal.pep-compensation-link-unavailable, evidence.refusal.pdp-compensation-link-invalid) carry the witnesses."
   },
   {
    "id": "evidence.refusal.resource-contract-unresolvable",
@@ -38258,6 +38870,96 @@
     }
    ],
    "notes": "#1629 (D744 ruling 3). The PDP signs a pdp-role Refusal Record phase_invalid over the request as submitted, naming no Mission and no evaluation, for an out-of-set phase and for a missing phase its declaration requires; the remote PDP retains one verifiable record per refusal (endpoint). phase_invalid joins the evidence store's PDP closed set, and a PEP-side store refuses to sign it. Mutations: recording the refusal as operation_target_invalid fails the signed-record and remote witnesses; removing phase_invalid from the PDP set fails the closed-set witness; adding it to the PEP set fails it too."
+  },
+  {
+   "id": "evidence.refusal.pep-compensation-link-unavailable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "`compensation_link_unavailable` (the operation is a compensate phase and the PEP cannot establish, from retained and verified evidence, the committed effect it offsets and the Decision that effect executed under)",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP that cannot establish the committed effect a compensation offsets records a Refusal Record with denial_reason compensation_link_unavailable and requests no decision"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a compensation whose original is unknown before any decision request",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a compensation whose original was only prepared, held or refused before any decision request",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses a compensation whose original record does not verify before any decision request",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-denial-reason.test.ts",
+     "name": "the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > compensation_link_invalid is the PDP's alone and compensation_link_unavailable the PEP's alone: a PEP-side store signs compensation_link_unavailable and never compensation_link_invalid (#252)",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#252 PR C2. Each refusal signs one verifiable PEP Refusal Record with this value and no decision request; the value is in the PEP closed set and the diagnostic mapping, and a PEP-side store never signs the PDP's compensation_link_invalid. Mutations: removing the refusal fails the refusal witnesses; removing the value from the PEP set, or adding the PDP value to it, fails the closed-set witness."
+  },
+  {
+   "id": "evidence.refusal.pdp-compensation-link-invalid",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for a compensate-phase request with no `compensates_evaluation_id`, or a request whose `compensates_evaluation_id` is malformed, `compensation_link_invalid`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PDP's pre-evaluation refusal of a missing or malformed compensation link is a Refusal Record with denial_reason compensation_link_invalid"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "the PDP refuses an unusable compensation link before evaluation (@spec authzen#context-compensation-link, authzen#pdp-consistency-checks, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #252) > records the refusal as a PDP-signed Refusal Record over the request as submitted, naming no Mission and no evaluation",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-compensation-link.test.ts",
+     "name": "the PDP refuses an unusable compensation link before evaluation (@spec authzen#context-compensation-link, authzen#pdp-consistency-checks, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #252) > the remote PDP refuses a compensate-phase request with no link, or a malformed one, before evaluation as compensation_link_invalid, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-denial-reason.test.ts",
+     "name": "the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > compensation_link_invalid is the PDP's alone and compensation_link_unavailable the PEP's alone: a PEP-side store signs compensation_link_unavailable and never compensation_link_invalid (#252)",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#252 PR C2. The PDP signs a pdp-role Refusal Record compensation_link_invalid over the request as submitted, naming no Mission and no evaluation, in process and over the remote channel; the value is in the PDP closed set and a PEP-side store refuses to sign it. Mutations: recording the refusal as phase_invalid fails the signed-record and remote witnesses; adding the value to the PEP set fails the closed-set witness."
   },
   {
    "id": "evidence.refusal.pdp-evaluation-context-invalid",
@@ -38956,7 +39658,7 @@
    "id": "evidence.execution.obligation-outcomes-schema",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
-   "text": "REQUIRED when the linked Decision Evidence carried obligations and a permit disposition exists. One object per attached obligation, with `id` (REQUIRED, a string, the obligation's identifier as returned by the decision), `type` (REQUIRED, a string, the obligation type), `outcome` (REQUIRED, a string, one of `fulfilled`, `failed`, or `unsupported`)",
+   "text": "REQUIRED when the linked Decision Evidence carried obligations and a permit disposition exists. One object per attached obligation, in the order the decision returned them, with `id` (a string, the obligation's identifier as returned by the decision), `type` (a string, the obligation type), `outcome` (REQUIRED, a string, one of `fulfilled`, `failed`, or `unsupported`)",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -38968,7 +39670,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "obligation_outcomes is REQUIRED whenever the linked Decision Evidence carried obligations and a permit disposition exists, with one object per attached obligation carrying id, type, and a fulfilled/failed/unsupported outcome"
+    "normative": "obligation_outcomes is REQUIRED whenever the linked Decision Evidence carried obligations and a permit disposition exists, with one object per attached obligation, in the order the decision returned them, each carrying a fulfilled/failed/unsupported outcome"
    },
    "level": "unit",
    "coverage": "partial",
@@ -38981,13 +39683,13 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an obligation that does not identify itself is still refused with zero effect, and no entry is invented for it",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an obligation without an id and one without a type each keep their own entry, in the decision's order beside a well-formed one, the missing member absent and the outcome unsupported",
      "level": "unit",
      "surface": "evidence-emission"
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a mixed obligation set with one unidentifiable member names none of them, rather than a partial list that reads as complete",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an empty id, a non-string type and a non-object obligation are malformed too: each keeps its entry, and no member is invented",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -39016,7 +39718,43 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "One entry per attached obligation that identifies itself, with id, type and outcome: unsupported for a type this PEP does not implement (#1640 adds fulfilled and failed for the notification type it performs). OUTSTANDING, #786 review point 2: an obligation the decision returns WITHOUT a required id or type cannot be represented at all, so the member is omitted entirely rather than fabricated or emitted as a partial list that would read as complete; and this deployment's PDP does not implement Decision Evidence's own obligations member, so the conditional that makes obligation_outcomes REQUIRED cannot fire from the linked record. Both remain open. #1640 witnesses over HTTP with DPoP: a completed record naming a transmitted notification fulfilled, a suppressed record naming a failed, malformed or untransportable notification failed or unsupported, and a mixed set named fulfilled and unsupported. Mutations: treating the permit's obligations as fulfilled without performing them fails the fulfilled witness; counting a failed transmission as fulfilled fails the failed witness; stopping at the first unfulfillable obligation fails the mixed witness. A non-array obligations member names no obligation and the record carries no outcome list (D770 ruling 5); giving it an empty list fails the non-array witness."
+   "notes": "#786: one entry per attached obligation, in the decision's order, now also for an obligation the decision returned without a non-empty id or type, which keeps only the members supplied, outcome unsupported (its own row is evidence.execution.obligation-outcomes-malformed-entry). Exact-equality assertions fail on a dropped, reordered or invented entry (mutations: filtering malformed entries out, reversing the list, restoring the old whole-member omission). #1640 adds fulfilled and failed for the notification type this PEP performs, witnessed over HTTP with DPoP: a completed record naming a transmitted notification fulfilled, a suppressed record naming a failed, malformed or untransportable notification failed or unsupported, and a mixed set named fulfilled and unsupported. Mutations: treating the permit's obligations as fulfilled without performing them fails the fulfilled witness; counting a failed transmission as fulfilled fails the failed witness; stopping at the first unfulfillable obligation fails the mixed witness. A present non-array obligations member names no obligation and the record carries no outcome list (D770 ruling 5); giving it an empty list fails the non-array witness. Partial: the REQUIRED-when conditional cannot fire from the linked record, since this deployment's PDP does not implement Decision Evidence's own obligations member (#594 W4-11), so the member's presence is witnessed on the PEP's own obligation processing rather than keyed to the linked record."
+  },
+  {
+   "id": "evidence.execution.obligation-outcomes-malformed-entry",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`id` and `type` are each REQUIRED when the decision supplied that member as a non-empty string, and absent otherwise, never invented. An obligation lacking either is malformed, and its `outcome` is `unsupported`.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each obligation_outcomes entry carries id and type exactly when the decision supplied that member as a non-empty string, copied as supplied and never invented, and the entry for an obligation lacking either has outcome unsupported; the malformed obligation still leaves the permit unusable, with no effect and no Refusal Record"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an obligation without an id and one without a type each keep their own entry, in the decision's order beside a well-formed one, the missing member absent and the outcome unsupported",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an empty id, a non-string type and a non-object obligation are malformed too: each keeps its entry, and no member is invented",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24). An attached obligation missing its id, one missing its type, an empty id, a non-string type and a non-object list entry each keep an entry with only the members the decision supplied as non-empty strings, outcome unsupported, beside a well-formed entry that keeps both. The entries come from processObligations (obligations.ts, #1640), which performs nothing for a malformed obligation. Mutations: inventing an id, dropping malformed entries, and restoring the old whole-member omission each fail both tests; letting a decision whose obligations are all malformed through as a permit fails the second. The representation relaxation does not relax the obligation itself: both tests assert the permit is refused unfulfillable_obligation. A present obligations member that is not a list is a different case: it names no obligation, so it is refused with no outcome list (D770 ruling 5, witnessed on authzen.obligation-processing.effective-deny and evidence.execution.obligation-outcomes-schema)."
   },
   {
    "id": "evidence.execution.result-summary-no-user-content",
@@ -39169,9 +39907,15 @@
      "name": "the payments resource executes only the authorized target (@spec resource-access#resource-matching, #1276) > a contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed end to end at the payments resource (T7: suppression with target_drift); no unit-level witness of the Execution Evidence record alone. Mutation M14 fails T7."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed end to end at the payments resource (T7: suppression with target_drift); no unit-level witness of the Execution Evidence record alone. Mutation M14 fails T7. #786: a unit-level witness of the record itself now covers the cannot-be-established half for the target object the permit was evaluated for (the invoice deleted at use: one suppressed target_drift record, the effective digest absent; relabelling the exit parameter_mismatch fails it). The differs half is still witnessed only end to end (T7), and the evaluation-context clause stays unclaimed (#773), so the row stays partial."
   },
   {
    "id": "evidence.execution.error-condition-unrecognized",
@@ -40298,8 +41042,14 @@
     },
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
-     "name": "Mission Receipt build + verify > rejects an Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3)",
+     "name": "Mission Receipt build + verify > rejects a completed or failed Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3, #786)",
      "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > accepts a suppressed record that keeps the authorized digest and omits the effective one as comparison unavailable, and reports no parameter deviation (#786)",
+     "level": "unit",
      "surface": "verification"
     },
     {
@@ -40309,7 +41059,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#594 W4-6 adds unit coverage of qualified issuer joins and observable unauthorized completed parameter deviation. Partial remains: full cross-component target reconciliation and the richer disposition/history families are not established by these signed fixtures. Exact authorized-digest mirror is already normative; no reverse-direction spec gap remains."
+   "notes": "#594 W4-6 adds unit coverage of qualified issuer joins and observable unauthorized completed parameter deviation. Partial remains: full cross-component target reconciliation and the richer disposition/history families are not established by these signed fixtures. Exact authorized-digest mirror is already normative; no reverse-direction spec gap remains. #786: digest consistency follows the amended member; a completed or failed record missing the effective digest beside the authorized one is still a join failure (removing the check, or exempting failed records, fails that test), and a suppressed record omitting it verifies with no deviation flag (rejecting it fails that test)."
   },
   {
    "id": "evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present",
@@ -41076,7 +41826,7 @@
    "id": "evidence.execution.effective-digest-required-when-authorized-present",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
-   "text": "CONDITIONAL. A string. REQUIRED whenever `authorized_parameter_digest` is present.",
+   "text": "CONDITIONAL. A string. REQUIRED whenever `authorized_parameter_digest` is present, except on a `suppressed` record whose executing PEP could not establish the effective parameters.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -41088,11 +41838,120 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "effective_parameter_digest is REQUIRED whenever authorized_parameter_digest is present, recording the digest over the normalized parameters actually attempted or executed so the two can be compared"
+    "normative": "effective_parameter_digest is REQUIRED whenever authorized_parameter_digest is present, recording the digest over the normalized parameters actually attempted or executed so the two can be compared; the one exception is a suppressed record whose executing PEP could not establish the effective parameters, so a completed or failed record carrying authorized_parameter_digest always carries it too"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#786 re-quoted the clause with its one exception, a suppressed record whose executing PEP could not establish the effective parameters; that branch has its own row (evidence.execution.effective-digest-absent-when-parameters-unestablishable). The REQUIRED branch itself, a PEP or executor always carrying the member beside the authorized digest on a completed, failed or established suppressed record, has no PEP-role assertion cited here yet (#594 W4-4); the receipt verifier's rejection of a completed or failed record missing it is a verifier witness, cited on evidence.receipt.step4-cross-record-joins."
+  },
+  {
+   "id": "evidence.execution.effective-digest-absent-when-parameters-unestablishable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "If the executing PEP cannot establish the effective parameters, this member MUST be absent rather than copied from `authorized_parameter_digest` or populated with a fabricated digest, and execution MUST be suppressed.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP that cannot establish the effective parameters of a permit it holds releases no effect and emits one suppressed Execution Evidence record that carries authorized_parameter_digest and omits effective_parameter_digest, never a copy of the authorized digest or another fabricated value, and emits no Refusal Record"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a send whose routing stops resolving between decision and commit is suppressed target_drift, keeping the authorized digest with no effective one, and sends nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/view-source.test.ts",
+     "name": "a remote Mission view source at the PEP (#818, D560) > a list read whose view lapses between the decision and its re-verification is suppressed target_drift, recording no observation it did not make",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24). Three exits where the effective parameters cannot be established: the invoice deleted after the decision and its redemption (transaction tool), the recipient routing no longer resolving (send_remittance_email), and a remote Mission view that lapsed before a bound list read's re-verification. Each asserts no effect, one suppressed record with the authorized digest present (equal to the retained Decision Evidence's parameter_digest in the invoice case) and the effective digest absent, and no Refusal Record (count deltas in the invoice case). Mutations: copying the authorized digest into the effective member fails all three; restoring the old recordless gap fails all three; letting the missing invoice through fails the zero-effect assertion on its own; adding a Refusal Record at that exit fails the no-Refusal-Record assertion on its own."
+  },
+  {
+   "id": "evidence.execution.unestablishable-parameters-error-names-condition",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The `error` names the condition that prevented it, `target_drift` when the target the permit was evaluated for cannot be established at use, and is never `parameter_mismatch`: no comparison was made.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a suppression whose effective parameters could not be established carries the error naming the condition that prevented them, target_drift for a target the permit was evaluated for that cannot be established at use, and never parameter_mismatch"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a send whose routing stops resolving between decision and commit is suppressed target_drift, keeping the authorized digest with no effective one, and sends nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24: reuse target_drift; the post-permit target_unresolvable recommendation is withdrawn, and the pre-decision Refusal Record target_unresolvable is unchanged). A deleted invoice and an unresolvable recipient routing each record target_drift on the record and on the caller-visible reason. Mutations: relabelling either exit parameter_mismatch fails its test, and the invoice test's record-error assertion fails on its own with the caller-visible assertion removed. A routing that resolves differently stays parameter_mismatch through the digest comparison (the existing list-membership test)."
+  },
+  {
+   "id": "evidence.execution.absent-effective-digest-comparison-unavailable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The absence means the comparison is unavailable, and a consumer MUST NOT read it as equality or as a parameter deviation.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer reading a suppressed record that carries authorized_parameter_digest without effective_parameter_digest accepts it as comparison unavailable, reporting neither the binding-held case nor a parameter deviation"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > accepts a suppressed record that keeps the authorized digest and omits the effective one as comparison unavailable, and reports no parameter deviation (#786)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#786. The consumer witnessed is the reference receipt verifier, reading the record at step 4: it verifies the suppressed record and reports no unauthorized_execution. Mutations: rejecting the absence on a suppressed record, and flagging a suppressed record as a deviation, each fail the test. Partial: the not-equality half has no distinguishing output in this verifier, which reports a deviation and never a binding-held result, so an implementation reading the absence as equality would return the same verdict."
   },
   {
    "id": "evidence.execution.object-required-members-and-types",
@@ -43110,9 +43969,74 @@
      "name": "Dispatch idempotency at /token (@spec mission-template#dispatch, mission#intent-submission-evidence) > a completed Dispatch recovers before evidence re-verification; a new Dispatch still verifies",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a lost-response retry while the delivered token is valid returns that same token, saving no token and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
    "notes": "Tested at the endpoint for the same-fingerprint retry, including a retry whose Intent Submission Evidence lapsed after completion (recovered before re-verification; proved by skipping the early lookup). Fingerprint mismatch and tombstone retention have their own rows (template.dispatch.fingerprint-mismatch-refusal, template.dispatch.approval-event-id-per-dispatch). Concurrent-duplicate recovery (the reservation's primary-key race) is not exercised, so the row stays partial."
+  },
+  {
+   "id": "template.dispatch.retry-gated-not-derived",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "grant-type",
+   "text": "a repeated identifier is gated to the previously committed instance rather than a fresh creation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a repeated dispatch_event_id whose delivered access token is still valid returns that same token, saving no token and leaving derivation_count unchanged; a retry against an instance no longer active is refused by that instance's gate with invalid_grant and its mission_error, counting nothing; a retry after containment narrowed the instance never returns the delivered token; concurrent requests under one dispatch_event_id recover one delivery, counted once"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a lost-response retry while the delivered token is valid returns that same token, saving no token and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a retry against an instance %s after its Dispatch is refused by the instance's own gate: invalid_grant, no token, nothing counted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a retry after containment narrowed the instance mints a token carrying only the narrowed authority, never the delivered one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a retry after the delivered token expired mints a fresh token for the same instance, counted once as a delivery and never as a second Dispatch; a further retry recovers the fresh token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > concurrent retries after the delivered token expired recover one fresh delivery, counted once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > concurrent first Dispatches under one dispatch_event_id create one instance and deliver one token, counted once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Partial on one reading for the owner: once the delivered token has expired, or containment has narrowed the instance, the retry re-mints for the same instance and counts that delivery once, following the expansion profile's recovery rule that Template adopts (a fresh delivery credential carries ordinary issuance accounting and no creation accounting). Whether that re-mint is the fresh derivation this sentence excludes is open (#250). Proved by disabling the replay, the delivery record and each replay guard (expiry, active state, carried authority) in turn. Without the active check a revoked instance is still refused, by the release fence instead of the gate; the suspended case witnesses the check. One Dispatch per (authenticated Dispatcher, dispatch_event_id) runs at a time, so concurrent retries recover one delivery; single process only (#641). Proved by removing that serialization (both concurrency witnesses fail)."
   },
   {
    "id": "template.dispatch.fingerprint-mismatch-refusal",
@@ -43842,7 +44766,7 @@
    "id": "template.dispatch.one-derivation",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
-   "text": "This grant performs exactly one derivation per `dispatch_event_id`",
+   "text": "This grant performs exactly one creation derivation per `dispatch_event_id`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -43853,8 +44777,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Dispatch increments the derivation_count of the instance it creates by exactly one, and a repeated dispatch_event_id, gated to the committed instance, counts nothing more",
-    "local": "the reference counts a new Dispatch once, which the cited test witnesses; a retry with the same dispatch_event_id currently counts again, the defect #1661 owns (first recorded in PR #1635), so the second clause has no witness"
+    "normative": "a Dispatch's creation increments the derivation_count of the instance it creates by exactly one, and a repeated dispatch_event_id never creates another instance or repeats creation accounting; a retry returning the delivered token, valid and still authorized, counts nothing; a retry minting a replacement delivery, after expiry or narrowing, counts once; concurrent retries recover one replacement",
+    "local": "the cited test witnesses the creation count; the retry witnesses (replay, replacement after expiry and narrowing, concurrent retries) merged with PR #1653 and are cited by template.dispatch.retry-gated-not-derived"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -43866,7 +44790,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1647, D764. Partial until a retried Dispatch stops counting again: #1661, linked to #250 (first recorded in PR #1635). The instance's limit is at least 1, so the Dispatch's own derivation never meets the limit, and no limit refusal applies. Mutation: counting an approval-bound grant as uncounted fails the cited test."
+   "notes": "#1647, D764; re-quoted for #1661 (D793), which separates creation from delivery. Partial, as D793 directs, until the clarified text and the retry witnesses agree on main: today only the creation count is witnessed here. Mutation: counting an approval-bound grant as uncounted fails the cited test."
   },
   {
    "id": "template.handoff.selector-refusal",
@@ -60568,7 +61492,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a poll for an approved deferral whose Mission is no longer active returns an error response and no token",
-    "local": "The poll answers access_denied."
+    "local": "The poll answers invalid_grant with the Mission's own mission_error, as issuance gating refuses any grant other than a Token Exchange; a suspended Mission's approval stays deliverable and delivers once the Mission resumes."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -60576,6 +61500,12 @@
     {
      "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
      "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > yields no token for a Mission revoked between the approval decision and the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > refuses a resolving poll for a Mission suspended after the approval decision with invalid_grant and mission_error suspended, delivering nothing; after resume the poll delivers (@spec mission#issuance-gating, #250)",
      "level": "endpoint",
      "surface": "token-endpoint"
     }

@@ -494,7 +494,11 @@ describe("the Operation Profile defines an idempotency key for every non-idempot
     const isHighConsequence = (actionClass: string) =>
       ["irreversible_action", "external_commitment", "privileged_administration"].includes(actionClass);
     const highConsequence = Object.entries(TOOL_ACTIONS).filter(([, mapping]) => isHighConsequence(mapping.actionClass));
-    expect(highConsequence.map(([tool]) => tool).sort()).toEqual(["execute_wire_transfer", "send_remittance_email"]);
+    expect(highConsequence.map(([tool]) => tool).sort()).toEqual([
+      "execute_wire_transfer",
+      "reverse_wire_transfer",
+      "send_remittance_email",
+    ]);
     for (const [tool, mapping] of highConsequence) {
       expect(mapping.idempotencyKey, tool).toBe(true);
       const definition = tools.find((t) => t.name === tool);
@@ -628,36 +632,6 @@ describe("evidence emission failures: a refusal before any effect, or a reported
       expect(emit).toHaveBeenCalled();
       expect(h.connectors.ledgerEntries()).toHaveLength(0);
       expect(retainedKinds(h)).toEqual({ decision: 0, refusal: 0, execution: 0 });
-    } finally {
-      await h.close();
-    }
-  });
-
-  it("suppressExecution returns effective_parameter_digest_unobservable when the permit's target no longer resolves, and retains nothing", async () => {
-    const h = await harness();
-    try {
-      const permit = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN);
-      const attempt = permit.attempt;
-      if (!attempt) throw new Error("no permit");
-      const record = vi.spyOn(h.evidence, "recordExecution");
-      // Through the server: the invoice disappears between the permit and the
-      // commit. Refused before any effect, with no record to retain.
-      const refused = await h.server.callTransactionTool(
-        "execute_wire_transfer",
-        { invoice_id: "inv-1", idempotency_key: key() },
-        TOKEN,
-        () => h.payments.db.prepare("DELETE FROM invoices WHERE id = ?").run("inv-1"),
-      );
-      expect(refused).toEqual({ ok: false, refusal_reason: "parameter_mismatch" });
-      expect(h.connectors.ledgerEntries()).toHaveLength(0);
-      // The earlier permit's disposition, now that its target is gone.
-      expect(await h.pep.suppressExecution(attempt, "parameter_mismatch")).toEqual({
-        recorded: false,
-        gap: "effective_parameter_digest_unobservable",
-      });
-      expect(record).not.toHaveBeenCalled();
-      expect(executions(h)).toEqual([]);
-      expect(h.settlements).toHaveLength(0);
     } finally {
       await h.close();
     }
@@ -814,6 +788,58 @@ function holdFirstCall(pep: Pep, name: "reverify" | "verifyPermitAtUse") {
   }) as never);
   return { reached, release: () => release(), restore: () => spy.mockRestore() };
 }
+
+/**
+ * @spec runtime-evidence#execution-evidence-object `effective_parameter_digest`
+ * (#786): "If the executing PEP cannot establish the effective parameters,
+ * this member MUST be absent rather than copied from
+ * `authorized_parameter_digest` or populated with a fabricated digest, and
+ * execution MUST be suppressed. The `error` names the condition that
+ * prevented it, `target_drift` when the target the permit was evaluated for
+ * cannot be established at use, and is never `parameter_mismatch`".
+ */
+describe("a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786)", () => {
+  it("the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record", async () => {
+    const h = await harness();
+    try {
+      const before = retainedKinds(h);
+      const refused = await h.server.callTransactionTool(
+        "execute_wire_transfer",
+        { invoice_id: "inv-1", idempotency_key: key() },
+        TOKEN,
+        // After the permit and its redemption, before the re-verification.
+        () => h.payments.db.prepare("DELETE FROM invoices WHERE id = ?").run("inv-1"),
+      );
+      expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
+      // Nothing reached a connector.
+      expect(h.connectors.ledgerEntries()).toHaveLength(0);
+      // Exactly one new record, the permit's suppressed disposition, and no
+      // Refusal Record: the permit was obtained, so this is not pre-decision.
+      expect(retainedKinds(h)).toEqual({
+        decision: before.decision + 1,
+        refusal: before.refusal,
+        execution: before.execution + 1,
+      });
+      const decision = h.evidence.all().find((e) => e.kind === "decision");
+      if (decision?.kind !== "decision") throw new Error("no retained Decision Evidence");
+      const [record] = executions(h);
+      expect(record?.outcome).toBe("suppressed");
+      expect(record?.error).toBe("target_drift");
+      expect(record?.evaluation_id).toBe(decision.content.evaluation_id);
+      expect(record?.emitter.role).toBe("pep");
+      // The authorized digest mirrors the linked Decision Evidence; the
+      // effective one is absent, never a copy of it and never a placeholder.
+      expect(decision.content.parameter_digest).toBeDefined();
+      expect(record?.authorized_parameter_digest).toBe(decision.content.parameter_digest);
+      expect(record).not.toHaveProperty("effective_parameter_digest");
+      // The suppression after redemption is the redeeming attempt's proof of
+      // no effect, so it settles the claim, carried by the record itself.
+      expect(h.settlements).toEqual([record]);
+    } finally {
+      await h.close();
+    }
+  });
+});
 
 /**
  * @spec runtime#idempotency (#1176 item 16): a replacement worker presents the

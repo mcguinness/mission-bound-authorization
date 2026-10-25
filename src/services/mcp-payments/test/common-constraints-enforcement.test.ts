@@ -500,6 +500,28 @@ describe("the payments resource enforces recipient_domain over every resolved re
     expect(sent(h)).toEqual([]);
   });
 
+  it("a send whose routing stops resolving between decision and commit is suppressed target_drift, keeping the authorized digest with no effective one, and sends nothing", async () => {
+    // @spec runtime-evidence#execution-evidence-object `effective_parameter_digest`
+    // (#786): the recipients the operation addresses no longer resolve, so
+    // its effective parameters cannot be established. The post-permit
+    // counterpart of the pre-decision unresolvable routing above.
+    const h = harness({ mission: { recipient_domain: "acme.example" } });
+    route(h, ["treasury@acme.example"]);
+    const res = await remit(h, () => {
+      // A list that now contains itself: the routing cannot be resolved.
+      h.payments.setMailList("remit-list@acme.example", ["loop@acme.example"]);
+      h.payments.setMailList("loop@acme.example", ["remit-list@acme.example"]);
+    });
+    expect(res).toEqual({ ok: false, refusal_reason: "target_drift" });
+    expect(h.decisions()).toBe(1);
+    expect(sent(h)).toEqual([]);
+    expect(h.evidence.all().some((e) => e.kind === "refusal")).toBe(false);
+    const executions = h.evidence.all().flatMap((e) => (e.kind === "execution" ? [e.content] : []));
+    expect(executions.map((e) => [e.outcome, e.error])).toEqual([["suppressed", "target_drift"]]);
+    expect(executions[0]?.authorized_parameter_digest).toBeDefined();
+    expect(executions[0]).not.toHaveProperty("effective_parameter_digest");
+  });
+
   it("refuses an operation that addresses no recipient under a recipient bound", async () => {
     const h = harness({ mission: { recipient_domain: "acme.example" } });
     const res = await read(h, "inv-q3");
