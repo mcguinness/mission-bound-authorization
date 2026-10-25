@@ -63,8 +63,8 @@
     "content_sha256": "483287bedfb2209de40290df596ca9bc2ea3178e485e6eaa226a46e903e1d6c2"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "e291181742f90c14fb44de0a164d0b14614623e7",
-    "content_sha256": "2144784335174ce9b70406ae1cf359ee7fc06d5c4fb2a03777c7aeb81ecf2b7a"
+    "revision": "f69c9b4a80d569f1a30c76860ddf70a9a2dde5ec",
+    "content_sha256": "8b944e1f959321364a841f6788e4a7b62682b239f2a2c6a1c13f647490297fb1"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
@@ -44252,7 +44252,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a redemption increments the instance's derivation_count by exactly one while the handoff exchange counts nothing, a replayed or concurrently losing redemption counts nothing, a refused handoff request counts nothing, and the Dispatcher's grant stays the instance's own; a retry after an issuance failure counts nothing more, the derivation being reserved under the grant's own jti"
+    "normative": "a redemption increments the instance's derivation_count by exactly one, apart from the handoff exchange's own, a replayed or concurrently losing redemption counts nothing, a refused handoff request counts nothing, and the Dispatcher's grant stays the instance's own; a retry after an issuance failure counts nothing more, the derivation being reserved under the grant's own jti"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -44288,7 +44288,61 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The Agent's token is minted under a provider Grant of its own, recorded in the Mission-bound grant index (kind dispatch-handoff) without moving the instance's grant_id; the redemption counts once (reserveDerivation, keyed by the grant's jti, @spec control-plane#serialization) and the save-time hook re-gates active state only. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "The Agent's token is minted under a provider Grant of its own, recorded in the Mission-bound grant index (kind dispatch-handoff) without moving the instance's grant_id; the redemption counts once (reserveDerivation, keyed by the grant's jti, @spec control-plane#serialization) and the save-time hook re-gates active state only. Proved by disabling the check (dispatch-handoff mutation harness, #1158). #1648 (D764): the zero-count claim about the handoff exchange was wrong and is removed; the exchange's count is template.handoff.exchange-counted."
+  },
+  {
+   "id": "template.handoff.exchange-counted",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "handoff-request",
+   "text": "A successful exchange is a derivation from the instance, gated and counted as the issuance profile requires",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each successful handoff exchange increments the instance's derivation_count by exactly one, apart from its redemption's; an exchange refused before admission (a wrong key, a wrong client, an inactive instance) counts nothing; at the instance's limit the exchange is refused invalid_grant with mission_error derivations_exhausted, issues no grant and counts nothing",
+    "local": "the reference counts once the grant is signed, under the grant's jti; a release-fence refusal after admission keeps the count, as the redemption's does: the documented exception, tracked as a #935 limitation (owner ruling on PR #1650), not compliance with the failed-derivations rule"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the exchange is one counted derivation (@spec derivation-limits#refresh-and-exchange, mission-template#handoff-request, #1648) > each successful exchange counts once against the instance, apart from its redemption, which counts one more",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the exchange is one counted derivation (@spec derivation-limits#refresh-and-exchange, mission-template#handoff-request, #1648) > an exchange refused before admission counts nothing: a wrong key, a wrong client, a suspended instance",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the exchange is one counted derivation (@spec derivation-limits#refresh-and-exchange, mission-template#handoff-request, #1648) > at the instance's limit the exchange is refused invalid_grant with mission_error derivations_exhausted, issuing no grant and counting nothing; below it the same request succeeds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the release fence on the Dispatch Handoff (@spec mission#issuance-gating, #250) > Dispatch Handoff exchange: a revocation committed after the exchange's state check, while the request-path drain runs, is refused invalid_request with mission_error revoked and no token member (D369)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1648, D764: count the successful exchange once, separately from redemption, against the instance; no exemption to keep the old behavior. Mutation: removing the reservation fails the count, limit, happy-path and fence witnesses; mapping the limit refusal to invalid_request fails the limit witness; counting before the refusal checks fails the refusal witness."
   },
   {
    "id": "template.handoff.agent-continues",
