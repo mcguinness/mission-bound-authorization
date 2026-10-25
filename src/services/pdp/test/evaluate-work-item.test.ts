@@ -112,6 +112,8 @@ describe("the work-item context at the PDP (@spec authzen#context-work-item, #81
     expect(carried.decision, JSON.stringify(carried.context)).toBe(true);
     expect(conditionsOf(carried)?.work_item).toEqual(W1);
     expect(evidenceOf(carried)?.work_item).toEqual(W1);
+    // Recorded once, top-level: the record's normalized conditions do not repeat it.
+    expect((evidenceOf(carried)?.conditions as Record<string, unknown> | undefined)?.work_item).toBeUndefined();
 
     const absent = await evaluate(request(), options());
     expect(absent.decision, JSON.stringify(absent.context)).toBe(true);
