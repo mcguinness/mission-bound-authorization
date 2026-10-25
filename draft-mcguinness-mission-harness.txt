@@ -84,6 +84,7 @@ Table of Contents
      5.1.  Destination-Set Matching
    6.  Mission Binding
      6.1.  Binding Inheritance
+     6.2.  Work-Item Identity
    7.  Resume Checks
      7.1.  Resume Algorithm
      7.2.  Interaction with the Orchestration Profile
@@ -171,6 +172,8 @@ Table of Contents
 
    *  the Mission binding a harness records on sessions and task graph
       nodes (Section 6);
+
+   *  qualified work-item identity and its attachment (Section 6.2);
 
    *  resume-time checks (Section 7);
 
@@ -576,6 +579,79 @@ Table of Contents
    record the distinct Mission binding and the relationship to the
    parent item.
 
+6.2.  Work-Item Identity
+
+   A qualified work-item identifier names one unit of governed work.  It
+   is the pair of work_item_issuer, a URI the deployment assigns to the
+   harness that issued the identifier, and work_item, that harness's own
+   string identifier for the item, unique within its issuer.  Harness
+   Evidence's work_item (Section 15.1) is the second member of the pair,
+   and work_item_issuer qualifies it.
+
+   The harness is the attacher.  When it creates a governed work item,
+   it assigns the identifier and binds the item to exactly one Mission,
+   the item's Mission binding (Section 6).  A queue or scheduler that
+   dispatches work is a deployment variant of this attacher, never a
+   second one: it authenticates to the harness, which assigns, records,
+   and attaches the identifier under this section.  A value the governed
+   agent can supply, such as a tool argument or model output, never
+   establishes, selects, or changes a work item, and the harness MUST
+   NOT merge one into what it attaches.
+
+   The harness MUST keep these properties of the identifier:
+
+   *  Mapping: a work item's Mission does not change, except by explicit
+      successor rebinding (Section 13.2).
+
+   *  Inheritance: a child node, job, or sub-agent handle created from
+      the item under the same Mission inherits its identifier
+      (Section 6.1); a child governed by a different Mission receives
+      its own identifier, bound to that Mission, never the parent's.
+
+   *  Retry: a retry or resumed dispatch keeps the identifier and is
+      still a new continuation point (Section 9).
+
+   *  Concurrency: concurrent work items, under one Mission or several,
+      have distinct identifiers, and the harness attaches each only to
+      the requests it originates for that item, under that item's
+      Mission.
+
+   Where the deployment's Enforcement Scope Statement
+   ([I-D.draft-mcguinness-mission-runtime]) names the harness as a work-
+   item attacher, the harness attaches the identifier to each governed
+   request it originates for the item, in the Mission reference it
+   propagates (Section 6). work_item_issuer and work_item are extension
+   members of the Mission reference tuple, defined here under that
+   tuple's extension rule
+   ([I-D.draft-mcguinness-mission-authority-server]).  Both are Strings,
+   carried together or not at all, in the HTTP and MCP carriages alike.
+
+   A PEP implementing this profile MUST take a work item only from these
+   members, once the reference itself verifies, and only where the
+   statement names the harness that work_item_issuer identifies as the
+   attacher for the client the PEP authenticated on that request.  A
+   reference that verifies shows only that it names the request's
+   Mission, not which component attached the work item, so verification
+   alone never establishes the attachment.  It MUST NOT read a work item
+   from tool arguments or any other value the agent supplies, and MUST
+   NOT carry one it cannot attribute to that attacher.  It carries the
+   work item to the decision as context.work_item
+   ([I-D.draft-mcguinness-mission-authzen]), an object whose issuer is
+   work_item_issuer and whose id is work_item.
+
+   Where the statement claims work-item attribution for an action class,
+   the work-item-attributed composition of
+   [I-D.draft-mcguinness-mission-architecture], the decision for each
+   action in that class requires the work item, the permit binds it, and
+   the executing PEP refuses a permit for another work item
+   ([I-D.draft-mcguinness-mission-authzen]).  Decision and Execution
+   Evidence carry it ([I-D.draft-mcguinness-mission-runtime-evidence]),
+   joining the item's Harness Evidence.  Elsewhere the deployment claims
+   Mission-level attribution only, and an attached work item is carried
+   but never required.  Attribution says which work item an action was
+   requested for.  It proves neither that the action serves the item's
+   purpose nor isolation between items in one process.
+
 7.  Resume Checks
 
    Before resuming governed work, a Mission-aware harness MUST establish
@@ -799,6 +875,13 @@ Table of Contents
 
    retry_of:  OPTIONAL.  Identifier of the prior attempt.
 
+   work_item, work_item_issuer:  REQUIRED where the Enforcement Scope
+      Statement claims work-item attribution for the item's class,
+      OPTIONAL otherwise.  The qualified work-item identifier of the
+      work the item performs (Section 6.2).  It is the same across
+      retries: queue_item_id names the attempt and retry_of the attempt
+      before it, while work_item names the work every attempt performs.
+
    idempotency_key:  REQUIRED when retrying an action whose runtime
       profile requires one.
 
@@ -833,6 +916,8 @@ Table of Contents
      "not_before": "2026-11-02T02:00:00Z",
      "expires_at": "2026-11-02T06:00:00Z",
      "retry_of": "queue_journal_post_6",
+     "work_item": "work_jrnl_2026q3_0042",
+     "work_item_issuer": "https://harness.example.com",
      "idempotency_key": "idem_jrnl_2026q3_0042"
    }
 
@@ -1108,7 +1193,9 @@ Table of Contents
    authority, not a credential or a permit carried over from the
    predecessor.  The harness records the rebinding as Harness Evidence
    with event_type mission_superseded (Section 15), naming both the
-   predecessor and the successor, so the continuity is auditable.  A
+   predecessor and the successor, so the continuity is auditable.  That
+   record carries the item's qualified work-item identifier, and the
+   rebinding is the only change to the item's Mission (Section 6.2).  A
    harness that cannot establish the successor state, whose superseded
    termination names no successor, or for which the item's actions are
    not within the successor, suppresses per the matrix above.
@@ -1361,7 +1448,8 @@ Table of Contents
 
    *  session_id;
 
-   *  task graph node or queue item identifier;
+   *  task graph node or queue item identifier, qualified by the harness
+      that issued it (Section 6.2);
 
    *  prior and resulting harness state;
 
@@ -1436,7 +1524,13 @@ Table of Contents
    session_id:  OPTIONAL.  Harness session identifier.
 
    work_item:  OPTIONAL.  Task graph node, queue item, background job,
-      or child handle identifier.
+      or child handle identifier: for a work item with a qualified work-
+      item identifier, its work_item (Section 6.2).
+
+   work_item_issuer:  OPTIONAL.  A string.  The work_item_issuer of the
+      record's work item (Section 6.2).  REQUIRED with work_item where
+      the Enforcement Scope Statement claims work-item attribution for
+      that work.
 
    actor:  OPTIONAL.  The actor or sub-agent identifier the record
       concerns, when applicable (for example, the child whose work was
@@ -1637,6 +1731,9 @@ Table of Contents
 
    *  prevent sub-agent authority by session ancestry;
 
+   *  where named as a work-item attacher, keep and attach qualified
+      work-item identifiers (Section 6.2);
+
    *  emit Harness Evidence for stop and resume decisions; and
 
    *  apply the stop behavior for stale state under the per-action-class
@@ -1778,7 +1875,10 @@ Table of Contents
    workspace identifiers, tool usage, agent topology, and Mission
    relationships.  Deployments SHOULD minimize retained harness state,
    control access to evidence, and avoid storing raw workspace content
-   in Harness Evidence unless required for audit.
+   in Harness Evidence unless required for audit.  A qualified work-item
+   identifier is a stable correlator across an item's requests and
+   records, and the Mission reference's forwarding rules apply to it
+   ([I-D.draft-mcguinness-mission-authority-server]).
 
 20.  IANA Considerations
 
@@ -1838,6 +1938,12 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
 21.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-architecture]
+              McGuinness, K., "An Architecture for Mission-Bound
+              Authorization", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              architecture.html>.
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", 2026,
@@ -1969,6 +2075,14 @@ Appendix A.  Mapping to Durable-Execution Engines
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Work-Item Identity: the harness assigns a qualified work-item
+      identifier (work_item_issuer and work_item), binds it to one
+      Mission, and attaches it as extension members of the propagated
+      Mission reference, with mapping, inheritance, retry, and
+      concurrency rules.  A PEP carries it to the decision only from
+      that attachment.  The Queue Item Object and Harness Evidence carry
+      it, and a mission_superseded record names it (#815).
 
    *  The taint baseline, taint reset and egress direction no longer key
       on the Subject.  Content from the Approver or from the delegating
