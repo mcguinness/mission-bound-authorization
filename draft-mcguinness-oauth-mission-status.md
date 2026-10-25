@@ -469,8 +469,6 @@ Decoded JWS payload:
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "active",
     "version": 1,
     "expires_at":  "2026-12-31T23:59:59Z",
@@ -851,8 +849,6 @@ for a token whose Mission is `active`:
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
-      "authority_hash":
-        "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
       "state":   "active",
       "fresh_until": "2026-11-02T08:00:55Z"
     }
@@ -1259,8 +1255,6 @@ Decoded JWS payload:
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "terminated",
     "termination": {
       "reason": "revoked",
@@ -1315,8 +1309,6 @@ and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
   "mission": {
     "id": "msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "suspended",
     "version": 2,
     "suspend_until": "2026-11-09T08:15:00Z",
