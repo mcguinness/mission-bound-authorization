@@ -58,12 +58,19 @@ describe("execution capabilities in the Enforcement Scope Statement (@spec runti
       ["payments:payment.schedule.cancel", null, "consequential_write"],
       ["payments:payment.execute", "prepare", "consequential_write"],
       ["payments:payment.execute", "commit", "irreversible_action"],
+      ["payments:payment.reverse", "compensate", "irreversible_action"],
       ["payments:remittance.send", null, "external_commitment"],
     ]);
     for (const d of declared) {
       expect(d.asserted, d.operation).toEqual([]);
       expect(d.conditional_effect, d.operation).toBe("none");
-      expect(d.compensation, d.operation).toBe("none");
+      // #252: the committed wire names the compensating operation the resource
+      // serves for it; nothing else declares one.
+      expect(d.compensation, `${d.operation} ${d.phase ?? ""}`).toEqual(
+        d.operation === "payments:payment.execute" && d.phase === "commit"
+          ? { action: "payments:payment.reverse" }
+          : "none",
+      );
     }
     // The high-consequence operations: the PDP's claim deduplicates a
     // retransmission, and the connector's entry for the permit identifier is

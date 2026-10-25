@@ -79,17 +79,21 @@ import {
 import {
   buildEffectiveParams,
   buildListEffectiveParams,
+  buildReversalParams,
   type EffectiveParams,
   type ListEffectiveParams,
   listMembers,
   parameterDigest,
 } from "./effective-params.js";
 import type {
+  DecisionEvidence,
   EvidenceStore,
+  ExecutionEvidence,
   ExecutionEvidenceObject,
   PepRefusalDenialReason,
   RuntimeHopReference,
 } from "./evidence.js";
+import type { CommittedEffectSource, CommittedWire } from "./connectors.js";
 import type { PaymentsStore } from "./payments-store.js";
 import { operationKey } from "./transaction.js";
 import { signChallenge } from "./txn-challenge.js";
@@ -153,9 +157,11 @@ export const TOOL_BASE = "mcp://payments.demo/tools";
  * Operation Profile {@link TOOL_ACTIONS} implements, the `operation_profile`
  * a contract document names. A contract version naming it performs under the
  * live Operation Profile; one naming another performs under that retained
- * profile (`PepDeps.retainedOperationProfiles`), or not at all.
+ * profile (`PepDeps.retainedOperationProfiles`, by default
+ * {@link RETAINED_OPERATION_PROFILES}), or not at all. v14 (#252) adds the
+ * compensate crossing `reverse_wire_transfer`.
  */
-export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v13";
+export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v14";
 
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
@@ -354,6 +360,16 @@ export interface ActionMapping {
    */
   phase?: ActionPhase;
   /**
+   * @spec runtime#compound-actions, authzen#context-compensation-link (#252):
+   * for a `compensate` crossing, the operation whose committed effect it
+   * offsets, named by action identifier and phase. The PEP finds that effect
+   * in its own retained, verified evidence and carries the effect's
+   * `evaluation_id` as `context.compensates_evaluation_id`; an agent argument
+   * never names it. A compensate crossing without this member has no effect
+   * to link and is refused before any decision request.
+   */
+  compensates?: { action: string; phase: ActionPhase };
+  /**
    * @spec resource-access#resource-matching (#1276, D447, D457): this
    * operation's documented, trusted operation contract: how the PEP
    * establishes its target before any authority is matched. The shipped
@@ -491,8 +507,29 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
   check_transfer: { action: "payments:payment.execute", phase: "preflight", actionClass: "consequential_read", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true },
   hold_transfer: { action: "payments:payment.execute", phase: "prepare", actionClass: "consequential_write", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true },
   execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true },
+  // @spec runtime#compound-actions (#252): the compensate crossing, its own
+  // action identifier and its own single-use, high-consequence Decision. It
+  // offsets the committed wire `execute_wire_transfer` released; neither that
+  // wire's permit nor the link to it authorizes the reversal.
+  reverse_wire_transfer: { action: "payments:payment.reverse", phase: "compensate", compensates: { action: "payments:payment.execute", phase: "commit" }, actionClass: "irreversible_action", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true },
   send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true, reachesRecipients: true },
 };
+
+/**
+ * @spec runtime#resource-contract rule 3 (#249, #252): the Operation Profiles
+ * of the superseded contract versions this resource still performs within
+ * their declared retention, keyed by the `operation_profile` their documents
+ * name. `payments-runtime-profile-v13` (contract version `2026-10-20`) is the
+ * live profile without the compensate crossing `reverse_wire_transfer`, which
+ * v14 added: every crossing it names performs exactly as it did, and the
+ * crossing it does not name is not performed under it. A snapshot taken at
+ * load, never the live table.
+ */
+export const RETAINED_OPERATION_PROFILES: Readonly<Record<string, Readonly<Record<string, ActionMapping>>>> = Object.freeze({
+  "payments-runtime-profile-v13": Object.freeze(
+    Object.fromEntries(Object.entries(TOOL_ACTIONS).filter(([tool]) => tool !== "reverse_wire_transfer")),
+  ),
+});
 
 /**
  * @spec runtime#read-binding — synthetic check object for a bulk
@@ -887,9 +924,18 @@ export interface PepDeps {
    * operation's parameters, and perform the operation, under the resolved
    * contract, never under another version the resource serves." A version
    * naming {@link PAYMENTS_PROFILE_VERSION} performs under the live profile;
-   * one naming a profile absent here is not performed at all.
+   * one naming a profile absent here is not performed at all. Absent, the
+   * shipped {@link RETAINED_OPERATION_PROFILES} apply.
    */
-  retainedOperationProfiles?: () => Readonly<Record<string, Record<string, ActionMapping>>>;
+  retainedOperationProfiles?: () => Readonly<Record<string, Readonly<Record<string, ActionMapping>>>>;
+  /**
+   * @spec runtime#compound-actions (#252): the committed-effect records a
+   * compensate crossing reads its parameters from: the ledger connector's
+   * entry for the wire it offsets. Absent, no compensation's parameters can
+   * be established and every compensate crossing is refused before any
+   * decision request (`compensation_link_unavailable`).
+   */
+  committedEffects?: CommittedEffectSource;
   /**
    * @spec runtime#compound-actions — the trusted Operation Profile this PEP
    * derives each crossing's action and phase from, resolved on EVERY lookup
@@ -1240,6 +1286,28 @@ export interface EnforceResult {
    * retrospective evidence is not what authorizes them.
    */
   evidence_gap?: DecisionEvidenceGap;
+  /**
+   * @spec runtime#compound-actions, authzen#context-compensation-link (#252):
+   * present on a permit for a `compensate` crossing. The committed effect the
+   * crossing offsets, as this PEP established it before the decision request
+   * from its own retained, verified evidence: the effect's Decision
+   * `evaluation_id`, which the request carried as
+   * `context.compensates_evaluation_id`, and the operation key the effect
+   * committed under, derived from that verified Decision. Never an agent
+   * argument.
+   */
+  compensates?: CompensatedEffect;
+}
+
+/**
+ * @spec runtime#compound-actions (#252): one committed effect a compensation
+ * offsets, established from verified evidence, never from an agent argument.
+ */
+export interface CompensatedEffect {
+  /** The `evaluation_id` of the Decision whose committed effect is offset. */
+  evaluationId: string;
+  /** The operation key that effect committed under, derived from that verified Decision. */
+  opKey: string;
 }
 
 /** Why a denial carries no retained Decision Evidence (D770 ruling 6). */
@@ -1443,7 +1511,8 @@ export type PepRefusalDiagnostic =
   | "pdp_unreachable"
   | "unresolvable_recipients"
   | "credential_boundary_changed"
-  | "phase_unavailable";
+  | "phase_unavailable"
+  | "compensation_link_unavailable";
 
 /**
  * @spec runtime-evidence#pre-decision-refusal (issue #786) — the deployment's
@@ -1514,6 +1583,11 @@ export const PRE_DECISION_DENIAL_REASON: Readonly<Record<PepRefusalDiagnostic, P
   // cannot establish the phase before requesting a decision. Already an
   // enumerated value, carried unchanged.
   phase_unavailable: "phase_unavailable",
+  // @spec runtime-evidence#pre-decision-refusal, authzen#context-compensation-link
+  // (#252): the operation is a compensate phase and this PEP cannot establish,
+  // from its retained and verified evidence, a committed effect it offsets and
+  // that effect's Decision. Already an enumerated value, carried unchanged.
+  compensation_link_unavailable: "compensation_link_unavailable",
 });
 
 /** Whether `diagnostic` is one this PEP refuses with on its Refusal Record path. */
@@ -1691,7 +1765,7 @@ export class Pep {
     const crossings =
       profile === undefined || profile === PAYMENTS_PROFILE_VERSION
         ? (this.deps.operationProfile?.() ?? TOOL_ACTIONS)
-        : (this.deps.retainedOperationProfiles?.()[profile] ?? {});
+        : (this.retainedProfiles()[profile] ?? {});
     return Object.values(crossings).some((m) => m.action === mapping.action && m.phase !== undefined);
   }
 
@@ -1708,7 +1782,12 @@ export class Pep {
    */
   toolActionUnder(tool: string, profile: string | undefined): ActionMapping | undefined {
     if (profile === undefined || profile === PAYMENTS_PROFILE_VERSION) return this.toolAction(tool);
-    return this.deps.retainedOperationProfiles?.()[profile]?.[tool];
+    return this.retainedProfiles()[profile]?.[tool];
+  }
+
+  /** The retained Operation Profiles, by version: the deployment's, or {@link RETAINED_OPERATION_PROFILES}. */
+  private retainedProfiles(): Readonly<Record<string, Readonly<Record<string, ActionMapping>>>> {
+    return this.deps.retainedOperationProfiles?.() ?? RETAINED_OPERATION_PROFILES;
   }
 
   /**
@@ -2329,6 +2408,57 @@ export class Pep {
       }
     }
 
+    // @spec runtime#compound-actions, authzen#context-compensation-link,
+    // runtime-evidence#pre-decision-refusal (#252): a compensate crossing
+    // offsets a committed effect, so its effect parameters are that effect's,
+    // never the invoice as it reads now and never an argument. Before any
+    // authorization (the credential bound below, then the PDP), this PEP
+    // establishes the link from its own retained, verified evidence and reads
+    // the committed wire's own ledger record through it, and the operation's
+    // normal form becomes that wire's invoice, vendor, amount, currency and
+    // payee plus the key of the wire it offsets. The credential bound, the
+    // PDP's constraints, `parameter_digest`, the operation key, the claim on
+    // the idempotency key, any approval bound to the digest, and every
+    // evidence record then bind what will actually be offset. The agent names
+    // only the invoice. No committed effect (none at all, or one only
+    // prepared, held or refused), more than one, a relied-on record that does
+    // not verify, or no ledger record is a link this PEP cannot establish,
+    // refused `compensation_link_unavailable` with no decision request. A
+    // credential naming no compensation at this target is refused first, so
+    // such a caller learns nothing about the effect.
+    let compensates: CompensatedEffect | undefined;
+    if (mapping.phase === "compensate") {
+      const presented = (token.mission !== undefined ? token.credentialAuthority : carriedAuthority) ?? [];
+      const named =
+        Array.isArray(presented) &&
+        presented.some((e) => e.actions.includes(mapping.action) && entryMatchesTarget(e, operationTarget));
+      if (!named && !joinMappingUnavailable) {
+        if (token.mission !== undefined) {
+          await this.recordRefusal(boundary, token, "out_of_authority", mapping.action, view, undefined, { resource: resourceObj });
+          return { permitted: false, denial_reason: "out_of_authority" };
+        }
+        return await this.refuse(boundary, token, "out_of_authority", mapping.action, view);
+      }
+      const established =
+        mapping.compensates && effective
+          ? await this.compensatedEffect(missionAnchor, effective.invoice_id, mapping.compensates)
+          : undefined;
+      if (!established) {
+        return await this.refuse(boundary, token, "compensation_link_unavailable", mapping.action, view, undefined, {
+          resource: resourceObj,
+        });
+      }
+      compensates = established.link;
+      effective = buildReversalParams({
+        action: mapping.action,
+        wire: established.wire,
+        resource: operationTarget,
+        reverses: established.link.opKey,
+      });
+      amount = effective.amount;
+      resourceObj = { ...resourceObj, properties: { ...resourceObj.properties, vendor_id: effective.vendor_id } };
+    }
+
     // @spec runtime#input-authority, runtime-oauth#authorization-details-mapping
     // (#825) — the credential bound, on the target this PEP resolved: the
     // action must fall within the verified credential's own authority, one
@@ -2524,6 +2654,10 @@ export class Pep {
         // agent-supplied `action_phase` argument is not read anywhere on this
         // path, so it cannot select or move the phase of a crossing.
         ...(mapping.phase !== undefined ? { action_phase: mapping.phase } : {}),
+        // @spec authzen#context-compensation-link (#252): the `evaluation_id`
+        // of the committed effect this compensate crossing offsets, as this
+        // PEP established it above from verified evidence; never an argument.
+        ...(compensates ? { compensates_evaluation_id: compensates.evaluationId } : {}),
         ...(actionApproval ? { action_approval: actionApproval } : {}),
         // @spec authority-server#mission-join (#557 review point 1) —
         // present exactly on the baseline-Join path: tells the PDP to
@@ -2887,6 +3021,14 @@ export class Pep {
         return undefined;
       },
     };
+    // @spec runtime#compound-actions (#252): a compensate crossing's
+    // parameters are the committed wire's, so a disposition observes them from
+    // that wire's ledger record, not from the invoice as it reads now.
+    if (compensates && effective) {
+      const link = compensates;
+      const reversal = effective;
+      attempt.observeEffectiveDigest = () => this.observeReversalDigest(reversal, link);
+    }
 
     // @spec authzen#response-context, runtime#decision-output: "a condition
     // the enforcing component does not recognize makes the permit unusable."
@@ -2982,7 +3124,116 @@ export class Pep {
       ...(listEffective ? { listEffective } : {}),
       ...(capabilitySnapshot ? { capabilitySnapshot } : {}),
       ...(listVendorScope ? { list_vendor_scope: listVendorScope } : {}),
+      ...(compensates ? { compensates } : {}),
     };
+  }
+
+  /**
+   * @spec runtime#compound-actions, runtime-evidence#decision-evidence-object
+   * `compensates_evaluation_id`, authzen#context-compensation-link (#252): the
+   * one committed effect of `compensated` on invoice `invoiceId` under the
+   * governing Mission, from this PEP's retained evidence: a permit's Decision
+   * Evidence for that action and phase on that invoice, joined by its signed
+   * `evaluation_id` to `completed` Execution Evidence, both re-verified under
+   * their own envelopes now. The operation key the effect committed under is
+   * derived from the verified Decision, never read from a retention row's
+   * unsigned join key. Through that key and the evaluation identifier the
+   * committed wire's own ledger record (`PepDeps.committedEffects`) supplies
+   * the effect's parameters: the invoice and vendor it paid, its amount,
+   * currency and payee.
+   *
+   * `undefined` when there is no such effect (none at all, or one only
+   * prepared, held or refused), when there is more than one, when a relied-on
+   * record does not verify, or when no ledger record answers for it (no
+   * source bound included). Every filter reads signed content, not a row's
+   * unsigned members. This deployment links only an effect committed under
+   * the same Mission.
+   */
+  private async compensatedEffect(
+    mission: { id: string; issuer: string },
+    invoiceId: string,
+    compensated: { action: string; phase: ActionPhase },
+  ): Promise<{ link: CompensatedEffect; wire: CommittedWire } | undefined> {
+    const held = this.deps.evidence.all();
+    const committed: Array<{ decision: DecisionEvidence; execution: ExecutionEvidence }> = [];
+    for (const row of held) {
+      if (row.kind !== "decision") continue;
+      const d = row.content;
+      if (
+        d.decision !== "permit" ||
+        d.mission.id !== mission.id ||
+        d.mission.issuer !== mission.issuer ||
+        d.action.name !== compensated.action ||
+        d.action_phase !== compensated.phase ||
+        d.resource.type !== "invoice" ||
+        d.resource.id !== invoiceId
+      ) {
+        continue;
+      }
+      const completed = held.filter(
+        (e): e is ExecutionEvidence =>
+          e.kind === "execution" &&
+          e.content.evaluation_id === d.evaluation_id &&
+          e.content.mission_id === mission.id &&
+          e.content.outcome === "completed",
+      );
+      // Permitted and never committed: a prepared, held or refused attempt.
+      if (completed.length === 0) continue;
+      committed.push(...completed.map((execution) => ({ decision: row, execution })));
+    }
+    if (committed.length !== 1) return undefined;
+    const [{ decision, execution }] = committed as [{ decision: DecisionEvidence; execution: ExecutionEvidence }];
+    if (!(await this.deps.evidence.verifyRetained(decision))) return undefined;
+    if (!(await this.deps.evidence.verifyRetained(execution))) return undefined;
+    const original = decision.content;
+    if (typeof original.parameter_digest !== "string") return undefined;
+    const link: CompensatedEffect = {
+      evaluationId: original.evaluation_id,
+      opKey: operationKey(original.mission.id, original.action.name, original.parameter_digest, original.action_phase),
+    };
+    const wire = this.deps.committedEffects?.committedWire(link.opKey, link.evaluationId);
+    if (!wire || wire.invoiceId !== invoiceId) return undefined;
+    return { link, wire };
+  }
+
+  /**
+   * @spec runtime#compound-actions, runtime#execution-reverification (#252):
+   * the compensate crossing's counterpart of {@link reverify}. Its normal
+   * form is the committed wire's, so it is re-derived from that wire's ledger
+   * record through the established link, never from the invoice as it reads
+   * now, and compared with the digest the permit bound. A record that
+   * answers differently is a parameter mismatch. A record that no longer
+   * answers leaves the effective parameters unestablished: `target_drift`,
+   * with the authorized digest kept and the effective one absent (#786).
+   */
+  async reverifyCompensation(
+    effective: EffectiveParams,
+    expectedDigest: string,
+    token: TokenFacts,
+    attempt: ExecutionAttempt,
+    link: CompensatedEffect,
+  ): Promise<ReverifyOutcome> {
+    const capability = await this.reverifyCapability(effective.capability_snapshot, token, effective.action, attempt);
+    if (!capability.ok) return capability;
+    const freshDigest = this.observeReversalDigest(effective, link);
+    if (freshDigest === undefined) {
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
+    }
+    if (freshDigest !== expectedDigest) {
+      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
+      return { ok: false, error: "parameter_mismatch", disposition };
+    }
+    return { ok: true, effectiveParameterDigest: freshDigest };
+  }
+
+  /** The reversal form's digest, re-derived now from the committed wire's ledger record (#252). */
+  private observeReversalDigest(effective: EffectiveParams, link: CompensatedEffect): string | undefined {
+    const wire = this.deps.committedEffects?.committedWire(link.opKey, link.evaluationId);
+    if (!wire) return undefined;
+    return parameterDigest(
+      buildReversalParams({ action: effective.action, wire, resource: effective.resource, reverses: link.opKey }),
+    );
   }
 
   /**

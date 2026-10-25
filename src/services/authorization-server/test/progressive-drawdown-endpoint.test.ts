@@ -1611,12 +1611,17 @@ describe("default off (@spec progressive#in-ceiling-expansion)", () => {
 
 describe("a drawdown of floor-class authority (@spec progressive#in-ceiling-expansion, mission#approval-authentication, #1255)", () => {
   it("a drawdown of each action the approval floor classifies high-risk falls back to a fresh approval, never to policy", async () => {
-    // The actions the published floor classifies here in a class some floor applies to.
+    // The actions the published floor classifies here in a class some floor
+    // applies to, within the ceiling a drawdown draws from. `payments:payment.reverse`
+    // (#252) is classified but outside that ceiling, so no drawdown reaches it.
     const invoking = new Set<string>(APPROVAL_FLOOR.floors.flatMap((f) => f.applies_to));
-    const actions = APPROVAL_FLOOR.classification
+    const inCeiling = new Set(FULL_CEILING.flatMap((e) => e.actions));
+    const floorClass = APPROVAL_FLOOR.classification
       .filter((c) => c.resource === RESOURCE)
       .flatMap((c) => Object.entries(c.actions).filter(([, cls]) => invoking.has(cls)).map(([action]) => action))
       .sort();
+    expect(floorClass.filter((a) => !inCeiling.has(a))).toEqual(["payments:payment.reverse"]);
+    const actions = floorClass.filter((a) => inCeiling.has(a));
     expect(actions).toEqual(["payments:payment.execute", "payments:remittance.send"]);
     for (const action of actions) {
       const pred = await issueMission(READ, ceilingOf());
