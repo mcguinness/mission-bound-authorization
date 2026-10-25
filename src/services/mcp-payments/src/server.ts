@@ -263,6 +263,7 @@ const CONNECTOR_OPERATIONS: Record<
     connectors.postWire({
       opKey,
       invoiceId: effective.invoice_id,
+      vendorId: effective.vendor_id,
       payeeAccount: effective.payee_account,
       amount: effective.amount.amount,
       currency: effective.amount.currency,
@@ -270,15 +271,20 @@ const CONNECTOR_OPERATIONS: Record<
       missionId,
     }),
   // @spec runtime#compound-actions (#252): the compensate crossing offsets the
-  // one committed wire its Decision linked, named by that wire's operation key
-  // and evaluation identifier; never an agent argument. With no established
-  // link there is nothing to offset, and nothing is committed.
-  reverse_wire_transfer: ({ connectors, opKey, permitId, missionId, compensates }) =>
-    compensates
+  // one committed wire its Decision linked, named by the wire's operation key
+  // (bound in the reversal's parameter digest) and evaluation identifier, with
+  // the amount, currency and payee the Decision evaluated and bound; the
+  // connector refuses them unless they equal the wire's record. Never an agent
+  // argument. With no established link there is nothing to offset.
+  reverse_wire_transfer: ({ connectors, opKey, effective, permitId, missionId, compensates }) =>
+    compensates && effective.reverses !== undefined
       ? connectors.reverseWire({
           opKey,
-          reversedOpKey: compensates.opKey,
+          reversedOpKey: effective.reverses,
           reversedPermitId: compensates.evaluationId,
+          amount: effective.amount.amount,
+          currency: effective.amount.currency,
+          payeeAccount: effective.payee_account,
           permitId,
           missionId,
         })
@@ -413,13 +419,15 @@ export const SETTLEMENT_REFUSAL_ERROR = "https://payments.demo/execution-errors/
 /**
  * @spec runtime#compound-actions (#252): the Execution Evidence `error` for a
  * reversal the ledger refused with no effect, by the connector's refusal: the
- * linked wire is not a committed entry, or it is already reversed. Each is a
+ * linked wire is not a committed entry, the reversal's amount, currency or
+ * payee differs from the wire's record, or it is already reversed. Each is a
  * collision-resistant name for the reason {@link SETTLEMENT_REFUSAL_ERROR} is;
  * the caller-visible diagnostic is the short name.
  */
 export const CONNECTOR_REFUSAL_ERRORS: Readonly<Record<NonNullable<CommitResult["refusal"]>, string>> = Object.freeze({
   already_settled: SETTLEMENT_REFUSAL_ERROR,
   wire_not_committed: "https://payments.demo/execution-errors/wire_not_committed",
+  reversal_mismatch: "https://payments.demo/execution-errors/reversal_mismatch",
   already_reversed: "https://payments.demo/execution-errors/already_reversed",
 });
 
@@ -1947,8 +1955,12 @@ export class McpPaymentsServer {
       tx.engine.advance(opKey, "abandoned");
       return { ok: false, refusal_reason: "permit_expired" };
     }
-    // TOCTOU re-verify inside the lease, before commit.
-    const bound = await this.deps.pep.reverify(res.effective, digest, token, attempt);
+    // TOCTOU re-verify inside the lease, before commit. A compensate crossing
+    // (#252) re-derives its form from the committed wire's record, not the
+    // invoice as it reads now.
+    const bound = res.compensates
+      ? await this.deps.pep.reverifyCompensation(res.effective, digest, token, attempt, res.compensates)
+      : await this.deps.pep.reverify(res.effective, digest, token, attempt);
     if (!bound.ok) {
       tx.engine.advance(opKey, "abandoned");
       return { ok: false, refusal_reason: bound.error };

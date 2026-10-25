@@ -5,6 +5,7 @@ export { type KeyRole, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
 export {
   buildEffectiveParams,
   buildListEffectiveParams,
+  buildReversalParams,
   parameterDigest,
   type EffectiveParams,
   type ListEffectiveParams,
@@ -116,6 +117,8 @@ export {
   type EmailCommit,
   type CommitResult,
   type CommittedEffect,
+  type CommittedEffectSource,
+  type CommittedWire,
   type ReversalCommit,
 } from "./connectors.js";
 export { TransactionEngine, operationKey, type OpState } from "./transaction.js";

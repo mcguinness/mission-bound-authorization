@@ -1231,6 +1231,9 @@ export async function composeStack(opts: {
   const pep = new Pep({
     payments,
     evidence,
+    // @spec runtime#compound-actions (#252): a compensation reads the
+    // committed wire's own ledger record for the parameters it offsets.
+    committedEffects: connectors,
     boundary,
     decide: decisionChannel.decide,
     claims: decisionChannel.claims,
