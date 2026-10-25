@@ -247,7 +247,13 @@ describe("the statement's work-item declaration (@spec harness#work-item-identit
   it("refuses a declaration it cannot read in full", () => {
     const bad: Array<Record<string, unknown>> = [
       { attachers: [{ client_id: "ap-agent" }], covered_classes: ["consequential_read"] },
-      { attachers: [{ client_id: "ap-agent", harness: HARNESS }, { client_id: "ap-agent", harness: "https://other.example" }], covered_classes: [] },
+      {
+        attachers: [
+          { client_id: "ap-agent", harness: HARNESS },
+          { client_id: "ap-agent", harness: "https://other.example" },
+        ],
+        covered_classes: ["consequential_read"],
+      },
       { attachers: [{ client_id: "ap-agent", harness: HARNESS }], covered_classes: ["privileged_administration"] },
       { attachers: [], covered_classes: ["consequential_read"] },
       { attachers: [{ client_id: "ap-agent", harness: HARNESS }], covered_classes: [] },
