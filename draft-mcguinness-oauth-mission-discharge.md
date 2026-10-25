@@ -373,13 +373,17 @@ change discharges earlier or later from opaque `event_type` values.
 
 Because `terminal_when` is a `constraints` member, a consumer that does
 not recognize it fails closed by the Mission Resource Access Profile's
-resource server enforcement rule directly: a consumer MUST fail closed on any
-`constraints` key it does not understand, or understands but cannot
-enforce, refusing the request rather than granting access while ignoring
-the key ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Discharge is
-load-bearing narrowing, so ignoring `terminal_when` would silently widen
-the grant. That enforcement rule is the honest basis of discharge's
-safety: an unrecognized `terminal_when` is refused, never dropped.
+resource server enforcement rule directly: a consumer MUST fail closed on
+any `constraints` key it does not understand, or understands but cannot
+enforce, in an applicable entry, rather than grant access while ignoring
+the key ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). The
+entry carrying it provides no authority, and the request is refused
+unless another applicable entry that the consumer can fully enforce
+authorizes the whole request on its own. Discharge is load-bearing
+narrowing, so ignoring `terminal_when` would silently widen the grant.
+That enforcement rule is the honest basis of discharge's safety: an
+unrecognized `terminal_when` leaves its entry authorizing nothing, and
+is never dropped.
 
 An authorization server that does not implement this capability simply
 does not emit `terminal_when`, and is unaffected. The fail-closed rule

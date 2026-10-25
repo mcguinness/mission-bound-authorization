@@ -99,7 +99,14 @@ source that asserted it. Operators reconciling a fleet should read
 The ID-JAG and attenuation-root paths use that reservation. The provider
 access-token hook does not: it is synchronous, runs inside the provider's own
 token save, and offers neither an operation identity nor an acceptance
-callback, so its count stays uncoupled from the token it pays for. Recording
+callback, so its count stays uncoupled from the token it pays for. A failure
+the request itself observes before the token leaves returns that count
+(#935, D772): the request notes each count the hook spends and settles it
+when it answers anything but a 200, or fails by an exception after its
+response was prepared. A crash or a lost response is never
+observed, so it stays counted. The ID-JAG path settles a reservation it
+admitted itself as not accepted, with authority `as:in-process-failure`,
+when the grant fails before it is returned. Recording
 authoritative issuance state and artifact material transactionally before
 delivery is a possible future architecture; this deployment does not implement
 it, and no completed serialization conformance claim is made. In particular, an

@@ -210,13 +210,23 @@ export interface ExecutionEvidenceObject {
   mission_id: string;
   audience: string;
   authorized_parameter_digest?: string;
+  /**
+   * Absent beside `authorized_parameter_digest` only on a `suppressed` record
+   * whose PEP could not establish the effective parameters: the comparison
+   * is unavailable, never equality and never a deviation (#786).
+   */
   effective_parameter_digest?: string;
   outcome: "completed" | "failed" | "suppressed";
   outcome_at: string;
   error?: string;
+  /**
+   * One entry per attached obligation, in the decision's order. `id` and
+   * `type` are present exactly when the decision supplied that member as a
+   * non-empty string, never invented (#786).
+   */
   obligation_outcomes?: Array<{
-    id: string;
-    type: string;
+    id?: string;
+    type?: string;
     outcome: "fulfilled" | "failed" | "unsupported";
     error?: string;
   }>;

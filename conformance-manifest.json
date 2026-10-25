@@ -11,16 +11,16 @@
     "content_sha256": "abc6086f27dc02ea41a48bccb7408faa0aeafdd8464d78a79af5c370084a70e5"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "c4cc5c57d4c8eb004a7fa1b19cc17e4122553684",
-    "content_sha256": "3436a62e45903dd2ce5ebcd988fd3342c8b1911cec42636cd7329ec7bc14652b"
+    "revision": "44b06289ade73bec07fdeb1d85d0015d2bd92c04",
+    "content_sha256": "ec87dcb5592e8af8c0dcb48fca2c7eb2a7cfcb4946b0dc918c9c3444f7990cf5"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
     "content_sha256": "e0466f26a42dc89f7f1637996066ed8de81addad3a6190db9b7f814e21525036"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "c4cc5c57d4c8eb004a7fa1b19cc17e4122553684",
-    "content_sha256": "79f74a6ae36470c96c7395824c11cc1c2bc6ebbb555e4364942a16f0f1515f30"
+    "revision": "e4ea8851eac388ba779d7d6651704f9edd0b9de6",
+    "content_sha256": "cf5239a4e9d0c20f9c6d4a2a54278585ab6316a944442af50ffb72622e9f1374"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "dbac886ac676052de539355a0e7f8603131508e3",
@@ -51,8 +51,8 @@
     "content_sha256": "0cf9c0c15240b62a32a5bd9bf0dddbb93cfe86d6390685e3c5c5fd7858b87a4f"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "dffb5f036c98b5d0a07ce1cb4a8f52282cf3b021",
-    "content_sha256": "ef7986472e164657a50fd9059751606e9b1232bfed4f97228bb70aad69e66e73"
+    "revision": "b4f67b35b7798a15ebb876f488100282291e98c9",
+    "content_sha256": "7045896b9dcf4574459f31fb8725faaf5d4520290b49d751ee028d2c958e8cd2"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "cb8fb904b1870d8d9b94816536376cd13b1c1f3c",
@@ -8413,7 +8413,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a failed or refused derivation leaves the derivation count unchanged",
-    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); and a failure AFTER admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back. NOT covered, because the reference does not meet the clause there (#914 ruling 1; #250): the provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint) commits the count before signing with no rollback, reservation or acceptance callback, so a failure after the count stays counted (documented by derivation-counting.test.ts > residual: the provider access-token hook counts before signing ...); and the ID-JAG continuation reserves before minting, so a grant that fails after admission (a state change between the exchange's audience-scoped authority check, which refuses before admission and counts nothing, and the gate) stays counted under an unreleased jti-keyed reservation until an authoritative non-acceptance returns it (continuation-grant.test.ts > residual: a continuation grant that fails after admission ..., driven at issueCrossDomainGrant). Partial until those paths stop counting a failed derivation"
+    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200 or fails by an exception after its response was prepared; the ID-JAG continuation settles its own fresh reservation as not accepted. NOT covered: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted (#250 step 3); a replayed reservation that fails again stays counted, since an earlier attempt's artifact may have been accepted; and a Dispatch Handoff redemption that fails after its reservation keeps it for the retry that replays it. Partial on those."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -8441,9 +8441,39 @@
      "name": "one counting and settlement path (@spec mission#delegation, derivation-limits#counted-operations) > an accounting record that cannot be written refuses, with nothing counted and no token",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > the provider access-token hook: a code exchange that fails after the count, before the token leaves, returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > the delegation handle exchange: a save that fails after the count, before the handle leaves, returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "one counting and settlement path (@spec mission#delegation, derivation-limits#counted-operations) > a save refused after the count fails the request, which returns the count, with no token and no record (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "a continuation ID-JAG that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a continuation grant that fails after admission settles its own reservation as not accepted: the count returns (#935, D772)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-counting.test.ts",
+     "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a failure that escapes the request after its response was prepared (the request-path drain throws) answers 500 and returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869: a delegated exchange whose accounting cannot be recorded counts nothing; a save refused after the count still spends it (the uncoupled counter)."
+   "notes": "#869: a delegated exchange whose accounting cannot be recorded counts nothing; a save refused after the count is settled (#935, D772)."
   },
   {
    "id": "derivation-limits.counting.async-family-refreshes-uncounted",
@@ -9059,7 +9089,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a derivation from a Mission that is not `active` issues nothing: a Token Exchange is refused `invalid_request` and a refresh `invalid_grant`, on the explicit state checks and on the save-time gate and lifetime clamp alike",
-    "local": "Token Exchange witnessed on async delegation (explicit check and lifetime clamp), expansion and child creation; refresh on the async-delegation family. The authorization-code and JWT-bearer paths keep invalid_grant through the same refusal mapping, pinned by its unit test."
+    "local": "Token Exchange witnessed on async delegation (explicit check and lifetime clamp), expansion and child creation; refresh on the async-delegation family; the deferred grant on the AROP poll, pending or approved, and the Mission approval poll, each with the Mission's own mission_error and the deferral left pollable after a resume. The authorization-code and JWT-bearer paths keep invalid_grant through the same refusal mapping, pinned by its unit test."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -9117,9 +9147,33 @@
      "name": "token-endpoint Mission gate refusal by grant (@spec mission#issuance-gating, #1154) > identifies a Token Exchange request by its grant_type alone",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "the AROP deferred grant against a Mission that is not active (@spec mission#issuance-gating, #250) > an approved deferral whose Mission is %s before the poll is refused invalid_grant with that mission_error, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "the AROP deferred grant against a Mission that is not active (@spec mission#issuance-gating, #250) > a pending deferral whose Mission is %s is refused invalid_grant with that mission_error, not authorization_pending",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > yields no token for a Mission revoked between the approval decision and the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > refuses a resolving poll for a Mission suspended after the approval decision with invalid_grant and mission_error suspended, delivering nothing; after resume the poll delivers (@spec mission#issuance-gating, #250)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1154 (D369)."
+   "notes": "#1154 (D369). Deferred polls aligned to invalid_grant (#250)."
   },
   {
    "id": "core.issuance-gating.after-acknowledged-revocation",
@@ -9139,7 +9193,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "after a revocation is acknowledged, a Token Exchange is refused `invalid_request` and any other grant, refresh included, `invalid_grant`, and nothing is issued",
-    "local": "the reference re-reads Mission state at release (the release fence, #1498), after the save-time gate, the signature and the request-path drain, on every 200 that releases an access token naming a Mission this AS issues, a stored result served again included; it orders a revocation against an issuance within one process only (#641). Every fenced path is witnessed with the fence disabled delivering a token: the code exchange, refresh and the async family's refresh, the device code grant, the deferred grant (AROP, Mission approval and expansion deferrals), the JWT-bearer grant (child and Dispatch Handoff redemption), the Mission dispatch grant, the delegation-handle, async-delegation, designation, delegated-redemption, child-creation, ceiling-drawdown and Dispatch Handoff exchanges, and the async-delegation and expansion stored results. A refusal carries mission_error with the released Mission's own termination reason (parent_terminated for a child whose parent was revoked). The ICA continuation exchange answers ICA's codes (core.issuance-gating.profile-code-override) and the transaction endpoint access_denied. Work committed before the fence stays spent: the Dispatch Handoff redemption's counted derivation and consumed grant, the designation and delegated redemption's counted derivation, the AROP and Mission approval deferrals' redemption, and an expansion successor's recorded delivery, which recovery never serves because it refuses the terminated successor first (#250)"
+    "local": "the reference re-reads Mission state at release (the release fence, #1498), after the save-time gate, the signature and the request-path drain, on every 200 that releases an access token naming a Mission this AS issues, a stored result served again included; it orders a revocation against an issuance within one process only (#641). Every fenced path is witnessed with the fence disabled delivering a token: the code exchange, refresh and the async family's refresh, the device code grant, the deferred grant (AROP, Mission approval and expansion deferrals), the JWT-bearer grant (child and Dispatch Handoff redemption), the Mission dispatch grant, the delegation-handle, async-delegation, designation, delegated-redemption, child-creation, ceiling-drawdown and Dispatch Handoff exchanges, and the async-delegation, expansion and Mission dispatch stored results. A refusal carries mission_error with the released Mission's own termination reason (parent_terminated for a child whose parent was revoked). The ICA continuation exchange answers ICA's codes (core.issuance-gating.profile-code-override) and the transaction endpoint access_denied. Work committed before the fence stays spent: the Dispatch Handoff redemption's counted derivation and consumed grant, the designation and delegated redemption's counted derivation, the AROP and Mission approval deferrals' redemption, and an expansion successor's recorded delivery, which recovery never serves because it refuses the terminated successor first (#250)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -9315,6 +9369,12 @@
     {
      "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
      "name": "the release fence on the delegation paths (@spec mission#issuance-gating, #250) > a stored result served again: the stored family replayed to a retry is refused invalid_request with mission_error revoked and no token member when the Mission is revoked while the replay's request-path drain runs",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "the release fence on the Mission dispatch grant (@spec mission#issuance-gating, #250) > a recovered delivery: a Dispatch retry whose instance is revoked while the retry's request-path drain runs is refused invalid_grant with mission_error revoked and no token member",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -33760,7 +33820,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#786 made the carrier split observable for the conditions this deployment reaches: one reason string (capability_source_unresolvable) lands on a Refusal Record pre-decision and on Execution Evidence at use, chosen by call site, and a post-permit duplicate lands on Execution Evidence while the wire keeps the mandated duplicate_suppressed diagnostic. kill_switch, phase_mismatch and target_drift are ungated in this deployment (#252 C, #773), and the obligation carrier is only reached as a deny, so full coverage of the table stays open."
+   "notes": "#786 made the carrier split observable for the conditions this deployment reaches: one reason string (capability_source_unresolvable) lands on a Refusal Record pre-decision and on Execution Evidence at use, chosen by call site, and a post-permit duplicate lands on Execution Evidence while the wire keeps the mandated duplicate_suppressed diagnostic. The two exits #786 kept open are closed on the Execution Evidence carrier: a target that cannot be established at use is a suppressed target_drift record with no Refusal Record (witnessed on evidence.execution.effective-digest-absent-when-parameters-unestablishable), and a permit carrying a malformed obligation is a suppressed obligation_unfulfilled record with one obligation_outcomes entry per attached obligation (evidence.execution.obligation-outcomes-malformed-entry). phase_mismatch (#252 C), the operation-target target_drift (#1276) and kill_switch (a declared boundary cutover, #853) are reached. Full coverage of the table stays open: the evaluation-context rows are #773's, and the permit-obligation carrier is only reached as a deny, since this PEP fulfills no obligation type. This row's role is AS while its cited witnesses are PEP tests; the #786 PEP witnesses are cited on their own PEP rows instead of here."
   },
   {
    "id": "authzen.failure-condition-coverage.post-permit-duplicate-carrier",
@@ -33951,6 +34011,42 @@
     }
    ],
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). target_drift at use is witnessed (T7). The parameter_mismatch precedence branch cannot arise under the reference's service-level contracts, which derive no target from arguments."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.target-object-unestablishable-at-use",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "Named target object the permit was evaluated for, or the effective parameters it determines, not establishable at use | Execution Evidence | `target_drift`",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit whose target object, or the effective parameters that object determines, cannot be established at use is carried as Execution Evidence, suppressed with error target_drift, never as a Refusal Record (target_unresolvable is the pre-decision carrier) and never as a parameter_mismatch"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a send whose routing stops resolving between decision and commit is suppressed target_drift, keeping the authorized digest with no effective one, and sends nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24: reuse target_drift; no post-permit target_unresolvable). The invoice deleted after the decision and the recipient routing that stops resolving each land on Execution Evidence, suppressed target_drift, with no Refusal Record and no second decision. Mutations: relabelling the invoice exit parameter_mismatch fails the record-error assertion on its own; adding a Refusal Record at that exit fails the no-Refusal-Record assertion on its own; relabelling the routing exit parameter_mismatch fails the routing test. The pre-decision row (a named target object not resolvable before the decision request, target_unresolvable) is evidence.refusal.denial-reason-enum-and-boundary's."
   },
   {
    "id": "authzen.failure-condition-coverage.lease-renewal-out-of-authority",
@@ -38956,7 +39052,7 @@
    "id": "evidence.execution.obligation-outcomes-schema",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
-   "text": "REQUIRED when the linked Decision Evidence carried obligations and a permit disposition exists. One object per attached obligation, with `id` (REQUIRED, a string, the obligation's identifier as returned by the decision), `type` (REQUIRED, a string, the obligation type), `outcome` (REQUIRED, a string, one of `fulfilled`, `failed`, or `unsupported`)",
+   "text": "REQUIRED when the linked Decision Evidence carried obligations and a permit disposition exists. One object per attached obligation, in the order the decision returned them, with `id` (a string, the obligation's identifier as returned by the decision), `type` (a string, the obligation type), `outcome` (REQUIRED, a string, one of `fulfilled`, `failed`, or `unsupported`)",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -38968,7 +39064,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "obligation_outcomes is REQUIRED whenever the linked Decision Evidence carried obligations and a permit disposition exists, with one object per attached obligation carrying id, type, and a fulfilled/failed/unsupported outcome"
+    "normative": "obligation_outcomes is REQUIRED whenever the linked Decision Evidence carried obligations and a permit disposition exists, with one object per attached obligation, in the order the decision returned them, each carrying a fulfilled/failed/unsupported outcome"
    },
    "level": "unit",
    "coverage": "partial",
@@ -38981,13 +39077,13 @@
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an obligation that does not identify itself is still refused with zero effect, and no entry is invented for it",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an obligation without an id and one without a type each keep their own entry, in the decision's order beside a well-formed one, the missing member absent and the outcome unsupported",
      "level": "unit",
      "surface": "evidence-emission"
     },
     {
      "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
-     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > a mixed obligation set with one unidentifiable member names none of them, rather than a partial list that reads as complete",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an empty id, a non-string type and a non-object obligation are malformed too: each keeps its entry, and no member is invented",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -39016,7 +39112,43 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "One entry per attached obligation that identifies itself, with id, type and outcome: unsupported for a type this PEP does not implement (#1640 adds fulfilled and failed for the notification type it performs). OUTSTANDING, #786 review point 2: an obligation the decision returns WITHOUT a required id or type cannot be represented at all, so the member is omitted entirely rather than fabricated or emitted as a partial list that would read as complete; and this deployment's PDP does not implement Decision Evidence's own obligations member, so the conditional that makes obligation_outcomes REQUIRED cannot fire from the linked record. Both remain open. #1640 witnesses over HTTP with DPoP: a completed record naming a transmitted notification fulfilled, a suppressed record naming a failed, malformed or untransportable notification failed or unsupported, and a mixed set named fulfilled and unsupported. Mutations: treating the permit's obligations as fulfilled without performing them fails the fulfilled witness; counting a failed transmission as fulfilled fails the failed witness; stopping at the first unfulfillable obligation fails the mixed witness. A non-array obligations member names no obligation and the record carries no outcome list (D770 ruling 5); giving it an empty list fails the non-array witness."
+   "notes": "#786: one entry per attached obligation, in the decision's order, now also for an obligation the decision returned without a non-empty id or type, which keeps only the members supplied, outcome unsupported (its own row is evidence.execution.obligation-outcomes-malformed-entry). Exact-equality assertions fail on a dropped, reordered or invented entry (mutations: filtering malformed entries out, reversing the list, restoring the old whole-member omission). #1640 adds fulfilled and failed for the notification type this PEP performs, witnessed over HTTP with DPoP: a completed record naming a transmitted notification fulfilled, a suppressed record naming a failed, malformed or untransportable notification failed or unsupported, and a mixed set named fulfilled and unsupported. Mutations: treating the permit's obligations as fulfilled without performing them fails the fulfilled witness; counting a failed transmission as fulfilled fails the failed witness; stopping at the first unfulfillable obligation fails the mixed witness. A present non-array obligations member names no obligation and the record carries no outcome list (D770 ruling 5); giving it an empty list fails the non-array witness. Partial: the REQUIRED-when conditional cannot fire from the linked record, since this deployment's PDP does not implement Decision Evidence's own obligations member (#594 W4-11), so the member's presence is witnessed on the PEP's own obligation processing rather than keyed to the linked record."
+  },
+  {
+   "id": "evidence.execution.obligation-outcomes-malformed-entry",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`id` and `type` are each REQUIRED when the decision supplied that member as a non-empty string, and absent otherwise, never invented. An obligation lacking either is malformed, and its `outcome` is `unsupported`.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each obligation_outcomes entry carries id and type exactly when the decision supplied that member as a non-empty string, copied as supplied and never invented, and the entry for an obligation lacking either has outcome unsupported; the malformed obligation still leaves the permit unusable, with no effect and no Refusal Record"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an obligation without an id and one without a type each keep their own entry, in the decision's order beside a well-formed one, the missing member absent and the outcome unsupported",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pep-fail-closed.test.ts",
+     "name": "GAP 2: an unrecognized decision-context member makes a permit unusable (@spec decision-output) > an empty id, a non-string type and a non-object obligation are malformed too: each keeps its entry, and no member is invented",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24). An attached obligation missing its id, one missing its type, an empty id, a non-string type and a non-object list entry each keep an entry with only the members the decision supplied as non-empty strings, outcome unsupported, beside a well-formed entry that keeps both. The entries come from processObligations (obligations.ts, #1640), which performs nothing for a malformed obligation. Mutations: inventing an id, dropping malformed entries, and restoring the old whole-member omission each fail both tests; letting a decision whose obligations are all malformed through as a permit fails the second. The representation relaxation does not relax the obligation itself: both tests assert the permit is refused unfulfillable_obligation. A present obligations member that is not a list is a different case: it names no obligation, so it is refused with no outcome list (D770 ruling 5, witnessed on authzen.obligation-processing.effective-deny and evidence.execution.obligation-outcomes-schema)."
   },
   {
    "id": "evidence.execution.result-summary-no-user-content",
@@ -39169,9 +39301,15 @@
      "name": "the payments resource executes only the authorized target (@spec resource-access#resource-matching, #1276) > a contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed end to end at the payments resource (T7: suppression with target_drift); no unit-level witness of the Execution Evidence record alone. Mutation M14 fails T7."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed end to end at the payments resource (T7: suppression with target_drift); no unit-level witness of the Execution Evidence record alone. Mutation M14 fails T7. #786: a unit-level witness of the record itself now covers the cannot-be-established half for the target object the permit was evaluated for (the invoice deleted at use: one suppressed target_drift record, the effective digest absent; relabelling the exit parameter_mismatch fails it). The differs half is still witnessed only end to end (T7), and the evaluation-context clause stays unclaimed (#773), so the row stays partial."
   },
   {
    "id": "evidence.execution.error-condition-unrecognized",
@@ -40298,8 +40436,14 @@
     },
     {
      "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
-     "name": "Mission Receipt build + verify > rejects an Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3)",
+     "name": "Mission Receipt build + verify > rejects a completed or failed Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3, #786)",
      "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > accepts a suppressed record that keeps the authorized digest and omits the effective one as comparison unavailable, and reports no parameter deviation (#786)",
+     "level": "unit",
      "surface": "verification"
     },
     {
@@ -40309,7 +40453,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#594 W4-6 adds unit coverage of qualified issuer joins and observable unauthorized completed parameter deviation. Partial remains: full cross-component target reconciliation and the richer disposition/history families are not established by these signed fixtures. Exact authorized-digest mirror is already normative; no reverse-direction spec gap remains."
+   "notes": "#594 W4-6 adds unit coverage of qualified issuer joins and observable unauthorized completed parameter deviation. Partial remains: full cross-component target reconciliation and the richer disposition/history families are not established by these signed fixtures. Exact authorized-digest mirror is already normative; no reverse-direction spec gap remains. #786: digest consistency follows the amended member; a completed or failed record missing the effective digest beside the authorized one is still a join failure (removing the check, or exempting failed records, fails that test), and a suppressed record omitting it verifies with no deviation flag (rejecting it fails that test)."
   },
   {
    "id": "evidence.receipt.step4-join-failure-exactly-one-parameter-digest-present",
@@ -41076,7 +41220,7 @@
    "id": "evidence.execution.effective-digest-required-when-authorized-present",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
-   "text": "CONDITIONAL. A string. REQUIRED whenever `authorized_parameter_digest` is present.",
+   "text": "CONDITIONAL. A string. REQUIRED whenever `authorized_parameter_digest` is present, except on a `suppressed` record whose executing PEP could not establish the effective parameters.",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -41088,11 +41232,120 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "effective_parameter_digest is REQUIRED whenever authorized_parameter_digest is present, recording the digest over the normalized parameters actually attempted or executed so the two can be compared"
+    "normative": "effective_parameter_digest is REQUIRED whenever authorized_parameter_digest is present, recording the digest over the normalized parameters actually attempted or executed so the two can be compared; the one exception is a suppressed record whose executing PEP could not establish the effective parameters, so a completed or failed record carrying authorized_parameter_digest always carries it too"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#786 re-quoted the clause with its one exception, a suppressed record whose executing PEP could not establish the effective parameters; that branch has its own row (evidence.execution.effective-digest-absent-when-parameters-unestablishable). The REQUIRED branch itself, a PEP or executor always carrying the member beside the authorized digest on a completed, failed or established suppressed record, has no PEP-role assertion cited here yet (#594 W4-4); the receipt verifier's rejection of a completed or failed record missing it is a verifier witness, cited on evidence.receipt.step4-cross-record-joins."
+  },
+  {
+   "id": "evidence.execution.effective-digest-absent-when-parameters-unestablishable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "If the executing PEP cannot establish the effective parameters, this member MUST be absent rather than copied from `authorized_parameter_digest` or populated with a fabricated digest, and execution MUST be suppressed.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP that cannot establish the effective parameters of a permit it holds releases no effect and emits one suppressed Execution Evidence record that carries authorized_parameter_digest and omits effective_parameter_digest, never a copy of the authorized digest or another fabricated value, and emits no Refusal Record"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a send whose routing stops resolving between decision and commit is suppressed target_drift, keeping the authorized digest with no effective one, and sends nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/view-source.test.ts",
+     "name": "a remote Mission view source at the PEP (#818, D560) > a list read whose view lapses between the decision and its re-verification is suppressed target_drift, recording no observation it did not make",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24). Three exits where the effective parameters cannot be established: the invoice deleted after the decision and its redemption (transaction tool), the recipient routing no longer resolving (send_remittance_email), and a remote Mission view that lapsed before a bound list read's re-verification. Each asserts no effect, one suppressed record with the authorized digest present (equal to the retained Decision Evidence's parameter_digest in the invoice case) and the effective digest absent, and no Refusal Record (count deltas in the invoice case). Mutations: copying the authorized digest into the effective member fails all three; restoring the old recordless gap fails all three; letting the missing invoice through fails the zero-effect assertion on its own; adding a Refusal Record at that exit fails the no-Refusal-Record assertion on its own."
+  },
+  {
+   "id": "evidence.execution.unestablishable-parameters-error-names-condition",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The `error` names the condition that prevented it, `target_drift` when the target the permit was evaluated for cannot be established at use, and is never `parameter_mismatch`: no comparison was made.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a suppression whose effective parameters could not be established carries the error naming the condition that prevented them, target_drift for a target the permit was evaluated for that cannot be established at use, and never parameter_mismatch"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a send whose routing stops resolving between decision and commit is suppressed target_drift, keeping the authorized digest with no effective one, and sends nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#786 (owner ruling 2026-10-24: reuse target_drift; the post-permit target_unresolvable recommendation is withdrawn, and the pre-decision Refusal Record target_unresolvable is unchanged). A deleted invoice and an unresolvable recipient routing each record target_drift on the record and on the caller-visible reason. Mutations: relabelling either exit parameter_mismatch fails its test, and the invoice test's record-error assertion fails on its own with the caller-visible assertion removed. A routing that resolves differently stays parameter_mismatch through the digest comparison (the existing list-membership test)."
+  },
+  {
+   "id": "evidence.execution.absent-effective-digest-comparison-unavailable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The absence means the comparison is unavailable, and a consumer MUST NOT read it as equality or as a parameter deviation.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer reading a suppressed record that carries authorized_parameter_digest without effective_parameter_digest accepts it as comparison unavailable, reporting neither the binding-held case nor a parameter deviation"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mission-receipt.test.ts",
+     "name": "Mission Receipt build + verify > accepts a suppressed record that keeps the authorized digest and omits the effective one as comparison unavailable, and reports no parameter deviation (#786)",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#786. The consumer witnessed is the reference receipt verifier, reading the record at step 4: it verifies the suppressed record and reports no unauthorized_execution. Mutations: rejecting the absence on a suppressed record, and flagging a suppressed record as a deviation, each fail the test. Partial: the not-equality half has no distinguishing output in this verifier, which reports a deviation and never a binding-held result, so an implementation reading the absence as equality would return the same verdict."
   },
   {
    "id": "evidence.execution.object-required-members-and-types",
@@ -43110,9 +43363,74 @@
      "name": "Dispatch idempotency at /token (@spec mission-template#dispatch, mission#intent-submission-evidence) > a completed Dispatch recovers before evidence re-verification; a new Dispatch still verifies",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a lost-response retry while the delivered token is valid returns that same token, saving no token and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
    "notes": "Tested at the endpoint for the same-fingerprint retry, including a retry whose Intent Submission Evidence lapsed after completion (recovered before re-verification; proved by skipping the early lookup). Fingerprint mismatch and tombstone retention have their own rows (template.dispatch.fingerprint-mismatch-refusal, template.dispatch.approval-event-id-per-dispatch). Concurrent-duplicate recovery (the reservation's primary-key race) is not exercised, so the row stays partial."
+  },
+  {
+   "id": "template.dispatch.retry-gated-not-derived",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "grant-type",
+   "text": "a repeated identifier is gated to the previously committed instance rather than a fresh derivation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.dispatch"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a repeated dispatch_event_id whose delivered access token is still valid returns that same token, saving no token and leaving derivation_count unchanged; a retry against an instance no longer active is refused by that instance's gate with invalid_grant and its mission_error, counting nothing; a retry after containment narrowed the instance never returns the delivered token; concurrent requests under one dispatch_event_id recover one delivery, counted once"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a lost-response retry while the delivered token is valid returns that same token, saving no token and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a retry against an instance %s after its Dispatch is refused by the instance's own gate: invalid_grant, no token, nothing counted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a retry after containment narrowed the instance mints a token carrying only the narrowed authority, never the delivered one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > a retry after the delivered token expired mints a fresh token for the same instance, counted once as a delivery and never as a second Dispatch; a further retry recovers the fresh token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > concurrent retries after the delivered token expired recover one fresh delivery, counted once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch retry recovers its delivery (@spec mission-template#grant-type, expansion#creation-recovery, #250) > concurrent first Dispatches under one dispatch_event_id create one instance and deliver one token, counted once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Partial on one reading for the owner: once the delivered token has expired, or containment has narrowed the instance, the retry re-mints for the same instance and counts that delivery once, following the expansion profile's recovery rule that Template adopts (a fresh delivery credential carries ordinary issuance accounting and no creation accounting). Whether that re-mint is the fresh derivation this sentence excludes is open (#250). Proved by disabling the replay, the delivery record and each replay guard (expiry, active state, carried authority) in turn. Without the active check a revoked instance is still refused, by the release fence instead of the gate; the suspended case witnesses the check. One Dispatch per (authenticated Dispatcher, dispatch_event_id) runs at a time, so concurrent retries recover one delivery; single process only (#641). Proved by removing that serialization (both concurrency witnesses fail)."
   },
   {
    "id": "template.dispatch.fingerprint-mismatch-refusal",
@@ -60568,7 +60886,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a poll for an approved deferral whose Mission is no longer active returns an error response and no token",
-    "local": "The poll answers access_denied."
+    "local": "The poll answers invalid_grant with the Mission's own mission_error, as issuance gating refuses any grant other than a Token Exchange; a suspended Mission's approval stays deliverable and delivers once the Mission resumes."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -60576,6 +60894,12 @@
     {
      "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
      "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > yields no token for a Mission revoked between the approval decision and the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > refuses a resolving poll for a Mission suspended after the approval decision with invalid_grant and mission_error suspended, delivering nothing; after resume the poll delivers (@spec mission#issuance-gating, #250)",
      "level": "endpoint",
      "surface": "token-endpoint"
     }

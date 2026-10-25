@@ -128,6 +128,12 @@ export type MissionApprovalPoll =
   | { error: "access_denied" }
   | { error: "invalid_grant" }
   /**
+   * @spec deferred-approval#deferred-sequencing, mission#issuance-gating: an
+   * approved approval whose Mission is no longer active yields no token. The
+   * caller refuses it as issuance gating does, with `observed`'s own state.
+   */
+  | { error: "mission_not_active"; observed: MissionRecord | undefined }
+  /**
    * DTR -00 Section 10.1 (#1357): the opening client polled under a key other
    * than the deferral's. The deferral is unchanged and stays redeemable under
    * its key.
@@ -609,7 +615,7 @@ export class MissionApprovalDeferralStore {
    * faster than the interval is `slow_down`; past the pending lifetime it is
    * `expired_token`; a denial or a cancellation is `access_denied`; an
    * approved approval delivers its Mission once, and only while that Mission
-   * is active.
+   * is active: otherwise `mission_not_active`.
    */
   poll(code: string, presenter: { clientId: string; jkt: string }): MissionApprovalPoll {
     const row = this.row(code);
@@ -637,8 +643,9 @@ export class MissionApprovalDeferralStore {
       }
       case "approved": {
         if (row.resolution_reason === "cancelled") return { error: "access_denied" };
-        const mission = row.mission_id ? this.kernel.get(row.mission_id) : undefined;
-        if (!mission || this.kernel.applyExpiry(mission).state !== "active") return { error: "access_denied" };
+        const stored = row.mission_id ? this.kernel.get(row.mission_id) : undefined;
+        const mission = stored ? this.kernel.applyExpiry(stored) : undefined;
+        if (!mission || mission.state !== "active") return { error: "mission_not_active", observed: mission };
         if (row.redeemed === 1) return { error: "invalid_grant" };
         // Claim the delivery: one live claim at a time, so concurrent polls
         // never deliver twice. The approval is redeemed only when the
