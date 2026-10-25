@@ -77,8 +77,15 @@ const deployment = (rate?: { max: number; windowSeconds: number }): JoinAssertio
     if (token.clientId === "estate-helper") return { clientId: "helper-agent", disposition: "delegate", depth: 1, mappingVersion };
     return undefined;
   },
+  // The double's actor records (#1561): `${missionId} ${clientId}` pairs.
+  recordedDelegate(mission, clientId) {
+    return recordedDelegates.has(`${mission.id} ${clientId}`);
+  },
   ...(rate ? { rateLimit: rate } : {}),
 });
+
+/** The delegates the double's actor records record under a Mission (#1561). */
+const recordedDelegates = new Set<string>();
 
 let as: BuiltAs;
 let server: Server;
@@ -94,6 +101,8 @@ let both: LifecycleTestClient;
 let outsider: LifecycleTestClient;
 /** Registered, enrolled for another scope only. */
 let stranger: LifecycleTestClient;
+/** Registered, enrolled for nothing, recorded as one Mission's delegate (#1561). */
+let delegateCaller: LifecycleTestClient;
 let approvals = 0;
 
 function approve(kernel: MissionKernel = as.kernel): MissionRecord {
@@ -163,9 +172,10 @@ beforeAll(async () => {
   stranger = await newLifecycleClient("join-assertion-stranger");
   both = await newLifecycleClient("join-assertion-both");
   outsider = await newLifecycleClient("join-assertion-outsider");
+  delegateCaller = await newLifecycleClient("join-assertion-delegate");
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    testClients: [pdp.metadata, pep.metadata, stranger.metadata, both.metadata, outsider.metadata],
+    testClients: [pdp.metadata, pep.metadata, stranger.metadata, both.metadata, outsider.metadata, delegateCaller.metadata],
     joinEnrollment: {
       [pdp.clientId]: { roles: ["pdp"], enforcementScopes: [CANONICAL_RESOURCE] },
       [pep.clientId]: { roles: ["pep"], enforcementScopes: [CANONICAL_RESOURCE] },
@@ -485,6 +495,24 @@ describe("Join Assertion enrollment roles (@spec authority-server#join-disclosur
   });
 });
 
+describe("Join Assertion visibility takes recorded delegates (@spec authority-server#join-assertion-request, #1561)", () => {
+  it("admits a caller the deployment's actor records record as the Mission's delegate, and answers it not_found for a Mission it is not recorded under, as an unknown Mission", async () => {
+    const record = approve();
+    const other = approve();
+    const token = actingToken();
+    const before = await request(delegateCaller, { mission_id: record.id, audience: pdp.clientId, access_token: token });
+    expect(before.status).toBe(404);
+    recordedDelegates.add(`${record.id} ${delegateCaller.clientId}`);
+    const inside = await request(delegateCaller, { mission_id: record.id, audience: pdp.clientId, access_token: token });
+    expect(inside.status, JSON.stringify(inside.json)).toBe(200);
+    expect(decodeJwt(inside.json.assertion as string).aud).toBe(pdp.clientId);
+    const elsewhere = await request(delegateCaller, { mission_id: other.id, audience: pdp.clientId, access_token: token });
+    const unknown = await request(pep, { mission_id: UNKNOWN, audience: pdp.clientId, access_token: token });
+    expect(elsewhere.status).toBe(404);
+    expect(elsewhere.json).toEqual(unknown.json);
+  });
+});
+
 describe("Join Assertion cache (@spec authority-server#join-assertion-request, #1454)", () => {
   it("serves a repeated request its cached assertion, keyed on the Mission, the token digest and the audience: a change in any one mints anew", async () => {
     const record = approve();
@@ -559,6 +587,7 @@ function heldService(kernel: MissionKernel, hooks: Hooks, enrolled: (clientId: s
     },
     get: (id: string) => kernel.get(id),
     nowDate: () => kernel.nowDate(),
+    joinEvidence: kernel.joinEvidence,
     signJoinAssertion: async (...args: Parameters<MissionKernel["signJoinAssertion"]>) => {
       await hooks.sign?.();
       return kernel.signJoinAssertion(...args);
@@ -628,8 +657,11 @@ async function expectRefused(service: JoinAssertionService, missionId: string, a
   expect(answer.status, `${label}: ${JSON.stringify(answer.body)}`).toBe(403);
   expect(answer.body.error, label).toBe("join_failed");
   expect("assertion" in answer.body, label).toBe(false);
-  expect(service.events(), label).toHaveLength(0);
+  expect(eventsFor(service, missionId), label).toHaveLength(0);
 }
+
+/** The join evidence events the kernel's store retains for one Mission (#1560: the store is the kernel's, shared by every service on it). */
+const eventsFor = (service: JoinAssertionService, missionId: string) => service.events().filter((e) => e.mission.id === missionId);
 
 /** The Mission changes three ways: revoked, suspended, and expired on a kernel whose clock the test moves. */
 let clockOffsetMs = 0;
@@ -705,7 +737,7 @@ describe("Join Assertion minting re-reads the Mission after every await (@spec a
     as.kernel.transition(record.id, "resume");
     const again = await mintWith(service, record.id, token);
     expect(again.status, JSON.stringify(again.body)).toBe(200);
-    expect(service.events()).toHaveLength(1);
+    expect(eventsFor(service, record.id)).toHaveLength(1);
   });
 
   it("does not serve a cached assertion for a Mission revoked while the next request's token is being established", async () => {
@@ -721,7 +753,7 @@ describe("Join Assertion minting re-reads the Mission after every await (@spec a
     expect(second.status, JSON.stringify(second.body)).toBe(403);
     expect(second.body.error).toBe("join_failed");
     expect("assertion" in second.body).toBe(false);
-    expect(service.events()).toHaveLength(1);
+    expect(eventsFor(service, record.id)).toHaveLength(1);
   });
 
   it("refuses join_failed when the Mission's authority_hash changes, or its audience is withdrawn, during the token check or the signing", async () => {

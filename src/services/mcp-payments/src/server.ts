@@ -49,6 +49,7 @@ import {
   type ActionApprovalInput,
   type ActionMapping,
   CANONICAL_RESOURCE,
+  type DecisionEvidenceGap,
   type EnforceResult,
   type ExecutionAttempt,
   type InsufficientAuthorization,
@@ -62,6 +63,7 @@ import {
   type Pep,
   recipientParams,
   type RequestSignals,
+  type SuppressOutcome,
   type TokenFacts,
   TOOL_ACTIONS,
   type TxnCredential,
@@ -389,6 +391,16 @@ export const REVERSIBLE_WRITE_REFUSAL_ERRORS: Readonly<Record<string, string>> =
 export const SETTLEMENT_REFUSAL_ERROR = "https://payments.demo/execution-errors/already_settled";
 
 /**
+ * @spec authzen#execution-evidence-requirement (#1640, D770 ruling 4): the
+ * Execution Evidence `error` for a result the PEP withheld because its
+ * `completed` record could not be recorded before disclosure. Computing a
+ * result discloses nothing, so the permit's final disposition is a
+ * suppression, under a collision-resistant name for the same reason as the
+ * refusals above. The caller-visible diagnostic is `evidence_unavailable`.
+ */
+export const EVIDENCE_UNAVAILABLE_ERROR = "https://payments.demo/execution-errors/evidence_unavailable";
+
+/**
  * Test-only failpoints on the keyed reversible-write path (#918): the awaited
  * reverification, where concurrent in-process attempts interleave after each
  * found the pair free; inside the one local transaction (a throw rolls the
@@ -434,7 +446,27 @@ export interface WriteToolResult {
   /** Present on a refusal of a keyed write: whether a later retry under the same key can succeed. */
   next_action?: "retry" | "none";
   insufficient_authorization?: InsufficientAuthorization;
+  /**
+   * @spec authzen#execution-evidence-requirement (#1640, D770 ruling 4):
+   * present only when a keyed write's effect committed and its `completed`
+   * Execution Evidence could not be recorded. Never a refusal: the effect
+   * stands. Its result is withheld; a retry under the same key retrieves it.
+   */
+  gap?: DispositionGap;
+  /**
+   * @spec authzen#obligation-processing (#1640, D770 ruling 6): present on a
+   * denial whose Decision Evidence did not verify. The authenticated decision
+   * still stands, and its obligations were still performed.
+   */
+  evidence_gap?: DecisionEvidenceGap;
 }
+
+/**
+ * Why a released effect's `completed` Execution Evidence does not exist: its
+ * emission failed after one retry, or no effective parameter digest could be
+ * observed for a parameter-bound permit.
+ */
+export type DispositionGap = Extract<SuppressOutcome, { recorded: false }>["gap"];
 
 export interface McpServerDeps {
   /** Trusted assembly's effective topology declaration, never a tool input. */
@@ -559,6 +591,8 @@ export interface TransactionToolResult {
    * `denial_reason` is set.
    */
   gap?: "emission_failed";
+  /** @spec authzen#obligation-processing (#1640, D770 ruling 6): a denial whose Decision Evidence did not verify. */
+  evidence_gap?: DecisionEvidenceGap;
 }
 
 export class McpPaymentsServer {
@@ -1274,6 +1308,7 @@ export class McpPaymentsServer {
     denial_reason?: string;
     refusal_reason?: string;
     insufficient_authorization?: InsufficientAuthorization;
+    evidence_gap?: DecisionEvidenceGap;
   }> {
     if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
     // @spec runtime#idempotency (#918): a keyed reversible write's effect is
@@ -1297,6 +1332,7 @@ export class McpPaymentsServer {
         ...(res.denial_reason ? { denial_reason: res.denial_reason } : {}),
         ...(res.refusal_reason ? { refusal_reason: res.refusal_reason } : {}),
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
+        ...(res.evidence_gap ? { evidence_gap: res.evidence_gap } : {}),
       };
     }
     // @spec runtime-evidence#execution-evidence-object (#786): the permit's
@@ -1319,6 +1355,7 @@ export class McpPaymentsServer {
       attempt,
     );
     if (!capability.ok) return { ok: false, refusal_reason: capability.error };
+    let listDigest: string | undefined;
     if (res.listEffective) {
       // @spec runtime#read-binding: reverify the bound list read's
       // normalized parameters immediately before execution, exactly as
@@ -1334,6 +1371,7 @@ export class McpPaymentsServer {
       }
       const bound = await this.deps.pep.reverifyList(res.listEffective, digest, token, attempt);
       if (!bound.ok) return { ok: false, refusal_reason: bound.error };
+      listDigest = bound.effectiveParameterDigest;
     }
     // The whole seam again after the awaited capability and parameter reads,
     // immediately before release: the permit can expire and the Operation
@@ -1341,10 +1379,29 @@ export class McpPaymentsServer {
     // the admission call above is not the last word on either.
     const live = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!live.ok) return { ok: false, refusal_reason: live.error };
-    return {
-      ok: true,
-      result: this.execute(tool, args, res.list_vendor_scope, res.listEffective?.members?.map((m) => m.id)),
-    };
+    const result = this.execute(tool, args, res.list_vendor_scope, res.listEffective?.members?.map((m) => m.id));
+    // @spec authzen#execution-evidence-requirement (#1640, D744 ruling 2): the
+    // read's completed disposition, recorded before its result is returned.
+    const recorded = await this.deps.pep.completeExecution(
+      attempt,
+      listDigest !== undefined ? { effectiveParameterDigest: listDigest } : {},
+    );
+    if (!recorded.recorded) return this.withholdUnevidenced(attempt);
+    return { ok: true, result };
+  }
+
+  /**
+   * @spec authzen#execution-evidence-requirement (#1640, D770 ruling 4): a
+   * result whose `completed` record could not be recorded is never returned.
+   * Computing it disclosed nothing, so the permit's final disposition is a
+   * suppression, recorded where the evidence path still accepts one, and the
+   * caller receives no protected data. Only an effect that already committed
+   * (a keyed write's local transaction, the transaction tier's connector) is
+   * reported as a gap instead, and even then without its result.
+   */
+  private async withholdUnevidenced(attempt: ExecutionAttempt): Promise<{ ok: false; refusal_reason: string }> {
+    await this.deps.pep.suppressExecution(attempt, EVIDENCE_UNAVAILABLE_ERROR);
+    return { ok: false, refusal_reason: "evidence_unavailable" };
   }
 
   /** @spec runtime#idempotency (#918): the Operation Profile keys this tool as a reversible write. */
@@ -1384,6 +1441,7 @@ export class McpPaymentsServer {
         ...(res.denial_reason ? { denial_reason: res.denial_reason } : {}),
         ...(res.refusal_reason ? { refusal_reason: res.refusal_reason } : {}),
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
+        ...(res.evidence_gap ? { evidence_gap: res.evidence_gap } : {}),
       };
     }
     if (this.isKeyedReversibleWrite(tool)) {
@@ -1418,7 +1476,17 @@ export class McpPaymentsServer {
     // await between them.
     const singleUse = this.takeSingleUse(attempt, res.decision);
     if (singleUse !== undefined) return this.refuseSingleUse(attempt, singleUse);
-    return { ok: true, result: this.execute(tool, args) };
+    const result = this.execute(tool, args);
+    // @spec authzen#execution-evidence-requirement (#1640, D744 ruling 2): the
+    // write's completed disposition, over the parameters reverification just
+    // confirmed. The hold stores nothing, so a record that cannot be written
+    // withholds the result (D770 ruling 4); the single use stays consumed.
+    const recorded = await this.deps.pep.completeExecution(
+      attempt,
+      bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {},
+    );
+    if (!recorded.recorded) return this.withholdUnevidenced(attempt);
+    return { ok: true, result };
   }
 
   /**
@@ -1731,6 +1799,16 @@ export class McpPaymentsServer {
       return { ok: false, refusal_reason: outcome.refusal, next_action: "none" };
     }
     failpoints?.afterCommit?.();
+    // @spec authzen#execution-evidence-requirement (#1640, D744 ruling 2): the
+    // committed write's completed disposition. The effect stands whatever the
+    // emission does, so a record that cannot be written is reported as a gap,
+    // never a refusal, and its result is withheld (D770 ruling 4): a retry
+    // under the key retrieves it under that retry's own permit and record.
+    const recorded = await this.deps.pep.completeExecution(
+      attempt,
+      bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {},
+    );
+    if (!recorded.recorded) return { ok: false, gap: recorded.gap };
     return { ok: true, result: outcome.result };
   }
 
@@ -1791,6 +1869,7 @@ export class McpPaymentsServer {
             }
           : {}),
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
+        ...(res.evidence_gap ? { evidence_gap: res.evidence_gap } : {}),
       };
     }
     // @spec authority-server#mission-join (#557) — the governing Mission for
@@ -2043,6 +2122,9 @@ export class McpPaymentsServer {
       authorized_parameter_digest: digest,
       effective_parameter_digest: digest,
       outcome: "completed",
+      // @spec authzen#obligation-processing (#1640): the obligations this
+      // permit's PEP fulfilled before release.
+      ...(attempt.obligationOutcomes ? { obligation_outcomes: attempt.obligationOutcomes } : {}),
       ...(token.jti
         ? {
             hop_reference: {

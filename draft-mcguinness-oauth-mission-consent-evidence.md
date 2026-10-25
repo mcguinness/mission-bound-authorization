@@ -52,6 +52,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC8725:
@@ -575,7 +583,7 @@ floor for translating committed authority into language.
 - A serialized Authority Set (JSON, token claims) MUST NOT be the
   primary rendering. A deployment MAY offer one as a detail layer
   ({{layered-rendering}}).
-- A Common Constraint ({{I-D.draft-mcguinness-oauth-mission}}) has
+- A Common Constraint ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) has
   registered semantics, and its rendered form MUST state them. A
   constraint key the template cannot translate MUST be rendered and
   identified as untranslated, never omitted: an Approver shown an

@@ -18,7 +18,7 @@ import { errors, type KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import { malformedMatcherInRequest, refusedMemberInRequest } from "../kernel/authorization-details-metadata.js";
-import { projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
+import { issuedWhole, projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { GateError } from "../kernel/kernel.js";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
@@ -288,6 +288,12 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
       return;
     }
     authority = projectThroughEffective(requested, effective);
+    // @spec mission#subset, mission#error-mapping (#1513; #1508, D625): every
+    // requested entry is issued whole, or the request is refused.
+    if (!issuedWhole(requested, effective)) {
+      txError(ctx, 400, "invalid_authorization_details", "requested authorization_details cannot be issued whole");
+      return;
+    }
   }
   if (authority.length === 0) {
     txError(ctx, 400, "invalid_authorization_details", "handed-off authorization_details must be non-empty");
@@ -365,7 +371,8 @@ export async function handleDispatchHandoffRedemption(
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
 
   // 1. The grant itself: signature, typ, exp, and aud = this token endpoint.
-  const grant = await verifyDispatchHandoffGrant(assertion, opts.publicJwks as JSONWebKeySet, opts.issuer);
+  // @spec #831 (role binding): the grant is signed by the AS token key and verifies under it alone.
+  const grant = await verifyDispatchHandoffGrant(assertion, opts.accessTokenJwks as JSONWebKeySet, opts.issuer);
   if (!grant) {
     refuse(ctx, "invalid_grant", "invalid dispatch handoff grant");
     return;

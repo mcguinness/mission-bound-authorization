@@ -1727,7 +1727,8 @@
    "pull_when": "You must prove what the Approver actually saw, not only what was approved.",
    "normative_references": [
     "draft-mcguinness-mission-approval-governance",
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-resource-access"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"
@@ -1752,6 +1753,7 @@
     "draft-mcguinness-oauth-mission-approval-revision",
     "draft-mcguinness-oauth-mission-discharge",
     "draft-mcguinness-oauth-mission-expansion",
+    "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-template"
    ]
   },

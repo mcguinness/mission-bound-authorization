@@ -409,6 +409,27 @@ describe("a refresh request beyond the presented refresh grant or the Mission is
     expectIssued(again.result, [LIST, READ]);
     expect(again.saved).toBe(1);
   });
+
+  // @spec mission#refresh-tokens (#1513 review): the entry the projection
+  // drops is refused even beside a valid entry for the same action, which
+  // covers it once bindings are set aside.
+  it("an entry the projection cannot issue whole is refused beside an overlapping entry that is issued", async () => {
+    const m = await issue();
+    pastSeventyPercent();
+    const cases = [
+      { ...entry([LIST]), capability_sources: [{ action: LIST }] },
+      entry([LIST], { vendors: [] }),
+    ];
+    for (const poisoned of cases) {
+      const details = [entry([LIST]), poisoned];
+      const refused = await countingRefreshSaves(() => refresh(m.refreshToken, m.keys, details));
+      expectRefused(refused.result, "invalid_authorization_details");
+      expect(refused.saved, JSON.stringify(details)).toBe(0);
+    }
+    const again = await countingRefreshSaves(() => refresh(m.refreshToken, m.keys, [entry([LIST])]));
+    expectIssued(again.result, [LIST]);
+    expect(again.saved).toBe(1);
+  });
 });
 
 describe("a code exchange's authorization_details narrows the issued token (@spec mission#subset, mission#error-mapping, #1303)", () => {

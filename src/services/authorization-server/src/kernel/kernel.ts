@@ -149,6 +149,7 @@ import {
   committedActivationPolicy,
   type EvaluatedActivationPolicy,
 } from "./activation-policy-snapshots.js";
+import { JoinEvidenceStore } from "./join-evidence-store.js";
 import { type ApprovalGovernanceRecord, ApprovalGovernanceRecordStore, signApprovalGovernanceRecord } from "./approval-governance.js";
 import {
   assertDirectApprovalRecord,
@@ -925,6 +926,13 @@ export class MissionKernel {
    */
   readonly activationPolicySnapshots: ActivationPolicySnapshotStore;
   /**
+   * @spec authority-server#join-assertion-artifact (#1560): the join evidence
+   * events, one per Join Assertion minted, on this kernel's database and kept
+   * for the audit horizon of the Mission each names. An audit read only: no
+   * minting check consults it.
+   */
+  readonly joinEvidence: JoinEvidenceStore;
+  /**
    * @spec approval-governance#atomic-commitment: the signed Approval
    * Governance Records, on this kernel's database and written only in the
    * creation transaction of the Mission each governs.
@@ -1066,6 +1074,13 @@ export class MissionKernel {
     // retention the tombstones compose, so the deployment declares one audit
     // horizon, not two that can drift.
     this.activationPolicySnapshots = new ActivationPolicySnapshotStore(this.db, {
+      now: this.now,
+      auditRetentionSeconds: this.tombstones.horizons().audit_retention_seconds,
+    });
+    // @spec authority-server#join-assertion-artifact (#1560): the same one
+    // declared audit retention, so a join evidence event is kept for its
+    // Mission's audit horizon.
+    this.joinEvidence = new JoinEvidenceStore(this.db, {
       now: this.now,
       auditRetentionSeconds: this.tombstones.horizons().audit_retention_seconds,
     });
@@ -5025,7 +5040,8 @@ export class MissionKernel {
    * transitions, drains runnable deliveries, prunes settled outbox rows past
    * the composed retention horizon, prunes tombstone DETAIL past that same
    * horizon while keeping each identity row as the permanent nonreuse marker,
-   * and moves every unreleased derivation reservation to `unacknowledged`
+   * prunes activation policy snapshots and join evidence events past their
+   * audit horizon, and moves every unreleased derivation reservation to `unacknowledged`
    * WITHOUT refunding its count.
    */
   async recoverAtBoot(): Promise<void> {
@@ -5036,6 +5052,9 @@ export class MissionKernel {
     // @spec mission#standing-consent-bases: only snapshots past their audit
     // horizon are deleted.
     this.activationPolicySnapshots.pruneExpired();
+    // @spec authority-server#join-assertion-artifact (#1560): only join
+    // evidence events past their Mission's audit horizon are deleted.
+    this.joinEvidence.pruneExpired();
     // @spec control-plane#serialization — an unreleased reservation is
     // ambiguous, not evidence that no artifact was accepted, so recovery
     // records the ambiguity and leaves the count spent. Only an authoritative
