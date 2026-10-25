@@ -45,6 +45,8 @@ const REFUSAL_RECORD_DIAGNOSTICS = [
   "phase_unavailable",
   // #252: a compensate crossing whose committed original the PEP cannot establish from verified evidence.
   "compensation_link_unavailable",
+  // #773: a covered operation's authoritative evaluation context cannot be captured.
+  "evaluation_context_unresolvable",
 ];
 
 const refusalInput = (denial_reason: string) => ({
@@ -114,6 +116,7 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
       "operation_target_invalid",
       "phase_invalid",
       "compensation_link_invalid",
+      "evaluation_context_invalid",
     ]);
     expect(isRefusalDenialReason("pdp", "operation_target_invalid")).toBe(true);
     expect(isRefusalDenialReason("pep", "operation_target_invalid")).toBe(false);

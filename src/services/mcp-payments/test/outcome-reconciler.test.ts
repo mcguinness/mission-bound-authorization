@@ -398,12 +398,14 @@ describe("the declared outcome reconciler runs the reconciliation (@spec runtime
     const h = await harness({ holdSettlement: true });
     try {
       const k = key();
-      // The parameters move after the permit and before the commit: the
-      // redeeming attempt refuses itself, with no effect.
+      // The invoice moves after the permit and before the commit: the
+      // redeeming attempt refuses itself, with no effect. The deployment
+      // claims Evaluation-Context Binding for this operation, so a moved
+      // authoritative fact is target_drift (#773).
       const refused = await h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: k }, TOKEN, () =>
         h.payments.bumpInvoiceAmount("inv-1", "150.00"),
       );
-      expect(refused.refusal_reason).toBe("parameter_mismatch");
+      expect(refused.refusal_reason).toBe("target_drift");
       expect(executions(h, "suppressed")).toHaveLength(1);
       h.clock.advance(PAST_LEASE_MS);
       const run = await h.reconciler.runOnce();

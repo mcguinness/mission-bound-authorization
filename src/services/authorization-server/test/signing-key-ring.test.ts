@@ -26,6 +26,7 @@ import {
   initSigningKeyRing,
   loadSigningKeyRing,
   SIGNING_KEY_RING_FORMAT,
+  SIGNING_KEY_RING_FORMAT_V1,
   SigningKeyRingError,
   kernelStoreFromEnv,
   signingKeysFromEnv,
@@ -211,10 +212,17 @@ describe("the signing key ring file (@spec #831 slice 1)", () => {
     for (const k of published) for (const m of PRIVATE_MEMBERS) expect(k[m]).toBeUndefined();
     expect(statSync(file).mode & 0o777).toBe(0o600);
     expect(statSync(join(file, "..")).mode & 0o777).toBe(0o700);
-    const ring = JSON.parse(readFileSync(file, "utf8")) as { format: string; issuer: string; roles: Record<string, { kid: string }> };
+    const ring = JSON.parse(readFileSync(file, "utf8")) as {
+      format: string;
+      issuer: string;
+      roles: Record<string, { generations: { kid: string; state: string }[] }>;
+    };
     expect(ring.format).toBe(SIGNING_KEY_RING_FORMAT);
     expect(ring.issuer).toBe(ISSUER);
     expect(Object.keys(ring.roles).sort()).toEqual([...AS_SIGNING_ROLES].sort());
+    for (const r of AS_SIGNING_ROLES) {
+      expect(ring.roles[r]!.generations.map((g) => [g.kid, g.state])).toEqual([[ROLES[r].kid, "active"]]);
+    }
     const before = readFileSync(file, "utf8");
     await expect(initSigningKeyRing(file, ISSUER, ROLES)).rejects.toThrow(/already exists; a ring is initialized once/);
     expect(readFileSync(file, "utf8")).toBe(before);
@@ -245,10 +253,13 @@ describe("the signing key ring file (@spec #831 slice 1)", () => {
   });
 
   it("refuses, never generating a replacement, a ring that is missing, open to others, malformed or mismatched", async () => {
-    const valid = ringPath();
-    await initSigningKeyRing(valid, ISSUER, ROLES);
-    const good = JSON.parse(readFileSync(valid, "utf8")) as Record<string, unknown>;
-    const roles = good.roles as Record<string, Record<string, unknown>>;
+    // A slice 1 (/1) ring, which still loads; the /2 invariants are signing-key-rotation.test.ts's.
+    const roles: Record<string, Record<string, unknown>> = {};
+    for (const r of AS_SIGNING_ROLES) {
+      const { privateKey } = await generateKeyPair(ROLES[r].alg, { extractable: true });
+      roles[r] = { kid: ROLES[r].kid, alg: ROLES[r].alg, created_at: new Date().toISOString(), private_jwk: await exportJWK(privateKey) };
+    }
+    const good: Record<string, unknown> = { format: SIGNING_KEY_RING_FORMAT_V1, issuer: ISSUER, created_at: new Date().toISOString(), roles };
     /** Write `content` as a 0600 ring in a fresh 0700 directory. */
     const ringWith = (content: string): string => {
       const file = ringPath();
@@ -267,7 +278,7 @@ describe("the signing key ring file (@spec #831 slice 1)", () => {
       ["missing", join(mkdtempSync(join(tmpdir(), "key-ring-")), "absent.json"), /no ring at .*pnpm keys init/],
       ["readable by others", openFile, /grants group or other access; it must be mode 0600/],
       ["not JSON", ringWith("{not json"), /is not valid JSON/],
-      ["not a ring", variant((r) => { r.format = "something-else"; }), /is not a mission-as-signing-key-ring\/1 ring/],
+      ["not a ring", variant((r) => { r.format = "something-else"; }), /is not a mission-as-signing-key-ring\/1 or mission-as-signing-key-ring\/2 ring/],
       ["another issuer", variant((r) => { r.issuer = "https://elsewhere.example"; }), /is for issuer https:\/\/elsewhere\.example/],
       ["a missing role", variant((r) => { delete (r.roles as Record<string, unknown>).asTxn; }), /has no asTxn key/],
       ["an extra role", variant((r) => { (r.roles as Record<string, unknown>).asExtra = roles.asTxn; }), /carries unknown roles: asExtra/],
@@ -276,6 +287,7 @@ describe("the signing key ring file (@spec #831 slice 1)", () => {
       ["no private key", variant((r) => { delete ((r.roles as Record<string, Record<string, Record<string, unknown>>>).asTxn!.private_jwk!).d; }), /asTxn holds no private key/],
       ["a key that does not import", variant((r) => { ((r.roles as Record<string, Record<string, Record<string, unknown>>>).asContinuation!.private_jwk!).d = "AAAA"; }), /asContinuation's key does not import/],
     ];
+    expect(await loadSigningKeyRing(ringWith(JSON.stringify(good)), ISSUER, ROLES)).toBeDefined();
     for (const [name, file, message] of cases) {
       await expect(loadSigningKeyRing(file, ISSUER, ROLES), name).rejects.toThrow(message);
       await expect(loadSigningKeyRing(file, ISSUER, ROLES), name).rejects.toBeInstanceOf(SigningKeyRingError);
@@ -299,13 +311,41 @@ describe("the signing key ring file (@spec #831 slice 1)", () => {
     const ring = { MISSION_KEY_RING: "/var/keys/ring.json" };
     expect(kernelStoreFromEnv({})).toBeUndefined();
     expect(kernelStoreFromEnv({ ...ring, MISSION_KERNEL_STORE: "" })).toBeUndefined();
-    expect(kernelStoreFromEnv({ ...ring, MISSION_KERNEL_STORE: "/var/state/kernel.db" })).toEqual({ file: "/var/state/kernel.db" });
+    const witness = { MISSION_KERNEL_WITNESS: "/var/witness/kernel.witness" };
+    expect(kernelStoreFromEnv({ ...ring, ...witness, MISSION_KERNEL_STORE: "/var/state/kernel.db" })).toEqual({
+      file: "/var/state/kernel.db",
+      witness: "/var/witness/kernel.witness",
+    });
     expect(() => kernelStoreFromEnv({ ...ring, MISSION_KERNEL_STORE: "state/kernel.db" })).toThrow(
       /^MISSION_KERNEL_STORE must be an absolute path, not state\/kernel\.db$/,
     );
     for (const keys of [{}, { MISSION_EPHEMERAL_KEYS: "1" }, { MISSION_KEY_RING: " " }]) {
       expect(() => kernelStoreFromEnv({ ...keys, MISSION_KERNEL_STORE: "/var/state/kernel.db" }), JSON.stringify(keys)).toThrow(
         /^MISSION_KERNEL_STORE requires MISSION_KEY_RING/,
+      );
+    }
+  });
+
+  it("a kernel kept in a file needs a recovery witness: MISSION_KERNEL_WITNESS is an absolute path outside the store's directory (#250 step 3)", () => {
+    const env = { MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KERNEL_STORE: "/var/state/kernel.db" };
+    for (const witness of [undefined, "", " "]) {
+      expect(() => kernelStoreFromEnv({ ...env, ...(witness === undefined ? {} : { MISSION_KERNEL_WITNESS: witness }) })).toThrow(
+        /^MISSION_KERNEL_STORE requires MISSION_KERNEL_WITNESS/,
+      );
+    }
+    expect(() => kernelStoreFromEnv({ ...env, MISSION_KERNEL_WITNESS: "witness/kernel.witness" })).toThrow(
+      /^MISSION_KERNEL_WITNESS must be an absolute path, not witness\/kernel\.witness$/,
+    );
+    expect(() => kernelStoreFromEnv({ ...env, MISSION_KERNEL_WITNESS: "/var/state/kernel.witness" })).toThrow(
+      /^MISSION_KERNEL_WITNESS must be outside the store's directory/,
+    );
+    // review: nested either way, the store's tree and the witness's would be restored together.
+    for (const [store, witness] of [
+      ["/var/state/kernel.db", "/var/state/recovery/kernel.witness"],
+      ["/var/witness/state/kernel.db", "/var/witness/kernel.witness"],
+    ]) {
+      expect(() => kernelStoreFromEnv({ ...env, MISSION_KERNEL_STORE: store, MISSION_KERNEL_WITNESS: witness }), witness).toThrow(
+        /^MISSION_KERNEL_WITNESS must be outside the store's directory/,
       );
     }
   });

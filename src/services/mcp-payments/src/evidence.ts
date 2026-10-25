@@ -216,6 +216,14 @@ export interface ExecutionEvidenceObject {
    * is unavailable, never equality and never a deviation (#786).
    */
   effective_parameter_digest?: string;
+  /**
+   * @spec runtime-evidence#execution-evidence-object (#773): the context pair,
+   * on the parameter pair's terms. The authorized member mirrors the linked
+   * Decision Evidence's `evaluation_context_digest`; the effective one is
+   * absent where the executing PEP could not re-establish the context.
+   */
+  authorized_evaluation_context_digest?: string;
+  effective_evaluation_context_digest?: string;
   outcome: "completed" | "failed" | "suppressed";
   outcome_at: string;
   error?: string;
@@ -801,12 +809,20 @@ export const REFUSAL_DENIAL_REASONS = Object.freeze({
     // phase and the PEP cannot establish, from retained and verified evidence,
     // the committed effect it offsets and that effect's Decision)".
     "compensation_link_unavailable",
+    // @spec runtime-evidence#pre-decision-refusal, runtime#evaluation-context-binding
+    // (#773): the PEP cannot capture the authoritative evaluation context a
+    // covered operation binds before requesting a decision.
+    "evaluation_context_unresolvable",
   ] as const),
   pdp: Object.freeze([
     "mission_context_missing",
     "operation_target_invalid",
     "phase_invalid",
     "compensation_link_invalid",
+    // @spec runtime-evidence#pre-decision-refusal, authzen#context-evaluation-binding
+    // (#773): evaluation-context binding inputs missing, malformed or
+    // incompatible with the declared binding, for a covered operation.
+    "evaluation_context_invalid",
   ] as const),
 });
 export type PepRefusalDenialReason = (typeof REFUSAL_DENIAL_REASONS.pep)[number];
@@ -858,6 +874,8 @@ export interface ExecutionEvidenceInput {
   audience: string;
   authorized_parameter_digest?: string;
   effective_parameter_digest?: string;
+  authorized_evaluation_context_digest?: string;
+  effective_evaluation_context_digest?: string;
   outcome: "completed" | "failed" | "suppressed";
   error?: string;
   obligation_outcomes?: ExecutionEvidenceObject["obligation_outcomes"];
@@ -1297,6 +1315,12 @@ export class EvidenceStore {
         : {}),
       ...(input.effective_parameter_digest !== undefined
         ? { effective_parameter_digest: input.effective_parameter_digest }
+        : {}),
+      ...(input.authorized_evaluation_context_digest !== undefined
+        ? { authorized_evaluation_context_digest: input.authorized_evaluation_context_digest }
+        : {}),
+      ...(input.effective_evaluation_context_digest !== undefined
+        ? { effective_evaluation_context_digest: input.effective_evaluation_context_digest }
         : {}),
       outcome: input.outcome,
       outcome_at,
