@@ -1813,7 +1813,12 @@ A read that is already fully constrained by the token's audience,
 resource, and the resource server's object-level authorization, and
 that does not materially affect the resource set or disclosure risk,
 need not be classified a consequential read, and is then not
-separately PDP-gated by this profile. A deployment MUST NOT, however,
+separately PDP-gated by this profile. A request that does reach the
+PDP within a mediated scope with no action class established, where
+the Enforcement Scope Statement declares action classes, is a request
+fault: it is refused before evaluation, never evaluated under a class
+it was not assigned, and no class is recorded for it
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). A deployment MUST NOT, however,
 use classification to evade the floor or a Resource-policy minimum, and
 once an action is a consequential write or higher it MUST be gated and
 bound as the table requires.
