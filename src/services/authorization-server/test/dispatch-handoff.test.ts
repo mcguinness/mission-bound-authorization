@@ -1637,7 +1637,7 @@ describe("Dispatch Handoff: the exchange is one counted derivation (@spec deriva
     expect(countOf(instance.missionId)).toBe(c0 + 3);
   });
 
-  it("a refused exchange counts nothing: a wrong key, a wrong client, a suspended instance", async () => {
+  it("an exchange refused before admission counts nothing: a wrong key, a wrong client, a suspended instance", async () => {
     const instance = await dispatchInstance();
     const c0 = countOf(instance.missionId);
     expect((await err(await handoff(instance.token, {}, "dispatcher", otherDpop))).error).toBe("invalid_grant");

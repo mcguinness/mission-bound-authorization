@@ -44305,8 +44305,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each successful handoff exchange increments the instance's derivation_count by exactly one, apart from its redemption's; an exchange refused for a wrong client or an inactive instance counts nothing; at the instance's limit the exchange is refused invalid_grant with mission_error derivations_exhausted, issues no grant and counts nothing",
-    "local": "the reference counts once the grant is signed, under the grant's jti; a release-fence refusal after admission keeps the count, as the redemption's does, which #935 owns"
+    "normative": "each successful handoff exchange increments the instance's derivation_count by exactly one, apart from its redemption's; an exchange refused before admission (a wrong key, a wrong client, an inactive instance) counts nothing; at the instance's limit the exchange is refused invalid_grant with mission_error derivations_exhausted, issues no grant and counts nothing",
+    "local": "the reference counts once the grant is signed, under the grant's jti; a release-fence refusal after admission keeps the count, as the redemption's does: the documented exception, tracked as a #935 limitation (owner ruling on PR #1650), not compliance with the failed-derivations rule"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -44319,7 +44319,7 @@
     },
     {
      "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
-     "name": "Dispatch Handoff: the exchange is one counted derivation (@spec derivation-limits#refresh-and-exchange, mission-template#handoff-request, #1648) > a refused exchange counts nothing: a wrong key, a wrong client, a suspended instance",
+     "name": "Dispatch Handoff: the exchange is one counted derivation (@spec derivation-limits#refresh-and-exchange, mission-template#handoff-request, #1648) > an exchange refused before admission counts nothing: a wrong key, a wrong client, a suspended instance",
      "level": "endpoint",
      "surface": "token-endpoint"
     },

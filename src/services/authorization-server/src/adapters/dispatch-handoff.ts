@@ -315,10 +315,12 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
   // @spec derivation-limits#refresh-and-exchange, mission#issuance-gating
   // (#1648, D764): the successful exchange is one derivation from the instance,
   // counted once against it, apart from the redemption's own. It is counted
-  // only after the grant is signed, under the grant's own jti, so a refused or
-  // failed exchange counts nothing; at the limit the signed grant is discarded
-  // and the refusal is invalid_grant with derivations_exhausted, while a
-  // lifecycle refusal stays invalid_request (D369).
+  // only after the grant is signed, under the grant's own jti, so an exchange
+  // refused before admission counts nothing; at the limit the signed grant is
+  // discarded and the refusal is invalid_grant with derivations_exhausted, while
+  // a lifecycle refusal stays invalid_request (D369). A release-fence refusal
+  // after admission keeps the count: a tracked #935 limitation, not compliance
+  // with the failed-derivations rule.
   try {
     const admitted = kernel.reserveDerivation(active.id, { operationId: `dispatch-handoff-exchange:${jti}`, artifactId: jti });
     kernel.releaseDerivation(admitted.reservation.reservation.reservationId, { artifactId: jti });
