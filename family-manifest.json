@@ -897,6 +897,7 @@
     }
    ],
    "references": [
+    "draft-mcguinness-mission-architecture",
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-authzen",
