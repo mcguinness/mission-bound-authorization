@@ -1453,7 +1453,10 @@ identifier and issuer, the kernel's Mission Reference and Controller;
 the lifecycle state space with its only-`active`-permits rule, the
 kernel's governance gate; the immutable Approved Context, the
 approval-time fixity behind every anchor its records cite; and the
-Mission's audit horizon, which bounds the ordered governance record.
+Mission's retention period as its binding declares it (the audit
+horizon in the OAuth binding), which bounds the ordered governance
+record and is the floor for this document's records
+({{record-integrity}}).
 The kernel requires no particular integrity anchors: `intent_hash`
 and `authority_hash` are the OAuth binding's commitment to the
 Approved Context, supplied by the issuance profile, not by the
@@ -3383,8 +3386,15 @@ The following requirements apply to every record:
   correlation members and each record's timestamps together
   ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 - The retention window declared in the Enforcement Scope Statement
-  MUST be no shorter than the Mission's audit horizon, as defined in
-  the Mission Record section of {{I-D.draft-mcguinness-oauth-mission}}.
+  MUST be no shorter than the Mission's retention period as its
+  Mission Substrate Binding declares it
+  ({{I-D.draft-mcguinness-mission-substrate}}, Section "Ordered
+  Governance Record"), nor shorter than any longer period a companion
+  the deployment adopts requires. That period is a floor for every
+  required record, not only for the governance record it is declared
+  for. The OAuth binding realizes it as the Mission's audit horizon
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Provenance and
+  Expiry"), which covers the Mission Record and its evidence.
 
 Digest encoding is uniform across this document family: every digest a
 family document defines uses the `sha-256:` prefixed base64url,
@@ -4158,6 +4168,17 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Changes a requirement (#854, D814): the record retention floor is the
+  Mission's retention period as its Mission Substrate Binding declares
+  it, realized in the OAuth binding as the audit horizon (the Mission
+  Record and its evidence), and no shorter than a longer period an
+  adopted companion requires; it is a floor for every required record,
+  not only the governance record. Commitment construction,
+  canonicalization and digest encoding are imported from the
+  substrate's default commitment construction, OAuth references
+  remaining for OAuth-owned anchors. A URI-valued parameter is
+  preserved unless the Operation Profile defines its normalization,
+  applied identically at commitment and execution reverification.
 - Evaluation-Context Binding (#773): the salt survives restart and is
   available to every replica that can use its bindings, or is held per
   epoch, so that a restart or a replica without the version loses those
