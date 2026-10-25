@@ -46,7 +46,6 @@ import Provider, {
   type Configuration,
   type KoaContextWithOIDC,
   type ResourceServer,
-  type SigningAlgorithmWithNone,
 } from "oidc-provider";
 import { loadReusableGrant, missionInteractionPolicy, ORDINARY_REQUEST_REFUSAL } from "./interaction-policy.js";
 import { type GovernedResourcePolicy, governedResourceRefusal, isMissionGovernedResource } from "./governed-resources.js";
@@ -1975,18 +1974,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
         : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
     // @spec mission#submission-via-par (#1503): the one Request Object
-    // signing algorithm (features.requestObjects below).
-    // @spec #831 (role binding): the provider holds every AS role's signing
-    // key and selects one by algorithm, so an ID Token in another role's
-    // algorithm would be signed under that role's key (a client registered
-    // for ES256 got an ID Token under as-status). ID Tokens are limited to the
-    // access-token key's algorithm; a registration naming another is refused.
-    // Signed userinfo, JWT introspection and JWT response modes are off, so no
-    // other client-facing JWT is signed. Every other list keeps the default.
-    enabledJWA: {
-      requestObjectSigningAlgValues: ["ES256"],
-      idTokenSigningAlgValues: accessTokenSigningAlgs(opts),
-    },
+    // signing algorithm (features.requestObjects below); every other
+    // algorithm list keeps the provider's default. The provider's keystore
+    // holds the access-token key alone (#831 role binding), so it signs no
+    // ID Token or other JWT under another role's key, and a client registered
+    // for another algorithm is refused.
+    enabledJWA: { requestObjectSigningAlgValues: ["ES256"] },
     interactions: {
       url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
       // @spec mission#approval-event (#1247), device-authorization#approval
@@ -2730,6 +2723,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
     await next();
     fenceRelease(ctx);
   });
+  // @spec #831 (role binding): the provider's keystore holds the access-token
+  // key alone (`jwks`), so it signs nothing under another role's key. The
+  // jwks_uri still publishes every role's public key: the provider serves the
+  // route, with its CORS handling and content type, and only the key set it
+  // answered with is replaced by `publicJwks`.
+  provider.use(async (ctx, next) => {
+    await next();
+    if (ctx.method === "GET" && ctx.path === "/jwks" && ctx.status === 200) {
+      ctx.body = { keys: opts.publicJwks.keys };
+    }
+  });
 
   // @spec device-authorization#request (#1202): the device authorization
   // intake, before the provider parses the request (Provider#use splices it
@@ -3120,15 +3124,6 @@ export function namesRequestedRar(ctx: unknown): boolean {
   }
 }
 
-/** @spec #831 (role binding): the algorithms of the access-token signing key, the one key an ID Token uses. */
-function accessTokenSigningAlgs(opts: AdapterOptions): SigningAlgorithmWithNone[] {
-  return [
-    ...new Set(
-      opts.accessTokenJwks.keys.map((k) => k.alg).filter((a): a is SigningAlgorithmWithNone => typeof a === "string" && a !== "none"),
-    ),
-  ];
-}
-
 export function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
   return {
     audience: resource,
@@ -3458,12 +3453,12 @@ async function handleChildJwtBearerGrant(
     throw new errors.InvalidRequest("assertion (the child-bound JWT authorization grant) required");
   }
 
-  // 2. Verify the assertion. It is signed by the AS token key, so it verifies on
-  //    the same public JWKS as tokens; iss = the AS, aud = the token endpoint,
-  //    typ = the child-grant typ.
+  // 2. Verify the assertion. It is signed by the AS token key, and verifies
+  //    under that key alone (#831 role binding); iss = the AS, aud = the token
+  //    endpoint, typ = the child-grant typ.
   let claims: Record<string, unknown>;
   try {
-    const verified = await jwtVerify(assertion, createLocalJWKSet(opts.publicJwks as never), {
+    const verified = await jwtVerify(assertion, createLocalJWKSet(opts.accessTokenJwks as never), {
       issuer: opts.issuer,
       audience: `${opts.issuer}/token`,
       typ: CHILD_GRANT_TYP,
@@ -3685,7 +3680,9 @@ const LIFECYCLE_OPERATION_CAPABILITY: Readonly<Record<string, ProviderCapability
 function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const { kernel } = opts;
   const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
-  const jwksResolver = createLocalJWKSet(opts.publicJwks as never);
+  // @spec #831 (role binding): introspection resolves an access token under
+  // the access-token key alone, never another AS role's key.
+  const jwksResolver = createLocalJWKSet(opts.accessTokenJwks as never);
   // @spec txn-authorization#two-phase-expiry — the admitted pending workflows.
   const txnWorkflows = newTxnWorkflows();
   // @spec deferred-approval#front-channel: where Deferred Mission Approval is
@@ -5507,7 +5504,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           issuer: opts.issuer,
           kernel,
           clients: opts.clients,
-          publicJwks: opts.publicJwks as { keys: JWK[] },
+          accessTokenJwks: opts.accessTokenJwks as { keys: JWK[] },
           dpopProofReplay: opts.dpopProofReplay as DpopProofReplay,
           // @spec txn-authorization#challenge-redemption — the SAME liveness
           // path introspection answers from: the issuance index resolves the
