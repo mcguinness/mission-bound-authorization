@@ -142,6 +142,7 @@ export {
   GateError,
   LifecycleConflictError,
   MissionNotFoundError,
+  MissionStateUnavailableError,
   ObservationWatermarkError,
   StaleVersionError,
   STATUS_SIGNING_ALG,
