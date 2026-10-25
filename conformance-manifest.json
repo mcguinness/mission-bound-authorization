@@ -15663,9 +15663,21 @@
      "name": "Mission Lifecycle endpoint transient failures (@spec status#idempotency, status#mission-status-errors, #1191) > answers a failure inside the transition unavailable (503), retains nothing, and a same-nonce retry is processed afresh and succeeds",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-commit-ordering.test.ts",
+     "name": "a lifecycle transition is committed before its acknowledgement is released (@spec status#lifecycle-processing, #1659 D771) > holds no open transaction at response release, and the committed rows already carry the transition, its version and the claimed nonce; the retransmit replays with no second transition",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-commit-ordering.test.ts",
+     "name": "a lifecycle transition is committed before its acknowledgement is released (@spec status#lifecycle-processing, #1659 D771) > runs on a WAL store with synchronous NORMAL, under which a committed transaction survives a process crash",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1535 finding 9 (D649, -01). Mutation: answering a failed commit with 200 fails the cited test (expected 200 to be 503). Partial (#1638 review): the cited test proves only that a transition whose commit throws inside the transaction is never acknowledged. That a successful commit is durable before the 200 is sent (the store's flush, and the ordering of commit and response under a successful commit) is not witnessed."
+   "notes": "#1535 finding 9 (D649, -01). Mutation: answering a failed commit with 200 fails the cited test (expected 200 to be 503). Partial (#1638 review; #1659, D771): the failure path is the first cited test. The ordering witness, on a file-backed store, reads at response release (where send() retains the bytes it delivers), not at signing, through a second connection rather than the writing one: the writing connection holds no open transaction, and the second connection already sees the transition, its version and the claimed nonce. Mutation: releasing the acknowledgement inside the transition's transaction fails it on the open transaction, and, with that assertion removed, on the second connection's read (state active, version 1). The configuration witness asserts WAL with synchronous NORMAL, under which a committed transaction survives a process crash but an operating-system crash or power loss can lose the most recent commits; it is process-crash evidence, not proof against arbitrary hardware failure. A file-backed crash/restart witness is required before tested."
   },
   {
    "id": "status.lifecycle.final-check-not-suspension",
@@ -19774,11 +19786,11 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "after a current schedule's deadline, a read and a lifecycle request each see the state on_expiry produces, whether or not the timer has run: a due schedule is applied before the read answers or the request is judged",
-    "local": "applyExpiry projects expiry, then applyDueSchedule commits the owed transition; expiry's precedence over a deadline is status.lifecycle.schedule-expiry-governs"
+    "normative": "after a current schedule's deadline, a read, a lifecycle request and a token release each see the state on_expiry produces, whether or not the timer has run: a due schedule is applied before the read answers or the request is judged, the release fence refuses a due revocation of the Mission or an ancestor without committing it, and a due transition that cannot be persisted is answered unavailable, never with the stored state",
+    "local": "applyExpiry projects expiry, then applyDueSchedule commits the owed transition; when that write fails it re-reads the row, re-evaluates a concurrent update and otherwise throws MissionStateUnavailableError (Status 503 unavailable, token endpoint temporarily_unavailable). The release fence reads observedForRelease, a read-only projection of a due revoke over the Mission and its ancestors that writes nothing. Expiry's precedence over a deadline is status.lifecycle.schedule-expiry-governs"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
@@ -19791,9 +19803,63 @@
      "name": "suspension schedule deadlines (@spec status#mission-lifecycle-endpoint, status#legal-transitions, status#state-machine, #1002) > serializes a deadline with a manual transition: whichever commits first decides, and the other acts on the state it left",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/release-fence-due-schedule.test.ts",
+     "name": "the release fence projects a due revocation schedule read-only (@spec status#mission-lifecycle-endpoint, mission#issuance-gating, #1659 D771) > refuses a token whose Mission's revocation deadline is reached, exactly, after the gate, mission_error revoked, and writes nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/release-fence-due-schedule.test.ts",
+     "name": "the release fence projects a due revocation schedule read-only (@spec status#mission-lifecycle-endpoint, mission#issuance-gating, #1659 D771) > refuses a Child Mission's release when its parent's revocation deadline has passed, as parent_terminated, writing neither row",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/release-fence-due-schedule.test.ts",
+     "name": "the release fence projects a due revocation schedule read-only (@spec status#mission-lifecycle-endpoint, mission#issuance-gating, #1659 D771) > releases when the deadline that passed belongs to a schedule an authorized replacement superseded",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/release-fence-due-schedule.test.ts",
+     "name": "the release fence projects a due revocation schedule read-only (@spec status#mission-lifecycle-endpoint, mission#issuance-gating, #1659 D771) > lets expiry govern a revocation deadline at expires_at: the release is refused mission_error expired, never revoked, and nothing is written",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/release-fence-due-schedule.test.ts",
+     "name": "the release fence projects a due revocation schedule read-only (@spec status#mission-lifecycle-endpoint, mission#issuance-gating, #1659 D771) > releases a token whose derivation passed its gate and whose Mission's due schedule is a resume, as a suspension committed after the gate does",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "a due schedule whose transition cannot be persisted (@spec status#mission-lifecycle-endpoint, status#mission-status-errors, #1659 D771) > answers a Status read unavailable (503) while a due resume cannot be written, never the stored suspended state, and active once the write succeeds",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "a due schedule whose transition cannot be persisted (@spec status#mission-lifecycle-endpoint, status#mission-status-errors, #1659 D771) > answers a Status read unavailable (503) while a due revoke cannot be written, then terminated revoked at its deadline once the write succeeds",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/suspension-schedule.test.ts",
+     "name": "a due schedule whose transition cannot be persisted (@spec status#mission-lifecycle-endpoint, status#mission-status-errors, #1659 D771) > reports the state another request committed when the due write loses the race, never unavailable",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/release-fence-due-schedule.test.ts",
+     "name": "issuance fails closed when a due transition cannot be persisted (@spec status#mission-lifecycle-endpoint, mission#issuance-gating, #1659 D771) > refuses a refresh temporarily_unavailable while a due resume cannot be written, consuming nothing, and serves the retry once storage accepts it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1535 finding 11 (D649, -01). Partial: the reference commits a due schedule on any read through applyExpiry (status observation, the issuance gates, transitions), but the token release fence reads the record without projecting a due schedule (kernel.ts: \"a due schedule is never projected\"), so a revoke deadline passing between a derivation's gate and its release is not treated as reached there. The gate itself applies the due schedule first. The residual also covers a persistence failure (#1638 review): applyDueSchedule commits the owed transition, and if that write fails the read reports the stored row, so a due resume whose write failed was reported suspended in the owner's probe; the deadline-effective state is not maintained when persisting the due transition fails."
+   "notes": "#1535 finding 11 (D649, -01). Tested (#1659, D771): the release fence projects a due revoke read-only over the Mission and its ancestors, and a due transition whose write fails is answered unavailable at the Status operation and temporarily_unavailable at the token endpoint, signing no stale state. Mutations: a fence that does not project the due revoke fails the exact-deadline and ancestor tests (the token is released; the child release is not refused); answering a failed write from the stored row fails the two Status 503 tests and the refresh 503 test (a signed stale state, and 400 suspended instead of 503). The superseded-schedule, expiry-precedence and due-resume tests are controls that pass under both mutations."
   },
   {
    "id": "status.lifecycle.schedule-late-delivery-expiry",
