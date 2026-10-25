@@ -2125,6 +2125,9 @@ export class McpPaymentsServer {
       // @spec authzen#obligation-processing (#1640): the obligations this
       // permit's PEP fulfilled before release.
       ...(attempt.obligationOutcomes ? { obligation_outcomes: attempt.obligationOutcomes } : {}),
+      // @spec runtime-evidence#evidence-extensions `work_item` (#815): the
+      // work item the PEP attributed to this request.
+      ...(attempt.workItem ? { work_item: attempt.workItem } : {}),
       ...(token.jti
         ? {
             hop_reference: {
