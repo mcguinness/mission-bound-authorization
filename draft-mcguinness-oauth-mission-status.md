@@ -524,8 +524,9 @@ The members are:
     state space is the issuance profile's
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
     Lifecycle"): `active` and `terminated`, this profile's `suspended`
-    when the Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}})
-    is deployed, and any further state a companion profile defines and
+    when the Mission Lifecycle endpoint's `suspend` operation
+    ({{lifecycle-operations}}) is deployed, and any further state a
+    companion profile defines and
     the deployment runs. A consumer applies the issuance profile's
     forward-compatibility rule: only `active` permits reliance, and
     every other value, recognized or not, is non-active. This
@@ -885,11 +886,12 @@ distinct from {{RFC7009}} token revocation. The endpoint MUST be
 served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
 recommendations of {{RFC9325}}.
 
-Adopting this endpoint extends the issuance profile's lifecycle state
-space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Lifecycle") with one additional state, `suspended` (a
-paused Mission that derives no tokens until resumed), and one
-termination reason, `completed` (the Mission completed
+This endpoint's operations extend the issuance profile's lifecycle
+state space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+Lifecycle"), each value arriving with the operation that introduces
+it ({{conformance}}): `suspend` adds one state, `suspended` (a paused
+Mission that derives no tokens until resumed), and `complete` adds
+one termination reason, `completed` (the Mission completed
 successfully).
 Issuance gating treats any state other than `active` as
 non-deriving, exactly as the issuance profile gates on `active`.
