@@ -49743,7 +49743,7 @@
     "normative": "an RS enforcing more than one applicable mission_resource_access entry treats them as alternative grants, not a conjunctive filter."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
@@ -49786,9 +49786,21 @@
      "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > a read authorizes through a later unconstrained entry beside one whose tenant fact the record lacks",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > a write authorizes through a later entry whose max_amount admits the amount",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > a transaction-assured operation authorizes and commits through a later entry whose max_amount admits the amount",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed at the SaaS resource (review on PR #1298): an unconstrained entry authorizes beside one SaaS cannot enforce, and each of two entries authorizes its own action. In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646: at the payments resource the alternative-grant behavior is witnessed for reads (a vendor-scoped list read relies on an entry that admits the vendor, at decision and reverification; a read relies on an unconstrained entry beside one missing its tenant fact; a vendor from one entry and a tenant from another never combine) and at the PDP, not across every operation the resource serves (writes, transaction-assured operations)."
+   "notes": "Witnessed at the SaaS resource (review on PR #1298): an unconstrained entry authorizes beside one SaaS cannot enforce, and each of two entries authorizes its own action. In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646 until writes and transaction-assured operations were witnessed; they now are (#1375): at the payments resource a read, a vendor-scoped list read, a write (schedule_payment) and a transaction-assured operation (execute_wire_transfer, committing one ledger entry) each authorize through a later entry that covers them whole, and parts of two entries never combine for any of them. No PEP path selects an entry: the list-scope derivation was the only one (#1646); every other operation's decision is the PDP's, which weighs each applicable entry. Proved by mutation: judging max_amount, or the Common Constraints, on the first applicable entry only fails these witnesses."
   },
   {
    "id": "resource-access.rs-enforcement.resource-match-unrecognized-fail-closed",
@@ -50213,7 +50225,7 @@
     "normative": "a request is authorized only through one applicable entry that covers it whole with every constraint satisfied; an independently sufficient alternative entry authorizes, none refuses, and parts of entries never combine"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
@@ -50268,9 +50280,27 @@
      "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > never combines parts of two entries: one admitting the vendor and another the tenant authorize nothing",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > a write authorizes through a later entry whose max_amount admits the amount",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > a transaction-assured operation authorizes and commits through a later entry whose max_amount admits the amount",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > never combines parts of two entries for a write or a transaction-assured operation: one admitting the amount and another the tenant authorize nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1375. Witnessed at the helper the payments PEP calls; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Vector cases cc-satisfaction-* still skip: the case reader has no rs-authorize executor. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646: at the payments resource the alternative-grant behavior is witnessed for reads (a vendor-scoped list read relies on an entry that admits the vendor, at decision and reverification; a read relies on an unconstrained entry beside one missing its tenant fact; a vendor from one entry and a tenant from another never combine) and at the PDP, not across every operation the resource serves (writes, transaction-assured operations)."
+   "notes": "#1375. Witnessed at the helper the payments PEP calls; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Vector cases cc-satisfaction-* still skip: the case reader has no rs-authorize executor. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646 until writes and transaction-assured operations were witnessed; they now are (#1375): at the payments resource a read, a vendor-scoped list read, a write (schedule_payment) and a transaction-assured operation (execute_wire_transfer, committing one ledger entry) each authorize through a later entry that covers them whole, and parts of two entries never combine for any of them. No PEP path selects an entry: the list-scope derivation was the only one (#1646); every other operation's decision is the PDP's, which weighs each applicable entry. Proved by mutation: judging max_amount, or the Common Constraints, on the first applicable entry only fails these witnesses."
   },
   {
    "id": "resource-access.common-constraints.max-amount-currency-no-intersection",
@@ -55030,6 +55060,12 @@
     {
      "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
      "name": "the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375) > never combines parts of two entries: one admitting the vendor and another the tenant authorize nothing",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "writes and transaction-assured operations rely on whichever applicable entry covers them whole (@spec resource-access#rs-enforcement, #1375) > never combines parts of two entries for a write or a transaction-assured operation: one admitting the amount and another the tenant authorize nothing",
      "level": "endpoint",
      "surface": "resource-operation"
     }
