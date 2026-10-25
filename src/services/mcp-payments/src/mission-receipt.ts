@@ -432,7 +432,46 @@ export type ReceiptVerifyFailure =
   /** Step 6: a predecessor's chain.sequence is not strictly less than this receipt's. */
   | "chain_sequence_violation";
 
-export type ReceiptVerifyResult = { valid: true; unauthorized_execution?: true } | { valid: false; reason: ReceiptVerifyFailure };
+/**
+ * @spec runtime-evidence#context-drift-classification, runtime-evidence#toctou-and-parameter-binding
+ * (#773): the digest pairs of the verified Execution Evidence that diverge,
+ * each reported on its own: "The audit consumer reports each divergent pair
+ * whatever the `error`." A pair diverges only when both of its members are
+ * present and unequal; an absent effective member is a comparison that was
+ * not made, never a divergence and never equality.
+ */
+export interface ReceiptDivergence {
+  parameter?: true;
+  evaluation_context?: true;
+}
+
+export type ReceiptVerifyResult =
+  | { valid: true; unauthorized_execution?: true; divergence?: ReceiptDivergence }
+  | { valid: false; reason: ReceiptVerifyFailure };
+
+/**
+ * @spec runtime-evidence#context-drift-classification (#773): the digest
+ * pairs of one Execution Evidence record that diverge, each on its own and
+ * independently of the record's `error`. A pair diverges only when both of
+ * its members are present and unequal. The one classification the receipt
+ * verifier applies.
+ */
+export function executionDivergence(record: Pick<
+  ExecutionEvidenceObject,
+  | "authorized_parameter_digest"
+  | "effective_parameter_digest"
+  | "authorized_evaluation_context_digest"
+  | "effective_evaluation_context_digest"
+>): ReceiptDivergence {
+  const diverges = (authorized: string | undefined, effective: string | undefined): boolean =>
+    authorized !== undefined && effective !== undefined && authorized !== effective;
+  return {
+    ...(diverges(record.authorized_parameter_digest, record.effective_parameter_digest) ? { parameter: true as const } : {}),
+    ...(diverges(record.authorized_evaluation_context_digest, record.effective_evaluation_context_digest)
+      ? { evaluation_context: true as const }
+      : {}),
+  };
+}
 
 const CTY_FOR: Record<ReceiptResolvedRecord["type"], string> = {
   decision: DECISION_EVIDENCE_MEDIA_TYPE,
@@ -679,6 +718,14 @@ async function verifyReceipt(
     if (executionRec.authorized_parameter_digest !== decisionRec.parameter_digest) {
       return { valid: false, reason: "join_failure" };
     }
+    // @spec runtime-evidence#execution-evidence-object
+    // `authorized_evaluation_context_digest` (#773): "REQUIRED when the linked
+    // Decision Evidence carries `evaluation_context_digest`; MUST equal it,
+    // and MUST be absent when the linked record carries no such digest", the
+    // same two-way mirror as the parameter pair.
+    if (executionRec.authorized_evaluation_context_digest !== decisionRec.evaluation_context_digest) {
+      return { valid: false, reason: "join_failure" };
+    }
   }
   if (receipt.kind === "execution" && executionRec && receipt.outcome !== executionRec.outcome) {
     return { valid: false, reason: "join_failure" };
@@ -768,8 +815,24 @@ async function verifyReceipt(
     }
   }
   // Step 7 (reject on any failure) is realized by every early return above.
-  const deviation = executionRec && executionRec.outcome !== "suppressed" &&
-    executionRec.authorized_parameter_digest !== undefined &&
-    executionRec.authorized_parameter_digest !== executionRec.effective_parameter_digest;
-  return { valid: true, ...(deviation ? { unauthorized_execution: true as const } : {}) };
+  //
+  // @spec runtime-evidence#context-drift-classification (#773): each digest
+  // pair is classified on its own, independently of the record's `error`
+  // and of its outcome. A pair diverges only when both members are present
+  // and unequal: an absent effective digest is an unavailable comparison.
+  const divergent = executionRec !== undefined ? executionDivergence(executionRec) : {};
+  const parameterDiverges = divergent.parameter === true;
+  const contextDiverges = divergent.evaluation_context === true;
+  // An executed record (completed or failed) with either pair diverging is an
+  // unauthorized execution; a suppressed one is the refusal working.
+  const deviation = executionRec !== undefined && executionRec.outcome !== "suppressed" && (parameterDiverges || contextDiverges);
+  const divergence: ReceiptDivergence = {
+    ...(parameterDiverges ? { parameter: true as const } : {}),
+    ...(contextDiverges ? { evaluation_context: true as const } : {}),
+  };
+  return {
+    valid: true,
+    ...(deviation ? { unauthorized_execution: true as const } : {}),
+    ...(parameterDiverges || contextDiverges ? { divergence } : {}),
+  };
 }

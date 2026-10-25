@@ -61,13 +61,15 @@ export function vendorTestCases(revokedInstances: Set<string>): {
       case: {
         id: "vt-parameters",
         suite: "adversarial",
-        description: "Valid token, permitted at decision, but parameters mutate before commit.",
+        description: "Valid token, permitted at decision, but the invoice it binds moves before commit.",
         tool: "execute_wire_transfer",
         args: { invoice_id: "inv-acme" },
         token: () => validToken(),
         beforeCommit: (store) => store.bumpInvoiceAmount("inv-acme", "499.00"),
         expect: "deny",
-        expectReason: "parameter_mismatch",
+        // @spec runtime#evaluation-context-binding (#773): a moved declared
+        // fact under the claimed binding is target_drift.
+        expectReason: "target_drift",
         consequential: true,
       },
     },

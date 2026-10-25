@@ -189,6 +189,24 @@ export {
   newDpopProofReplay,
 } from "./dpop-replay.js";
 export {
+  EVALUATION_CONTEXT_BINDING_EXTENSION,
+  EVALUATION_CONTEXT_GRANULARITIES,
+  EVALUATION_CONTEXT_PROPERTIES,
+  EvaluationContextBindingConfigError,
+  EvaluationContextBindingDeclarations,
+  type EvaluationContextBindingRef,
+  type EvaluationContextDescriptor,
+  type EvaluationContextDescriptorResolution,
+  type EvaluationContextFact,
+  type EvaluationContextGranularity,
+  type EvaluationContextOperation,
+  type EvaluationContextProperty,
+  evaluationContextBindingViolation,
+  isEvaluationContextBindingRef,
+  isEvaluationContextDigest,
+  sameEvaluationContextBinding,
+} from "./evaluation-context.js";
+export {
   canonicalIdempotencyScope,
   IDEMPOTENCY_KEY_PATTERN,
   IDEMPOTENCY_SCOPE_DIMENSIONS,

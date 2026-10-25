@@ -18,6 +18,7 @@ import {
   computeAnchor,
   containmentSelectorViolation,
   DuplicateMemberError,
+  EvaluationContextBindingDeclarations,
   GOVERNED_POLICY_TYP,
   isAbsoluteUri,
   isActionPhase,
@@ -525,6 +526,21 @@ export const RESOURCE_CONTRACTS: ResourceContractDeclarations = (() => {
     .extensions as Record<string, unknown> | undefined;
   try {
     return new ResourceContractDeclarations(extensions?.resource_contracts ?? []);
+  } catch (e) {
+    throw new ConfigError("enforcement-scope.json", `extensions.${(e as Error).message}`);
+  }
+})();
+/**
+ * @spec runtime#evaluation-context-binding (#773): the statement's
+ * Evaluation-Context Binding claim and declaration, validated at load: every
+ * descriptor document hashes to its reference, and a claim names its covered
+ * classes, operations and descriptors. The one trusted source the PDP
+ * (validation, the echoed condition) and the PEP (capture and reverification)
+ * read. Without the statement's claim it covers nothing.
+ */
+export const EVALUATION_CONTEXT_BINDING: EvaluationContextBindingDeclarations = (() => {
+  try {
+    return new EvaluationContextBindingDeclarations(RUNTIME_SCOPE_CONFIG);
   } catch (e) {
     throw new ConfigError("enforcement-scope.json", `extensions.${(e as Error).message}`);
   }
