@@ -35,7 +35,7 @@ import {
   stalenessBound,
 } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -409,6 +409,10 @@ describe("compound-action phase carriers on the decision (@spec authzen#context-
     stalenessBound,
     relationForAction,
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+    // #773: a deployment that does not claim Evaluation-Context Binding; this
+    // file's subject is another input, and the claimed path has its own
+    // witnesses (evaluate-evaluation-context.test.ts).
+    evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
   });
 
   it("echoes the validated request phase as the permit's conditions.action_phase", async () => {

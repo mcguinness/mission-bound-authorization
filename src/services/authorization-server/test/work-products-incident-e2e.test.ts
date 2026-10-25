@@ -49,7 +49,7 @@ import {
 import { exportJWK, generateKeyPair } from "jose";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { withCredential } from "../../pdp/test/with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -143,7 +143,18 @@ const evalAction = async (missionId: string, action: string) => {
         amount: { amount: "100.00", currency: "USD" },
       },
     },
-    { view, fga, modelId, now: () => new Date(), stalenessBound, relationForAction, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE },
+    {
+      view,
+      fga,
+      modelId,
+      now: () => new Date(),
+      stalenessBound,
+      relationForAction,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+      // #773: this direct PDP call stands for a deployment that does not claim
+      // Evaluation-Context Binding; the claimed path has its own witnesses.
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+    },
   );
 };
 

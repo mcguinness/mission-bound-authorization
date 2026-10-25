@@ -9,6 +9,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
+  type KernelStoreConfig,
   APPROVER_LOGIN_CALLBACK_PATH,
   ApprovalSessionStore,
   type AuthorityEntry,
@@ -392,7 +393,7 @@ export async function composeStack(opts: {
    * a key ring. The composition creates the file's directory; whoever
    * composed the stack closes the kernel (`DemoStack.kernel.close()`).
    */
-  kernelStore?: { file: string };
+  kernelStore?: KernelStoreConfig;
   /**
    * @spec runtime#boundary-identifier-change (#853 review): the Enforcement
    * Scope Statement this stack runs under, validated by `loadRuntimePosture`.

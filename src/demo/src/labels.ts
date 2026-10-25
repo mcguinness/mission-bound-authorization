@@ -50,6 +50,7 @@ export const REASON_LABELS: Record<string, string> = {
   egress_destination_unlisted: "Destination not on the declared egress allowlist",
   unknown_mission: "Mission not recognized by the enforcement point",
   parameter_mismatch: "Parameters changed after the decision (time-of-check vs time-of-use)",
+  target_drift: "The target changed after the decision (a bound evaluation-context fact moved)",
   view_inconsistent: "Token's mission view doesn't match the authorization server",
   invalid_credential: "Missing or invalid mission credential",
   mission_not_active: "Mission is not active (suspended or terminated)",
