@@ -444,8 +444,20 @@ the payee account, plus the final recipient set for
 `payments:remittance.send`. Each fact names the parameter member it also
 occupies, since the parameter digest above keeps binding the same values.
 
+The compensate crossing `reverse_wire_transfer` (`payments:payment.reverse`,
+an `irreversible_action`) is covered too, under its own descriptor. Its
+facts describe the reversal it performs, read from the committed wire's
+ledger record through the link the PEP established (#252): the vendor the
+wire paid, its amount and currency, its payee, and the operation key it
+committed under, with the invoice and vendor that record names as the
+targets. None is read from the invoice as it reads now, so an invoice that
+changes after its wire committed leaves the context unchanged, and a
+changed or missing ledger record is `target_drift`. The request carries
+`compensates_evaluation_id` beside the context members.
+
 Every crossing of a covered operation captures its context from the
-payments store before the decision request (a capture that fails is
+payments store, or the compensate crossing from the ledger record, before
+the decision request (a capture that fails is
 refused `evaluation_context_unresolvable`) and re-resolves it at admission
 and immediately before release, on all three dispatch paths. A change
 confined to the declared facts is `target_drift`; a changed member the
