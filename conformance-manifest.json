@@ -341,9 +341,28 @@
     "normative": "a deployment claiming the extension publishes the covered classes and operations, each operation's versioned binding descriptor, and which of the verified or enforced property it reaches"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-posture.test.ts",
+     "name": "the Evaluation-Context Binding declaration is refused at load unless complete (@spec runtime#evaluation-context-binding, #773) > admits the shipped declaration, publishing each covered operation's class, descriptor reference and the verified property",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-posture.test.ts",
+     "name": "the Evaluation-Context Binding declaration is refused at load unless complete (@spec runtime#evaluation-context-binding, #773) > a claiming class without an operation, a descriptor or a resolver is refused at load",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the shipped declaration and the Operation Profile agree (@spec runtime#evaluation-context-binding, #773) > every crossing of a covered class is a covered operation, and every covered crossing captures under the shipped descriptors",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#773. The shipped statement claims the extension and publishes extensions.evaluation_context_binding: covered classes irreversible_action and external_commitment, the covered operations (payments:payment.execute with its preflight, prepare and commit crossings, and payments:remittance.send), each operation's descriptor reference, and the verified property; the loader refuses a claim lacking a declaration, an operation, a covered class's operation, a descriptor or a fact's resolver. The PEP-side test checks the profile and the published declaration agree. Mutations: publishing enforced with a declared precondition fails the admission test (C3); dropping the loader's findings (L20) or the covered-class check (L25) fails the refusal test; uncovering the commit crossing fails the agreement test (C1)."
   },
   {
    "id": "runtime.evaluation-context.descriptor-bytes-immutable",
@@ -363,9 +382,22 @@
     "normative": "re-resolving a published `{id, version}` reference returns byte-identical descriptor content whose digest still equals the reference's `digest`; a revised descriptor is published under a new version rather than replacing those bytes"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/runtime-posture.test.ts",
+     "name": "the Evaluation-Context Binding declaration is refused at load unless complete (@spec runtime#evaluation-context-binding, #773) > refuses at load a descriptor whose published bytes no longer hash to its reference",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > the descriptor reference is committed inside the digest with the Mission, the operation, the targets, the facts and the salt",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#773. Each declared descriptor document is hashed at load and one that no longer hashes to its reference is refused, claimed or not (L23), and the PEP re-hashes the document when it resolves a reference; a revised descriptor is published under a new version, whose different reference changes the committed digest over the same facts (the composition test). Mutations: L23 fails the load test; M5 fails the composition test."
   },
   {
    "id": "runtime.evaluation-context.descriptor-binding",
@@ -385,9 +417,22 @@
     "normative": "the descriptor reference is committed inside the context digest, so an Operation Profile update cannot reinterpret an outstanding permit"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > the descriptor reference is committed inside the digest with the Mission, the operation, the targets, the facts and the salt",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are target_drift: the parameter pair equal, the context pair present and unequal",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#773. The committed object is reconstructed member for member (descriptor reference, Mission, operation and phase, targets, facts, salt and version) and its canonical-object digest equals the one sent; a republished descriptor over unchanged facts commits a different digest, and a permit decided under the earlier reference is refused target_drift at use. Mutation M5 (reference not committed) fails both."
   },
   {
    "id": "runtime.evaluation-context.capture-authoritative",
@@ -407,9 +452,22 @@
     "normative": "every declared fact is read from the resource's authoritative interface; an agent-supplied value is never accepted as one of those observations"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > agent-supplied values never enter the capture: the facts are the store's, whatever the arguments carry",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > the descriptor reference is committed inside the digest with the Mission, the operation, the targets, the facts and the salt",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#773. The PEP resolves every declared fact from the payments store records the request's invoice names: arguments naming the authoritative facts (amount, payee_account, invoice_version) do not change the captured digest, while a change to the store's record does; the composition test shows the committed facts are the store's values. Mutation M6 (an argument entering the commitment) fails the first."
   },
   {
    "id": "runtime.evaluation-context.preserve-approval-and-operation-bindings",
@@ -429,9 +487,16 @@
     "normative": "adopting the extension leaves the approval-to-decision, transaction-token, parameter, and operation-idempotency bindings intact, so no earlier approval or operation identity authorizes changed effect parameters"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "claim applicability: covered, uncovered and non-claiming (@spec runtime#evaluation-context-binding, authzen#response-context, #773) > the parameter digest, the operation key and so the approval and transaction-token bindings are unchanged by the claim",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#773. Additive binding: the claimed and unclaimed deployments send byte-identical parameter_digest and derive the same operation key for one wire, so every consumer keyed on them (action-bound approvals, transaction challenges and tokens, operation idempotency) is unchanged. partial: the parameter and operation-idempotency clauses are witnessed directly; the approval-to-decision and transaction-token clauses rest on those unchanged bytes and are not separately witnessed under the claim. The witness is the equality itself; no mutation of the binding code is specific to it."
   },
   {
    "id": "runtime.evaluation-context.salt-recovery",
@@ -451,9 +516,40 @@
     "normative": "a binding whose salt or descriptor cannot be recovered fails closed; neither is silently replaced with a fresh value"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on check_transfer (read path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on hold_transfer (write path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on execute_wire_transfer (transaction path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on send_remittance_email (transaction path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unrecoverable descriptor or salt is target_drift with the effective context digest absent and the parameter pair kept",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773 ruling 1. Per-epoch salt: each version is in-memory random material under a random identifier, so a restarted keeper holds none of an earlier one's versions and the binding is never recomputed under a substitute; it is refused target_drift with the effective context digest absent on every covered dispatch path. A descriptor that no longer applies at use (the declaration withdrawn) is the same refusal. Mutations: M4 (recompute under the current salt) fails the absent-digest assertion of all four restart tests and the unrecoverable test; removing the context check at use (M1+M2) fails them outright. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
   },
   {
    "id": "runtime.evaluation-context.pdp-returns-supplied-digest",
@@ -473,9 +569,22 @@
     "normative": "a covered permit carries as its context condition the digest the request supplied, echoed from the PEP's observation rather than recomputed by the PDP; the salt remains unavailable to the PDP, while authoritative facts remain available wherever its policy needs their values"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "the PDP echoes the validated context digest and records the binding (@spec authzen#response-context, runtime#evaluation-context-binding, runtime-evidence#decision-evidence-object, #773) > returns the supplied digest as the permit condition, unrecomputed, and Decision Evidence records the same digest and the descriptor reference",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "the PDP validates the evaluation-context inputs of a covered operation before evaluation (@spec authzen#context-evaluation-binding, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #773) > the remote PDP refuses unusable inputs before evaluation with a signed Refusal Record, and a caller's options cannot remove its declaration",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773. A covered permit's conditions.evaluation_context_digest is the request's digest, echoed verbatim (an arbitrary well-formed value the PDP could not compute), over the in-process and remote decision paths; the signed record carries no salt. partial: the clause that authoritative facts remain available to policy rests on the unchanged parameter and attribute inputs and is not separately witnessed. Mutation P14 (no echo) fails the remote test's echo assertion cleanly; in process it trips the emitter's equality guard."
   },
   {
    "id": "runtime.evaluation-context.reverify-and-fail-closed",
@@ -495,9 +604,40 @@
     "normative": "a missing binding, a changed descriptor, an unequal digest, or an unavailable fact refuses before any effect is released"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "claim applicability: covered, uncovered and non-claiming (@spec runtime#evaluation-context-binding, authzen#response-context, #773) > a covered operation whose permit lacks the context condition is refused target_drift with zero effects",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are target_drift: the parameter pair equal, the context pair present and unequal",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a moved authoritative fact on a covered operation is target_drift: zero effects, both digest pairs recorded and each unequal",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a declared fact that stops resolving at use is target_drift with no effective context digest, though the parameters still resolve",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unrecoverable descriptor or salt is target_drift with the effective context digest absent and the parameter pair kept",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773. Each clause refuses before any effect: a permit lacking the condition (M9), a changed descriptor (M5, M1+M2), an unequal digest after a moved fact (M2), and an unavailable fact while the parameters still resolve (M1+M2 turns it into parameter_mismatch) or an unrecoverable salt or descriptor (M4, M1+M2). Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
   },
   {
    "id": "runtime.evaluation-context.per-phase-capture",
@@ -517,9 +657,46 @@
     "normative": "each consequential phase captures and checks context under its own permit, never carrying another phase's permit or context, and a fact declared prepare-stable is also compared across prepare and commit"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "every phase captures and checks its own context, on every dispatch path (@spec runtime#evaluation-context-binding, runtime#compound-actions, #773) > each crossing of the compound action commits its own phase: one parameter digest, three distinct context digests",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "every phase captures and checks its own context, on every dispatch path (@spec runtime#evaluation-context-binding, runtime#compound-actions, #773) > a fact moved in check_transfer's own window is refused target_drift on the read path, with zero effects",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "every phase captures and checks its own context, on every dispatch path (@spec runtime#evaluation-context-binding, runtime#compound-actions, #773) > a fact moved in hold_transfer's own window is refused target_drift on the write path, with zero effects",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "every phase captures and checks its own context, on every dispatch path (@spec runtime#evaluation-context-binding, runtime#compound-actions, #773) > a fact moved in execute_wire_transfer's own window is refused target_drift on the transaction path, with zero effects",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "every phase captures and checks its own context, on every dispatch path (@spec runtime#evaluation-context-binding, runtime#compound-actions, #773) > a fact moved in send_remittance_email's own window is refused target_drift on the transaction path, with zero effects",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "every phase captures and checks its own context, on every dispatch path (@spec runtime#evaluation-context-binding, runtime#compound-actions, #773) > a commit permit whose context condition is the prepare crossing's binding is refused target_drift",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#773 ruling 5. Each crossing of payments:payment.execute captures its own context with its own phase committed (one parameter digest, three context digests) and is checked at its own use on its own dispatch path (read, write, transaction), as is payments:remittance.send; a commit permit carrying the prepare crossing's context binding is refused. partial: the prepare-stable SHOULD is not implemented, and the descriptor reader refuses any member it does not implement, so no fact can be declared prepare-stable. Mutations: M23 (phase not committed) fails the distinct-digest and prepare-on-commit tests; M1 fails the read-path test and M2 the write and transaction tests. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
   },
   {
    "id": "runtime.evaluation-context.atomic-enforced-property",
@@ -541,7 +718,7 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "notes": "#773 ruling 5: the enforced property is not claimed; the shipped declaration publishes verified for both operations. The loader refuses an enforced declaration whose operation asserts no evaluation_context_enforced execution capability (witnessed on runtime.execution-capabilities.enforced-context-needs-conditional-effect); no atomic resource-side comparison exists in the reference, so this row has no witness."
   },
   {
    "id": "authzen.profiles.transaction-assurance-required-for-bound-classes",
@@ -584,9 +761,22 @@
     "normative": "a decision request for a covered operation carries both the context digest and the versioned descriptor reference"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > the decision request of a covered crossing carries the context digest and the descriptor reference, built by the PEP alone",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > a covered crossing sends the context digest and the descriptor reference, and executes when the context is unchanged",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#773. A covered crossing's decision request carries context.evaluation_context_digest and context.evaluation_context_binding (the declared descriptor reference), built by the PEP before any PDP sees it, and an uncovered crossing's carries neither; end to end the permit then executes. Mutation M27 (members omitted) fails both."
   },
   {
    "id": "authzen.context-evaluation-binding.pdp-validates-or-refuses-permit",
@@ -606,9 +796,22 @@
     "normative": "the PDP checks both inputs against the declared operation binding and issues no covered permit when either is missing, malformed, or incompatible with that declaration, refusing the request before evaluation (`evaluation_context_invalid`)"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact. Re-quoted at #1629 (D744 ruling 3): the refusal before evaluation is new text."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "the PDP validates the evaluation-context inputs of a covered operation before evaluation (@spec authzen#context-evaluation-binding, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #773) > refuses missing, malformed or incompatible inputs as evaluation_context_invalid: no decision, no Decision Evidence, no FGA check and no Resource policy query",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "the PDP validates the evaluation-context inputs of a covered operation before evaluation (@spec authzen#context-evaluation-binding, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #773) > checks the phase first: a request failing both is refused once, as phase_invalid",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#773. For a covered operation the PDP refuses, before evaluation and with no decision work, both inputs missing, either missing, an unprefixed or non-string digest, a non-object reference, a reference with an extra member, and one naming another version or digest than the declaration; the phase is checked first. Mutation P13 (no refusal) fails the first."
   },
   {
    "id": "authzen.response-context.evaluation-context-digest-equals-request",
@@ -628,9 +831,22 @@
     "normative": "the permit's context-digest condition equals the digest the request supplied and the PDP validated"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "the PDP echoes the validated context digest and records the binding (@spec authzen#response-context, runtime#evaluation-context-binding, runtime-evidence#decision-evidence-object, #773) > returns the supplied digest as the permit condition, unrecomputed, and Decision Evidence records the same digest and the descriptor reference",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > a covered crossing sends the context digest and the descriptor reference, and executes when the context is unchanged",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#773. The permit's condition equals the validated request digest at the PDP, and end to end the decision the PEP receives carries the digest its request sent. Mutation P14 fails both (in process through the emitter's equality guard, end to end as a refused permit)."
   },
   {
    "id": "evidence.decision.evaluation-context-digest-equals-condition",
@@ -650,9 +866,22 @@
     "normative": "Decision Evidence for a permit records the same context digest the live permit condition carries"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "the PDP echoes the validated context digest and records the binding (@spec authzen#response-context, runtime#evaluation-context-binding, runtime-evidence#decision-evidence-object, #773) > returns the supplied digest as the permit condition, unrecomputed, and Decision Evidence records the same digest and the descriptor reference",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "Decision Evidence never signs a context binding it did not establish (@spec runtime-evidence#decision-evidence-object, #773) > refuses to sign a permit whose recorded digest differs from the live condition",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773. A covered permit's signed Decision Evidence records the condition's digest and the descriptor reference, top level and outside conditions, and the emitter refuses to sign a permit whose recorded digest differs from the condition. Mutations: P15 (inputs not passed to the emitter) fails the first; P17 (equality guard removed) fails the second."
   },
   {
    "id": "evidence.decision.evaluation-context-malformed-input-omitted",
@@ -672,9 +901,16 @@
     "normative": "malformed binding input is left out of the signed record rather than recorded as an established binding"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "Decision Evidence never signs a context binding it did not establish (@spec runtime-evidence#decision-evidence-object, #773) > omits malformed context input from the signed record rather than recording it as an established binding",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773. An unprefixed digest, a digest without a reference, a reference with an extra member and one naming no URI are each left out of the signed record; established inputs are recorded. Mutation P16 fails it."
   },
   {
    "id": "evidence.execution.effective-evaluation-context-absent-when-unresolvable",
@@ -694,9 +930,408 @@
     "normative": "an unestablishable context leaves the effective digest absent rather than fabricated, and execution is suppressed with error target_drift"
    },
    "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on check_transfer (read path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on hold_transfer (write path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on execute_wire_transfer (transaction path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on send_remittance_email (transaction path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unrecoverable descriptor or salt is target_drift with the effective context digest absent and the parameter pair kept",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a declared fact that stops resolving at use is target_drift with no effective context digest, though the parameters still resolve",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unavailable fact is target_drift, with no invented comparison: both effective digests absent, both authorized digests kept",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773, unblocked by #786's suppression representation. A context the PEP cannot establish (a lost salt version on every covered dispatch path, a descriptor that no longer applies, a declared fact that stops resolving, a deleted invoice) leaves effective_evaluation_context_digest absent, never copied or invented, with error target_drift. Mutations: M4 fails the restart and unrecoverable tests on the absent-digest assertion; M1+M2 fails the fact-stops-resolving test (parameter_mismatch instead)."
+  },
+  {
+   "id": "runtime.evaluation-context.salt-rotation",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "Rotation MUST retain a version for the lifetime of every outstanding binding that uses it, or explicitly invalidate those bindings.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a binding made before a salt rotation still verifies at use under its retained version; one the rotation explicitly invalidated is refused before any effect"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a rotation retains the earlier version for an outstanding binding on every path, and an explicit invalidation refuses it",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#773 ruling 1. On each covered dispatch path, a rotation in the decision-to-use window leaves the binding verifying under its own version and the effect runs; a rotation that invalidates the earlier version refuses it target_drift with no effect. Mutations: M4 (recompute under the current version) fails the retained half; M1+M2 fails the invalidated half."
+  },
+  {
+   "id": "runtime.evaluation-context.unrecoverable-binding-refused-on-every-path",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "Every execution path that can use such a binding refuses it before any effect.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a binding whose salt or descriptor cannot be recovered is refused before any effect on every dispatch path that can use it"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on check_transfer (read path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on hold_transfer (write path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on execute_wire_transfer (transaction path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on send_remittance_email (transaction path): target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#773 ruling 1. A restart in the decision-to-use window (the salt keeper replaced by a fresh epoch) is refused target_drift before any effect on the read (check_transfer), write (hold_transfer) and transaction (execute_wire_transfer, send_remittance_email) paths. The check runs in the shared PERMIT_USE_CHECKS seam, so the keyed reversible-write paths apply it too, though no covered operation takes them. Mutation M1+M2 fails all four. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
+  },
+  {
+   "id": "runtime.evaluation-context.capture-failure-pre-decision",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "An inability to capture context before requesting a Decision produces a pre-decision Refusal Record, `evaluation_context_unresolvable`",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a covered crossing whose declared facts or salt cannot be captured before the decision request is refused with a Refusal Record evaluation_context_unresolvable and no decision request"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > an unresolvable fact or an unavailable salt refuses before the decision request, as a Refusal Record evaluation_context_unresolvable",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773 ruling 2. A declared fact the store cannot resolve (an empty payee account) and no live salt version each refuse before any decision request: one signed Refusal Record evaluation_context_unresolvable naming the invoice, no PDP request, no Decision Evidence, no Execution Evidence. Mutations: M7 (the capture failure proceeds) and M29 (mapped to state_unavailable) fail it."
+  },
+  {
+   "id": "runtime.evaluation-context.primary-error",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evaluation-context-binding",
+   "text": "Its `error` is `target_drift` unless the context is established and an agent-supplied parameter demonstrably changed, which is `parameter_mismatch`",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a context failure at use is recorded target_drift, except parameter_mismatch where the context was established and a parameter the descriptor does not declare as a fact changed"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a moved authoritative fact on a covered operation is target_drift: zero effects, both digest pairs recorded and each unequal",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an agent-supplied parameter that changed is parameter_mismatch, with both digest pairs recorded",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an agent-supplied parameter that changed while an authoritative fact also moved is parameter_mismatch, and the context divergence is still recorded",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unavailable context is target_drift even where an agent-supplied parameter also changed, and the parameter divergence is still recorded",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are target_drift: the parameter pair equal, the context pair present and unequal",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#773 ruling 3, Runtime's pointer to Runtime Evidence's Context Drift and Parameter Deviation. Witnesses and mutations as evidence.execution.context-drift-primary-error. The agent-supplied deviation is constructed at the PEP's own API (the parameter object the executor uses is changed between the permit and verifyPermitAtUse); the reference re-derives the parameters from the bound invoice, so no request through the server can change an agent-supplied parameter at use."
+  },
+  {
+   "id": "evidence.refusal.pep-evaluation-context-unresolvable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "`evaluation_context_unresolvable` (the runtime profile's Evaluation-Context Binding extension covers the operation, and the PEP cannot capture its authoritative evaluation context before requesting a decision)",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a PEP that cannot capture a covered operation's authoritative evaluation context before requesting a decision records a Refusal Record with denial_reason `evaluation_context_unresolvable` and requests no decision"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/refusal-denial-reason.test.ts",
+     "name": "the PEP maps every Refusal Record diagnostic into the closed set (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > the mapping covers exactly the Refusal Record path's diagnostics, and each maps to a value in the closed PEP set",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > an unresolvable fact or an unavailable salt refuses before the decision request, as a Refusal Record evaluation_context_unresolvable",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773 ruling 2. evaluation_context_unresolvable joins the PEP closed set and the diagnostic mapping; the capture refusal signs it. Distinct from the PDP's evaluation_context_invalid. Mutations: M28 (removed from the PEP set) fails both; M29 fails the capture refusal."
+  },
+  {
+   "id": "evidence.execution.context-drift-primary-error",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "context-drift-classification",
+   "text": "A suppression records one `error`, named by what moved, and keeps every digest pair the executing PEP can observe",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "per the table: an unestablishable context is target_drift; an established context with a parameter outside the declared facts changed is parameter_mismatch; an established context that is unequal, unbound or under a changed descriptor, with parameters unchanged or changed only in declared facts, is target_drift; every observable digest pair is recorded"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a moved authoritative fact on a covered operation is target_drift: zero effects, both digest pairs recorded and each unequal",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an agent-supplied parameter that changed is parameter_mismatch, with both digest pairs recorded",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an agent-supplied parameter that changed while an authoritative fact also moved is parameter_mismatch, and the context divergence is still recorded",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unavailable context is target_drift even where an agent-supplied parameter also changed, and the parameter divergence is still recorded",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unavailable fact is target_drift, with no invented comparison: both effective digests absent, both authorized digests kept",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are target_drift: the parameter pair equal, the context pair present and unequal",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unrecoverable descriptor or salt is target_drift with the effective context digest absent and the parameter pair kept",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773 ruling 3. Each table row is witnessed with the digest pairs the record keeps: a moved declared fact (both pairs unequal, target_drift), an agent-supplied change (parameter_mismatch, both pairs unequal), both (parameter_mismatch, the context divergence kept), an unavailable context with an agent change (target_drift, the parameter divergence kept), an unavailable fact (both effective digests absent), a changed descriptor (parameter pair equal, context pair unequal), and an unrecoverable salt or descriptor (parameter pair kept, effective context absent). The agent-supplied deviation is constructed at the PEP's own API; see runtime.evaluation-context.primary-error. Mutations: M2, M3, M26, M5 and M10 each fail the rows they target."
+  },
+  {
+   "id": "evidence.execution.context-drift-audit-reports-each-pair",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "context-drift-classification",
+   "text": "The audit consumer reports each divergent pair whatever the `error`.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an audit consumer reading Execution Evidence reports a divergent parameter pair and a divergent evaluation-context pair each, whichever the record's error names"
+   },
+   "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#773 specification slice only. Optional per-class extension, not claimed by the reference deployment; implementation and negative/recovery tests follow. Existing parameter/approval bindings must remain intact."
+   "notes": "#773 ruling 3. The PEP records both pairs (witnessed on evidence.execution.context-drift-primary-error); no reference audit consumer classifies Execution Evidence pairs, and the Mission Receipt verifier does not check the context pair. The TOCTOU and parameter binding paragraph restates the same duty."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.evaluation-context-unresolvable",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "Authoritative evaluation context of a covered operation not capturable at the PEP before the decision request | Refusal Record | `evaluation_context_unresolvable`",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a covered operation whose authoritative evaluation context the PEP cannot capture before the decision request is carried as a Refusal Record evaluation_context_unresolvable, never a PDP denial or Execution Evidence"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > an unresolvable fact or an unavailable salt refuses before the decision request, as a Refusal Record evaluation_context_unresolvable",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773 ruling 2. The refusal has one carrier: a signed Refusal Record, with no decision request, no Decision Evidence and no Execution Evidence. Mutations M7 and M29 fail it."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.context-primary-error",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "The recorded `error` is `target_drift` unless the context is established and an agent-supplied parameter changed, and every observable digest pair is kept",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "under a claimed Evaluation-Context Binding a context failure at use is Execution Evidence target_drift, or parameter_mismatch where the context was established and an agent-supplied parameter changed, with every observable digest pair kept"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a moved authoritative fact on a covered operation is target_drift: zero effects, both digest pairs recorded and each unequal",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an agent-supplied parameter that changed is parameter_mismatch, with both digest pairs recorded",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an agent-supplied parameter that changed while an authoritative fact also moved is parameter_mismatch, and the context divergence is still recorded",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unavailable context is target_drift even where an agent-supplied parameter also changed, and the parameter divergence is still recorded",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773 ruling 3, AuthZEN's restatement of Runtime Evidence's classification. Witnesses and mutations as evidence.execution.context-drift-primary-error."
   },
   {
    "id": "runtime.action-approval.resolution-not-agent-invocable",
@@ -28887,16 +29522,22 @@
     "local": "the reference loader refuses at load an execution_capabilities entry asserting evaluation_context_enforced with conditional_effect none, and admits it with a declared precondition"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/execution-capabilities.test.ts",
      "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an enforced Evaluation-Context Binding claim with no declared conditional-effect support, and admits it with a declared precondition",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/runtime-posture.test.ts",
+     "name": "the Evaluation-Context Binding declaration is refused at load unless complete (@spec runtime#evaluation-context-binding, #773) > refuses at load an enforced property no execution capability supports, and a covered class outside the mediated scope",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "Partial: the refusal is witnessed on the reference statement's per-operation assertion (proved by disabling the evaluation_context_enforced check). The Evaluation-Context Binding declaration that publishes the verified or enforced property per operation is #773's and does not exist in the reference, so no test reads the property from it."
+   "notes": "Witnessed on both declarations that can publish the property: the reference statement's per-operation execution capability (refused at load asserting evaluation_context_enforced with conditional_effect none, proved by disabling that check) and, since #773, the Evaluation-Context Binding declaration, which the loader refuses when an operation declares the enforced property with no execution capability asserting evaluation_context_enforced (mutation L21 fails it). The shipped declaration publishes verified only."
   },
   {
    "id": "runtime.execution-capabilities.exactly-once-needs-resource-idempotency",
@@ -32765,9 +33406,21 @@
      "name": "the PDP refuses an unusable action phase before evaluation (@spec authzen#context-action-phase, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #1629) > refuses an action_phase outside the closed set before evaluation as phase_invalid: no decision, no Decision Evidence, no FGA check and no Resource policy query",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "the PDP validates the evaluation-context inputs of a covered operation before evaluation (@spec authzen#context-evaluation-binding, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #773) > the remote PDP refuses unusable inputs before evaluation with a signed Refusal Record, and a caller's options cannot remove its declaration",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "the PDP validates the evaluation-context inputs of a covered operation before evaluation (@spec authzen#context-evaluation-binding, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #773) > refuses missing, malformed or incompatible inputs as evaluation_context_invalid: no decision, no Decision Evidence, no FGA check and no Resource policy query",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1629 (D744 ruling 3). partial: the phase_invalid half is witnessed: the refusal is a pre-evaluation Refusal Record, never a decision with a denial_reason (no Decision Evidence, no evaluation_id, the remote channel answers a refusal, not a signed decision). evaluation_context_invalid has no reference surface (Evaluation-Context Binding at the PDP, #773, is unclaimed), and the Decision-Base-only clause (internal form) has none either: the reference PDP signs the portable Refusal Record. Mutation: not refusing an out-of-set phase fails both witnesses."
+   "notes": "#1629 (D744 ruling 3). partial: the phase_invalid half is witnessed: the refusal is a pre-evaluation Refusal Record, never a decision with a denial_reason (no Decision Evidence, no evaluation_id, the remote channel answers a refusal, not a signed decision). evaluation_context_invalid has no reference surface (Evaluation-Context Binding at the PDP, #773, is unclaimed), and the Decision-Base-only clause (internal form) has none either: the reference PDP signs the portable Refusal Record. Mutation: not refusing an out-of-set phase fails both witnesses. #773: the evaluation_context_invalid half is now witnessed the same way (a pre-evaluation Refusal Record, no decision, no Decision Evidence, the remote channel answering a refusal; mutation P13 fails both witnesses). The row stays partial for the Decision-Base-only clause alone."
   },
   {
    "id": "authzen.runtime-denial-classification.stale-state-scope",
@@ -38153,9 +38806,22 @@
     "normative": "a PDP's pre-evaluation refusal of missing, malformed or incompatible evaluation-context binding inputs for a covered operation is a Refusal Record with denial_reason `evaluation_context_invalid`"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1629 (D744 ruling 3). todo: no reference witness yet; existing coverage does not transfer to the changed text."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "the PDP validates the evaluation-context inputs of a covered operation before evaluation (@spec authzen#context-evaluation-binding, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #773) > the remote PDP refuses unusable inputs before evaluation with a signed Refusal Record, and a caller's options cannot remove its declaration",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-evaluation-context.test.ts",
+     "name": "the PDP validates the evaluation-context inputs of a covered operation before evaluation (@spec authzen#context-evaluation-binding, authzen#failure-condition-coverage, runtime-evidence#pre-decision-refusal, #773) > records the refusal as a PDP-signed Refusal Record over the request as submitted, naming no Mission and no evaluation",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773. The remote PDP and the in-process decision refuse unusable covered-operation inputs before evaluation with a PDP-signed Refusal Record evaluation_context_invalid over the request as submitted, no Mission and no evaluation_id; evaluation_context_invalid joins the PDP's closed set. Mutation P13 fails both; P19 (the server's own declaration not applied) fails the remote test."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
@@ -39067,9 +39733,21 @@
      "name": "a permit whose effective parameters cannot be established at use (@spec runtime-evidence#execution-evidence-object, #786) > the invoice deleted after the decision: zero effects, one suppressed record with error target_drift, the authorized digest kept and the effective digest absent, and no Refusal Record",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a moved authoritative fact on a covered operation is target_drift: zero effects, both digest pairs recorded and each unequal",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a declared fact that stops resolving at use is target_drift with no effective context digest, though the parameters still resolve",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed end to end at the payments resource (T7: suppression with target_drift); no unit-level witness of the Execution Evidence record alone. Mutation M14 fails T7. #786: a unit-level witness of the record itself now covers the cannot-be-established half for the target object the permit was evaluated for (the invoice deleted at use: one suppressed target_drift record, the effective digest absent; relabelling the exit parameter_mismatch fails it). The differs half is still witnessed only end to end (T7), and the evaluation-context clause stays unclaimed (#773), so the row stays partial."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed end to end at the payments resource (T7: suppression with target_drift); no unit-level witness of the Execution Evidence record alone. Mutation M14 fails T7. #786: a unit-level witness of the record itself now covers the cannot-be-established half for the target object the permit was evaluated for (the invoice deleted at use: one suppressed target_drift record, the effective digest absent; relabelling the exit parameter_mismatch fails it). The differs half is still witnessed only end to end (T7), and the evaluation-context clause stays unclaimed (#773), so the row stays partial. #773: the evaluation-context clause is now witnessed at unit level of the record (a moved declared fact and a declared fact that stops resolving, each one suppressed target_drift record; M2 and M1+M2 fail them). The operation-target differs half is still witnessed only end to end (T7), so the row stays partial."
   },
   {
    "id": "evidence.execution.error-condition-unrecognized",
