@@ -114,7 +114,7 @@ beforeAll(async () => {
   config = joinConfig();
   const configPath = join(dir, "mas-pilot.json");
   writeFileSync(configPath, JSON.stringify(config));
-  const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id);
+  const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id, { disclose: ["provenance"] });
   pdpKey = pdp.privateJwk;
   const pepOnly = await newStatusClientKey(PEP_ONLY);
   const outsider = await newStatusClientKey(OUTSIDER);
