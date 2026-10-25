@@ -320,9 +320,9 @@ export interface EvaluationRequest {
      * @spec authzen#context-work-item (#815): OPTIONAL, the qualified
      * work-item identifier `{issuer, id}` the PEP took from the harness's
      * authenticated attachment, never from tool arguments. Typed `unknown`
-     * deliberately: a malformed value denies `work_item_context_missing`,
-     * never admitted by the type system, and only a value `parseWorkItem`
-     * accepts reaches the permit or Decision Evidence.
+     * deliberately: a malformed value is refused before evaluation as
+     * `work_item_invalid`, never admitted by the type system, and only a
+     * value `parseWorkItem` accepts reaches the permit or Decision Evidence.
      */
     work_item?: unknown;
     /**
@@ -440,9 +440,9 @@ export type DenialReason =
   | "actor_invalid"
   /**
    * @spec authzen#context-work-item, authzen#runtime-denial-classification
-   * (#815): "the decision request carries a `context.work_item` that is not
-   * well-formed, or the deployment claims work-item attribution for the
-   * action's class and the request carries none."
+   * (#815): "the deployment claims work-item attribution for the action's
+   * class and the decision request carries no `context.work_item`." A
+   * malformed one is the pre-evaluation refusal `work_item_invalid` instead.
    */
   | "work_item_context_missing"
   /**
@@ -535,7 +535,13 @@ export interface Decision {
  * name unusable decision inputs, not evaluated policy denials (@spec
  * authzen#failure-condition-coverage).
  */
-export type PdpRefusalReason = "operation_target_invalid" | "phase_invalid" | "compensation_link_invalid";
+export type PdpRefusalReason =
+  | "operation_target_invalid"
+  | "phase_invalid"
+  | "compensation_link_invalid"
+  // @spec authzen#context-work-item (#815): a present `context.work_item`
+  // that is not exactly `{issuer, id}`, an unusable input like the phase.
+  | "work_item_invalid";
 
 /**
  * Thrown by {@link evaluate} for a decision request the PDP refuses before
@@ -1027,6 +1033,18 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
     await recordPdpRefusal(opts.refusals, "compensation_link_invalid", req);
     throw new DecisionRequestRefused("compensation_link_invalid");
   }
+  // @spec authzen#context-work-item, authzen#failure-condition-coverage
+  // (#815): "The PDP MUST refuse, before evaluation, a request whose
+  // `context.work_item` is present but not of that shape". An unusable
+  // decision input, not an evaluated policy denial: a Refusal Record
+  // `work_item_invalid`, with no decision, no evaluation_id and no Decision
+  // Evidence. Absence is not this refusal: where the class is claimed it is
+  // the evaluated denial `work_item_context_missing` (step 1b).
+  const presentedWorkItem = (req as { context?: { work_item?: unknown } } | undefined)?.context?.work_item;
+  if (presentedWorkItem !== undefined && parseWorkItem(presentedWorkItem) === undefined) {
+    await recordPdpRefusal(opts.refusals, "work_item_invalid", req);
+    throw new DecisionRequestRefused("work_item_invalid");
+  }
   // @spec authzen#evaluation-request-digest-input: digest the request as
   // submitted, on receipt, before evaluation applies any default or enrichment.
   const requestDigest = evaluationRequestDigest(req);
@@ -1351,15 +1369,14 @@ async function evaluateInner(
     return deny("credential_invalid");
   }
 
-  // 1b. Work-item context (@spec authzen#context-work-item, #815): "The PDP
-  // MUST deny with `work_item_context_missing` a decision whose
-  // `context.work_item` is present but not of that shape, and, where the
+  // 1b. Work-item context (@spec authzen#context-work-item, #815): "Where the
   // deployment's Enforcement Scope Statement claims work-item attribution for
-  // the action's class, one from which it is absent." The class is the
-  // deployment class the trusted PEP supplied; the claim is this PDP's own
-  // binding, never a request member. Elsewhere an absent member relaxes
-  // nothing: Mission-level attribution only.
-  if (req.context.work_item !== undefined && workItem === undefined) return deny("work_item_context_missing");
+  // the action's class, the PDP MUST deny with `work_item_context_missing` a
+  // decision from which `context.work_item` is absent." A malformed member
+  // never reaches this point: `evaluate` refused it before evaluation as
+  // `work_item_invalid`. The class is the deployment class the trusted PEP
+  // supplied; the claim is this PDP's own binding, never a request member.
+  // Elsewhere an absent member relaxes nothing: Mission-level attribution only.
   if (workItem === undefined && actionClass !== undefined && opts.workItemAttributedClasses?.has(actionClass)) {
     return deny("work_item_context_missing");
   }

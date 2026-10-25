@@ -4,9 +4,11 @@
  * harness#work-item-identity (#815): the qualified work-item identifier at
  * the PDP.
  *
- * A malformed `context.work_item` denies `work_item_context_missing` in any
- * class, and an absent one denies the same way only in a class the PDP's own
- * statement claims work-item attribution for. A present, well-formed one is
+ * A malformed `context.work_item` is an unusable input, refused before
+ * evaluation in any class as `work_item_invalid` (a Refusal Record, no
+ * decision, no Decision Evidence); an absent one is the evaluated denial
+ * `work_item_context_missing`, only in a class the PDP's own statement claims
+ * work-item attribution for. A present, well-formed one is
  * bound into the permit's `work_item` condition and recorded on Decision
  * Evidence, and it is part of the authorization binding and the cache key, so
  * a retransmission never hands one work item's permit to another.
@@ -20,9 +22,24 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createDecisionEvidenceEmitter, type DecisionEvidenceObject } from "../src/decision-evidence.js";
+import {
+  createDecisionEvidenceEmitter,
+  type DecisionEvidenceEmitter,
+  type DecisionEvidenceObject,
+  evaluationRequestDigest,
+} from "../src/decision-evidence.js";
 import { createDecisionPoint } from "../src/decision-point.js";
-import { type Decision, type DecisionOptions, evaluate as evaluateRequest, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
+import {
+  type Decision,
+  type DecisionOptions,
+  DecisionRequestRefused,
+  evaluate as evaluateRequest,
+  type EvaluateOptions,
+  type EvaluationRequest,
+  type PdpRefusal,
+} from "../src/evaluate.js";
+import { createPdpRefusalRecorder, type PdpRefusalRecord } from "../src/refusal-record.js";
+import { type EvidenceKeyResolver, REFUSAL_RECORD_MEDIA_TYPE, verifyEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 import type { Fga } from "../src/fga.js";
 import { type ConsumptionStatusFn, type IdempotencyClaimDomain, openIdempotencyClaimDomain } from "../src/idempotency-claims.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
@@ -134,9 +151,10 @@ describe("the work-item context at the PDP (@spec authzen#context-work-item, #81
     expect(conditionsOf(present)?.work_item).toEqual(W1);
   });
 
-  it("denies work_item_context_missing for a malformed work item, claimed or not, and signs none into Decision Evidence", async () => {
+  it("refuses a malformed work item before evaluation as work_item_invalid, claimed or not: no decision, no evaluation_id, no Decision Evidence and no FGA check", async () => {
     const malformed: unknown[] = [
       "work-1",
+      null,
       { id: "work-1" },
       { issuer: HARNESS },
       { issuer: HARNESS, id: "" },
@@ -145,13 +163,57 @@ describe("the work-item context at the PDP (@spec authzen#context-work-item, #81
       [HARNESS, "work-1"],
     ];
     for (const workItem of malformed) {
-      for (const opts of [options(), options({ workItemAttributedClasses: new Set(["consequential_read"]) })]) {
-        const d = await evaluate(request({ workItem }), opts);
-        expect(d.decision, JSON.stringify(workItem)).toBe(false);
-        expect(d.context.denial_reason, JSON.stringify(workItem)).toBe("work_item_context_missing");
-        expect(evidenceOf(d)?.work_item, JSON.stringify(workItem)).toBeUndefined();
+      for (const claimed of [undefined, new Set(["consequential_read"])]) {
+        const label = `${JSON.stringify(workItem)} claimed=${claimed !== undefined}`;
+        const refusals: PdpRefusal[] = [];
+        const emitted: unknown[] = [];
+        let fgaCalls = 0;
+        const req = withCredential(request({ workItem }));
+        const outcome = await evaluateRequest(req, {
+          ...options(claimed ? { workItemAttributedClasses: claimed } : {}),
+          fga: { checkWithContext: async () => (fgaCalls += 1) > 0 } as unknown as Fga,
+          evidence: { emit: async (record: unknown) => emitted.push(record) } as unknown as DecisionEvidenceEmitter,
+          refusals: (r) => refusals.push(r),
+        }).then(
+          (decision) => ({ decision }),
+          (error: unknown) => ({ error }),
+        );
+        expect(outcome, label).toEqual({ error: expect.any(DecisionRequestRefused) });
+        expect((outcome as { error: DecisionRequestRefused }).error.denial_reason, label).toBe("work_item_invalid");
+        expect(refusals.map((r) => r.denial_reason), label).toEqual(["work_item_invalid"]);
+        expect(refusals[0]?.evaluation_request, label).toBe(req);
+        expect(emitted, label).toHaveLength(0);
+        expect(fgaCalls, label).toBe(0);
       }
     }
+  });
+
+  it("records the work_item_invalid refusal as a PDP-signed Refusal Record over the request as submitted, with no evaluation_id", async () => {
+    const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    const retained: PdpRefusalRecord[] = [];
+    const refusals = createPdpRefusalRecorder({
+      signer: { kid: "pdp-815-refusal", key: privateKey },
+      emitterId: "pdp.example",
+      scope: RESOURCE,
+      retain: (record) => retained.push(record),
+      now: () => NOW,
+    });
+    const resolve: EvidenceKeyResolver = ({ kid, emitter }) =>
+      kid === "pdp-815-refusal" && emitter.id === "pdp.example" && emitter.role === "pdp" ? { key: publicKey } : undefined;
+    const req = withCredential(request({ workItem: { issuer: HARNESS, id: "work-1", extra: "x" } }));
+    await expect(evaluateRequest(req, options({ refusals }))).rejects.toBeInstanceOf(DecisionRequestRefused);
+    expect(retained).toHaveLength(1);
+    expect(retained[0]).toMatchObject({
+      audience: RESOURCE,
+      action: { name: "payments:invoice.read" },
+      decision: "deny",
+      denial_reason: "work_item_invalid",
+      evaluation_request_digest: evaluationRequestDigest(req),
+      request_digest_input: "decision_request",
+      emitter: { id: "pdp.example", role: "pdp" },
+    });
+    expect(retained[0]).not.toHaveProperty("evaluation_id");
+    expect(await verifyEvidenceEnvelope(retained[0] as PdpRefusalRecord, REFUSAL_RECORD_MEDIA_TYPE, resolve)).toEqual({ valid: true });
   });
 
   it("the decision point applies its own claimed classes and strips any an enforcement component supplies", async () => {
