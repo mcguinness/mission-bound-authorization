@@ -465,9 +465,15 @@
      "name": "Evaluation-Context Binding at the PEP (@spec runtime#evaluation-context-binding, authzen#context-evaluation-binding, #773) > the descriptor reference is committed inside the digest with the Mission, the operation, the targets, the facts and the salt",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > the descriptor's facts are the committed wire's, not the invoice as it reads now: an invoice that moved after the wire, and again before release, leaves the context unchanged",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#773. The PEP resolves every declared fact from the payments store records the request's invoice names: arguments naming the authoritative facts (amount, payee_account, invoice_version) do not change the captured digest, while a change to the store's record does; the composition test shows the committed facts are the store's values. Mutation M6 (an argument entering the commitment) fails the first."
+   "notes": "#773. The PEP resolves every declared fact from the payments store records the request's invoice names: arguments naming the authoritative facts (amount, payee_account, invoice_version) do not change the captured digest, while a change to the store's record does; the composition test shows the committed facts are the store's values. Mutation M6 (an argument entering the commitment) fails the first. #252: the compensate crossing's authoritative interface is the committed wire's ledger record: an invoice changed after its wire committed, and again before release, leaves the captured context equal to one computed from the wire's record, and the reversal offsets the wire's USD 125. Mutation C1 (the compensate crossing's facts read from the live invoice) fails it; S1 (a resolver reading a record other than its own) fails the shipped-agreement test, which also shows the compensate descriptor's facts do not resolve from the invoice."
   },
   {
    "id": "runtime.evaluation-context.preserve-approval-and-operation-bindings",
@@ -659,9 +665,21 @@
      "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unrecoverable descriptor or salt is target_drift with the effective context digest absent and the parameter pair kept",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > a moved fact of the committed wire's record is target_drift with zero effects, both digest pairs recorded and each unequal",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > a committed wire record that no longer answers is target_drift, with both effective digests absent and both authorized digests kept",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#773. Each clause refuses before any effect: a permit lacking the condition (M9); a changed descriptor, refused by its own check with the context recomputed under the committed descriptor and equal (X2, M1+M2); an unequal digest after a moved fact (M2); and an unavailable fact while the parameters still resolve (M1+M2 turns it into parameter_mismatch) or an unrecoverable salt or committed descriptor (M4, X3, M1+M2). Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
+   "notes": "#773. Each clause refuses before any effect: a permit lacking the condition (M9); a changed descriptor, refused by its own check with the context recomputed under the committed descriptor and equal (X2, M1+M2); an unequal digest after a moved fact (M2); and an unavailable fact while the parameters still resolve (M1+M2 turns it into parameter_mismatch) or an unrecoverable salt or committed descriptor (M4, X3, M1+M2). Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result. #252: on the compensate crossing, a moved fact of the committed wire's record (C2 turns it into parameter_mismatch) and a record that no longer answers (C1 leaves an effective context digest) each refuse before any reversal."
   },
   {
    "id": "runtime.evaluation-context.per-phase-capture",
@@ -718,9 +736,15 @@
      "name": "every phase captures and checks its own context, on every dispatch path (@spec runtime#evaluation-context-binding, runtime#compound-actions, #773) > a commit permit whose context condition is the prepare crossing's binding is refused target_drift",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > captures at the compensate crossing: the request carries compensates_evaluation_id beside the context digest and descriptor, and the completed record carries the pair",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#773 ruling 5. Each crossing of payments:payment.execute captures its own context with its own phase committed (one parameter digest, three context digests) and is checked at its own use on its own dispatch path (read, write, transaction), as is payments:remittance.send; a commit permit carrying the prepare crossing's context binding is refused. partial only for the prepare-stable SHOULD: no shipped descriptor declares a prepare-stable fact (the descriptor reader refuses any member it does not implement, so none can be declared), so that branch is inapplicable to the shipped claim and is not implemented. Mutations: M23 (phase not committed) fails the distinct-digest and prepare-on-commit tests; M1 fails the read-path test and M2 the write and transaction tests. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
+   "notes": "#773 ruling 5. Each crossing of payments:payment.execute captures its own context with its own phase committed (one parameter digest, three context digests) and is checked at its own use on its own dispatch path (read, write, transaction), as is payments:remittance.send; a commit permit carrying the prepare crossing's context binding is refused. partial only for the prepare-stable SHOULD: no shipped descriptor declares a prepare-stable fact (the descriptor reader refuses any member it does not implement, so none can be declared), so that branch is inapplicable to the shipped claim and is not implemented. Mutations: M23 (phase not committed) fails the distinct-digest and prepare-on-commit tests; M1 fails the read-path test and M2 the write and transaction tests. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result. #252: the compensate crossing of payments:payment.reverse captures its own context under its own descriptor, after its link to the committed wire is established, and is checked at its own use; mutations C3 (no capture there), C4 (its fresh parameters re-derived from the invoice) and C5 (recomputation ignoring the committed wire) each fail that test."
   },
   {
    "id": "runtime.evaluation-context.atomic-enforced-property",
@@ -991,9 +1015,15 @@
      "name": "claim applicability: covered, uncovered and non-claiming (@spec runtime#evaluation-context-binding, authzen#response-context, #773) > an uncovered operation and a non-claiming deployment are unchanged: no context members, and a moved fact stays parameter_mismatch",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > captures at the compensate crossing: the request carries compensates_evaluation_id beside the context digest and descriptor, and the completed record carries the pair",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773. The authorized member mirrors the linked Decision Evidence on every disposition the executing PEP writes: the completed record of each covered crossing on the read, write and transaction paths (the read and write paths through the shared disposition writer, the transaction tier through its own completed record) and a suppression; a deployment whose Decision Evidence carries no context digest writes no such member. Mutations: A1 (the disposition writer drops the authorized member) fails the check_transfer and hold_transfer completed tests; A2 (the transaction tier's completed record drops it) fails the execute_wire_transfer and send_remittance_email completed tests."
+   "notes": "#773. The authorized member mirrors the linked Decision Evidence on every disposition the executing PEP writes: the completed record of each covered crossing on the read, write and transaction paths (the read and write paths through the shared disposition writer, the transaction tier through its own completed record) and a suppression; a deployment whose Decision Evidence carries no context digest writes no such member. Mutations: A1 (the disposition writer drops the authorized member) fails the check_transfer and hold_transfer completed tests; A2 (the transaction tier's completed record drops it) fails the execute_wire_transfer and send_remittance_email completed tests. #252: the compensate crossing's completed reversal record carries the pair too, re-established from the committed wire (C3 and C5 fail it)."
   },
   {
    "id": "evidence.execution.effective-evaluation-context-required-when-reestablished",
@@ -1056,9 +1086,15 @@
      "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a fact that moved under a changed descriptor diverges under the retained original and is target_drift",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > captures at the compensate crossing: the request carries compensates_evaluation_id beside the context digest and descriptor, and the completed record carries the pair",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773. The completed record of every covered crossing carries the effective context digest: the write paths pass the digest reverification re-established before the effect, the read path's disposition writer re-establishes it now, and the transaction tier's completed record carries reverification's. A completed disposition that cannot re-establish it is the reported gap effective_evaluation_context_digest_unobservable, the counterpart of #786's effective_parameter_digest_unobservable, never a record that drops the member. Under a changed descriptor the digest is computed under the retained original. Mutations: E1 (the disposition writer drops the effective member on a completed record) fails the check_transfer and hold_transfer completed tests; E2 (the gap removed, so the record is emitted without the member) fails the gap test; X1 (recomputed under the live descriptor) fails the retained-original tests. W1 and W2 (the write and keyed write paths pass no context digest, so the writer re-establishes it after the effect) survive: no shipped write effect moves a declared fact and no keyed write is covered, so that pass-through is defense in depth with no witness."
+   "notes": "#773. The completed record of every covered crossing carries the effective context digest: the write paths pass the digest reverification re-established before the effect, the read path's disposition writer re-establishes it now, and the transaction tier's completed record carries reverification's. A completed disposition that cannot re-establish it is the reported gap effective_evaluation_context_digest_unobservable, the counterpart of #786's effective_parameter_digest_unobservable, never a record that drops the member. Under a changed descriptor the digest is computed under the retained original. Mutations: E1 (the disposition writer drops the effective member on a completed record) fails the check_transfer and hold_transfer completed tests; E2 (the gap removed, so the record is emitted without the member) fails the gap test; X1 (recomputed under the live descriptor) fails the retained-original tests. W1 and W2 (the write and keyed write paths pass no context digest, so the writer re-establishes it after the effect) survive: no shipped write effect moves a declared fact and no keyed write is covered, so that pass-through is defense in depth with no witness. #252: the compensate crossing's completed reversal record carries the pair too, re-established from the committed wire (C3 and C5 fail it)."
   },
   {
    "id": "evidence.execution.effective-evaluation-context-absent-when-unresolvable",
@@ -1121,9 +1157,21 @@
      "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unavailable fact is target_drift, with no invented comparison: both effective digests absent, both authorized digests kept",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > a committed wire record that no longer answers is target_drift, with both effective digests absent and both authorized digests kept",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > a compensation binding made before a restart is refused before any effect: target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773, unblocked by #786's suppression representation. A context the PEP cannot establish (a lost salt version on every covered dispatch path, a committed descriptor no longer published, a declared fact that stops resolving, a deleted invoice) leaves effective_evaluation_context_digest absent, never copied or invented, with error target_drift. Mutations: M4 fails the restart and unrecoverable tests on the absent-digest assertion; M1+M2 fails the fact-stops-resolving test (parameter_mismatch instead). Mutation X3 (an unrecoverable committed descriptor replaced by the live one) fails the unrecoverable test's absent-digest assertion."
+   "notes": "#773, unblocked by #786's suppression representation. A context the PEP cannot establish (a lost salt version on every covered dispatch path, a committed descriptor no longer published, a declared fact that stops resolving, a deleted invoice) leaves effective_evaluation_context_digest absent, never copied or invented, with error target_drift. Mutations: M4 fails the restart and unrecoverable tests on the absent-digest assertion; M1+M2 fails the fact-stops-resolving test (parameter_mismatch instead). Mutation X3 (an unrecoverable committed descriptor replaced by the live one) fails the unrecoverable test's absent-digest assertion. #252: on the compensate crossing, a committed wire record that no longer answers, or a lost salt version, leaves the effective context digest absent (C1 fails the first)."
   },
   {
    "id": "runtime.evaluation-context.salt-rotation",
@@ -1197,9 +1245,15 @@
      "name": "restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773) > a binding made before a restart is refused before any effect on send_remittance_email (transaction path): target_drift, no effective context digest",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > a compensation binding made before a restart is refused before any effect: target_drift, no effective context digest",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#773 ruling 1. A restart in the decision-to-use window (the salt keeper replaced by a fresh epoch) is refused target_drift before any effect on the read (check_transfer), write (hold_transfer) and transaction (execute_wire_transfer, send_remittance_email) paths. The check runs in the shared PERMIT_USE_CHECKS seam, so the keyed reversible-write paths apply it too, though no covered operation takes them. Mutation M1+M2 fails all four. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result."
+   "notes": "#773 ruling 1. A restart in the decision-to-use window (the salt keeper replaced by a fresh epoch) is refused target_drift before any effect on the read (check_transfer), write (hold_transfer) and transaction (execute_wire_transfer, send_remittance_email) paths. The check runs in the shared PERMIT_USE_CHECKS seam, so the keyed reversible-write paths apply it too, though no covered operation takes them. Mutation M1+M2 fails all four. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result. #252: so is the compensate crossing (reverse_wire_transfer, the transaction path through reverifyCompensation); M1+C2 (the seam row and the compensation's classifier removed) fails it."
   },
   {
    "id": "runtime.evaluation-context.capture-failure-pre-decision",
@@ -1285,9 +1339,15 @@
      "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a fact that moved under a changed descriptor diverges under the retained original and is target_drift",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > a moved fact of the committed wire's record is target_drift with zero effects, both digest pairs recorded and each unequal",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773 ruling 3, Runtime's pointer to Runtime Evidence's Context Drift and Parameter Deviation. Witnesses and mutations as evidence.execution.context-drift-primary-error, the changed-descriptor rows included (X1, X2). The agent-supplied deviation is constructed at the PEP's own API (the parameter object the executor uses is changed between the permit and verifyPermitAtUse); the reference re-derives the parameters from the bound invoice, so no request through the server can change an agent-supplied parameter at use."
+   "notes": "#773 ruling 3, Runtime's pointer to Runtime Evidence's Context Drift and Parameter Deviation. Witnesses and mutations as evidence.execution.context-drift-primary-error, the changed-descriptor rows included (X1, X2). The agent-supplied deviation is constructed at the PEP's own API (the parameter object the executor uses is changed between the permit and verifyPermitAtUse); the reference re-derives the parameters from the bound invoice, so no request through the server can change an agent-supplied parameter at use. #252: the compensate crossing classifies the same way: a moved declared fact of the committed wire's record is target_drift with both pairs recorded and unequal (C2 fails it)."
   },
   {
    "id": "evidence.refusal.pep-evaluation-context-unresolvable",
@@ -1391,9 +1451,15 @@
      "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unrecoverable descriptor or salt is target_drift with the effective context digest absent and the parameter pair kept",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > a moved fact of the committed wire's record is target_drift with zero effects, both digest pairs recorded and each unequal",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773 ruling 3, with the owner's P2 correction. Each table row is witnessed with the digest pairs the record keeps: a moved declared fact (both pairs unequal, target_drift), an agent-supplied change (parameter_mismatch, both pairs unequal), both (parameter_mismatch, the context divergence kept), an unavailable context with an agent change (target_drift, the parameter divergence kept), an unavailable fact (both effective digests absent), unchanged facts under a changed descriptor (target_drift by the descriptor-change check, both pairs equal, no divergence), a fact moved under a changed descriptor (target_drift, the context digest diverging under the committed descriptor), and an unrecoverable salt or committed descriptor (parameter pair kept, effective context absent). The agent-supplied deviation is constructed at the PEP's own API; see runtime.evaluation-context.primary-error. Mutations: M2, M3, M26, M10, X1 (recompute under the live descriptor), X2 (descriptor-change check removed) and X3 (an unrecoverable committed descriptor replaced by the live one) each fail the rows they target."
+   "notes": "#773 ruling 3, with the owner's P2 correction. Each table row is witnessed with the digest pairs the record keeps: a moved declared fact (both pairs unequal, target_drift), an agent-supplied change (parameter_mismatch, both pairs unequal), both (parameter_mismatch, the context divergence kept), an unavailable context with an agent change (target_drift, the parameter divergence kept), an unavailable fact (both effective digests absent), unchanged facts under a changed descriptor (target_drift by the descriptor-change check, both pairs equal, no divergence), a fact moved under a changed descriptor (target_drift, the context digest diverging under the committed descriptor), and an unrecoverable salt or committed descriptor (parameter pair kept, effective context absent). The agent-supplied deviation is constructed at the PEP's own API; see runtime.evaluation-context.primary-error. Mutations: M2, M3, M26, M10, X1 (recompute under the live descriptor), X2 (descriptor-change check removed) and X3 (an unrecoverable committed descriptor replaced by the live one) each fail the rows they target. #252: the compensate crossing classifies the same way: a moved declared fact of the committed wire's record is target_drift with both pairs recorded and unequal (C2 fails it)."
   },
   {
    "id": "evidence.execution.context-drift-audit-reports-each-pair",
@@ -1514,9 +1580,15 @@
      "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > an unavailable context is target_drift even where an agent-supplied parameter also changed, and the parameter divergence is still recorded",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > a moved fact of the committed wire's record is target_drift with zero effects, both digest pairs recorded and each unequal",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773 ruling 3, AuthZEN's restatement of Runtime Evidence's classification. Witnesses and mutations as evidence.execution.context-drift-primary-error."
+   "notes": "#773 ruling 3, AuthZEN's restatement of Runtime Evidence's classification. Witnesses and mutations as evidence.execution.context-drift-primary-error. #252: the compensate crossing classifies the same way: a moved declared fact of the committed wire's record is target_drift with both pairs recorded and unequal (C2 fails it)."
   },
   {
    "id": "runtime.action-approval.resolution-not-agent-invocable",
@@ -2095,9 +2167,15 @@
      "name": "compound-action phases (@spec runtime#compound-actions) > suppresses a compensation whose committed wire record no longer answers at use as target_drift, keeping the authorized digest and omitting the effective one",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > a deployment that does not claim the extension is unchanged at the compensate crossing: no context members, and a moved fact of the wire's record stays parameter_mismatch",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Owner review of PR #1656 (P1). Committing USD 125, changing the invoice to USD 1 and requesting a reversal under a USD 10 reversal ceiling is denied parameter_violation, the request carrying USD 125, with zero connector effects; within the ceiling the reversal offsets exactly USD 125, and the request, Decision Evidence, operation key and completed Execution Evidence carry the digest of the wire's reversal form; a wire record that changes after the Decision is refused at use parameter_mismatch. Mutations: binding the invoice as it reads now fails the denial assertion (the permit is then refused at use); doing so with the at-use comparison and the connector check also off reverses USD 125 (the zero-effect assertion fails on its own); binding the current amount into the reversal form with both downstream guards off fails the committed-amount assertion; skipping the at-use comparison fails the at-use refusal, and with the connector check also off the zero-effect assertion fails on its own. After #786: a wire record that no longer answers at use leaves the effective parameters unestablished, suppressed target_drift with the authorized digest kept and the effective one absent. Mutation: recording that case as parameter_mismatch fails the target_drift witness."
+   "notes": "Owner review of PR #1656 (P1). Committing USD 125, changing the invoice to USD 1 and requesting a reversal under a USD 10 reversal ceiling is denied parameter_violation, the request carrying USD 125, with zero connector effects; within the ceiling the reversal offsets exactly USD 125, and the request, Decision Evidence, operation key and completed Execution Evidence carry the digest of the wire's reversal form; a wire record that changes after the Decision is refused at use: target_drift under the shipped Evaluation-Context Binding claim, which covers the compensate crossing and declares the wire's amount a fact (#773), and parameter_mismatch in a deployment that does not claim it. Mutations: binding the invoice as it reads now fails the denial assertion (the permit is then refused at use); doing so with the at-use comparison and the connector check also off reverses USD 125 (the zero-effect assertion fails on its own); binding the current amount into the reversal form with both downstream guards off fails the committed-amount assertion; skipping the at-use comparison fails the non-claiming at-use witness (U1, #773: under the shipped claim the context check refuses the changed record first, so that witness no longer isolates the comparison). After #786: a wire record that no longer answers at use leaves the effective parameters unestablished, suppressed target_drift with the authorized digest kept and the effective one absent. Mutation: recording that case as parameter_mismatch fails the target_drift witness."
   },
   {
    "id": "runtime.compound-actions.offset-refuses-differing-parameters",
@@ -2132,9 +2210,15 @@
      "name": "compound-action phases (@spec runtime#compound-actions) > refuses at use a compensation whose committed wire record no longer matches the form its permit bound, with zero connector effects",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > a deployment that does not claim the extension is unchanged at the compensate crossing: no context members, and a moved fact of the wire's record stays parameter_mismatch",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Owner review of PR #1656. Mutations: removing the connector check, or dropping the currency from it, fails the connector witness, and the zero-reversal assertion fails on its own; skipping the at-use comparison fails the at-use witness."
+   "notes": "Owner review of PR #1656. Mutations: removing the connector check, or dropping the currency from it, fails the connector witness, and the zero-reversal assertion fails on its own; skipping the at-use comparison fails the non-claiming at-use witness (U1, #773: under the shipped claim the context check refuses the changed record first)."
   },
   {
    "id": "runtime.idempotency.phase-in-scope",
