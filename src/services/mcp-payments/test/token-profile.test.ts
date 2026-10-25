@@ -9,20 +9,30 @@
  */
 
 import { randomUUID } from "node:crypto";
-import type { Fga, MissionView } from "@mission/pdp";
+import { evaluateRemote, type Fga, type MissionView } from "@mission/pdp";
 import { credentialProfileVectors } from "@mission/core/test-vectors";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   CANONICAL_RESOURCE,
   canonicalHtu,
+  Connectors,
   createEphemeralEvidenceKeys,
   createHttpMcpChannel,
   createHttpMediatedClient,
+  type DecisionEvidence,
   type DpopKeys,
+  dpopFetch,
   dpopProofFor,
+  EVIDENCE_UNAVAILABLE_ERROR,
   EvidenceStore,
+  EXECUTION_EVIDENCE_MEDIA_TYPE,
+  type ExecutionEvidence,
   McpPaymentsServer,
+  NotificationOutbox,
+  type ObligationNotifier,
   openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
@@ -31,6 +41,7 @@ import {
   TOOL_ACTIONS,
   type ActionMapping,
   type TokenFacts,
+  TransactionEngine,
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, resourcePolicyFixture } from "@mission/pdp/test-support";
@@ -874,52 +885,6 @@ describe("an obligation the PEP does not recognize or cannot fulfill is an effec
     }
   });
 
-  it("a present obligations member that is not an array is malformed, an effective deny over HTTP with DPoP: nothing is scheduled, the disposition is suppressed obligation_unfulfilled with one unsupported entry and nothing invented, and an empty list still schedules (#786)", async () => {
-    // @spec authzen#obligation-processing ("an obligation it does not
-    // recognize, or cannot fulfill, as an effective deny"), runtime-evidence
-    // #execution-evidence-object `obligation_outcomes` (#786): a member that
-    // is present but not a list is not "no obligation". It is malformed, and
-    // its one positional entry copies only what was supplied.
-    for (const [label, obligations, outcomes] of [
-      [
-        "an obligation object not wrapped in a list",
-        { id: "obl_1", type: "step_up" },
-        [{ id: "obl_1", type: "step_up", outcome: "unsupported", error: "no obligation type is implemented at this PEP" }],
-      ],
-      ["an empty object", {}, [{ outcome: "unsupported", error: "the obligation lacks a non-empty id or type" }]],
-      ["a number", 7, [{ outcome: "unsupported", error: "the obligation lacks a non-empty id or type" }]],
-      ["null", null, [{ outcome: "unsupported", error: "the obligation lacks a non-empty id or type" }]],
-    ] as const) {
-      const x = await endpoint((d) => {
-        if (d.decision) d.context.obligations = obligations;
-      }, SCHEDULING_VIEW);
-      try {
-        const before = x.businessState();
-        const refused = await call(x.client);
-        expect(refused, label).toMatchObject({ ok: false, refusal_reason: "unfulfillable_obligation" });
-        expect(x.businessState(), label).toEqual(before);
-        const executions = x.evidence.all().flatMap((e) => (e.kind === "execution" ? [e.content] : []));
-        expect(executions, label).toHaveLength(1);
-        expect(executions[0], label).toMatchObject({ outcome: "suppressed", error: "obligation_unfulfilled" });
-        expect(executions[0]?.obligation_outcomes, label).toEqual(outcomes);
-        expect(x.evidence.all().filter((e) => e.kind === "refusal"), label).toHaveLength(0);
-      } finally {
-        await x.close();
-      }
-    }
-    // Control: an empty list attaches no obligation, so the same permit schedules.
-    const control = await endpoint((d) => {
-      if (d.decision) d.context.obligations = [];
-    }, SCHEDULING_VIEW);
-    try {
-      const permitted = await call(control.client);
-      expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
-      expect(control.businessState().schedules).toHaveLength(1);
-    } finally {
-      await control.close();
-    }
-  });
-
   it("a denial carrying obligations is still a denial over HTTP with DPoP: nothing is scheduled", async () => {
     // The Mission names no scheduling, so the PDP denies; the obligation rides the denial.
     const readOnly: MissionView = { ...VIEW, authority_set: [entry(["payments:invoice.read"]) as MissionView["authority_set"][number]] };
@@ -932,6 +897,330 @@ describe("an obligation the PEP does not recognize or cannot fulfill is an effec
       expect(denied, JSON.stringify(denied)).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
       expect(x.businessState()).toEqual(before);
       expect(x.evidence.all().filter((e) => e.kind === "execution")).toHaveLength(0);
+    } finally {
+      await x.close();
+    }
+  });
+});
+
+describe("the PEP performs a notification obligation before release on a permit, and on a denial, at the resource's HTTP endpoint (@spec authzen#obligation-processing, authzen#obligations, #1640)", () => {
+  const SCHEDULE = entry(["payments:invoice.read", "payments:payment.schedule", "payments:payment.execute"], { vendors: ["acme", "globex"] });
+  const SCHEDULING_VIEW: MissionView = { ...VIEW, authority_set: [SCHEDULE as MissionView["authority_set"][number]] };
+  const READ_ONLY_VIEW: MissionView = { ...VIEW, authority_set: [entry(["payments:invoice.read"]) as MissionView["authority_set"][number]] };
+  const NOTIFY = {
+    id: "obl_notify",
+    type: "notification",
+    properties: { to: "ap-controller@example.com", topic: "Payment scheduled", body: "A payment for invoice inv-1 was scheduled." },
+  };
+
+  /**
+   * The resource's HTTP MCP endpoint under DPoP, deciding through the embedded
+   * signing PDP; `attach` adds obligations to the decision the PDP returned,
+   * as a PDP attaching them would. `notifier` is the PEP's notification
+   * transport, absent when none is configured. `decideOverride` replaces the
+   * embedded PDP (and `attach`) with another decision channel.
+   */
+  async function endpoint(
+    attach: (decision: { decision: boolean; context: Record<string, unknown> }) => void,
+    view: MissionView,
+    notifier: ObligationNotifier | undefined,
+    decideOverride?: NonNullable<ConstructorParameters<typeof Pep>[0]["decide"]>,
+  ) {
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: resourcePolicyFixture() });
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    const store = payments();
+    const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
+    const loadView = (ref: { id: string; issuer: string }) =>
+      ref.id === view.id && ref.issuer === view.issuer
+        ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+        : undefined;
+    const decisionIds: string[] = [];
+    const pep = new Pep({
+      decide:
+        decideOverride ??
+        (async (req, opts) => {
+          const decision = await keys.decide(req, opts);
+          decisionIds.push(decision.context.decision_id as string);
+          attach(decision);
+          return decision;
+        }),
+      payments: store,
+      evidence,
+      fga: allowingFga,
+      modelId: "m",
+      loadView,
+      instanceEpoch: "epoch-1640-obligations",
+      ...(notifier ? { notifier } : {}),
+    });
+    const connectors = new Connectors();
+    const routed = new McpPaymentsServer({
+      writeReservations,
+      pep,
+      payments: store,
+      loadView,
+      jwks: { keys: [asJwk as never] },
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
+      issuer: ISSUER,
+      transaction: { engine: new TransactionEngine("epoch-1640-obligations"), connectors, evidence },
+    });
+    const channel = await createHttpMcpChannel(routed);
+    const session = await createHttpMediatedClient(channel.url, await mint({ authorization_details: [SCHEDULE] }), holder);
+    const businessState = () => ({
+      invoices: store.listInvoices(),
+      schedules: writeReservations.schedules(),
+      reservations: writeReservations.reservations(),
+      consumedPermits: writeReservations.consumedPermits(),
+      wires: connectors.ledgerEntries(),
+    });
+    return {
+      evidence,
+      decisionIds,
+      writeReservations,
+      connectors,
+      businessState,
+      client: session.client,
+      close: async () => {
+        await session.close();
+        await channel.close();
+      },
+    };
+  }
+
+  const call = (client: Awaited<ReturnType<typeof endpoint>>["client"]) =>
+    client.callTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+  const executions = (x: Awaited<ReturnType<typeof endpoint>>) =>
+    x.evidence.all().filter((e): e is ExecutionEvidence => e.kind === "execution").map((e) => e.content);
+
+  it("a permit carrying a notification obligation over HTTP with DPoP completes the transmission before the write is released, then schedules, and the completed record names the obligation fulfilled", async () => {
+    // The transport takes a while to transmit, and reports how many schedules
+    // existed once it had: a PEP that released the write before the
+    // transmission completed would show one.
+    const schedulesAtTransmission: number[] = [];
+    let x: Awaited<ReturnType<typeof endpoint>> | undefined;
+    const outbox = new NotificationOutbox(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      schedulesAtTransmission.push(x?.writeReservations.schedules().length ?? -1);
+    });
+    x = await endpoint((d) => {
+      if (d.decision) d.context.obligations = [NOTIFY];
+    }, SCHEDULING_VIEW, outbox);
+    try {
+      const scheduled = await call(x.client);
+      expect(scheduled.ok, JSON.stringify(scheduled)).toBe(true);
+      expect(x.writeReservations.schedules()).toHaveLength(1);
+      expect(schedulesAtTransmission).toEqual([0]);
+      expect(outbox.sent()).toEqual([
+        { obligation_id: "obl_notify", evaluation_id: x.decisionIds[0], ...NOTIFY.properties },
+      ]);
+      const records = executions(x);
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        evaluation_id: x.decisionIds[0],
+        outcome: "completed",
+        obligation_outcomes: [{ id: "obl_notify", type: "notification", outcome: "fulfilled" }],
+      });
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a permit for an irreversible commit (execute_wire_transfer) carrying a notification obligation over HTTP with DPoP completes the transmission before the wire is posted, and the executor's completed record names the obligation fulfilled", async () => {
+    const wiresAtTransmission: number[] = [];
+    let x: Awaited<ReturnType<typeof endpoint>> | undefined;
+    const outbox = new NotificationOutbox(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      wiresAtTransmission.push(x?.connectors.ledgerEntries().length ?? -1);
+    });
+    x = await endpoint((d) => {
+      if (d.decision) d.context.obligations = [NOTIFY];
+    }, SCHEDULING_VIEW, outbox);
+    try {
+      const wired = await x.client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+      expect(wired.ok, JSON.stringify(wired)).toBe(true);
+      expect(x.connectors.ledgerEntries()).toHaveLength(1);
+      expect(wiresAtTransmission).toEqual([0]);
+      expect(outbox.sent().map((n) => n.obligation_id)).toEqual(["obl_notify"]);
+      const records = executions(x);
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        evaluation_id: x.decisionIds[0],
+        outcome: "completed",
+        emitter: { role: "executor" },
+        obligation_outcomes: [{ id: "obl_notify", type: "notification", outcome: "fulfilled" }],
+      });
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a permit whose notification cannot be performed over HTTP with DPoP releases no protected effect: a failed transmission, a malformed obligation and an absent transport each refuse the write unfulfillable_obligation with nothing scheduled, and the suppressed record names the obligation failed or unsupported", async () => {
+    const failing = new NotificationOutbox(() => {
+      throw new Error("relay refused the destination");
+    });
+    const { body: _body, ...noBody } = NOTIFY.properties;
+    for (const [label, obligation, notifier, outcome] of [
+      ["the transmission fails", NOTIFY, failing, { outcome: "failed", error: "notification transmission failed" }],
+      ["the obligation carries no body", { ...NOTIFY, properties: noBody }, new NotificationOutbox(), { outcome: "failed", error: "malformed notification obligation" }],
+      ["no transport is configured", NOTIFY, undefined, { outcome: "unsupported", error: "no notification transport is configured at this PEP" }],
+    ] as const) {
+      const x = await endpoint((d) => {
+        if (d.decision) d.context.obligations = [obligation];
+      }, SCHEDULING_VIEW, notifier);
+      try {
+        const before = x.businessState();
+        const refused = await call(x.client);
+        expect(refused, label).toMatchObject({ ok: false, refusal_reason: "unfulfillable_obligation" });
+        expect(refused, label).not.toHaveProperty("result");
+        expect(x.businessState(), label).toEqual(before);
+        const records = executions(x);
+        expect(records, label).toHaveLength(1);
+        expect(records[0], label).toMatchObject({
+          outcome: "suppressed",
+          error: "obligation_unfulfilled",
+          obligation_outcomes: [{ id: "obl_notify", type: "notification", ...outcome }],
+        });
+      } finally {
+        await x.close();
+      }
+    }
+  });
+
+  it("a permit carrying a notification beside an obligation the PEP does not recognize over HTTP with DPoP still transmits the notification and releases no protected effect: the write is refused unfulfillable_obligation, nothing is scheduled, and the outcomes are fulfilled and unsupported", async () => {
+    const outbox = new NotificationOutbox();
+    const x = await endpoint((d) => {
+      if (d.decision) d.context.obligations = [{ id: "obl_unknown", type: "x-unrecognized", properties: {} }, NOTIFY];
+    }, SCHEDULING_VIEW, outbox);
+    try {
+      const before = x.businessState();
+      const refused = await call(x.client);
+      expect(refused).toMatchObject({ ok: false, refusal_reason: "unfulfillable_obligation" });
+      expect(x.businessState()).toEqual(before);
+      expect(outbox.sent().map((n) => [n.obligation_id, n.to])).toEqual([["obl_notify", NOTIFY.properties.to]]);
+      const records = executions(x);
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        outcome: "suppressed",
+        error: "obligation_unfulfilled",
+        obligation_outcomes: [
+          { id: "obl_unknown", type: "x-unrecognized", outcome: "unsupported" },
+          { id: "obl_notify", type: "notification", outcome: "fulfilled" },
+        ],
+      });
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a denial carrying a notification obligation over HTTP with DPoP stays a denial and transmits the notification, beside an obligation the PEP does not recognize: nothing is scheduled and no Execution Evidence is recorded", async () => {
+    const outbox = new NotificationOutbox();
+    // The Mission names no scheduling, so the PDP denies; the obligations ride the denial.
+    const x = await endpoint((d) => {
+      if (!d.decision) d.context.obligations = [{ id: "obl_unknown", type: "x-unrecognized", properties: {} }, NOTIFY];
+    }, READ_ONLY_VIEW, outbox);
+    try {
+      const before = x.businessState();
+      const denied = await call(x.client);
+      expect(denied, JSON.stringify(denied)).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+      expect(denied).not.toHaveProperty("refusal_reason");
+      expect(denied).not.toHaveProperty("evidence_gap");
+      expect(x.businessState()).toEqual(before);
+      expect(outbox.sent()).toEqual([
+        { obligation_id: "obl_notify", evaluation_id: x.decisionIds[0], ...NOTIFY.properties },
+      ]);
+      expect(executions(x)).toHaveLength(0);
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a permit whose obligations member is present but not an array (null, an object, a string) over HTTP with DPoP releases no protected effect: the write is refused unfulfillable_obligation, nothing is transmitted, and the suppressed record carries no outcome list; an absent member or an empty array schedules", async () => {
+    for (const [label, value] of [
+      ["null", null],
+      ["an object", { id: "obl_notify", type: "notification", properties: NOTIFY.properties }],
+      ["a string", "notification"],
+    ] as const) {
+      const outbox = new NotificationOutbox();
+      const x = await endpoint((d) => {
+        if (d.decision) d.context.obligations = value;
+      }, SCHEDULING_VIEW, outbox);
+      try {
+        const before = x.businessState();
+        const refused = await call(x.client);
+        expect(refused, label).toMatchObject({ ok: false, refusal_reason: "unfulfillable_obligation" });
+        expect(x.businessState(), label).toEqual(before);
+        expect(outbox.sent(), label).toEqual([]);
+        const records = executions(x);
+        expect(records, label).toHaveLength(1);
+        expect(records[0], label).toMatchObject({ outcome: "suppressed", error: "obligation_unfulfilled" });
+        expect(records[0], label).not.toHaveProperty("obligation_outcomes");
+      } finally {
+        await x.close();
+      }
+    }
+    for (const [label, attach] of [
+      ["absent", (_d: { decision: boolean; context: Record<string, unknown> }) => {}],
+      ["an empty array", (d: { decision: boolean; context: Record<string, unknown> }) => {
+        if (d.decision) d.context.obligations = [];
+      }],
+    ] as const) {
+      const x = await endpoint(attach, SCHEDULING_VIEW, new NotificationOutbox());
+      try {
+        const scheduled = await call(x.client);
+        expect(scheduled.ok, `${label} ${JSON.stringify(scheduled)}`).toBe(true);
+        expect(x.businessState().schedules, label).toHaveLength(1);
+      } finally {
+        await x.close();
+      }
+    }
+  }, 30_000);
+
+  it("a denial whose Decision Evidence does not verify over HTTP with DPoP still stands and still transmits its notification, and the response says its evidence is missing: nothing is scheduled and no evidence is retained or recorded", async () => {
+    const outbox = new NotificationOutbox();
+    // The authenticated decision response carries the obligation; the
+    // retrospective record beside it is altered so it no longer verifies.
+    const x = await endpoint((d) => {
+      if (d.decision) return;
+      d.context.obligations = [NOTIFY];
+      const record = d.context.decision_evidence as Record<string, unknown>;
+      d.context.decision_evidence = { ...record, sequence: (record.sequence as number) + 1000 };
+    }, READ_ONLY_VIEW, outbox);
+    try {
+      const before = x.businessState();
+      const denied = await call(x.client);
+      expect(denied, JSON.stringify(denied)).toMatchObject({
+        ok: false,
+        denial_reason: "out_of_authority",
+        evidence_gap: "decision_evidence_unverifiable",
+      });
+      expect(denied).not.toHaveProperty("refusal_reason");
+      expect(x.businessState()).toEqual(before);
+      expect(outbox.sent().map((n) => [n.obligation_id, n.evaluation_id])).toEqual([["obl_notify", x.decisionIds[0]]]);
+      expect(x.evidence.all().filter((e) => e.kind === "decision")).toHaveLength(0);
+      expect(executions(x)).toHaveLength(0);
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a denial whose response fails channel authentication over HTTP with DPoP executes none of the obligations it carries: the request is refused channel_failure, nothing is transmitted and nothing is scheduled", async () => {
+    const outbox = new NotificationOutbox();
+    // A remote decision channel whose response is not signed by the PDP: the
+    // body is a denial carrying a notification, as a forged or altered
+    // response would be.
+    const forged = (async () =>
+      new Response(
+        JSON.stringify({ decision: false, context: { denial_reason: "out_of_authority", obligations: [NOTIFY] } }),
+      )) as typeof fetch;
+    const decide: NonNullable<ConstructorParameters<typeof Pep>[0]["decide"]> = (request) =>
+      evaluateRemote(request, { url: "http://pdp.unused.test/evaluate", pepId: "payments-pep", secret: "test-only", fetchImpl: forged });
+    const x = await endpoint(() => {}, SCHEDULING_VIEW, outbox, decide);
+    try {
+      const before = x.businessState();
+      const refused = await call(x.client);
+      expect(refused, JSON.stringify(refused)).toMatchObject({ ok: false, refusal_reason: "channel_failure" });
+      expect(outbox.sent()).toEqual([]);
+      expect(x.businessState()).toEqual(before);
+      expect(executions(x)).toHaveLength(0);
     } finally {
       await x.close();
     }
@@ -1029,6 +1318,252 @@ describe("a compound-action phase the PEP cannot establish is refused phase_unav
       expect(shipped.evidence.all().filter((e) => e.kind === "refusal")).toHaveLength(0);
     } finally {
       await shipped.close();
+    }
+  });
+});
+
+describe("every consequential permit's final disposition is one Execution Evidence record at the resource's HTTP endpoint (@spec authzen#execution-evidence-requirement, authzen#conformance, #1640)", () => {
+  const READS = entry(["payments:invoice.read", "payments:invoice.list", "payments:vendor.read"], { vendors: ["acme", "globex"] });
+  const HOLD = entry(["payments:payment.execute"], { vendors: ["acme"] });
+  const TRANSACT = entry(["payments:payment.execute", "payments:remittance.send"], { vendors: ["acme"] });
+  const SCHEDULE = entry(["payments:invoice.read", "payments:payment.schedule"], { vendors: ["acme", "globex"] });
+
+  /**
+   * The resource's HTTP MCP endpoint under DPoP, deciding through the embedded
+   * signing PDP, for a Mission and a credential naming `authority`. `evidence`
+   * builds the store the PEP retains and emits into.
+   */
+  async function endpoint(
+    authority: ReturnType<typeof entry>,
+    evidence: (keys: ReturnType<typeof createEphemeralEvidenceKeys>) => EvidenceStore = (keys) =>
+      new EvidenceStore(keys.signing, keys.resolver),
+  ) {
+    const view: MissionView = { ...VIEW, authority_set: [authority as MissionView["authority_set"][number]] };
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: resourcePolicyFixture() });
+    const store = evidence(keys);
+    const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
+    const loadView = (ref: { id: string; issuer: string }) =>
+      ref.id === view.id && ref.issuer === view.issuer
+        ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+        : undefined;
+    const ledger = payments();
+    const connectors = new Connectors();
+    const pep = new Pep({
+      decide: (req, opts) => keys.decide(req, opts),
+      payments: ledger,
+      evidence: store,
+      fga: allowingFga,
+      modelId: "m",
+      loadView,
+      instanceEpoch: "epoch-1640-execution-evidence",
+    });
+    const routed = new McpPaymentsServer({
+      writeReservations,
+      pep,
+      payments: ledger,
+      loadView,
+      jwks: { keys: [asJwk as never] },
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
+      issuer: ISSUER,
+      transaction: { engine: new TransactionEngine("epoch-1640-execution-evidence"), connectors, evidence: store },
+    });
+    const channel = await createHttpMcpChannel(routed);
+    const session = await createHttpMediatedClient(channel.url, await mint({ authorization_details: [authority] }), holder);
+    return {
+      evidence: store,
+      resolver: keys.resolver,
+      writeReservations,
+      connectors,
+      url: channel.url,
+      client: session.client,
+      close: async () => {
+        await session.close();
+        await channel.close();
+      },
+    };
+  }
+
+  /**
+   * The one permit's Decision Evidence and its one completed, signed, linked
+   * Execution Evidence record; `bound` says whether the permit binds a
+   * parameter digest, which the record then carries as both digests, and
+   * `role` is the emitter that released the effect.
+   */
+  async function expectOneCompleted(
+    x: Awaited<ReturnType<typeof endpoint>>,
+    label: string,
+    bound: boolean,
+    role: "pep" | "executor" = "pep",
+  ) {
+    const decisions = x.evidence.all().filter((e): e is DecisionEvidence => e.kind === "decision");
+    const executions = x.evidence.all().filter((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(decisions, label).toHaveLength(1);
+    expect(executions, label).toHaveLength(1);
+    expect(x.evidence.all().filter((e) => e.kind === "refusal"), label).toHaveLength(0);
+    const decision = (decisions[0] as DecisionEvidence).content;
+    const record = (executions[0] as ExecutionEvidence).content;
+    expect(decision.decision, label).toBe("permit");
+    expect(record, label).toMatchObject({
+      evaluation_id: decision.evaluation_id,
+      mission_id: VIEW.id,
+      audience: CANONICAL_RESOURCE,
+      outcome: "completed",
+      emitter: { id: CANONICAL_RESOURCE, role },
+    });
+    expect(record, label).not.toHaveProperty("error");
+    expect(decision.parameter_digest !== undefined, label).toBe(bound);
+    if (bound) {
+      expect(record.authorized_parameter_digest, label).toBe(decision.parameter_digest);
+      expect(record.effective_parameter_digest, label).toBe(decision.parameter_digest);
+    } else {
+      expect(record, label).not.toHaveProperty("authorized_parameter_digest");
+    }
+    expect(await verifyEvidenceEnvelope(record, EXECUTION_EVIDENCE_MEDIA_TYPE, x.resolver), label).toEqual({ valid: true });
+  }
+
+  it("a completed consequential read (get_invoice, list_invoices, lookup_vendor) over HTTP with DPoP releases its result with exactly one signed completed Execution Evidence record linked to the permit's evaluation", async () => {
+    for (const [tool, args, bound] of [
+      ["get_invoice", { invoice_id: "inv-1" }, true],
+      ["list_invoices", {}, true],
+      ["lookup_vendor", { vendor_id: "acme" }, false],
+    ] as const) {
+      const x = await endpoint(READS);
+      try {
+        const read = await x.client.callTool(tool, args);
+        expect(read.ok, `${tool} ${JSON.stringify(read)}`).toBe(true);
+        expect(read.result, tool).toBeDefined();
+        await expectOneCompleted(x, tool, bound);
+      } finally {
+        await x.close();
+      }
+    }
+  });
+
+  it("a completed reversible write under a single-use permit (hold_transfer) over HTTP with DPoP releases the hold with exactly one signed completed Execution Evidence record linked to the permit's evaluation", async () => {
+    const x = await endpoint(HOLD);
+    try {
+      const held = await x.client.callTool("hold_transfer", { invoice_id: "inv-1" });
+      expect(held, JSON.stringify(held)).toEqual({ ok: true, result: { held: true, invoice_id: "inv-1" } });
+      expect(x.writeReservations.consumedPermits()).toHaveLength(1);
+      await expectOneCompleted(x, "hold_transfer", true);
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a completed keyed reversible write (schedule_payment) over HTTP with DPoP schedules once with exactly one signed completed Execution Evidence record linked to the permit's evaluation", async () => {
+    const x = await endpoint(SCHEDULE);
+    try {
+      const scheduled = await x.client.callTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+      expect(scheduled.ok, JSON.stringify(scheduled)).toBe(true);
+      expect(x.writeReservations.schedules()).toHaveLength(1);
+      await expectOneCompleted(x, "schedule_payment", true);
+    } finally {
+      await x.close();
+    }
+  });
+
+  it("a completed irreversible commit (execute_wire_transfer) or external commitment (send_remittance_email) over HTTP with DPoP commits one connector effect with exactly one signed completed Execution Evidence record linked to the permit's evaluation, recorded by the executor at the commit point", async () => {
+    for (const tool of ["execute_wire_transfer", "send_remittance_email"] as const) {
+      const x = await endpoint(TRANSACT);
+      try {
+        const committed = await x.client.callTool(tool, { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+        expect(committed.ok, `${tool} ${JSON.stringify(committed)}`).toBe(true);
+        expect(x.connectors.committedEffects(), tool).toHaveLength(1);
+        await expectOneCompleted(x, tool, true, "executor");
+      } finally {
+        await x.close();
+      }
+    }
+  });
+
+  /** An evidence store whose `completed` records cannot be recorded; every other record still can. */
+  class CompletionUnavailable extends EvidenceStore {
+    override async recordExecution(...args: Parameters<EvidenceStore["recordExecution"]>) {
+      if (args[2].outcome === "completed") throw new Error("retention unavailable");
+      return super.recordExecution(...args);
+    }
+  }
+
+  /**
+   * One tool call over a fresh HTTP MCP session with DPoP, keeping the raw
+   * bytes of every response the resource sent for it, so an assertion reads
+   * what crossed the wire rather than what the client parsed.
+   */
+  async function callCapturingBytes(
+    x: Awaited<ReturnType<typeof endpoint>>,
+    authority: ReturnType<typeof entry>,
+    tool: string,
+    args: Record<string, unknown>,
+  ): Promise<{ structured: Record<string, unknown>; bytes: string }> {
+    const token = await mint({ authorization_details: [authority] });
+    const inner = dpopFetch(token, holder);
+    let capturing = false;
+    const pending: Promise<string>[] = [];
+    const fetchImpl = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+      const res = await inner(input as never, init as never);
+      if (capturing && (init?.method ?? "GET") === "POST") pending.push(res.clone().text());
+      return res;
+    }) as typeof fetch;
+    const transport = new StreamableHTTPClientTransport(new URL(x.url), { fetch: fetchImpl as never });
+    const mcp = new Client({ name: "bytes-1640", version: "0.0.1" }, { capabilities: {} });
+    await mcp.connect(transport as never);
+    try {
+      capturing = true;
+      const res = await mcp.callTool({ name: tool, arguments: args });
+      capturing = false;
+      return { structured: res.structuredContent as Record<string, unknown>, bytes: (await Promise.all(pending)).join("\n") };
+    } finally {
+      await transport.terminateSession().catch(() => {});
+      await mcp.close();
+    }
+  }
+
+  it("a read or a hold whose completed record cannot be recorded over HTTP with DPoP returns no protected data: no response byte carries the result, the refusal is evidence_unavailable, and the permit's disposition is recorded suppressed", async () => {
+    for (const [tool, authority, args, markers] of [
+      ["get_invoice", READS, { invoice_id: "inv-1" }, ["payee_account", "125.00"]],
+      ["list_invoices", READS, {}, ["payee_account", "125.00"]],
+      ["hold_transfer", HOLD, { invoice_id: "inv-1" }, ["held"]],
+    ] as const) {
+      // The same call with its record written carries the result on the wire,
+      // so the markers find protected data where it is present.
+      const control = await endpoint(authority);
+      try {
+        const released = await callCapturingBytes(control, authority, tool, args);
+        expect(released.structured.ok, tool).toBe(true);
+        for (const marker of markers) expect(released.bytes, `${tool} control`).toContain(marker);
+      } finally {
+        await control.close();
+      }
+      const x = await endpoint(authority, (keys) => new CompletionUnavailable(keys.signing, keys.resolver));
+      try {
+        const withheld = await callCapturingBytes(x, authority, tool, args);
+        expect(withheld.structured, tool).toEqual({ ok: false, refusal_reason: "evidence_unavailable" });
+        expect(withheld.bytes.length, tool).toBeGreaterThan(0);
+        for (const marker of markers) expect(withheld.bytes, tool).not.toContain(marker);
+        const records = x.evidence.all().filter((e): e is ExecutionEvidence => e.kind === "execution");
+        expect(records.map((r) => [r.content.outcome, r.content.error]), tool).toEqual([["suppressed", EVIDENCE_UNAVAILABLE_ERROR]]);
+      } finally {
+        await x.close();
+      }
+    }
+  }, 30_000);
+
+  it("a keyed write whose effect committed but whose completed record cannot be recorded over HTTP with DPoP reports the emission_failed gap with no result on the wire: the schedule stands once, and a retry under the same key retrieves it under its own permit", async () => {
+    const x = await endpoint(SCHEDULE, (keys) => new CompletionUnavailable(keys.signing, keys.resolver));
+    try {
+      const args = { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` };
+      const committed = await callCapturingBytes(x, SCHEDULE, "schedule_payment", args);
+      expect(committed.structured).toEqual({ ok: false, gap: "emission_failed" });
+      expect(committed.bytes.length).toBeGreaterThan(0);
+      expect(committed.bytes).not.toContain("schedule_id");
+      expect(x.writeReservations.schedules()).toHaveLength(1);
+      expect(x.evidence.all().filter((e) => e.kind === "execution")).toHaveLength(0);
+      const retried = await callCapturingBytes(x, SCHEDULE, "schedule_payment", args);
+      expect(retried.structured).toMatchObject({ ok: true, deduped: true, result: { scheduled: true } });
+      expect(x.writeReservations.schedules()).toHaveLength(1);
+    } finally {
+      await x.close();
     }
   });
 });

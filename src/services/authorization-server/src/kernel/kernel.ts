@@ -149,6 +149,7 @@ import {
   committedActivationPolicy,
   type EvaluatedActivationPolicy,
 } from "./activation-policy-snapshots.js";
+import { JoinEvidenceStore } from "./join-evidence-store.js";
 import { type ApprovalGovernanceRecord, ApprovalGovernanceRecordStore, signApprovalGovernanceRecord } from "./approval-governance.js";
 import {
   assertDirectApprovalRecord,
@@ -408,6 +409,14 @@ export class MissionNotFoundError extends Error {}
  * from the Mission's current state version (`stale_version`, HTTP 409).
  */
 export class StaleVersionError extends Error {}
+/**
+ * @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): a due
+ * schedule's transition could not be persisted, and a re-read shows no other
+ * request committed it or replaced the schedule. A decision never reports the
+ * pre-deadline state in its place: the Status operation answers `unavailable`
+ * and issuance fails closed.
+ */
+export class MissionStateUnavailableError extends Error {}
 /**
  * @spec control-plane#fresh-observation — raised only under the OPTIONAL
  * `strictObservationWatermark` policy: state advanced between the observation
@@ -925,6 +934,13 @@ export class MissionKernel {
    */
   readonly activationPolicySnapshots: ActivationPolicySnapshotStore;
   /**
+   * @spec authority-server#join-assertion-artifact (#1560): the join evidence
+   * events, one per Join Assertion minted, on this kernel's database and kept
+   * for the audit horizon of the Mission each names. An audit read only: no
+   * minting check consults it.
+   */
+  readonly joinEvidence: JoinEvidenceStore;
+  /**
    * @spec approval-governance#atomic-commitment: the signed Approval
    * Governance Records, on this kernel's database and written only in the
    * creation transaction of the Mission each governs.
@@ -1066,6 +1082,13 @@ export class MissionKernel {
     // retention the tombstones compose, so the deployment declares one audit
     // horizon, not two that can drift.
     this.activationPolicySnapshots = new ActivationPolicySnapshotStore(this.db, {
+      now: this.now,
+      auditRetentionSeconds: this.tombstones.horizons().audit_retention_seconds,
+    });
+    // @spec authority-server#join-assertion-artifact (#1560): the same one
+    // declared audit retention, so a join evidence event is kept for its
+    // Mission's audit horizon.
+    this.joinEvidence = new JoinEvidenceStore(this.db, {
       now: this.now,
       auditRetentionSeconds: this.tombstones.horizons().audit_retention_seconds,
     });
@@ -4079,15 +4102,16 @@ export class MissionKernel {
    * expiry takes precedence over its parent's termination.
    */
   observe(record: MissionRecord): MissionRecord {
-    return this.observeAt(record, this.now().getTime(), 0);
+    return this.observeAt(record, this.now().getTime(), 0, false);
   }
 
-  private observeAt(record: MissionRecord, nowMs: number, depth: number): MissionRecord {
-    const own = observeExpiry(record, nowMs);
+  private observeAt(record: MissionRecord, nowMs: number, depth: number, dueRevoke: boolean): MissionRecord {
+    let own = observeExpiry(record, nowMs);
+    if (dueRevoke && own.state !== "terminated") own = observeDueRevoke(own, nowMs);
     if (own.state === "terminated" || !record.parent?.id || depth > 64) return own;
     const stored = this.get(record.parent.id);
     if (!stored) return own;
-    const parent = this.observeAt(stored, nowMs, depth + 1);
+    const parent = this.observeAt(stored, nowMs, depth + 1, dueRevoke);
     if (parent.state !== "terminated") return own;
     return { ...own, state: "terminated", termination: parentTerminatedTermination(parent) };
   }
@@ -4096,6 +4120,23 @@ export class MissionKernel {
   observedRecord(id: string): MissionRecord | undefined {
     const record = this.get(id);
     return record ? this.observe(record) : undefined;
+  }
+
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"), mission#issuance-gating
+   * (#1659, D771): the record as the release fence decides on it. As
+   * {@link observe}, and a due `on_expiry=revoke` schedule of the Mission or
+   * any ancestor is also projected, read-only, as its `revoked` termination at
+   * `suspend_until`. Expiry is observed first, so a deadline the Mission's
+   * `expires_at` overtook yields `expired`; a recorded termination is kept; a
+   * replaced or cancelled schedule is not the record's current one and
+   * projects nothing. A due `resume` projects nothing: the suspension it ends
+   * was committed after the gate, which still releases. Nothing is written, no
+   * version advances, no event is emitted and no derivation is refunded.
+   */
+  observedForRelease(id: string): MissionRecord | undefined {
+    const record = this.get(id);
+    return record ? this.observeAt(record, this.now().getTime(), 0, true) : undefined;
   }
 
   /**
@@ -4111,10 +4152,11 @@ export class MissionKernel {
    * @spec status#state-machine, status#legal-transitions: the same clock
    * applies a due suspension schedule, AFTER expiry, so a Mission past its
    * `expires_at` is `expired` and never resumed, and a deadline at or after
-   * `expires_at` never applies. Unlike expiry, a due
-   * schedule is never projected: a resume or revocation that did not commit
-   * is not reported, and the caller gets the stored `suspended` row (which
-   * derives nothing) until the commit lands.
+   * `expires_at` never applies. Unlike expiry, a due schedule is never
+   * projected here: it commits, and a resume or revocation whose write fails
+   * is never reported as the stored `suspended` row ({@link applyDueSchedule};
+   * the release fence projects a due revocation read-only,
+   * {@link observedForRelease}).
    */
   applyExpiry(record: MissionRecord): MissionRecord {
     const observed = this.observe(record);
@@ -4136,10 +4178,17 @@ export class MissionKernel {
    * @spec status#mission-lifecycle-endpoint ("Operations"): commit the
    * transition a due schedule owes ({@link dueScheduleTransition}) under the
    * `(version, state)` compare-and-set, which clears the schedule with it.
-   * On a failed write the caller gets the current row, never a projection.
    * Whichever path reaches it (a read, a request, or the timer), the commit
    * names the schedule it applied, so every effect outside the kernel follows
    * that commit through the durable fan-out.
+   *
+   * @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): a
+   * failed write is re-read. When the row moved (another request committed the
+   * transition or replaced the schedule), the expiry clock runs on the row as
+   * it now stands. When it did not, the write failed in storage, and
+   * {@link MissionStateUnavailableError} is raised rather than reporting the
+   * pre-deadline state: the Status operation answers `unavailable`, issuance
+   * fails closed, and the timer retries.
    */
   private applyDueSchedule(record: MissionRecord, observed: MissionRecord): MissionRecord {
     const due = dueScheduleTransition(record, this.now().getTime());
@@ -4150,12 +4199,16 @@ export class MissionKernel {
         appliedSchedule: record.schedule,
       });
     } catch {
+      let current: MissionRecord | undefined;
       try {
-        const current = this.get(record.id);
-        return current ? this.observe(current) : observed;
+        current = this.get(record.id);
       } catch {
-        return observed;
+        current = undefined;
       }
+      if (current && (current.version !== record.version || current.state !== record.state)) {
+        return this.applyExpiry(current);
+      }
+      throw new MissionStateUnavailableError(`mission ${record.id}: its due schedule could not be applied`);
     }
   }
 
@@ -5010,7 +5063,8 @@ export class MissionKernel {
    * transitions, drains runnable deliveries, prunes settled outbox rows past
    * the composed retention horizon, prunes tombstone DETAIL past that same
    * horizon while keeping each identity row as the permanent nonreuse marker,
-   * and moves every unreleased derivation reservation to `unacknowledged`
+   * prunes activation policy snapshots and join evidence events past their
+   * audit horizon, and moves every unreleased derivation reservation to `unacknowledged`
    * WITHOUT refunding its count.
    */
   async recoverAtBoot(): Promise<void> {
@@ -5021,6 +5075,9 @@ export class MissionKernel {
     // @spec mission#standing-consent-bases: only snapshots past their audit
     // horizon are deleted.
     this.activationPolicySnapshots.pruneExpired();
+    // @spec authority-server#join-assertion-artifact (#1560): only join
+    // evidence events past their Mission's audit horizon are deleted.
+    this.joinEvidence.pruneExpired();
     // @spec control-plane#serialization — an unreleased reservation is
     // ambiguous, not evidence that no artifact was accepted, so recovery
     // records the ambiguity and leaves the count spent. Only an authoritative
@@ -5246,6 +5303,19 @@ function dueScheduleTransition(
   return schedule.on_expiry === "resume"
     ? { to: "active" }
     : { to: "terminated", termination: { reason: "revoked", terminated_at: new Date(until).toISOString() } };
+}
+
+/**
+ * @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): the
+ * record with a due `on_expiry=revoke` schedule projected as its termination,
+ * with no write and no `version`; any other record unchanged. The caller has
+ * already observed expiry, so a deadline `expires_at` overtook never reaches
+ * here as due.
+ */
+function observeDueRevoke(record: MissionRecord, nowMs: number): MissionRecord {
+  const due = dueScheduleTransition(record, nowMs);
+  if (due?.to !== "terminated" || !due.termination) return record;
+  return { ...record, state: "terminated", termination: due.termination };
 }
 
 /**
