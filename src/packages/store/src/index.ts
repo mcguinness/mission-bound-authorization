@@ -12,12 +12,23 @@ export type { Database } from "better-sqlite3";
 export interface StoreOptions {
   /** Non-default persistence escape hatch (D27); ':memory:' is the default. */
   file?: string;
+  /**
+   * Hold the file's lock for this handle's lifetime: `locking_mode=EXCLUSIVE`
+   * and `synchronous=FULL`, with no busy wait, so a second handle or process
+   * opening the same file is refused at once rather than becoming a second
+   * writer. Meaningful only with `file`.
+   */
+  exclusive?: boolean;
 }
 
 export function openStore(schemaSql: string, options: StoreOptions = {}): Database.Database {
-  const db = new Database(options.file ?? ":memory:");
+  const db = new Database(options.file ?? ":memory:", options.exclusive ? { timeout: 0 } : {});
+  if (options.exclusive) db.pragma("locking_mode = EXCLUSIVE");
   db.pragma("journal_mode = WAL");
+  if (options.exclusive) db.pragma("synchronous = FULL");
   db.pragma("foreign_keys = ON");
+  // Under EXCLUSIVE, the first write takes the lock and keeps it until close.
+  if (options.exclusive) db.transaction(() => undefined).immediate();
   db.exec(schemaSql);
   return db;
 }
@@ -151,15 +162,47 @@ export function afterCommit(db: Database.Database, callback: () => void): void {
   else callback();
 }
 
+/**
+ * A hook around each OUTERMOST managed transaction on one database, for an
+ * owner that keeps an external record of its commits (the kernel's recovery
+ * witness, #250): `begin` before it opens, `beforeCommit` as its last step
+ * inside it, `settled` once it has committed or rolled back, and
+ * `afterCommit` after a commit, before its {@link afterCommit} callbacks. A
+ * throw from `afterCommit` skips those callbacks. Savepoints are not hooked.
+ */
+export interface CommitGuard {
+  begin(): void;
+  beforeCommit(): void;
+  settled(committed: boolean): void;
+  afterCommit(): void;
+}
+const commitGuards = new WeakMap<Database.Database, CommitGuard>();
+
+/** Register `guard` for every outermost {@link withTransaction} on `db`. */
+export function setCommitGuard(db: Database.Database, guard: CommitGuard): void {
+  commitGuards.set(db, guard);
+}
+
 export function withTransaction<T>(db: Database.Database, fn: () => T): T {
   const parent = commitFrames.get(db);
   if (db.inTransaction && !parent)
     throw new Error("withTransaction cannot nest in an unmanaged transaction");
+  const guard = parent ? undefined : commitGuards.get(db);
   const frame: CommitFrame = { callbacks: [] };
   commitFrames.set(db, frame);
   let result: T;
+  let committed = false;
   try {
-    result = db.transaction(fn)();
+    guard?.begin();
+    const body = guard
+      ? () => {
+          const value = fn();
+          guard.beforeCommit();
+          return value;
+        }
+      : fn;
+    result = db.transaction(body)();
+    committed = true;
   } catch (e) {
     if (isUniqueViolation(e)) {
       throw new UniqueViolationError((e as Error).message);
@@ -168,9 +211,13 @@ export function withTransaction<T>(db: Database.Database, fn: () => T): T {
   } finally {
     if (parent) commitFrames.set(db, parent);
     else commitFrames.delete(db);
+    guard?.settled(committed);
   }
   if (parent) parent.callbacks.push(...frame.callbacks);
-  else for (const callback of frame.callbacks) callback();
+  else {
+    guard?.afterCommit();
+    for (const callback of frame.callbacks) callback();
+  }
   return result;
 }
 
