@@ -44025,9 +44025,21 @@
      "name": "Dispatch Handoff: the handoff to the selected Agent and its continuation (@spec mission-template#dispatch-handoff) > the Dispatcher's handoff grant names the Agent; the Agent redeems it with its own key, then opens and refreshes a family",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > a requested set the projection cannot issue whole is refused invalid_authorization_details, issuing no handoff grant; the whole set is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > an entry the projection drops is refused beside an overlapping entry that is issued; the recorded binding is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "D357 acceptance bar item 3 at the exchange (cannot exceed the presented token's or the current effective authority). The down-scoped and unreadable subject tokens are AS-signed by the test. Proved by disabling the check (dispatch-handoff mutation harness, #1158)."
+   "notes": "D357 acceptance bar item 3 at the exchange (cannot exceed the presented token's or the current effective authority). The down-scoped and unreadable subject tokens are AS-signed by the test. Proved by disabling the check (dispatch-handoff mutation harness, #1158). #1513: a request naming a capability_sources binding the instance does not record, beyond both sets under the Subset Rule, is refused rather than handed off without the entry; the check compares each requested entry with its own projection, so a sibling entry for the same action cannot cover a dropped one (a recorded binding with another digest, vendors: []); disabling it fails the two #1513 witnesses alone, and comparing the whole set instead fails only the overlap witness, and disabling either subset check still fails only its own witness."
   },
   {
    "id": "template.handoff.grant-members",
@@ -64519,9 +64531,21 @@
      "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > contain, then open a family naming the contained capability: refused invalid_authorization_details as exceeding the Mission authority, though the presented token carries it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "a requested family set the projection cannot issue whole is refused, never trimmed (@spec mission#subset, mission#error-mapping, #1513) > each vector is refused invalid_authorization_details, creating no family and counting nothing; the whole request still creates the family",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "a requested family set the projection cannot issue whole is refused, never trimmed (@spec mission#subset, mission#error-mapping, #1513) > an entry the projection drops is refused beside an overlapping entry that is issued; the recorded binding is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness."
+   "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness. #1513: the async-delegation exchange also refuses a request its projection cannot issue whole, such as an entry naming a capability_sources binding the Mission does not record (beyond the grant under the Subset Rule), which it had opened as a narrower family; the check compares each requested entry with its own projection, so a sibling entry for the same action cannot cover a dropped one; disabling it fails the two #1513 witnesses alone, and comparing the whole set instead fails only the overlap witness, and the whole-issue refusal carries its own description, so the containment witness still catches the Mission check alone."
   },
   {
    "id": "core.error-mapping.original-audience-invalid-target",
@@ -65166,7 +65190,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a refresh whose requested authorization_details cannot be issued whole issues no token rather than a token carrying fewer or narrower entries than requested: an entry beyond the grant is not intersected down to what the grant carries, and an entry the issuer's projection cannot carry whole does not leave the remaining entries issued",
-    "local": "the reference refuses invalid_authorization_details unless every requested entry is a subset of the issued set; its projection drops an entry carrying a capability_sources binding the grant does not record (an entry beyond the grant under the subset rule) or a max_amount that is not a decimal (an incomparable value, refused conservatively per the subset rule)"
+    "local": "the reference refuses invalid_authorization_details unless every requested entry is a subset of its own projection, so a sibling entry for the same action does not cover one the projection drops; its projection drops an entry carrying a capability_sources binding the grant does not record (an entry beyond the grant under the subset rule) or a max_amount that is not a decimal (an incomparable value, refused conservatively per the subset rule)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -65194,9 +65218,15 @@
      "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > an entry the projection cannot issue whole is refused beside an overlapping entry that is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 (D620 finding 6). Proved by mutation: comparing only the issued set's size to zero, instead of requiring every requested entry within it, fails the issued-whole witness on each of its two vectors alone (each was run as the only case); projecting with neither the subset check nor the issued-whole check fails the narrower-family, excess and relaxation witnesses, each issued a trimmed token. The same check serves the authorization code exchange, which shares the narrowing function; no code-exchange witness is cited."
+   "notes": "#1503 (D620 finding 6). Proved by mutation: comparing only the issued set's size to zero, instead of requiring every requested entry within it, fails the issued-whole witness on each of its two vectors alone (each was run as the only case); projecting with neither the subset check nor the issued-whole check fails the narrower-family, excess and relaxation witnesses, each issued a trimmed token. The same check serves the authorization code exchange, which shares the narrowing function; no code-exchange witness is cited. #1513 review: comparing the whole requested set with the whole issued set let a sibling entry for the same action cover a dropped one (an unrecorded binding, vendors: []), issuing the remainder; the per-entry check (issuedWhole, shared with family creation and the Dispatch Handoff) fails the overlap witness when it compares the whole set instead, and removing it fails the issued-whole and overlap witnesses."
   },
   {
    "id": "core.subset.widening-request-refused",
@@ -65838,7 +65868,8 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a joined decision request carries context.mission_join, with the actor-record depth as delegate_depth for a delegate"
+    "normative": "a joined decision request carries context.mission_join: on the mapping join, with the actor-record depth as delegate_depth for a delegate; on the assertion path, with the assertion it obtained, the assertion's join claim governing the depth (a separate delegate_depth is optional there)",
+    "local": "the reference PEP omits delegate_depth beside an obtained assertion, so a second actor-record store cannot contradict the MAS's; this is reference behavior (D770), not a protocol prohibition, and the PDP's disagreement check still applies to a caller that reports one"
    },
    "level": "unit",
    "coverage": "tested",
@@ -65848,8 +65879,15 @@
      "name": "baseline MAS Join: context.mission_join carriage (@spec authority-server#join-authzen) > carries context.mission_join on a joined delegate decision, with the actor-record depth as delegate_depth",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mas-join-assertion-pep.test.ts",
+     "name": "on the assertion path the assertion's depth is the only depth (@spec authority-server#join-authzen, #join-assertion-pdp, #1561) > carries no delegate_depth of its own beside an assertion it obtained, though its own actor records give one; with no assertion it carries its own",
+     "level": "unit",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "#1561: on the assertion path the PEP carries no depth of its own beside the assertion, so a second actor-record store cannot contradict the MAS's. Proved by restoring the PEP's own depth beside an obtained assertion: the cited #1561 test then sees delegate_depth 2. D770: the omission is reference behavior, recorded in the local observation; the member is optional on the assertion path (#972 clarifies the draft)."
   },
   {
    "id": "mas.join-inputs.mission-bound-never-carries",
@@ -66097,7 +66135,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "on the assertion path, rule 5 narrowing and the rule 9 commitment use the join claim",
-    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: under a mapping contract that resolves nothing, a verified assertion joins; rule 5 narrows a delegate by join.client_id and join.depth, and the join_view_id commitment is computed over the join claim's client and disposition; in the pilot, a delegate joins at the MAS's recorded depth"
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: under a mapping contract that resolves nothing, a verified assertion joins; rule 5 narrows a delegate by join.client_id and join.depth, and the join_view_id commitment is computed over the join claim's client and disposition; in the pilot, a delegate joins at the depth the MAS's actor records give, with no depth of the PEP's own beside the assertion (#1561)"
    },
    "level": "unit",
    "coverage": "tested",
@@ -66110,7 +66148,7 @@
     },
     {
      "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
-     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a delegate at the depth the MAS's actor records give, and denies when the PEP's actor records report another depth",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a delegate at the depth the MAS's actor records give, recorded at the MAS's operator console; the PEP keeps no records and carries no depth of its own, so nothing contradicts the MAS (#1561)",
      "level": "cross-component",
      "surface": "decision-request"
     }
@@ -66133,7 +66171,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a PEP-reported delegate_depth that disagrees with join.depth is denied mission_binding_failed",
-    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key, and end to end in the separated MAS pilot, where the MAS process mints them and the PEP carries them: a reported delegate_depth that differs from join.depth is denied mission_binding_failed; one that agrees permits; in the pilot, the PEP's actor records put the delegate at depth 2 where the MAS's say 1"
+    "local": "the reference PDP (services/pdp/src/join-assertion.ts, evaluate.ts step 4b), unit-tested with assertions signed by a key standing in for the MAS's Status key: a reported delegate_depth that differs from join.depth is denied mission_binding_failed; one that agrees permits. In the MAS pilot the PEP carries no delegate_depth of its own beside an assertion and keeps no actor records on that path (#1561), so no disagreement arises there"
    },
    "level": "unit",
    "coverage": "tested",
@@ -66143,15 +66181,9 @@
      "name": "evaluate(): an assertion that fails a check denies mission_binding_failed, never falling back to the mapping join (@spec authority-server#join-assertion-pdp, #1454) > denies a reported delegate_depth that differs from join.depth, and permits one that agrees",
      "level": "unit",
      "surface": "decision-request"
-    },
-    {
-     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
-     "name": "the separated MAS pilot's Join Assertion path (#1454) > joins a delegate at the depth the MAS's actor records give, and denies when the PEP's actor records report another depth",
-     "level": "cross-component",
-     "surface": "decision-request"
     }
    ],
-   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect that drops the comparison. The client-join case is mas.join-assertion.client-join-depth-zero (#1592)."
+   "notes": "#1454 (sender-bound Join Assertions): the PEP and PDP side. Proved by a defect that drops the comparison. The client-join case is mas.join-assertion.client-join-depth-zero (#1592). #1561: the pilot witness, where the PEP's separate records put a delegate at depth 2 against the MAS's 1, is retired: the PEP no longer keeps a second store or carries a depth beside an assertion."
   },
   {
    "id": "mas.join-assertion.client-join-depth-zero",
@@ -66518,6 +66550,96 @@
     }
    ],
    "notes": "#1454 (sender-bound Join Assertions): the MAS side. Proved by a defect that advertises a list without the algorithm the MAS signs with."
+  },
+  {
+   "id": "mas.join-assertion.evidence-retained",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "join-assertion-artifact",
+   "text": "Each minting is a join evidence event. The MAS records the following, retained for the audit horizon",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.join-assertion"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every minted assertion leaves a join evidence event recording the Mission reference, the token digest and thumbprint, the join result, the authenticated caller, the mapping version where one is published, and the validity window, and the event is retained for the audit horizon",
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, kernel/join-evidence-store.ts) and the MAS pilot (demo/src/mas-pilot/mas-as.ts): each minting writes its event (mission issuer and id, token sha256 and its one confirmation, join, caller, audience, mapping_version, iat, exp) to the kernel database after the last Mission re-read and before the assertion is cached or returned; a write that fails answers unavailable (503) with nothing returned or cached, so a retry mints anew. Each event is kept until a retain_until written when it is recorded: its Mission's expires_at plus the kernel's declared audit retention, the one value its terminal tombstones and activation policy snapshots compose. The pilot's MAS declares the deployment's audit horizon, AUDIT_HORIZON_SECONDS (config/policy.json audit_horizon_s, 31536000 seconds: one year after Mission expiry, D770); the reusable kernel's default (7776000 seconds) applies only where a deployment declares none. Boot recovery deletes only events whose stored retain_until has passed, and a reboot under another declaration neither recomputes nor shortens it. Durable only on the file-backed kernel store with a key ring: restart is witnessed in process and for the separated MAS process started directly (demo/src/mas-pilot/mas-serve.ts through startMasProcess); a relaunch through the launcher (launchMasPilot) is not witnessed. The in-memory default does not survive a restart. Events read back oldest first, so a mapping change is attributable through each event's mapping_version. An operator reads a Mission's events through the operator console's MAS half (GET /missions/{id}/join-evidence, behind its bearer); the MAS serves them on no route of its own. The reference MAS validates no Instance Context as a Context Consumer, so that member is never recorded."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > records each minting on the kernel store, and the event survives a restart with the key ring and the kernel file: the Mission reference, the token digest and thumbprint, the join, the caller, the audience, mapping_version and the validity window",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > makes a mapping change attributable after a restart: each retained event names the mapping_version its assertion was minted under, in minting order",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > keeps each event for its Mission's audit horizon, the Mission's expiry plus the declared audit retention: a boot at that horizon keeps it, and a boot past it prunes it and keeps a later Mission's",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > returns no assertion, and caches none, when the event cannot be recorded: unavailable (HTTP 503), and the same request then mints anew and records its event",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > the store refuses an event under another Mission, a Mission expiry that is not a date-time, and a retention that is not a non-negative number, writing nothing",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > a declared audit retention is the one horizon the kernel's join evidence and tombstones compose (#1560, D770); absent, the reusable kernel's 90-day default",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-evidence-retention.test.ts",
+     "name": "Join evidence retention (@spec authority-server#join-assertion-artifact, #1560) > keeps an event's stored horizon across a reboot (#1560, D770): a kernel rebooted under the 90-day default neither recomputes nor shortens the one-year retain_until it was recorded with, and prunes the event only once that stored horizon passes",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion artifact (@spec authority-server#join-assertion-artifact, #1454) > mints a sender-bound assertion for an enrolled PDP: typ, a listed alg, iss, mission, token with its one confirmation, join, aud, mapping_version",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-evidence.test.ts",
+     "name": "the pilot's kernel keeps join evidence for the deployment's audit horizon (@spec authority-server#join-assertion-artifact, #1560, D770) > keeps an event for one year after its Mission's expiry, the horizon its tombstones share: past the reusable 90-day default and at its retain_until it is kept across a restart, and only a boot after retain_until prunes it",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-evidence.test.ts",
+     "name": "the MAS operator console reads join evidence (@spec authority-server#join-assertion-artifact, #1560) > reads a Mission's join evidence events behind the console's bearer, that Mission's alone, and the MAS serves them on no route of its own",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-evidence.test.ts",
+     "name": "the separated MAS process keeps its join evidence across a restart (@spec authority-server#join-assertion-artifact, #1560) > with a key ring and a kernel store, a minted assertion's event, with its mapping_version, reads back through the MAS's operator console after the MAS restarts",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1560 (join evidence retention, from #1454): the MAS side. D770 item 2: the pilot's kernel keeps join evidence (with its tombstones and activation policy snapshots) for the deployment's declared audit horizon, AUDIT_HORIZON_SECONDS, one year after Mission expiry, not the reusable kernel's 90-day default; the one-year boundary is witnessed by the pilot horizon test (kept past the 90-day default and at retain_until across restarts, pruned only after). Restart scope: in process, and the separated MAS process started directly (mas-serve.ts through startMasProcess); a relaunch through the launcher (launchMasPilot) is not witnessed. Proved by defects that skip the event write, cache the assertion before the write, let a failed write propagate instead of answering unavailable, drop mapping_version from the event, compute the horizon from the assertion's exp or without the audit retention, prune at the horizon (<=) or prune every event, drop the boot-recovery prune, read events newest first, read every Mission's events for one Mission (store and console route), keep the events in a process-memory database instead of the kernel's, have mas-serve.ts ignore the kernel store, return no events from the service, write the event before the post-signing re-read, serve the events on the MAS's own route, skip the console's bearer check, drop each of the store's three input guards, have the pilot fall back to the kernel default, have the authorization server ignore the declared retention, and recompute retain_until at a reboot (in the boot prune, and by rewriting the stored value). The Instance Context member is not applicable: the reference MAS validates none."
   },
   {
    "id": "mas.join-assertion.pdp-rejects-unlisted-alg",
@@ -67374,7 +67496,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a caller that is neither the Mission's client, a recorded delegate, nor an enrollee for the Mission's enforcement scope receives not_found, the same answer as for an unknown Mission",
-    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both; the reference MAS holds no delegate actor records (follow-up: #1561), so its visibility set is the Mission's client and the enrollees of either role"
+    "local": "the reference authorization server acting as the MAS (services/authorization-server/src/adapters/join-assertion.ts, provider.ts), its joinEnrollment configuration keyed by the authenticated caller, each enrollee with roles pep, pdp or both, and its deployment's actor records (JoinAssertionDeployment.recordedDelegate): in the MAS pilot, the separated MAS's own records (demo/src/mas-pilot/mas-join-assertions.ts), the same records the asserted join takes a delegate's depth from, an edge recorded only at the MAS's operator console (#1561). A recorded delegate is a client those records place under the Mission through a chain reaching the Mission's own client"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -67396,9 +67518,21 @@
      "name": "the separated MAS pilot's Join Assertion path (#1454) > takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/join-assertion-endpoint.test.ts",
+     "name": "Join Assertion visibility takes recorded delegates (@spec authority-server#join-assertion-request, #1561) > admits a caller the deployment's actor records record as the Mission's delegate, and answers it not_found for a Mission it is not recorded under, as an unknown Mission",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-join-assertion.test.ts",
+     "name": "the separated MAS pilot's Join Assertion path (#1454) > takes the visibility set's recorded delegates from the MAS's actor records (#1561): a client recorded as a Mission's delegate may request for it, and is not_found for a Mission it is not recorded under",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "#1591 (D708). Proved by defects that drop the visibility check (the invisible caller and the enrolled-for-nothing caller are served) and that admit any registered caller."
+   "notes": "#1591 (D708). Proved by defects that drop the visibility check (the invisible caller and the enrolled-for-nothing caller are served) and that admit any registered caller. #1561: recorded delegates join the visibility set, from the MAS's actor records. Proved by defects that drop the recorded-delegate check (the recorded delegate is then not_found, in the unit and at the live MAS) and that read the visibility from a store other than the MAS's actor records (the delegate recorded at the console is then not_found)."
   },
   {
    "id": "mas.join-assertion.pep-carries-assertion",

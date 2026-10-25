@@ -20,6 +20,7 @@ import {
   isValidAmount,
   isSubsetEntry,
   isSubsetSet,
+  isSubsetSetIgnoringCapabilitySources,
   refusedEntryMember,
   resourceMatchViolation,
   resourceWithin,
@@ -1155,6 +1156,25 @@ export function projectThroughEffective(
     candidate,
     effective.map((entry) => ({ entry, origin: entry })),
   ).map((p) => p.entry);
+}
+
+/**
+ * @spec mission#subset, mission#refresh-tokens (#1508, #1513): whether
+ * {@link projectThroughEffective} issues every requested entry whole. Each
+ * entry is checked against its own fragments, so an entry the projection drops
+ * is not covered by a sibling's fragment. The comparison sets
+ * `capability_sources` aside, since a fragment carries the effective side's
+ * bindings where the entry names none; a fragment that covers the entry keeps
+ * every binding the entry names for its actions, because the projection drops
+ * a pairing whose named bindings differ from the effective side's.
+ */
+export function issuedWhole(
+  requested: readonly AuthorityEntry[],
+  effective: readonly AuthorityEntry[],
+): boolean {
+  return requested.every((entry) =>
+    isSubsetSetIgnoringCapabilitySources([entry], projectThroughEffective([entry], effective)),
+  );
 }
 
 /**
