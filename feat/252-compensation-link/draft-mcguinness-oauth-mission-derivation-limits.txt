@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         24 October 2026
-Expires: 27 April 2027
+Intended status: Standards Track                         25 October 2026
+Expires: 28 April 2027
 
 
                 Mission Derivation Limits for OAuth 2.0
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 27 April 2027.
+   This Internet-Draft will expire on 28 April 2027.
 
 Copyright Notice
 
@@ -326,11 +326,14 @@ Table of Contents
    counted against the child's own derivation_limit.  The successor
    access token a ceiling-drawdown response returns is one derivation,
    counted against the successor, never the predecessor
-   ([I-D.draft-mcguinness-oauth-mission-progressive]).  The redemption
-   of a Dispatch Handoff grant at the Mission Issuer is one derivation,
-   counted against the dispatched Mission its mission claim names
-   ([I-D.draft-mcguinness-oauth-mission-template], Section "Dispatch
-   Handoff").
+   ([I-D.draft-mcguinness-oauth-mission-progressive]).  A Template
+   Dispatch is one derivation per dispatch_event_id, counted against the
+   dispatched Mission it creates
+   ([I-D.draft-mcguinness-oauth-mission-template], Section "Dispatch").
+   The redemption of a Dispatch Handoff grant at the Mission Issuer is
+   one derivation, counted against the dispatched Mission its mission
+   claim names ([I-D.draft-mcguinness-oauth-mission-template],
+   Section "Dispatch Handoff").
 
 4.2.  Atomicity and Concurrency
 
@@ -787,6 +790,11 @@ Appendix B.  Document History
    [[ To be removed from the final specification ]]
 
    -00
+
+   *  Editorial, no requirement change (#1647, D764): What Counts names
+      a Template Dispatch as one derivation per dispatch_event_id,
+      counted against the dispatched Mission it creates, as Template
+      already states.
 
    *  Editorial, no requirement change (#1631, D751): Counting
       Derivations follows the OAuth binding's Derivation definition,
