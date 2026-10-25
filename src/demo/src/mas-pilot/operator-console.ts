@@ -16,7 +16,9 @@
  *   claim names the new Mission), and revoke or contain one at the advertised
  *   Mission Lifecycle endpoint as the Lifecycle client. Where the MAS runs
  *   the Join Assertion path, it also records a delegate edge in the MAS's
- *   actor records (#1561), the only way one is recorded.
+ *   actor records (#1561), the only way one is recorded. It reads a
+ *   Mission's join evidence events from the MAS's kernel store (#1560), the
+ *   operator's audit read: the MAS serves them on no route of its own.
  * - The pilot half (in the pilot's process): obtain an estate credential (an
  *   estate client's authorization code flow, DPoP-bound, its key kept here),
  *   make a joined call over the gateway with a `Mission-Reference`, and read
@@ -72,8 +74,9 @@ const stringArray = (v: unknown): string[] | undefined =>
   Array.isArray(v) && v.length > 0 && v.every((a) => typeof a === "string") ? (v as string[]) : undefined;
 
 /**
- * The MAS half: approve, revoke and contain, at the MAS over HTTP; and, where
- * the MAS keeps actor records (#1561), record a delegate edge in them.
+ * The MAS half: approve, revoke and contain, at the MAS over HTTP; read its
+ * join evidence (#1560); and, where the MAS keeps actor records (#1561),
+ * record a delegate edge in them.
  */
 export function masConsoleRoutes(
   mas: Pick<PilotMas, "issuer" | "operator" | "built">,
@@ -81,6 +84,18 @@ export function masConsoleRoutes(
 ): ConsoleRoutes {
   const { issuer, operator } = mas;
   return async (method, path, body) => {
+    // @spec authority-server#join-assertion-artifact (#1560): the join
+    // evidence events the kernel's store retains for the Mission, oldest
+    // first, each with the instant past which boot recovery may prune it.
+    // Behind the console's bearer, like every route here.
+    const joinEvidence = /^\/missions\/([^/]+)\/join-evidence$/.exec(path);
+    if (method === "GET" && joinEvidence) {
+      const missionId = decodeURIComponent(joinEvidence[1] as string);
+      const events = mas.built.kernel.joinEvidence
+        .forMission({ issuer, id: missionId })
+        .map((r) => ({ ...r.event, retain_until: r.retain_until }));
+      return { status: 200, body: { mission_id: missionId, issuer, events } };
+    }
     // @spec authority-server#join-assertion-request, #mission-join rule 5
     // (#1561): the operator's path to record that `client_id` acts under the
     // Mission on `delegated_by`'s delegation, in the actor records the MAS's
