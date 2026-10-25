@@ -291,7 +291,7 @@ describe("the MAS process outlives no launcher (#818 slice 5B review)", () => {
   it("a MAS process started without MAS_PILOT_EXIT_WITH_PARENT ignores the end of its stdin", async () => {
     const env: NodeJS.ProcessEnv = { ...process.env, NODE_OPTIONS: "" };
     delete env.MAS_PILOT_EXIT_WITH_PARENT;
-    const pdp = await newStatusClientKey("mas-pilot-pdp");
+    const pdp = await newStatusClientKey("mas-pilot-pdp", { disclose: ["provenance"] });
     Object.assign(env, {
       MAS_PILOT_CONFIG: configFile(14889, 14888),
       MISSION_EPHEMERAL_KEYS: "1",
