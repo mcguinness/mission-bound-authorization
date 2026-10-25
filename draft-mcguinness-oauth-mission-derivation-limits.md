@@ -350,9 +350,12 @@ against the child's own `derivation_limit`. The successor access token
 a ceiling-drawdown response returns is one derivation, counted against
 the successor, never the predecessor
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}). A Template
-Dispatch is one derivation per `dispatch_event_id`, counted against the
-dispatched Mission it creates
-({{I-D.draft-mcguinness-oauth-mission-template}}, Section "Dispatch").
+Dispatch's creation is one derivation per `dispatch_event_id`, counted
+against the dispatched Mission it creates; a retry that returns the
+delivered access token counts nothing, and one that mints a
+replacement delivery counts once more
+({{I-D.draft-mcguinness-oauth-mission-template}}, Section "Idempotency
+and recovery").
 The redemption of a Dispatch Handoff grant at the Mission Issuer is
 one derivation, counted against the dispatched Mission its `mission`
 claim names ({{I-D.draft-mcguinness-oauth-mission-template}}, Section
@@ -734,6 +737,11 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 \[\[ To be removed from the final specification ]]
 
 -00
+
+- Clarification (#1661, D793): What Counts separates a Template
+  Dispatch's creation, one derivation per `dispatch_event_id`, from its
+  delivery: a retry that returns the delivered token counts nothing,
+  and one that mints a replacement delivery counts once more.
 
 - Editorial, no requirement change (#1647, D764): What Counts names a
   Template Dispatch as one derivation per `dispatch_event_id`, counted

@@ -763,11 +763,14 @@ names no Agent. The Mission Issuer selects the instance's Agent
 Dispatcher's authentication and from the presenter binding of the
 returned access token, which is sender-constrained to the
 Dispatcher's key. This grant
-performs exactly one derivation per `dispatch_event_id`: the
+performs exactly one creation derivation per `dispatch_event_id`: the
 adjudication order of {{dispatch}} runs once for a new identifier, and
 a repeated identifier is gated to the previously committed instance
-rather than a fresh derivation. This is the single gated derivation
-the Dispatch performs per dispatch event; a Dispatch Handoff's
+rather than a fresh creation. A retry is recovery of that instance's
+delivery ({{dispatch-idempotency}}): returning the delivered access
+token counts nothing, and minting a replacement delivery counts once
+under ordinary issuance accounting. This is the single creation
+derivation the Dispatch performs per dispatch event; a Dispatch Handoff's
 exchange and its redemption ({{dispatch-handoff}}) are each a further
 derivation.
 
@@ -1087,13 +1090,17 @@ all apply, since no Mission yet exists for the retry to recover
 Recovery is delivery of the already-dispatched Mission, never a
 second instantiation and never a second count against `max_active` or
 `dispatch_rate`. A retry recovered while the original access token
-remains valid returns that token; a retry recovered after it has
-expired is answered by minting a fresh access token for the same,
-still-`active` instance, an ordinary delivery event that repeats no
-creation accounting, exactly as the expansion profile's recovery
-defines for an expired delivery credential
+remains valid, and carries no authority the instance has since lost,
+returns that token and counts nothing. A retry recovered after the
+token has expired, or after the instance's authority has narrowed
+below what it carries, is answered by minting a replacement access
+token for the same, still-`active` instance: an ordinary delivery
+event, counted once under ordinary issuance accounting, that repeats
+no creation accounting, as the expansion profile's recovery defines
+for an expired delivery credential
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Recovery
-Is Delivery"). Tombstone retention follows the expansion profile's
+Is Delivery"). Concurrent retries recover the same replacement
+delivery: the Mission Issuer mints one and returns it to each. Tombstone retention follows the expansion profile's
 rule, against the deployment's published retry horizon
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Tombstone
 Retention"). This makes retry safe at machine speed and keeps
@@ -1758,6 +1765,13 @@ IANA action. Following the restraint of the sibling profiles:
 
 \[\[ To be removed from the final specification ]]
 
+- Clarification (#1661, D793): a Dispatch performs exactly one creation
+  derivation per `dispatch_event_id`, and a retry is recovery of its
+  delivery. Returning the delivered access token, while it is valid and
+  carries no authority the instance has since lost, counts nothing;
+  minting a replacement delivery, after expiry or narrowing, counts
+  once under ordinary issuance accounting and repeats no creation
+  accounting; concurrent retries recover the same replacement.
 - A successful Dispatch Handoff exchange is a derivation from the
   instance, counted once and apart from its redemption, as Derivation
   Limits' Token Exchange rule counts it (#1648, D764).
