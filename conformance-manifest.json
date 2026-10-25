@@ -1010,6 +1010,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > reverses exactly the committed amount whatever the invoice now reads, and the Decision Evidence and Execution Evidence carry the committed-effect parameters' digest",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
      "name": "compound-action phases (@spec runtime#compound-actions) > ignores an agent-supplied compensates_evaluation_id argument and links the verified original",
      "level": "unit",
      "surface": "resource-operation"
@@ -1021,7 +1027,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#252 PR C2 (owner rulings 2026-10-24, D762). The compensate crossing reverse_wire_transfer (payments:payment.reverse) offsets a wire execute_wire_transfer committed, through the reference ledger connector, under its own single-use compensate Decision whose signed Decision Evidence carries compensates_evaluation_id equal to the commit's evaluation_id; the reversal entry names the wire's operation key and the compensation's own permit, the wire entry is unchanged, and reconciliation joins both effects to completed Execution Evidence. The PEP establishes the link from its own retained records, which it re-verifies, never from an argument: an argument naming another evaluation is not read past the tool boundary and is refused at intake on it. In the composed stack the records re-verify through the boundary-bound resolver and the link reaches the PDP, whose denial records it. Mutations: recording another value as the link fails the Decision Evidence assertion; a reversal that inserts nothing fails the connector assertion; reconciliation without reversal entries fails the reconcile assertion; a request carrying another link, or the agent-supplied one, fails the envelope assertion; a stack resolver without the executor's key fails the stack's verification assertion. A simulated connector establishes reference behavior, not real bank reversal semantics."
+   "notes": "#252 PR C2 (owner rulings 2026-10-24, D762). The compensate crossing reverse_wire_transfer (payments:payment.reverse) offsets a wire execute_wire_transfer committed, through the reference ledger connector, under its own single-use compensate Decision whose signed Decision Evidence carries compensates_evaluation_id equal to the commit's evaluation_id; the reversal entry names the wire's operation key and the compensation's own permit, the wire entry is unchanged, and reconciliation joins both effects to completed Execution Evidence. The PEP establishes the link from its own retained records, which it re-verifies, never from an argument: an argument naming another evaluation is not read past the tool boundary and is refused at intake on it. In the composed stack the records re-verify through the boundary-bound resolver and the link reaches the PDP, whose denial records it. Mutations: recording another value as the link fails the Decision Evidence assertion; a reversal that inserts nothing fails the connector assertion; reconciliation without reversal entries fails the reconcile assertion; a request carrying another link, or the agent-supplied one, fails the envelope assertion; a stack resolver without the executor's key fails the stack's verification assertion. A simulated connector establishes reference behavior, not real bank reversal semantics. Owner review of PR #1656: the compensating Decision binds the committed wire's own parameters (the reversal form read from the wire's ledger record), and the offset is exactly the committed amount even after the invoice changed; its Decision Evidence and Execution Evidence carry that form's digest."
   },
   {
    "id": "runtime.compound-actions.compensate-not-under-original-permit",
@@ -1058,12 +1064,18 @@
     },
     {
      "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > denies a reversal of a committed USD 125 wire under a USD 10 reversal ceiling after the invoice changed to USD 1, with zero connector effects",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
      "name": "compound-action phases (@spec runtime#compound-actions) > offsets a committed wire through the reference connector under a fresh compensate Decision whose evidence links the original commit's evaluation_id",
      "level": "unit",
      "surface": "resource-operation"
     }
    ],
-   "notes": "#252 PR C2. The commit's own permit presented at the compensating crossing is refused at admission by the phase binding (phase_mismatch): zero reversal entries, the wire ledger unchanged, exactly one suppressed Execution Evidence record linked to that permit, and no Refusal Record. A compensation the Mission does not authorize is denied out_of_authority though its link to the committed original is established, and the denial records the link. The authorized compensation obtains its own Decision for its own action, with a fresh evaluation_id, use_limit 1 and its own operation key. Mutations: disabling the phase comparison makes the refusal parameter_mismatch (the reason assertion fails), and disabling the digest comparison as well lets the commit's permit offset the wire (the zero-reversal assertion fails on its own); evaluating the compensation under the compensated action identifier permits it (the denial assertion fails, and the zero-reversal assertion fails on its own)."
+   "notes": "#252 PR C2. The commit's own permit presented at the compensating crossing is refused at admission by the phase binding (phase_mismatch): zero reversal entries, the wire ledger unchanged, exactly one suppressed Execution Evidence record linked to that permit, and no Refusal Record. A compensation the Mission does not authorize is denied out_of_authority though its link to the committed original is established, and the denial records the link. The authorized compensation obtains its own Decision for its own action, with a fresh evaluation_id, use_limit 1 and its own operation key. Mutations: disabling the phase comparison makes the refusal parameter_mismatch (the reason assertion fails), and disabling the digest comparison as well lets the commit's permit offset the wire (the zero-reversal assertion fails on its own); evaluating the compensation under the compensated action identifier permits it (the denial assertion fails, and the zero-reversal assertion fails on its own). Owner review of PR #1656: the compensation is authorized under its own authority on what it will offset: a USD 10 reversal ceiling denies the reversal of a committed USD 125 wire (parameter_violation) though the invoice now reads USD 1, with zero connector effects."
   },
   {
    "id": "runtime.compound-actions.permit-binds-phase",
@@ -1217,6 +1229,86 @@
      "surface": "resource-operation"
     }
    ]
+  },
+  {
+   "id": "runtime.compound-actions.compensation-parameters-from-committed-effect",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "the PEP MUST establish them from that effect's retained record before requesting the Decision, never from current resource state or an agent-supplied argument, and bind them through `parameter_digest`",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a compensation is decided and bound on the committed effect's parameters, read from that effect's retained record before the Decision, never from the resource as it reads now or an argument: constraints are evaluated against what will be offset, and parameter_digest binds it",
+    "local": "the reversal form: the invoice and vendor the wire paid, its amount, currency and payee, the operation target, and the wire's operation key, read from the ledger connector's entry joined to the re-verified Decision and Execution Evidence (PepDeps.committedEffects)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > denies a reversal of a committed USD 125 wire under a USD 10 reversal ceiling after the invoice changed to USD 1, with zero connector effects",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > reverses exactly the committed amount whatever the invoice now reads, and the Decision Evidence and Execution Evidence carry the committed-effect parameters' digest",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses at use a compensation whose committed wire record no longer matches the form its permit bound, with zero connector effects",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Owner review of PR #1656 (P1). Committing USD 125, changing the invoice to USD 1 and requesting a reversal under a USD 10 reversal ceiling is denied parameter_violation, the request carrying USD 125, with zero connector effects; within the ceiling the reversal offsets exactly USD 125, and the request, Decision Evidence, operation key and completed Execution Evidence carry the digest of the wire's reversal form; a wire record that changes after the Decision is refused at use parameter_mismatch. Mutations: binding the invoice as it reads now fails the denial assertion (the permit is then refused at use); doing so with the at-use comparison and the connector check also off reverses USD 125 (the zero-effect assertion fails on its own); binding the current amount into the reversal form with both downstream guards off fails the committed-amount assertion; skipping the at-use comparison fails the at-use refusal, and with the connector check also off the zero-effect assertion fails on its own."
+  },
+  {
+   "id": "runtime.compound-actions.offset-refuses-differing-parameters",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "compound-actions",
+   "text": "The executing resource MUST refuse an offset whose parameters differ from the committed effect's.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an offset whose parameters differ from the committed effect's record is refused with no effect, whatever the caller presents",
+    "local": "the ledger connector refuses reversal_mismatch when the amount, currency or payee differs from the wire's entry, and the PEP re-derives the reversal form from that entry before the effect"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > the reference connector offsets a committed wire once, only with the wire's recorded amount, currency and payee, and refuses an unknown or uncommitted one",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/compound-actions.test.ts",
+     "name": "compound-action phases (@spec runtime#compound-actions) > refuses at use a compensation whose committed wire record no longer matches the form its permit bound, with zero connector effects",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Owner review of PR #1656. Mutations: removing the connector check, or dropping the currency from it, fails the connector witness, and the zero-reversal assertion fails on its own; skipping the at-use comparison fails the at-use witness."
   },
   {
    "id": "runtime.idempotency.phase-in-scope",
