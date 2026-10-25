@@ -63,8 +63,8 @@
     "content_sha256": "483287bedfb2209de40290df596ca9bc2ea3178e485e6eaa226a46e903e1d6c2"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "ec82149461dec8f4a5955f1a12f236366de06047",
-    "content_sha256": "52ecc391bdeac9eefc058dd4063003aec768bba30ac739f4089920df497ad643"
+    "revision": "0a8d989f52e000a391fa2653fb7df1446b906a08",
+    "content_sha256": "7b240ade339ad7221372fdb6def5df21b4b7d18e0f3e8ce90ae07eab473c9f69"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
@@ -43353,7 +43353,7 @@
    "id": "template.dispatch.retry-gated-not-derived",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "grant-type",
-   "text": "a repeated identifier is gated to the previously committed instance rather than a fresh derivation",
+   "text": "a repeated identifier is gated to the previously committed instance rather than a fresh creation",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -44148,7 +44148,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a Dispatch's creation increments the derivation_count of the instance it creates by exactly one, and a repeated dispatch_event_id never creates another instance or repeats creation accounting; a retry returning the delivered token, valid and still authorized, counts nothing; a retry minting a replacement delivery, after expiry or narrowing, counts once; concurrent retries recover one replacement",
-    "local": "the cited test witnesses the creation count; the retry witnesses (replay, replacement after expiry and narrowing, concurrent retries) arrive with PR #1653, whose own row is template.dispatch.retry-gated-not-derived"
+    "local": "the cited test witnesses the creation count; the retry witnesses (replay, replacement after expiry and narrowing, concurrent retries) merged with PR #1653 and are cited by template.dispatch.retry-gated-not-derived"
    },
    "level": "endpoint",
    "coverage": "partial",
