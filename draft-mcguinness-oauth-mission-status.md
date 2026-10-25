@@ -320,7 +320,13 @@ authenticates directly as a client (mechanism 1 or 3) carries the
 deployment-defined equivalent grant, not a scope, and so resolves
 Mission state without holding an access token the AS issued. A caller
 carrying no such authorization is refused with the not-found response
-of {{mission-status-errors}} ({{mission-status-anti-oracle}}).
+of {{mission-status-errors}} ({{mission-status-anti-oracle}}). This
+includes an authenticated caller presenting an otherwise-valid access
+token without the `mission_status` scope: it receives the not-found
+response, not the `insufficient_scope` error of
+{{Section 3.1 of RFC6750}}. An expired token, a token for another
+audience, or a failed sender constraint is instead an access-token
+authentication failure ({{mission-status-auth-failures}}).
 
 A presented access token (mechanism 2) MUST be audience-restricted to
 this endpoint's protected-resource identifier: the `resource` value the
