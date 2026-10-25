@@ -2689,6 +2689,13 @@ Table of Contents
    |cannot be established|           |                                 |
    |at use               |           |                                 |
    +---------------------+-----------+---------------------------------+
+   |Named target object  |Execution  |target_drift                     |
+   |the permit was       |Evidence   |                                 |
+   |evaluated for, or the|           |                                 |
+   |effective parameters |           |                                 |
+   |it determines, not   |           |                                 |
+   |establishable at use |           |                                 |
+   +---------------------+-----------+---------------------------------+
    |Permit validity      |Execution  |permit_expired                   |
    |window passed at     |Evidence   |                                 |
    |execution            |           |                                 |
@@ -3504,6 +3511,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Failure-Condition Coverage maps a named target object, or the
+      effective parameters it determines, not establishable at use to
+      Execution Evidence target_drift, the post-permit counterpart of
+      the pre-decision target_unresolvable (#786).
 
    *  Owner-ruled follow-ups to the editorial pass (#1629).  A PDP
       claiming the Obligations feature publishes its supported

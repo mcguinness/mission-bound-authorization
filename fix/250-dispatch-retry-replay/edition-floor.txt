@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-25T06:28:01Z
-Source repository commit: 99dddf935447c123019f5aac577f577166eec0ab
+Generated: 2026-10-25T19:49:24Z
+Source repository commit: 87ef42bcaf0d1e9dbd867a0da2836eb016bd0444
 Member count: 7
 
 Reading order:
@@ -24501,17 +24501,29 @@ Table of Contents
       parameter_digest.  The link to what the permit authorized.
 
    effective_parameter_digest:  CONDITIONAL.  A string.  REQUIRED
-      whenever authorized_parameter_digest is present.  The digest, in
-      the same form, over the normalized parameters actually attempted
-      or executed.  Equality with authorized_parameter_digest is the
-      binding-held case.  Inequality is a parameter deviation, and the
-      record REMAINS VALID: evidence of an unauthorized execution is
-      still evidence, never grounds to discard the record.  A deviation
-      recorded against outcome suppressed carries error
-      parameter_mismatch.  A deviation recorded against outcome
-      completed or failed, a buggy or compromised executor having gone
-      ahead despite the mismatch, is equally representable, and a
-      consumer MUST flag it as an unauthorized execution.
+      whenever authorized_parameter_digest is present, except on a
+      suppressed record whose executing PEP could not establish the
+      effective parameters.  The digest, in the same form, over the
+      normalized parameters actually attempted or executed.  Equality
+      with authorized_parameter_digest is the binding-held case.
+      Inequality is a parameter deviation, and the record REMAINS VALID:
+      evidence of an unauthorized execution is still evidence, never
+      grounds to discard the record.  A deviation recorded against
+      outcome suppressed carries error parameter_mismatch.  A deviation
+      recorded against outcome completed or failed, a buggy or
+      compromised executor having gone ahead despite the mismatch, is
+      equally representable, and a consumer MUST flag it as an
+      unauthorized execution.
+
+      If the executing PEP cannot establish the effective parameters,
+      this member MUST be absent rather than copied from
+      authorized_parameter_digest or populated with a fabricated digest,
+      and execution MUST be suppressed.  The error names the condition
+      that prevented it, target_drift when the target the permit was
+      evaluated for cannot be established at use, and is never
+      parameter_mismatch: no comparison was made.  The absence means the
+      comparison is unavailable, and a consumer MUST NOT read it as
+      equality or as a parameter deviation.
 
    authorized_evaluation_context_digest:  CONDITIONAL.  A string.
       REQUIRED when the linked Decision Evidence carries
@@ -24602,12 +24614,17 @@ Table of Contents
 
    obligation_outcomes:  CONDITIONAL.  An array of objects.  REQUIRED
       when the linked Decision Evidence carried obligations and a permit
-      disposition exists.  One object per attached obligation, with id
-      (REQUIRED, a string, the obligation's identifier as returned by
-      the decision), type (REQUIRED, a string, the obligation type),
-      outcome (REQUIRED, a string, one of fulfilled, failed, or
-      unsupported), and error (OPTIONAL, a string, an implementation-
-      specific detail on a non-fulfilled outcome).
+      disposition exists.  One object per attached obligation, in the
+      order the decision returned them, with id (a string, the
+      obligation's identifier as returned by the decision), type (a
+      string, the obligation type), outcome (REQUIRED, a string, one of
+      fulfilled, failed, or unsupported), and error (OPTIONAL, a string,
+      an implementation-specific detail on a non-fulfilled outcome). id
+      and type are each REQUIRED when the decision supplied that member
+      as a non-empty string, and absent otherwise, never invented.  An
+      obligation lacking either is malformed, and its outcome is
+      unsupported.  This relaxes the record's representation, not the
+      obligation's own validity requirements.
 
    sequence:  REQUIRED.  An integer.  The per-Mission sequence indicator
       the runtime profile requires of every record, so the execution
@@ -26214,6 +26231,15 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Execution Evidence: a PEP that cannot establish the effective
+      parameters suppresses execution and omits
+      effective_parameter_digest, never copying or fabricating it; the
+      absence means the comparison is unavailable, and a target that
+      cannot be established at use is target_drift. obligation_outcomes
+      keeps one entry per attached obligation, in decision order,
+      omitting an id or type the decision did not supply, with outcome
+      unsupported (#786).
 
    *  Refusal Record: phase_unavailable records a PEP that cannot
       establish a compound action's phase before requesting a decision;
@@ -28995,6 +29021,13 @@ Table of Contents
    |cannot be established|           |                                 |
    |at use               |           |                                 |
    +---------------------+-----------+---------------------------------+
+   |Named target object  |Execution  |target_drift                     |
+   |the permit was       |Evidence   |                                 |
+   |evaluated for, or the|           |                                 |
+   |effective parameters |           |                                 |
+   |it determines, not   |           |                                 |
+   |establishable at use |           |                                 |
+   +---------------------+-----------+---------------------------------+
    |Permit validity      |Execution  |permit_expired                   |
    |window passed at     |Evidence   |                                 |
    |execution            |           |                                 |
@@ -29810,6 +29843,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Failure-Condition Coverage maps a named target object, or the
+      effective parameters it determines, not establishable at use to
+      Execution Evidence target_drift, the post-permit counterpart of
+      the pre-decision target_unresolvable (#786).
 
    *  Owner-ruled follow-ups to the editorial pass (#1629).  A PDP
       claiming the Obligations feature publishes its supported

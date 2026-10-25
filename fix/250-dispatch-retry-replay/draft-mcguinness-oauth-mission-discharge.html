@@ -1596,13 +1596,17 @@ change discharges earlier or later from opaque <code>event_type</code> values.<a
         </h3>
 <p id="section-3.5-1">Because <code>terminal_when</code> is a <code>constraints</code> member, a consumer that does
 not recognize it fails closed by the Mission Resource Access Profile's
-resource server enforcement rule directly: a consumer <span class="bcp14">MUST</span> fail closed on any
-<code>constraints</code> key it does not understand, or understands but cannot
-enforce, refusing the request rather than granting access while ignoring
-the key (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Discharge is
-load-bearing narrowing, so ignoring <code>terminal_when</code> would silently widen
-the grant. That enforcement rule is the honest basis of discharge's
-safety: an unrecognized <code>terminal_when</code> is refused, never dropped.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+resource server enforcement rule directly: a consumer <span class="bcp14">MUST</span> fail closed on
+any <code>constraints</code> key it does not understand, or understands but cannot
+enforce, in an applicable entry, rather than grant access while ignoring
+the key (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). The
+entry carrying it provides no authority, and the request is refused
+unless another applicable entry that the consumer can fully enforce
+authorizes the whole request on its own. Discharge is load-bearing
+narrowing, so ignoring <code>terminal_when</code> would silently widen the grant.
+That enforcement rule is the honest basis of discharge's safety: an
+unrecognized <code>terminal_when</code> leaves its entry authorizing nothing, and
+is never dropped.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
 <p id="section-3.5-2">An authorization server that does not implement this capability simply
 does not emit <code>terminal_when</code>, and is unaffected. The fail-closed rule
 binds a consumer that encounters the constraint without implementing
