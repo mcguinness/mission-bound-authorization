@@ -12,7 +12,7 @@
   "reference": {
     "id": "https://payments.example/contracts/payments",
     "version": "2026-10-24",
-    "digest": "sha-256:yOnTm2LygAMm7b1_-SK1Vzce-QOT9zNvySIDq8fupd0"
+    "digest": "sha-256:XmDUu1kbDM82CuNuhCzNYaIEmZeZqFVvbVresqKClYc"
   },
   "document": {
     "id": "https://payments.example/contracts/payments",
@@ -44,11 +44,20 @@
         "vendor_scope_source",
         "members"
       ],
-      "none": []
+      "none": [],
+      "reversal": [
+        "action",
+        "invoice_id",
+        "vendor_id",
+        "amount",
+        "payee_account",
+        "resource",
+        "reverses"
+      ]
     },
     "constraints": {
-      "max_amount": "the invoice record's amount and currency",
-      "vendors": "the vendor the store resolves for the target",
+      "max_amount": "the invoice record's amount and currency; for reverse_wire_transfer, the reversed wire's recorded amount and currency",
+      "vendors": "the vendor the store resolves for the target; for reverse_wire_transfer, the reversed wire's recorded vendor",
       "requires_action_approval": "an action-bound approval bound to parameter_digest",
       "terminal_when": "the Mission Issuer's discharge state",
       "resource_issued_after": "the invoice record's issued_at; for list_invoices, each member's",
@@ -151,7 +160,7 @@
         "phase": "compensate",
         "action_class": "irreversible_action",
         "operation_target": "service",
-        "parameters": "invoice",
+        "parameters": "reversal",
         "idempotency_key": true,
         "capability": {
           "tool_id": "mcp://payments.demo/tools/reverse_wire_transfer",

@@ -17,7 +17,7 @@
     "reference": {
       "id": "https://payments.example/contracts/payments",
       "version": "2026-10-24",
-      "digest": "sha-256:yOnTm2LygAMm7b1_-SK1Vzce-QOT9zNvySIDq8fupd0"
+      "digest": "sha-256:XmDUu1kbDM82CuNuhCzNYaIEmZeZqFVvbVresqKClYc"
     }
   },
   "resource_match": [
