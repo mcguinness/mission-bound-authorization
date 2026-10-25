@@ -219,7 +219,7 @@ d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
   it("attaches to a MAS already running (MAS_PILOT_MAS_URL), approves at its own console, permits, refuses after a revocation, and leaves the MAS running on shutdown", async () => {
     const configPath = configFile(14869, 14868);
     // The PDP's key, generated where the PDP runs: the MAS gets the public half (#1407).
-    const pdp = await newStatusClientKey(loadMasPilotConfig().separated_mas.pdp_client_id);
+    const pdp = await newStatusClientKey(loadMasPilotConfig().separated_mas.pdp_client_id, { disclose: ["provenance"] });
     const masBearer = crypto.randomUUID();
     const env: NodeJS.ProcessEnv = { ...process.env, NODE_OPTIONS: "" };
     Object.assign(env, {
@@ -415,7 +415,7 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
   });
 
   it("the MAS process refuses a Status client registration it cannot use (#1407)", async () => {
-    const { registration } = await newStatusClientKey("mas-pilot-pdp");
+    const { registration } = await newStatusClientKey("mas-pilot-pdp", { disclose: ["provenance"] });
     for (const bad of [undefined, "", "not json", "[]", "{}", JSON.stringify([{ client_id: "mas-pilot-pdp" }]), JSON.stringify([{ jwks: registration.jwks }])]) {
       expect(() => parseStatusClients(bad), String(bad)).toThrow(/MAS_PILOT_STATUS_CLIENTS/);
     }
@@ -424,7 +424,7 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
 
   it("refuses a PDP key that is not a private JWK with a kid (#1407)", async () => {
     const env = { ...keys, MAS_PILOT_CONFIG: configFile(14862, 14863), MAS_PILOT_DEVELOPMENT_STORE: "1", MAS_PILOT_MAS_URL: "http://127.0.0.1:1" };
-    const { privateJwk, registration } = await newStatusClientKey("mas-pilot-pdp");
+    const { privateJwk, registration } = await newStatusClientKey("mas-pilot-pdp", { disclose: ["provenance"] });
     const { kid: _kid, ...unnamed } = privateJwk;
     for (const bad of ["not json", "null", JSON.stringify(registration.jwks.keys[0]), JSON.stringify(unnamed)]) {
       expect(() => masPilotLaunchOptions({ ...env, MAS_PILOT_PDP_KEY: bad }, "separated"), bad.slice(0, 20)).toThrow(

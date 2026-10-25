@@ -186,8 +186,10 @@ beforeAll(async () => {
   const configPath = join(dir, "mas-pilot.json");
   const config = separatedConfig(ESTATE_PORT);
   writeFileSync(configPath, JSON.stringify(config));
-  const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id);
-  const reader = await newStatusClientKey(READER_CLIENT);
+  // Both run a PDP, whose policy view commits `authority_hash` (#1682):
+  // `reader` is the PDP the MAS has not enrolled for Join Disclosure.
+  const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id, { disclose: ["provenance"] });
+  const reader = await newStatusClientKey(READER_CLIENT, { disclose: ["provenance"] });
   pdpKey = pdp.privateJwk;
   readerKey = reader.privateJwk;
   masOptions = { configPath, statusClients: [pdp.registration, reader.registration], keyRing, kernelStore: join(dir, "state", "kernel.db") };

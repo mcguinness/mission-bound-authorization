@@ -74,24 +74,40 @@ export interface PilotMas {
 export interface StatusClientRegistration {
   client_id: string;
   jwks: { keys: Record<string, unknown>[] };
+  /**
+   * @spec status#mission-status-response (#1682, D795): the disclosure
+   * privileges the MAS binds to this client. A PDP's policy view commits
+   * `authority_hash`, the correlation use Status authorizes, so the client
+   * that runs a PDP registers `provenance`; any other Status client
+   * registers none.
+   */
+  disclose?: readonly string[];
 }
 
 /**
  * A Status client's signing key, generated where the client runs: the private
  * JWK (with its `kid`) for the client, and the registration the MAS needs.
  */
-export async function newStatusClientKey(clientId: string): Promise<{ privateJwk: JWK; registration: StatusClientRegistration }> {
+export async function newStatusClientKey(
+  clientId: string,
+  options: { disclose?: readonly string[] } = {},
+): Promise<{ privateJwk: JWK; registration: StatusClientRegistration }> {
   const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true });
   const kid = `${clientId}-${crypto.randomUUID().slice(0, 8)}`;
   return {
     privateJwk: { ...(await exportJWK(privateKey)), kid, alg: "ES256" },
-    registration: { client_id: clientId, jwks: { keys: [{ ...(await exportJWK(publicKey)), kid, alg: "ES256", use: "sig" }] } },
+    registration: {
+      client_id: clientId,
+      jwks: { keys: [{ ...(await exportJWK(publicKey)), kid, alg: "ES256", use: "sig" }] },
+      ...(options.disclose ? { disclose: options.disclose } : {}),
+    },
   };
 }
 
 /**
  * `MAS_PILOT_STATUS_CLIENTS`: a JSON array of Status client registrations,
- * at least one, each a `client_id` and a JWKS of public keys only.
+ * at least one, each a `client_id` and a JWKS of public keys only, and
+ * optionally the client's `disclose` privileges (#1682).
  */
 export function parseStatusClients(raw: string | undefined): StatusClientRegistration[] {
   if (raw === undefined || raw === "") throw new Error("MAS_PILOT_STATUS_CLIENTS registers no Status client");
@@ -103,11 +119,18 @@ export function parseStatusClients(raw: string | undefined): StatusClientRegistr
   }
   if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("MAS_PILOT_STATUS_CLIENTS must be a non-empty array");
   return parsed.map((c, i) => {
-    const entry = c as { client_id?: unknown; jwks?: { keys?: unknown } };
+    const entry = c as { client_id?: unknown; jwks?: { keys?: unknown }; disclose?: unknown };
     if (typeof entry.client_id !== "string" || entry.client_id === "" || !Array.isArray(entry.jwks?.keys)) {
       throw new Error(`MAS_PILOT_STATUS_CLIENTS[${i}] must have a client_id and a jwks with keys`);
     }
-    return { client_id: entry.client_id, jwks: { keys: entry.jwks.keys as Record<string, unknown>[] } };
+    if (entry.disclose !== undefined && !(Array.isArray(entry.disclose) && entry.disclose.every((d) => typeof d === "string"))) {
+      throw new Error(`MAS_PILOT_STATUS_CLIENTS[${i}].disclose must be an array of strings`);
+    }
+    return {
+      client_id: entry.client_id,
+      jwks: { keys: entry.jwks.keys as Record<string, unknown>[] },
+      ...(entry.disclose !== undefined ? { disclose: entry.disclose as string[] } : {}),
+    };
   });
 }
 
@@ -139,17 +162,14 @@ export async function buildPilotMas(config: MasPilotConfig, opts: PilotMasOption
       approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) },
     },
   };
-  // @spec status#mission-status-response (#1682, D795): a PDP enrolled for
-  // Join Disclosure commits `authority_hash` in its `policy_view_id`, the
-  // correlation use the Status profile authorizes, so only a client enrolled
-  // with the PDP role holds the `provenance` disclosure privilege.
-  const pdpClients = new Set(separated.enrollment.filter((e) => e.roles.includes("pdp")).map((e) => e.client_id));
   const statusClients: LifecycleClientRegistration[] = (opts.statusClients ?? []).map((c) => ({
     client_id: c.client_id,
     client_name: `${c.client_id} (MAS pilot Status client)`,
     jwks: c.jwks,
     grants: [MISSION_STATUS_SCOPE],
-    ...(pdpClients.has(c.client_id) ? { disclose: ["provenance"] } : {}),
+    // @spec status#mission-status-response (#1682, D795): the registration's
+    // own disclosure privileges, nothing inferred from enrollment.
+    ...(c.disclose !== undefined ? { disclose: c.disclose } : {}),
   }));
   const built = await buildAuthorizationServer({
     issuer,
