@@ -30736,7 +30736,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "under lifecycle-mediated enforcement, an action the dependency governs is refused while upstream observation or reconciliation exceeds its declared bound, even though the Mission state reads `active`",
-    "local": "the reference's declared dependency (config/authority-dependencies.json, subject-delegation) under lifecycle-mediated enforcement: the authorization server's reconciler (services/authorization-server/src/adapters/authority-reconciler.ts) commits suspend or revoke through the lifecycle operations and records its progress, the time the observation its last complete pass acted on represents; a failed source read, or a pass whose transitions do not all commit, does not advance it. The PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) refuses resource_policy once that progress is absent or older than reconciliation_max_lag_seconds (60 s), whatever the Mission's state reads, records reconciliation_overdue in the dependency evidence, and caps a permit at the progress plus the lag bound. The reference composition gives the PDP the progress in process (BuiltAs.authorityDependency.reconciliation); a PDP without it refuses every governed action. The issuance gates evaluate the observation directly and do not apply the lag refusal"
+    "local": "the reference's declared dependency (config/authority-dependencies.json, subject-delegation) under lifecycle-mediated enforcement: the authorization server's reconciler (services/authorization-server/src/adapters/authority-reconciler.ts) commits suspend or revoke through the lifecycle operations and records its progress, the time the observation its last complete pass acted on represents; a failed source read, or a pass whose transitions do not all commit, does not advance it. The PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) refuses resource_policy once that progress is absent or older than reconciliation_max_lag_seconds (60 s), whatever the Mission's state reads, records reconciliation_overdue in the dependency evidence, and caps a permit at the progress plus the lag bound. The reference composition gives the PDP the progress in process (BuiltAs.authorityDependency.reconciliation); a PDP without it refuses every governed action. The issuance gates evaluate the observation directly and do not apply the lag refusal. Fresh progress does not authorize reliance on a dependency the reconciliation could not resolve: a pass records the governed Missions whose Subject the source holds no record of, and the PDP refuses them unresolved, with no suspension or revocation. The reconciler's progress is dated from when its read was issued, so a slow read does not make an overdue reconciliation current, and a pass over a kernel whose durable state is uncertain neither commits nor counts as current (D813)."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -30776,9 +30776,27 @@
      "name": "the reconciler across a restart of a file-backed authorization server (@spec runtime#input-authority-dependency, #830) > refuses at the PDP until its first pass after the restart, then commits no transition twice and acts on the next change",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "an unresolved Subject under lifecycle-only enforcement is an uncertainty that refuses, never a revocation (@spec runtime#input-authority-dependency, #830, D813) > refuses dependent actions once the source no longer holds the Subject, though the reconciliation is current and the Mission active, records the uncertainty apart from a withdrawal, and revokes nothing",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "the reconciler's reads are ordered with the scheduled refreshes and dated from issue (@spec runtime#input-authority-dependency, #830, D813) > dates its progress from when its read was issued, so a slow read does not make an overdue reconciliation current",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "a pass over a kernel whose durable state is uncertain (@spec runtime#input-authority-dependency, control-plane#rollback, #830, D813) > commits nothing and does not count as current, so the PDP refuses until a pass over a reconciled kernel completes",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#830 (D789): specification slice. #830 Q-d reference PR B (D798). Mutation-proved: dropping the lag check, accepting absent progress, refusing only past the bound rather than at it, applying no lag at the PDP, skipping the PDP's step under lifecycle-only enforcement, advancing the progress over a failed pass, treating a failed read as a pass, not giving the PDP the reconciler's progress, starting a reconciler with progress present, and dropping the permit's cap at the reconciliation's currency, each failed its witness."
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR B (D798). Mutation-proved: dropping the lag check, accepting absent progress, refusing only past the bound rather than at it, applying no lag at the PDP, skipping the PDP's step under lifecycle-only enforcement, advancing the progress over a failed pass, treating a failed read as a pass, not giving the PDP the reconciler's progress, starting a reconciler with progress present, and dropping the permit's cap at the reconciliation's currency, each failed its witness. D813 review (PR B): not refusing an unresolved Mission under the lag check, a pass that records no unresolved Missions, progress that omits them, an unresolved set never cleared, revoking an unresolved Subject, dating progress from the read's completion, and counting a pass over an uncertain kernel, each failed its witness."
   },
   {
    "id": "runtime.authority-dependency.refuse-when-not-established",
@@ -30988,7 +31006,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "where the PDP enforces a declared dependency, the retained evidence of its refusal records whether the dependency was known withdrawn, its observation stale, or its source unavailable",
-    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the PDP records each refusal in the deployment's dependency evidence (AuthorityDependencyEvidence: enforcer, dependency, failure withdrawn, invalidated, stale or unavailable, Mission, subject, client, action, observation time); a deployment record, not a Runtime Evidence object (the wire form is #830 Q-c's). Source availability is the outcome of the latest-issued read that completed, so a late failure of an older read does not turn a stale observation into an unavailable source (D813)."
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the PDP records each refusal in the deployment's dependency evidence (AuthorityDependencyEvidence: enforcer, dependency, failure withdrawn, invalidated, stale or unavailable, Mission, subject, client, action, observation time); a deployment record, not a Runtime Evidence object (the wire form is #830 Q-c's). Source availability is the outcome of the latest-issued read that completed, so a late failure of an older read does not turn a stale observation into an unavailable source (D813). A Subject the source answers without is recorded as unresolved, an uncertainty kept apart from a confirmed withdrawal (D813)."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -31010,9 +31028,15 @@
      "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > reports the source's availability from the latest-issued read that completed, not the last to complete",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "an unresolved Subject under lifecycle-only enforcement is an uncertainty that refuses, never a revocation (@spec runtime#input-authority-dependency, #830, D813) > refuses dependent actions once the source no longer holds the Subject, though the reconciliation is current and the Mission active, records the uncertainty apart from a withdrawal, and revokes nothing",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: classifying every expired observation as stale, whether or not the source answered, failed the witness. D813 review (PR A): taking availability from the last read to complete failed the availability witness."
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: classifying every expired observation as stale, whether or not the source answered, failed the witness. D813 review (PR A): taking availability from the last read to complete failed the availability witness. D813 review (PR B): recording an unknown Subject as withdrawn failed the witness."
   },
   {
    "id": "runtime.authority-dependency.evidence-distinguishes-local",
@@ -31168,7 +31192,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a deployment claiming an external-change bound states it from the authoritative system recording the change to a dependent action no longer beginning an effect, states how already-started work is treated, and accounts for detection, evaluation, state change, downstream reliance and permit validity",
-    "local": "config/authority-dependencies.json's external_change_bound: 60 s from the identity source recording the change (identity.json's changed_at) to every issuance gate and PDP decision under a governed Mission refusing and the reconciler having suspended or revoked it, with already-started work stated separately and a path naming detection (detection_period_seconds, 30 s), evaluation, state change (reconciliation_period_seconds, 30 s), downstream reliance, permit validity and the behavior under a failed read or reconciliation. The reader requires the bound to cover one period of each in sequence and the reconciliation period to be shorter than the lag bound; the authorization server refuses to start with a scheduled read or pass slower than declared. Measured under a controlled clock at the declared periods, from every phase of the two schedules in 5 s steps: worst case 30 s to the first gate refusal, to the first PDP refusal and to the suspension. The matrix by principal role, with each cell's owner, source and staleness bound, is src/docs/authority-dependencies.md"
+    "local": "config/authority-dependencies.json's external_change_bound: 60 s from the identity source recording the change (identity.json's changed_at) to every issuance gate and PDP decision under a governed Mission refusing and the reconciler having suspended or revoked it, with already-started work stated separately and a path naming detection (detection_period_seconds, 30 s), evaluation, state change (reconciliation_period_seconds, 30 s), downstream reliance, permit validity and the behavior under a failed read or reconciliation. The reader requires the bound to cover one period of each in sequence and the reconciliation period to be shorter than the lag bound; the authorization server refuses to start with a scheduled read or pass slower than declared. Measured under a controlled clock at the declared periods, from every phase of the two schedules in 5 s steps: worst case 30 s to the first gate refusal, to the first PDP refusal and to the suspension. The matrix by principal role, with each cell's owner, source and staleness bound, is src/docs/authority-dependencies.md. The end includes effect release (D813): the measurement composes the payments PEP, which holds a permit issued just before the change and unused across it; from the first read showing the change its release check refuses that permit, while the permit's own valid_until still runs, in the same 30 s worst case, and no effect is released after the cutoff. Permit issuance is not already-started work, as the declaration's already_started states."
    },
    "level": "unit",
    "coverage": "tested",
@@ -31181,7 +31205,7 @@
     },
     {
      "file": "src/services/authorization-server/test/authority-dependency-bound.test.ts",
-     "name": "the external-change bound, measured end to end (@spec runtime#state-freshness, #830) > stops every dependent action within the declared bound from the source recording the change, from every phase of the declared schedules; a permit decided before the change expires within its observation's validity",
+     "name": "the external-change bound, measured end to end (@spec runtime#state-freshness, #830) > stops every dependent action within the declared bound from the source recording the change, from every phase of the declared schedules, a permit issued before the change and held unused included; a permit decided before the change expires within its observation's validity",
      "level": "cross-component",
      "surface": "decision-request"
     },
@@ -31192,7 +31216,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#830 (D789): specification slice. #830 Q-d reference PR B (D798). Mutation-proved: accepting a bound that does not cover its periods, a reconciliation period not shorter than the lag bound, or a lifecycle declaration without a reconciliation period, starting with a slower schedule, and a reconciliation pass acting on a cached read instead of reading the source, each failed its witness."
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR B (D798). Mutation-proved: accepting a bound that does not cover its periods, a reconciliation period not shorter than the lag bound, or a lifecycle declaration without a reconciliation period, starting with a slower schedule, and a reconciliation pass acting on a cached read instead of reading the source, each failed its witness. D813 review (PR B): removing the PEP's release check, and not rechecking a PDP-routed dependency at the PEP, each failed the measurement's held-permit witness."
   },
   {
    "id": "authzen.conventions.required-when-known-no-inference",
