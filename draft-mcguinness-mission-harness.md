@@ -601,9 +601,12 @@ carried together or not at all, in the HTTP and MCP carriages alike.
 A PEP implementing this profile MUST take a work item only from these
 members, once the reference itself verifies, and only where the
 statement names the harness that `work_item_issuer` identifies as the
-attacher for the client the PEP authenticated on that request. It MUST
-NOT read a work item from tool arguments or any other value the agent
-supplies, and MUST NOT carry one it cannot attribute to that attacher.
+attacher for the client the PEP authenticated on that request. A
+reference that verifies shows only that it names the request's
+Mission, not which component attached the work item, so verification
+alone never establishes the attachment. It MUST NOT read a work item
+from tool arguments or any other value the agent supplies, and MUST
+NOT carry one it cannot attribute to that attacher.
 It carries the work item to the decision as `context.work_item`
 ({{I-D.draft-mcguinness-mission-authzen}}), an object whose `issuer`
 is `work_item_issuer` and whose `id` is `work_item`.
