@@ -9089,7 +9089,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a derivation from a Mission that is not `active` issues nothing: a Token Exchange is refused `invalid_request` and a refresh `invalid_grant`, on the explicit state checks and on the save-time gate and lifetime clamp alike",
-    "local": "Token Exchange witnessed on async delegation (explicit check and lifetime clamp), expansion and child creation; refresh on the async-delegation family. The authorization-code and JWT-bearer paths keep invalid_grant through the same refusal mapping, pinned by its unit test."
+    "local": "Token Exchange witnessed on async delegation (explicit check and lifetime clamp), expansion and child creation; refresh on the async-delegation family; the deferred grant on the AROP poll, pending or approved, and the Mission approval poll, each with the Mission's own mission_error and the deferral left pollable after a resume. The authorization-code and JWT-bearer paths keep invalid_grant through the same refusal mapping, pinned by its unit test."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -9147,9 +9147,33 @@
      "name": "token-endpoint Mission gate refusal by grant (@spec mission#issuance-gating, #1154) > identifies a Token Exchange request by its grant_type alone",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "the AROP deferred grant against a Mission that is not active (@spec mission#issuance-gating, #250) > an approved deferral whose Mission is %s before the poll is refused invalid_grant with that mission_error, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "the AROP deferred grant against a Mission that is not active (@spec mission#issuance-gating, #250) > a pending deferral whose Mission is %s is refused invalid_grant with that mission_error, not authorization_pending",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > yields no token for a Mission revoked between the approval decision and the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > refuses a resolving poll for a Mission suspended after the approval decision with invalid_grant and mission_error suspended, delivering nothing; after resume the poll delivers (@spec mission#issuance-gating, #250)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1154 (D369)."
+   "notes": "#1154 (D369). Deferred polls aligned to invalid_grant (#250)."
   },
   {
    "id": "core.issuance-gating.after-acknowledged-revocation",
@@ -60862,7 +60886,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a poll for an approved deferral whose Mission is no longer active returns an error response and no token",
-    "local": "The poll answers access_denied."
+    "local": "The poll answers invalid_grant with the Mission's own mission_error, as issuance gating refuses any grant other than a Token Exchange; a suspended Mission's approval stays deliverable and delivers once the Mission resumes."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -60870,6 +60894,12 @@
     {
      "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
      "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > yields no token for a Mission revoked between the approval decision and the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > refuses a resolving poll for a Mission suspended after the approval decision with invalid_grant and mission_error suspended, delivering nothing; after resume the poll delivers (@spec mission#issuance-gating, #250)",
      "level": "endpoint",
      "surface": "token-endpoint"
     }

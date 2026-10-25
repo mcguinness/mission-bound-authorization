@@ -63,6 +63,8 @@ import {
   type AdapterOptions,
   audienceCarriedEntries,
   clientProposalParam,
+  lifecycleMissionError,
+  MissionGrantError,
   newResourceServer,
   resourceServerInfoFor,
   SCOPE_DECIDED_AT_SAVE,
@@ -498,6 +500,12 @@ export async function pollMissionApprovalDeferral(
         throw new errors.ExpiredToken();
       case "access_denied":
         throw new errors.AccessDenied();
+      case "mission_not_active":
+        // @spec deferred-approval#deferred-sequencing, mission#issuance-gating:
+        // a Mission revoked between the approval decision and the resolving
+        // poll yields no token, refused as issuance gating refuses any grant
+        // other than a Token Exchange, with the Mission's own mission_error.
+        throw new MissionGrantError("mission is not active", lifecycleMissionError(r.observed));
       case "invalid_dpop_proof":
         // DTR -00 Section 10.1 (#1357): the opening client under another key;
         // the deferral stays redeemable under its own.
