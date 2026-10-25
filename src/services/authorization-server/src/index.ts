@@ -40,7 +40,7 @@ import {
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import {
   generateEphemeralSigningKeys,
-  loadSigningKeyRing,
+  loadSigningKeyRingState,
   SigningKeyRingError,
   type SigningKeySource,
 } from "./kernel/signing-key-ring.js";
@@ -96,6 +96,7 @@ import {
   type ServiceTokenPrincipal,
   type TxnArs,
 } from "./adapters/provider.js";
+import { VerifyOnlySigningKey } from "./adapters/verify-only-signing-key.js";
 import type { CrossOrgOptions } from "./adapters/cross-org-grant.js";
 import { bindAuthoritySourceCatalog } from "./kernel/authority-source.js";
 import { mappedAudiences } from "./kernel/approved-audience.js";
@@ -178,15 +179,33 @@ export {
 
 export { MISSION_ID_ENTROPY_BYTES, newMissionId } from "./kernel/mission-id.js";
 export {
+  activateSigningKeyGeneration,
   AS_SIGNING_ROLES,
+  type AsSigningKeys,
   type AsSigningRole,
+  compromiseSigningKeyGeneration,
+  generationKid,
   initSigningKeyRing,
+  JWKS_MAX_AGE_SECONDS,
+  type KernelStoreConfig,
   kernelStoreFromEnv,
   loadSigningKeyRing,
+  loadSigningKeyRingState,
+  migrateSigningKeyRing,
+  retireSigningKeyGeneration,
+  type SigningKeyRetention,
+  type SigningKeyRingVerification,
+  type RoleSigningKeys,
   SIGNING_KEY_RING_FORMAT,
+  SIGNING_KEY_RING_FORMAT_V1,
+  SIGNING_KEY_STATES,
   SigningKeyRingError,
   type SigningKeySource,
+  type SigningKeyState,
   signingKeysFromEnv,
+  stageSigningKeyGeneration,
+  verifySigningKeyRing,
+  type WithdrawnSigningKey,
 } from "./kernel/signing-key-ring.js";
 export {
   attachCapabilitySources,
@@ -234,6 +253,16 @@ export {
   MissionTombstoneStore,
   type TombstoneRetentionInputs,
 } from "./kernel/tombstones.js";
+export {
+  readRecoveryWitness,
+  reconcileKernelRecovery,
+  RecoveryReconciliationError,
+  RecoveryUncertainError,
+  type RecoveryReconciliation,
+  type RecoveryUncertainReason,
+  type RecoveryWitnessRecord,
+  witnessSharesStoreTree,
+} from "./kernel/recovery-witness.js";
 export type { ProtectedEventSource } from "./adapters/provider.js";
 export {
   ALL_PROVIDER_CAPABILITIES,
@@ -649,6 +678,7 @@ export {
   type RecordedModelOutput,
   recordGovernedPolicyConsent,
   STANDARD_CLASS,
+  standingConsentsAttestedUnder,
   unclassifiedActions,
   validateGovernedPolicyApprovalConfig,
   withdrawGovernedPolicyConsent,
@@ -1015,9 +1045,11 @@ export async function buildAuthorizationServer(opts: {
    * default is in-memory and single-process; a `file` selects the OPT-IN
    * file-backed SINGLE-WRITER store, which is what makes the durable lifecycle
    * outbox and the terminal tombstones survive a restart and lets the recovery
-   * test exercise that path. It authorizes no second writer.
+   * test exercise that path. It authorizes no second writer. A `witness`
+   * (#250 step 3) adds the recovery witness: the store is held exclusively and
+   * opens only when it matches the witness.
    */
-  kernelStore?: { file?: string };
+  kernelStore?: { file?: string; witness?: string };
   /**
    * @spec control-plane#tombstones, authority-server#join-assertion-artifact
    * (#1560, D770): the deployment's declared post-expiry audit retention, in
@@ -1450,25 +1482,31 @@ export async function buildAuthorizationServer(opts: {
   if ("ring" in keySource && opts.testTokenSigningJwk) {
     throw new SigningKeyRingError("testTokenSigningJwk cannot be combined with a key ring");
   }
-  const signing =
+  const ringState =
     "ring" in keySource
-      ? await loadSigningKeyRing(keySource.ring, opts.issuer, roleConfig)
-      : await generateEphemeralSigningKeys(roleConfig);
+      ? await loadSigningKeyRingState(keySource.ring, opts.issuer, roleConfig)
+      : { keys: await generateEphemeralSigningKeys(roleConfig) };
+  const signing = ringState.keys;
+  // @spec #831 B2: each role signs under its active generation's `kid`; the
+  // jwks_uri publishes every role's live set (pending, active and overlap
+  // generations), and the AS's own verifiers accept a role's active and
+  // overlap generations. A generation withdrawn as compromised is in none.
   let tokenPrivateKey: CryptoKey = signing.asToken.privateKey;
   let tokenJwk: Record<string, unknown> = signing.asToken.privateJwk;
-  let tokenJwkPub: Record<string, unknown> = signing.asToken.publicJwk;
+  let tokenKid = signing.asToken.kid;
+  let tokenPublished = signing.asToken.published;
+  let tokenVerification = signing.asToken.verification;
   if (opts.testTokenSigningJwk) {
     const injected = { ...opts.testTokenSigningJwk, kid: asToken.kid, alg: asToken.alg, use: "sig" };
     tokenPrivateKey = (await importJWK(injected as JWK, asToken.alg)) as CryptoKey;
     tokenJwk = injected;
-    tokenJwkPub = publicJwkOf(injected as JWK);
+    tokenKid = asToken.kid;
+    tokenPublished = [publicJwkOf(injected as JWK)];
+    tokenVerification = tokenPublished;
   }
-  const statusKeys = { privateKey: signing.asStatus.privateKey };
-  const txnKeys = { privateKey: signing.asTxn.privateKey };
-  const continuationKeys = { privateKey: signing.asContinuation.privateKey };
-  const statusJwkPub = signing.asStatus.publicJwk;
-  const txnJwkPub = signing.asTxn.publicJwk;
-  const continuationJwkPub = signing.asContinuation.publicJwk;
+  const statusKeys = { privateKey: signing.asStatus.privateKey, kid: signing.asStatus.kid };
+  const txnKeys = { privateKey: signing.asTxn.privateKey, kid: signing.asTxn.kid };
+  const continuationKeys = { privateKey: signing.asContinuation.privateKey, kid: signing.asContinuation.kid };
 
   const agent = await seedAgentClient();
   const child = await seedChildClient();
@@ -1660,6 +1698,10 @@ export async function buildAuthorizationServer(opts: {
     // @spec control-plane#deployment-declaration (D27) — in-memory by default;
     // the file-backed single-writer store is the declared opt-in.
     ...(opts.kernelStore?.file ? { store: { file: opts.kernelStore.file } } : {}),
+    // @spec control-plane#rollback (#250 step 3): the recovery witness.
+    ...(opts.kernelStore?.file && opts.kernelStore.witness
+      ? { recoveryWitness: { file: opts.kernelStore.witness } }
+      : {}),
     // @spec control-plane#tombstones — the deployment's declared retention
     // horizons, composed into the detailed tombstone horizon. Every input is a
     // number this deployment actually declares: the access-token lifetime is
@@ -1734,7 +1776,8 @@ export async function buildAuthorizationServer(opts: {
     // `authority_source` from this and from nothing a client sends.
     authoritySourceCatalog: (opts.authoritySources ?? AUTHORITY_SOURCES) as never,
     statusKey: statusKeys.privateKey,
-    statusKid: asStatus.kid,
+    statusKid: statusKeys.kid,
+    statusVerificationJwks: signing.asStatus.verification,
     ...(opts.now ? { now: opts.now } : {}),
     // Fan the committed transition out to the Status List republisher (PULL) and
     // any injected subscriber, e.g. the Mission Signals emitter (PUSH). The
@@ -1914,9 +1957,11 @@ export async function buildAuthorizationServer(opts: {
   // ID-JAG; the validator's pinned ICA typ keeps the two token types apart. The
   // resource->AS map mirrors the demo cross-domain wiring (stack.ts). The
   // subject resolver is deterministic over a constant salt.
-  const publicJwks = { keys: [tokenJwkPub, statusJwkPub, txnJwkPub, continuationJwkPub] };
+  const publicJwks = {
+    keys: [...tokenPublished, ...signing.asStatus.published, ...signing.asTxn.published, ...signing.asContinuation.published],
+  };
   const continuationAssertionIssuers: ContinuationIssuer[] = opts.continuationAssertionIssuers ?? [
-    { iss: opts.issuer, jwks: { keys: [continuationJwkPub] } as never, attestsFor: [] },
+    { iss: opts.issuer, jwks: { keys: signing.asContinuation.verification } as never, attestsFor: [] },
   ];
   const resourceToAs =
     opts.resourceToAs ??
@@ -1961,10 +2006,19 @@ export async function buildAuthorizationServer(opts: {
     clients: clientRegistrations,
     // @spec #831 (role binding): the provider signs with the access-token key
     // alone; every role's public key is still published on the jwks_uri
-    // (`publicJwks`, served by the adapter).
-    jwks: { keys: [tokenJwk] },
+    // (`publicJwks`, served by the adapter). @spec #831 B2: it also verifies
+    // its own JWTs (an `id_token_hint`) under the access-token role's overlap
+    // generations, held verify-only and ahead of the signer, so `key_ops`
+    // alone keeps them out of signing; no other role's key is held.
+    jwks: {
+      keys: [
+        ...tokenVerification.filter((k) => k.kid !== tokenKid).map((k) => new VerifyOnlySigningKey(k)),
+        tokenJwk,
+      ] as never,
+    },
     publicJwks,
-    accessTokenJwks: { keys: [tokenJwkPub] },
+    ...(ringState.revision !== undefined ? { jwksRevision: ringState.revision } : {}),
+    accessTokenJwks: { keys: tokenVerification },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),
     ...(opts.approverLogin ? { approverLogin: new ApproverLoginRelyingParty(opts.approverLogin, opts.issuer) } : {}),
@@ -2005,14 +2059,14 @@ export async function buildAuthorizationServer(opts: {
           txnAuthorization: {
             ...opts.transactionAuthorization,
             tokenKey: txnKeys.privateKey,
-            tokenKid: asTxn.kid,
+            tokenKid: txnKeys.kid,
           },
         }
       : {}),
     // @spec child-delegation#child-client-identity — sign the child-bound RFC 7523
     // authorization grant with the AS token key (verifies on the jwks_uri).
     childGrantKey: tokenPrivateKey,
-    childGrantKid: asToken.kid,
+    childGrantKid: tokenKid,
     childGrantAlg: asToken.alg,
     // @spec authority-server#mission-join (#557) — the dev-only ordinary
     // issuance route, signed with this AS's own token key so the resource
@@ -2025,7 +2079,7 @@ export async function buildAuthorizationServer(opts: {
       ? {
           devOrdinaryIssuance: {
             key: tokenPrivateKey,
-            kid: asToken.kid,
+            kid: tokenKid,
             alg: asToken.alg,
             audience: MAS_JOIN.join_resource,
           },
@@ -2049,7 +2103,7 @@ export async function buildAuthorizationServer(opts: {
     resourceToAs,
     subjectResolver,
     continuationGrantKey: continuationKeys.privateKey,
-    continuationGrantKid: asContinuation.kid,
+    continuationGrantKid: continuationKeys.kid,
     templateStore,
     dispatchPolicies,
     protectedEventSources,

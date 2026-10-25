@@ -51,6 +51,7 @@
       }
     ]
   },
+  "claims": ["evaluation_context_binding"],
   "extensions": {
     "transaction_assurance": [
       {
@@ -76,6 +77,87 @@
         "execution_lease_consumer": "mcp-payments-pep"
       }
     ],
+    "evaluation_context_binding": {
+      "covered_classes": ["irreversible_action", "external_commitment"],
+      "operations": [
+        {
+          "operation": "payments:payment.execute",
+          "action_class": "irreversible_action",
+          "phases": ["preflight", "prepare", "commit"],
+          "property": "verified",
+          "descriptor": {"id": "https://payments.example/evaluation-context/payment-execute", "version": "2026-10-24", "digest": "sha-256:Xhg-UR5WSihXsK1u2Ig9p9y50a_OIwFziE92yJp7NGw"}
+        },
+        {
+          "operation": "payments:remittance.send",
+          "action_class": "external_commitment",
+          "property": "verified",
+          "descriptor": {"id": "https://payments.example/evaluation-context/remittance-send", "version": "2026-10-24", "digest": "sha-256:F-czt37mgd3Ab_IG9DMPnkQ8ecuf9KaudTggxV7TjXM"}
+        },
+        {
+          "operation": "payments:payment.reverse",
+          "action_class": "irreversible_action",
+          "phases": ["compensate"],
+          "property": "verified",
+          "descriptor": {"id": "https://payments.example/evaluation-context/payment-reverse", "version": "2026-10-25", "digest": "sha-256:_Lrssy2jXGLmYZEqNl5UIiWQ5WTBvUMt9TN_wFGn-8E"}
+        }
+      ],
+      "descriptors": [
+        {
+          "id": "https://payments.example/evaluation-context/payment-execute",
+          "version": "2026-10-24",
+          "digest": "sha-256:Xhg-UR5WSihXsK1u2Ig9p9y50a_OIwFziE92yJp7NGw",
+          "document": {
+            "id": "https://payments.example/evaluation-context/payment-execute",
+            "version": "2026-10-24",
+            "targets": ["invoice", "vendor"],
+            "facts": [
+              {"name": "invoice_revision", "resolver": "payments-store:invoice.version", "granularity": "revision", "normalization": "integer", "parameter": "invoice_version"},
+              {"name": "vendor_id", "resolver": "payments-store:invoice.vendor_id", "granularity": "effective_values", "normalization": "string", "parameter": "vendor_id"},
+              {"name": "vendor_revision", "resolver": "payments-store:vendor.version", "granularity": "revision", "normalization": "integer", "parameter": "vendor_version"},
+              {"name": "amount", "resolver": "payments-store:invoice.amount", "granularity": "effective_values", "normalization": "decimal-string-and-currency", "parameter": "amount"},
+              {"name": "payee_account", "resolver": "payments-store:invoice.payee_account", "granularity": "effective_values", "normalization": "string", "parameter": "payee_account"}
+            ]
+          }
+        },
+        {
+          "id": "https://payments.example/evaluation-context/remittance-send",
+          "version": "2026-10-24",
+          "digest": "sha-256:F-czt37mgd3Ab_IG9DMPnkQ8ecuf9KaudTggxV7TjXM",
+          "document": {
+            "id": "https://payments.example/evaluation-context/remittance-send",
+            "version": "2026-10-24",
+            "targets": ["invoice", "vendor"],
+            "facts": [
+              {"name": "invoice_revision", "resolver": "payments-store:invoice.version", "granularity": "revision", "normalization": "integer", "parameter": "invoice_version"},
+              {"name": "vendor_id", "resolver": "payments-store:invoice.vendor_id", "granularity": "effective_values", "normalization": "string", "parameter": "vendor_id"},
+              {"name": "vendor_revision", "resolver": "payments-store:vendor.version", "granularity": "revision", "normalization": "integer", "parameter": "vendor_version"},
+              {"name": "amount", "resolver": "payments-store:invoice.amount", "granularity": "effective_values", "normalization": "decimal-string-and-currency", "parameter": "amount"},
+              {"name": "payee_account", "resolver": "payments-store:invoice.payee_account", "granularity": "effective_values", "normalization": "string", "parameter": "payee_account"},
+              {"name": "recipients", "resolver": "payments-store:vendor.remittance_recipients", "granularity": "effective_values", "normalization": "sorted-distinct-strings", "parameter": "recipients"}
+            ]
+          }
+        },
+        {
+          "id": "https://payments.example/evaluation-context/payment-reverse",
+          "version": "2026-10-25",
+          "digest": "sha-256:_Lrssy2jXGLmYZEqNl5UIiWQ5WTBvUMt9TN_wFGn-8E",
+          "document": {
+            "id": "https://payments.example/evaluation-context/payment-reverse",
+            "version": "2026-10-25",
+            "targets": ["invoice", "vendor"],
+            "facts": [
+              {"name": "vendor_id", "resolver": "ledger:wire.vendor_id", "granularity": "effective_values", "normalization": "string", "parameter": "vendor_id"},
+              {"name": "amount", "resolver": "ledger:wire.amount", "granularity": "effective_values", "normalization": "decimal-string-and-currency", "parameter": "amount"},
+              {"name": "payee_account", "resolver": "ledger:wire.payee_account", "granularity": "effective_values", "normalization": "string", "parameter": "payee_account"},
+              {"name": "reversed_operation", "resolver": "ledger:wire.op_key", "granularity": "effective_values", "normalization": "string", "parameter": "reverses"},
+              {"name": "invoice_issued_at", "resolver": "payments-store:invoice.issued_at", "granularity": "effective_values", "normalization": "string-or-null"},
+              {"name": "invoice_classification", "resolver": "payments-store:invoice.classification", "granularity": "effective_values", "normalization": "string-or-null"},
+              {"name": "vendor_tenant", "resolver": "payments-store:vendor.tenant", "granularity": "effective_values", "normalization": "string-or-null"}
+            ]
+          }
+        }
+      ]
+    },
     "reversible_write_idempotency": [
       {
         "mediated_class_or_scope": "payments:payment.schedule",

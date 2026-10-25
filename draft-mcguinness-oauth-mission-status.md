@@ -126,7 +126,7 @@ that build on the issuance profile. The capabilities are:
   holding a `mission_id` resolves, with responses signed as a JWS
   {{RFC7515}}.
 - An extension to OAuth token introspection that carries a Mission
-  projection, which a deployment MAY return as a {{RFC9701}}-signed
+  projection, which a deployment can return as a {{RFC9701}}-signed
   response ({{introspection-projection}}).
 - A **Mission Lifecycle endpoint** ({{mission-lifecycle-endpoint}})
   for explicit `revoke`, `suspend`, `resume`, and `complete`
@@ -238,7 +238,8 @@ The request is an HTTPS POST with an
   for a specific audience MUST send it.
 
 `nonce`:
-: REQUIRED. A string. A client-generated nonce binding the
+: REQUIRED. A string of 1 to 255 Unicode code points. A
+  client-generated nonce binding the
   response to this request. It MUST be unique per request within the
   response lifetime. A consumer MUST reject a response whose `nonce`
   does not equal the one it sent. This is a standard client challenge:
@@ -319,7 +320,13 @@ authenticates directly as a client (mechanism 1 or 3) carries the
 deployment-defined equivalent grant, not a scope, and so resolves
 Mission state without holding an access token the AS issued. A caller
 carrying no such authorization is refused with the not-found response
-of {{mission-status-errors}} ({{mission-status-anti-oracle}}).
+of {{mission-status-errors}} ({{mission-status-anti-oracle}}). This
+includes an authenticated caller presenting an otherwise-valid access
+token without the `mission_status` scope: it receives the not-found
+response, not the `insufficient_scope` error of
+{{Section 3.1 of RFC6750}}. An expired token, a token for another
+audience, or a failed sender constraint is instead an access-token
+authentication failure ({{mission-status-auth-failures}}).
 
 A presented access token (mechanism 2) MUST be audience-restricted to
 this endpoint's protected-resource identifier: the `resource` value the
@@ -381,6 +388,10 @@ credential it presented:
 
 Every challenge carries the `resource_metadata` parameter naming the
 endpoint's Protected Resource Metadata ({{Section 5.1 of RFC9728}}).
+A 401 response carries the challenge or challenges and a JSON body
+({{mission-status-errors}}): a challenge's `error` attribute, when
+present, follows its scheme as above and is distinct from the body's
+`error`, which is `unauthorized`.
 An authenticated caller not authorized for the referenced Mission
 receives `not_found` (404) with no challenge
 ({{mission-status-anti-oracle}}).
@@ -524,8 +535,9 @@ The members are:
     state space is the issuance profile's
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
     Lifecycle"): `active` and `terminated`, this profile's `suspended`
-    when the Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}})
-    is deployed, and any further state a companion profile defines and
+    when the Mission Lifecycle endpoint's `suspend` operation
+    ({{lifecycle-operations}}) is deployed, and any further state a
+    companion profile defines and
     the deployment runs. A consumer applies the issuance profile's
     forward-compatibility rule: only `active` permits reliance, and
     every other value, recognized or not, is non-active. This
@@ -885,11 +897,12 @@ distinct from {{RFC7009}} token revocation. The endpoint MUST be
 served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
 recommendations of {{RFC9325}}.
 
-Adopting this endpoint extends the issuance profile's lifecycle state
-space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Lifecycle") with one additional state, `suspended` (a
-paused Mission that derives no tokens until resumed), and one
-termination reason, `completed` (the Mission completed
+This endpoint's operations extend the issuance profile's lifecycle
+state space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+Lifecycle"), each value arriving with the operation that introduces
+it ({{conformance}}): `suspend` adds one state, `suspended` (a paused
+Mission that derives no tokens until resumed), and `complete` adds
+one termination reason, `completed` (the Mission completed
 successfully).
 Issuance gating treats any state other than `active` as
 non-deriving, exactly as the issuance profile gates on `active`.
@@ -902,8 +915,9 @@ deployment that
 needs a prompt cutoff on outstanding tokens uses the propagation
 mechanisms of {{revocation-enforcement-classes}}.
 
-Suspension is reversible, so a refresh refused for it should not spend
-the client's ability to refresh after a `resume`. After validating a
+Suspension is reversible. Consuming or invalidating a refresh token
+solely because of suspension can prevent refresh after a `resume`.
+After validating a
 refresh request and before consuming or rotating its refresh token,
 the AS SHOULD check whether the Mission, or another Mission whose
 state a companion profile makes gate its derivation, is suspended.
@@ -967,7 +981,9 @@ form-urlencoded body:
   The AS applies it as {{idempotency}} describes.
 
 `nonce`:
-: REQUIRED. A string. A client-generated nonce.
+: REQUIRED. A string of 1 to 255 Unicode code points. A
+  client-generated nonce, the request's idempotency key
+  ({{idempotency}}).
 
 The request also carries the client authentication parameters of the
 mechanism it uses, as at the Mission Status endpoint
@@ -996,7 +1012,9 @@ A companion profile MAY register a further `operation` value on this
 endpoint that changes no Mission-level state, provided it defines the
 value's request members, authorization, anti-oracle behavior,
 idempotency and outcome vocabulary, result shape, and conformance
-requirements completely.
+requirements completely. It registers the value by defining it in
+its own specification; no IANA registry holds `operation` values
+({{iana}}).
 
 A `suspend` MAY carry `suspend_until` with a REQUIRED `on_expiry`; the
 pair is the Mission's schedule. When the `suspend_until` of a current
@@ -1326,7 +1344,8 @@ When `suspend_until` passes without a `resume`, the AS applies
 ## Idempotency and Conflicts {#idempotency}
 
 The request `nonce` ({{lifecycle-operations}}) is
-the idempotency key: an opaque string of 1 to 255 characters. The AS
+the idempotency key: an opaque string of 1 to 255 Unicode code points.
+The AS
 treats an absent, empty, longer, or non-string `nonce` as malformed
 (`invalid_request`, with no `nonce` echoed).
 
@@ -1531,8 +1550,9 @@ bound: the advertisement is the ceiling on every reliance window
 built from these surfaces. The 60-second value in this document's
 examples is a tight deployment's choice, not a floor.
 
-Where Mission revocation must take effect but only the baseline
-derivation-time check is in use, Mission-bound access tokens SHOULD use
+Where a deployment needs Mission revocation to take effect but only
+the baseline derivation-time check is in use, Mission-bound access
+tokens SHOULD use
 TTLs no longer than the declared `mission_max_stale_seconds`.
 Deployments where revocation propagates out of band (token
 introspection, per-request status checks, or a companion profile's
@@ -1729,9 +1749,8 @@ An implementation claiming an extension MUST meet its requirements:
   `private_key_jwt`,
   `mission_status_endpoint_auth_signing_alg_values_supported`.
 - **Introspection projection**: carry the Mission projection on the
-  introspection response ({{introspection-projection}}), returning it
-  as a {{RFC9701}}-signed response where end-to-end integrity is
-  required.
+  introspection response ({{introspection-projection}}), signing it
+  with {{RFC9701}} as that section provides.
 - **Mission Lifecycle**: serve the Mission Lifecycle endpoint
   ({{mission-lifecycle-endpoint}}), gate the `suspended` state and the
   `completed` termination it introduces exactly as the issuance profile
@@ -1763,8 +1782,8 @@ An implementation claiming an extension MUST meet its requirements:
   the operations that introduce them. An implementation claiming
   Mission Lifecycle meets this class.
 - **Revocation propagation**: advertise `mission_max_stale_seconds`
-  and size Mission-bound access-token TTLs to it
-  ({{revocation-enforcement-classes}}).
+  and size Mission-bound access-token TTLs as
+  {{revocation-enforcement-classes}} provides.
 
 A Mission Issuer that claims any extension above meets the following
 requirement, whichever companion profiles it adopts. Every
@@ -1835,8 +1854,8 @@ least the Mission's audit horizon
 ({{I-D.draft-mcguinness-oauth-mission}}), so an archived
 `application/mission-status-response+jwt` remains verifiable for
 audit and dispute. This is the issuance profile's retired-key rule
-({{I-D.draft-mcguinness-oauth-mission}}), with the audit horizon as the
-bound.
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Signing and Key
+Rotation"), with the audit horizon as the bound.
 
 A key known or suspected compromised follows the issuance profile's
 compromise rule ({{I-D.draft-mcguinness-oauth-mission}}, Section
@@ -2079,6 +2098,18 @@ Mission Termination Reasons registry
   response shows `authority_hash` to a caller the example does not
   show holding its disclosure privilege; and the revocation's `reason`
   describes a revocation, not a completion (#1535).
+- The `nonce` is a string of 1 to 255 Unicode code points at both
+  endpoints, a constraint the Mission Status request now states
+  (#1535).
+- Conformance's introspection-signing and TTL-sizing items defer to
+  the sections that state those rules, resolving language that
+  conflicted with them; each lifecycle value arrives with the
+  operation that introduces it; an otherwise-valid access token
+  without the `mission_status` scope receives the not-found response,
+  not `insufficient_scope`; a 401's challenge errors are distinct from
+  its JSON body's `unauthorized`; and a companion registers an
+  extension operation by defining it in its own specification
+  (#1535).
 
 -00
 

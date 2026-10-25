@@ -310,6 +310,11 @@ function settleCountedDerivations(kernel: MissionKernel, ctx: { status: number }
   for (const missionId of counted) kernel.refundDerivation(missionId);
 }
 
+/** A request that reads no Mission state: discovery metadata or the key set (#250 step 3). */
+function isRecoveryDiagnostic(ctx: { method: string; path: string }): boolean {
+  return (ctx.method === "GET" || ctx.method === "HEAD") && (ctx.path === "/jwks" || ctx.path.startsWith("/.well-known/"));
+}
+
 /**
  * @spec mission#issuance-gating, status#mission-lifecycle-endpoint — map a
  * kernel {@link GateError} onto the `mission_error` diagnostic value, where
@@ -430,6 +435,7 @@ import {
   childMissionClaim,
 } from "../kernel/child-delegation.js";
 import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
+import { JWKS_MAX_AGE_SECONDS } from "../kernel/signing-key-ring.js";
 import { type DpopProofReplay, newDpopProofReplay, refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
   handleTransactionAuthorization,
@@ -825,6 +831,12 @@ export interface AdapterOptions {
    * `subject_token` verifies under. `publicJwks` holds every AS role's key.
    */
   accessTokenJwks: { keys: Record<string, unknown>[] };
+  /**
+   * @spec #831 B2: the key ring revision the AS loaded, served as the
+   * `/jwks` `ETag` so verification can confirm which revision is running.
+   * Absent with keys generated at boot.
+   */
+  jwksRevision?: number;
   /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;
@@ -2042,6 +2054,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
     features: {
       // We serve our own approval interaction (the mission-kernel adapter).
       devInteractions: { enabled: false },
+      // @spec #831 B2: admits the verify-only keys for the access-token
+      // role's overlap generations (VerifyOnlySigningKey) in `jwks`.
+      externalSigningSupport: { enabled: true, ack: "experimental-01" },
       pushedAuthorizationRequests: { enabled: true, requirePushedAuthorizationRequests: true },
       // @spec mission#submission-via-par (#1503): the second carriage of the
       // Submission envelope, a `mission_intent` claim in a signed Request
@@ -2755,6 +2770,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
     ctx.set("cache-control", "no-store");
   }
 
+  /**
+   * @spec control-plane#rollback (#250 step 3): answer 503
+   * `temporarily_unavailable` in place of any response but discovery metadata
+   * and the key set while the kernel is uncertain. True when it refused.
+   */
+  function refuseWhileUncertain(ctx: { method: string; path: string; status: number; body: unknown; set(field: string, value: string): void }): boolean {
+    if (!kernel.recoveryUncertainty() || isRecoveryDiagnostic(ctx)) return false;
+    ctx.status = 503;
+    ctx.body = {
+      error: "temporarily_unavailable",
+      error_description: "the authorization server's durable state is uncertain and must be reconciled before it serves again",
+    };
+    ctx.set("cache-control", "no-store");
+    return true;
+  }
+
   // @spec mission#issuance-gating (#250): THE RELEASE FENCE, the AS's final
   // decision to release a token. It must stay the first `provider.use` here.
   // Provider#use splices each middleware ahead of the route dispatcher in
@@ -2769,17 +2800,35 @@ export function buildProvider(opts: AdapterOptions): Provider {
   provider.use(async (ctx, next) => {
     await next();
     fenceRelease(ctx);
+    // @spec control-plane#rollback (#250 step 3): uncertainty that began while
+    // this request was in flight (a write elsewhere, the request-path drain)
+    // still refuses its response, here where nothing awaits after.
+    refuseWhileUncertain(ctx);
   });
   // @spec #831 (role binding): the provider's keystore holds the access-token
   // key alone (`jwks`), so it signs nothing under another role's key. The
   // jwks_uri still publishes every role's public key: the provider serves the
   // route, with its CORS handling and content type, and only the key set it
   // answered with is replaced by `publicJwks`.
+  // @spec #831 B2: the response declares an explicit freshness lifetime, the
+  // interval a pending generation is published before it activates.
   provider.use(async (ctx, next) => {
     await next();
     if (ctx.method === "GET" && ctx.path === "/jwks" && ctx.status === 200) {
       ctx.body = { keys: opts.publicJwks.keys };
+      ctx.set("cache-control", `max-age=${JWKS_MAX_AGE_SECONDS}`);
+      if (opts.jwksRevision !== undefined) ctx.set("etag", `"${opts.jwksRevision}"`);
     }
+  });
+
+  // @spec control-plane#rollback (#250 step 3): a witnessed kernel whose durable
+  // state became uncertain while running (a witness write that failed, or a
+  // write that bypassed its guard) refuses every state-dependent request until
+  // it is reconciled offline. Only discovery metadata and the key set, which
+  // read no Mission state, still answer.
+  provider.use(async (ctx, next) => {
+    if (refuseWhileUncertain(ctx)) return;
+    await next();
   });
 
   // @spec derivation-limits#counted-operations (#935, D772): settles the
@@ -4489,7 +4538,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // members: `nonce` REQUIRED and well formed (a malformed one is refused
       // and never echoed), `mission_id` REQUIRED, `audience` non-empty when sent.
       if (echo === undefined) {
-        refuse(400, "invalid_request", "nonce is required: a string of 1 to 255 characters", undefined);
+        refuse(400, "invalid_request", "nonce is required: a string of 1 to 255 Unicode code points", undefined);
         return;
       }
       const missionId = form.params.mission_id;
@@ -4707,7 +4756,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (nonce === undefined) {
         deliver(400, {
           error: "invalid_request",
-          error_description: "nonce is REQUIRED: a string of 1 to 255 characters",
+          error_description: "nonce is REQUIRED: a string of 1 to 255 Unicode code points",
         });
         return;
       }

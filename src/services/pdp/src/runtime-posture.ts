@@ -5,6 +5,7 @@ import {
   authorityDependencyFindings,
   type EnforcementScopeStatement,
   type ExecutionCapabilityDeclaration,
+  evaluationContextBindingFindings,
   evidenceDeclarationFindings,
   executionCapabilityFindings,
   resourceContractFindings,
@@ -129,6 +130,12 @@ export function loadRuntimePosture(
   // dependency missing an element the Runtime requires is refused here.
   const dependencies = authorityDependencyFindings(input);
   if (dependencies.length) throw new PostureConfigError(JSON.stringify(dependencies));
+  // @spec runtime#evaluation-context-binding (#773): a claim lacking a covered
+  // operation, a descriptor or a fact's resolver, a descriptor whose bytes do
+  // not hash to its reference, and an enforced property no execution
+  // capability supports are refused here, as an undeclared class is below.
+  const contextBinding = evaluationContextBindingFindings(input);
+  if (contextBinding.length) throw new PostureConfigError(JSON.stringify(contextBinding));
   const state = (input as EnforcementScopeStatement).state_source as unknown as Record<string, unknown>;
   const fail = (why: string): never => { throw new PostureConfigError(why); };
   if (state.pdp_unavailability_posture !== "deny") fail("only deny is implemented; bounded permit reuse is not available");

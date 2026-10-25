@@ -496,7 +496,9 @@ describe("the payments resource enforces recipient_domain over every resolved re
       h.payments.setMailList("remit-list@acme.example", ["treasury@acme.example", "drop@elsewhere.example"]),
     );
     expect(res.ok).toBe(false);
-    expect(res.refusal_reason).toBe("parameter_mismatch");
+    // The recipient set is a declared fact of the claimed Evaluation-Context
+    // Binding, so a changed membership is target_drift (#773).
+    expect(res.refusal_reason).toBe("target_drift");
     expect(sent(h)).toEqual([]);
   });
 

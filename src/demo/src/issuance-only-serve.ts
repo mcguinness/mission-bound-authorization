@@ -4,7 +4,7 @@
  * credentials the walkthrough reads (see issuance-only.ts).
  */
 import { writeFileSync } from "node:fs";
-import { kernelStoreFromEnv, type SigningKeySource, signingKeysFromEnv } from "@mission/authorization-server";
+import { type KernelStoreConfig, kernelStoreFromEnv, type SigningKeySource, signingKeysFromEnv } from "@mission/authorization-server";
 import { CREDENTIALS_PATH, startIssuanceOnly } from "./issuance-only.js";
 
 const introspection = process.argv.includes("--introspection");
@@ -12,7 +12,7 @@ const introspection = process.argv.includes("--introspection");
 // @spec #250: MISSION_KERNEL_STORE keeps the kernel across restarts, and
 // requires the key ring.
 let signingKeys: SigningKeySource;
-let kernelStore: { file: string } | undefined;
+let kernelStore: KernelStoreConfig | undefined;
 try {
   signingKeys = signingKeysFromEnv(process.env);
   kernelStore = kernelStoreFromEnv(process.env);
@@ -34,7 +34,9 @@ console.log(`  AS        ${credentials.asUrl}  (issuer; JWKS ${credentials.asUrl
 console.log(`  plain-rs  ${credentials.rsUrl}  (audience ${credentials.audience})`);
 console.log(`  introspection: ${introspection ? `${credentials.asUrl}/introspect as rs-plain` : "off (JWT only)"}`);
 console.log(`  signing keys: ${"ring" in signingKeys ? `key ring ${signingKeys.ring}` : "ephemeral (new at every restart)"}`);
-console.log(`  kernel store: ${kernelStore ? `${kernelStore.file} (kept across restarts)` : "in memory (lost at restart)"}`);
+console.log(
+  `  kernel store: ${kernelStore ? `${kernelStore.file} (kept across restarts; recovery witness ${kernelStore.witness})` : "in memory (lost at restart)"}`,
+);
 console.log(`  dev credentials: ${CREDENTIALS_PATH}`);
 console.log("  ready; run `pnpm issuance-only:walkthrough` in another shell. Ctrl-C to stop.");
 // Close both servers once, on the first of SIGINT, SIGTERM or SIGHUP. A

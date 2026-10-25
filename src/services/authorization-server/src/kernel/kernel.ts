@@ -172,6 +172,13 @@ import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { ContinuationStore } from "./continuation-store.js";
 import { DelegationFamilyStore } from "./delegation-family-store.js";
+import {
+  guardKernelStore,
+  type RecoveryGuard,
+  type RecoveryUncertainError,
+  refuseUnwitnessedOpen,
+  witnessSharesStoreTree,
+} from "./recovery-witness.js";
 import { newMissionId } from "./mission-id.js";
 import {
   assembleResourceContracts,
@@ -634,6 +641,14 @@ export interface KernelOptions {
   statusKey: CryptoKey;
   statusKid: string;
   /**
+   * @spec #831 B2: the public JWKs of the Status role's generations the AS
+   * still accepts (active and overlap), each under its `kid`. A record the
+   * status signer signed under an earlier generation verifies by its `kid`
+   * through {@link MissionKernel.statusVerificationKeyFor}. Absent: the
+   * active key alone.
+   */
+  statusVerificationJwks?: Record<string, unknown>[];
+  /**
    * @spec containment#containment-policy — the ISSUER-HELD ContainmentPolicy
    * (the map from a protected-event class to what narrows). OPTIONAL: only
    * {@link MissionKernel.containOnEvent} reads it, so a kernel constructed
@@ -836,11 +851,20 @@ export interface KernelOptions {
    * default stays in-memory and single-process; a `file` names the OPT-IN
    * file-backed SINGLE-WRITER store that makes restart recovery of the durable
    * lifecycle outbox and the terminal tombstones observable. It authorizes no
-   * second writer: multi-process claiming and fencing stay behind #641's
-   * deployment trigger, and `packages/store` adds no busy timeout and no
-   * IMMEDIATE transaction mode.
+   * second writer: multi-process claiming stays behind #641's deployment
+   * trigger. Without a {@link recoveryWitness} the file takes no lock and no
+   * busy timeout; with one it is held exclusively (#250 step 3).
    */
   store?: StoreOptions;
+  /**
+   * @spec control-plane#rollback (#250 step 3): the recovery witness for a
+   * file-backed `store`, a file kept outside the database restore unit. With
+   * it, the kernel opens the store exclusively, admits it only when its
+   * recovery marker matches the witness exactly, and advances both on every
+   * write transaction ({@link guardKernelStore}). Without it, a restored
+   * older store is not detected.
+   */
+  recoveryWitness?: { file: string };
   /**
    * @spec control-plane#tombstones — the deployment's declared retention
    * horizons. The detailed tombstone horizon is their COMPOSED maximum; the
@@ -885,6 +909,8 @@ function derivationCapExhausted(id: string): GateError {
 
 export class MissionKernel {
   readonly db: Database;
+  /** @spec control-plane#rollback (#250 step 3): the commit guard of a witnessed store, else undefined. */
+  readonly recovery: RecoveryGuard | undefined;
   /**
    * @spec issuance-grant#effective-set-projection (#617 review 3) — the durable
    * Mission-bound grant index. Its own store handle, deliberately NOT this
@@ -1047,7 +1073,23 @@ export class MissionKernel {
       opts.issuer,
     );
     this.sourceResolver = opts.authoritySourceResolver ?? catalogAuthoritySourceResolver(this.sourceCatalog);
-    this.db = openStore(SCHEMA, opts.store ?? {});
+    // @spec control-plane#rollback (#250 step 3): a witnessed store is opened
+    // exclusively and admitted before anything below writes to it.
+    if (opts.recoveryWitness && !opts.store?.file) {
+      throw new Error("recoveryWitness needs a file-backed kernel store");
+    }
+    if (opts.recoveryWitness && opts.store?.file && witnessSharesStoreTree(opts.store.file, opts.recoveryWitness.file)) {
+      throw new Error("the recovery witness must be outside the store's directory, and the store outside the witness's");
+    }
+    this.db = openStore(SCHEMA, opts.recoveryWitness ? { ...opts.store, exclusive: true } : (opts.store ?? {}));
+    try {
+      if (opts.recoveryWitness && opts.store?.file) {
+        this.recovery = guardKernelStore(this.db, opts.store.file, opts.recoveryWitness.file);
+      } else if (opts.store?.file) refuseUnwitnessedOpen(this.db);
+    } catch (e) {
+      this.db.close();
+      throw e;
+    }
     migrateMissions(this.db);
     this.sourceBindings = new SourceBindingStore(this.db);
     reconcileSourceBindings(
@@ -1369,6 +1411,17 @@ export class MissionKernel {
     return this.statusPublicKey;
   }
   private statusPublicKey?: KeyObject;
+
+  /**
+   * @spec #831 B2: the Status key a record names by `kid`, among the
+   * generations the AS still accepts (active and overlap); undefined for any
+   * other `kid`, a retired or compromised generation's included.
+   */
+  statusVerificationKeyFor(kid: string): KeyObject | undefined {
+    if (kid === this.opts.statusKid) return this.statusVerificationKey();
+    const jwk = this.opts.statusVerificationJwks?.find((k) => k.kid === kid);
+    return jwk ? createPublicKey({ key: jwk as never, format: "jwk" }) : undefined;
+  }
 
   /**
    * @spec mission#standing-consent-bases: the auditor's check of a Mission's
@@ -5285,6 +5338,17 @@ export class MissionKernel {
    */
   close(): void {
     this.db.close();
+    // @spec control-plane#rollback (#250 step 3): and the witness's lock.
+    this.recovery?.release();
+  }
+
+  /**
+   * @spec control-plane#rollback (#250 step 3): the uncertainty a witnessed
+   * kernel ran into at run time, if any. While it is set, every write refuses,
+   * and state-dependent service must refuse too.
+   */
+  recoveryUncertainty(): RecoveryUncertainError | undefined {
+    return this.recovery?.uncertainty;
   }
 
   private mustGet(id: string): MissionRecord {

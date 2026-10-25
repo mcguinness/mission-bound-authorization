@@ -22,6 +22,8 @@ export interface MasProcessOptions {
   /** The signing keys: a key ring path (with `kernelStore`, Missions survive a restart), or ephemeral keys. */
   keyRing?: string;
   kernelStore?: string;
+  /** The kernel store's recovery witness (#250 step 3), required with `kernelStore`. */
+  kernelWitness?: string;
   /** The MAS's introspection client secret at the estate, where the configuration declares `join_assertion` (#1454). */
   joinIntrospectionSecret?: string;
   /** Serve the MAS's operator console on an ephemeral loopback port behind a bearer generated here (#1561). */
@@ -48,6 +50,7 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
     "MISSION_KEY_RING",
     "MISSION_EPHEMERAL_KEYS",
     "MISSION_KERNEL_STORE",
+    "MISSION_KERNEL_WITNESS",
     "MAS_PILOT_JOIN_INTROSPECTION_SECRET",
     "MAS_PILOT_OPERATOR_TOKEN",
     "MAS_PILOT_OPERATOR_CONSOLE_PORT",
@@ -60,6 +63,7 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
     MAS_PILOT_STATUS_CLIENTS: JSON.stringify(opts.statusClients),
     ...(opts.keyRing ? { MISSION_KEY_RING: opts.keyRing } : { MISSION_EPHEMERAL_KEYS: "1" }),
     ...(opts.kernelStore ? { MISSION_KERNEL_STORE: opts.kernelStore } : {}),
+    ...(opts.kernelWitness ? { MISSION_KERNEL_WITNESS: opts.kernelWitness } : {}),
     ...(opts.joinIntrospectionSecret ? { MAS_PILOT_JOIN_INTROSPECTION_SECRET: opts.joinIntrospectionSecret } : {}),
     ...(consoleToken ? { MAS_PILOT_OPERATOR_TOKEN: consoleToken, MAS_PILOT_OPERATOR_CONSOLE_PORT: "0" } : {}),
   });
