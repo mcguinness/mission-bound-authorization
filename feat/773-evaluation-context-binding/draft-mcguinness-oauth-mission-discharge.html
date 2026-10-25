@@ -1568,8 +1568,9 @@ effective authority narrowed even though <code>state</code> did not change.<a hr
         <h3 id="name-subset-rule">
 <a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-subset-rule" class="section-name selfRef">Subset Rule</a>
         </h3>
-<p id="section-3.4-1">Because <code>terminal_when</code> is a Common Constraint, the issuance profile's
-subset comparison (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) applies its
+<p id="section-3.4-1">Because <code>terminal_when</code> is a Common Constraint, the Mission Resource
+Access Profile's subset comparison
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) applies its
 defined subset rule with no new clause: for a key present in the
 reference entry's <code>constraints</code>, the same key <span class="bcp14">MUST</span> be present in the
 candidate entry and its value <span class="bcp14">MUST</span> be no broader under the key's
@@ -1594,14 +1595,18 @@ change discharges earlier or later from opaque <code>event_type</code> values.<a
 <a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-forward-compatibility" class="section-name selfRef">Forward Compatibility</a>
         </h3>
 <p id="section-3.5-1">Because <code>terminal_when</code> is a <code>constraints</code> member, a consumer that does
-not recognize it fails closed by the issuance profile's resource server
-enforcement rule directly: a consumer <span class="bcp14">MUST</span> fail closed on any
-<code>constraints</code> key it does not understand, or understands but cannot
-enforce, refusing the request rather than granting access while ignoring
-the key (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Discharge is
-load-bearing narrowing, so ignoring <code>terminal_when</code> would silently widen
-the grant. That enforcement rule is the honest basis of discharge's
-safety: an unrecognized <code>terminal_when</code> is refused, never dropped.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+not recognize it fails closed by the Mission Resource Access Profile's
+resource server enforcement rule directly: a consumer <span class="bcp14">MUST</span> fail closed on
+any <code>constraints</code> key it does not understand, or understands but cannot
+enforce, in an applicable entry, rather than grant access while ignoring
+the key (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). The
+entry carrying it provides no authority, and the request is refused
+unless another applicable entry that the consumer can fully enforce
+authorizes the whole request on its own. Discharge is load-bearing
+narrowing, so ignoring <code>terminal_when</code> would silently widen the grant.
+That enforcement rule is the honest basis of discharge's safety: an
+unrecognized <code>terminal_when</code> leaves its entry authorizing nothing, and
+is never dropped.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
 <p id="section-3.5-2">An authorization server that does not implement this capability simply
 does not emit <code>terminal_when</code>, and is unaffected. The fail-closed rule
 binds a consumer that encounters the constraint without implementing
