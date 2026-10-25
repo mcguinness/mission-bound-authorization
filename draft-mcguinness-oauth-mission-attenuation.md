@@ -300,7 +300,7 @@ authority from `mission_resource_access` entries
   such a tool is rejected ({{request-discovery}});
 - a tool's argument constraints map to the entry's `constraints`,
   compared under the specification-defined Common Constraint value-space rules
-  ({{I-D.draft-mcguinness-oauth-mission}}) for specification-defined constraint
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) for specification-defined constraint
   names and under the deployment's rules otherwise; a root argument
   constraint MUST be no broader than the mapped entry `constraints`; and
 - the root MUST derive only from entries whose `delegation` permits the

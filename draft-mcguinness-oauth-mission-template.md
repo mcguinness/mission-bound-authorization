@@ -768,7 +768,8 @@ adjudication order of {{dispatch}} runs once for a new identifier, and
 a repeated identifier is gated to the previously committed instance
 rather than a fresh derivation. This is the single gated derivation
 the Dispatch performs per dispatch event; a Dispatch Handoff's
-redemption ({{dispatch-handoff}}) is a further derivation.
+exchange and its redemption ({{dispatch-handoff}}) are each a further
+derivation.
 
 On success the Mission Issuer responds with an access token bound to
 the instance, sender-constrained to the Dispatcher's key:
@@ -1198,6 +1199,11 @@ member, is refused with `invalid_grant`. A Mission that is not `active`
 is refused with `invalid_request` ({{Section 2.2.2 of RFC8693}}),
 carrying the `mission_error` member
 ({{I-D.draft-mcguinness-oauth-mission}}).
+
+A successful exchange is a derivation from the instance, gated and
+counted as the issuance profile requires
+({{I-D.draft-mcguinness-oauth-mission}}), apart from the redemption of
+the grant it issues ({{handoff-redemption}}).
 
 In the example scenario ({{example-scenario}}), `erp-scheduler`
 requests the handoff of its instance, proving the key its access
@@ -1752,6 +1758,9 @@ IANA action. Following the restraint of the sibling profiles:
 
 \[\[ To be removed from the final specification ]]
 
+- A successful Dispatch Handoff exchange is a derivation from the
+  instance, counted once and apart from its redemption, as Derivation
+  Limits' Token Exchange rule counts it (#1648, D764).
 - The Dispatch Handoff states its effect on grant bindings: the handoff
   grant establishes no grant lineage, its redemption resolves the
   instance from the grant's authenticated `mission` claim and issues a

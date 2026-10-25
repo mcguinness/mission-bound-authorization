@@ -32,10 +32,12 @@ import {
   type PropagatedMissionReference,
   type ResourceContractDeclarations,
   type ResourceContractRef,
+  refusedEntryMember,
   resourceContractOf,
   sameResourceContract,
   TXN_AUTHORIZATION_REQUIRED,
   type TxnMissionClaim,
+  unsupportedEntryMember,
 } from "@mission/core";
 import { CATALOG_TOOL_BINDINGS, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { getTracer } from "@mission/telemetry";
@@ -97,6 +99,7 @@ import { admitArguments } from "./intake.js";
 import { absenceMeansNeverGranted, type MissionViewSource, prepareRequestView, viewMissRefusal } from "./view-source.js";
 import { accessTokenHash } from "./dpop.js";
 import type { JoinAssertionSource } from "./join-assertion-client.js";
+import { type ObligationNotifier, type ObligationProcessing, processObligations } from "./obligations.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 
@@ -533,6 +536,39 @@ function deriveVendorScope(
     return { vendor_scope: [...allowedVendors].sort(), vendor_scope_source: "entry" };
   }
   return { vendor_scope: [...new Set(invoiceVendorIds)].sort(), vendor_scope_source: "all" };
+}
+
+/**
+ * @spec resource-access#rs-enforcement, runtime#read-binding (#1375): the
+ * applicable entry a bound list read's vendor scope derives from, the same at
+ * decision and at reverification. Entries are alternative grants: of the
+ * entries naming the target and the action that this resource can fully
+ * enforce (no `locations`, no member outside the supported set, judged on the
+ * committed entry), the first whose `vendors` admit the requested vendor, so a
+ * later entry covering the request is relied on as the PDP relies on it,
+ * never refused because an earlier entry excludes the vendor. With no vendor
+ * requested, the first such entry, to whose vendors the read narrows. One
+ * entry's scope, never a union of several.
+ */
+function listScopeEntry(
+  entries: readonly AuthorityEntry[] | undefined,
+  target: string,
+  action: string,
+  requestedVendorId: string | undefined,
+): AuthorityEntry | undefined {
+  const applicable = (entries ?? []).filter((e) => {
+    if (!entryMatchesTarget(e, target) || !e.actions.includes(action)) return false;
+    const committed = committedEntry(e);
+    return refusedEntryMember(committed) === undefined && unsupportedEntryMember(committed) === undefined;
+  });
+  if (requestedVendorId !== undefined) {
+    const admitting = applicable.find((e) => {
+      const vendors = e.constraints?.vendors;
+      return !vendors || vendors.includes(requestedVendorId);
+    });
+    if (admitting) return admitting;
+  }
+  return applicable[0];
 }
 
 /**
@@ -1051,6 +1087,14 @@ export interface PepDeps {
    */
   revokedInstances?: Set<string>;
   /**
+   * @spec authzen#obligation-processing (#1640): the transport this PEP
+   * performs the AuthZEN Obligations Profile's `notification` obligation
+   * through, on a permit before release and on a denial. Absent, a
+   * `notification` is one this PEP cannot perform: on a permit it is an
+   * effective deny ({@link processObligations}).
+   */
+  notifier?: ObligationNotifier;
+  /**
    * Optional observer for tooling/demos: receives the AuthZEN request the PEP
    * built and the raw PDP decision for each enforced action. Never affects
    * the decision; unset in production.
@@ -1189,7 +1233,17 @@ export interface EnforceResult {
    * write path refuses it before any effect.
    */
   writeReservationUnkeyable?: true;
+  /**
+   * @spec authzen#obligation-processing (#1640, D770 ruling 6): present on a
+   * denial whose Decision Evidence did not verify, so none was retained. The
+   * authenticated decision still stands and its obligations were performed:
+   * retrospective evidence is not what authorizes them.
+   */
+  evidence_gap?: DecisionEvidenceGap;
 }
+
+/** Why a denial carries no retained Decision Evidence (D770 ruling 6). */
+export type DecisionEvidenceGap = "decision_evidence_unverifiable";
 
 /** @spec runtime#idempotency (#918): the pair a keyed reversible write reserves. */
 export interface WriteReservationScope {
@@ -1315,6 +1369,15 @@ export interface ExecutionAttempt {
   /** One execution identity per disposition attempt; reused for emission retries. */
   executionId: string;
   /**
+   * @spec authzen#obligation-processing, runtime-evidence#execution-evidence-object
+   * `obligation_outcomes` (#1640): set once the permit's obligations were
+   * performed and every one fulfilled, before any release. Every later
+   * disposition of the permit, completed or suppressed, carries it: "on a
+   * permit, obligation processing is recorded in Execution Evidence's
+   * `obligation_outcomes`, one entry per attached obligation".
+   */
+  obligationOutcomes?: ExecutionEvidenceObject["obligation_outcomes"];
+  /**
    * @spec runtime#idempotency (#917, owner ruling 2026-10-02): set once this
    * attempt's single-use redemption succeeded (D28). Only a redeeming
    * attempt settles the PDP's idempotency claim: an attempt that never held
@@ -1329,17 +1392,23 @@ export interface ExecutionAttempt {
   /**
    * Re-observe this operation's effective parameter digest from CURRENT
    * authoritative state, at the moment of the disposition. `undefined` means
-   * the operation binds no parameters, or its target can no longer be
-   * resolved; it is never a licence to repeat the authorized digest, which
-   * would assert an observation that was not made.
+   * the operation binds no parameters, or its effective parameters can no
+   * longer be established (its target or routing no longer resolves); the
+   * record then omits the effective digest, and this is never a licence to
+   * repeat the authorized digest, which would assert an observation that was
+   * not made.
    */
   observeEffectiveDigest: () => string | undefined;
 }
 
 /**
- * The result of one post-permit disposition. `recorded: false` carries the
- * reason no valid record could be emitted: the disposition still refuses the
- * action, and the gap is an open defect rather than a fabricated record.
+ * The result of one post-permit disposition. `recorded: false` reports why no
+ * record was emitted, rather than papering over it: `emission_failed` after
+ * one retry on the same execution identity, or
+ * `effective_parameter_digest_unobservable` for a COMPLETED disposition whose
+ * effective digest could not be observed, since a completed record never
+ * omits it. A suppression never reports the latter: it emits without the
+ * effective digest, "comparison unavailable" (#786).
  */
 export type SuppressOutcome =
   | { recorded: true }
@@ -1500,33 +1569,6 @@ export function buildInsufficientAuthorization(authorizationDetails: AuthorityEn
     'error_description="the requested action is outside the Mission\'s Authority Set", ' +
     `authorization_remediation=${authorization_remediation}`;
   return { www_authenticate, authorization_remediation };
-}
-
-/**
- * @spec runtime-evidence#execution-evidence-object `obligation_outcomes`:
- * "one object per attached obligation, with `id` (REQUIRED ...), `type`
- * (REQUIRED ...)". This PEP implements no obligation type, so every attached
- * obligation is `unsupported`.
- *
- * Returns `undefined` when ANY attached obligation does not identify itself.
- * Omitting one entry would break one-outcome-per-attached-obligation while
- * still reading as a complete list, and `id`/`type` cannot be invented. That
- * case is an outstanding representation gap (issue #786): the operation is
- * still refused with zero effect, and the record carries no fabricated entry.
- */
-function obligationOutcomes(
-  obligations: readonly unknown[],
-): ExecutionEvidenceObject["obligation_outcomes"] | undefined {
-  const named: NonNullable<ExecutionEvidenceObject["obligation_outcomes"]> = [];
-  for (const raw of obligations) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
-    const { id, type } = raw as { id?: unknown; type?: unknown };
-    if (typeof id !== "string" || id.length === 0 || typeof type !== "string" || type.length === 0) {
-      return undefined;
-    }
-    named.push({ id, type, outcome: "unsupported", error: "no obligation type is implemented at this PEP" });
-  }
-  return named;
 }
 
 /**
@@ -2037,6 +2079,12 @@ export class Pep {
         const assertion = await source.obtain({ mission: missionAnchor, accessToken });
         if (assertion !== undefined) {
           joinAssertion = { assertion, token_sha256: accessTokenHash(accessToken), token_jkt: token.cnfJkt };
+          // @spec authority-server#join-authzen, #join-assertion-pdp (#1561):
+          // on the assertion path the assertion's `join` claim governs, and
+          // its depth comes from the MAS's actor records. This PEP carries no
+          // depth of its own beside it, so a second record store cannot
+          // contradict the MAS's.
+          delegateDepth = undefined;
         }
       }
     }
@@ -2197,9 +2245,6 @@ export class Pep {
       // `parameter_digest` below; previously nothing did, so no digest ever
       // reached the PDP request or the reverification the write/transaction
       // paths already perform.
-      const entry = view.authority_set.find(
-        (e) => entryMatchesTarget(e, operationTarget) && e.actions.includes(mapping.action),
-      );
       // @spec runtime#input-resource-policy (#828 step 5): a named vendor_id
       // is the vendor the payments store resolved, never the argument, as
       // for lookup_vendor (D324); a vendor the store does not hold is refused
@@ -2210,6 +2255,7 @@ export class Pep {
         requestedVendorId = this.deps.payments.getVendor(String(args.vendor_id))?.id;
         if (requestedVendorId === undefined) return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view);
       }
+      const entry = listScopeEntry(view.authority_set, operationTarget, mapping.action, requestedVendorId);
       const scope = deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds());
       // @spec resource-access#initial-common-constraints (#1266): a bound that
       // reads a member fact (issuance, tenant, classification) is evaluated
@@ -2606,6 +2652,27 @@ export class Pep {
     }
 
     if (!decision.decision) {
+      // @spec authzen#obligation-processing (#1640): "on a denial the PEP MUST
+      // still deny the action and MUST additionally execute every returned
+      // obligation." Every obligation this PEP can perform is performed; the
+      // denial is unchanged whatever they do, and none is evidenced: a
+      // denial-side obligation inherits the Obligations Profile's
+      // no-proof-of-execution posture.
+      //
+      // D770 ruling 6: the obligation's authority is the authenticated decision
+      // response, not the retrospective Decision Evidence. A response the
+      // decision channel could not authenticate, or whose integrity failed,
+      // was refused above as a channel failure and carried none; a denial
+      // whose evidence did not verify still stands, still runs its
+      // obligations, and says that its evidence is missing.
+      if (Array.isArray(decision.context.obligations) && decision.context.obligations.length > 0) {
+        const denialId = decision.context.decision_id;
+        await processObligations(
+          decision.context.obligations as unknown[],
+          this.deps.notifier,
+          typeof denialId === "string" ? denialId : undefined,
+        );
+      }
       const ar = decision.context.access_request as EnforceResult["access_request"] | undefined;
       const result: EnforceResult = {
         permitted: false,
@@ -2613,6 +2680,7 @@ export class Pep {
         denial_reason: decision.context.denial_reason as string,
         ...(effective ? { effective } : {}),
         ...(ar ? { access_request: ar } : {}),
+        ...(!retention.retained ? { evidence_gap: "decision_evidence_unverifiable" as const } : {}),
       };
       // @spec txn-authorization#resource-challenge — on an
       // action_approval_required denial the resource normalizes the operation,
@@ -2781,8 +2849,10 @@ export class Pep {
         if (effective) {
           const invoice = this.deps.payments.getInvoice(effective.invoice_id);
           const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
-          // The target is gone: no digest over "the parameters actually
-          // attempted" exists to observe. Declining is the honest answer.
+          // The target, or the routing it addresses, no longer resolves: no
+          // digest over "the parameters actually attempted" exists to
+          // observe. The observation is withheld, so the suppressed record
+          // still emits and carries no effective digest (#786).
           if (!invoice || !vendor) return undefined;
           const bound = recipientParams(effective.recipients !== undefined || this.reachesRecipients(effective.action), this.deps.payments, vendor.id);
           if (!bound) return undefined;
@@ -2802,11 +2872,14 @@ export class Pep {
           });
           // #818 (D560): a remote source's read has lapsed; no observation.
           if (!loaded && this.deps.viewSource) return undefined;
-          const entry = loaded?.view.authority_set.find(
-            (e) => entryMatchesTarget(e, listEffective.resource) && e.actions.includes(listEffective.action),
-          );
           const requestedVendorId =
             listEffective.vendor_scope_source === "requested" ? listEffective.vendor_scope[0] : undefined;
+          const entry = listScopeEntry(
+            loaded?.view.authority_set,
+            listEffective.resource,
+            listEffective.action,
+            requestedVendorId,
+          );
           return parameterDigest(
             this.freshListParams(listEffective, deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds())),
           );
@@ -2838,26 +2911,38 @@ export class Pep {
       return { permitted: false, refusal_reason: "unrecognized_condition" };
     }
 
-    // @spec authzen#obligations: an obligation MAY accompany a permit; the
-    // PEP MUST fulfill every obligation before releasing the action's effect
-    // and MUST treat an unrecognized or unfulfillable obligation as an
-    // effective deny, the obligations-lane counterpart of the conditions
-    // check above. This PEP implements NO obligation type yet, so ANY
-    // obligation present is, by definition, unfulfillable: its mere presence
-    // is a deny, never a silently granted permit and never folded into the
-    // conditions refusal reason above (a distinct rule, a distinct reason).
-    const obligations = decision.context.obligations as unknown[] | undefined;
-    if (obligations && obligations.length > 0) {
-      // @spec runtime-evidence#execution-evidence-object `obligation_outcomes`
-      // ("one object per attached obligation"): the failing entries are named
-      // when every attached obligation identifies itself, and the member is
-      // omitted entirely when one does not. A partial list would read as
-      // complete, and `id`/`type` are REQUIRED and cannot be invented.
-      const outcomes = obligationOutcomes(obligations);
-      await this.suppressExecution(attempt, "obligation_unfulfilled", {
-        ...(outcomes ? { obligationOutcomes: outcomes } : {}),
-      });
-      return { permitted: false, refusal_reason: "unfulfillable_obligation" };
+    // @spec authzen#obligation-processing (#1640, D744 ruling 8): "on a
+    // permit the PEP MUST fulfill each obligation before releasing the
+    // action's effect", and "MUST treat an obligation it does not recognize,
+    // or cannot fulfill, as an effective deny and MUST release no protected
+    // effect; it still executes every obligation it understands and can
+    // perform". Every obligation this PEP can perform is performed here,
+    // before any release on any dispatch path, and only then is the permit
+    // judged: one obligation not fulfilled suppresses it, never a silently
+    // granted permit and never folded into the conditions refusal reason
+    // above (a distinct rule, a distinct reason).
+    //
+    // A present `obligations` member that is not an array (null, an object,
+    // a string) names no obligation this PEP can perform or account for: it
+    // is malformed and refused, and the record carries no outcome list rather
+    // than a fabricated one (D770 ruling 5).
+    const attached: unknown = decision.context.obligations;
+    if (attached !== undefined && !(Array.isArray(attached) && attached.length === 0)) {
+      const processed: ObligationProcessing = Array.isArray(attached)
+        ? await processObligations(attached, this.deps.notifier, attempt.evaluationId)
+        : { fulfilled: false };
+      if (!processed.fulfilled) {
+        // @spec runtime-evidence#execution-evidence-object `obligation_outcomes`
+        // ("one object per attached obligation, in the order the decision
+        // returned them"): every attached obligation has its entry, a malformed
+        // one included, with no `id` or `type` invented for it (#786).
+        await this.suppressExecution(attempt, "obligation_unfulfilled", {
+          ...(processed.outcomes ? { obligationOutcomes: processed.outcomes } : {}),
+        });
+        return { permitted: false, refusal_reason: "unfulfillable_obligation" };
+      }
+      // Fulfilled: every obligation identified itself and was performed.
+      attempt.obligationOutcomes = processed.outcomes;
     }
 
     // @spec runtime#idempotency (#918): the pair a keyed reversible write
@@ -2912,12 +2997,14 @@ export class Pep {
    * agent's arguments or an unverified response. `role` is `pep`: nothing
    * executed, so the executor did not dispose of this permit.
    *
-   * The effective digest is OBSERVED here, at the disposition, and the record
-   * is not emitted at all when an authorized digest is present and no
-   * observation can be made ({@link SuppressOutcome} `gap`). Emitting a
-   * sentinel would fabricate an observation; emitting the record without the
-   * member would be invalid under the present schema. That case is #786's
-   * declared outstanding defect, joint with #594.
+   * The effective digest is OBSERVED here, at the disposition. When the
+   * effective parameters cannot be established (the permit's target no
+   * longer resolves, say), the record keeps the authorized digest and omits
+   * the effective one: "this member MUST be absent rather than copied from
+   * `authorized_parameter_digest` or populated with a fabricated digest ...
+   * The absence means the comparison is unavailable". That exception is the
+   * suppressed record's alone: the shared writer never emits a completed
+   * record without the effective digest ({@link completeExecution}).
    *
    * Emission is awaited so signing and retention complete before the caller
    * learns the outcome, and one retry reuses the same execution identity. A
@@ -2928,10 +3015,70 @@ export class Pep {
     error: string,
     opts: { obligationOutcomes?: ExecutionEvidenceObject["obligation_outcomes"] } = {},
   ): Promise<SuppressOutcome> {
-    const observed = attempt.observeEffectiveDigest();
-    if (attempt.authorizedParameterDigest !== undefined && observed === undefined) {
+    return this.recordDisposition(attempt, { outcome: "suppressed", error }, opts);
+  }
+
+  /**
+   * @spec authzen#execution-evidence-requirement, authzen#conformance (#1640,
+   * D744 ruling 2): "a PEP that claims Runtime Evidence MUST emit one
+   * Execution Evidence Object for the final disposition of every
+   * consequential permit: `completed`, `failed`, or `suppressed` before
+   * release." The completed counterpart of {@link suppressExecution}, for the
+   * read and reversible-write paths, whose effect this PEP releases itself:
+   * called once the effect is released (a read's result computed, a write's
+   * local transaction committed) and before the caller learns the outcome.
+   * The transaction-assurance path records its own completed disposition at
+   * its connector commit point, under the executor role.
+   *
+   * `effectiveParameterDigest` is the digest the path's reverification just
+   * confirmed over the parameters it executed with; absent, the digest is
+   * observed here, at the disposition, from current authoritative state.
+   *
+   * No evidence capacity is reserved before these effects: a durable
+   * reservation is the transaction-assurance requirement's alone (D744
+   * ruling 2). When the record cannot be emitted after one retry, the caller
+   * returns no protected result (D770 ruling 4): a read or a hold disclosed
+   * nothing and is suppressed instead, and a keyed write whose effect
+   * committed reports the {@link SuppressOutcome} `gap` without its result.
+   */
+  async completeExecution(
+    attempt: ExecutionAttempt,
+    opts: { effectiveParameterDigest?: string } = {},
+  ): Promise<SuppressOutcome> {
+    return this.recordDisposition(attempt, {
+      outcome: "completed",
+      ...(opts.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: opts.effectiveParameterDigest } : {}),
+    });
+  }
+
+  /**
+   * The one Execution Evidence writer behind {@link suppressExecution} and
+   * {@link completeExecution}: one record per disposition attempt, under the
+   * attempt's own execution identity, signed by this PEP.
+   */
+  private async recordDisposition(
+    attempt: ExecutionAttempt,
+    disposition: { outcome: "suppressed"; error: string } | { outcome: "completed"; effectiveParameterDigest?: string },
+    opts: { obligationOutcomes?: ExecutionEvidenceObject["obligation_outcomes"] } = {},
+  ): Promise<SuppressOutcome> {
+    const observed =
+      disposition.outcome === "completed" && disposition.effectiveParameterDigest !== undefined
+        ? disposition.effectiveParameterDigest
+        : attempt.observeEffectiveDigest();
+    // @spec runtime-evidence#execution-evidence-object
+    // `effective_parameter_digest` (#786): "REQUIRED whenever
+    // `authorized_parameter_digest` is present, except on a `suppressed`
+    // record whose executing PEP could not establish the effective
+    // parameters." A suppression always emits, without the member when it is
+    // unobserved. A completed disposition never omits it: with no observation
+    // there is no valid completed record to emit, and that is the reported
+    // gap, never a record that drops the member.
+    if (disposition.outcome === "completed" && attempt.authorizedParameterDigest !== undefined && observed === undefined) {
       return { recorded: false, gap: "effective_parameter_digest_unobservable" };
     }
+    // The outcomes of the permit's obligations, as performed before release,
+    // unless this disposition is the obligation failure itself.
+    const obligationOutcomes = opts.obligationOutcomes ?? attempt.obligationOutcomes;
     const input = {
       permitId: attempt.permitId,
       opKey: attempt.joinKey,
@@ -2939,25 +3086,27 @@ export class Pep {
       evaluation_id: attempt.evaluationId,
       mission_id: attempt.mission.id,
       audience: attempt.audience,
-      // The pair is carried together or not at all: the authorized member MUST
-      // be absent when the linked Decision Evidence carries no
-      // `parameter_digest`, and an effective digest alone commits nothing.
-      ...(attempt.authorizedParameterDigest !== undefined && observed !== undefined
+      // The authorized member mirrors the linked Decision Evidence: present
+      // exactly when it carries `parameter_digest`. The effective member is
+      // present only beside it and only when observed: an effective digest
+      // alone commits nothing, and an unobserved one is never invented.
+      ...(attempt.authorizedParameterDigest !== undefined
         ? {
             authorized_parameter_digest: attempt.authorizedParameterDigest,
-            effective_parameter_digest: observed,
+            ...(observed !== undefined ? { effective_parameter_digest: observed } : {}),
           }
         : {}),
-      outcome: "suppressed" as const,
-      error,
-      ...(opts.obligationOutcomes ? { obligation_outcomes: opts.obligationOutcomes } : {}),
+      outcome: disposition.outcome,
+      ...(disposition.outcome === "suppressed" ? { error: disposition.error } : {}),
+      ...(obligationOutcomes ? { obligation_outcomes: obligationOutcomes } : {}),
       ...(attempt.hopReference ? { hop_reference: attempt.hopReference } : {}),
     };
     for (let tries = 0; tries < 2; tries += 1) {
       try {
         const recorded = await this.deps.evidence.recordExecution(CANONICAL_RESOURCE, "pep", input);
-        // A suppression after redemption is the redeeming attempt's proof of
-        // no effect: it settles the claim `failed`.
+        // A disposition after redemption is the redeeming attempt's proof of
+        // how it ended: it settles the claim (a suppression settles it
+        // `failed`). No path that completes here redeems.
         if (attempt.redeemed) await this.settleClaim(recorded.content);
         return { recorded: true };
       } catch {
@@ -3078,19 +3227,26 @@ export class Pep {
     const invoice = this.deps.payments.getInvoice(effective.invoice_id);
     const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
     if (!invoice || !vendor) {
-      // The permit's target no longer resolves. The parameters it bound cannot
-      // be met, so the disposition is a parameter mismatch; the record itself
-      // is the outstanding case above (no effective digest is observable).
-      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
-      return { ok: false, error: "parameter_mismatch", disposition };
+      // @spec runtime-evidence#execution-evidence-object
+      // `effective_parameter_digest` (#786): the target the permit was
+      // evaluated for no longer resolves, so the effective parameters cannot
+      // be established. That is `target_drift`, "never `parameter_mismatch`:
+      // no comparison was made", and the record carries the authorized digest
+      // with the effective one absent.
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
     }
     // @spec resource-access#initial-common-constraints (#1266): the routed
-    // recipients re-resolved now; a routing that changed, or no longer
-    // resolves, is a parameter mismatch.
+    // recipients re-resolved now. A routing that changed is a parameter
+    // mismatch, caught by the digest comparison below. A routing that no
+    // longer resolves leaves the recipients the operation addresses, and so
+    // its effective parameters, unestablished: the post-permit counterpart of
+    // the pre-decision `unresolvable_recipients` (`target_unresolvable`),
+    // recorded `target_drift` with no effective digest (#786).
     const bound = recipientParams(effective.recipients !== undefined || this.reachesRecipients(effective.action), this.deps.payments, vendor.id);
     if (!bound) {
-      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
-      return { ok: false, error: "parameter_mismatch", disposition };
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
     }
     const fresh = buildEffectiveParams({ action: effective.action, invoice, vendor, resource: effective.resource, ...bound });
     const freshDigest = parameterDigest(fresh);
@@ -3141,11 +3297,9 @@ export class Pep {
       const disposition = await this.suppressExecution(attempt, "target_drift");
       return { ok: false, error: "target_drift", disposition };
     }
-    const entry = loaded?.view.authority_set.find(
-      (e) => entryMatchesTarget(e, effective.resource) && e.actions.includes(effective.action),
-    );
     const requestedVendorId =
       effective.vendor_scope_source === "requested" ? effective.vendor_scope[0] : undefined;
+    const entry = listScopeEntry(loaded?.view.authority_set, effective.resource, effective.action, requestedVendorId);
     const fresh = this.freshListParams(
       effective,
       deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),

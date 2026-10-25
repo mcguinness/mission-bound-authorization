@@ -264,8 +264,12 @@ export interface TxnAuthorizationDeps {
   kernel: MissionKernel;
   /** Registered clients, for private_key_jwt authentication at this endpoint. */
   clients: Record<string, unknown>[];
-  /** This AS's published keys, for verifying the presented `subject_token`. */
-  publicJwks: { keys: JWK[] };
+  /**
+   * @spec #831 (role binding): the public half of this AS's access-token
+   * signing key alone, for verifying the presented `subject_token`. No other
+   * role's key (a transaction token's above all) verifies one.
+   */
+  accessTokenJwks: { keys: JWK[] };
   dpopProofReplay: DpopProofReplay;
   /**
    * @spec txn-authorization#challenge-redemption step 1, step 7 — whether the
@@ -436,7 +440,7 @@ async function admit(
   //    replayable here as the subject's credential.
   let subject: Record<string, unknown>;
   try {
-    ({ payload: subject } = (await jwtVerify(subjectToken, createLocalJWKSet(deps.publicJwks as never), {
+    ({ payload: subject } = (await jwtVerify(subjectToken, createLocalJWKSet(deps.accessTokenJwks as never), {
       typ: "at+jwt",
     })) as { payload: Record<string, unknown> });
   } catch {

@@ -642,9 +642,17 @@ async function verifyReceipt(
       return { valid: false, reason: "join_failure" };
     }
     // @spec runtime-evidence#execution-evidence-object `effective_parameter_digest`
-    // (lines 1025-1027, #739 review point 3): "REQUIRED whenever
-    // `authorized_parameter_digest` is present."
-    if (executionRec.authorized_parameter_digest !== undefined && executionRec.effective_parameter_digest === undefined) {
+    // (#739 review point 3, #786): "REQUIRED whenever
+    // `authorized_parameter_digest` is present, except on a `suppressed`
+    // record whose executing PEP could not establish the effective
+    // parameters." A completed or failed record missing it is a join
+    // failure. A suppressed one is valid: the comparison is unavailable, and
+    // the deviation flag below never reads that absence as a deviation.
+    if (
+      executionRec.outcome !== "suppressed" &&
+      executionRec.authorized_parameter_digest !== undefined &&
+      executionRec.effective_parameter_digest === undefined
+    ) {
       return { valid: false, reason: "join_failure" };
     }
   }

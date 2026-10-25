@@ -213,6 +213,8 @@ d("MAS pilot: delegates need a recorded actor edge under the Mission (#818, D284
     expect(missing.ok).toBe(false);
     expect(missing.denial_reason).toBe("mission_binding_failed");
     // The actor records name the Mission-namespace client the contract maps to.
+    // The in-process pilot runs the mapping join, so the PEP keeps them.
+    if (!pilot.actorRecords) throw new Error("the in-process pilot keeps the PEP's actor records");
     pilot.actorRecords.record({
       mission: { issuer: pilot.missionIssuer, id: delegableMission },
       clientId: "subagent-invoice-extractor",

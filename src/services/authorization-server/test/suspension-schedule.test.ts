@@ -42,6 +42,7 @@ import {
   buildAuthorizationServer,
   createChildMission,
   type LifecycleCommit,
+  LifecycleConflictError,
   MISSION_LIFECYCLE_SCOPE,
   MISSION_RESUME_SCOPE,
   MissionKernel,
@@ -987,5 +988,75 @@ describe("suspension scheduler deployment (@spec status#mission-lifecycle-endpoi
     });
     expect(revokeOnly.suspensionScheduler).toBeUndefined();
     expect(as.suspensionScheduler).toBeDefined();
+  });
+});
+
+describe("a due schedule whose transition cannot be persisted (@spec status#mission-lifecycle-endpoint, status#mission-status-errors, #1659 D771)", () => {
+  /** The Status read as the wire carries it, any status code. */
+  async function statusRead(id: string): Promise<{ status: number; text: string }> {
+    const res = await fetch(`${ISSUER}/missions/${id}/status`, { headers: { "x-service-token": DEV_SERVICE_TOKEN } });
+    return { status: res.status, text: await res.text() };
+  }
+
+  /** The next state write fails in storage, as a disk error would. */
+  function failNextWrite(): void {
+    const kernel = as.kernel as unknown as { setState: (...args: unknown[]) => unknown };
+    vi.spyOn(kernel, "setState").mockImplementationOnce(() => {
+      throw new Error("SQLITE_IOERR: disk I/O error");
+    });
+  }
+
+  it("answers a Status read unavailable (503) while a due resume cannot be written, never the stored suspended state, and active once the write succeeds", async () => {
+    const m = approve();
+    expect((await op(operator, { mission_id: m.id, operation: "suspend", suspend_until: at(30), on_expiry: "resume" })).status).toBe(200);
+    const suspended = stored(as.kernel, m.id);
+    clock.skip(30_000);
+    failNextWrite();
+    const failed = await statusRead(m.id);
+    expect(failed.status, failed.text).toBe(503);
+    expect(JSON.parse(failed.text)).toMatchObject({ error: "unavailable" });
+    expect(failed.text).not.toContain("suspended");
+    expect(stored(as.kernel, m.id)).toEqual(suspended);
+    expect(await status(m.id)).toMatchObject({ state: "active", version: suspended.version + 1 });
+    await clock.advance(0);
+  });
+
+  it("answers a Status read unavailable (503) while a due revoke cannot be written, then terminated revoked at its deadline once the write succeeds", async () => {
+    const m = approve();
+    const until = at(30);
+    expect((await op(operator, { mission_id: m.id, operation: "suspend", suspend_until: until, on_expiry: "revoke" })).status).toBe(200);
+    const suspended = stored(as.kernel, m.id);
+    clock.skip(30_000);
+    failNextWrite();
+    const failed = await statusRead(m.id);
+    expect(failed.status, failed.text).toBe(503);
+    expect(stored(as.kernel, m.id)).toEqual(suspended);
+    expect(await status(m.id)).toMatchObject({
+      state: "terminated",
+      termination: { reason: "revoked", terminated_at: until },
+    });
+    await clock.advance(0);
+  });
+
+  it("reports the state another request committed when the due write loses the race, never unavailable", async () => {
+    const m = approve();
+    expect((await op(operator, { mission_id: m.id, operation: "suspend", suspend_until: at(30), on_expiry: "resume" })).status).toBe(200);
+    const suspended = stored(as.kernel, m.id);
+    clock.skip(30_000);
+    const kernel = as.kernel as unknown as { setState: (...args: unknown[]) => unknown };
+    vi.spyOn(kernel, "setState").mockImplementationOnce(() => {
+      // Another request commits the due resume first; this write then loses
+      // the compare-and-set.
+      as.kernel.materializeExpiry(m.id);
+      throw new LifecycleConflictError(`stale lifecycle version for ${m.id}`);
+    });
+    const read = await statusRead(m.id);
+    expect(read.status, read.text).toBe(200);
+    expect((decodeJwt(read.text) as Record<string, unknown>).mission).toMatchObject({
+      state: "active",
+      version: suspended.version + 1,
+    });
+    expect(events(as.kernel, m.id).filter((e) => e.prior_state === "suspended" && e.state === "active")).toHaveLength(1);
+    await clock.advance(0);
   });
 });

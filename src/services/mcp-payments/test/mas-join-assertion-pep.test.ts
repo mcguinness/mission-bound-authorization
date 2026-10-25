@@ -40,8 +40,8 @@ const view: MissionView = {
 };
 const TOKEN: TokenFacts = { sub: "alice", clientId: "ap-agent", iss: "https://idp.test", cnfJkt: "jkt-verified" };
 
-/** A PEP whose decision requests are recorded, with `source` as its assertion source. */
-function build(source: JoinAssertionSource | undefined) {
+/** A PEP whose decision requests are recorded, with `source` as its assertion source and `depth` as its own actor-record depth. */
+function build(source: JoinAssertionSource | undefined, depth?: (clientId: string) => number | undefined) {
   const requests: EvaluationRequest[] = [];
   const payments = new PaymentsStore();
   payments.seed([{ id: "acme", name: "Acme", status: "approved" }], []);
@@ -59,7 +59,11 @@ function build(source: JoinAssertionSource | undefined) {
         ? { view, observation: { state: "active", version: 1, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined,
     instanceEpoch: "epoch-1454",
-    masJoin: { resolveOrdinaryAuthority: () => [ENTRY], ...(source ? { assertionSource: source } : {}) },
+    masJoin: {
+      resolveOrdinaryAuthority: () => [ENTRY],
+      ...(source ? { assertionSource: source } : {}),
+      ...(depth ? { resolveDelegateDepth: (_mission: unknown, clientId: string) => depth(clientId) } : {}),
+    },
   });
   return { pep, requests };
 }
@@ -107,5 +111,23 @@ describe("the PEP carries a Join Assertion with the credential's digest and one 
     await noCredential.pep.enforce("lookup_vendor", { vendor_id: "acme" }, TOKEN, undefined, { missionReference: REFERENCE });
     expect(called).toBe(false);
     expect(noCredential.requests[0]?.context.mission_join).toEqual({});
+  });
+});
+
+describe("on the assertion path the assertion's depth is the only depth (@spec authority-server#join-authzen, #join-assertion-pdp, #1561)", () => {
+  it("carries no delegate_depth of its own beside an assertion it obtained, though its own actor records give one; with no assertion it carries its own", async () => {
+    const DELEGATE: TokenFacts = { ...TOKEN, clientId: "helper-agent" };
+    // A deployment wiring both: this PEP's own records put the delegate at depth 2.
+    const ownDepth = (clientId: string) => (clientId === "helper-agent" ? 2 : undefined);
+    const asserted = build({ obtain: async () => "header.claims.signature" }, ownDepth);
+    await asserted.pep.enforce("lookup_vendor", { vendor_id: "acme" }, DELEGATE, undefined, { missionReference: REFERENCE, accessToken: ACCESS_TOKEN });
+    expect(asserted.requests[0]?.context.mission_join).toEqual({
+      assertion: "header.claims.signature",
+      token_sha256: accessTokenHash(ACCESS_TOKEN),
+      token_jkt: "jkt-verified",
+    });
+    const unasserted = build({ obtain: async () => undefined }, ownDepth);
+    await unasserted.pep.enforce("lookup_vendor", { vendor_id: "acme" }, DELEGATE, undefined, { missionReference: REFERENCE, accessToken: ACCESS_TOKEN });
+    expect(unasserted.requests[0]?.context.mission_join).toEqual({ delegate_depth: 2 });
   });
 });

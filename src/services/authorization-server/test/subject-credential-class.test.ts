@@ -211,8 +211,24 @@ async function mission(authority: unknown[]): Promise<{ missionId: string; acces
   return { missionId: (decodeJwt(accessToken).mission as { id: string }).id, accessToken };
 }
 
-/** A transaction token from the transaction endpoint: challenge, submission, approval, poll. */
-async function transactionTokenFor(accessToken: string, missionId: string): Promise<string> {
+/** POST /transaction as ap-agent, proving `presenter`. */
+async function postTransaction(payload: Record<string, string>): Promise<Answer> {
+  const htu = `${ISSUER}/transaction`;
+  const res = await fetch(htu, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(presenter, htu) },
+    body: new URLSearchParams({
+      client_id: "ap-agent",
+      client_assertion: await assertion("ap-agent"),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      ...payload,
+    }).toString(),
+  });
+  return { status: res.status, body: (await res.json()) as Body };
+}
+
+/** An initial transaction submission: a challenge for `missionId`'s remittance entry, presenting `subjectToken`. */
+async function initiateTransaction(subjectToken: string, missionId: string): Promise<Answer> {
   const requested = (as.kernel.get(missionId)?.authority_set as AuthorityEntry[])
     .filter((e) => e.actions.includes("payments:remittance.send"))
     .map(({ capability_sources: _provenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
@@ -221,7 +237,7 @@ async function transactionTokenFor(accessToken: string, missionId: string): Prom
     authorization_details: requested,
     reason: "over-cap remittance requires approval",
     parameter_digest: "sha-256:aa11bb22cc33dd44",
-    mission: decodeJwt(accessToken).mission,
+    mission: decodeJwt(subjectToken).mission,
     cnf: { jkt: presenterJkt },
   })
     .setProtectedHeader({ alg: "ES256", kid: "rs-txn", typ: TXN_CHALLENGE_TYP })
@@ -231,31 +247,22 @@ async function transactionTokenFor(accessToken: string, missionId: string): Prom
     .setIssuedAt()
     .setExpirationTime("300s")
     .sign(rsTxnKeys.privateKey);
-  const htu = `${ISSUER}/transaction`;
-  const post = async (payload: Record<string, string>) =>
-    fetch(htu, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(presenter, htu) },
-      body: new URLSearchParams({
-        client_id: "ap-agent",
-        client_assertion: await assertion("ap-agent"),
-        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-        ...payload,
-      }).toString(),
-    });
-  const init = await post({
+  return postTransaction({
     transaction_challenge: challenge,
-    subject_token: accessToken,
+    subject_token: subjectToken,
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
   });
-  const initBody = (await init.json()) as Body;
-  expect(init.status, JSON.stringify(initBody)).toBe(200);
+}
+
+/** A transaction token from the transaction endpoint: challenge, submission, approval, poll. */
+async function transactionTokenFor(accessToken: string, missionId: string): Promise<string> {
+  const init = await initiateTransaction(accessToken, missionId);
+  expect(init.status, JSON.stringify(init.body)).toBe(200);
   const task = ars.pending()[0];
   expect(await ars.adjudicate(task?.id as string, "approve", "bob")).not.toBeNull();
-  const polled = await post({ transaction_authorization_id: initBody.transaction_authorization_id as string });
-  const polledBody = (await polled.json()) as Body;
-  expect(polled.status, JSON.stringify(polledBody)).toBe(200);
-  return polledBody.access_token as string;
+  const polled = await postTransaction({ transaction_authorization_id: init.body.transaction_authorization_id as string });
+  expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+  return polled.body.access_token as string;
 }
 
 /** `credential`'s claims re-signed under `role`'s ring key, typed `typ`. */
@@ -521,4 +528,113 @@ describe("a subject_token is a Mission access token: the AS's access-token key a
       });
     });
   }
+});
+
+/** `credential`'s claims, under its own type, re-signed under the transaction-token key. */
+const sameTypeUnderAnotherRole = (credential: string) =>
+  resigned(credential, "asTxn", JSON.parse(Buffer.from(credential.split(".")[0] as string, "base64url").toString()).typ as string);
+
+const JWT_BEARER = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+
+/** A child-bound grant for the sub-agent, from a real child creation. */
+async function childGrant(): Promise<string> {
+  const { accessToken } = await mission([entry(["payments:invoice.read", "payments:remittance.send"])]);
+  const answer = await token(
+    "ap-agent",
+    presenter,
+    exchange(accessToken, {
+      requested_token_type: JWT_TOKEN_TYPE,
+      creation_request_id: crypto.randomUUID(),
+      login_hint: "alice",
+      mission_intent: JSON.stringify({ intent: { goal: "Extract Acme invoices", target_resources: [RESOURCE], expires_at: FAR } }),
+      authorization_details: JSON.stringify([entry(["payments:invoice.read"])]),
+      child_actor: JSON.stringify({ sub: SUBAGENT, sub_profile: "ai_agent" }),
+    }),
+  );
+  expect(answer.status, JSON.stringify(answer.body)).toBe(200);
+  return answer.body.access_token as string;
+}
+
+/** A Dispatch Handoff grant naming the sub-agent, from a real dispatched instance. */
+async function handoffGrant(): Promise<string> {
+  const instance = await dispatchedInstance();
+  const answer = await token("ap-agent", presenter, exchange(instance, { requested_token_type: JWT_TOKEN_TYPE, mission_dispatch_handoff: "true" }));
+  expect(answer.status, JSON.stringify(answer.body)).toBe(200);
+  return answer.body.access_token as string;
+}
+
+/** RFC 7662 introspection as the payments resource server. */
+async function introspect(tokenValue: string): Promise<Body> {
+  const res = await fetch(`${ISSUER}/introspect`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      authorization: `Basic ${Buffer.from("rs-payments:dev-introspection-rs-payments").toString("base64")}`,
+    },
+    body: new URLSearchParams({ token: tokenValue }).toString(),
+  });
+  expect(res.status).toBe(200);
+  return (await res.json()) as Body;
+}
+
+describe("the AS's other verifiers and its provider sign and accept only under the access-token key (@spec #831 role binding)", () => {
+  it("the transaction endpoint refuses a subject_token typed at+jwt under the transaction-token key, and admits the real one", async () => {
+    const { accessToken, missionId } = await mission([entry(["payments:invoice.read", "payments:remittance.send"])]);
+    const forged = await initiateTransaction(await sameTypeUnderAnotherRole(accessToken), missionId);
+    expect(forged.status, JSON.stringify(forged.body)).toBe(400);
+    expect(forged.body.error).toBe("invalid_grant");
+    expect(forged.body.error_description).toContain("subject_token did not verify");
+    const real = await initiateTransaction(accessToken, missionId);
+    expect(real.status, JSON.stringify(real.body)).toBe(200);
+    expect(real.body.transaction_authorization_id).toMatch(/^txa_/);
+  });
+
+  it("introspection reports an at+jwt under the transaction-token key inactive, and the real access token active", async () => {
+    const { accessToken } = await mission([entry(["payments:invoice.read"])]);
+    expect(await introspect(await sameTypeUnderAnotherRole(accessToken))).toEqual({ active: false });
+    expect((await introspect(accessToken)).active).toBe(true);
+  });
+
+  it("a child-bound grant under the transaction-token key is refused at redemption, and the real one redeems", async () => {
+    const grant = await childGrant();
+    const forged = await token(SUBAGENT, subagentDpop, { grant_type: JWT_BEARER, assertion: await sameTypeUnderAnotherRole(grant) });
+    expect(forged.status, JSON.stringify(forged.body)).toBe(400);
+    expect(forged.body.error).toBe("invalid_grant");
+    expect(forged.body.access_token).toBeUndefined();
+    const real = await token(SUBAGENT, subagentDpop, { grant_type: JWT_BEARER, assertion: grant });
+    expect(real.status, JSON.stringify(real.body)).toBe(200);
+  });
+
+  it("a Dispatch Handoff grant under the transaction-token key is refused at redemption, and the real one redeems", async () => {
+    const grant = await handoffGrant();
+    const forged = await token(SUBAGENT, subagentDpop, { grant_type: JWT_BEARER, assertion: await sameTypeUnderAnotherRole(grant) });
+    expect(forged.status, JSON.stringify(forged.body)).toBe(400);
+    expect(forged.body.error).toBe("invalid_grant");
+    expect(forged.body.access_token).toBeUndefined();
+    const real = await token(SUBAGENT, subagentDpop, { grant_type: JWT_BEARER, assertion: grant });
+    expect(real.status, JSON.stringify(real.body)).toBe(200);
+  });
+
+  it("the jwks_uri publishes every role's public key, and no private member, though the provider holds the access-token key alone", async () => {
+    const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Body;
+    // A browser fetches keys cross-origin: the provider's CORS handling stays
+    // on the route (the preflight and the GET both answer for the origin).
+    const origin = "https://app.example.com";
+    const preflight = await fetch(meta.jwks_uri as string, {
+      method: "OPTIONS",
+      headers: { origin, "access-control-request-method": "GET" },
+    });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get("access-control-allow-origin")).toBe(origin);
+    const res = await fetch(meta.jwks_uri as string, { headers: { origin } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe(origin);
+    expect(res.headers.get("vary")).toContain("Origin");
+    expect(res.headers.get("content-type")).toContain("application/jwk-set+json");
+    const { keys } = (await res.json()) as { keys: Body[] };
+    expect(keys.map((k) => k.kid).sort()).toEqual(Object.values(ROLES).map((r) => r.kid).sort());
+    for (const k of keys) {
+      for (const priv of ["d", "p", "q", "dp", "dq", "qi"]) expect(k, `${k.kid} ${priv}`).not.toHaveProperty(priv);
+    }
+  });
 });

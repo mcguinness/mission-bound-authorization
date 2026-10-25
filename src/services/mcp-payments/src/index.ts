@@ -54,6 +54,7 @@ export {
   type WriteReservationScope,
   type ReverifyOutcome,
   type SuppressOutcome,
+  type DecisionEvidenceGap,
   PRE_DECISION_DENIAL_REASON,
   type PepRefusalDiagnostic,
   isPepRefusalDiagnostic,
@@ -76,7 +77,9 @@ export {
 } from "./pep.js";
 export {
   CONNECTOR_TOOLS,
+  type DispositionGap,
   dispatchPathFor,
+  EVIDENCE_UNAVAILABLE_ERROR,
   McpPaymentsServer,
   REVERSIBLE_WRITE_REFUSAL_ERRORS,
   TokenAudienceError,
@@ -138,6 +141,16 @@ export {
   type WriteReservationStoreOptions,
 } from "./write-reservations.js";
 export { type RedemptionStatus, recordRedeemingAttempt, redemptionStatusFor } from "./redemption-status.js";
+export {
+  MALFORMED_OBLIGATION,
+  malformedObligationOutcome,
+  NotificationOutbox,
+  type ObligationNotification,
+  type ObligationNotifier,
+  type ObligationOutcome,
+  type ObligationProcessing,
+  processObligations,
+} from "./obligations.js";
 export type { ExecutionEvidence } from "./evidence.js";
 export { createEphemeralEvidenceKeys, type EphemeralEvidenceKeys } from "./ephemeral-signer.js";
 export {
