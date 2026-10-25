@@ -1933,11 +1933,14 @@ Table of Contents
    evaluation_context_digest:  CONDITIONAL.  A string.  REQUIRED on a
       permit for an operation covered by Section 5.10; MUST equal the
       validated request's context digest.  The executing PEP MUST
-      recompute it with its own applicable descriptor and authoritative
-      facts, and MUST refuse before an effect on a missing or unequal
-      binding, an unknown descriptor, or an unavailable fact.  A
-      mismatch or inability to re-resolve after a permit is Execution
-      Evidence suppressed with target_drift, not a PDP denial reason.
+      recompute it under the descriptor the binding committed, from
+      authoritative facts, and MUST refuse before an effect on a missing
+      or unequal binding, a descriptor the operation's declaration no
+      longer names, an unrecoverable descriptor, or an unavailable fact.
+      A mismatch or inability to re-resolve after a permit is Execution
+      Evidence suppressed, not a PDP denial reason, with the error the
+      runtime evidence profile's classification names
+      ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
    action_phase:  CONDITIONAL.  A string from preflight, prepare,
       commit, or compensate; REQUIRED on a permit for an operation that
@@ -2477,6 +2480,12 @@ Table of Contents
    |verified evidence before |           |                                 |
    |the decision request     |           |                                 |
    +-------------------------+-----------+---------------------------------+
+   |Authoritative evaluation |Refusal    |evaluation_context_unresolvable  |
+   |context of a covered     |Record     |                                 |
+   |operation not capturable |           |                                 |
+   |at the PEP before the    |           |                                 |
+   |decision request         |           |                                 |
+   +-------------------------+-----------+---------------------------------+
    |Presented credential's   |Refusal    |credential_authority_insufficient|
    |own authority does not   |Record     |                                 |
    |cover the request,       |           |                                 |
@@ -2685,7 +2694,10 @@ Table of Contents
    +-------------------------+-----------+---------------------------------+
    |Effective parameters     |Execution  |parameter_mismatch               |
    |differ at the executing  |Evidence   |                                 |
-   |PEP                      |           |                                 |
+   |PEP in a parameter no    |           |                                 |
+   |claimed evaluation-      |           |                                 |
+   |context binding declares |           |                                 |
+   |as a fact                |           |                                 |
    +-------------------------+-----------+---------------------------------+
    |Permit's bound phase     |Execution  |phase_mismatch                   |
    |differs from the         |Evidence   |                                 |
@@ -2790,6 +2802,15 @@ Table of Contents
       parameter-bound permit is a parameter deviation,
       parameter_mismatch; target_drift records an operation target that
       differs while the bound parameters do not.
+
+   *  Context: under a claimed Evaluation-Context Binding a moved
+      declared fact can change the parameter digest too.  The recorded
+      error is target_drift unless the context is established and an
+      agent-supplied parameter changed, and every observable digest pair
+      is kept ([I-D.draft-mcguinness-mission-runtime-evidence]).
+      evaluation_context_unresolvable is the PEP's capture failure
+      before the decision request, and evaluation_context_invalid the
+      PDP's refusal of the inputs it received.
 
    *  Duplicates: The duplicate_suppressed and idempotency_conflict rows
       key on the same (idempotency scope, idempotency_key) claim
@@ -3528,6 +3549,14 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Failure-Condition Coverage maps a covered operation's evaluation
+      context not capturable at the PEP to the Refusal Record
+      evaluation_context_unresolvable, and limits the parameter_mismatch
+      row to a parameter no claimed binding declares as a fact; a
+      context failure at use carries the error the runtime evidence
+      profile's classification names; the context digest condition is
+      recomputed under the descriptor the binding committed (#773).
 
    *  Compensation link (#252). context.compensates_evaluation_id is
       REQUIRED on a compensate-phase request, established by the PEP
