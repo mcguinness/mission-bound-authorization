@@ -624,6 +624,48 @@ describe("every phase captures and checks its own context, on every dispatch pat
   });
 });
 
+describe("a completed disposition carries the context pair, or is the reported gap (@spec runtime-evidence#execution-evidence-object, #773)", () => {
+  for (const c of COVERED) {
+    it(`the completed record of ${c.tool} (${c.path} path) mirrors the decided context digest and carries the context re-established before release`, async () => {
+      const h = harness();
+      const done = await cross(h, c);
+      expect(done.ok, JSON.stringify(done)).toBe(true);
+      const [decision] = decisions(h);
+      expect(decision?.evaluation_context_digest).toMatch(/^sha-256:[A-Za-z0-9_-]{43}$/);
+      const completed = executions(h);
+      expect(completed.map((r) => r.outcome)).toEqual(["completed"]);
+      expect(completed[0]?.authorized_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+      // Re-established under the committed descriptor and salt version, and
+      // equal, since nothing moved before release.
+      expect(completed[0]?.effective_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+      expect(executionDivergence(completed[0] as ExecutionEvidence["content"])).toEqual({});
+    });
+  }
+
+  it("a completed disposition whose context cannot be re-established is the reported gap, never a record without the effective context digest", async () => {
+    // The control: the same disposition records the pair when the context
+    // re-establishes.
+    const control = harness();
+    const held = await control.pep.enforce("hold_transfer", { invoice_id: "inv-1" }, TOKEN);
+    if (!held.permitted || !held.attempt) throw new Error(JSON.stringify(held));
+    expect(await control.pep.completeExecution(held.attempt)).toEqual({ recorded: true });
+    expect(executions(control)[0]?.effective_evaluation_context_digest).toBe(
+      executions(control)[0]?.authorized_evaluation_context_digest,
+    );
+    // The salt version is lost after the permit: the parameters still resolve,
+    // the context does not.
+    const h = harness();
+    const permit = await h.pep.enforce("hold_transfer", { invoice_id: "inv-1" }, TOKEN);
+    if (!permit.permitted || !permit.attempt) throw new Error(JSON.stringify(permit));
+    h.restart();
+    expect(await h.pep.completeExecution(permit.attempt)).toEqual({
+      recorded: false,
+      gap: "effective_evaluation_context_digest_unobservable",
+    });
+    expect(executions(h)).toHaveLength(0);
+  });
+});
+
 describe("restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773)", () => {
   for (const c of COVERED) {
     it(`a binding made before a restart is refused before any effect on ${c.tool} (${c.path} path): target_drift, no effective context digest`, async () => {

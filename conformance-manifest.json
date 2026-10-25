@@ -937,6 +937,130 @@
    "notes": "#773. An unprefixed digest, a digest without a reference, a reference with an extra member and one naming no URI are each left out of the signed record; established inputs are recorded. Mutation P16 fails it."
   },
   {
+   "id": "evidence.execution.authorized-evaluation-context-mirrors-decision",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "REQUIRED when the linked Decision Evidence carries `evaluation_context_digest`; MUST equal it, and MUST be absent when the linked record carries no such digest.",
+   "role": "PRODUCER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Execution Evidence record of a context-bound permit carries authorized_evaluation_context_digest equal to the linked Decision Evidence's evaluation_context_digest, and a record whose linked Decision Evidence carries none has no such member"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a completed disposition carries the context pair, or is the reported gap (@spec runtime-evidence#execution-evidence-object, #773) > the completed record of check_transfer (read path) mirrors the decided context digest and carries the context re-established before release",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a completed disposition carries the context pair, or is the reported gap (@spec runtime-evidence#execution-evidence-object, #773) > the completed record of hold_transfer (write path) mirrors the decided context digest and carries the context re-established before release",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a completed disposition carries the context pair, or is the reported gap (@spec runtime-evidence#execution-evidence-object, #773) > the completed record of execute_wire_transfer (transaction path) mirrors the decided context digest and carries the context re-established before release",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a completed disposition carries the context pair, or is the reported gap (@spec runtime-evidence#execution-evidence-object, #773) > the completed record of send_remittance_email (transaction path) mirrors the decided context digest and carries the context re-established before release",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a moved authoritative fact on a covered operation is target_drift: zero effects, both digest pairs recorded and each unequal",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "claim applicability: covered, uncovered and non-claiming (@spec runtime#evaluation-context-binding, authzen#response-context, #773) > an uncovered operation and a non-claiming deployment are unchanged: no context members, and a moved fact stays parameter_mismatch",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773. The authorized member mirrors the linked Decision Evidence on every disposition the executing PEP writes: the completed record of each covered crossing on the read, write and transaction paths (the read and write paths through the shared disposition writer, the transaction tier through its own completed record) and a suppression; a deployment whose Decision Evidence carries no context digest writes no such member. Mutations: A1 (the disposition writer drops the authorized member) fails the check_transfer and hold_transfer completed tests; A2 (the transaction tier's completed record drops it) fails the execute_wire_transfer and send_remittance_email completed tests."
+  },
+  {
+   "id": "evidence.execution.effective-evaluation-context-required-when-reestablished",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "REQUIRED when an authorized context digest is present and the executing PEP successfully re-resolved that context. It commits the attempted context under the same descriptor and salt version.",
+   "role": "PRODUCER",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a record of a context-bound permit whose context the PEP re-established carries effective_evaluation_context_digest, computed under the descriptor and salt version the binding committed; a completed disposition whose context cannot be re-established emits no record lacking it and reports the gap instead"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a completed disposition carries the context pair, or is the reported gap (@spec runtime-evidence#execution-evidence-object, #773) > the completed record of check_transfer (read path) mirrors the decided context digest and carries the context re-established before release",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a completed disposition carries the context pair, or is the reported gap (@spec runtime-evidence#execution-evidence-object, #773) > the completed record of hold_transfer (write path) mirrors the decided context digest and carries the context re-established before release",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a completed disposition carries the context pair, or is the reported gap (@spec runtime-evidence#execution-evidence-object, #773) > the completed record of execute_wire_transfer (transaction path) mirrors the decided context digest and carries the context re-established before release",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a completed disposition carries the context pair, or is the reported gap (@spec runtime-evidence#execution-evidence-object, #773) > the completed record of send_remittance_email (transaction path) mirrors the decided context digest and carries the context re-established before release",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "a completed disposition carries the context pair, or is the reported gap (@spec runtime-evidence#execution-evidence-object, #773) > a completed disposition whose context cannot be re-established is the reported gap, never a record without the effective context digest",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > unchanged facts under a changed descriptor are refused by the descriptor-change check, with the effective context digest computed under the retained original and equal to the authorized one",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a fact that moved under a changed descriptor diverges under the retained original and is target_drift",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#773. The completed record of every covered crossing carries the effective context digest: the write paths pass the digest reverification re-established before the effect, the read path's disposition writer re-establishes it now, and the transaction tier's completed record carries reverification's. A completed disposition that cannot re-establish it is the reported gap effective_evaluation_context_digest_unobservable, the counterpart of #786's effective_parameter_digest_unobservable, never a record that drops the member. Under a changed descriptor the digest is computed under the retained original. Mutations: E1 (the disposition writer drops the effective member on a completed record) fails the check_transfer and hold_transfer completed tests; E2 (the gap removed, so the record is emitted without the member) fails the gap test; X1 (recomputed under the live descriptor) fails the retained-original tests."
+  },
+  {
    "id": "evidence.execution.effective-evaluation-context-absent-when-unresolvable",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",

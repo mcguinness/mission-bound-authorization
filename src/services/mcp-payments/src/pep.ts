@@ -1483,8 +1483,10 @@ export interface AttemptEvaluationContext {
  * one retry on the same execution identity, or
  * `effective_parameter_digest_unobservable` for a COMPLETED disposition whose
  * effective digest could not be observed, since a completed record never
- * omits it. A suppression never reports the latter: it emits without the
- * effective digest, "comparison unavailable" (#786).
+ * omits it, and `effective_evaluation_context_digest_unobservable` for one
+ * whose context-bound permit's effective context digest could not be (#773).
+ * A suppression never reports either: it emits without the effective digest,
+ * "comparison unavailable" (#786).
  */
 export type SuppressOutcome =
   | { recorded: true }
@@ -3353,8 +3355,11 @@ export class Pep {
     // `effective_evaluation_context_digest` (#773): the context pair on the
     // same terms. A suppression records the context it could re-establish
     // now, under the committed descriptor and salt version, and omits it
-    // otherwise; a completed disposition of a covered crossing carries the
-    // context it re-established before release, or is the reported gap.
+    // otherwise. A completed disposition of a covered crossing carries the
+    // context its reverification re-established before the effect, where the
+    // path reverified (the write paths), or the context re-established now
+    // (the read path, which releases no effect), as the parameter digest
+    // falls back above; with neither, it is the reported gap.
     const observedContext =
       disposition.outcome === "completed" && disposition.effectiveEvaluationContextDigest !== undefined
         ? disposition.effectiveEvaluationContextDigest
