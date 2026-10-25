@@ -2,8 +2,8 @@
  * @spec control-plane#tombstones — kernel-held terminal-state tombstones.
  *
  * A tombstone is written in the SAME transaction as the terminal state write,
- * carries the canonical issuer/Mission identity, the terminal state and its
- * termination reason, the final version and the commit reference, and is
+ * carries the canonical issuer/Mission identity, the terminal state, its
+ * termination as committed, the final version and the commit reference, and is
  * retained for the COMPOSED maximum of
  * the deployment's applicable horizons. After that detailed retention expires
  * the detail columns are pruned and the identity row remains forever as the
@@ -17,7 +17,7 @@
 
 import type { Database } from "@mission/store";
 import { normalizeStoredLifecycle } from "./termination.js";
-import type { MissionState } from "./types.js";
+import type { MissionState, Termination } from "./types.js";
 
 export const MISSION_TOMBSTONE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS mission_tombstones (
@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS mission_tombstones (
   detail_expires_at INTEGER NOT NULL,
   detail_pruned INTEGER NOT NULL DEFAULT 0,
   termination_reason TEXT,
+  termination_json TEXT,
   PRIMARY KEY (issuer, mission_id)
 ) STRICT;
 `;
@@ -40,6 +41,11 @@ CREATE TABLE IF NOT EXISTS mission_tombstones (
  * a `PRAGMA table_info` snapshot), and a row that predates it keeps its legacy
  * `terminal_state`, which {@link MissionTombstoneStore.find} reads as
  * `terminated` with that reason.
+ *
+ * @spec child-delegation#carryover-cas (#1675, D803): so is `termination_json`,
+ * the termination exactly as committed (its effective `terminated_at` and its
+ * references, which the commit time cannot stand in for). A row written
+ * before it carries none, and nothing is reconstructed for it.
  */
 function migrateTombstones(db: Database): void {
   const columns = new Set(
@@ -47,6 +53,9 @@ function migrateTombstones(db: Database): void {
   );
   if (!columns.has("termination_reason")) {
     db.exec("ALTER TABLE mission_tombstones ADD COLUMN termination_reason TEXT");
+  }
+  if (!columns.has("termination_json")) {
+    db.exec("ALTER TABLE mission_tombstones ADD COLUMN termination_json TEXT");
   }
 }
 
@@ -105,6 +114,8 @@ export interface MissionTombstone {
   terminalState?: MissionState;
   /** @spec mission#termination: the termination reason; a legacy row reads its stored state as the reason. */
   terminationReason?: string;
+  /** The termination as committed; absent on a row written before it was kept, and once pruned. */
+  termination?: Termination;
   finalVersion?: number;
   transitionAt?: string;
   commitEventId?: string;
@@ -145,6 +156,7 @@ export class MissionTombstoneStore {
     missionId: string;
     terminalState: MissionState;
     terminationReason?: string;
+    termination?: Termination;
     finalVersion: number;
     transitionAt: string;
     commitEventId: string;
@@ -154,9 +166,9 @@ export class MissionTombstoneStore {
     this.db
       .prepare(
         `INSERT INTO mission_tombstones
-           (issuer, mission_id, terminal_state, termination_reason, final_version, transition_at,
+           (issuer, mission_id, terminal_state, termination_reason, termination_json, final_version, transition_at,
             commit_event_id, detail_expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (issuer, mission_id) DO NOTHING`,
       )
       .run(
@@ -164,6 +176,7 @@ export class MissionTombstoneStore {
         input.missionId,
         input.terminalState,
         input.terminationReason ?? null,
+        input.termination ? JSON.stringify(input.termination) : null,
         input.finalVersion,
         input.transitionAt,
         input.commitEventId,
@@ -201,6 +214,7 @@ export class MissionTombstoneStore {
       missionId: row.mission_id as string,
       ...(lifecycle ? { terminalState: lifecycle.state } : {}),
       ...(lifecycle?.termination ? { terminationReason: lifecycle.termination.reason } : {}),
+      ...(row.termination_json ? { termination: JSON.parse(row.termination_json as string) as Termination } : {}),
       ...(row.final_version !== null ? { finalVersion: row.final_version as number } : {}),
       ...(row.transition_at ? { transitionAt: row.transition_at as string } : {}),
       ...(row.commit_event_id ? { commitEventId: row.commit_event_id as string } : {}),
@@ -218,7 +232,7 @@ export class MissionTombstoneStore {
     const res = this.db
       .prepare(
         `UPDATE mission_tombstones
-            SET terminal_state = NULL, termination_reason = NULL, final_version = NULL,
+            SET terminal_state = NULL, termination_reason = NULL, termination_json = NULL, final_version = NULL,
                 transition_at = NULL, commit_event_id = NULL, detail_pruned = 1
           WHERE detail_pruned = 0 AND detail_expires_at <= ?`,
       )

@@ -304,10 +304,10 @@ offer.
 | Child contained before rendering | Carried without the contained authority; no containment is restored or carried | The replacement is derived from the old child's effective set, under an independent ceiling of that set | `carryover.test.ts`: "does not restore containment removed from the old child's effective set" | `child-delegation.carryover.effective-set-basis` |
 | Child contained after rendering | Refused | Membership pass (`containment_version`, effective authority) | `carryover.test.ts`: "refuses a batch when a rendered child was contained after approval" | `child-delegation.carryover.completion-cas` |
 | Child entry discharged before rendering | Carried without the discharged entry, though the successor holds it; the replacement has no latch of its own | The old child's effective set drops discharged entries | `discharge-carryover.test.ts`: "does not restore an entry discharged on the old child: the replacement carries only the remaining entry, though its new parent holds both" | `child-delegation.carryover.effective-set-basis` |
-| Child entry discharged after rendering | Refused, even by a plan that excludes the discharge's state change | Membership pass (effective authority, `state_changed`) | `discharge-carryover.test.ts`: "refuses a batch whose child entry was discharged after rendering, creating nothing"; "refuses it even where the plan commits a state change as an exclusion: the child's effective authority moved, which the plan did not commit" | `child-delegation.carryover.completion-cas` |
+| Child entry discharged after rendering | Refused, even by a plan that excludes the discharge's state change, and even where the entry was already contained | Membership pass (the committed discharge state, effective authority, `state_changed`) | `discharge-carryover.test.ts`: "refuses a batch whose child entry was discharged after rendering, creating nothing"; "refuses it even where the plan commits a state change as an exclusion: the child's effective authority moved, which the plan did not commit"; "refuses a discharge after rendering that leaves the effective authority unchanged, under a plan that excludes only state changes" | `child-delegation.carryover.completion-cas` |
 | Derivation consumed after rendering | Refused | Membership pass (`derivation_consumed`); compare-and-set on `derivation_count`, which moves with no version change | `carryover.test.ts`: "refuses a batch whose derivation counter moved after rendering with no lifecycle version bump" | `child-delegation.carryover.completion-cas` |
 | Child created after rendering | Refused | Membership pass (`unrendered_descendant`; the parent's fan-out occupancy moved) | `carryover.test.ts`: "refuses a batch when a grandchild was inserted after approval, so no unrendered descendant is silently carried" | `child-delegation.carryover.completion-cas` |
-| Rendered child terminated, or its record gone, after rendering | Refused; a terminated row is not an acceptable exclusion | Membership pass (`state_changed`, `record_missing`) | `carryover.test.ts`: "refuses a batch when a rendered child was terminated after approval rather than treating it as an acceptable exclusion"; "refuses a batch when a rendered child's record is gone at completion" | `child-delegation.carryover.completion-cas` |
+| Rendered child terminated, or its record gone, after rendering | Refused; a terminated row is not an acceptable exclusion. Where a plan commits `record_missing`, a gone row is recorded from its tombstone's committed termination, or refused without one | Membership pass (`state_changed`, `record_missing`); the final map records every rendered row | `carryover.test.ts`: "refuses a batch when a rendered child was terminated after approval rather than treating it as an acceptable exclusion"; "refuses a batch when a rendered child's record is gone at completion" | `child-delegation.carryover.completion-cas` |
 | Carried child's own expiry arriving before completion | Refused, with nothing carried; a plan that commits `state_changed` instead excludes the child and records it `expired` while the rest carries | The membership pass compares a carried row through the expiry clock (`state_changed`); creation's expiry check is a backstop | `carryover.test.ts`: "refuses a batch when a carried child's own expiry arrives before completion: no replacement can outlive it"; "is excluded and recorded expired under a plan committing state changes, while its sibling carries" | `child-delegation.carryover.completion-cas`, `child-delegation.child-state.own-expiry-precedence` |
 | Successor expiry extension | Completes; each replacement keeps the old child's expiry. The deferred expansion route offers no extension; the kernel accepts one | The old child's expiry is an independent bound beside the new parent's | `carryover.test.ts`: "refuses to extend a carried child under a successor whose approved extension outlives the predecessor" (the batch completes) | `child-delegation.carryover.no-expiry-extension`, `.expansion-expiry` |
 | Carryover switched off after the plan was approved | Completion refused `server_error` (HTTP 500), a deployment fault rather than a decision; nothing is cascaded and the approval stays unredeemed; restoring the switch completes the same plan | Completion refuses a committed plan while the switch is off | `carryover.test.ts`: "refuses completion when a committed manifest meets a disabled switch, and cascades nothing"; "executes the same committed manifest intact once the switch is restored" | None |
@@ -322,10 +322,10 @@ What a process restart keeps, for the AS's state and the state it depends on.
 launchers (`server.ts`, `pnpm as-native` and `pnpm issuance-only`) run the
 kernel in memory unless `MISSION_KERNEL_STORE=<absolute path>` names its file,
 which requires a key ring (`MISSION_KEY_RING`), so that what the kept kernel
-issued or signed still verifies after a restart. That is restart recovery for
-one process on one host: the file takes no lock, so a second process on the same
-file is not refused, and a restore from an older backup is not detected, which
-remain #250's restore and fencing step.
+issued or signed still verifies after a restart, and a recovery witness
+(`MISSION_KERNEL_WITNESS`), so that a restored older store is refused rather than
+resumed ([Restore admission](#restore-admission)). That is recovery for one
+process on one host.
 
 | State | Where it lives | Across a restart |
 |---|---|---|
@@ -370,6 +370,99 @@ after an out-of-band restore, and the fenced reconciliation policy that would
 decide when it is certain again, remain follow-on work. Multi-process
 serialization and claiming remain under #641's explicit deployment trigger;
 this slice adds no such claim.
+
+## Restore admission
+
+With a recovery witness (#250 step 3; `KernelOptions.recoveryWitness`, or
+`kernelStore: { file, witness }`, or `MISSION_KERNEL_WITNESS` for the shipped
+launchers), the file-backed kernel answers Control Plane's rollback resistance for
+one writer on one host.
+
+- **The witness.** A small file at an absolute path outside the store's directory
+  tree, with the store outside the witness's (both compared canonically), so
+  restoring either tree cannot restore the other with it. It holds the store's
+  identity, the writer generation, the last committed recovery sequence, the
+  sequence of a commit in flight, and any uncertainty a run recorded. The store
+  holds the matching `recovery_marker` row. `pnpm kernel-recovery init --store
+  <path> --witness <path>` creates both, once, for a new store or one that
+  predates the witness; nothing initializes them automatically.
+- **One writer, one witness.** The kernel holds its store with an exclusive lock,
+  and the witness's own lock (`<witness>.lock`, a SQLite handle the operating
+  system releases with the process), taken before the witness is read. A second
+  kernel, on the same store or on a copy of it, and an offline reconciliation are
+  refused while one holds either.
+- **Every write is witnessed.** Each outermost write transaction on the kernel
+  database reads the witness back (it must be the record this writer last wrote),
+  writes the intent durably before its commit, advances the marker inside it, and
+  finalizes the witness after it, before any lifecycle publication. Every
+  statement that can write runs inside such a transaction: `run`, `get`, `all`
+  and `iterate` on a statement that is not read-only, the same through a chained
+  builder, and `exec`.
+- **A closed boot.** The kernel opens only when the store's marker matches the
+  witness exactly, with nothing recorded. A store older than the witness (a
+  restored backup), a lost, unreadable or foreign witness, a store ahead of its
+  witness, a commit left in flight, a recorded uncertainty, and a witnessed store
+  opened without its witness all refuse, and the AS does not start: `pnpm
+  as-native`, for one, exits 1 with the refusal as its startup-failure line.
+- **Offline reconciliation.** With the AS stopped, `pnpm kernel-recovery
+  acknowledge` records a commit the store holds, `abandon` clears one it does
+  not, and `accept` takes the store as it is, under a new generation, once a run
+  recorded an uncertainty (an escaped write, a witness that moved) with no commit
+  in flight. Each refuses when the store says otherwise. Nothing lowers the
+  witness: an older store is refused until the witnessed one is restored.
+- **Uncertain while running.** A witness write that fails, a commit that fails
+  after its intent, a witness that changed underneath the writer, or a write that
+  bypassed the guard leaves the kernel uncertain: every later write refuses, the
+  uncertainty is recorded in the witness where it can be written (a pending
+  intent is the trace when it cannot), and the AS answers every request but
+  discovery metadata and the key set with 503 `temporarily_unavailable`, a
+  request already in flight included: the release fence checks again after
+  every await. A commit whose witness could not be finalized publishes nothing;
+  boot recovery publishes it after `acknowledge`. The demo stack's and the
+  in-process MAS pilot's PEP, RS and PDP load Missions through
+  `kernelMissionView`, which loads none while the kernel is uncertain, so their
+  decisions refuse too. Other in-process readers that only display state (the
+  console BFF's fleet view, the agent console, the catalog) are not gated.
+
+### Transaction inventory
+
+Every table in the kernel database, the module that writes it, and how its
+writes are witnessed. "Managed" is a `withTransaction` (or an `...InCallerTx`
+step inside one); "statement" is a bare statement the guard runs as a
+one-statement transaction; "boot" writes run at construction or `recoverAtBoot`.
+`recovery-witness-as.test.ts` fails when the database holds a table this list
+does not name. A write the list misses is still caught by the guard's backstop,
+a check at the next guarded transaction, after that write committed.
+
+| Table | Module | Writes |
+|---|---|---|
+| `missions` | `kernel.ts` | managed (insert, transitions, containment, discharge latch, schedule, status-list slot, supersession, carryover's version check); statement (`bindGrant`, `bindFirstGrant`, the derivation count and its refund) |
+| `approval_reservations` | `kernel.ts` | statement (`reserveApproval`) |
+| `authority_source_bindings` | `source-binding-store.ts` | managed (with the Mission insert; boot reconciliation) |
+| `continuation_anchors`, `continuation_handles` | `continuation-store.ts` | managed (rooting, termination); statement (a continuation hop's `mint`) |
+| `delegation_families` | `delegation-family-store.ts` | managed (termination); statement (`record`, `invalidate`) |
+| `mission_tombstones` | `tombstones.ts` | managed (with the terminal transition); boot (detail pruning) |
+| `lifecycle_events`, `lifecycle_deliveries` | `lifecycle-outbox.ts` | managed (enqueue with the transition); statement (delivery outcomes, after the commit); boot (pruning, migration) |
+| `lifecycle_responses`, `discharge_events` | `lifecycle-idempotency.ts` | managed (claims, discharge records); statement (`record`, expiry purges) |
+| `derivation_reservations` | `derivation-reservations.ts` | managed (reserve, release, reconcile); boot (`recoverAtBoot`) |
+| `activation_policy_snapshots` | `activation-policy-snapshots.ts` | managed (upsert); boot (pruning) |
+| `join_assertion_events` | `join-evidence-store.ts` | statement (`record`); boot (pruning) |
+| `discharge_mapping_pins` | `discharge-pin-store.ts` | managed (with the Mission insert) |
+| `discharge_selectors` | `discharge-selector-store.ts` | managed (`selectorFor`) |
+| `approval_governance_records` | `approval-governance.ts` | managed |
+| `direct_approval_rules`, `direct_approval_inputs` | `direct-approval-record.ts` | managed |
+| `drawdown_recording_rules`, `drawdown_record_inputs` | `drawdown-approval-record.ts` | managed |
+| `governed_policy_roots`, `governed_policy_consents`, `governed_policy_activations` | `governed-policy-approval.ts` | managed (consent, activation); statement (`withdraw`) |
+| `creation_idempotency` | `creation-idempotency.ts` | managed (reserve, complete, advance); statement (`failReserved`, `completeDelivered`, `recordDelivery`, expiry purge) |
+| `expansion_deferrals`, `progressive_refusals` | `deferred.ts` (`ExpansionDeferralStore`) | managed (redemption); statement (open, approve, deny, cancel, polls, refusals) |
+| `carryover_reservations`, `carryover_results`, `carryover_replacements` | `carryover.ts` | managed (reserve, consume, retain); statement (`cancel`) |
+| `mission_approval_deferrals` | `mission-approval-deferral.ts` | managed (open, completion, direct approval); statement (resolve, cancel, polls, delivery claims) |
+| `mission_deferred_authorization_codes` | `adapters/deferred-mission-approval.ts` | managed (`openOnce`); statement (`stage`) |
+| `recovery_marker` | `recovery-witness.ts` | managed (every guarded transaction; reconciliation) |
+
+Not supported: a way back from an older store by invalidating its authority under
+a new generation (#250, slice B), more than one writer, and more than one host
+(#641).
 
 ## Upgrading a kernel written before #1340
 

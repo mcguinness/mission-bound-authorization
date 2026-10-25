@@ -31,6 +31,7 @@
  */
 
 import {
+  type KernelStoreConfig,
   type BuiltAs,
   buildAuthorizationServer,
   type JoinAssertionDeployment,
@@ -142,7 +143,7 @@ export interface PilotMasOptions {
    */
   statusClients?: readonly StatusClientRegistration[];
   signingKeys?: SigningKeySource;
-  kernelStore?: { file: string };
+  kernelStore?: KernelStoreConfig;
   /** @spec authority-server#join-assertion (#1454): serve the Join Assertion endpoint with this deployment. */
   joinAssertions?: JoinAssertionDeployment;
   now?: () => Date;

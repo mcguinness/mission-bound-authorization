@@ -37,7 +37,7 @@ import { createServer, type Server } from "node:http";
 import { createRequire } from "node:module";
 import { dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { kernelStoreFromEnv, type SigningKeySource, signingKeysFromEnv } from "@mission/authorization-server";
+import { type KernelStoreConfig, kernelStoreFromEnv, type SigningKeySource, signingKeysFromEnv } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
 import type { JWK } from "jose";
 import type { ResourcePolicyStore } from "../resource-policy-store.js";
@@ -60,20 +60,20 @@ export interface MasPilotLaunchOptions {
   resourcePolicyStore: ResourcePolicyStore;
   /** The MAS's signing keys and kernel file, where this launcher runs the MAS. */
   signingKeys?: SigningKeySource;
-  kernelStore?: { file: string };
+  kernelStore?: KernelStoreConfig;
   /**
    * Separated only: an already running MAS, and the private key (a JWK with
    * its `kid`) the PDP authenticates with there as `separated_mas.pdp_client_id`,
    * whose public half that MAS registered, instead of starting one.
    */
   mas?: { url: string; pdpKey: JWK };
-  /** The MAS process's key environment (`MISSION_KEY_RING`, `MISSION_EPHEMERAL_KEYS`, `MISSION_KERNEL_STORE`). */
+  /** The MAS process's key environment (`MISSION_KEY_RING`, `MISSION_EPHEMERAL_KEYS`, `MISSION_KERNEL_STORE`, `MISSION_KERNEL_WITNESS`). */
   masKeyEnv?: Record<string, string>;
   /** A running MAS's introspection client secret at the estate, where the configuration declares `join_assertion` (#1454). */
   joinIntrospectionSecret?: string;
 }
 
-const KEY_ENV = ["MISSION_KEY_RING", "MISSION_EPHEMERAL_KEYS", "MISSION_KERNEL_STORE"] as const;
+const KEY_ENV = ["MISSION_KEY_RING", "MISSION_EPHEMERAL_KEYS", "MISSION_KERNEL_STORE", "MISSION_KERNEL_WITNESS"] as const;
 
 /**
  * The launcher's options, from its environment. Each value that is set but
@@ -374,7 +374,9 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
     const masKeys = options.mas
       ? "the running MAS's own"
       : `${keyEnv.MISSION_KEY_RING ? `key ring ${keyEnv.MISSION_KEY_RING}` : "ephemeral, generated at this boot"}; kernel ${
-          keyEnv.MISSION_KERNEL_STORE ? `store ${keyEnv.MISSION_KERNEL_STORE}` : "in memory, lost at shutdown"
+          keyEnv.MISSION_KERNEL_STORE
+            ? `store ${keyEnv.MISSION_KERNEL_STORE}, witness ${keyEnv.MISSION_KERNEL_WITNESS}`
+            : "in memory, lost at shutdown"
         }`;
     return {
       pilot,

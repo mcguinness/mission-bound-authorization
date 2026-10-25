@@ -71,7 +71,8 @@ In process, both consoles are the one printed URL.
 | `OPENFGA_STORE_ID`, `OPENFGA_MODEL_ID` | Attach to the administered Resource-policy store and model: verified, never written (deployment §4). |
 | `MAS_PILOT_DEVELOPMENT_STORE=1` | Instead, bootstrap a fresh store seeded from `config/mas-pilot.json` `resource_policy`. Its store and model are printed, and a later start can attach to them. |
 | `MISSION_KEY_RING=<absolute path>` or `MISSION_EPHEMERAL_KEYS=1` | Where the MAS's signing keys come from, as for the as-native target. A ring is created once with `pnpm keys init --ring <path> --issuer http://127.0.0.1:14834`. |
-| `MISSION_KERNEL_STORE=<absolute path>` | Optional: keeps the MAS's Missions, and its join evidence (§3.8), across a restart. |
+| `MISSION_KERNEL_STORE=<absolute path>` | Optional: keeps the MAS's Missions, and its join evidence (§3.8), across a restart. It needs `MISSION_KERNEL_WITNESS`. |
+| `MISSION_KERNEL_WITNESS=<absolute path>` | With a kernel store: its recovery witness, in another directory, created once with `pnpm kernel-recovery init --store <path> --witness <path>`. A store restored from before it refuses to start (control-plane-deployment, Restore admission). |
 | `MAS_PILOT_CONFIG` | The configuration file (default `config/mas-pilot.json`). |
 | `OPENFGA_HTTP_URL`, `OPENFGA_PRESHARED_KEY`, `OPENFGA_CA_CERT` | The OpenFGA connection; the defaults reach the `docker compose` OpenFGA, and `scripts/mas-pilot.mjs` trusts `certs/openfga.crt` when it exists and no CA is set. |
 | `MAS_PILOT_MAS_URL`, `MAS_PILOT_PDP_KEY` | Separated only: use a MAS already running, and the PDP's private key (a JWK with its `kid`) whose public half that MAS registered (§3.7). |
