@@ -816,6 +816,10 @@ export const REFUSAL_DENIAL_REASONS = Object.freeze({
     "operation_target_invalid",
     "phase_invalid",
     "compensation_link_invalid",
+    // @spec runtime-evidence#pre-decision-refusal, authzen#context-work-item
+    // (#815): a request whose `context.work_item` is present but not
+    // exactly `{issuer, id}`, an unusable input refused before evaluation.
+    "work_item_invalid",
   ] as const),
 });
 export type PepRefusalDenialReason = (typeof REFUSAL_DENIAL_REASONS.pep)[number];

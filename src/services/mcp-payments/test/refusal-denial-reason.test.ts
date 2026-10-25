@@ -114,6 +114,7 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
       "operation_target_invalid",
       "phase_invalid",
       "compensation_link_invalid",
+      "work_item_invalid",
     ]);
     expect(isRefusalDenialReason("pdp", "operation_target_invalid")).toBe(true);
     expect(isRefusalDenialReason("pep", "operation_target_invalid")).toBe(false);
@@ -136,6 +137,15 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
     const record = await evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput("phase_unavailable"));
     expect(record.content.denial_reason).toBe("phase_unavailable");
     expect(evidence.all()).toHaveLength(1);
+  });
+
+  it("work_item_invalid is the PDP's alone, and a PEP-side store never signs it (#815)", async () => {
+    expect(isRefusalDenialReason("pdp", "work_item_invalid")).toBe(true);
+    expect(isRefusalDenialReason("pep", "work_item_invalid")).toBe(false);
+    const keys = createEphemeralEvidenceKeys();
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    await expect(evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput("work_item_invalid"))).rejects.toThrow(/not in the closed set/);
+    expect(evidence.all()).toHaveLength(0);
   });
 
   it("compensation_link_invalid is the PDP's alone and compensation_link_unavailable the PEP's alone: a PEP-side store signs compensation_link_unavailable and never compensation_link_invalid (#252)", async () => {
