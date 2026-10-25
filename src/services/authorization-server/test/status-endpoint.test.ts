@@ -251,6 +251,32 @@ describe("Mission Status endpoint errors (@spec status#mission-status-auth-failu
     }
   });
 
+  it("accepts a nonce of 1 and of 255 code points, inside or outside the Basic Multilingual Plane, echoing it exactly, and refuses an empty one and one of 256 invalid_request with none echoed, after authentication (@spec status#mission-status-request, #1535 finding 17, D805, #1689 review)", async () => {
+    const record = approve();
+    const members = { mission_id: record.id, audience: CANONICAL_RESOURCE };
+    // U+1F600 is one code point and two UTF-16 units: 255 of them are 510
+    // units, and 128 of them (256 units) are within the bound.
+    const astral = String.fromCodePoint(0x1f600);
+    for (const accepted of ["k", "k".repeat(255), astral, astral.repeat(128), astral.repeat(255), `k${astral.repeat(254)}`]) {
+      const answer = await read(reader, { ...members, nonce: accepted });
+      expect(answer.status, answer.text).toBe(200);
+      expect((await verified(answer.text)).nonce).toBe(accepted);
+    }
+    for (const refused of ["", "k".repeat(256), astral.repeat(256), `k${astral.repeat(255)}`]) {
+      const answer = await read(reader, { ...members, nonce: refused });
+      expect(answer.status, answer.text).toBe(400);
+      expect(answer.json?.error).toBe("invalid_request");
+      expect(Object.hasOwn(answer.json ?? {}, "nonce")).toBe(false);
+    }
+    // Authentication precedes member validation: unauthenticated, an
+    // over-long nonce is the authentication failure's to answer.
+    for (const overLong of ["k".repeat(256), astral.repeat(256)]) {
+      const unauthenticated = await post({ ...members, nonce: overLong });
+      expect(unauthenticated.status, unauthenticated.text).toBe(400);
+      expect(unauthenticated.json?.error).toBe("invalid_client");
+    }
+  });
+
   it("refuses a failed or absent client authentication invalid_client (HTTP 400) with no challenge, before any Mission is read", async () => {
     const record = approve();
     const n = nonce();
