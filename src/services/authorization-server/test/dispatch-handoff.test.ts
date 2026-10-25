@@ -397,8 +397,8 @@ describe("Dispatch Handoff: the handoff to the selected Agent and its continuati
     expect(grant.authorization_details).toEqual(instance.authority);
     expect((grant.exp as number) - (grant.iat as number)).toBeLessThanOrEqual(MAX_DISPATCH_HANDOFF_LIFETIME_S);
     expect((grant.exp as number) * 1000).toBeLessThanOrEqual(Date.parse(before?.expires_at as string));
-    // The exchange counts nothing: the redemption is the derivation.
-    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before?.derivation_count);
+    // The exchange is one counted derivation from the instance (#1648, D764).
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe((before?.derivation_count ?? 0) + 1);
 
     const r = await redeem(hb.access_token);
     const rb = (await r.json()) as {
@@ -426,9 +426,9 @@ describe("Dispatch Handoff: the handoff to the selected Agent and its continuati
     // the redeemed Mission-bound token carries no `scope`.
     expect(rb.scope).toBeUndefined();
     expect(agentToken.scope).toBeUndefined();
-    // One counted derivation, and the Dispatcher's grant stays the instance's.
+    // The redemption counts one more, and the Dispatcher's grant stays the instance's.
     const after = as.kernel.get(instance.missionId);
-    expect(after?.derivation_count).toBe((before?.derivation_count ?? 0) + 1);
+    expect(after?.derivation_count).toBe((before?.derivation_count ?? 0) + 2);
     expect(after?.grant_id).toBe(before?.grant_id);
 
     // The Agent continues as the approved agent: a family, then a refresh.
@@ -1652,8 +1652,9 @@ describe("the release fence on the Dispatch Handoff (@spec mission#issuance-gati
     expectFenceRefusal(res, "invalid_request");
     // The fence's own refusal, not the exchange's state check.
     expect(res.body.error_description).toContain("before its token was released");
-    // The exchange counts nothing.
-    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before);
+    // The exchange's derivation was counted before the fence and stays spent,
+    // as the redemption's does: whether a fence refusal returns it is #935's.
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe((before ?? 0) + 1);
   });
 
   it("Dispatch Handoff redemption: a revocation committed after the save-time gate and the signature is refused invalid_grant with mission_error revoked and no token member; the grant stays consumed and its derivation counted, so a retry is refused as already redeemed", async () => {
@@ -1684,5 +1685,51 @@ describe("the release fence on the Dispatch Handoff (@spec mission#issuance-gati
     expect(retry.body.mission_error).toBeUndefined();
     expect(retry.body.access_token).toBeUndefined();
     expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
+  });
+});
+
+describe("Dispatch Handoff: the exchange is one counted derivation (@spec derivation-limits#refresh-and-exchange, mission-template#handoff-request, #1648)", () => {
+  const countOf = (missionId: string) => as.kernel.get(missionId)?.derivation_count ?? 0;
+
+  it("each successful exchange counts once against the instance, apart from its redemption, which counts one more", async () => {
+    const instance = await dispatchInstance();
+    const c0 = countOf(instance.missionId);
+    const first = await handoff(instance.token);
+    const firstBody = (await first.json()) as { access_token: string };
+    expect(first.status, JSON.stringify(firstBody)).toBe(200);
+    expect(countOf(instance.missionId)).toBe(c0 + 1);
+    const second = await handoff(instance.token);
+    expect(second.status).toBe(200);
+    expect(countOf(instance.missionId)).toBe(c0 + 2);
+    expect((await redeem(firstBody.access_token)).status).toBe(200);
+    expect(countOf(instance.missionId)).toBe(c0 + 3);
+  });
+
+  it("an exchange refused before admission counts nothing: a wrong key, a wrong client, a suspended instance", async () => {
+    const instance = await dispatchInstance();
+    const c0 = countOf(instance.missionId);
+    expect((await err(await handoff(instance.token, {}, "dispatcher", otherDpop))).error).toBe("invalid_grant");
+    expect((await err(await handoff(instance.token, {}, "agent", dispatcherDpop))).error).toBe("invalid_grant");
+    as.kernel.transition(instance.missionId, "suspend");
+    const suspended = await err(await handoff(instance.token));
+    expect(suspended.error).toBe("invalid_request");
+    expect(suspended.mission_error).toBe("suspended");
+    expect(countOf(instance.missionId)).toBe(c0);
+  });
+
+  it("at the instance's limit the exchange is refused invalid_grant with mission_error derivations_exhausted, issuing no grant and counting nothing; below it the same request succeeds", async () => {
+    const instance = await dispatchInstance();
+    const c0 = countOf(instance.missionId);
+    as.kernel.db.prepare("UPDATE missions SET derivation_limit = derivation_count WHERE id = ?").run(instance.missionId);
+    const res = await handoff(instance.token);
+    const body = (await res.json()) as { error?: string; mission_error?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+    expect(body.mission_error).toBe("derivations_exhausted");
+    expect(body.access_token).toBeUndefined();
+    expect(countOf(instance.missionId)).toBe(c0);
+    as.kernel.db.prepare("UPDATE missions SET derivation_limit = derivation_count + 1 WHERE id = ?").run(instance.missionId);
+    expect((await handoff(instance.token)).status).toBe(200);
+    expect(countOf(instance.missionId)).toBe(c0 + 1);
   });
 });

@@ -32,10 +32,12 @@ import {
   type PropagatedMissionReference,
   type ResourceContractDeclarations,
   type ResourceContractRef,
+  refusedEntryMember,
   resourceContractOf,
   sameResourceContract,
   TXN_AUTHORIZATION_REQUIRED,
   type TxnMissionClaim,
+  unsupportedEntryMember,
 } from "@mission/core";
 import { CATALOG_TOOL_BINDINGS, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { getTracer } from "@mission/telemetry";
@@ -533,6 +535,39 @@ function deriveVendorScope(
     return { vendor_scope: [...allowedVendors].sort(), vendor_scope_source: "entry" };
   }
   return { vendor_scope: [...new Set(invoiceVendorIds)].sort(), vendor_scope_source: "all" };
+}
+
+/**
+ * @spec resource-access#rs-enforcement, runtime#read-binding (#1375): the
+ * applicable entry a bound list read's vendor scope derives from, the same at
+ * decision and at reverification. Entries are alternative grants: of the
+ * entries naming the target and the action that this resource can fully
+ * enforce (no `locations`, no member outside the supported set, judged on the
+ * committed entry), the first whose `vendors` admit the requested vendor, so a
+ * later entry covering the request is relied on as the PDP relies on it,
+ * never refused because an earlier entry excludes the vendor. With no vendor
+ * requested, the first such entry, to whose vendors the read narrows. One
+ * entry's scope, never a union of several.
+ */
+function listScopeEntry(
+  entries: readonly AuthorityEntry[] | undefined,
+  target: string,
+  action: string,
+  requestedVendorId: string | undefined,
+): AuthorityEntry | undefined {
+  const applicable = (entries ?? []).filter((e) => {
+    if (!entryMatchesTarget(e, target) || !e.actions.includes(action)) return false;
+    const committed = committedEntry(e);
+    return refusedEntryMember(committed) === undefined && unsupportedEntryMember(committed) === undefined;
+  });
+  if (requestedVendorId !== undefined) {
+    const admitting = applicable.find((e) => {
+      const vendors = e.constraints?.vendors;
+      return !vendors || vendors.includes(requestedVendorId);
+    });
+    if (admitting) return admitting;
+  }
+  return applicable[0];
 }
 
 /**
@@ -2197,9 +2232,6 @@ export class Pep {
       // `parameter_digest` below; previously nothing did, so no digest ever
       // reached the PDP request or the reverification the write/transaction
       // paths already perform.
-      const entry = view.authority_set.find(
-        (e) => entryMatchesTarget(e, operationTarget) && e.actions.includes(mapping.action),
-      );
       // @spec runtime#input-resource-policy (#828 step 5): a named vendor_id
       // is the vendor the payments store resolved, never the argument, as
       // for lookup_vendor (D324); a vendor the store does not hold is refused
@@ -2210,6 +2242,7 @@ export class Pep {
         requestedVendorId = this.deps.payments.getVendor(String(args.vendor_id))?.id;
         if (requestedVendorId === undefined) return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view);
       }
+      const entry = listScopeEntry(view.authority_set, operationTarget, mapping.action, requestedVendorId);
       const scope = deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds());
       // @spec resource-access#initial-common-constraints (#1266): a bound that
       // reads a member fact (issuance, tenant, classification) is evaluated
@@ -2802,11 +2835,14 @@ export class Pep {
           });
           // #818 (D560): a remote source's read has lapsed; no observation.
           if (!loaded && this.deps.viewSource) return undefined;
-          const entry = loaded?.view.authority_set.find(
-            (e) => entryMatchesTarget(e, listEffective.resource) && e.actions.includes(listEffective.action),
-          );
           const requestedVendorId =
             listEffective.vendor_scope_source === "requested" ? listEffective.vendor_scope[0] : undefined;
+          const entry = listScopeEntry(
+            loaded?.view.authority_set,
+            listEffective.resource,
+            listEffective.action,
+            requestedVendorId,
+          );
           return parameterDigest(
             this.freshListParams(listEffective, deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds())),
           );
@@ -3141,11 +3177,9 @@ export class Pep {
       const disposition = await this.suppressExecution(attempt, "target_drift");
       return { ok: false, error: "target_drift", disposition };
     }
-    const entry = loaded?.view.authority_set.find(
-      (e) => entryMatchesTarget(e, effective.resource) && e.actions.includes(effective.action),
-    );
     const requestedVendorId =
       effective.vendor_scope_source === "requested" ? effective.vendor_scope[0] : undefined;
+    const entry = listScopeEntry(loaded?.view.authority_set, effective.resource, effective.action, requestedVendorId);
     const fresh = this.freshListParams(
       effective,
       deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
