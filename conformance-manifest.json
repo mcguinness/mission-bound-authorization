@@ -9072,6 +9072,29 @@
    "notes": "#1503 finding 14 (D620): termination triggered by policy itself stays a revocation. Mutation-proved: recording the scheduled deadline's termination as `completed` fails the deadline test; the child and successor remediations committing `complete` in place of `revoke` fail their remediation tests (`completed` for `revoked`); and a revoke transition recording `completed` fails step 8."
   },
   {
+   "id": "core.revocation.subject-deprovisioned-terminates",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "revocation",
+   "text": "When the AS establishes that the principal identified by a Mission's recorded `subject` ({{record-principal-members}}) has been deprovisioned, it SHOULD terminate that Mission with termination reason `revoked`",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when the AS establishes that the principal identified by a Mission's recorded subject (iss, sub) is deprovisioned, every Mission of that Subject not yet terminated, a suspended one included, is terminated with reason revoked and further issuance is refused; temporary disablement, a source outage or an unavailable lookup terminates nothing, nor does the departure or disablement of an Approver, owner or client who is not the recorded Subject; already-issued tokens are not recalled by the termination itself"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#830 Q-e (D798). todo until witnessed: #830's reference reconciler (Q-d) commits revoke on deprovisioning. A deployment that does not follow the rule documents why (deployment documentation, not separately witnessed)."
+  },
+  {
    "id": "core.issuance-gating.inactive-refused-by-grant",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "issuance-gating",
