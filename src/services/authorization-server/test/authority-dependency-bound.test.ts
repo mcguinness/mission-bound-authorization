@@ -217,19 +217,21 @@ describe("the declared schedules, run by the authorization server's own timers (
       issuer: ISSUER,
       authorityDependency: { declaration: DECLARATION, resolver, refreshIntervalMs: 50, reconcileIntervalMs: 50 },
     });
-    const mission = approve(as, "alice");
-    const changedAt = new Date();
-    writeFileSync(identityFile, JSON.stringify([{ sub: "alice", status: "disabled", changed_at: changedAt.toISOString() }, { sub: "bob" }]));
-    const deadline = Date.now() + 5_000;
-    while (Date.now() < deadline && !(gateRefuses(as, mission.id) && as.kernel.get(mission.id)?.state === "suspended")) {
-      await new Promise((r) => setTimeout(r, 10));
+    try {
+      const mission = approve(as, "alice");
+      writeFileSync(identityFile, JSON.stringify([{ sub: "alice", status: "disabled", changed_at: new Date().toISOString() }, { sub: "bob" }]));
+      const deadline = Date.now() + 3_000;
+      while (Date.now() < deadline && !(gateRefuses(as, mission.id) && as.kernel.get(mission.id)?.state === "suspended")) {
+        await new Promise((r) => setTimeout(r, 10));
+      }
+      expect(gateRefuses(as, mission.id)).toBe(true);
+      expect(as.kernel.get(mission.id)?.state).toBe("suspended");
+      expect(built(as.authorityReconciler, "the reconciler").last()?.ok).toBe(true);
+    } finally {
+      as.stopAuthorityDependency?.();
+      as.kernel.close();
     }
-    expect(gateRefuses(as, mission.id)).toBe(true);
-    expect(as.kernel.get(mission.id)?.state).toBe("suspended");
-    expect(built(as.authorityReconciler, "the reconciler").last()?.ok).toBe(true);
-    as.stopAuthorityDependency?.();
-    as.kernel.close();
-  });
+  }, 10_000);
 
   it("refuses to start a composition that schedules either period slower than declared", async () => {
     const resolver = new AuthorityDependencyResolver({ issuer: ISSUER, read: async () => [], parse: (raw) => parseIdentityState(raw) });
