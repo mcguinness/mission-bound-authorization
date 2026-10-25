@@ -30910,7 +30910,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a permit issued in reliance on a dependency observation expires no later than the observation's accepted validity, measured from the time the observation represents",
-    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the observation's validity is a ceiling of the PDP's one permit-deadline calculation (authority_dependency_valid_until), measured from the time the observation represents"
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the observation's validity is a ceiling of the PDP's one permit-deadline calculation (authority_dependency_valid_until), measured from the time the observation represents; under lifecycle-mediated enforcement (#830 Q-d PR B) the ceiling is the earlier of that validity and the reconciliation's currency, the reconciler's last complete pass plus the declared lag bound"
    },
    "level": "endpoint",
    "coverage": "tested",
