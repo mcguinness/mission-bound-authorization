@@ -65391,7 +65391,8 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a joined decision request carries context.mission_join: on the mapping join, with the actor-record depth as delegate_depth for a delegate; on the assertion path, with the assertion it obtained and no delegate_depth of its own, the assertion's join claim governing"
+    "normative": "a joined decision request carries context.mission_join: on the mapping join, with the actor-record depth as delegate_depth for a delegate; on the assertion path, with the assertion it obtained, the assertion's join claim governing the depth (a separate delegate_depth is optional there)",
+    "local": "the reference PEP omits delegate_depth beside an obtained assertion, so a second actor-record store cannot contradict the MAS's; this is reference behavior (D770), not a protocol prohibition, and the PDP's disagreement check still applies to a caller that reports one"
    },
    "level": "unit",
    "coverage": "tested",
@@ -65409,7 +65410,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1561: on the assertion path the PEP carries no depth of its own beside the assertion, so a second actor-record store cannot contradict the MAS's. Proved by restoring the PEP's own depth beside an obtained assertion: the cited #1561 test then sees delegate_depth 2."
+   "notes": "#1561: on the assertion path the PEP carries no depth of its own beside the assertion, so a second actor-record store cannot contradict the MAS's. Proved by restoring the PEP's own depth beside an obtained assertion: the cited #1561 test then sees delegate_depth 2. D770: the omission is reference behavior, recorded in the local observation; the member is optional on the assertion path (#972 clarifies the draft)."
   },
   {
    "id": "mas.join-inputs.mission-bound-never-carries",
