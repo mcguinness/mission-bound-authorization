@@ -168,15 +168,28 @@ export {
 
 export { MISSION_ID_ENTROPY_BYTES, newMissionId } from "./kernel/mission-id.js";
 export {
+  activateSigningKeyGeneration,
   AS_SIGNING_ROLES,
+  type AsSigningKeys,
   type AsSigningRole,
+  compromiseSigningKeyGeneration,
+  generationKid,
   initSigningKeyRing,
+  JWKS_MAX_AGE_SECONDS,
   kernelStoreFromEnv,
   loadSigningKeyRing,
+  migrateSigningKeyRing,
+  retireSigningKeyGeneration,
+  type RoleSigningKeys,
   SIGNING_KEY_RING_FORMAT,
+  SIGNING_KEY_RING_FORMAT_V1,
+  SIGNING_KEY_STATES,
   SigningKeyRingError,
   type SigningKeySource,
+  type SigningKeyState,
   signingKeysFromEnv,
+  stageSigningKeyGeneration,
+  type WithdrawnSigningKey,
 } from "./kernel/signing-key-ring.js";
 export {
   attachCapabilitySources,
@@ -1401,21 +1414,26 @@ export async function buildAuthorizationServer(opts: {
     "ring" in keySource
       ? await loadSigningKeyRing(keySource.ring, opts.issuer, roleConfig)
       : await generateEphemeralSigningKeys(roleConfig);
+  // @spec #831 B2: each role signs under its active generation's `kid`; the
+  // jwks_uri publishes every role's live set (pending, active and overlap
+  // generations), and the AS's own verifiers accept a role's active and
+  // overlap generations. A generation withdrawn as compromised is in none.
   let tokenPrivateKey: CryptoKey = signing.asToken.privateKey;
   let tokenJwk: Record<string, unknown> = signing.asToken.privateJwk;
-  let tokenJwkPub: Record<string, unknown> = signing.asToken.publicJwk;
+  let tokenKid = signing.asToken.kid;
+  let tokenPublished = signing.asToken.published;
+  let tokenVerification = signing.asToken.verification;
   if (opts.testTokenSigningJwk) {
     const injected = { ...opts.testTokenSigningJwk, kid: asToken.kid, alg: asToken.alg, use: "sig" };
     tokenPrivateKey = (await importJWK(injected as JWK, asToken.alg)) as CryptoKey;
     tokenJwk = injected;
-    tokenJwkPub = publicJwkOf(injected as JWK);
+    tokenKid = asToken.kid;
+    tokenPublished = [publicJwkOf(injected as JWK)];
+    tokenVerification = tokenPublished;
   }
-  const statusKeys = { privateKey: signing.asStatus.privateKey };
-  const txnKeys = { privateKey: signing.asTxn.privateKey };
-  const continuationKeys = { privateKey: signing.asContinuation.privateKey };
-  const statusJwkPub = signing.asStatus.publicJwk;
-  const txnJwkPub = signing.asTxn.publicJwk;
-  const continuationJwkPub = signing.asContinuation.publicJwk;
+  const statusKeys = { privateKey: signing.asStatus.privateKey, kid: signing.asStatus.kid };
+  const txnKeys = { privateKey: signing.asTxn.privateKey, kid: signing.asTxn.kid };
+  const continuationKeys = { privateKey: signing.asContinuation.privateKey, kid: signing.asContinuation.kid };
 
   const agent = await seedAgentClient();
   const child = await seedChildClient();
@@ -1629,7 +1647,8 @@ export async function buildAuthorizationServer(opts: {
     // `authority_source` from this and from nothing a client sends.
     authoritySourceCatalog: (opts.authoritySources ?? AUTHORITY_SOURCES) as never,
     statusKey: statusKeys.privateKey,
-    statusKid: asStatus.kid,
+    statusKid: statusKeys.kid,
+    statusVerificationJwks: signing.asStatus.verification,
     ...(opts.now ? { now: opts.now } : {}),
     // Fan the committed transition out to the Status List republisher (PULL) and
     // any injected subscriber, e.g. the Mission Signals emitter (PUSH). The
@@ -1798,9 +1817,11 @@ export async function buildAuthorizationServer(opts: {
   // ID-JAG; the validator's pinned ICA typ keeps the two token types apart. The
   // resource->AS map mirrors the demo cross-domain wiring (stack.ts). The
   // subject resolver is deterministic over a constant salt.
-  const publicJwks = { keys: [tokenJwkPub, statusJwkPub, txnJwkPub, continuationJwkPub] };
+  const publicJwks = {
+    keys: [...tokenPublished, ...signing.asStatus.published, ...signing.asTxn.published, ...signing.asContinuation.published],
+  };
   const continuationAssertionIssuers: ContinuationIssuer[] = opts.continuationAssertionIssuers ?? [
-    { iss: opts.issuer, jwks: { keys: [continuationJwkPub] } as never, attestsFor: [] },
+    { iss: opts.issuer, jwks: { keys: signing.asContinuation.verification } as never, attestsFor: [] },
   ];
   const resourceToAs =
     opts.resourceToAs ??
@@ -1848,7 +1869,7 @@ export async function buildAuthorizationServer(opts: {
     // (`publicJwks`, served by the adapter).
     jwks: { keys: [tokenJwk] },
     publicJwks,
-    accessTokenJwks: { keys: [tokenJwkPub] },
+    accessTokenJwks: { keys: tokenVerification },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),
     ...(opts.approverLogin ? { approverLogin: new ApproverLoginRelyingParty(opts.approverLogin, opts.issuer) } : {}),
@@ -1889,14 +1910,14 @@ export async function buildAuthorizationServer(opts: {
           txnAuthorization: {
             ...opts.transactionAuthorization,
             tokenKey: txnKeys.privateKey,
-            tokenKid: asTxn.kid,
+            tokenKid: txnKeys.kid,
           },
         }
       : {}),
     // @spec child-delegation#child-client-identity — sign the child-bound RFC 7523
     // authorization grant with the AS token key (verifies on the jwks_uri).
     childGrantKey: tokenPrivateKey,
-    childGrantKid: asToken.kid,
+    childGrantKid: tokenKid,
     childGrantAlg: asToken.alg,
     // @spec authority-server#mission-join (#557) — the dev-only ordinary
     // issuance route, signed with this AS's own token key so the resource
@@ -1909,7 +1930,7 @@ export async function buildAuthorizationServer(opts: {
       ? {
           devOrdinaryIssuance: {
             key: tokenPrivateKey,
-            kid: asToken.kid,
+            kid: tokenKid,
             alg: asToken.alg,
             audience: MAS_JOIN.join_resource,
           },
@@ -1933,7 +1954,7 @@ export async function buildAuthorizationServer(opts: {
     resourceToAs,
     subjectResolver,
     continuationGrantKey: continuationKeys.privateKey,
-    continuationGrantKid: asContinuation.kid,
+    continuationGrantKid: continuationKeys.kid,
     templateStore,
     dispatchPolicies,
     protectedEventSources,

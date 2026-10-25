@@ -622,6 +622,14 @@ export interface KernelOptions {
   statusKey: CryptoKey;
   statusKid: string;
   /**
+   * @spec #831 B2: the public JWKs of the Status role's generations the AS
+   * still accepts (active and overlap), each under its `kid`. A record the
+   * status signer signed under an earlier generation verifies by its `kid`
+   * through {@link MissionKernel.statusVerificationKeyFor}. Absent: the
+   * active key alone.
+   */
+  statusVerificationJwks?: Record<string, unknown>[];
+  /**
    * @spec containment#containment-policy — the ISSUER-HELD ContainmentPolicy
    * (the map from a protected-event class to what narrows). OPTIONAL: only
    * {@link MissionKernel.containOnEvent} reads it, so a kernel constructed
@@ -1335,6 +1343,17 @@ export class MissionKernel {
     return this.statusPublicKey;
   }
   private statusPublicKey?: KeyObject;
+
+  /**
+   * @spec #831 B2: the Status key a record names by `kid`, among the
+   * generations the AS still accepts (active and overlap); undefined for any
+   * other `kid`, a retired or compromised generation's included.
+   */
+  statusVerificationKeyFor(kid: string): KeyObject | undefined {
+    if (kid === this.opts.statusKid) return this.statusVerificationKey();
+    const jwk = this.opts.statusVerificationJwks?.find((k) => k.kid === kid);
+    return jwk ? createPublicKey({ key: jwk as never, format: "jwk" }) : undefined;
+  }
 
   /**
    * @spec mission#standing-consent-bases: the auditor's check of a Mission's

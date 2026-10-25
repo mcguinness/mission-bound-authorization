@@ -788,12 +788,17 @@ function consentAuthentic(kernel: MissionKernel, c: GovernedPolicyConsent): bool
   const parts = c.attestation.split(".");
   if (parts.length !== 3) return false;
   const [h, p, s] = parts as [string, string, string];
-  const ok = verify(
-    "sha256",
-    Buffer.from(`${h}.${p}`, "utf8"),
-    { key: kernel.statusVerificationKey(), dsaEncoding: "ieee-p1363" },
-    Buffer.from(s, "base64url"),
-  );
+  // @spec #831 B2: the key the header names, among the Status generations
+  // the AS still accepts, so a consent signed before a rotation still verifies.
+  let kid: unknown;
+  try {
+    kid = (JSON.parse(Buffer.from(h, "base64url").toString("utf8")) as Record<string, unknown>).kid;
+  } catch {
+    return false;
+  }
+  const key = typeof kid === "string" ? kernel.statusVerificationKeyFor(kid) : undefined;
+  if (!key) return false;
+  const ok = verify("sha256", Buffer.from(`${h}.${p}`, "utf8"), { key, dsaEncoding: "ieee-p1363" }, Buffer.from(s, "base64url"));
   return ok && Buffer.from(p, "base64url").toString("utf8") === canonicalize(attested(c));
 }
 

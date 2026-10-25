@@ -6,6 +6,9 @@
  * still verifies after it, and activates. With keys generated at each boot,
  * the same kept consent no longer verifies and activation refuses
  * `consent_unauthenticated`: the ring is what carries the consent across.
+ * A consent names its Status generation by `kid`, so it still verifies after
+ * the Status key rotates (its generation in overlap), and not once that
+ * generation is withdrawn as compromised (#831 B2).
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -14,13 +17,17 @@ import { DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   activateGovernedPolicy,
+  activateSigningKeyGeneration,
+  compromiseSigningKeyGeneration,
   type BuiltAs,
   buildAuthorizationServer,
   type GovernedPolicyRoot,
   initSigningKeyRing,
+  JWKS_MAX_AGE_SECONDS,
   recordGovernedPolicyConsent,
   type RegisteredActivationPolicy,
   type SigningKeySource,
+  stageSigningKeyGeneration,
   validateMissionIntent,
 } from "../src/index.js";
 
@@ -102,6 +109,41 @@ describe("a governed-policy consent across a restart (@spec approval-governance#
     const activation = activate() as { mission: { state: string; approval_basis: { type: string } } };
     expect(activation.mission.state).toBe("active");
     expect(activation.mission.approval_basis.type).toBe("governed_policy");
+  });
+
+  it("still verifies after the Status key rotates between the boots: the generation that signed it is in overlap (#831 B2)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "governed-ring-"));
+    dirs.push(dir);
+    const ring = join(dir, "keys", "ring.json");
+    const roles = { asToken, asStatus, asTxn, asContinuation };
+    await initSigningKeyRing(ring, ISSUER, roles);
+    let boots = 0;
+    const activate = await consentAcrossRestart(async () => {
+      if (boots++ === 1) {
+        await stageSigningKeyGeneration(ring, ISSUER, roles, "asStatus");
+        await activateSigningKeyGeneration(ring, ISSUER, roles, "asStatus", {
+          minPublishedS: JWKS_MAX_AGE_SECONDS,
+          now: () => new Date(Date.now() + (JWKS_MAX_AGE_SECONDS + 1) * 1000),
+        });
+      }
+      return { ring };
+    });
+    const activation = activate() as { mission: { state: string } };
+    expect(activation.mission.state).toBe("active");
+  });
+
+  it("no longer verifies once the Status generation that signed it is withdrawn as compromised: consent_unauthenticated (#831 B2)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "governed-ring-"));
+    dirs.push(dir);
+    const ring = join(dir, "keys", "ring.json");
+    const roles = { asToken, asStatus, asTxn, asContinuation };
+    await initSigningKeyRing(ring, ISSUER, roles);
+    let boots = 0;
+    const activate = await consentAcrossRestart(async () => {
+      if (boots++ === 1) await compromiseSigningKeyGeneration(ring, ISSUER, roles, "asStatus", asStatus.kid);
+      return { ring };
+    });
+    expect(activate).toThrow(expect.objectContaining({ code: "consent_unauthenticated" }));
   });
 
   it("no longer verifies after a restart with keys generated at each boot: activation refuses consent_unauthenticated", async () => {
