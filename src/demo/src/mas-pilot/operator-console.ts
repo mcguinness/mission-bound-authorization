@@ -14,7 +14,11 @@
  *   the approval decided on the approval surface by the approval-service
  *   principal, and the token request that completes it, whose `mission`
  *   claim names the new Mission), and revoke or contain one at the advertised
- *   Mission Lifecycle endpoint as the Lifecycle client.
+ *   Mission Lifecycle endpoint as the Lifecycle client. Where the MAS runs
+ *   the Join Assertion path, it also records a delegate edge in the MAS's
+ *   actor records (#1561), the only way one is recorded. It reads a
+ *   Mission's join evidence events from the MAS's kernel store (#1560), the
+ *   operator's audit read: the MAS serves them on no route of its own.
  * - The pilot half (in the pilot's process): obtain an estate credential (an
  *   estate client's authorization code flow, DPoP-bound, its key kept here),
  *   make a joined call over the gateway with a `Mission-Reference`, and read
@@ -29,7 +33,7 @@ import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
-import { createHttpMediatedClient, type DpopKeys } from "@mission/mcp-payments";
+import { type ActorRecords, createHttpMediatedClient, type DpopKeys } from "@mission/mcp-payments";
 import { generateKeyPair } from "jose";
 import { resolveMissionApproval } from "../approval-console.js";
 import { requestLifecycle } from "../lifecycle-client.js";
@@ -69,21 +73,72 @@ const parseJson = (text: string): Json | undefined => {
 const stringArray = (v: unknown): string[] | undefined =>
   Array.isArray(v) && v.length > 0 && v.every((a) => typeof a === "string") ? (v as string[]) : undefined;
 
-/** The MAS half: approve, revoke and contain, at the MAS over HTTP. */
-export function masConsoleRoutes(mas: Pick<PilotMas, "issuer" | "operator">): ConsoleRoutes {
+/**
+ * The MAS half: approve, revoke and contain, at the MAS over HTTP; read its
+ * join evidence (#1560); and, where the MAS keeps actor records (#1561),
+ * record a delegate edge in them.
+ */
+export function masConsoleRoutes(
+  mas: Pick<PilotMas, "issuer" | "operator" | "built">,
+  opts: { actorRecords?: ActorRecords } = {},
+): ConsoleRoutes {
   const { issuer, operator } = mas;
   return async (method, path, body) => {
+    // @spec authority-server#join-assertion-artifact (#1560): the join
+    // evidence events the kernel's store retains for the Mission, oldest
+    // first, each with the instant past which boot recovery may prune it.
+    // Behind the console's bearer, like every route here.
+    const joinEvidence = /^\/missions\/([^/]+)\/join-evidence$/.exec(path);
+    if (method === "GET" && joinEvidence) {
+      const missionId = decodeURIComponent(joinEvidence[1] as string);
+      const events = mas.built.kernel.joinEvidence
+        .forMission({ issuer, id: missionId })
+        .map((r) => ({ ...r.event, retain_until: r.retain_until }));
+      return { status: 200, body: { mission_id: missionId, issuer, events } };
+    }
+    // @spec authority-server#join-assertion-request, #mission-join rule 5
+    // (#1561): the operator's path to record that `client_id` acts under the
+    // Mission on `delegated_by`'s delegation, in the actor records the MAS's
+    // Join Assertion visibility and asserted depth both read. The Mission must
+    // be one this MAS holds; its own client is depth 0 and is never recorded
+    // as a delegate.
+    const delegates = /^\/missions\/([^/]+)\/delegates$/.exec(path);
+    if (method === "POST" && delegates && opts.actorRecords) {
+      const record = mas.built.kernel.get(delegates[1] as string);
+      if (!record) return { status: 404, body: { error: "no such Mission at this MAS" } };
+      const clientId = body.client_id;
+      const delegatedBy = body.delegated_by;
+      if (typeof clientId !== "string" || clientId === "" || typeof delegatedBy !== "string" || delegatedBy === "") {
+        return { status: 400, body: { error: "client_id and delegated_by are required, each a non-empty string" } };
+      }
+      if (clientId === record.client_id || clientId === delegatedBy) {
+        return { status: 400, body: { error: "client_id must be a delegate: neither the Mission's own client nor its own delegator" } };
+      }
+      const mission = { id: record.id, issuer: record.issuer };
+      opts.actorRecords.record({ mission, clientId, delegatedBy });
+      const depth = opts.actorRecords.resolveDepth(mission, clientId, record.client_id);
+      return {
+        status: 201,
+        body: { mission_id: record.id, client_id: clientId, delegated_by: delegatedBy, ...(depth !== undefined ? { depth } : {}) },
+      };
+    }
     if (method === "POST" && path === "/missions") {
       const subject = typeof body.subject === "string" ? body.subject : "alice";
       const actions = body.actions === undefined ? DEFAULT_ACTIONS : stringArray(body.actions);
       if (!actions) return { status: 400, body: { error: "actions must be a non-empty array of strings" } };
       const label = typeof body.label === "string" ? body.label : "operator";
+      // `delegate` (#1561): the proposed entry is delegable to that client, at
+      // most one hop from the Mission's own client.
+      if (body.delegate !== undefined && (typeof body.delegate !== "string" || body.delegate === "")) {
+        return { status: 400, body: { error: "delegate must be a non-empty string" } };
+      }
+      const delegation = typeof body.delegate === "string" ? { delegation: { max_depth: 1, allowed_delegates: [{ sub: body.delegate }] } } : {};
       const pending = await submitMissionApproval(issuer, operator.agentClientJwk, {
         missionIntent: JSON.stringify({
           intent: { goal: `MAS pilot: ${label}`, target_resources: [CANONICAL_RESOURCE], expires_at: "2027-06-01T00:00:00Z" },
         }),
         authorizationDetails: JSON.stringify([
-          { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions, constraints: { vendors: ["acme"] } },
+          { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions, constraints: { vendors: ["acme"] }, ...delegation },
         ]),
       });
       const code = await resolveMissionApproval(issuer, operator.approvalToken, pending, "approve", subject);

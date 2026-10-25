@@ -18,7 +18,7 @@ import { errors, type KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import { malformedMatcherInRequest, refusedMemberInRequest } from "../kernel/authorization-details-metadata.js";
-import { projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
+import { issuedWhole, projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { GateError } from "../kernel/kernel.js";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
@@ -40,6 +40,7 @@ import {
   newResourceServer,
   resourceServerInfoFor,
   SCOPE_DECIDED_AT_SAVE,
+  tokenEndpointGateRefusal,
   type AdapterOptions,
 } from "./provider.js";
 
@@ -97,7 +98,8 @@ export function issuedByThisProcess(jti: string, bootId: string): boolean {
 /**
  * Mint the handoff grant: `aud` identifies the redeeming AS's token endpoint,
  * `client_id` the selected Agent (the Mission Record's `client_id`) as the
- * only redeemer. Not a derivation: the redemption is (it mints the token).
+ * only redeemer. Signing only: the exchange counts its derivation once the
+ * grant is signed ({@link handleDispatchHandoffExchange}).
  */
 export async function mintDispatchHandoffGrant(
   signer: DispatchHandoffSigner,
@@ -188,8 +190,8 @@ export async function verifyDispatchHandoffGrant(
  * @spec mission-template#dispatch-handoff: the exchange. The router has
  * already checked the selector (`true`, no conflicting selector, the jwt
  * `requested_token_type`). Steps follow the Template profile; the response is
- * the handoff grant, and nothing is counted (the redemption is the
- * derivation).
+ * the handoff grant. A successful exchange is one derivation from the
+ * instance, counted once, separately from the redemption (#1648, D764).
  */
 export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: KoaContextWithOIDC): Promise<void> {
   const { kernel } = opts;
@@ -286,6 +288,12 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
       return;
     }
     authority = projectThroughEffective(requested, effective);
+    // @spec mission#subset, mission#error-mapping (#1513; #1508, D625): every
+    // requested entry is issued whole, or the request is refused.
+    if (!issuedWhole(requested, effective)) {
+      txError(ctx, 400, "invalid_authorization_details", "requested authorization_details cannot be issued whole");
+      return;
+    }
   }
   if (authority.length === 0) {
     txError(ctx, 400, "invalid_authorization_details", "handed-off authorization_details must be non-empty");
@@ -299,7 +307,7 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
     ctx.body = { error: "dispatch_handoff_unsupported" };
     return;
   }
-  const { grant, expiresIn } = await mintDispatchHandoffGrant(
+  const { grant, jti, expiresIn } = await mintDispatchHandoffGrant(
     { key: opts.childGrantKey, kid: opts.childGrantKid, alg: opts.childGrantAlg },
     {
       issuer: opts.issuer,
@@ -310,6 +318,22 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
       ...(opts.processBootId !== undefined ? { bootId: opts.processBootId } : {}),
     },
   );
+  // @spec derivation-limits#refresh-and-exchange, mission#issuance-gating
+  // (#1648, D764): the successful exchange is one derivation from the instance,
+  // counted once against it, apart from the redemption's own. It is counted
+  // only after the grant is signed, under the grant's own jti, so an exchange
+  // refused before admission counts nothing; at the limit the signed grant is
+  // discarded and the refusal is invalid_grant with derivations_exhausted, while
+  // a lifecycle refusal stays invalid_request (D369). A release-fence refusal
+  // after admission keeps the count: a tracked #935 limitation, not compliance
+  // with the failed-derivations rule.
+  try {
+    const admitted = kernel.reserveDerivation(active.id, { operationId: `dispatch-handoff-exchange:${jti}`, artifactId: jti });
+    kernel.releaseDerivation(admitted.reservation.reservation.reservationId, { artifactId: jti });
+  } catch (e) {
+    if (!(e instanceof GateError)) throw e;
+    throw tokenEndpointGateRefusal(e.reason, e.message, gateErrorToMissionError(e.reason, kernel.observedRecord(active.id)), true);
+  }
   ctx.status = 200;
   ctx.set("cache-control", "no-store");
   ctx.body = {

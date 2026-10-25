@@ -344,8 +344,29 @@ contract alone, unchanged. By party:
   `token` (`sha256` and `jkt` or `x5t#S256`), `join`, `aud`,
   `mapping_version` and an `exp` capped by the token's. It caches on
   (`issuer`, `mission_id`), the token digest and the `audience`, rechecking
-  before it serves, and records each minting as a join evidence event, in
-  process memory only (retention, follow-up: #1560). How the acting token
+  before it serves. Each minting is a join evidence event (#1560): the
+  Mission reference, the token digest and thumbprint, the `join` result,
+  the authenticated caller, the `audience`, the `mapping_version` and the
+  validity window, written to the kernel's store
+  (`MissionKernel.joinEvidence`) before the assertion is cached or
+  returned; a write that fails answers `unavailable` (503), with nothing
+  returned or cached. An event is retained until its Mission's expiry
+  plus the pilot kernel's audit retention, and pruned at boot only after
+  that instant. The pilot's MAS (`buildPilotMas`) sets that retention to
+  the deployment's declared audit horizon, `audit_horizon_s` in
+  `config/policy.json` (`AUDIT_HORIZON_SECONDS`, one year; D770), which
+  its terminal tombstones and activation policy snapshots share; the
+  reusable kernel's default, 90 days, does not apply to the pilot. Each
+  event's `retain_until` is written when it is recorded and a reboot
+  never recomputes or shortens it. With `MISSION_KERNEL_STORE` and a key
+  ring the events survive a restart of the MAS process (witnessed by
+  starting `mas-serve.ts` directly; a relaunch through the launcher is
+  not witnessed); the in-memory default loses them with the Missions. The
+  operator console's MAS half reads a Mission's events
+  (`GET /missions/{id}/join-evidence`, behind its bearer); the MAS serves
+  them on no route of its own. Witnesses:
+  `services/authorization-server/test/join-assertion-evidence-retention.test.ts`
+  and `demo/test/mas-pilot-join-evidence.test.ts`. How the acting token
   is established and how the joins
   are evaluated are the deployment's hook. The pilot's is
   `pilotJoinAssertions` (`demo/src/mas-pilot/mas-join-assertions.ts`), which
@@ -371,7 +392,13 @@ contract alone, unchanged. By party:
   installed when the MAS starts under the same `mapping_cache` bound as
   the gateway's, which supplies `mapping_version` (`mas-pilot-identity@1`).
   A delegate joins under the contract's delegate policy, at its depth in
-  the MAS's own actor records. Witnesses:
+  the MAS's own actor records. Those records are the one source of a
+  delegate's standing on this path (#1561): the endpoint's visibility set
+  takes its recorded delegates from them (a client they place under the
+  Mission through a chain reaching its own client), and an operator records
+  an edge only at the MAS's operator console, `POST /missions/{id}/delegates`
+  behind its bearer; the MAS process refuses any IPC message but `approve`
+  and `clock`. They are held in memory. Witnesses:
   `services/authorization-server/test/join-assertion-endpoint.test.ts` and
   `demo/test/mas-pilot-join-assertion.test.ts`.
 - **The PEP** (MAS §join-authzen): it requests the assertion itself, as
@@ -389,7 +416,11 @@ contract alone, unchanged. By party:
   `aud`. An assertion it obtains rides
   `context.mission_join` with `token_sha256` and `token_jkt`, the key the
   request's DPoP proof verified against. With none obtained, none of the
-  members is carried.
+  members is carried. Beside an assertion the PEP carries no
+  `delegate_depth` of its own, and on this path it keeps no actor records
+  (#1561): the assertion's depth, from the MAS's records, is the only one,
+  so a second store cannot contradict it, and a delegate's joined request
+  that carries no assertion has no depth and is denied.
 - **The PDP** (MAS §join-assertion-pdp): `EvaluateOptions.joinAssertion`
   (`services/pdp/src/join-assertion.ts`, `evaluate.ts` step 4b), set by the
   separated pilot's decision wrapper: the audience
@@ -425,7 +456,10 @@ asserts that nothing was disclosed or committed, and the PDP's signed
 Decision Evidence:
 
 - `the separated MAS pilot's Join Assertion path (#1454) > joins a JWT and an opaque estate credential on the MAS's sender-bound assertion: the PEP carries it with the credential's digest and DPoP key thumbprint, and the PDP permits a read that requires it`;
-- `… > joins a delegate at the depth the MAS's actor records give, and denies when the PEP's actor records report another depth`;
+- `… > joins a delegate at the depth the MAS's actor records give, recorded at the MAS's operator console; the PEP keeps no records and carries no depth of its own, so nothing contradicts the MAS (#1561)`;
+- `… > takes the visibility set's recorded delegates from the MAS's actor records (#1561): a client recorded as a Mission's delegate may request for it, and is not_found for a Mission it is not recorded under`
+  (at the endpoint, `join-assertion-endpoint.test.ts` `Join Assertion visibility takes recorded delegates …`);
+- `… > records a delegate only at the authenticated operator console (#1561): no bearer is refused, an unknown Mission is not found, and the Mission's own client is never a delegate`;
 - `… > denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none`
   (one the MAS minted for a second enrolled PDP; one for another token
   bound to the same key; the MAS's assertion re-signed with another key's
@@ -434,7 +468,7 @@ Decision Evidence:
 - `… > takes each enrollee in its role at the live MAS (#1591, D708): a PEP-only enrollee requests for the PDP's audience but reads no Join Disclosure and is no audience; the both-roles client reads it and is one; a client enrolled for nothing is not_found and reads none`
   (at the endpoint, `join-assertion-endpoint.test.ts` `Join Assertion enrollment roles …`, and at Status, `status-join-disclosure.test.ts` `Join Disclosure takes the PDP role …`);
 - `… > the MAS mints nothing for a token it cannot establish or that does not join: a digest it cannot resolve, a token for another resource, an unmapped or other subject, a delegate it holds no record of or holds too deep`;
-- `the Join Assertion path is declared, and runs only where it can (#1454) > …`, `the separated MAS pilot refuses a declared Join Assertion path it cannot run (#1454) > …`, and the launcher's (walkthrough §7).
+- `the Join Assertion path is declared, and runs only where it can (#1454) > …`, `the separated MAS pilot refuses a declared Join Assertion path it cannot run (#1454) > …`, and the launcher's (walkthrough §7), among them `the separated launcher runs the declared Join Assertion path (#1454) > joins a delegate an operator recorded at the MAS's operator console, and denies mission_binding_failed one unrecorded or recorded too deep, in an operator launch (#1561)`.
 
 Unit witnesses: `services/pdp/test/evaluate-join-assertion.test.ts`
 (every check, the `token` claim's one confirmation member, an algorithm the
@@ -458,10 +492,13 @@ Gaps:
   read from the key ring it creates: a working MAS mints none of them.
 - An unlisted algorithm is witnessed at the PDP alone: the MAS signs ES256
   only, and the pilot's PDP accepts what the MAS advertises.
-- The MAS's and the PEP's actor records are separate stores; the tests
-  write each (the MAS's through its test-harness `actor` message). The
-  launcher writes neither, so no delegate joins on the assertion path
-  there (follow-up: #1561).
+- The MAS's actor records are held in memory: a restart loses every
+  recorded edge, though a kernel store keeps the Missions. In an operator
+  launch the MAS's `join_failed` refusal of an unrecorded or too-deep
+  delegate is seen only as the PDP's `mission_binding_failed`; the live-MAS
+  witnesses above show the `join_failed` itself.
+- The visibility set's "recorded delegates" has no defined source in the
+  MAS draft (#972); the reference's is the MAS's actor records.
 - The MAS installs the contract once, at its start: after
   `mapping_cache.max_stale_seconds` (300) it mints nothing until it is
   restarted, and a joined decision that requires an assertion denies.
@@ -728,7 +765,8 @@ pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.
   demo/test/mas-pilot-launcher.test.ts demo/test/mas-pilot-launcher-shutdown.test.ts \
   demo/test/mas-pilot-join-assertion.test.ts demo/test/mas-pilot-join-deployment.test.ts services/pdp/test/evaluate-join-assertion.test.ts \
   services/mcp-payments/test/mas-join-assertion-pep.test.ts services/mcp-payments/test/join-assertion-client.test.ts \
-  services/authorization-server/test/join-assertion-endpoint.test.ts
+  services/authorization-server/test/join-assertion-endpoint.test.ts \
+  services/authorization-server/test/join-assertion-evidence-retention.test.ts demo/test/mas-pilot-join-evidence.test.ts
 ```
 
 §10's four files and §11's three unit files need no OpenFGA. The reference authorization server binds
@@ -753,3 +791,7 @@ frees its ports, and the MAS exits with its launcher.
 `mas-pilot-join-assertion.test.ts` runs its MAS process on `127.0.0.1:14905`
 and its estate on `14906`, and its launcher on `14907` and `14908`; its
 declaration and launcher refusals need no OpenFGA.
+`mas-pilot-join-evidence.test.ts` needs no OpenFGA: its MAS process binds
+`127.0.0.1:14917` and its estate `14918`, and the operator console and the
+MAS's own surface bind ephemeral ports.
+`join-assertion-evidence-retention.test.ts` binds no port.

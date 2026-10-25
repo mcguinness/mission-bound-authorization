@@ -59,6 +59,7 @@ import {
 import {
   type EffectiveAuthoritySource,
   projectRarThroughMission,
+  issuedWhole,
   projectThroughEffective,
   SourceUnavailableError,
 } from "../kernel/derive.js";
@@ -1301,6 +1302,12 @@ export async function handleAsyncDelegationExchange(
       return;
     }
     confinedSubset = projectThroughEffective(requestedSubset, effective);
+    // @spec mission#subset, mission#error-mapping (#1513; #1508, D625): every
+    // requested entry is issued whole, or the request is refused.
+    if (!issuedWhole(requestedSubset, effective)) {
+      txError(ctx, 400, "invalid_authorization_details", "requested authorization_details cannot be issued whole");
+      return;
+    }
   }
   if (confinedSubset.length === 0) {
     txError(ctx, 400, "invalid_authorization_details", "confined authorization_details must be non-empty");
