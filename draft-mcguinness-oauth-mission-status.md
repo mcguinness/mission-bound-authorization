@@ -1735,16 +1735,17 @@ issuer identifier), `iat`, and `keys`: a JWK Set's `keys` array
 `kid`, for at least the audit horizon of every Mission whose responses
 it signed.
 
-The AS signs the set under its active Mission Status signing key: the
-key that the consumer's trusted configuration authorizes to sign the
-AS's Mission Status responses. A key's presence in the `jwks_uri` is
-not that authorization, since the `jwks_uri` also carries other roles'
-keys and retired keys. The AS never signs the set under a key the set
-lists. When the Mission Status signing key is itself compromised, the
-AS signs the set under its replacement once the consumer's trusted
-configuration authorizes that replacement, and never under another
-published key. A consumer MUST NOT accept a historical key set whose
-signature does not verify under that authorized key.
+The AS signs the set under its active Mission Status signing key, the
+key it currently signs Mission Status responses under, and never under
+a key the set lists or a key of another role. When that key is itself
+compromised, the AS signs the set under its replacement and never
+under another published key. A consumer identifies the authorized
+signer through its trusted configuration, not by its presence in the
+`jwks_uri`, since the `jwks_uri` also carries other roles' keys and
+retired keys; it accepts a replacement only once that configuration
+authorizes it. A consumer MUST NOT accept a historical key set whose
+signature does not verify under the key its trusted configuration
+authorizes.
 
 Each listed JWK carries the `revoked` member {{OpenID.Federation}}
 (Section 8.7.2) with `reason` `compromised` and these times:
@@ -1911,8 +1912,9 @@ never given a heuristic lifetime ({{Section 4.2.2 of RFC9111}}): the
 consumer revalidates it before reuse. The consumer replaces its cached
 key set with each one it fetches rather than adding to it, so a
 removed key stops verifying within that lifetime. When the cached set
-is stale and revalidation fails, the consumer MUST NOT accept a
-response for a current reliance decision until revalidation succeeds.
+is stale and revalidation fails, the consumer MUST NOT accept a Status
+or Lifecycle response for a current reliance decision until a fetch or
+revalidation succeeds.
 An auditor examining an archived response signed under a compromised
 key classifies it by the published compromise information,
 `compromised_at` or its absence; the Mandate profile's compromise-time

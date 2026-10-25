@@ -20203,7 +20203,7 @@
    "id": "status.signing-keys.failed-revalidation-refuses",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "signing-key-retention",
-   "text": "When the cached set is stale and revalidation fails, the consumer MUST NOT accept a response for a current reliance decision until revalidation succeeds.",
+   "text": "When the cached set is stale and revalidation fails, the consumer MUST NOT accept a Status or Lifecycle response for a current reliance decision until a fetch or revalidation succeeds.",
    "role": "verifier",
    "strength": "MUST NOT",
    "applicability": {
@@ -20213,7 +20213,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "when the cached jwks_uri set is stale and revalidation fails, the consumer refuses current reliance on a Status response until a revalidation of the jwks_uri succeeds"
+    "normative": "when the cached jwks_uri set is stale and revalidation fails, the consumer refuses current reliance on a Status or Lifecycle response until a fetch or revalidation of the jwks_uri succeeds"
    },
    "level": "unit",
    "coverage": "todo",
@@ -20239,7 +20239,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the historical key set is a jwk-set+jwt signed under the AS's active Mission Status signing key, the key the consumer's trusted configuration authorizes for Status responses; never under a listed key, a retired key or another role's key, and after that key's own compromise under its replacement once the consumer's trusted configuration authorizes it"
+    "normative": "the historical key set is a jwk-set+jwt signed under the AS's active Mission Status signing key, the key it currently signs Mission Status responses under; never under a listed key, a retired key or another role's key, and after that key's own compromise under its replacement, never another published key"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -20250,7 +20250,7 @@
    "id": "status.historical-key-set.consumer-validates-signer",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "historical-key-set",
-   "text": "A consumer MUST NOT accept a historical key set whose signature does not verify under that authorized key.",
+   "text": "A consumer MUST NOT accept a historical key set whose signature does not verify under the key its trusted configuration authorizes.",
    "role": "verifier",
    "strength": "MUST NOT",
    "applicability": {
@@ -20260,7 +20260,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consumer refuses a historical key set signed under any key other than the AS's authorized active Mission Status signing key, including another role's key, a retired key or a key the set lists"
+    "normative": "a consumer refuses a historical key set signed under any key other than the Mission Status signing key its trusted configuration authorizes, including another role's key, a retired key, a key the set lists, and a replacement its configuration does not yet authorize"
    },
    "level": "unit",
    "coverage": "todo",
