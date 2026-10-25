@@ -30,6 +30,13 @@ import {
 } from "@mission/demo-data";
 import { randomBytes } from "node:crypto";
 import type { ResourceContractDeclarations, ScopeProjectionMapping } from "@mission/core";
+import {
+  type AuthorityDependencyDeclaration,
+  type AuthorityDependencyEnforcement,
+  type AuthorityDependencyEvidence,
+  type AuthorityDependencyResolver,
+  evaluateAuthorityDependency,
+} from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import {
   generateEphemeralSigningKeys,
@@ -868,6 +875,14 @@ export interface BuiltAs {
    */
   missionApprovalDeferrals?: MissionApprovalDeferralStore;
   /**
+   * @spec runtime#input-authority-dependency (#830, D798): the declared
+   * authority dependency this assembly gates issuance on, with `governed`
+   * answered from this kernel's records, for the deployment's PDP or composed
+   * PEP step to evaluate the same dependency from the same observations.
+   * Present exactly where the assembly was given one.
+   */
+  authorityDependency?: AuthorityDependencyEnforcement;
+  /**
    * @spec expansion#creation-idempotency — the creation-idempotency store
    * (observe recorded operations; perturb delivery artifacts in tests).
    */
@@ -1235,6 +1250,25 @@ export async function buildAuthorizationServer(opts: {
    */
   testClientCredentials?: boolean;
   /**
+   * @spec runtime#input-authority-dependency (#830, D798): a declared
+   * authority dependency (config/authority-dependencies.json) and the
+   * identity-state resolver that observes it. Every issuance gate consults it
+   * beside the `active` check: the approval decision refuses `access_denied`
+   * and a derivation (code redemption, refresh before its refresh token is
+   * consumed, token exchange, child and expansion) refuses `invalid_grant`,
+   * each within the declared bound and failing closed when no acceptable
+   * observation remains. `refreshIntervalMs` re-reads the source on that
+   * period, outside any store transaction; absent, the caller refreshes.
+   * Absent, no dependency is gated.
+   */
+  authorityDependency?: {
+    declaration: AuthorityDependencyDeclaration;
+    resolver: AuthorityDependencyResolver;
+    evidence?: AuthorityDependencyEvidence;
+    now?: () => number;
+    refreshIntervalMs?: number;
+  };
+  /**
    * @spec discharge#discharge-authority — additional service-token principals and
    * their scopes, merged OVER the shipped dev token (which carries both
    * `mission_lifecycle` and `mission_discharge`). A test registers a
@@ -1545,9 +1579,43 @@ export async function buildAuthorizationServer(opts: {
   const knownSubjects = new Set([...USERS.map((u) => u.sub), ...AUTHORITY_SOURCES.entries.flatMap((e) => e.principals ?? [])]);
   const approverRoleSubs = new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub));
   const approvalFloor = opts.approvalFloor ?? APPROVAL_FLOOR;
+  // @spec runtime#input-authority-dependency (#830, D798): the issuance
+  // gates' dependency check, over the resolver's cached observation.
+  const dependency = opts.authorityDependency;
+  const dependencyNow = dependency?.now ?? (() => Date.now());
+  const authorityDependencyGate: ConstructorParameters<typeof MissionKernel>[0]["authorityDependencyGate"] = dependency
+    ? (candidate, surface) => {
+        if (!(dependency.declaration.governs.authority_sources as readonly string[]).includes(candidate.authoritySource)) return undefined;
+        const nowMs = dependencyNow();
+        const evaluated = evaluateAuthorityDependency(dependency.declaration, dependency.resolver.view(candidate.subject), {
+          clientId: candidate.clientId,
+          nowMs,
+        });
+        if (evaluated.ok) return undefined;
+        dependency.evidence?.record({
+          enforcer: "as",
+          dependency: dependency.declaration.id,
+          failure: evaluated.failure,
+          ...(candidate.mission ? { mission: candidate.mission } : {}),
+          subject: candidate.subject,
+          client: candidate.clientId,
+          action: surface,
+          ...(evaluated.observedAt !== undefined ? { observed_at: evaluated.observedAt } : {}),
+          at: new Date(nowMs).toISOString(),
+        });
+        return { failure: evaluated.failure };
+      }
+    : undefined;
+  if (dependency?.refreshIntervalMs !== undefined) {
+    // Re-read the source on its period, outside any store transaction; an
+    // unref'd timer never keeps the process alive.
+    const timer = setInterval(() => void dependency.resolver.refresh(), dependency.refreshIntervalMs);
+    timer.unref();
+  }
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
+    ...(authorityDependencyGate ? { authorityDependencyGate } : {}),
     // @spec mission#transformation-capabilities (#1503 finding 7, D733): the
     // trusted entry-to-audience mapping (the same mapping the provider reads
     // at every issuance), read at each approval or consent event and
@@ -2016,6 +2084,27 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
     ...(suspensionScheduler ? { suspensionScheduler } : {}),
     ...(joinAssertionService ? { joinAssertions: joinAssertionService } : {}),
+    ...(dependency
+      ? {
+          authorityDependency: {
+            declaration: dependency.declaration,
+            resolver: dependency.resolver,
+            ...(dependency.evidence ? { evidence: dependency.evidence } : {}),
+            ...(dependency.now ? { now: dependency.now } : {}),
+            // The principal and client a Mission's dependency is evaluated for,
+            // from this kernel's record: only a Mission this AS holds, under an
+            // authority source the declaration governs.
+            governed: (mission: { id: string; issuer: string }) => {
+              const record = kernel.get(mission.id);
+              if (!record || record.issuer !== mission.issuer) return undefined;
+              if (!(dependency.declaration.governs.authority_sources as readonly string[]).includes(record.authority_source.type)) {
+                return undefined;
+              }
+              return { subject: record.subject, clientId: record.client_id };
+            },
+          } satisfies AuthorityDependencyEnforcement,
+        }
+      : {}),
     startupRemediation: {
       revokedChildren,
       successors: successorRemediation,

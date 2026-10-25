@@ -55,6 +55,26 @@ export {
   toolsSubset,
   verifyAttenuationChain,
 } from "./attenuation-chain.js";
+export {
+  AuthorityDependencyConfigError,
+  type AuthorityDependencyDeclaration,
+  type AuthorityDependencyEnforcement,
+  AuthorityDependencyEvidence,
+  type AuthorityDependencyRefusal,
+  AuthorityDependencyResolver,
+  checkAuthorityDependency,
+  type DependencyEvaluation,
+  type DependencyFailure,
+  type DependencyPrincipal,
+  evaluateAuthorityDependency,
+  type GovernedAuthoritySource,
+  type IdentityStateRecord,
+  type InvalidatingChange,
+  type PrincipalStateObservation,
+  type PrincipalStateView,
+  type PrincipalStatus,
+  parseAuthorityDependencyDeclarations,
+} from "./authority-dependency.js";
 export type {
   AuthorityEntry,
   ChildFanoutControls,

@@ -39,6 +39,44 @@ demo server's `POST /bff/approver/login` records a new one.
 - **Updating.** Edit, review, and restart the AS. A change applies to the
   next approval decision; Missions already approved are unaffected.
 
+## `authority-dependencies.json`
+
+The deployment's declared authority dependencies (`@spec
+runtime#input-authority-dependency`, #830, D798). The one shipped
+declaration, `subject-delegation`, makes reliance on a user-delegated
+Mission depend on the Subject's continuing delegation to the client acting
+under it: the Subject's account active in the identity source and the
+delegation not withdrawn. Each declaration states every element the Runtime
+requires: the dependency, its source and the state an observation
+represents; what it governs (`governs.authority_sources`, the Missions'
+recorded authority sources, and the scope in words); the invalidating
+changes; `max_staleness_seconds`, separate from the Mission-state freshness
+declaration; whether an online check is required; the enforcement route
+(`enforcement.direct`, `pdp` or `pep`, and `enforcement.lifecycle`); and the
+recovery and responsibility transfer. A composition that enforces it states
+it in its Enforcement Scope Statement (`withAuthorityDependencies`, under
+`extensions.authority_dependencies`), and gives the authorization server's
+issuance gates, the PDP or the PEP's composed step the same declaration and
+identity-state resolver. Read by `@mission/demo-data`
+(`AUTHORITY_DEPENDENCIES`) through `@mission/core`'s strict reader.
+
+The identity source is `identity.json`: each principal's optional `status`
+(`active`, `disabled` or `deprovisioned`; absent, `active`),
+`withdrawn_delegations` (the clients it no longer delegates to) and
+`changed_at` (when the source recorded the change). The resolver re-reads
+the file without a restart.
+
+- **Owner.** The deployment's security owner for the declaration; the
+  identity owner for `identity.json`'s status and delegations.
+- **Integrity.** Repository review and the strict readers, which refuse a
+  declaration missing any element, an unknown member, a non-positive
+  staleness, an unknown invalidating change or authority source, and a
+  declaration with no enforcement route; and, in the identity source, an
+  unknown status, a malformed list or instant, and a principal listed twice.
+- **Updating.** The declaration: edit, review, and restart. The identity
+  source: edit it in place; the next resolver read observes the change, and
+  an observation stays acceptable for `max_staleness_seconds` from the read.
+
 ## `delegation.json`
 
 The clients a same-Mission delegation may designate (`@spec

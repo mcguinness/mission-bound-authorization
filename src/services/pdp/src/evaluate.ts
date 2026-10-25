@@ -25,6 +25,8 @@ import {
   compareAmounts,
   computeAnchor,
   type ConstraintFacts,
+  type AuthorityDependencyEnforcement,
+  checkAuthorityDependency,
   conditionsNoBroader,
   type CredentialAuthorityEntry,
   entryMatchesTarget,
@@ -617,6 +619,17 @@ export interface EvaluateOptions {
    * Mission bound alone binds a named fixture from `@mission/pdp/test-support`.
    */
   resourcePolicy: ResourcePolicy;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): a declared
+   * authority dependency this PDP evaluates directly, as part of its
+   * Resource-policy step: an action under a Mission the declaration governs
+   * is refused `resource_policy` (the mechanism's own refusal) unless an
+   * acceptable observation establishes the dependency, and a permit expires
+   * no later than that observation's accepted validity. Applied only where
+   * the declaration routes direct evaluation to the PDP. Bound PDP-side, like
+   * `resourcePolicy`, and never supplied by an enforcement component.
+   */
+  authorityDependency?: AuthorityDependencyEnforcement;
   now: () => Date;
   /**
    * The declared freshness posture per action class: a window in seconds, an
@@ -867,6 +880,7 @@ export type DecisionOptions = Omit<
   | "requester"
   | "consumptionStatus"
   | "resourcePolicy"
+  | "authorityDependency"
   | "refusals"
   | "resourceContracts"
   | "durationLeases"
@@ -2143,6 +2157,22 @@ async function evaluateInner(
   // contract's resolution from step 4b: the policy stays a bound evaluated
   // independently of the join (@spec authority-server#mission-join rule 8,
   // #818).
+  // @spec runtime#input-authority-dependency (#830, D798): direct
+  // evaluation of a declared authority dependency, composed into this
+  // Resource-policy step: "A dependency enforced through an existing
+  // mechanism keeps that mechanism's refusal", so a dependency not
+  // established refuses `resource_policy`, and the refusal's cause
+  // (withdrawn, invalidated, stale or unavailable) is retained in the
+  // deployment's dependency evidence, not on the wire.
+  let dependencyValidUntilMs: number | undefined;
+  const dependency = opts.authorityDependency;
+  if (dependency !== undefined && dependency.declaration.enforcement.direct === "pdp") {
+    const checked = checkAuthorityDependency(dependency, { id: view.id, issuer: view.issuer }, { enforcer: "pdp", action: req.action.name });
+    if (!checked.ok) {
+      return { decision: false, context: base({ denial_reason: "resource_policy", reason: "resource_policy", next_action: "none" }) };
+    }
+    dependencyValidUntilMs = checked.validUntilMs;
+  }
   const iss = req.subject.properties?.iss;
   const client = req.context.actor?.client_id;
   const policy = await checkResourcePolicy(opts.resourcePolicy, {
@@ -2374,6 +2404,10 @@ async function evaluateInner(
       ...windowCeilings,
       // @spec metering#metering (#1440): a duration-leased permit expires with its lease.
       ...(lease.kind === "leased" ? [lease.ceiling] : []),
+      // @spec runtime#input-authority-dependency (#830): "A permit issued in
+      // reliance on a dependency observation MUST expire no later than that
+      // observation's accepted validity."
+      ...(dependencyValidUntilMs !== undefined ? [{ name: "authority_dependency_valid_until", atMs: dependencyValidUntilMs }] : []),
     ],
   });
   if (deadline.kind === "elapsed") {

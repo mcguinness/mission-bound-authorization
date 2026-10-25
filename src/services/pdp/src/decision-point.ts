@@ -22,7 +22,7 @@
  */
 
 import { generateKeyPairSync, randomUUID } from "node:crypto";
-import type { ResourceContractDeclarations } from "@mission/core";
+import type { AuthorityDependencyEnforcement, ResourceContractDeclarations } from "@mission/core";
 import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "./decision-evidence.js";
 import type { DurationLeaseDomain } from "./duration-lease.js";
 import {
@@ -136,6 +136,13 @@ export interface DecisionPointConfig {
    */
   resourcePolicy?: ResourcePolicy;
   /**
+   * @spec runtime#input-authority-dependency (#830): this decision point's
+   * declared authority dependency, bound here for the reason the Resource
+   * policy is: an enforcement component that could supply it could supply
+   * one that establishes every dependency. Absent, the PDP evaluates none.
+   */
+  authorityDependency?: AuthorityDependencyEnforcement;
+  /**
    * @spec authzen#pdp-request consistency check 11 (#1276, D457): this
    * decision point's Refusal Record emission path for a request it refuses
    * before evaluation (`operation_target_invalid`), bound here for the reason
@@ -197,6 +204,7 @@ interface PointBindings {
   emitter: DecisionEvidenceEmitter | undefined;
   claims: IdempotencyClaimDomain | undefined;
   resourcePolicy: ResourcePolicy | undefined;
+  authorityDependency?: AuthorityDependencyEnforcement | undefined;
   refusals: PdpRefusalRecorder | undefined;
   resourceContracts?: ResourceContractDeclarations | undefined;
   durationLeases?: DurationLeaseDomain | undefined;
@@ -219,12 +227,13 @@ function bindDecide(
   requester: ClaimRequester,
   consumptionStatus?: ConsumptionStatusFn,
 ): DecisionFn {
-  const { emitter, claims, resourcePolicy, refusals, resourceContracts, durationLeases, phasedActions } = bindings;
+  const { emitter, claims, resourcePolicy, authorityDependency, refusals, resourceContracts, durationLeases, phasedActions } = bindings;
   return async (req, opts) => {
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
     delete forwarded.evidence;
     delete forwarded.claims;
     delete forwarded.resourcePolicy;
+    delete forwarded.authorityDependency;
     delete forwarded.requester;
     delete forwarded.consumptionStatus;
     delete forwarded.refusals;
@@ -235,6 +244,7 @@ function bindDecide(
     if (durationLeases) forwarded.durationLeases = durationLeases;
     if (claims) forwarded.claims = claims;
     if (resourcePolicy) forwarded.resourcePolicy = resourcePolicy;
+    if (authorityDependency) forwarded.authorityDependency = authorityDependency;
     if (refusals) forwarded.refusals = refusals;
     if (resourceContracts) forwarded.resourceContracts = resourceContracts;
     if (phasedActions) forwarded.phasedActions = phasedActions;
@@ -282,6 +292,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
     emitter,
     claims: config.claims,
     resourcePolicy: config.resourcePolicy,
+    authorityDependency: config.authorityDependency,
     refusals: config.refusals,
     resourceContracts: config.resourceContracts,
     durationLeases: config.durationLeases,
@@ -338,6 +349,8 @@ export function createEphemeralDecisionPoint(options: {
    * the bound.
    */
   resourcePolicy?: ResourcePolicy;
+  /** @spec runtime#input-authority-dependency (#830): bound exactly as in {@link createDecisionPoint}. */
+  authorityDependency?: AuthorityDependencyEnforcement;
   /** @spec authzen#pdp-request consistency check 11 (#1276): bound exactly as in {@link createDecisionPoint}. */
   refusals?: PdpRefusalRecorder;
   /** @spec authzen#context-resource-contract (#249): bound exactly as in {@link createDecisionPoint}. */
@@ -355,6 +368,7 @@ export function createEphemeralDecisionPoint(options: {
     kid = "ephemeral-pdp",
     claims,
     resourcePolicy,
+    authorityDependency,
     refusals,
     authorizesAudience,
     resourceContracts,
@@ -368,7 +382,7 @@ export function createEphemeralDecisionPoint(options: {
     audience,
     ...(authorizesAudience ? { authorizesAudience } : {}),
   });
-  const bindings: PointBindings = { emitter, claims, resourcePolicy, refusals, resourceContracts, durationLeases, phasedActions };
+  const bindings: PointBindings = { emitter, claims, resourcePolicy, authorityDependency, refusals, resourceContracts, durationLeases, phasedActions };
   return {
     decide: bindDecide(bindings, unboundRequester()),
     decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),

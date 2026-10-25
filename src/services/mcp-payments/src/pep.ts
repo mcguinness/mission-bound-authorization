@@ -14,6 +14,8 @@ import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type ActionPhase,
+  type AuthorityDependencyEnforcement,
+  checkAuthorityDependency,
   type CollectionMemberFacts,
   type ConstraintFacts,
   type CredentialAuthorityEntry,
@@ -1132,6 +1134,17 @@ export interface PepDeps {
    * other actors in the chain (the orchestrator) keep working.
    */
   revokedInstances?: Set<string>;
+  /**
+   * @spec runtime#input-authority-dependency, runtime#input-resource-policy
+   * (#830, D798): a declared authority dependency this PEP evaluates as a
+   * composed resource-policy step, where the declaration routes direct
+   * evaluation to the PEP. After the PDP permits and before anything is
+   * released, an action under a Mission the declaration governs is refused
+   * `resource_policy` unless an acceptable observation establishes the
+   * dependency: the PDP permits within Mission authority, and this step still
+   * refuses. The cause is retained in the deployment's dependency evidence.
+   */
+  authorityDependency?: AuthorityDependencyEnforcement;
   /**
    * @spec authzen#obligation-processing (#1640): the transport this PEP
    * performs the AuthZEN Obligations Profile's `notification` obligation
@@ -3051,6 +3064,23 @@ export class Pep {
       // (@spec runtime-evidence#pre-decision-refusal boundary rule).
       await this.suppressExecution(attempt, "condition_unrecognized");
       return { permitted: false, refusal_reason: "unrecognized_condition" };
+    }
+
+    // @spec runtime#input-authority-dependency (#830, D798): the composed
+    // resource-policy step for a declared dependency routed to this PEP, after
+    // the permit and before any obligation runs or effect is released. A
+    // dependency not established suppresses the permit, and the refusal is
+    // this mechanism's own, `resource_policy`.
+    const dependency = this.deps.authorityDependency;
+    if (dependency !== undefined && dependency.declaration.enforcement.direct === "pep") {
+      const checked = checkAuthorityDependency(dependency, { id: missionAnchor.id, issuer: missionAnchor.issuer }, {
+        enforcer: "pep",
+        action: mapping.action,
+      });
+      if (!checked.ok) {
+        await this.suppressExecution(attempt, "resource_policy");
+        return { permitted: false, decision, denial_reason: "resource_policy" };
+      }
     }
 
     // @spec authzen#obligation-processing (#1640, D744 ruling 8): "on a
