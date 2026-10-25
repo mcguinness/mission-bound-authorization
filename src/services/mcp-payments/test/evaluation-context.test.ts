@@ -111,7 +111,7 @@ const missionToken = (id: string): TokenFacts => ({
 const TOKEN = missionToken("msn_773");
 const TOKEN_B = missionToken("msn_773b");
 
-const view = (id: string): MissionView => ({
+const view = (id: string, constraints: Record<string, unknown> = {}): MissionView => ({
   id,
   issuer: ISSUER,
   state: "active",
@@ -128,7 +128,7 @@ const view = (id: string): MissionView => ({
         "payments:payment.schedule",
         "payments:invoice.read",
       ],
-      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"], ...constraints },
     },
   ] as MissionView["authority_set"],
   subject: { iss: ISSUER, sub: "alice" },
@@ -155,19 +155,40 @@ interface Harness {
   rewrite: (fn: ((d: Decision) => Decision) | undefined) => void;
 }
 
-function harness(o: { pep?: EvaluationContextBindingDeclarations; pdp?: EvaluationContextBindingDeclarations } = {}): Harness {
+function harness(
+  o: {
+    pep?: EvaluationContextBindingDeclarations;
+    pdp?: EvaluationContextBindingDeclarations;
+    /** The vendor record's tenant (#252 owner review). */
+    tenant?: string;
+    /** `inv-1`'s issuance instant and classification label. */
+    issuedAt?: string;
+    classification?: string;
+    /** Common Constraints added to the Mission's entry. */
+    constraints?: Record<string, unknown>;
+  } = {},
+): Harness {
   const now = () => new Date(BASE_MS);
   const payments = new PaymentsStore();
   payments.seed(
-    [{ id: "acme", name: "Acme", status: "approved" }],
+    [{ id: "acme", name: "Acme", status: "approved", ...(o.tenant !== undefined ? { tenant: o.tenant } : {}) }],
     [
-      { id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" },
+      {
+        id: "inv-1",
+        vendor_id: "acme",
+        amount: "125.00",
+        currency: "USD",
+        payee_account: "acct-acme",
+        status: "payable",
+        ...(o.issuedAt !== undefined ? { issued_at: o.issuedAt } : {}),
+        ...(o.classification !== undefined ? { classification: o.classification } : {}),
+      },
       { id: "inv-2", vendor_id: "acme", amount: "75.00", currency: "USD", payee_account: "acct-acme", status: "payable" },
     ],
   );
   const loadView = (ref: { id: string; issuer: string }) =>
     (ref.id === "msn_773" || ref.id === "msn_773b") && ref.issuer === ISSUER
-      ? { view: view(ref.id), observation: { state: "active", version: 1, mode: "fresh", freshness_at: now().toISOString() } }
+      ? { view: view(ref.id, o.constraints), observation: { state: "active", version: 1, mode: "fresh", freshness_at: now().toISOString() } }
       : undefined;
   let pepKeys: EvidenceKeyResolver | undefined;
   const claims = openEphemeralClaimDomain({
@@ -747,6 +768,10 @@ describe("the compensate crossing captures and checks its own context, from the 
     expect(decision?.evaluation_context_digest).toBe(fromWire.digest);
     const completed = executions(h).find((r) => r.outcome === "completed" && r.evaluation_id === decision?.evaluation_id);
     expect(completed?.effective_evaluation_context_digest).toBe(fromWire.digest);
+    // The effect parameters are the wire's too: the reversal form the
+    // Decision bound is the one re-derived and offset at release.
+    expect(completed?.authorized_parameter_digest).toBe(decision?.parameter_digest);
+    expect(completed?.effective_parameter_digest).toBe(decision?.parameter_digest);
     expect(h.connectors.reversalEntries("msn_773")).toEqual([expect.objectContaining({ amount: "125.00", currency: "USD" })]);
   });
 
@@ -807,6 +832,99 @@ describe("the compensate crossing captures and checks its own context, from the 
     const [record] = executions(h).filter((r) => r.outcome === "suppressed");
     expect(record?.error).toBe("parameter_mismatch");
     expect(record).not.toHaveProperty("authorized_evaluation_context_digest");
+  });
+});
+
+/** A suppressed compensation whose live resource fact moved: parameters unchanged, context unequal, zero effects. */
+function expectLiveFactDrift(h: Harness, refused: { ok: boolean; refusal_reason?: string }): void {
+  expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
+  expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+  const decision = compensating(h);
+  expect(decision?.decision).toBe("permit");
+  const [record] = executions(h).filter((r) => r.outcome === "suppressed");
+  expect(record?.error).toBe("target_drift");
+  // The parameter pair: the wire's reversal form, re-derived and unchanged.
+  expect(record?.authorized_parameter_digest).toBe(decision?.parameter_digest);
+  expect(record?.effective_parameter_digest).toBe(record?.authorized_parameter_digest);
+  // The context pair: the moved live fact.
+  expect(record?.authorized_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+  expect(record?.effective_evaluation_context_digest).toBeDefined();
+  expect(record?.effective_evaluation_context_digest).not.toBe(record?.authorized_evaluation_context_digest);
+  expect(executionDivergence(record as ExecutionEvidence["content"])).toEqual({ evaluation_context: true });
+}
+
+describe("the compensate crossing binds the live resource facts its decision evaluates (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #773, #252)", () => {
+  it("the owner's case: a reversal approved while the vendor belongs to tenant-a, moved to tenant-b before release, is refused target_drift with zero effects", async () => {
+    const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+    expectLiveFactDrift(h, await reverse(h, () => h.payments.setVendorTenant("acme", "tenant-b")));
+    // The control: the same move before the decision is refused by the bound.
+    const control = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+    expect((await cross(control, COMMIT)).ok).toBe(true);
+    control.payments.setVendorTenant("acme", "tenant-b");
+    const denied = await control.server.callTransactionTool(REVERSE, { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, TOKEN);
+    expect(denied).toMatchObject({ ok: false, denial_reason: "parameter_violation" });
+    expect(control.connectors.reversalEntries("msn_773")).toHaveLength(0);
+  });
+
+  it("an invoice whose issuance moved outside the approved bound before release is refused target_drift with zero effects", async () => {
+    const h = harness({ issuedAt: "2026-08-15T00:00:00Z", constraints: { resource_issued_after: "2026-07-01T00:00:00Z" } });
+    expectLiveFactDrift(h, await reverse(h, () => h.payments.setInvoiceIssuedAt("inv-1", "2026-06-01T00:00:00Z")));
+  });
+
+  it("an invoice whose classification moved outside the approved bound before release is refused target_drift with zero effects", async () => {
+    const h = harness({ classification: "internal", constraints: { data_classification: ["internal"] } });
+    expectLiveFactDrift(h, await reverse(h, () => h.payments.setInvoiceClassification("inv-1", "restricted")));
+  });
+
+  it("the compensate crossing reads no effect fact from the store: a descriptor naming the invoice's amount for it does not capture", () => {
+    const payments = new PaymentsStore();
+    payments.seed(
+      [{ id: "acme", name: "Acme", status: "approved" }],
+      [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
+    );
+    const connectors = new Connectors(() => new Date(BASE_MS));
+    connectors.postWire({
+      opKey: "op-wire",
+      invoiceId: "inv-1",
+      vendorId: "acme",
+      payeeAccount: "acct-acme",
+      amount: "125.00",
+      currency: "USD",
+      permitId: "evl-wire",
+      missionId: "msn_773",
+    });
+    const storeAmount = new EvaluationContextBindingDeclarations(
+      claimedStatement((st) => {
+        const ecb = st.extensions.evaluation_context_binding as {
+          operations: Array<{ operation: string; descriptor: { id: string; version: string; digest: string } }>;
+          descriptors: DescriptorEntry[];
+        };
+        const current = ecb.descriptors.find((d) => d.id.endsWith("/payment-reverse")) as DescriptorEntry;
+        const facts = (current.document.facts as Array<Record<string, unknown>>).map((f) =>
+          f.name === "amount" ? { ...f, resolver: "payments-store:invoice.amount" } : f,
+        );
+        const document = { ...current.document, version: "2026-10-25-store-amount", facts };
+        const digest = canonicalDigest(document as JsonValue);
+        ecb.descriptors.push({ id: current.id, version: "2026-10-25-store-amount", digest, document });
+        for (const op of ecb.operations) {
+          if (op.operation === "payments:payment.reverse") op.descriptor = { id: current.id, version: "2026-10-25-store-amount", digest };
+        }
+        return st;
+      }),
+    );
+    const capture = (declarations: EvaluationContextBindingDeclarations) =>
+      captureEvaluationContext({
+        declarations,
+        salts: new EvaluationContextSalts(),
+        mission: { issuer: ISSUER, id: "msn_773" },
+        operation: reverseOperation,
+        invoiceId: "inv-1",
+        payments,
+        compensates: { opKey: "op-wire", evaluationId: "evl-wire" },
+        committedEffects: connectors,
+      });
+    expect(capture(CLAIMED).ok).toBe(true);
+    expect(capture(storeAmount)).toEqual({ ok: false, reason: "fact_unresolvable" });
   });
 });
 
