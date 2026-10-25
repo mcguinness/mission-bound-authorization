@@ -1722,7 +1722,11 @@ JWS, not <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span> (see <a
 <p id="section-3.5-4">In the ERP examples in this document, the operation contract identifies
 <code>https://erp.example.com</code> as the operation target
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
-constraints determine the permitted operations within that service.<a href="#section-3.5-4" class="pilcrow">¶</a></p>
+constraints determine the permitted operations within that service.
+In the audience-scoped Mission Status example below, the consumer is
+the ERP resource server, client <code>erp-rs</code>, which the Mission Issuer's
+configuration authorizes for that audience; its client identifier is
+the response's <code>sub</code>.<a href="#section-3.5-4" class="pilcrow">¶</a></p>
 <p id="section-3.5-5">The signed payload reports the Mission's current state and the
 audience-scoped evidence the consumer needs.<a href="#section-3.5-5" class="pilcrow">¶</a></p>
 <div class="lang-http-message sourcecode" id="section-3.5-6">
@@ -1751,15 +1755,13 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "sub": "s6BhdRkqt3",
+  "sub": "erp-rs",
   "nonce": "nonce_K9pV4nT2sR7mB1xQ",
   "iat": 1793606400,
   "exp": 1793606460,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "active",
     "version": 1,
     "expires_at":  "2026-12-31T23:59:59Z",
@@ -2308,8 +2310,6 @@ for a token whose Mission is <code>active</code>:<a href="#section-4-5" class="p
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
-      "authority_hash":
-        "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
       "state":   "active",
       "fresh_until": "2026-11-02T08:00:55Z"
     }
@@ -2777,7 +2777,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &amp;operation=revoke
-&amp;reason=Quarterly+reconcile+completed+early
+&amp;reason=Quarterly+reconcile+cancelled
 &amp;nonce=nonce_8Y3vN0sM6tP1xR9bQ5
 </pre><a href="#section-5.5-2" class="pilcrow">¶</a>
 </div>
@@ -2813,8 +2813,6 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "terminated",
     "termination": {
       "reason": "revoked",
@@ -2867,8 +2865,6 @@ and <code>on_expiry</code> in <code>mission</code> alongside <code>state</code>.
   "mission": {
     "id": "msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "suspended",
     "version": 2,
     "suspend_until": "2026-11-09T08:15:00Z",
@@ -4104,6 +4100,13 @@ and a past <code>suspend_until</code> is refused only on a new request.<a href="
           <p id="appendix-A-3.3.1">An RFC 7009 revocation does not by itself revoke a Mission, and a
 revocation that a deployment's policy couples to it commits the same
 <code>revoke</code> transition, state version and event.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.4">
+          <p id="appendix-A-3.4.1">Editorial, no requirement change: in the audience-scoped Mission
+Status example, the consumer is the ERP resource server; no example
+response shows <code>authority_hash</code> to a caller the example does not
+show holding its disclosure privilege; and the revocation's <code>reason</code>
+describes a revocation, not a completion (#1535).<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>

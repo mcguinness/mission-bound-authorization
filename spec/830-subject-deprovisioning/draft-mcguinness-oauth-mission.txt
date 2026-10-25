@@ -7121,7 +7121,7 @@ A.6.  Stage 5: Suspension, Resumption, and Revocation
       profile's lifecycle operations, and the AS derives nothing in
       between (Section 7).  The revocation at 08:53:20 is the agent's
       own revoke operation, with the reason "Quarterly reconcile
-      completed early", under an explicit lifecycle authorization the
+      cancelled", under an explicit lifecycle authorization the
       deployment grants it for this Mission; its resource tokens and
       refresh token confer no such authority.  The AS commits it as
       state version 4.
@@ -8236,6 +8236,10 @@ Appendix G.  Document History
       grant; a grant binding resolves the Mission for the operations
       using it, and a profile-defined grant can instead resolve it
       through its authenticated mission reference (#1631, D751).
+
+   *  Editorial, no requirement change: the Mission Status variation's
+      revocation reason describes a revocation, not a completion
+      (#1535).
 
    *  When the AS establishes that a Mission's recorded Subject has been
       deprovisioned, it SHOULD terminate the Mission with reason

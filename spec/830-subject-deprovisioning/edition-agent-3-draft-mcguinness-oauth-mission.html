@@ -9998,7 +9998,7 @@ and resumed at 08:30:00 (state versions 2 and 3) through the
 profile's lifecycle operations, and the AS derives nothing in
 between (<a href="#lifecycle" class="auto internal xref">Section 7</a>). The revocation at 08:53:20 is the agent's
 own <code>revoke</code> operation, with the reason "Quarterly reconcile
-completed early", under an explicit lifecycle authorization the
+cancelled", under an explicit lifecycle authorization the
 deployment grants it for this Mission; its resource tokens and
 refresh token confer no such authority. The AS commits it as state
 version 4.<a href="#appendix-A.6-8.1.1" class="pilcrow">¶</a></p>
@@ -11390,11 +11390,16 @@ and a profile-defined grant can instead resolve it through its
 authenticated <code>mission</code> reference (#1631, D751).<a href="#appendix-G-3.14.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-G-3.15">
-          <p id="appendix-G-3.15.1">When the AS establishes that a Mission's recorded Subject has been
+          <p id="appendix-G-3.15.1">Editorial, no requirement change: the Mission Status variation's
+revocation <code>reason</code> describes a revocation, not a completion
+(#1535).<a href="#appendix-G-3.15.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.16">
+          <p id="appendix-G-3.16.1">When the AS establishes that a Mission's recorded Subject has been
 deprovisioned, it <span class="bcp14">SHOULD</span> terminate the Mission with reason <code>revoked</code>;
 temporary disablement, an outage, or another principal's departure
 does not trigger the rule, and termination does not recall issued
-tokens (Revocation; #830).<a href="#appendix-G-3.15.1" class="pilcrow">¶</a></p>
+tokens (Revocation; #830).<a href="#appendix-G-3.16.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-G-4">-01<a href="#appendix-G-4" class="pilcrow">¶</a></p>

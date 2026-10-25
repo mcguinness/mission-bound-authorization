@@ -1538,9 +1538,12 @@ against the child's own <code>derivation_limit</code>. The successor access toke
 a ceiling-drawdown response returns is one derivation, counted against
 the successor, never the predecessor
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). A Template
-Dispatch is one derivation per <code>dispatch_event_id</code>, counted against the
-dispatched Mission it creates
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>, Section "Dispatch").
+Dispatch's creation is one derivation per <code>dispatch_event_id</code>, counted
+against the dispatched Mission it creates; a retry that returns the
+delivered access token counts nothing, and one that mints a
+replacement delivery counts once more
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>, Section "Idempotency
+and recovery").
 The redemption of a Dispatch Handoff grant at the Mission Issuer is
 one derivation, counted against the dispatched Mission its <code>mission</code>
 claim names (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>, Section
@@ -2104,76 +2107,82 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 <p id="appendix-B-2">-00<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-3.1">
-          <p id="appendix-B-3.1.1">Editorial, no requirement change (#1647, D764): What Counts names a
-Template Dispatch as one derivation per <code>dispatch_event_id</code>, counted
-against the dispatched Mission it creates, as Template already
-states.<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.1.1">Clarification (#1661, D793): What Counts separates a Template
+Dispatch's creation, one derivation per <code>dispatch_event_id</code>, from its
+delivery: a retry that returns the delivered token counts nothing,
+and one that mints a replacement delivery counts once more.<a href="#appendix-B-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.2">
-          <p id="appendix-B-3.2.1">Editorial, no requirement change (#1631, D751): Counting
+          <p id="appendix-B-3.2.1">Editorial, no requirement change (#1647, D764): What Counts names a
+Template Dispatch as one derivation per <code>dispatch_event_id</code>, counted
+against the dispatched Mission it creates, as Template already
+states.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.3">
+          <p id="appendix-B-3.3.1">Editorial, no requirement change (#1631, D751): Counting
 Derivations follows the OAuth binding's Derivation definition, which
 includes the redemption of a profile-defined grant, and What Counts
 names a Dispatch Handoff grant's redemption at the Mission Issuer as
 one derivation counted against the dispatched Mission. No operation's
 accounting changes: each operation the list gains is one its profile
-already declares a derivation.<a href="#appendix-B-3.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-3.3">
-          <p id="appendix-B-3.3.1">Editorial (#1176): examples of the canonical Mission follow one
-dated history; an example line too long for the page is folded per
-RFC 8792. No requirement changes.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
+already declares a derivation.<a href="#appendix-B-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.4">
-          <p id="appendix-B-3.4.1">The derivation-limit refusal states its code directly,
-<code>invalid_grant</code> on every derivation path, since the OAuth binding's
-lifecycle refusal on a Token Exchange is <code>invalid_request</code> (#1154).<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.4.1">Editorial (#1176): examples of the canonical Mission follow one
+dated history; an example line too long for the page is folded per
+RFC 8792. No requirement changes.<a href="#appendix-B-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.5">
-          <p id="appendix-B-3.5.1">Approval Rendering and Effective Limit: the human approval of a
+          <p id="appendix-B-3.5.1">The derivation-limit refusal states its code directly,
+<code>invalid_grant</code> on every derivation path, since the OAuth binding's
+lifecycle refusal on a Token Exchange is <code>invalid_request</code> (#1154).<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.6">
+          <p id="appendix-B-3.6.1">Approval Rendering and Effective Limit: the human approval of a
 standing consent renders the rule that establishes each admitted
 Mission's limit, with its maximum or a statement that no finite
 maximum is guaranteed, from the consented version and its retained
 policy state; a finite maximum caps each admitted Mission's limit,
 and no policy change raises or removes it. Where Consent Evidence
 is recorded, that approval's disclosure commits the rendering
-(#1119).<a href="#appendix-B-3.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-B-3.6">
-          <p id="appendix-B-3.6.1">Effective Limit and What Counts: a ceiling-drawdown successor
-carries forward its predecessor's committed derivation count and
-never exceeds its limit, alongside the carryover exception; its
-successor access token counts once, against the successor (#1079).<a href="#appendix-B-3.6.1" class="pilcrow">¶</a></p>
+(#1119).<a href="#appendix-B-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.7">
-          <p id="appendix-B-3.7.1">Approval Rendering applies where the limit is established at a
-human approval event; a policy-adjudicated instance has no consent
-rendering (#1078).<a href="#appendix-B-3.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.7.1">Effective Limit and What Counts: a ceiling-drawdown successor
+carries forward its predecessor's committed derivation count and
+never exceeds its limit, alongside the carryover exception; its
+successor access token counts once, against the successor (#1079).<a href="#appendix-B-3.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.8">
-          <p id="appendix-B-3.8.1">What Counts states that a child-creation token exchange is not
-counted against the Parent Mission's limit, and that the child's
-redemption of its initial grant counts against the child's own
-limit.<a href="#appendix-B-3.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.8.1">Approval Rendering applies where the limit is established at a
+human approval event; a policy-adjudicated instance has no consent
+rendering (#1078).<a href="#appendix-B-3.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.9">
-          <p id="appendix-B-3.9.1">Composition Across Missions states that the example's 12
-descendants and 120 derivations count Missions live at once, not a
-lifetime total.<a href="#appendix-B-3.9.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-3.9.1">What Counts states that a child-creation token exchange is not
+counted against the Parent Mission's limit, and that the child's
+redemption of its initial grant counts against the child's own
+limit.<a href="#appendix-B-3.9.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-B-3.10">
-          <p id="appendix-B-3.10.1">Initial version. Carries the derivation limit of Mission-Bound
+          <p id="appendix-B-3.10.1">Composition Across Missions states that the example's 12
+descendants and 120 derivations count Missions live at once, not a
+lifetime total.<a href="#appendix-B-3.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-3.11">
+          <p id="appendix-B-3.11.1">Initial version. Carries the derivation limit of Mission-Bound
 Authorization for OAuth 2.0 with its wire names and rules unchanged:
 the <code>requested_derivation_limit</code> Intent member, the
 <code>derivation_limit</code> record member, counting and refusal at issuance,
 the <code>derivations_exhausted</code> diagnostic, the <code>derivations_remaining</code>
-introspection member, and approval rendering.<a href="#appendix-B-3.10.1" class="pilcrow">¶</a></p>
+introspection member, and approval rendering.<a href="#appendix-B-3.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-3.11">
-          <p id="appendix-B-3.11.1">Under the Mission Issuance Grant profile, the Mission Authority
+        <li class="normal" id="appendix-B-3.12">
+          <p id="appendix-B-3.12.1">Under the Mission Issuance Grant profile, the Mission Authority
 Server's committed grant minting is a counted derivation; redemption
 and refresh at a consuming Authorization Server are not, and the
 limit does not cap the tokens they issue; the approval rendering
-states that bound (#963).<a href="#appendix-B-3.11.1" class="pilcrow">¶</a></p>
+states that bound (#963).<a href="#appendix-B-3.12.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
