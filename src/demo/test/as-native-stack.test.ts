@@ -24,13 +24,13 @@
  */
 
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { createRequire } from "node:module";
 import { connect, createServer, Server as NetServer } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   ALL_PROVIDER_CAPABILITIES,
@@ -38,6 +38,7 @@ import {
   initSigningKeyRing,
   MissionKernel,
   type ProviderCapability,
+  reconcileKernelRecovery,
   STATUS_LIST_ID,
 } from "@mission/authorization-server";
 import { calculateJwkThumbprint, decodeJwt, decodeProtectedHeader, exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -178,6 +179,15 @@ const INITIALIZE = JSON.stringify({
   params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "as-native-test", version: "0.0.1" } },
 });
 const MCP_HEADERS = { "content-type": "application/json", accept: "application/json, text/event-stream" };
+
+
+/** Create the recovery witness for a kernel store before its first start, as `pnpm kernel-recovery init` does (#250 step 3). */
+function initKernelWitness(storeFile: string, witnessFile: string): string {
+  mkdirSync(dirname(storeFile), { recursive: true });
+  mkdirSync(dirname(witnessFile), { recursive: true });
+  reconcileKernelRecovery({ storeFile, witnessFile, action: "init" });
+  return witnessFile;
+}
 
 describe("the as-native target excludes the MAS join route at startup (D315)", () => {
   it("fails startup, before connecting to anything, when the payments resource is configured governed", async () => {
@@ -1502,14 +1512,15 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     const ring = join(dir, "keys", "ring.json");
     await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
     const kernelFile = join(dir, "state", "kernel.db");
-    const env = { MISSION_KEY_RING: ring, MISSION_KERNEL_STORE: kernelFile };
+    const witnessFile = initKernelWitness(kernelFile, join(dir, "witness", "kernel.witness"));
+    const env = { MISSION_KEY_RING: ring, MISSION_KERNEL_STORE: kernelFile, MISSION_KERNEL_WITNESS: witnessFile };
     const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
 
     const first = await launchAsNative(launchOptions(env, files));
     let missionId: string;
     let version: number;
     try {
-      expect(first.summary).toContain(`  kernel store       ${kernelFile} (kept across restarts)`);
+      expect(first.summary).toContain(`  kernel store       ${kernelFile} (kept across restarts; recovery witness ${witnessFile})`);
       const as = first.stack.authServer;
       if (!as) throw new Error("the as-native target runs the AS");
       const issued = await issueMissionToken(
@@ -1542,6 +1553,48 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     }
   });
 
+  it("refuses to start on a kernel store restored from before its recovery witness, and starts again once the witnessed store is back (#250 step 3)", async () => {
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    const dir = mkdtempSync(join(tmpdir(), "as-native-kernel-"));
+    const ring = join(dir, "keys", "ring.json");
+    await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
+    const kernelFile = join(dir, "state", "kernel.db");
+    const witnessFile = initKernelWitness(kernelFile, join(dir, "witness", "kernel.witness"));
+    const env = { MISSION_KEY_RING: ring, MISSION_KERNEL_STORE: kernelFile, MISSION_KERNEL_WITNESS: witnessFile };
+    const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
+    // The store's restore unit, backed up before the deployment's first run.
+    const backup = join(dir, "backup.db");
+    copyFileSync(kernelFile, backup);
+
+    const first = await launchAsNative(launchOptions(env, files));
+    const as = first.stack.authServer;
+    if (!as) throw new Error("the as-native target runs the AS");
+    await issueMissionToken(
+      as.asUrl,
+      as.agentClientJwk,
+      {
+        missionIntent: JSON.stringify({
+          intent: { goal: "Read the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+        }),
+        authorizationDetails: JSON.stringify([
+          { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
+        ]),
+      },
+      as.approverConsole,
+    );
+    await first.close();
+    const witnessed = join(dir, "witnessed.db");
+    copyFileSync(kernelFile, witnessed);
+
+    // The older store is put back in place: the deployment refuses to start on it.
+    copyFileSync(backup, kernelFile);
+    await expect(launchAsNative(launchOptions(env, files))).rejects.toThrow(/kernel recovery state is uncertain \(rollback\)/);
+    // The witnessed store, restored, starts.
+    copyFileSync(witnessed, kernelFile);
+    const again = await launchAsNative(launchOptions(env, files));
+    await again.close();
+  });
+
   it("refuses an unusable configuration by name, before anything connects", () => {
     const cases: [Record<string, string>, RegExp][] = [
       [{ OPENFGA_HTTP_URL: "not a url" }, /^OPENFGA_HTTP_URL is not a URL: not a url$/],
@@ -1557,6 +1610,16 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       // @spec #250: a kernel kept across restarts needs keys kept across them.
       [{ MISSION_EPHEMERAL_KEYS: "1", MISSION_KERNEL_STORE: "/var/state/kernel.db" }, /^MISSION_KERNEL_STORE requires MISSION_KEY_RING/],
       [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KERNEL_STORE: "state/kernel.db" }, /^MISSION_KERNEL_STORE must be an absolute path, not state\/kernel\.db$/],
+      // @spec #250 step 3: and a recovery witness outside the store's directory.
+      [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KERNEL_STORE: "/var/state/kernel.db" }, /^MISSION_KERNEL_STORE requires MISSION_KERNEL_WITNESS/],
+      [
+        { MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KERNEL_STORE: "/var/state/kernel.db", MISSION_KERNEL_WITNESS: "witness/kernel.witness" },
+        /^MISSION_KERNEL_WITNESS must be an absolute path, not witness\/kernel\.witness$/,
+      ],
+      [
+        { MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KERNEL_STORE: "/var/state/kernel.db", MISSION_KERNEL_WITNESS: "/var/state/kernel.witness" },
+        /^MISSION_KERNEL_WITNESS must be outside the store's directory/,
+      ],
     ];
     for (const [env, message] of cases) expect(() => asNativeLaunchOptions(env), JSON.stringify(env)).toThrow(message);
   });
@@ -1585,7 +1648,9 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     const dir = mkdtempSync(join(tmpdir(), "as-native-kernel-"));
     const ring = join(dir, "keys", "ring.json");
     await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
-    const env = { MISSION_KEY_RING: ring, MISSION_KERNEL_STORE: join(dir, "state", "kernel.db") };
+    const kernelFile = join(dir, "state", "kernel.db");
+    const witnessFile = initKernelWitness(kernelFile, join(dir, "witness", "kernel.witness"));
+    const env = { MISSION_KEY_RING: ring, MISSION_KERNEL_STORE: kernelFile, MISSION_KERNEL_WITNESS: witnessFile };
     // The upstream Approver login provider starts before the AS, so a failed
     // startup releases its port too (#1320): pinned here so it can be probed.
     const provider = `http://127.0.0.1:${LAUNCH_IDP_PORT}`;

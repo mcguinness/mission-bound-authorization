@@ -9,8 +9,16 @@
 import type { MissionKernel } from "@mission/authorization-server";
 import { deriveJoinDelegation, type MissionView } from "@mission/pdp";
 
-/** The committed view of `missionId`, with expiry applied, or `undefined` when the kernel holds no such Mission. */
+/**
+ * The committed view of `missionId`, with expiry applied, or `undefined` when
+ * the kernel holds no such Mission or its durable state is uncertain.
+ */
 export function kernelMissionView(kernel: MissionKernel, missionId: string): MissionView | undefined {
+  // @spec control-plane#rollback (#250 step 3): an uncertain kernel may hold a
+  // commit its witness never recorded, so it loads no Mission at all, and a
+  // decision that needs one is refused as for an unknown Mission. The AS's 503
+  // covers HTTP; this covers the in-process PEP, RS and PDP that load here.
+  if (kernel.recoveryUncertainty()) return undefined;
   const r = kernel.get(missionId);
   if (!r) return undefined;
   const fresh = kernel.applyExpiry(r);

@@ -725,9 +725,13 @@ the Mission kernel in that file across restarts, and requires
 `MISSION_KEY_RING`; absent, the kernel is in memory. The launcher creates the
 file's directory, prints which it runs, and releases the file on close:
 `the as-native launcher in process, OpenFGA client stubbed (D332) > keeps the kernel in the file MISSION_KERNEL_STORE names, with a key ring: a Mission issued before a restart is the same record after it (#250)`.
-It restores the kernel only, never the provider's grants, and it is restart
-recovery for one process: the file takes no lock and a restore from an older
-backup is not detected (#250's restore and fencing step). With `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID`
+It restores the kernel only, never the provider's grants, and it is recovery for
+one process on one host. It also requires a recovery witness
+(`MISSION_KERNEL_WITNESS`, created once with `pnpm kernel-recovery init`): the
+kernel holds its file exclusively and starts only when the store matches the
+witness, so a store restored from before it refuses startup:
+`the as-native launcher in process, OpenFGA client stubbed (D332) > refuses to start on a kernel store restored from before its recovery witness, and starts again once the witnessed store is back (#250 step 3)`.
+With `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID`
 set it attaches to that store and model, verifying the model and creating
 nothing; with neither it bootstraps a development store seeded from
 `config/seed/resource-policy.json` and prints its ids (#828):
