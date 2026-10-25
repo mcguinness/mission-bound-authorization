@@ -1111,10 +1111,10 @@ with `event_type` `mission_superseded` ({{harness-evidence}}), naming
 both the predecessor and the successor, so the continuity is
 auditable. That record carries the item's qualified work-item
 identifier, and the rebinding is the only change to the item's Mission
-({{work-item-identity}}). A harness that cannot establish the successor state, whose
-`superseded` termination names no `successor`, or for which the item's
-actions are not within the successor, suppresses per the matrix
-above.
+({{work-item-identity}}). A harness that cannot establish the
+successor state, whose `superseded` termination names no `successor`,
+or for which the item's actions are not within the successor,
+suppresses per the matrix above.
 
 For irreversible actions, external commitments, and privileged
 administration, `handoff` or orchestration handling under a deployment

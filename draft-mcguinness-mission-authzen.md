@@ -1324,11 +1324,11 @@ Authorization binding:
   view identity, the approval, and every policy-relevant context
   input, including `taint`, `work_item`, the Mission history
   reference, the capability source, and any extension member a
-  companion profile adds. This is what a permit is bound to. A new companion context
-  member is part of the authorization binding by default; a companion
-  narrows it only by amending this enumeration. It excludes only the
-  request's volatile machinery: the `supported_obligations`
-  declaration and transport metadata.
+  companion profile adds. This is what a permit is bound to. A new
+  companion context member is part of the authorization binding by
+  default; a companion narrows it only by amending this enumeration.
+  It excludes only the request's volatile machinery: the
+  `supported_obligations` declaration and transport metadata.
 
 Cache key:
 : The authorization binding plus the explicit state generation the
