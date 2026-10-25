@@ -488,8 +488,9 @@ actually serves. Declaring both creates no fallback: the binding
 profile's precedence decides which reference establishes the Mission
 (under the Mission Authority Server profile, a credential-carried
 reference governs), and a conflicting selector or an invalid
-credential is not rescued by an externally established reference. In either mode, the
-established Mission is the Mission every input of {{decision-inputs}}
+credential is not rescued by an externally established reference.
+In either mode, the established Mission is the Mission every input of
+{{decision-inputs}}
 (authority, Resource policy, parameters, actor, time, state) is
 evaluated against, and the Mission reference the permit and the
 evidence record bind.
@@ -1826,8 +1827,9 @@ PDP within a mediated scope with no action class established, where
 the Enforcement Scope Statement declares action classes, is a request
 fault: it is refused before evaluation, never evaluated under a class
 it was not assigned, and no class is recorded for it
-({{I-D.draft-mcguinness-mission-runtime-evidence}}). A deployment MUST NOT, however,
-use classification to evade the floor or a Resource-policy minimum, and
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). A deployment
+MUST NOT, however, use classification to evade the floor or a
+Resource-policy minimum, and
 once an action is a consequential write or higher it MUST be gated and
 bound as the table requires.
 
@@ -4162,6 +4164,14 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Changes a requirement (#956, D814): a mediated request that reaches the
+  PDP with no action class established, where the Enforcement Scope
+  Statement declares classes, is a request fault refused before
+  evaluation and is never evaluated or recorded under a class it was not
+  assigned. `mission_establishment_mode` takes `credential_carried`,
+  `externally_established`, or a non-empty duplicate-free list of the
+  modes a scope serves; declaring both creates no fallback, the
+  binding's precedence deciding.
 - Evaluation-Context Binding (#773): the salt survives restart and is
   available to every replica that can use its bindings, or is held per
   epoch, so that a restart or a replica without the version loses those

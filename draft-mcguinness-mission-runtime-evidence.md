@@ -2687,6 +2687,10 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- Refusal Record: `action_class_missing` records a PDP refusal of a
+  mediated request with no action class established, where the runtime
+  Enforcement Scope Statement declares classes, with no class recorded
+  (#956, D814).
 - Refusal Record: `evaluation_context_unresolvable` records a PEP that
   cannot capture the authoritative evaluation context of an operation
   Evaluation-Context Binding covers before requesting a decision,

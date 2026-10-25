@@ -3138,6 +3138,11 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 \[\[ To be removed from the final specification ]]
 
+- Changes a requirement (#956, D814): where the runtime Enforcement
+  Scope Statement declares action classes, the PDP refuses a mediated
+  request with no action class established before evaluation, records
+  the Refusal Record `action_class_missing`, and never evaluates it
+  under a default class or records one in Decision Evidence.
 - Failure-Condition Coverage maps a covered operation's evaluation
   context not capturable at the PEP to the Refusal Record
   `evaluation_context_unresolvable`, and limits the `parameter_mismatch`
