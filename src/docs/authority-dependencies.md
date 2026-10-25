@@ -37,7 +37,14 @@ The enforcers split the failure cases:
 - The PDP alone applies the lag refusal. It refuses a governed Mission's
   actions once the reconciler's last complete pass rests on an observation
   older than `reconciliation_max_lag_seconds` (60 s), even while the
-  Mission's state reads `active`.
+  Mission's state reads `active`. It does so only where the composition
+  binds the PDP to the dependency. A composition that routes direct
+  evaluation to the PEP under lifecycle-mediated enforcement must still
+  bind the PDP, because the PEP's composed step evaluates the observation
+  and not the reconciler's progress.
+- A Mission the reconciler restricted carries no cause on its record. The
+  reconciler's last outcome (`AuthorityReconciler.last()`) and the
+  lifecycle commit stream show which Missions it suspended or revoked.
 - In the reference composition, the PDP reads the reconciler's progress in
   process (`BuiltAs.authorityDependency.reconciliation`). A PDP without that
   progress refuses every governed action, so a lost or never-started
