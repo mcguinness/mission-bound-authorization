@@ -11,16 +11,16 @@
     "content_sha256": "abc6086f27dc02ea41a48bccb7408faa0aeafdd8464d78a79af5c370084a70e5"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "8e02dcec937ef11c018775610c35cfbc02a78db9",
-    "content_sha256": "c664b0dd71c9480f5911390db72a2e089a1936ac577083b4b758c1182b64bbf9"
+    "revision": "1967110d4f3c44400da17b0c7fa1519924a39105",
+    "content_sha256": "33061a12149025d80afe6272d1969bf35923d2ae4f1a777f735da00c4b48a753"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
     "content_sha256": "e0466f26a42dc89f7f1637996066ed8de81addad3a6190db9b7f814e21525036"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "b22cc8f2446f19e71df91daa84150dbd7122ef12",
-    "content_sha256": "823a9cceb955d0ad482ef821b6d52f00335d5b0087e3e505b403437027119bfb"
+    "revision": "5d049a72f788d82e9afa1eb6ea0d923e32a11d40",
+    "content_sha256": "86caba34a5a129f8d1ebc545f74af5adaf5ece9fc85b110da115e14f1ac6bc4b"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "b89421141eb93ccbaf1497fcec876f281ae91816",
@@ -159,8 +159,8 @@
     "content_sha256": "437ffcf048e52ad43a7c044adb6a46af60a4c9f76faf6142da3794b6456844f6"
    },
    "draft-mcguinness-mission-harness.md": {
-    "revision": "8e02dcec937ef11c018775610c35cfbc02a78db9",
-    "content_sha256": "b73a32dafb7fcc37ed4826b900553be5f1ed22170399eb7286a90a949ea2b247"
+    "revision": "1859f68af5307bc7ad368e3cd58383c8b42c7dd9",
+    "content_sha256": "d339ce2786b7f680f388cb23abe5df7a94e68d1ec6b73f4efd3b09d2ebaeefe1"
    }
   }
  },
@@ -79434,7 +79434,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a work item reaches the decision request only from a verified reference and only when its work_item_issuer is the harness the statement names for the authenticated client; a reference naming another Mission than the credential is refused before any decision"
+    "normative": "a work item reaches the decision request only from a verified reference and only when its work_item_issuer is the harness the statement names for the authenticated client; a verified reference whose work item names another harness, or arrives on another client's request, is not carried; a reference naming another Mission than the credential is refused before any decision"
    },
    "level": "unit",
    "coverage": "tested",
@@ -79564,7 +79564,7 @@
    "id": "authzen.context-work-item.pep-populates-from-attachment-only",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-work-item",
-   "text": "The PEP populates `context.work_item` only from the harness's authenticated attachment, never from tool arguments or another value the agent supplies.",
+   "text": "The PEP populates `context.work_item` only from the harness's authenticated attachment: the work item a verified Mission reference carries, for the attacher the Enforcement Scope Statement declares for the authenticated client",
    "role": "PEP",
    "strength": "stated",
    "applicability": {
@@ -79575,7 +79575,7 @@
    "surface": "decision-request",
    "assertion": "ignore",
    "observation": {
-    "normative": "context.work_item carries the harness's verified attachment, as {issuer, id}, and never a value from tool arguments"
+    "normative": "context.work_item carries, as {issuer, id}, only a work item a verified Mission reference carried for the attacher the statement declares for the authenticated client, and never a value from tool arguments"
    },
    "level": "unit",
    "coverage": "tested",
@@ -79595,10 +79595,10 @@
    ]
   },
   {
-   "id": "authzen.context-work-item.malformed-denied",
+   "id": "authzen.context-work-item.malformed-refused",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-work-item",
-   "text": "a decision whose `context.work_item` is present but not of that shape",
+   "text": "The PDP MUST refuse, before evaluation, a request whose `context.work_item` is present but not of that shape",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -79609,24 +79609,31 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a present context.work_item that is not exactly an object with string issuer and id is denied work_item_context_missing in any class, and none is signed into Decision Evidence"
+    "normative": "a present context.work_item that is not exactly an object with string issuer and id is refused before evaluation as the Refusal Record work_item_invalid, in any class: no decision, no evaluation_id, no Decision Evidence and no policy evaluation"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-work-item.test.ts",
-     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > denies work_item_context_missing for a malformed work item, claimed or not, and signs none into Decision Evidence",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > refuses a malformed work item before evaluation as work_item_invalid, claimed or not: no decision, no evaluation_id, no Decision Evidence and no FGA check",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > records the work_item_invalid refusal as a PDP-signed Refusal Record over the request as submitted, with no evaluation_id",
+     "level": "unit",
+     "surface": "evidence-emission"
     }
-   ]
+   ],
+   "notes": "Owner review at d0821947: a malformed member is an unusable input (D744's split), not the evaluated denial work_item_context_missing."
   },
   {
    "id": "authzen.context-work-item.absent-denied-where-claimed",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-work-item",
-   "text": "where the deployment's Enforcement Scope Statement claims work-item attribution for the action's class, one from which it is absent",
+   "text": "Where the deployment's Enforcement Scope Statement claims work-item attribution for the action's class, the PDP MUST deny with `work_item_context_missing` ({{runtime-denial-classification}}) a decision from which `context.work_item` is absent.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -79637,7 +79644,8 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "in a class the PDP's own statement claims work-item attribution for, a decision with no context.work_item is denied work_item_context_missing; the claim is the PDP's binding, and a claim an enforcement component supplies is stripped"
+    "normative": "in a class the PDP's own statement claims work-item attribution for, a decision with no context.work_item is the evaluated denial work_item_context_missing; the claim is the PDP's binding, and a claim an enforcement component supplies is stripped",
+    "local": "Witnessed only on the co-resident decision point createDecisionPoint builds, which binds workItemAttributedClasses and strips a value an enforcement component supplies. createEphemeralDecisionPoint takes no claimed-class configuration, and the remote PDP server neither binds nor strips it (a remote deployment would supply it through its own getOptions): neither path is verified, and no row claims it."
    },
    "level": "unit",
    "coverage": "tested",
@@ -79671,7 +79679,8 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "in a class no statement claims, a decision without context.work_item is decided as before, and one with it carries it"
+    "normative": "in a class no statement claims, a decision without context.work_item is decided as before, and one with it carries it",
+    "local": "Witnessed only on the co-resident decision point createDecisionPoint builds, which binds workItemAttributedClasses and strips a value an enforcement component supplies. createEphemeralDecisionPoint takes no claimed-class configuration, and the remote PDP server neither binds nor strips it (a remote deployment would supply it through its own getOptions): neither path is verified, and no row claims it."
    },
    "level": "unit",
    "coverage": "tested",
@@ -79830,7 +79839,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Decision Evidence carries work_item exactly as the request presented it, on a permit or a denial, and omits it for a malformed one"
+    "normative": "Decision Evidence carries work_item exactly as the request presented it, on a permit or a denial; a request with a malformed one is refused before evaluation and yields no Decision Evidence"
    },
    "level": "unit",
    "coverage": "tested",
@@ -79843,7 +79852,7 @@
     },
     {
      "file": "src/services/pdp/test/evaluate-work-item.test.ts",
-     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > denies work_item_context_missing for a malformed work item, claimed or not, and signs none into Decision Evidence",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > refuses a malformed work item before evaluation as work_item_invalid, claimed or not: no decision, no evaluation_id, no Decision Evidence and no FGA check",
      "level": "unit",
      "surface": "evidence-emission"
     }
@@ -79908,6 +79917,130 @@
      "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
      "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > item swap within one Mission: a permit decided for one work item is refused work_item_mismatch with zero effect when presented for another",
      "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "harness.work-item.verification-is-not-attachment",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "verification alone never establishes the attachment",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a Mission reference that verifies against the credential's Mission still carries no work item into the decision unless its work_item_issuer is the attacher the statement declares for the authenticated client"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > does not carry a work item whose harness is not the attacher the statement names for the authenticated client",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-work-item.verified-reference-is-not-attachment",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "A reference that verifies does not by itself establish that attachment, and the PEP never takes a work item from tool arguments or another value the agent supplies.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a verified reference whose work item is not the declared attacher's for the authenticated client, and a work_item tool argument, never reach context.work_item"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > does not carry a work item whose harness is not the attacher the statement names for the authenticated client",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > never reads a work item from tool arguments: alone it is never carried, and beside an attachment the attachment governs",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.failure-condition-coverage.work-item-invalid-unusable-input",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "`evaluation_context_invalid`, and `work_item_invalid` are PDP refusals before evaluation",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a malformed work-item context is carried as a Refusal Record work_item_invalid with no evaluation_id, never as a PDP denial reason or Decision Evidence"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > records the work_item_invalid refusal as a PDP-signed Refusal Record over the request as submitted, with no evaluation_id",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > refuses a malformed work item before evaluation as work_item_invalid, claimed or not: no decision, no evaluation_id, no Decision Evidence and no FGA check",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "evidence.refusal.work-item-invalid",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for one carrying a work-item context that is not well-formed (the harness profile, {{I-D.draft-mcguinness-mission-harness}}), `work_item_invalid`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PDP's Refusal Record for a request with a malformed work-item context carries denial_reason work_item_invalid, signed over the request as submitted, with no evaluation_id"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > records the work_item_invalid refusal as a PDP-signed Refusal Record over the request as submitted, with no evaluation_id",
+     "level": "unit",
      "surface": "evidence-emission"
     }
    ]
