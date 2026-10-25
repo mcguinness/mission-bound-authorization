@@ -3879,9 +3879,57 @@
      "name": "terminal tombstones and identifier nonreuse > records the terminal tombstone in the terminal transition's own transaction",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > an older backup restored under the witness is refused, and the witness is never lowered to match it",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > an older backup is refused the same way after a consumer observed the newer state",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > a lost witness is refused, and init does not recreate one over a store that has a marker",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > a witness behind its store, another store's witness and an unreadable witness are each refused",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: an intent left pending (@spec control-plane#rollback, #250 step 3) > an intent written before a commit that never happened: the kernel stops, the restart refuses, and abandon (not acknowledge) resumes the store as it was",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: an intent left pending (@spec control-plane#rollback, #250 step 3) > a commit whose witness was never finalized: the kernel stops, the restart refuses, and acknowledge (not abandon) resumes the committed state",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: one writer and every write guarded (@spec control-plane#rollback, #250 step 3) > a write that bypasses the guard stops the kernel at the next guarded transaction",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: one writer and every write guarded (@spec control-plane#rollback, #250 step 3) > a second kernel cannot open the store while one holds it, and reconciliation refuses while it is held",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. The rest of the invariant is unimplemented: the issuer does not refuse state-dependent service while a durable version or commit metadata is uncertain after an out-of-band restore, there is no fenced reconciliation policy that decides when it is certain again, and no retaining-consumer high-water mark is exercised here. No waiver of existing binding-level requirements."
+   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. With a recovery witness configured (#250 step 3, slice A), the kernel holds its store exclusively and opens only when the store's recovery marker matches the witness, a file outside the database restore unit that every write transaction advances (intent before the commit, finalized after it): a restored older store, a lost, unreadable or foreign witness and an unresolved intent refuse to open, and a run-time witness or commit failure, or a write that bypassed the guard, stops every further write. Offline reconciliation under the exclusive lock acknowledges or abandons an intent and never lowers the witness. Not yet covered: the Authorization Server's wiring and its refusal of state-dependent service while a running kernel is uncertain (slice A, second PR); a way back from an older store other than restoring the witnessed one, by invalidating authority under a new generation (slice B); the retaining-consumer high-water mark; and any topology beyond one writer on one host. The escape detector notices a bypassing write only at the next guarded transaction, after that write committed. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.tombstones",
