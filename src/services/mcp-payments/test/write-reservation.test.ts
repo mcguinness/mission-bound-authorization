@@ -220,9 +220,11 @@ describe("the PEP's reservation and retention for keyed reversible writes (@spec
       expect(changed.next_action).toBe("none");
       expect(changed).not.toHaveProperty("result");
       expect(h.store.schedules().map((s) => [s.amount, s.state])).toEqual([["125.00", "scheduled"]]);
-      // A post-permit disposition of the fresh permit, never a PDP denial.
+      // The first write's completed disposition, then a post-permit
+      // disposition of the fresh permit, never a PDP denial.
       const records = h.executions();
       expect(records.map((r) => [r.content.outcome, r.content.error, r.content.emitter.role])).toEqual([
+        ["completed", undefined, "pep"],
         ["suppressed", "operation_identity_conflict", "pep"],
       ]);
       expect(h.evidence.forMission("msn_918a").filter((e) => e.kind === "refusal")).toHaveLength(0);
@@ -354,9 +356,18 @@ describe("the PEP's reservation and retention for keyed reversible writes (@spec
       expect(stale).toEqual({ ok: false, refusal_reason: "permit_expired" });
       expect(h.store.schedules().map((s) => s.invoice_id)).toEqual(["inv-1"]);
       expect(h.store.reservations()).toHaveLength(1);
+      // The unused permit's disposition is its expiry. The original attempt's
+      // one disposition is the completed write: its replay is refused with
+      // nothing further recorded under that execution identity.
       expect(
-        h.executions().filter((r) => r.content.error === "permit_expired").map((r) => r.content.evaluation_id).sort(),
-      ).toEqual([original.attempt?.evaluationId, unused.attempt?.evaluationId].sort());
+        h.executions().filter((r) => r.content.error === "permit_expired").map((r) => r.content.evaluation_id),
+      ).toEqual([unused.attempt?.evaluationId]);
+      expect(
+        h
+          .executions()
+          .filter((r) => r.content.evaluation_id === original.attempt?.evaluationId)
+          .map((r) => [r.content.outcome, r.content.execution_id]),
+      ).toEqual([["completed", original.attempt?.executionId]]);
 
       // Past the published horizon the record is outside the guarantee: once
       // the schedule is cancelled, the same key is a new execution.

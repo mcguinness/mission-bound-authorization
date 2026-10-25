@@ -349,11 +349,14 @@ issuance, its redemption of the child's initial grant, is counted
 against the child's own `derivation_limit`. The successor access token
 a ceiling-drawdown response returns is one derivation, counted against
 the successor, never the predecessor
-({{I-D.draft-mcguinness-oauth-mission-progressive}}). The redemption
-of a Dispatch Handoff grant at the Mission Issuer is one derivation,
-counted against the dispatched Mission its `mission` claim names
-({{I-D.draft-mcguinness-oauth-mission-template}}, Section "Dispatch
-Handoff").
+({{I-D.draft-mcguinness-oauth-mission-progressive}}). A Template
+Dispatch is one derivation per `dispatch_event_id`, counted against the
+dispatched Mission it creates
+({{I-D.draft-mcguinness-oauth-mission-template}}, Section "Dispatch").
+The redemption of a Dispatch Handoff grant at the Mission Issuer is
+one derivation, counted against the dispatched Mission its `mission`
+claim names ({{I-D.draft-mcguinness-oauth-mission-template}}, Section
+"Dispatch Handoff").
 
 ## Atomicity and Concurrency {#concurrency}
 
@@ -731,6 +734,11 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 \[\[ To be removed from the final specification ]]
 
 -00
+
+- Editorial, no requirement change (#1647, D764): What Counts names a
+  Template Dispatch as one derivation per `dispatch_event_id`, counted
+  against the dispatched Mission it creates, as Template already
+  states.
 
 - Editorial, no requirement change (#1631, D751): Counting
   Derivations follows the OAuth binding's Derivation definition, which
