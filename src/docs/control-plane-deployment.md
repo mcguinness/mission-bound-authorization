@@ -411,7 +411,11 @@ one writer on one host.
   uncertain: every later write refuses, and the AS answers every request but
   discovery metadata and the key set with 503 `temporarily_unavailable` until it
   is restarted and reconciled. A commit whose witness could not be finalized
-  publishes nothing; boot recovery publishes it after `acknowledge`.
+  publishes nothing; boot recovery publishes it after `acknowledge`. The demo
+  stack's and the in-process MAS pilot's PEP, RS and PDP load Missions through
+  `kernelMissionView`, which loads none while the kernel is uncertain, so their
+  decisions refuse too. Other in-process readers that only display state (the
+  console BFF's fleet view, the agent console, the catalog) are not gated.
 
 Not supported: a way back from an older store by invalidating its authority under
 a new generation (#250, slice B), more than one writer, and more than one host
