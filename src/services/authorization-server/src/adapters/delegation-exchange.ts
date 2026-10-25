@@ -49,6 +49,7 @@ import {
   markDelegationMint,
   MissionExchangeError,
   newResourceServer,
+  noteCountedDerivation,
   resourceServerInfoFor,
   SCOPE_DECIDED_AT_SAVE,
   tokenEndpointGateRefusal,
@@ -141,8 +142,7 @@ function activeMission(opts: AdapterOptions, record: MissionRecord): MissionReco
  * accounting under the token's fixed `jti`, count the derivation once (the
  * commit point), then save. A failed record refuses with nothing counted; a
  * refused count or save removes the record. A save refused after the count
- * leaves the count spent with no token, the uncoupled-counter residual the
- * handle and approval mints share.
+ * fails the request, which returns the count (#935, D772).
  */
 async function settle(
   opts: AdapterOptions,
@@ -163,6 +163,7 @@ async function settle(
   }
   try {
     opts.kernel.gateDerivation(accounting.missionId);
+    noteCountedDerivation(ctx, accounting.missionId);
   } catch (e) {
     store.remove(accounting.iss, accounting.jti);
     if (!(e instanceof GateError)) throw e;
