@@ -22626,9 +22626,50 @@
      "name": "MCP _meta Mission reference propagation > a loaded view naming a different Mission issuer than the credential is refused with mission_reference_conflict",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "the HTTP MCP transport reads the _meta Mission reference (@spec authority-server#mcp-reference, #1694) > where the field and _meta both carry a reference they must agree; otherwise the call is refused mission_reference_conflict, never one picked",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1. #1503: a credential whose `mission.issuer` differs from its `iss` is now refused at validation (core.rs-enforcement.mission-issuer-equals-iss), so the binding-source arm is witnessed by a credential naming its own issuer and a loaded view under another; removing the PEP's view-issuer check fails that test."
+   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1. #1503: a credential whose `mission.issuer` differs from its `iss` is now refused at validation (core.rs-enforcement.mission-issuer-equals-iss), so the binding-source arm is witnessed by a credential naming its own issuer and a loaded view under another; removing the PEP's view-issuer check fails that test. #1694: two propagated sources on one HTTP request, the Mission-Reference field and the _meta key, that disagree (or either malformed) are refused mission_reference_conflict, never one picked; taking the field without the agreement check fails that witness alone."
+  },
+  {
+   "id": "mas.reference.mcp-key-honored",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mcp-reference",
+   "text": "A server that silently ignores this key is not a conforming Mission PEP.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission reference a tools/call carries in params._meta reaches enforcement on every MCP transport the PEP serves: one naming another Mission, and a malformed one, are refused, never ignored",
+    "local": "the reference PEP reads the key on both its MCP transports: the in-memory transport, and the HTTP transport since #1694, where a reference carried in both the Mission-Reference field and _meta must name the same tuple"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "the HTTP MCP transport reads the _meta Mission reference (@spec authority-server#mcp-reference, #1694) > a reference in _meta alone reaches the PEP: the matching one permits, one naming another Mission is refused mission_reference_conflict",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "the HTTP MCP transport reads the _meta Mission reference (@spec authority-server#mcp-reference, #1694) > a malformed _meta reference is refused mission_reference_conflict, never ignored",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1694. The witnesses run real DPoP-bound Mission tokens over the HTTP transport with the PDP's FGA check stubbed to permit, so each result turns on the reference alone and they run without OpenFGA. Proved by mutation: not reading the _meta key on the HTTP transport fails both witnesses and the agreement witness on mas.reference.conflict-deny. The in-memory transport's reading is exercised by mcp-channel.test.ts, which needs a live OpenFGA."
   },
   {
    "id": "mas.reference.mcp-duplicate-keys",
