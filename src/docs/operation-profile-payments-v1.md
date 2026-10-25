@@ -13,10 +13,12 @@ The file name is the document's stable name and does not carry the version.
   ledger connector under its own single-use Decision, carrying
   `context.compensates_evaluation_id`, the link to the committed original
   that the PEP establishes from its own retained, verified evidence
-  (Compensation, below). The payments resource contract gains version
-  `2026-10-24`, which names this profile; `2026-10-20` (v13) is superseded
-  and performed under the retained v13 profile within its retention. Every
-  other operation keeps its decision bytes.
+  (Compensation, below). Its parameters are the committed wire's, read from
+  the wire's ledger record, in the `reversal` form. The payments resource
+  contract gains version `2026-10-24`, which names this profile;
+  `2026-10-20` (v13) is superseded and performed under the retained v13
+  profile within its retention. Every other operation keeps its decision
+  bytes. The ledger records the vendor each wire paid.
 
 - **v13** (#249, D553): adds optional resource contract enforcement. The
   payments resource contract (Resource contract, below) is declared in the
@@ -376,6 +378,8 @@ parameters and execution use the normalized values.
 - `hold_transfer`: `{ invoice_id: string }`
 - `execute_wire_transfer`: `{ invoice_id: string, idempotency_key: string }`
 - `reverse_wire_transfer`: `{ invoice_id: string, idempotency_key: string }`
+  (the arguments name the wire to reverse; its parameters are the wire's
+  recorded ones, Compensation, below)
 - `send_remittance_email`: `{ invoice_id: string, idempotency_key: string }`
 
 Every `idempotency_key` takes the format in Idempotency keys below.
@@ -621,7 +625,11 @@ phase of the wire's compound action, on its own action identifier
 idempotency key, operation key and single-use permit. Neither the wire's
 permit nor the link below authorizes it: the Mission's authority must name
 `payments:payment.reverse`, and an action-bound approval the deployment
-requires for that class applies to it as to any other operation.
+requires for that class applies to it as to any other operation. The shipped
+Authorization Server cannot approve that authority: `config/policy.json`
+grants no `payments:payment.reverse`, since adding it to the payments
+ceiling entry would add it to every derived payments Mission, so a Mission
+carrying it is issued outside the shipped approval paths.
 
 - **The link.** The agent names only the invoice whose wire it asks to
   reverse. Before any decision request the PEP finds, in its own retained
@@ -634,6 +642,18 @@ requires for that class applies to it as to any other operation.
   the verified Decision (Mission, action, `parameter_digest`, phase), never
   read from a retention row. An argument naming an evaluation is outside
   the served schema and is refused at intake.
+- **The parameters.** Before any authorization (the credential bound, then
+  the decision), the PEP reads the wire's ledger record through that key
+  and evaluation identifier, and the operation's form is the `reversal`
+  form: the invoice and vendor the wire paid, its amount and currency, its
+  payee, the operation target, and the wire's operation key (`reverses`).
+  The invoice as it reads now never supplies them, and no argument does.
+  `parameter_digest` over that form is what the decision evaluates (a
+  reversal ceiling is compared with the committed amount), and what the
+  operation key, the PDP's claim on the idempotency key, any approval bound
+  to the digest, and the Decision and Execution Evidence bind. At use the
+  PEP re-derives the form from the ledger record and refuses a different
+  digest `parameter_mismatch`.
 - **Refusals before the decision request.** No committed wire for the
   invoice (none at all, or only a preflight, a hold, or a commit permit
   whose wire never committed), more than one, or a relied-on record that
@@ -646,9 +666,11 @@ requires for that class applies to it as to any other operation.
   Evidence and no effect.
 - **Connector.** The ledger connector's reversal entry names the wire's
   operation key and the reversal's own; it refuses a wire that is not a
-  committed entry for the linked evaluation (`wire_not_committed`) and a
-  wire already reversed (`already_reversed`), each as suppressed Execution
-  Evidence under a `https://payments.demo/execution-errors/` name. A
+  committed entry for the linked evaluation (`wire_not_committed`), a
+  reversal whose amount, currency or payee differs from the wire's record
+  (`reversal_mismatch`), and a wire already reversed (`already_reversed`),
+  each as suppressed Execution Evidence under a
+  `https://payments.demo/execution-errors/` name. A
   retry under the reversal's operation key is deduplicated. A reversal
   leaves the invoice settled, so a later wire for it is still refused
   `already_settled`. This is reference behavior, not a bank's reversal
