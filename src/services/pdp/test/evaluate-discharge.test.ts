@@ -31,7 +31,7 @@ import { describe, expect, it } from "vitest";
 import { evaluate as evaluateRequest, type EvaluationRequest } from "../src/evaluate.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -94,6 +94,10 @@ const opts = (v: MissionView) => ({
   stalenessBound,
   relationForAction,
   resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+  // #773: a deployment that does not claim Evaluation-Context Binding; this
+  // file's subject is another input, and the claimed path has its own
+  // witnesses (evaluate-evaluation-context.test.ts).
+  evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
 });
 
 describe("discharged entries are excluded from the PDP's authority input", () => {

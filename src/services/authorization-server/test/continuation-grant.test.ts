@@ -22,7 +22,10 @@
  * dedicated Continuation Assertion Issuer key injected via continuationAssertionIssuers.
  */
 
+import { mkdtempSync } from "node:fs";
 import { type Server } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { prefixAdmits } from "@mission/core";
 import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { ResourceAuthorizationServer } from "@mission/ras";
@@ -45,18 +48,28 @@ import {
 } from "./unknown-member.helper.js";
 import { TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import {
+  activateSigningKeyGeneration,
   AuthorityNarrowedToEmptyError,
   buildAuthorizationServer,
   type BuiltAs,
   ID_JAG_TOKEN_TYPE,
   IDENTITY_CONTINUATION_JWT_TYP,
   IDENTITY_CONTINUATION_TOKEN_TYPE,
+  initSigningKeyRing,
   issueCrossDomainGrant,
+  stageSigningKeyGeneration,
   validateMissionIntent,
 } from "../src/index.js";
+import { confirmRing } from "./ring-confirm.helper.js";
 
 const PORT = 14475;
 const ISSUER = `http://localhost:${PORT}`;
+/**
+ * @spec #831 B2: the AS runs on a key ring whose continuation role is
+ * rotated, so the ID-JAG carries generation 2's kid, with generation 1 still
+ * published in overlap.
+ */
+const CONTINUATION_KID = `${TOPOLOGY.keys.asContinuation.kid}-2`;
 const CAI = "https://cai.example"; // the injected Continuation Assertion Issuer
 const CAI_OTHER = "https://cai-other.example"; // trusted only for OTHER_RAS's hops
 const OTHER_RAS = "https://ras.other.test";
@@ -370,6 +383,13 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
 const replay = switchableDpopReplay();
 
 beforeAll(async () => {
+  const ring = join(mkdtempSync(join(tmpdir(), "continuation-grant-")), "keys", "ring.json");
+  const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+  const roles = { asToken, asStatus, asTxn, asContinuation };
+  await initSigningKeyRing(ring, ISSUER, roles);
+  await stageSigningKeyGeneration(ring, ISSUER, roles, "asContinuation");
+  await confirmRing(ring, ISSUER, roles);
+  await activateSigningKeyGeneration(ring, ISSUER, roles, "asContinuation", { minPublishedS: 0 });
   caiKeys = await generateKeyPair("ES256", { extractable: true });
   const caiPub = { ...(await exportJWK(caiKeys.publicKey)), kid: "cai-key", alg: "ES256", use: "sig" };
   otherCaiKeys = await generateKeyPair("ES256", { extractable: true });
@@ -409,6 +429,7 @@ beforeAll(async () => {
     // @spec #1173 (D375): switchable to full for the cache-bound cases.
     dpopProofReplay: replay,
     issuer: ISSUER,
+    signingKeys: { ring },
     allowHeadlessAdjudication: true,
     // Further token-exchange clients, so a hop can be continued by an actor
     // other than the one that obtained it.
@@ -555,7 +576,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       issuer: ISSUER,
       audience: RAS_AUD,
     });
-    expect(protectedHeader.kid).toBe("as-continuation");
+    expect(protectedHeader.kid).toBe(CONTINUATION_KID);
     expect(payload.aud).toBe(RAS_AUD);
     expect((payload.cnf as { jkt?: string }).jkt).toBe(agentJkt); // sender-constrained to the DPoP key
     expect((payload.mission as { id?: string }).id).toBe(missionId);
@@ -612,7 +633,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     // jwks_uri) — the same wiring the demo stack performs. aud = the RAS issuer,
     // which is the ID-JAG audience (RAS_AUD).
     const serverJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: Record<string, unknown>[] };
-    const asContinuationPub = serverJwks.keys.find((k) => k.kid === "as-continuation");
+    const asContinuationPub = serverJwks.keys.find((k) => k.kid === CONTINUATION_KID);
     expect(asContinuationPub, "as-continuation key must be published on jwks_uri").toBeDefined();
 
     const rasKeys = await generateKeyPair("ES256", { extractable: true });
@@ -1796,7 +1817,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
     //      untouched by revocation". This ID-JAG has never been redeemed, so the
     //      RAS one-time-jti check is satisfied.
     const serverJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: Record<string, unknown>[] };
-    const asContinuationPub = serverJwks.keys.find((k) => k.kid === "as-continuation");
+    const asContinuationPub = serverJwks.keys.find((k) => k.kid === CONTINUATION_KID);
     const rasKeys = await generateKeyPair("ES256", { extractable: true });
     const ras = new ResourceAuthorizationServer({
       localCeiling: DERIVATION_POLICY.ceiling,

@@ -21,6 +21,10 @@
  * - the same claims under the access-token key, typed as a transaction
  *   token: the token-type check alone refuses it;
  * - the legitimate credential itself, which still succeeds.
+ *
+ * The ring is rotated before the AS starts (#831 B2): the access-token and
+ * transaction-token roles sign under generation 2, with generation 1 in
+ * overlap, so every artifact here carries its role's active `kid`.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { type Server } from "node:http";
@@ -33,6 +37,7 @@ import {
   createLocalJWKSet,
   type CryptoKey,
   decodeJwt,
+  decodeProtectedHeader,
   exportJWK,
   generateKeyPair,
   importJWK,
@@ -42,6 +47,7 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { floorApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
+import { confirmRing } from "./ring-confirm.helper.js";
 import {
   ACCESS_TOKEN_TOKEN_TYPE,
   JWT_TOKEN_TYPE,
@@ -49,6 +55,7 @@ import {
 } from "../src/adapters/continuation-grant.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import {
+  activateSigningKeyGeneration,
   ALL_PROVIDER_CAPABILITIES,
   ApprovalSessionStore,
   type AuthorityEntry,
@@ -59,6 +66,7 @@ import {
   MISSION_TXN_TOKEN_TYP,
   missionResourceAccessProfile,
   OperationProfileRegistry,
+  stageSigningKeyGeneration,
   TXN_CHALLENGE_TYP,
 } from "../src/index.js";
 import { type AsSigningKeys, loadSigningKeyRing } from "../src/kernel/signing-key-ring.js";
@@ -268,7 +276,7 @@ async function transactionTokenFor(accessToken: string, missionId: string): Prom
 /** `credential`'s claims re-signed under `role`'s ring key, typed `typ`. */
 async function resigned(credential: string, role: "asToken" | "asTxn", typ: string): Promise<string> {
   return new SignJWT(decodeJwt(credential) as Body)
-    .setProtectedHeader({ alg: ROLES[role].alg, kid: ROLES[role].kid, typ })
+    .setProtectedHeader({ alg: ROLES[role].alg, kid: ring[role].kid, typ })
     .sign(ring[role].privateKey);
 }
 
@@ -381,6 +389,8 @@ const PATHS: Path[] = [
     succeeded: ({ status, body }) => {
       expect(status, JSON.stringify(body)).toBe(200);
       expect(body.issued_token_type).toBe(JWT_TOKEN_TYPE);
+      // The handoff grant is signed under the access-token role's active generation (#831 B2).
+      expect(decodeProtectedHeader(body.access_token as string).kid).toBe(ring.asToken.kid);
     },
   },
   {
@@ -448,7 +458,13 @@ beforeAll(async () => {
   dirs.push(dir);
   const ringFile = join(dir, "keys", "ring.json");
   await initSigningKeyRing(ringFile, ISSUER, ROLES);
+  for (const role of ["asToken", "asTxn"]) await stageSigningKeyGeneration(ringFile, ISSUER, ROLES, role);
+  await confirmRing(ringFile, ISSUER, ROLES);
+  for (const role of ["asToken", "asTxn"]) {
+    await activateSigningKeyGeneration(ringFile, ISSUER, ROLES, role, { minPublishedS: 0 });
+  }
   ring = await loadSigningKeyRing(ringFile, ISSUER, ROLES);
+  expect([ring.asToken.kid, ring.asTxn.kid]).toEqual(["as-token-2", "as-txn-2"]);
 
   rsTxnKeys = await generateKeyPair("ES256", { extractable: true });
   const rsTxnPublic = { ...(await exportJWK(rsTxnKeys.publicKey)), kid: "rs-txn", alg: "ES256" } as JWK;
@@ -500,7 +516,7 @@ describe("a subject_token is a Mission access token: the AS's access-token key a
     const claims = decodeJwt(transactionToken);
     const header = JSON.parse(Buffer.from(transactionToken.split(".")[0] as string, "base64url").toString()) as Body;
     expect(claims.iss).toBe(ISSUER);
-    expect(header.kid).toBe(ROLES.asTxn.kid);
+    expect(header.kid).toBe(ring.asTxn.kid);
     expect(header.typ).toBe(MISSION_TXN_TOKEN_TYP);
     expect(typeof (claims.mission as { id?: unknown }).id).toBe("string");
     expect((claims.cnf as { jkt?: string }).jkt).toBe(presenterJkt);
@@ -632,7 +648,8 @@ describe("the AS's other verifiers and its provider sign and accept only under t
     expect(res.headers.get("vary")).toContain("Origin");
     expect(res.headers.get("content-type")).toContain("application/jwk-set+json");
     const { keys } = (await res.json()) as { keys: Body[] };
-    expect(keys.map((k) => k.kid).sort()).toEqual(Object.values(ROLES).map((r) => r.kid).sort());
+    expect(keys.map((k) => k.kid).sort()).toEqual(Object.values(ring).flatMap((r) => r.published.map((k) => k.kid)).sort());
+    expect(keys).toHaveLength(6);
     for (const k of keys) {
       for (const priv of ["d", "p", "q", "dp", "dq", "qi"]) expect(k, `${k.kid} ${priv}`).not.toHaveProperty(priv);
     }

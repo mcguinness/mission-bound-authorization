@@ -20,7 +20,14 @@
 
 import { randomBytes } from "node:crypto";
 import type { ContextActor } from "@mission/actor-chain";
-import { type ActionPhase, canonicalDigest, isActionPhase, type JsonValue } from "@mission/core";
+import {
+  type ActionPhase,
+  canonicalDigest,
+  isActionPhase,
+  isEvaluationContextBindingRef,
+  isEvaluationContextDigest,
+  type JsonValue,
+} from "@mission/core";
 import {
   DECISION_EVIDENCE_MEDIA_TYPE,
   type EvidenceEnvelope,
@@ -118,6 +125,12 @@ export interface RuntimeConditions {
    * (the emitter keeps `valid_until` and `use_limit` only).
    */
   resource_contract?: { id: string; version: string; digest: string };
+  /**
+   * @spec authzen#response-context `evaluation_context_digest` (#773): the
+   * live context binding of a covered permit. Like `parameter_digest`, it is
+   * recorded once, top-level, never inside the record's `conditions`.
+   */
+  evaluation_context_digest?: string;
 }
 
 /** @spec runtime-evidence#decision-evidence-object `action_class` (runtime profile's classes). */
@@ -217,6 +230,13 @@ export interface DecisionEvidenceObject {
   principal_mapping?: RuntimePrincipalMapping;
   hop_reference?: RuntimeHopReference;
   parameter_digest?: string;
+  /**
+   * @spec runtime-evidence#decision-evidence-object (#773): the validated
+   * context digest and descriptor reference of a covered operation. On a
+   * permit the digest equals the live condition. Never the salt.
+   */
+  evaluation_context_digest?: string;
+  evaluation_context_binding?: { id: string; version: string; digest: string };
   evaluation_request_digest?: string;
   /**
    * @spec runtime-evidence#decision-evidence-object `compensates_evaluation_id`,
@@ -339,6 +359,9 @@ export interface DecisionEvidenceEmissionInput {
   credential?: RuntimeCredentialRef;
   principal_mapping?: RuntimePrincipalMapping;
   parameter_digest?: string;
+  /** @spec runtime-evidence#decision-evidence-object (#773): the PDP-validated context inputs, absent where not established. */
+  evaluation_context_digest?: string;
+  evaluation_context_binding?: { id: string; version: string; digest: string };
   /**
    * @spec authzen#evaluation-request-digest-input: the digest of the request
    * as submitted, computed by the caller on receipt (before any default or
@@ -447,6 +470,17 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
       if (input.action_phase === "compensate" && !isEvaluationIdentifier(input.compensates_evaluation_id)) {
         throw new Error("Decision Evidence for a compensate-phase decision requires compensates_evaluation_id");
       }
+      // @spec runtime-evidence#decision-evidence-object `evaluation_context_digest`
+      // (#773): "On a permit the digest MUST equal the live permit condition."
+      if (input.decision === "permit" && input.conditions?.evaluation_context_digest !== input.evaluation_context_digest) {
+        throw new Error("Decision Evidence context binding differs from wire conditions");
+      }
+      // "Malformed input MUST be omitted, never copied into signed evidence as
+      // an established binding": a digest without its reference, or either in
+      // a malformed shape, is not recorded.
+      const contextRecorded =
+        isEvaluationContextDigest(input.evaluation_context_digest) &&
+        isEvaluationContextBindingRef(input.evaluation_context_binding);
       if (input.decision === "permit" && classes.slice(2).includes(action_class) && input.conditions?.use_limit !== 1) {
         throw new Error("Decision Evidence high-consequence permit requires use_limit 1");
       }
@@ -497,6 +531,16 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         ...(credential ? { credential } : {}),
         ...(input.principal_mapping !== undefined ? { principal_mapping: input.principal_mapping } : {}),
         ...(input.parameter_digest !== undefined ? { parameter_digest: input.parameter_digest } : {}),
+        ...(contextRecorded
+          ? {
+              evaluation_context_digest: input.evaluation_context_digest,
+              evaluation_context_binding: {
+                id: (input.evaluation_context_binding as { id: string }).id,
+                version: (input.evaluation_context_binding as { version: string }).version,
+                digest: (input.evaluation_context_binding as { digest: string }).digest,
+              },
+            }
+          : {}),
         ...(evaluation_request_digest !== undefined ? { evaluation_request_digest } : {}),
         // Only a validated identifier is recorded; malformed input is omitted.
         ...(isEvaluationIdentifier(input.compensates_evaluation_id)

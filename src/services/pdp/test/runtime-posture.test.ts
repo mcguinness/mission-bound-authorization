@@ -39,8 +39,11 @@ describe("published runtime posture (@spec runtime#runtime-operational, status#s
     // one tier whose declaration it carries.
     // The declaration exists without the capability being claimed: ten rows
     // gated on this tier are still unmet, two of them blocked, so the shipped
-    // statement asserts nothing it cannot meet (#252 C1).
-    expect(published.claims).toBeUndefined();
+    // statement asserts nothing it cannot meet (#252 C1). Its one claim is
+    // Evaluation-Context Binding at the verified property (#773), whose
+    // declaration it carries.
+    expect(published.claims).toEqual(["evaluation_context_binding"]);
+    expect(published.claims).not.toContain("transaction_assurance");
     for (const declaration of published.extensions.transaction_assurance) {
       expect(published.mediated_scope.action_classes).toContain(declaration.mediated_class_or_scope);
       expect(published.mediated_scope.pep_locations).toContain(declaration.execution_lease_consumer);
@@ -118,5 +121,100 @@ describe("published runtime posture (@spec runtime#runtime-operational, status#s
       mutate(changed);
       expect(() => loadRuntimePosture(changed)).toThrow(PostureConfigError);
     }
+  });
+});
+
+/**
+ * @spec runtime#evaluation-context-binding (#773): "A claiming deployment MUST
+ * publish the covered classes and operations, each operation's versioned
+ * binding descriptor, and whether it reaches the verified or enforced
+ * property". The loader refuses a claim that does not, a descriptor whose
+ * published bytes no longer hash to its reference, and an enforced property
+ * no declared capability supports. Each case mutates one member of the
+ * shipped declaration and loads it under the claim.
+ */
+describe("the Evaluation-Context Binding declaration is refused at load unless complete (@spec runtime#evaluation-context-binding, #773)", () => {
+  const claimed = (mutate: (ecb: any, s: any) => void = () => {}) => {
+    const s = structuredClone(RUNTIME_SCOPE_CONFIG) as any;
+    s.claims = ["evaluation_context_binding"];
+    mutate(s.extensions.evaluation_context_binding, s);
+    return s;
+  };
+
+  it("admits the shipped declaration, publishing each covered operation's class, descriptor reference and the verified property", () => {
+    const posture = loadRuntimePosture(claimed()) as any;
+    const ecb = posture.extensions.evaluation_context_binding;
+    expect(ecb.covered_classes).toEqual(["irreversible_action", "external_commitment"]);
+    for (const o of ecb.operations) {
+      expect(ecb.covered_classes).toContain(o.action_class);
+      expect(o.property).toBe("verified");
+      expect(ecb.descriptors.some((d: any) => d.id === o.descriptor.id && d.version === o.descriptor.version && d.digest === o.descriptor.digest)).toBe(true);
+    }
+    for (const d of ecb.descriptors) {
+      expect(d.document.facts.length).toBeGreaterThan(0);
+      for (const f of d.document.facts) {
+        expect(typeof f.resolver).toBe("string");
+        expect(["revision", "effective_values"]).toContain(f.granularity);
+        expect(typeof f.normalization).toBe("string");
+      }
+    }
+  });
+
+  it("a claiming class without an operation, a descriptor or a resolver is refused at load", () => {
+    const cases: Array<[string, (ecb: any, s: any) => void, RegExp]> = [
+      ["no declaration", (_e, s) => { delete s.extensions.evaluation_context_binding; }, /claimed but carries no attached declaration|claimed with no declaration/],
+      ["no operation", (e) => { e.operations = []; }, /at least one covered operation/],
+      ["a covered class with no operation", (e) => { e.operations = e.operations.filter((o: any) => o.action_class !== "external_commitment"); }, /covered class external_commitment declares no operation/],
+      ["an operation with no descriptor", (e) => { delete e.operations[0].descriptor; }, /operations\[0\]\.descriptor must be an object/],
+      ["a descriptor reference naming no declared descriptor", (e) => { e.operations[0].descriptor = { ...e.operations[0].descriptor, version: "1999-01-01" }; }, /resolves to no declared descriptor/],
+      ["a fact naming no resolver", (e) => { delete e.descriptors[0].document.facts[0].resolver; }, /names no authoritative resolver|does not hash/],
+      ["a fact with an undeclared granularity", (e) => { e.descriptors[0].document.facts[0].granularity = "snapshot"; }, /granularity|does not hash/],
+    ];
+    for (const [label, mutate, problem] of cases) {
+      expect(() => loadRuntimePosture(claimed(mutate)), label).toThrow(PostureConfigError);
+      expect(() => loadRuntimePosture(claimed(mutate)), label).toThrow(problem);
+    }
+  });
+
+  it("a fact naming no resolver is refused even when its descriptor's digest is recomputed over the changed bytes", async () => {
+    const { canonicalDigest } = await import("@mission/core");
+    const s = claimed((e) => {
+      const d = e.descriptors[0];
+      delete d.document.facts[0].resolver;
+      d.digest = canonicalDigest(d.document);
+      for (const o of e.operations) if (o.descriptor.id === d.id && o.descriptor.version === d.version) o.descriptor.digest = d.digest;
+    });
+    expect(() => loadRuntimePosture(s)).toThrow(/names no authoritative resolver/);
+  });
+
+  it("refuses at load a descriptor whose published bytes no longer hash to its reference", () => {
+    const changed = claimed((e) => {
+      e.descriptors[0].document.facts[0].normalization = "string";
+    });
+    expect(() => loadRuntimePosture(changed)).toThrow(/does not hash to its reference's digest/);
+    // The same check holds for a declaration present without the claim.
+    const unclaimed = structuredClone(RUNTIME_SCOPE_CONFIG) as any;
+    unclaimed.extensions.evaluation_context_binding.descriptors[0].document.targets = ["invoice"];
+    expect(() => loadRuntimePosture(unclaimed)).toThrow(/does not hash to its reference's digest/);
+  });
+
+  it("refuses at load an enforced property no execution capability supports, and a covered class outside the mediated scope", () => {
+    expect(() => loadRuntimePosture(claimed((e) => { e.operations[0].property = "enforced"; }))).toThrow(
+      /enforced property for payments:payment.execute with no execution capability asserting evaluation_context_enforced/,
+    );
+    expect(() =>
+      loadRuntimePosture(
+        claimed((e, s) => {
+          // The class leaves the mediated scope with every other declaration that names it.
+          s.mediated_scope.action_classes = s.mediated_scope.action_classes.filter((c: string) => c !== "external_commitment");
+          s.extensions.transaction_assurance = s.extensions.transaction_assurance.filter(
+            (d: any) => d.mediated_class_or_scope !== "external_commitment",
+          );
+          s.extensions.execution_capabilities = s.extensions.execution_capabilities.filter(
+            (d: any) => d.action_class !== "external_commitment",
+          );
+        }),
+      ),
+    ).toThrow(/covered class \W+external_commitment\W+ is outside mediated_scope.action_classes/);
   });
 });
