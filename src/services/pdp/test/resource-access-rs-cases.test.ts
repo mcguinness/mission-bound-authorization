@@ -134,6 +134,10 @@ describe("the PDP's rs-authorize executor for the Mission Resource Access cases 
     expect(await decide(c.input), c.expected.reason).toBe(c.expected.outcome === "allow");
   });
 
+  // A case this executor does not run is reported as a skipped test naming its
+  // ID and the reason, never silently omitted.
+  for (const c of skipped) it.skip(`${c.id}: skipped (${skipReason(c)})`, () => {});
+
   it("runs the alternative-grant and Common Constraint cases, and skips the token-validation and member-role ones", () => {
     expect(run.map((c) => c.id).sort()).toEqual([
       "cc-satisfaction-alternative",
@@ -145,9 +149,16 @@ describe("the PDP's rs-authorize executor for the Mission Resource Access cases 
       "fc-05",
       "fc-07",
     ]);
-    const reasons = Object.fromEntries(skipped.map((c) => [c.id, skipReason(c)]));
-    expect(reasons["fc-04"]).toBe("requires rs.enforcement");
-    expect(reasons["fc-06"]).toBe("requires rs.member-roles");
-    for (const reason of Object.values(reasons)) expect(reason).toMatch(/^requires rs\.(enforcement|member-roles)/);
+    expect(Object.fromEntries(skipped.map((c) => [c.id, skipReason(c)]))).toEqual({
+      "cc-recipients-every": "requires rs.enforcement",
+      "cc-satisfaction-absent-amount": "requires rs.enforcement",
+      "cc-satisfaction-absent-issuance": "requires rs.enforcement",
+      "cc-satisfaction-absent-tenant": "requires rs.enforcement",
+      "ev-act-09": "requires rs.enforcement",
+      "fc-04": "requires rs.enforcement",
+      "fc-06": "requires rs.member-roles",
+      "fc-09": "requires rs.member-roles, rs.extension-members",
+      "fc-10": "requires rs.member-roles, rs.extension-members",
+    });
   });
 });
