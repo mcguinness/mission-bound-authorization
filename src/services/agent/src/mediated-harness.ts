@@ -18,7 +18,30 @@ import { checkOnResume, checkStatusContinuity, type MissionState, type ResumeDec
  * `@mission/mcp-payments`'s MediatedClient; a fake in tests). */
 export interface MediatedToolChannel {
   listTools(missionToken: string): Promise<string[]>;
-  callTool(name: string, args: Record<string, unknown>, missionToken: string): Promise<MediatedToolResult>;
+  /**
+   * `missionReference` is the propagated Mission reference the harness
+   * attaches in the request's transport metadata (MCP `params._meta`), never
+   * in `args` (@spec authority-server#mcp-reference).
+   */
+  callTool(
+    name: string,
+    args: Record<string, unknown>,
+    missionToken: string,
+    missionReference?: unknown,
+  ): Promise<MediatedToolResult>;
+}
+
+/**
+ * @spec harness#work-item-identity (#815): the work item this harness is
+ * running, which it assigned and bound to its Mission. `issuer` is the
+ * harness's URI and `id` its identifier for the item; `missionIssuer` is the
+ * bound Mission's issuer, which with the harness's Mission identifier forms
+ * the reference tuple the work item rides in.
+ */
+export interface HarnessWorkItem {
+  issuer: string;
+  id: string;
+  missionIssuer: string;
 }
 
 /**
@@ -52,6 +75,15 @@ export interface MediatedHarnessOptions {
   readStatus?: (id: string) => Promise<MissionStatusLease | undefined>;
   /** Injectable clock (defaults to `() => new Date()`), so tests can inject `now`. */
   now?: () => Date;
+  /**
+   * @spec harness#work-item-identity (#815): present, the harness attaches
+   * this work item to every governed call it originates, as the
+   * `work_item_issuer` and `work_item` members of the propagated Mission
+   * reference in the call's transport metadata. The same item rides every
+   * submission, a resumed one included; nothing the planner returns, tool
+   * arguments included, is merged into it.
+   */
+  workItem?: HarnessWorkItem;
 }
 
 /**
@@ -66,6 +98,7 @@ export interface MediatedHarnessOptions {
 export class MediatedHarness {
   private readonly readStatus: ((id: string) => Promise<MissionStatusLease | undefined>) | undefined;
   private readonly now: () => Date;
+  private readonly workItem: HarnessWorkItem | undefined;
 
   constructor(
     private readonly channel: MediatedToolChannel,
@@ -75,6 +108,19 @@ export class MediatedHarness {
   ) {
     this.readStatus = options.readStatus;
     this.now = options.now ?? (() => new Date());
+    this.workItem = options.workItem === undefined ? undefined : Object.freeze({ ...options.workItem });
+  }
+
+  /**
+   * @spec harness#work-item-identity (#815): the reference this harness
+   * attaches: its own Mission identifier, the bound Mission's issuer and the
+   * work item it assigned, from its own state only. Absent without a work
+   * item, which leaves the call exactly as before.
+   */
+  private reference(): Record<string, string> | undefined {
+    const w = this.workItem;
+    if (w === undefined) return undefined;
+    return { mission_id: this.missionId, issuer: w.missionIssuer, work_item_issuer: w.issuer, work_item: w.id };
   }
 
   /**
@@ -106,7 +152,10 @@ export class MediatedHarness {
         : `mission_not_active:${resume.state}`;
       return { ok: false, refusal_reason, resume };
     }
-    return this.channel.callTool(name, args, missionToken);
+    const reference = this.reference();
+    return reference === undefined
+      ? this.channel.callTool(name, args, missionToken)
+      : this.channel.callTool(name, args, missionToken, reference);
   }
 }
 
