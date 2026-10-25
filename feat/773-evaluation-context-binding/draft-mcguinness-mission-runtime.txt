@@ -2953,14 +2953,18 @@ Table of Contents
 
    The PDP MUST return the supplied context digest as a permit condition
    for a covered operation.  The executing PEP MUST re-resolve the
-   declared facts and recompute the bound context with its own
-   applicable descriptor immediately before releasing the effect, in the
-   same step as the parameter_digest recomputation of Section 9.4.  A
-   missing binding, changed descriptor, unequal digest, or unavailable
-   fact MUST cause refusal before any effect.  A condition on an
-   operation outside the declared binding is invalid there.  The normal
-   invalid-condition and permit-binding rules still apply; the request
-   or retrospective evidence cannot replace the permit condition.
+   declared facts and recompute the bound context under the descriptor
+   and salt version the binding committed immediately before releasing
+   the effect, in the same step as the parameter_digest recomputation of
+   Section 9.4.  A missing binding, changed descriptor, unequal digest,
+   or unavailable fact MUST cause refusal before any effect.  A changed
+   descriptor is one the operation's declaration no longer names,
+   refused even where the facts are unchanged; a committed descriptor
+   that cannot be recovered leaves the context unavailable.  A condition
+   on an operation outside the declared binding is invalid there.  The
+   normal invalid-condition and permit-binding rules still apply; the
+   request or retrospective evidence cannot replace the permit
+   condition.
 
    An inability to capture context before requesting a Decision produces
    a pre-decision Refusal Record, evaluation_context_unresolvable
@@ -4887,7 +4891,8 @@ Appendix D.  Document History
       Record evaluation_context_unresolvable; after a permit, the error
       is target_drift unless the context is established and an agent-
       supplied parameter changed, with every observable digest pair
-      kept.
+      kept.  The context is recomputed under the descriptor the binding
+      committed, and a changed descriptor is refused on its own.
 
    *  Deployment Considerations: a gated action waits for its gate in
       every class; whether the decision waits on the network depends on

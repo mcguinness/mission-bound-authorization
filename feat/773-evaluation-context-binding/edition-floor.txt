@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-25T04:58:32Z
-Source repository commit: 4ae4a1130e28c12d7017b71791f347c534965334
+Generated: 2026-10-25T06:14:21Z
+Source repository commit: 37404f8f68b6d3add4736d39ac4744a71ebe976c
 Member count: 7
 
 Reading order:
@@ -21244,14 +21244,18 @@ Table of Contents
 
    The PDP MUST return the supplied context digest as a permit condition
    for a covered operation.  The executing PEP MUST re-resolve the
-   declared facts and recompute the bound context with its own
-   applicable descriptor immediately before releasing the effect, in the
-   same step as the parameter_digest recomputation of Section 9.4.  A
-   missing binding, changed descriptor, unequal digest, or unavailable
-   fact MUST cause refusal before any effect.  A condition on an
-   operation outside the declared binding is invalid there.  The normal
-   invalid-condition and permit-binding rules still apply; the request
-   or retrospective evidence cannot replace the permit condition.
+   declared facts and recompute the bound context under the descriptor
+   and salt version the binding committed immediately before releasing
+   the effect, in the same step as the parameter_digest recomputation of
+   Section 9.4.  A missing binding, changed descriptor, unequal digest,
+   or unavailable fact MUST cause refusal before any effect.  A changed
+   descriptor is one the operation's declaration no longer names,
+   refused even where the facts are unchanged; a committed descriptor
+   that cannot be recovered leaves the context unavailable.  A condition
+   on an operation outside the declared binding is invalid there.  The
+   normal invalid-condition and permit-binding rules still apply; the
+   request or retrospective evidence cannot replace the permit
+   condition.
 
    An inability to capture context before requesting a Decision produces
    a pre-decision Refusal Record, evaluation_context_unresolvable
@@ -23178,7 +23182,8 @@ Appendix D.  Document History
       Record evaluation_context_unresolvable; after a permit, the error
       is target_drift unless the context is established and an agent-
       supplied parameter changed, with every observable digest pair
-      kept.
+      kept.  The context is recomputed under the descriptor the binding
+      committed, and a changed descriptor is refused on its own.
 
    *  Deployment Considerations: a gated action waits for its gate in
       every class; whether the decision waits on the network depends on
@@ -24812,40 +24817,46 @@ Table of Contents
    both digest pairs.  A suppression records one error, named by what
    moved, and keeps every digest pair the executing PEP can observe:
 
-     +========================+=================+====================+
-     | Evaluation context at  | Parameters      | error              |
-     | use                    | about to be     |                    |
-     |                        | used            |                    |
-     +========================+=================+====================+
-     | Established and equal  | Equal           | none: the bindings |
-     |                        |                 | hold               |
-     +------------------------+-----------------+--------------------+
-     | Not establishable: a   | Any             | target_drift       |
-     | declared fact, target, |                 |                    |
-     | salt version, or       |                 |                    |
-     | descriptor             |                 |                    |
-     +------------------------+-----------------+--------------------+
-     | Established            | A parameter the | parameter_mismatch |
-     |                        | descriptor does |                    |
-     |                        | not declare as  |                    |
-     |                        | a fact differs  |                    |
-     +------------------------+-----------------+--------------------+
-     | Established and        | Equal, or       | target_drift       |
-     | unequal to the         | differing only  |                    |
-     | permit's condition, or | in declared     |                    |
-     | the condition missing  | facts           |                    |
-     +------------------------+-----------------+--------------------+
-     | Established under a    | Equal           | target_drift       |
-     | changed descriptor,    |                 |                    |
-     | facts unchanged        |                 |                    |
-     +------------------------+-----------------+--------------------+
+    +=========================+=================+====================+
+    | Evaluation context at   | Parameters      | error              |
+    | use                     | about to be     |                    |
+    |                         | used            |                    |
+    +=========================+=================+====================+
+    | Established and equal   | Equal           | none: the bindings |
+    |                         |                 | hold               |
+    +-------------------------+-----------------+--------------------+
+    | Not establishable: a    | Any             | target_drift       |
+    | declared fact, target,  |                 |                    |
+    | salt version, or the    |                 |                    |
+    | committed descriptor    |                 |                    |
+    +-------------------------+-----------------+--------------------+
+    | Established             | A parameter the | parameter_mismatch |
+    |                         | descriptor does |                    |
+    |                         | not declare as  |                    |
+    |                         | a fact differs  |                    |
+    +-------------------------+-----------------+--------------------+
+    | Established and unequal | Equal, or       | target_drift       |
+    | to the permit's         | differing only  |                    |
+    | condition, or the       | in declared     |                    |
+    | condition missing       | facts           |                    |
+    +-------------------------+-----------------+--------------------+
+    | Established and equal,  | Equal           | target_drift       |
+    | under a descriptor the  |                 |                    |
+    | operation's declaration |                 |                    |
+    | no longer names         |                 |                    |
+    +-------------------------+-----------------+--------------------+
 
-                                  Table 2
+                                 Table 2
 
-   A parameter the descriptor does not declare as a fact is the
-   request's own, so parameter_mismatch records a demonstrated change to
-   a request parameter, such as an agent-supplied argument.  An
-   unavailable context is never compared:
+   The effective context digest is computed under the descriptor and
+   salt version the binding committed, never under one declared since,
+   so unchanged facts keep the pair equal under a changed descriptor;
+   the change itself is the refusal, and no context divergence is
+   reported for it.  A parameter the descriptor does not declare as a
+   fact is the request's own, so parameter_mismatch records a
+   demonstrated change to a request parameter, such as an agent-supplied
+   argument.  An unavailable context, the committed descriptor
+   unrecoverable included, is never compared:
    effective_evaluation_context_digest is absent, and so is
    effective_parameter_digest where the parameters cannot be established
    (Section 5).  The audit consumer reports each divergent pair whatever
@@ -26317,7 +26328,10 @@ Appendix A.  Document History
       suppression records when the context fails at use: target_drift
       unless the context is established and an agent-supplied parameter
       changed, with every observable digest pair kept and every
-      divergence reported (#773).
+      divergence reported; the effective context digest is computed
+      under the committed descriptor, so a changed descriptor with
+      unchanged facts is refused without a divergence, and an
+      unrecoverable one leaves the digest absent (#773).
 
    *  Execution Evidence: a PEP that cannot establish the effective
       parameters suppresses execution and omits
@@ -28319,10 +28333,11 @@ Table of Contents
    evaluation_context_digest:  CONDITIONAL.  A string.  REQUIRED on a
       permit for an operation covered by Section 5.9; MUST equal the
       validated request's context digest.  The executing PEP MUST
-      recompute it with its own applicable descriptor and authoritative
-      facts, and MUST refuse before an effect on a missing or unequal
-      binding, an unknown descriptor, or an unavailable fact.  A
-      mismatch or inability to re-resolve after a permit is Execution
+      recompute it under the descriptor the binding committed, from
+      authoritative facts, and MUST refuse before an effect on a missing
+      or unequal binding, a descriptor the operation's declaration no
+      longer names, an unrecoverable descriptor, or an unavailable fact.
+      A mismatch or inability to re-resolve after a permit is Execution
       Evidence suppressed, not a PDP denial reason, with the error the
       runtime evidence profile's classification names
       ([I-D.draft-mcguinness-mission-runtime-evidence]).
@@ -29958,7 +29973,8 @@ Appendix A.  Document History
       evaluation_context_unresolvable, and limits the parameter_mismatch
       row to a parameter no claimed binding declares as a fact; a
       context failure at use carries the error the runtime evidence
-      profile's classification names (#773).
+      profile's classification names; the context digest condition is
+      recomputed under the descriptor the binding committed (#773).
 
    *  Failure-Condition Coverage maps a named target object, or the
       effective parameters it determines, not establishable at use to

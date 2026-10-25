@@ -4664,11 +4664,15 @@ guessing of low-entropy values; digest-only evidence still exposes
 equality and linkability.<a href="#section-9.1-7" class="pilcrow">¶</a></p>
 <p id="section-9.1-8">The PDP <span class="bcp14">MUST</span> return the supplied context digest as a permit condition
 for a covered operation. The executing PEP <span class="bcp14">MUST</span> re-resolve the declared
-facts and recompute the bound context with its own applicable descriptor
-immediately before releasing the effect, in the same step as the
-<code>parameter_digest</code> recomputation of <a href="#execution-reverification" class="auto internal xref">Section 9.4</a>. A
+facts and recompute the bound context under the descriptor and salt
+version the binding committed immediately before releasing the effect, in
+the same step as the <code>parameter_digest</code> recomputation of
+<a href="#execution-reverification" class="auto internal xref">Section 9.4</a>. A
 missing binding, changed descriptor, unequal digest, or unavailable fact
-<span class="bcp14">MUST</span> cause refusal before any effect. A condition on an operation outside
+<span class="bcp14">MUST</span> cause refusal before any effect. A changed descriptor is one the
+operation's declaration no longer names, refused even where the facts
+are unchanged; a committed descriptor that cannot be recovered leaves the
+context unavailable. A condition on an operation outside
 the declared binding is invalid there. The normal invalid-condition and
 permit-binding rules still apply; the request or retrospective evidence
 cannot replace the permit condition.<a href="#section-9.1-8" class="pilcrow">¶</a></p>
@@ -6738,7 +6742,9 @@ unrecoverable binding before any effect. A capture failure before the
 decision request is the Refusal Record <code>evaluation_context_unresolvable</code>;
 after a permit, the <code>error</code> is <code>target_drift</code> unless the context is
 established and an agent-supplied parameter changed, with every
-observable digest pair kept.<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
+observable digest pair kept. The context is recomputed under the
+descriptor the binding committed, and a changed descriptor is refused
+on its own.<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.2">
           <p id="appendix-D-2.2.1">Deployment Considerations: a gated action waits for its gate in

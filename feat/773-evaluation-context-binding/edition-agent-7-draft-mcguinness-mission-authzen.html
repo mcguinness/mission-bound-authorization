@@ -3611,9 +3611,10 @@ store and refuses a re-presented consumed <code>evaluation_id</code>.<a href="#s
               <p id="section-6.1.1-2.8.1">CONDITIONAL. A string. <span class="bcp14">REQUIRED</span> on a permit for an operation
 covered by <a href="#context-evaluation-binding" class="auto internal xref">Section 5.9</a>; <span class="bcp14">MUST</span> equal the
 validated request's context digest. The executing PEP <span class="bcp14">MUST</span>
-recompute it with its own applicable descriptor and authoritative
-facts, and <span class="bcp14">MUST</span> refuse before an effect on a missing or unequal
-binding, an unknown descriptor, or an unavailable fact. A mismatch
+recompute it under the descriptor the binding committed, from
+authoritative facts, and <span class="bcp14">MUST</span> refuse before an effect on a missing or
+unequal binding, a descriptor the operation's declaration no longer
+names, an unrecoverable descriptor, or an unavailable fact. A mismatch
 or inability to re-resolve after a permit is Execution Evidence
 <code>suppressed</code>, not a PDP denial reason, with the <code>error</code> the runtime
 evidence profile's classification names
@@ -5545,7 +5546,8 @@ context not capturable at the PEP to the Refusal Record
 <code>evaluation_context_unresolvable</code>, and limits the <code>parameter_mismatch</code>
 row to a parameter no claimed binding declares as a fact; a context
 failure at use carries the <code>error</code> the runtime evidence profile's
-classification names (#773).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+classification names; the context digest condition is recomputed under
+the descriptor the binding committed (#773).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
           <p id="appendix-A-2.2.1">Failure-Condition Coverage maps a named target object, or the

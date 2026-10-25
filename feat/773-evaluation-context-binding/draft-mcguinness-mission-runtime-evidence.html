@@ -3034,7 +3034,7 @@ moved, and keeps every digest pair the executing PEP can observe:<a href="#secti
                 <td class="text-left" rowspan="1" colspan="1">none: the bindings hold</td>
               </tr>
               <tr>
-                <td class="text-left" rowspan="1" colspan="1">Not establishable: a declared fact, target, salt version, or descriptor</td>
+                <td class="text-left" rowspan="1" colspan="1">Not establishable: a declared fact, target, salt version, or the committed descriptor</td>
                 <td class="text-left" rowspan="1" colspan="1">Any</td>
                 <td class="text-left" rowspan="1" colspan="1">
                   <code>target_drift</code>
@@ -3055,7 +3055,7 @@ moved, and keeps every digest pair the executing PEP can observe:<a href="#secti
 </td>
               </tr>
               <tr>
-                <td class="text-left" rowspan="1" colspan="1">Established under a changed descriptor, facts unchanged</td>
+                <td class="text-left" rowspan="1" colspan="1">Established and equal, under a descriptor the operation's declaration no longer names</td>
                 <td class="text-left" rowspan="1" colspan="1">Equal</td>
                 <td class="text-left" rowspan="1" colspan="1">
                   <code>target_drift</code>
@@ -3063,10 +3063,15 @@ moved, and keeps every digest pair the executing PEP can observe:<a href="#secti
               </tr>
             </tbody>
           </table>
-<p id="section-5.4.1-3">A parameter the descriptor does not declare as a fact is the request's
-own, so <code>parameter_mismatch</code> records a demonstrated change to a request
-parameter, such as an agent-supplied argument. An unavailable context is never compared:
-<code>effective_evaluation_context_digest</code> is absent, and so is
+<p id="section-5.4.1-3">The effective context digest is computed under the descriptor and salt
+version the binding committed, never under one declared since, so
+unchanged facts keep the pair equal under a changed descriptor; the
+change itself is the refusal, and no context divergence is reported for
+it. A parameter the descriptor does not declare as a fact is the
+request's own, so <code>parameter_mismatch</code> records a demonstrated change to a
+request parameter, such as an agent-supplied argument. An unavailable
+context, the committed descriptor unrecoverable included, is never
+compared: <code>effective_evaluation_context_digest</code> is absent, and so is
 <code>effective_parameter_digest</code> where the parameters cannot be established
 (<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>). The audit consumer reports each
 divergent pair whatever the <code>error</code>.<a href="#section-5.4.1-3" class="pilcrow">¶</a></p>
@@ -4904,7 +4909,10 @@ distinct from the PDP's <code>evaluation_context_invalid</code>. Context Drift
 and Parameter Deviation gives the one <code>error</code> a suppression records
 when the context fails at use: <code>target_drift</code> unless the context is
 established and an agent-supplied parameter changed, with every
-observable digest pair kept and every divergence reported (#773).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+observable digest pair kept and every divergence reported; the
+effective context digest is computed under the committed descriptor,
+so a changed descriptor with unchanged facts is refused without a
+divergence, and an unrecoverable one leaves the digest absent (#773).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
           <p id="appendix-A-2.2.1">Execution Evidence: a PEP that cannot establish the effective

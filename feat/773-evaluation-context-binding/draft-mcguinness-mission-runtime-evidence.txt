@@ -1423,40 +1423,46 @@ Table of Contents
    both digest pairs.  A suppression records one error, named by what
    moved, and keeps every digest pair the executing PEP can observe:
 
-     +========================+=================+====================+
-     | Evaluation context at  | Parameters      | error              |
-     | use                    | about to be     |                    |
-     |                        | used            |                    |
-     +========================+=================+====================+
-     | Established and equal  | Equal           | none: the bindings |
-     |                        |                 | hold               |
-     +------------------------+-----------------+--------------------+
-     | Not establishable: a   | Any             | target_drift       |
-     | declared fact, target, |                 |                    |
-     | salt version, or       |                 |                    |
-     | descriptor             |                 |                    |
-     +------------------------+-----------------+--------------------+
-     | Established            | A parameter the | parameter_mismatch |
-     |                        | descriptor does |                    |
-     |                        | not declare as  |                    |
-     |                        | a fact differs  |                    |
-     +------------------------+-----------------+--------------------+
-     | Established and        | Equal, or       | target_drift       |
-     | unequal to the         | differing only  |                    |
-     | permit's condition, or | in declared     |                    |
-     | the condition missing  | facts           |                    |
-     +------------------------+-----------------+--------------------+
-     | Established under a    | Equal           | target_drift       |
-     | changed descriptor,    |                 |                    |
-     | facts unchanged        |                 |                    |
-     +------------------------+-----------------+--------------------+
+    +=========================+=================+====================+
+    | Evaluation context at   | Parameters      | error              |
+    | use                     | about to be     |                    |
+    |                         | used            |                    |
+    +=========================+=================+====================+
+    | Established and equal   | Equal           | none: the bindings |
+    |                         |                 | hold               |
+    +-------------------------+-----------------+--------------------+
+    | Not establishable: a    | Any             | target_drift       |
+    | declared fact, target,  |                 |                    |
+    | salt version, or the    |                 |                    |
+    | committed descriptor    |                 |                    |
+    +-------------------------+-----------------+--------------------+
+    | Established             | A parameter the | parameter_mismatch |
+    |                         | descriptor does |                    |
+    |                         | not declare as  |                    |
+    |                         | a fact differs  |                    |
+    +-------------------------+-----------------+--------------------+
+    | Established and unequal | Equal, or       | target_drift       |
+    | to the permit's         | differing only  |                    |
+    | condition, or the       | in declared     |                    |
+    | condition missing       | facts           |                    |
+    +-------------------------+-----------------+--------------------+
+    | Established and equal,  | Equal           | target_drift       |
+    | under a descriptor the  |                 |                    |
+    | operation's declaration |                 |                    |
+    | no longer names         |                 |                    |
+    +-------------------------+-----------------+--------------------+
 
-                                  Table 2
+                                 Table 2
 
-   A parameter the descriptor does not declare as a fact is the
-   request's own, so parameter_mismatch records a demonstrated change to
-   a request parameter, such as an agent-supplied argument.  An
-   unavailable context is never compared:
+   The effective context digest is computed under the descriptor and
+   salt version the binding committed, never under one declared since,
+   so unchanged facts keep the pair equal under a changed descriptor;
+   the change itself is the refusal, and no context divergence is
+   reported for it.  A parameter the descriptor does not declare as a
+   fact is the request's own, so parameter_mismatch records a
+   demonstrated change to a request parameter, such as an agent-supplied
+   argument.  An unavailable context, the committed descriptor
+   unrecoverable included, is never compared:
    effective_evaluation_context_digest is absent, and so is
    effective_parameter_digest where the parameters cannot be established
    (Section 5).  The audit consumer reports each divergent pair whatever
@@ -2928,7 +2934,10 @@ Appendix A.  Document History
       suppression records when the context fails at use: target_drift
       unless the context is established and an agent-supplied parameter
       changed, with every observable digest pair kept and every
-      divergence reported (#773).
+      divergence reported; the effective context digest is computed
+      under the committed descriptor, so a changed descriptor with
+      unchanged facts is refused without a divergence, and an
+      unrecoverable one leaves the digest absent (#773).
 
    *  Execution Evidence: a PEP that cannot establish the effective
       parameters suppresses execution and omits
