@@ -880,7 +880,7 @@ describe("the compensate crossing binds the live resource facts its decision eva
     ["invoice", (h: Harness) => h.payments.db.prepare("DELETE FROM invoices WHERE id = 'inv-1'").run()],
     ["vendor", (h: Harness) => h.payments.db.prepare("DELETE FROM vendors WHERE id = 'acme'").run()],
   ] as const) {
-    it(`an ${record} record removed between the decision and release is refused target_drift with zero effects, the wire's parameter pair kept and no effective context digest`, async () => {
+    it(`the ${record} record removed between the decision and release is refused target_drift with zero effects, the wire's parameter pair kept and no effective context digest`, async () => {
       const h = harness();
       const refused = await reverse(h, () => remove(h));
       expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
@@ -973,7 +973,7 @@ describe("a compensating decision and its context are one observation of the liv
     },
   ] as const;
   for (const c of CASES) {
-    it(`a ${c.fact} moved while the link's evidence is verified reaches the decision as moved: the PDP's bound denies, and the request and its committed context carry the same value`, async () => {
+    it(`the ${c.fact} moved while the link's evidence is verified reaches the decision as moved: the PDP's bound denies, and the request and its committed context carry the same value`, async () => {
       const h = harness(c.seed);
       expect((await cross(h, COMMIT)).ok).toBe(true);
       // The owner's #1663 review 3 scenario: the fact moves inside the
