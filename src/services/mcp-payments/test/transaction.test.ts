@@ -523,7 +523,9 @@ d("M5 transaction-assurance tier", () => {
       () => payments.bumpInvoiceAmount("inv-1", "480.00"),
     );
     expect(res.ok).toBe(false);
-    expect(res.refusal_reason).toBe("parameter_mismatch");
+    // A moved invoice under the deployment's Evaluation-Context Binding claim
+    // is target_drift (#773).
+    expect(res.refusal_reason).toBe("target_drift");
     // No wire committed.
     expect(connectors.ledgerEntries("msn_m5")).toHaveLength(0);
   });

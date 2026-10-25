@@ -60,7 +60,7 @@ alongside its other service listeners. The agent tool surface has no such hook.
 | 0 | Discovery bootstrap (catalog, consent_required) | M8 |
 | 1 | Issuance (shaper -> PAR -> Bob approves -> DPoP token) | M1 |
 | 2 | Happy path (in-authority read/schedule, Decision Evidence) | M4 |
-| 3 | Parameter binding / TOCTOU refusal | M4 |
+| 3 | Parameter binding / context drift refusal | M4 |
 | 4 | Wire transfer (permit, lease, evidence, reconciliation) | M5 |
 | 5 | ARAP reevaluate (approval as input context, no new token) | M6 |
 | 6 | AROP / DTR (subset-of-Mission deferred token; never expands) | M7 |
