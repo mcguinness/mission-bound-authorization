@@ -19503,6 +19503,70 @@
    "notes": "#1535 finding 17, item 4 (D805): a normative constraint on the Mission Status request; Error Responses already refused a malformed nonce at both endpoints, and the only syntax was Lifecycle's idempotency rule. Boundary witnesses at 0, 1, 255 and 256 code points, ASCII and outside the Basic Multilingual Plane (#1689 review: the bound counts code points, not UTF-16 units). Mutations of the shared bound (adapters/lifecycle-endpoint.ts wellFormedNonce): counting UTF-16 units instead of code points, an upper bound of 256 or 254 code points, and a lower bound admitting the empty string or refusing one code point, each fail the cited test at both endpoints."
   },
   {
+   "id": "status.response.authority-hash-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "disclosed at the AS's discretion to a caller it authorizes for audit or correlation use",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Status Response, a Status read or a lifecycle confirmation, carries mission.authority_hash only for a caller the AS authorizes for audit or correlation use: a caller holding only the Status-read grant, the Status-read and lifecycle grants, or Join Disclosure enrollment receives none, an authorized caller receives the Mission's committed anchor, and a retransmitted confirmation replays the bytes first sent",
+    "local": "discloseProvenance (adapters/provider.ts) reads the client's configured disclose list for provenance; observeInCallerTx (kernel.ts) includes the member only when that option is set; both Status routes, the lifecycle confirmation and the discharge envelope pass it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > omits authority_hash from a Status read by a client holding the read grant, or the read and lifecycle grants, without the disclosure privilege",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > carries authority_hash, the Mission's committed anchor, on a Status read by a client holding the provenance privilege",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > gives a PDP enrolled for Join Disclosure its subject and client_id but not authority_hash, absent the privilege",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > omits authority_hash from a lifecycle confirmation to a client without the privilege, and its retransmit replays the same bytes",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > carries authority_hash on a lifecycle confirmation to a client with the privilege, and its retransmit replays the same bytes",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > discharges over HTTP, returning the signed discharge_result beside `mission`",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1682 (D795): the reference disclosed authority_hash on every Mission Status Response; it now honors a per-client provenance disclosure privilege and nothing else. Mutations: always disclosing fails the three omission tests and the discharge envelope's; never disclosing fails both carry tests; deriving it from the Status-read grant fails the omission tests; deriving it from the lifecycle grant fails the two tests whose caller holds that grant without the privilege; adding Join Disclosure enrollment fails only the enrolled-PDP test; dropping it at the lifecycle confirmation fails the lifecycle carry test. The discharge envelope is witnessed for the omission only."
+  },
+  {
    "id": "status.response.served-audience-aud",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
@@ -63411,9 +63475,51 @@
      "name": "discharge state at a carryover's completion (@spec child-delegation#carryover-cas, child-delegation#carryover-no-reset, #919) > refuses a discharge after rendering that leaves the effective authority unchanged, under a plan that excludes only state changes",
      "level": "cross-component",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > refuses the batch when the tombstone's detail is pruned, kept no termination, or does not exist",
+     "level": "cross-component",
+     "surface": "derivation"
     }
    ],
-   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses. #919 adds a suspension and a resume after rendering, containment after approval, a rendered record gone at completion, and a discharge after rendering. Containment and discharge are compared by the membership pass: the committed `containment_version`, the committed `discharged_digests` as a set (#1673, D803) and `effective_authority_hash`; the conditional UPDATE binds the scalar inputs only. A latch on an entry containment already removed leaves the effective authority unchanged, so under a plan excluding only state changes only the discharge-set comparison refuses it; disabling that comparison fails its witness alone. Proved by mutation: disabling the membership pass and the UPDATE check together fails the suspension, resume, record and state-only discharge witnesses; dropping only the `record_missing` divergence fails the record witness; dropping only the effective-authority comparison fails the state-only discharge witness, where the plan excludes the discharge's state change but not its narrowed authority. With both halves off, the containment and all-or-nothing discharge witnesses are still refused by another check, so they are not the halves' discriminating witnesses. #1674: a carried row is compared as observed through the expiry clock, so an old child whose own expiry arrived before completion diverges as `state_changed` though no transition was persisted: refused under all-or-nothing, excluded and recorded `expired` under a plan committing that class. A cascade row is compared as stored, since its outcome does not change. Proved by mutation: comparing carried rows as stored fails the exclusion witness; comparing every row as observed fails the rendered-cascade own-expiry witness."
+   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses. #919 adds a suspension and a resume after rendering, containment after approval, a rendered record gone at completion, and a discharge after rendering. Containment and discharge are compared by the membership pass: the committed `containment_version`, the committed `discharged_digests` as a set (#1673, D803) and `effective_authority_hash`; the conditional UPDATE binds the scalar inputs only. A latch on an entry containment already removed leaves the effective authority unchanged, so under a plan excluding only state changes only the discharge-set comparison refuses it; disabling that comparison fails its witness alone. Proved by mutation: disabling the membership pass and the UPDATE check together fails the suspension, resume, record and state-only discharge witnesses; dropping only the `record_missing` divergence fails the record witness; dropping only the effective-authority comparison fails the state-only discharge witness, where the plan excludes the discharge's state change but not its narrowed authority. With both halves off, the containment and all-or-nothing discharge witnesses are still refused by another check, so they are not the halves' discriminating witnesses. #1674: a carried row is compared as observed through the expiry clock, so an old child whose own expiry arrived before completion diverges as `state_changed` though no transition was persisted: refused under all-or-nothing, excluded and recorded `expired` under a plan committing that class. A cascade row is compared as stored, since its outcome does not change. Proved by mutation: comparing carried rows as stored fails the exclusion witness; comparing every row as observed fails the rendered-cascade own-expiry witness. #1675: a missing rendered row excluded under a plan committing `record_missing` must still be recorded; without a usable tombstone the completion is refused."
+  },
+  {
+   "id": "child-delegation.carryover.outcome-per-rendered-row",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-cas",
+   "text": "Each final outcome is recorded against its rendered row, not inferred from set equality over the subtree.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every rendered row has exactly one outcome in the final map and the authenticated Carryover Evidence, including a rendered row whose record no longer exists, or the completion is refused",
+    "local": "the reference records a rendered row its subtree walk did not reach from that row's tombstone, looked up by issuer and Mission identity: the terminal state and the termination committed at its terminal transition (kept on the tombstone since #1675). With no tombstone, a pruned one, or one written before the termination was kept, the batch is refused; no field is reconstructed from the commit time"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > is recorded once, from its tombstone, with the termination it committed, in the map and the signed evidence; the rest carries",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > refuses the batch when the tombstone's detail is pruned, kept no termination, or does not exist",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1675 (D803). Proved by mutation: not recording a rendered row the walk did not reach fails both witnesses; keeping no termination on the tombstone fails the recorded witness; skipping an unusable tombstone instead of refusing fails the refusal witness; pruning that keeps the termination fails the refusal witness's prune assertion. Under all-or-nothing a missing record refuses at the membership pass, before the map."
   },
   {
    "id": "child-delegation.carryover.generation-order",
@@ -63780,9 +63886,15 @@
      "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > cascades an unrendered descendant under disclosed exclusions and lists it explicitly in the authenticated map",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > is recorded once, from its tombstone, with the termination it committed, in the map and the signed evidence; the rest carries",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Signature verification, not payload construction: the retained Carryover Evidence is an ES256 compact JWS signed synchronously inside the completion transaction with the issuer's Status key, verified in-process against the issuer's public key and, at the wire, against the published `/jwks` document. Its payload carries `manifest_hash`, the qualified predecessor and successor references, the committed exclusion policy and the COMPLETE final map, with unrendered descendants listed explicitly."
+   "notes": "Signature verification, not payload construction: the retained Carryover Evidence is an ES256 compact JWS signed synchronously inside the completion transaction with the issuer's Status key, verified in-process against the issuer's public key and, at the wire, against the published `/jwks` document. Its payload carries `manifest_hash`, the qualified predecessor and successor references, the committed exclusion policy and the COMPLETE final map, with unrendered descendants listed explicitly. #1675: the complete map includes a rendered row whose record is gone, recorded from its tombstone; the witness checks the retained map and the signed evidence alike."
   },
   {
    "id": "child-delegation.carryover.observation-correlation",

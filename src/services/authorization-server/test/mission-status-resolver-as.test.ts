@@ -74,7 +74,13 @@ beforeAll(async () => {
     allowHeadlessAdjudication: true,
     now: clock,
     testClients: [pdp.metadata, reader.metadata],
-    lifecycleClientGrants: { [pdp.clientId]: [MISSION_STATUS_SCOPE], [reader.clientId]: [MISSION_STATUS_SCOPE] },
+    // A PDP's policy view commits `authority_hash`, so both PDP credentials
+    // hold the configured `provenance` disclosure privilege (#1682, D795);
+    // only `pdp` is enrolled for Join Disclosure.
+    lifecycleClientGrants: {
+      [pdp.clientId]: { grants: [MISSION_STATUS_SCOPE], disclose: ["provenance"] },
+      [reader.clientId]: { grants: [MISSION_STATUS_SCOPE], disclose: ["provenance"] },
+    },
     joinEnrollment: { [pdp.clientId]: { roles: ["pdp"], enforcementScopes: [CANONICAL_RESOURCE] } },
   });
   await listen();

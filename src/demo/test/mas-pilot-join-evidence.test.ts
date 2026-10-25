@@ -98,7 +98,7 @@ describe("the MAS operator console reads join evidence (@spec authority-server#j
   it("reads a Mission's join evidence events behind the console's bearer, that Mission's alone, and the MAS serves them on no route of its own", async () => {
     const config = loadMasPilotConfig();
     const pdpClient = config.separated_mas.pdp_client_id;
-    const pdp = await newStatusClientKey(pdpClient);
+    const pdp = await newStatusClientKey(pdpClient, { disclose: ["provenance"] });
     const known = new Map<string, ActingToken>();
     const deployment: JoinAssertionDeployment = {
       async establishActingToken(form) {
@@ -183,7 +183,7 @@ describe("the pilot's kernel keeps join evidence for the deployment's audit hori
   it("keeps an event for one year after its Mission's expiry, the horizon its tombstones share: past the reusable 90-day default and at its retain_until it is kept across a restart, and only a boot after retain_until prunes it", async () => {
     const config = loadMasPilotConfig();
     const pdpClient = config.separated_mas.pdp_client_id;
-    const pdp = await newStatusClientKey(pdpClient);
+    const pdp = await newStatusClientKey(pdpClient, { disclose: ["provenance"] });
     const dir = mkdtempSync(join(tmpdir(), "mas-pilot-join-horizon-"));
     dirs.push(dir);
     const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
@@ -283,7 +283,7 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
     const configPath = join(dir, "mas-pilot.json");
     writeFileSync(configPath, JSON.stringify(config));
     const pdpClient = config.separated_mas.pdp_client_id;
-    const pdp = await newStatusClientKey(pdpClient);
+    const pdp = await newStatusClientKey(pdpClient, { disclose: ["provenance"] });
     const joinIntrospectionSecret = crypto.randomUUID();
 
     // The estate the MAS introspects, with the MAS's introspection client registered.
