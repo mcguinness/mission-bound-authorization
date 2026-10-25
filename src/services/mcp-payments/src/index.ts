@@ -5,6 +5,7 @@ export { type KeyRole, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
 export {
   buildEffectiveParams,
   buildListEffectiveParams,
+  buildReversalParams,
   parameterDigest,
   type EffectiveParams,
   type ListEffectiveParams,
@@ -81,9 +82,12 @@ export {
   TOOL_ACTIONS,
   PAYMENTS_INVOICE_CONTRACT,
   PAYMENTS_PROFILE_VERSION,
+  RETAINED_OPERATION_PROFILES,
   type ActionMapping,
+  type CompensatedEffect,
 } from "./pep.js";
 export {
+  CONNECTOR_REFUSAL_ERRORS,
   CONNECTOR_TOOLS,
   type DispositionGap,
   dispatchPathFor,
@@ -118,7 +122,16 @@ export {
   type HttpMediatedClient,
 } from "./mcp-http-transport.js";
 export { accessTokenHash } from "./dpop.js";
-export { Connectors, type WireCommit, type EmailCommit, type CommitResult, type CommittedEffect } from "./connectors.js";
+export {
+  Connectors,
+  type WireCommit,
+  type EmailCommit,
+  type CommitResult,
+  type CommittedEffect,
+  type CommittedEffectSource,
+  type CommittedWire,
+  type ReversalCommit,
+} from "./connectors.js";
 export { TransactionEngine, operationKey, type OpState } from "./transaction.js";
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
 export { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";

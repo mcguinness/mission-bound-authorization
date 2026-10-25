@@ -495,7 +495,11 @@ describe("the Operation Profile defines an idempotency key for every non-idempot
     const isHighConsequence = (actionClass: string) =>
       ["irreversible_action", "external_commitment", "privileged_administration"].includes(actionClass);
     const highConsequence = Object.entries(TOOL_ACTIONS).filter(([, mapping]) => isHighConsequence(mapping.actionClass));
-    expect(highConsequence.map(([tool]) => tool).sort()).toEqual(["execute_wire_transfer", "send_remittance_email"]);
+    expect(highConsequence.map(([tool]) => tool).sort()).toEqual([
+      "execute_wire_transfer",
+      "reverse_wire_transfer",
+      "send_remittance_email",
+    ]);
     for (const [tool, mapping] of highConsequence) {
       expect(mapping.idempotencyKey, tool).toBe(true);
       const definition = tools.find((t) => t.name === tool);

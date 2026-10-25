@@ -152,6 +152,7 @@
     { "tool": "check_transfer", "class": "consequential_read", "gateway": "joined" },
     { "tool": "hold_transfer", "class": "consequential_write", "gateway": "joined" },
     { "tool": "execute_wire_transfer", "class": "irreversible_action", "gateway": "mission_bound_only" },
+    { "tool": "reverse_wire_transfer", "class": "irreversible_action", "gateway": "mission_bound_only" },
     { "tool": "send_remittance_email", "class": "external_commitment", "gateway": "mission_bound_only" }
   ]
 }

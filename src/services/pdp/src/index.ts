@@ -129,6 +129,7 @@ export {
 export { authorizationBinding, decisionCacheKey, idempotencyScopeOf, operationIdentity } from "./projections.js";
 export {
   createDecisionEvidenceEmitter,
+  isEvaluationIdentifier,
   newRecordId,
   evaluationRequestDigest,
   preRequestDigest,

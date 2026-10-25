@@ -3312,6 +3312,10 @@ async function handleDeferredGrant(
           throw new errors.ExpiredToken();
         case "access_denied":
           throw new errors.AccessDenied();
+        case "mission_not_active":
+          // @spec mission#issuance-gating: refused as any grant other than a
+          // Token Exchange is, with the Mission's own mission_error.
+          throw new MissionGrantError("mission is not active", lifecycleMissionError(r.observed));
         default:
           throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
       }

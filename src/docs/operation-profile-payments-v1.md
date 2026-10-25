@@ -1,12 +1,24 @@
-# payments-runtime-profile-v13
+# payments-runtime-profile-v14
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v13`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v14`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v14** (#252): adds `reverse_wire_transfer`, the compensate phase of the
+  wire (`payments:payment.reverse`). It offsets a committed wire through the
+  ledger connector under its own single-use Decision, carrying
+  `context.compensates_evaluation_id`, the link to the committed original
+  that the PEP establishes from its own retained, verified evidence
+  (Compensation, below). Its parameters are the committed wire's, read from
+  the wire's ledger record, in the `reversal` form. The payments resource
+  contract gains version `2026-10-24`, which names this profile;
+  `2026-10-20` (v13) is superseded and performed under the retained v13
+  profile within its retention. Every other operation keeps its decision
+  bytes. The ledger records the vendor each wire paid.
 
 - **v13** (#249, D553): adds optional resource contract enforcement. The
   payments resource contract (Resource contract, below) is declared in the
@@ -130,6 +142,7 @@ The file name is the document's stable name and does not carry the version.
 | `check_transfer` | `payments:payment.execute`, phase `preflight` | `invoice` | `consequential_read` (no state, no effect) | core |
 | `hold_transfer` | `payments:payment.execute`, phase `prepare` | `invoice` | `consequential_write` (a reversible hold) | core |
 | `execute_wire_transfer` | `payments:payment.execute`, phase `commit` | `invoice` | `irreversible_action` | transaction-assurance |
+| `reverse_wire_transfer` | `payments:payment.reverse`, phase `compensate` | `invoice` | `irreversible_action` | transaction-assurance |
 | `send_remittance_email` | `payments:remittance.send` | `invoice` | `external_commitment` | transaction-assurance |
 
 The Class column is the `action_class` the PEP sends on every decision
@@ -140,7 +153,9 @@ path (`tier` in the same table): only `transaction-assurance` takes the
 single-use permit, execution lease, and connector path. The three
 `payments:payment.execute` rows are the phases of one compound action
 (runtime compound actions); each phase is classified by what that
-crossing does.
+crossing does. `reverse_wire_transfer` is that action's compensate phase,
+on its own action identifier: a compensation is a separately authorized
+operation, never a use of the wire's permit.
 
 ## Operation contract
 
@@ -192,8 +207,11 @@ Resource Access, Resource Contracts). Its declaration is the Enforcement Scope
 Statement's `extensions.resource_contracts`: one contract, `id`
 `https://payments.example/contracts/payments`, served for the canonical
 resource URI under `resource_match: prefix` (so a finer target beneath the
-service, such as an argument-derived invoice target, is covered), with one
-version, `2026-10-20`, in state `current`.
+service, such as an argument-derived invoice target, is covered), with two
+versions: `2026-10-24` in state `current`, naming
+`payments-runtime-profile-v14`, and `2026-10-20` in state `superseded`,
+naming v13, retained until `2027-10-24T00:00:00Z`. Both are frozen in
+`vectors/mission-resource-access-subset/`.
 
 - **Contract material.** The version's document assembles, for each tool:
   its action identifier and phase, its minimum action class, its
@@ -201,8 +219,9 @@ version, `2026-10-20`, in state `current`.
   `parameter_digest` (the invoice form, the list form, or none), whether it
   takes an idempotency key, and its catalog capability (`tool_id` and the
   extracted-definition `source_digest`). It names, per constraint key, the
-  fact the resource reads, and the Operation Profile version it assembles,
-  `operation_profile: payments-runtime-profile-v13`. It overrides none of
+  fact the resource reads, and the Operation Profile version it assembles
+  (`operation_profile`: `payments-runtime-profile-v14` for `2026-10-24`).
+  It overrides none of
   those definitions. Resource policy, Mission state, entitlements,
   revocation and resolved resource facts are not contract material.
 - **Digest and immutability.** The version's `digest` is `sha-256:` and the
@@ -241,7 +260,9 @@ version, `2026-10-20`, in state `current`.
   perform under as `resource.properties.resource_contract`, and a credential
   entry carrying a reference covers the operation only under exactly it.
 - **Retained versions.** A superseded version is performed under the
-  Operation Profile its document names (`PepDeps.retainedOperationProfiles`):
+  Operation Profile its document names (`PepDeps.retainedOperationProfiles`,
+  by default `RETAINED_OPERATION_PROFILES`, whose v13 is v14 without
+  `reverse_wire_transfer`):
   the operation target and the effective parameters, so `parameter_digest`,
   follow that profile, never the current one.
 - **Decision.** The PDP resolves the reference under its own declaration and
@@ -357,6 +378,9 @@ parameters and execution use the normalized values.
 - `check_transfer`: `{ invoice_id: string }`
 - `hold_transfer`: `{ invoice_id: string }`
 - `execute_wire_transfer`: `{ invoice_id: string, idempotency_key: string }`
+- `reverse_wire_transfer`: `{ invoice_id: string, idempotency_key: string }`
+  (the arguments name the wire to reverse; its parameters are the wire's
+  recorded ones, Compensation, below)
 - `send_remittance_email`: `{ invoice_id: string, idempotency_key: string }`
 
 Every `idempotency_key` takes the format in Idempotency keys below.
@@ -539,8 +563,9 @@ and outbox connectors, which reject duplicates. Retries of the same
 effective operation are therefore safe at the connector even if upstream
 state machines fail mid-flight.
 
-`execute_wire_transfer` and `send_remittance_email`, the two
-high-consequence operations, also require a caller-supplied
+`execute_wire_transfer`, `reverse_wire_transfer` and
+`send_remittance_email`, the three high-consequence operations, also
+require a caller-supplied
 `idempotency_key`: 16 to 128 characters of `ALPHA / DIGIT / "-" / "_"`,
 one key per intended execution. The PEP forwards it as
 `action.properties.idempotency_key`; it never enters `parameter_digest`.
@@ -621,6 +646,65 @@ Residuals:
   already settled; paying the difference is a new business event that
   needs its own identity and is left to operator handling.
 
+## Compensation (#252)
+
+`reverse_wire_transfer` offsets a committed wire. It is the compensate
+phase of the wire's compound action, on its own action identifier
+`payments:payment.reverse`, in the high-consequence class, with its own
+idempotency key, operation key and single-use permit. Neither the wire's
+permit nor the link below authorizes it: the Mission's authority must name
+`payments:payment.reverse`, and an action-bound approval the deployment
+requires for that class applies to it as to any other operation. The shipped
+Authorization Server cannot approve that authority: `config/policy.json`
+grants no `payments:payment.reverse`, since adding it to the payments
+ceiling entry would add it to every derived payments Mission, so a Mission
+carrying it is issued outside the shipped approval paths.
+
+- **The link.** The agent names only the invoice whose wire it asks to
+  reverse. Before any decision request the PEP finds, in its own retained
+  evidence for the governing Mission, the one permit Decision Evidence for
+  `payments:payment.execute` at phase `commit` on that invoice that has
+  `completed` Execution Evidence, re-verifies both records under their own
+  envelopes, and takes that Decision's `evaluation_id`. It sends it as
+  `context.compensates_evaluation_id`; the PDP records it in the
+  compensating Decision Evidence. The wire's operation key is derived from
+  the verified Decision (Mission, action, `parameter_digest`, phase), never
+  read from a retention row. An argument naming an evaluation is outside
+  the served schema and is refused at intake.
+- **The parameters.** Before any authorization (the credential bound, then
+  the decision), the PEP reads the wire's ledger record through that key
+  and evaluation identifier, and the operation's form is the `reversal`
+  form: the invoice and vendor the wire paid, its amount and currency, its
+  payee, the operation target, and the wire's operation key (`reverses`).
+  The invoice as it reads now never supplies them, and no argument does.
+  `parameter_digest` over that form is what the decision evaluates (a
+  reversal ceiling is compared with the committed amount), and what the
+  operation key, the PDP's claim on the idempotency key, any approval bound
+  to the digest, and the Decision and Execution Evidence bind. At use the
+  PEP re-derives the form from the ledger record and refuses a different
+  digest `parameter_mismatch`.
+- **Refusals before the decision request.** No committed wire for the
+  invoice (none at all, or only a preflight, a hold, or a commit permit
+  whose wire never committed), more than one, or a relied-on record that
+  does not verify is refused `compensation_link_unavailable`, with a
+  Refusal Record of that value and no decision request. The PDP refuses a
+  compensate-phase request without a well-formed link before evaluation
+  (`compensation_link_invalid`).
+- **At use.** The wire's own permit presented at this crossing is refused
+  by the phase binding (`phase_mismatch`), with suppressed Execution
+  Evidence and no effect.
+- **Connector.** The ledger connector's reversal entry names the wire's
+  operation key and the reversal's own; it refuses a wire that is not a
+  committed entry for the linked evaluation (`wire_not_committed`), a
+  reversal whose amount, currency or payee differs from the wire's record
+  (`reversal_mismatch`), and a wire already reversed (`already_reversed`),
+  each as suppressed Execution Evidence under a
+  `https://payments.demo/execution-errors/` name. A
+  retry under the reversal's operation key is deduplicated. A reversal
+  leaves the invoice settled, so a later wire for it is still refused
+  `already_settled`. This is reference behavior, not a bank's reversal
+  semantics.
+
 ## Permits, leases, commit point (D28/D36/D29/D39)
 
 - Permit properties ride the PDP decision: single-use decision identifier,
@@ -655,6 +739,7 @@ The reads (`list_invoices`, `get_invoice`, `lookup_vendor`,
 | `cancel_scheduled_payment` | PEP reservation | reservation row | the local transaction | lookup |
 | `hold_transfer` | none | none | the response | held |
 | `execute_wire_transfer` | PDP claim | ledger entry | ledger acceptance | lookup |
+| `reverse_wire_transfer` | PDP claim | reversal entry | ledger acceptance of the reversal | lookup |
 | `send_remittance_email` | PDP claim | outbox entry | outbox acceptance | lookup |
 
 - **Durable idempotency.** The wire and the notice rely on the PDP's
@@ -683,8 +768,10 @@ The reads (`list_invoices`, `get_invoice`, `lookup_vendor`,
   a failed reverification suppresses a wire or a notice; nothing stops
   either after it. `cancel_scheduled_payment` withdraws a schedule after
   its commit as its own operation under its own Decision.
-- **Compensation.** None. A refund or a correcting notice would be a new
-  operation under its own authority (runtime compound actions).
+- **Compensation.** The wire names `payments:payment.reverse`
+  (Compensation, below); no other operation declares one. A refund of a
+  notice or a correcting notice would be a new operation under its own
+  authority (runtime compound actions).
 - **Claims.** Every entry asserts none. Recovery never executes an effect
   again: no operation declares `resource_retransmission`.
 

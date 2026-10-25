@@ -73,7 +73,7 @@ import type {
   RuntimeCapabilitySource,
   RuntimeCredentialRef,
 } from "./decision-evidence.js";
-import { runtimeCapabilitySourceOf, evaluationRequestDigest } from "./decision-evidence.js";
+import { runtimeCapabilitySourceOf, evaluationRequestDigest, isEvaluationIdentifier } from "./decision-evidence.js";
 import type { Fga } from "./fga.js";
 import {
   type ClaimInput,
@@ -366,6 +366,17 @@ export interface EvaluationRequest {
     evaluation_context_digest?: unknown;
     /** @spec authzen#context-evaluation-binding (#773): the versioned descriptor reference `{id, version, digest}`. */
     evaluation_context_binding?: unknown;
+    /**
+     * @spec authzen#context-compensation-link (#252): CONDITIONAL, REQUIRED
+     * on a request whose `action_phase` is `compensate`. The `evaluation_id`
+     * of the committed effect the operation offsets, which the PEP
+     * establishes from its own retained, verified evidence and never from an
+     * agent argument. Typed `unknown` deliberately: {@link evaluate} refuses
+     * a malformed value, or a compensate-phase request without one, before
+     * evaluation (`compensation_link_invalid`). Correlation only: it confers
+     * no authority.
+     */
+    compensates_evaluation_id?: unknown;
     action_approval?: ActionApproval;
     /**
      * @spec authority-server#mission-join (#557 review point 1) — present
@@ -520,10 +531,15 @@ export interface Decision {
  * Record `denial_reason` values a PDP refuses a decision request with before
  * evaluating it. A refusal is not a decision: it carries no `evaluation_id`
  * and no Decision Evidence, and never a PDP denial reason such as
- * `out_of_authority`. `phase_invalid` names an unusable decision input, not an
- * evaluated policy denial (@spec authzen#failure-condition-coverage).
+ * `out_of_authority`. `phase_invalid` and `compensation_link_invalid` (#252)
+ * name unusable decision inputs, not evaluated policy denials (@spec
+ * authzen#failure-condition-coverage).
  */
-export type PdpRefusalReason = "operation_target_invalid" | "phase_invalid" | "evaluation_context_invalid";
+export type PdpRefusalReason =
+  | "operation_target_invalid"
+  | "phase_invalid"
+  | "compensation_link_invalid"
+  | "evaluation_context_invalid";
 
 /**
  * Thrown by {@link evaluate} for a decision request the PDP refuses before
@@ -1023,6 +1039,26 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
     await recordPdpRefusal(opts.refusals, "phase_invalid", req);
     throw new DecisionRequestRefused("phase_invalid");
   }
+  // @spec authzen#pdp-consistency-checks check 12, authzen#context-compensation-link,
+  // authzen#failure-condition-coverage (#252): `compensates_evaluation_id`,
+  // when present, is a well-formed evaluation identifier, and a request whose
+  // validated phase is `compensate` carries one. Otherwise the request is
+  // unusable, refused before evaluation as `compensation_link_invalid`: no
+  // decision, no evaluation_id and no Decision Evidence, so no compensate
+  // Decision is ever issued without its required link. Checked after the
+  // phase, which it reads, so a request failing both is refused once, as
+  // `phase_invalid`. Syntax only: the PEP established the link from its own
+  // verified evidence, and the link confers no authority here.
+  const compensationLink = (req as { context?: { compensates_evaluation_id?: unknown } } | undefined)?.context
+    ?.compensates_evaluation_id;
+  const linkUnusable =
+    compensationLink !== undefined
+      ? !isEvaluationIdentifier(compensationLink)
+      : actionPhase === "compensate";
+  if (linkUnusable) {
+    await recordPdpRefusal(opts.refusals, "compensation_link_invalid", req);
+    throw new DecisionRequestRefused("compensation_link_invalid");
+  }
   // @spec authzen#context-evaluation-binding, authzen#failure-condition-coverage,
   // runtime-evidence#pre-decision-refusal (#773): "The PDP MUST validate their
   // shape and applicability against the declared operation binding, and MUST
@@ -1166,6 +1202,14 @@ async function emitDecisionEvidence(
     // reaches this point (evaluate refuses it before evaluation), and the
     // guard here keeps an unvalidated string out of a signed record either way.
     ...(isActionPhase(req.context.action_phase) ? { action_phase: req.context.action_phase } : {}),
+    // @spec runtime-evidence#decision-evidence-object `compensates_evaluation_id`,
+    // authzen#context-compensation-link (#252): the VALIDATED link, on a
+    // permit and on a denial alike. A malformed value never reaches this point
+    // (evaluate refuses it before evaluation), and the guard keeps one out of a
+    // signed record either way.
+    ...(isEvaluationIdentifier(req.context.compensates_evaluation_id)
+      ? { compensates_evaluation_id: req.context.compensates_evaluation_id }
+      : {}),
     ...(req.context.actor !== undefined ? { actor: req.context.actor } : {}),
     ...(req.context.credential !== undefined ? { credential: req.context.credential } : {}),
     ...(principal_mapping !== undefined ? { principal_mapping } : {}),
