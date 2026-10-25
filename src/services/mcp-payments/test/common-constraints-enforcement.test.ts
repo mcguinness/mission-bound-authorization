@@ -70,6 +70,14 @@ interface Harness {
  */
 function harness(opts: {
   mission?: Record<string, unknown>;
+  /**
+   * Several Authority Set entries, in order, each the `constraints` of one
+   * entry naming the resource and every action (`undefined` for none); when
+   * present, it replaces the single entry `mission` describes (#1375).
+   */
+  entries?: ReadonlyArray<Record<string, unknown> | undefined>;
+  /** Extra top-level members for the entry at the same index of `entries`. */
+  entryMembers?: ReadonlyArray<Record<string, unknown> | undefined>;
   credential?: Record<string, unknown>;
   /** The clock's starting instant (default: now). */
   startMs?: number;
@@ -102,14 +110,16 @@ function harness(opts: {
     state: "active",
     version: 1,
     authority_hash: "sha-256:m1266",
-    authority_set: [
-      {
-        type: "mission_resource_access",
-        resource: CANONICAL_RESOURCE,
-        actions: ALL_ACTIONS,
-        ...(opts.mission ? { constraints: opts.mission } : {}),
-      } as MissionView["authority_set"][number],
-    ],
+    authority_set: (opts.entries ?? [opts.mission]).map(
+      (constraints, i) =>
+        ({
+          type: "mission_resource_access",
+          resource: CANONICAL_RESOURCE,
+          actions: ALL_ACTIONS,
+          ...(constraints ? { constraints } : {}),
+          ...(opts.entryMembers?.[i] ?? {}),
+        }) as MissionView["authority_set"][number],
+    ),
     subject: { iss: ISSUER, sub: "alice" },
     client_id: "ap-agent",
   };
@@ -812,5 +822,60 @@ describe("protected resource metadata names only enforced constraint keys (@spec
       const keys = Object.keys(entry.constraints ?? {});
       expect(keys.filter((key) => !vouched.includes(key)), JSON.stringify(entry)).toEqual([]);
     }
+  });
+});
+
+// @spec resource-access#common-constraints, resource-access#rs-enforcement
+// (#1375): "It MUST refuse the request unless another applicable entry
+// independently authorizes the whole request with every constraint
+// satisfied." The payments resource relies on whichever applicable entry
+// covers the request whole: the PDP weighs every entry, and a bound list
+// read's vendor scope derives from an entry that admits the requested vendor,
+// at decision and at reverification alike.
+describe("the payments resource relies on whichever applicable entry covers the request whole (@spec resource-access#rs-enforcement, #1375)", () => {
+  const ids = (result: unknown) => (result as Array<{ id: string }>).map((i) => i.id).sort();
+  const list = (h: Harness, vendorId: string) => h.server.callReadTool("list_invoices", { vendor_id: vendorId }, h.token);
+  const listAll = (h: Harness) => h.server.callReadTool("list_invoices", {}, h.token);
+
+  it("a vendor-scoped list read authorizes through a later entry whose vendors admit the vendor, returning only that vendor's invoices", async () => {
+    const acme = { vendors: ["acme"] };
+    const globex = { vendors: ["globex"] };
+    // Control: the acme entry alone excludes globex.
+    expect((await list(harness({ entries: [acme] }), "globex")).ok).toBe(false);
+    const forward = await list(harness({ entries: [acme, globex] }), "globex");
+    expect(forward.ok, JSON.stringify(forward)).toBe(true);
+    expect(ids(forward.result)).toEqual(["inv-globex"]);
+    const reverse = await list(harness({ entries: [globex, acme] }), "acme");
+    expect(reverse.ok, JSON.stringify(reverse)).toBe(true);
+    expect(ids(reverse.result)).toEqual(["inv-early", "inv-edge", "inv-late", "inv-none", "inv-q3"]);
+  });
+
+  it("an unscoped list read narrows to the first entry the resource can fully enforce, never to one carrying an unknown member", async () => {
+    const opts = { entries: [undefined, { vendors: ["acme"] }], entryMembers: [{ x_member: true }, undefined] };
+    const res = await listAll(harness(opts));
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect(ids(res.result)).toEqual(["inv-early", "inv-edge", "inv-late", "inv-none", "inv-q3"]);
+  });
+
+  it("a read authorizes through a later unconstrained entry beside one whose tenant fact the record lacks", async () => {
+    const tenant = { tenant: "payments-demo" };
+    // Control: initech's record names no tenant, so the tenant entry alone authorizes nothing.
+    expect((await read(harness({ entries: [tenant] }), "inv-initech")).ok).toBe(false);
+    const res = await read(harness({ entries: [tenant, undefined] }), "inv-initech");
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+  });
+
+  it("never combines parts of two entries: one admitting the vendor and another the tenant authorize nothing", async () => {
+    // inv-q3 is acme's, and acme's tenant is payments-demo.
+    const halves = [
+      { vendors: ["acme"], tenant: "other-tenant" },
+      { vendors: ["globex"], tenant: "payments-demo" },
+    ];
+    const refused = await read(harness({ entries: halves }), "inv-q3");
+    expect(refused.ok).toBe(false);
+    expect(refused.result).toBeUndefined();
+    // Positive control: one entry satisfying both authorizes.
+    const whole = { vendors: ["acme"], tenant: "payments-demo" };
+    expect((await read(harness({ entries: [...halves, whole] }), "inv-q3")).ok).toBe(true);
   });
 });

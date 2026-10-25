@@ -282,6 +282,26 @@ describe("PDP Mission bound: applicable entries are alternative grants (#1375)",
     expect((await decideOn(viewOf(bound, plain))).permit).toBe(true);
   });
 
+  // @spec resource-access#rs-enforcement (#1258 item 4): an entry carrying a
+  // member the resource server does not recognize, or `locations`, is one it
+  // cannot fully enforce. It provides no authority, alone or as a fallback.
+  it("an entry carrying an unknown member or locations provides no authority, alone or as the fallback for a failing entry", async () => {
+    const unknown = mEntry({ x_unknown: true });
+    const located = mEntry({ locations: [] });
+    for (const [label, unenforceable] of [["unknown member", unknown], ["locations", located]] as const) {
+      expect(await decideOn(viewOf(unenforceable)), label).toMatchObject({ permit: false, reason: "out_of_authority" });
+      // The first entry needs an absent tenant fact; the fallback is unenforceable.
+      expect(await decideOn(viewOf(tenant, unenforceable)), `tenant then ${label}`).toMatchObject(REFUSED);
+      // An enforceable entry beside it still authorizes on its own.
+      expect((await decideOn(viewOf(unenforceable, plain))).permit, `${label} then plain`).toBe(true);
+    }
+  });
+
+  it("disregards delegation, whatever it carries: an entry with a companion member inside it still authorizes", async () => {
+    const delegating = mEntry({ delegation: { max_depth: 1, x_companion: { anything: true } } });
+    expect((await decideOn(viewOf(delegating))).permit).toBe(true);
+  });
+
   it("an entry requiring an action-bound approval is satisfied only by one; without it, an entry requiring none authorizes", async () => {
     const gated = mEntry({ constraints: { requires_action_approval: true } });
     expect((await decideOn(viewOf(gated))).reason).toBe("action_approval_required");
