@@ -1668,7 +1668,7 @@ through standard {{RFC8414}} discovery.
   declared, and a consumer sizes reliance to token lifetime alone.
 
 `mission_historical_jwks_uri`:
-: CONDITIONAL. A string containing a URL. The URL of the AS's
+: CONDITIONAL. A string containing an `https` URL. The URL of the AS's
   historical key set ({{historical-key-set}}). REQUIRED while that set
   lists a key.
 {: newline="true"}
@@ -1727,12 +1727,24 @@ Cache-Control: max-age=3600
 The historical key set holds the public keys the AS has withdrawn as
 compromised ({{signing-key-retention}}), so that responses signed
 under them stay verifiable for audit. It is a JWT {{RFC7519}} with
-`typ` `jwk-set+jwt`, served at `mission_historical_jwks_uri`, whose
-claims are `iss` (the AS's issuer identifier), `iat`, and `keys`: a JWK
-Set's `keys` array {{RFC7517}} holding each such key's public JWK,
-under its original `kid`, for at least the audit horizon of every
-Mission whose responses it signed. The AS signs the set under a key
-in its current `jwks_uri`, never under a key the set lists.
+`typ` `jwk-set+jwt`, served at `mission_historical_jwks_uri`, which a
+consumer takes only from authorization server metadata it has
+validated ({{Section 3.3 of RFC8414}}). Its claims are `iss` (the AS's
+issuer identifier), `iat`, and `keys`: a JWK Set's `keys` array
+{{RFC7517}} holding each such key's public JWK, under its original
+`kid`, for at least the audit horizon of every Mission whose responses
+it signed.
+
+The AS signs the set under its active Mission Status signing key: the
+key that the consumer's trusted configuration authorizes to sign the
+AS's Mission Status responses. A key's presence in the `jwks_uri` is
+not that authorization, since the `jwks_uri` also carries other roles'
+keys and retired keys. The AS never signs the set under a key the set
+lists. When the Mission Status signing key is itself compromised, the
+AS signs the set under its replacement once the consumer's trusted
+configuration authorizes that replacement, and never under another
+published key. A consumer MUST NOT accept a historical key set whose
+signature does not verify under that authorized key.
 
 Each listed JWK carries the `revoked` member {{OpenID.Federation}}
 (Section 8.7.2) with `reason` `compromised` and these times:
@@ -1893,12 +1905,18 @@ under a key the AS has published as compromised. A consumer MUST NOT
 use a key from the historical key set to verify a response for a
 current reliance decision. A consumer MUST NOT rely on a cached copy
 of the AS's `jwks_uri` beyond the freshness lifetime its response
-declares ({{Section 4.2 of RFC9111}}), and replaces its cached key set
-with each one it fetches rather than adding to it, so a removed key
-stops verifying within that lifetime. An auditor examining an archived
-response signed under a compromised key classifies it by the
-published compromise information, `compromised_at` or its absence;
-the Mandate profile's compromise-time rule is one such classification
+explicitly declares ({{Section 4.2.1 of RFC9111}}). A response without
+valid explicit freshness information is stale when received, and is
+never given a heuristic lifetime ({{Section 4.2.2 of RFC9111}}): the
+consumer revalidates it before reuse. The consumer replaces its cached
+key set with each one it fetches rather than adding to it, so a
+removed key stops verifying within that lifetime. When the cached set
+is stale and revalidation fails, the consumer MUST NOT accept a
+response for a current reliance decision until revalidation succeeds.
+An auditor examining an archived response signed under a compromised
+key classifies it by the published compromise information,
+`compromised_at` or its absence; the Mandate profile's compromise-time
+rule is one such classification
 ({{I-D.draft-mcguinness-mission-mandate}}).
 
 ## General OAuth Security
@@ -2124,11 +2142,14 @@ Mission Termination Reasons registry
 
 - A key known or suspected compromised leaves the `jwks_uri` and is
   no longer used for signing. It stays resolvable for the audit
-  horizon in a signed historical key set (`mission_historical_jwks_uri`),
+  horizon in a historical key set (`mission_historical_jwks_uri`, an
+  `https` URL from validated metadata), signed by the active Mission
+  Status signing key the consumer's configuration authorizes, and
   marked with OpenID Federation's `revoked` member: its revocation
-  time and, where established, its compromise time. Consumers bound
-  their `jwks_uri` cache to its declared lifetime and never verify a
-  current reliance decision under a historical key (#831, D774).
+  time and, where established, its compromise time. Consumers use only
+  explicit `jwks_uri` freshness, revalidate a stale set, refuse current
+  reliance when that fails, and never verify a current reliance
+  decision under a historical key (#831, D774, D780).
 - A transition is durably committed before any response acknowledges
   it, and the OAuth binding's final issuance check is not extended to
   suspension.

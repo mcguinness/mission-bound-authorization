@@ -20161,7 +20161,7 @@
    "id": "status.signing-keys.bounded-jwks-cache",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "signing-key-retention",
-   "text": "A consumer MUST NOT rely on a cached copy of the AS's `jwks_uri` beyond the freshness lifetime its response declares",
+   "text": "A consumer MUST NOT rely on a cached copy of the AS's `jwks_uri` beyond the freshness lifetime its response explicitly declares",
    "role": "verifier",
    "strength": "MUST NOT",
    "applicability": {
@@ -20171,7 +20171,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consumer re-fetches the AS's jwks_uri once the cached copy's declared freshness lifetime ends and replaces its cached key set with the fetched one, never adding to it, so a removed key stops verifying within that lifetime"
+    "normative": "a consumer relies on a cached jwks_uri only within the freshness lifetime its response explicitly declares, then re-fetches and replaces its cached key set with the fetched one, never adding to it, so a removed key stops verifying within that lifetime"
    },
    "level": "unit",
    "coverage": "todo",
@@ -20179,10 +20179,52 @@
    "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
   },
   {
+   "id": "status.signing-keys.no-heuristic-freshness",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "A response without valid explicit freshness information is stale when received",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a jwks_uri response without valid explicit freshness information is stale when received and is revalidated before reuse; the consumer never assigns it a heuristic lifetime"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+  },
+  {
+   "id": "status.signing-keys.failed-revalidation-refuses",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "When the cached set is stale and revalidation fails, the consumer MUST NOT accept a response for a current reliance decision until revalidation succeeds.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the cached jwks_uri set is stale and revalidation fails, the consumer refuses current reliance on a Status response until a revalidation of the jwks_uri succeeds"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+  },
+  {
    "id": "status.historical-key-set.signed",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "historical-key-set",
-   "text": "The AS signs the set under a key in its current `jwks_uri`, never under a key the set lists.",
+   "text": "The AS signs the set under its active Mission Status signing key",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -20197,12 +20239,33 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the historical key set is a jwk-set+jwt signed under a key in the AS's current jwks_uri and never under a key it lists as revoked"
+    "normative": "the historical key set is a jwk-set+jwt signed under the AS's active Mission Status signing key, the key the consumer's trusted configuration authorizes for Status responses; never under a listed key, a retired key or another role's key, and after that key's own compromise under its replacement once the consumer's trusted configuration authorizes it"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3."
+   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3. D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization."
+  },
+  {
+   "id": "status.historical-key-set.consumer-validates-signer",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "A consumer MUST NOT accept a historical key set whose signature does not verify under that authorized key.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer refuses a historical key set signed under any key other than the AS's authorized active Mission Status signing key, including another role's key, a retired key or a key the set lists"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
   },
   {
    "id": "status.historical-key-set.revoked-member",
@@ -20249,7 +20312,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "while the historical key set lists a key, the AS advertises its URL as mission_historical_jwks_uri in its authorization server metadata"
+    "normative": "while the historical key set lists a key, the AS advertises its https URL as mission_historical_jwks_uri in its authorization server metadata"
    },
    "level": "endpoint",
    "coverage": "todo",
