@@ -2096,6 +2096,17 @@ Mission Termination Reasons registry
   response shows `authority_hash` to a caller the example does not
   show holding its disclosure privilege; and the revocation's `reason`
   describes a revocation, not a completion (#1535).
+- The `nonce` is a string of 1 to 255 characters at both endpoints, a
+  constraint the Mission Status request now states (#1535).
+- Conformance's introspection-signing and TTL-sizing items defer to
+  the sections that state those rules, resolving language that
+  conflicted with them; each lifecycle value arrives with the
+  operation that introduces it; an otherwise-valid access token
+  without the `mission_status` scope receives the not-found response,
+  not `insufficient_scope`; a 401's challenge errors are distinct from
+  its JSON body's `unauthorized`; and a companion registers an
+  extension operation by defining it in its own specification
+  (#1535).
 
 -00
 
