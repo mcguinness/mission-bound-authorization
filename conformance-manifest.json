@@ -30534,7 +30534,7 @@
    "id": "runtime.authority-dependency.refuse-when-not-established",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-authority-dependency",
-   "text": "The PDP MUST refuse an action a declared dependency governs when the dependency is known to be withdrawn, when an applicable invalidation has been observed, or when no acceptable authoritative observation of it remains",
+   "text": "The deployment MUST refuse an action governed by a declared dependency, through its declared enforcement route, when the dependency is known to be withdrawn, when an applicable invalidation has been observed, or when no acceptable authoritative observation remains",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -30545,12 +30545,34 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an action a declared dependency governs is refused on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains, while an observation still within its accepted validity keeps serving through a source outage"
+    "normative": "where the PDP enforces a declared dependency, an action it governs is refused on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes."
+   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
+  },
+  {
+   "id": "runtime.authority-dependency.refuse-when-not-established-local",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "The deployment MUST refuse an action governed by a declared dependency, through its declared enforcement route, when the dependency is known to be withdrawn, when an applicable invalidation has been observed, or when no acceptable authoritative observation remains",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where a composed resource-policy step at the PEP or resource server enforces a declared dependency, an action it governs is refused there on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains, even when the PDP permits within Mission authority; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
   },
   {
    "id": "runtime.authority-dependency.permit-cap",
@@ -30578,7 +30600,7 @@
    "id": "runtime.authority-dependency.evidence-distinguishes",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-authority-dependency",
-   "text": "Retained decision evidence distinguishes a known withdrawal, a stale observation and an unavailable source",
+   "text": "Retained evidence of such a refusal, from whichever component enforces the dependency, distinguishes a known withdrawal, a stale observation and an unavailable source",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -30589,12 +30611,34 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the retained evidence of a refusal under a declared dependency records whether the dependency was known withdrawn, its observation stale, or its source unavailable"
+    "normative": "where the PDP enforces a declared dependency, the retained evidence of its refusal records whether the dependency was known withdrawn, its observation stale, or its source unavailable"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes."
+   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
+  },
+  {
+   "id": "runtime.authority-dependency.evidence-distinguishes-local",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "Retained evidence of such a refusal, from whichever component enforces the dependency, distinguishes a known withdrawal, a stale observation and an unavailable source",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a composed resource-policy step at the PEP or resource server enforces a declared dependency, the retained evidence of its refusal records whether the dependency was known withdrawn, its observation stale, or its source unavailable"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
   },
   {
    "id": "runtime.authority-dependency.mechanism-refusal-kept",
@@ -30611,12 +30655,34 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a dependency enforced through the lifecycle, a containment overlay or a resource-policy step is refused as that mechanism refuses (an inactive Mission, contained authority, a failed resource-policy condition)"
+    "normative": "where the PDP enforces a dependency through an existing mechanism, it refuses as that mechanism refuses (an inactive Mission, contained authority, a failed resource-policy condition)"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes."
+   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
+  },
+  {
+   "id": "runtime.authority-dependency.mechanism-refusal-kept-local",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "A dependency enforced through an existing mechanism keeps that mechanism's refusal: an inactive Mission, contained authority, or a failed resource-policy condition",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where a composed resource-policy step at the PEP or resource server enforces a dependency, its refusal is that mechanism's failed resource-policy condition"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
   },
   {
    "id": "runtime.state-freshness.external-change-bound",
