@@ -784,6 +784,17 @@ describe("the compensate crossing captures and checks its own context, from the 
     expect(record).not.toHaveProperty("effective_evaluation_context_digest");
   });
 
+  it("a compensation binding made before a restart is refused before any effect: target_drift, no effective context digest", async () => {
+    const h = harness();
+    const refused = await reverse(h, () => h.restart());
+    expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
+    expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+    const [record] = executions(h).filter((r) => r.outcome === "suppressed");
+    expect(record?.error).toBe("target_drift");
+    expect(record?.authorized_evaluation_context_digest).toBeDefined();
+    expect(record).not.toHaveProperty("effective_evaluation_context_digest");
+  });
+
   it("a deployment that does not claim the extension is unchanged at the compensate crossing: no context members, and a moved fact of the wire's record stays parameter_mismatch", async () => {
     const h = harness({ pep: UNCLAIMED, pdp: UNCLAIMED });
     const refused = await reverse(h, () => {
