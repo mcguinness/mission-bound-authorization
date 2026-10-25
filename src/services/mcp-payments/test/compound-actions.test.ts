@@ -849,6 +849,26 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     expect(h.connectors.reversalEntries("msn_252")).toHaveLength(0);
   });
 
+  it("suppresses a compensation whose committed wire record no longer answers at use as target_drift, keeping the authorized digest and omitting the effective one", async () => {
+    const h = harness();
+    expect((await cross(h, crossings[2])).ok).toBe(true);
+    const refused = await h.server.callTransactionTool(
+      "reverse_wire_transfer",
+      { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+      TOKEN,
+      () => {
+        h.connectors.db.prepare("DELETE FROM ledger WHERE invoice_id = 'inv-1'").run();
+      },
+    );
+    expect(refused).toMatchObject({ ok: false, refusal_reason: "target_drift" });
+    const suppressed = executions(h).filter((e) => e.content.outcome === "suppressed");
+    expect(suppressed).toHaveLength(1);
+    expect(suppressed[0]?.content.error).toBe("target_drift");
+    expect(suppressed[0]?.content.authorized_parameter_digest).toBe(compensating(h)[0]?.content.parameter_digest);
+    expect(suppressed[0]?.content).not.toHaveProperty("effective_parameter_digest");
+    expect(h.connectors.reversalEntries("msn_252")).toHaveLength(0);
+  });
+
   it("the PDP refuses a compensate request without compensates_evaluation_id, or with a malformed one, before evaluation", async () => {
     // A requester that drops or garbles the link: the PDP never evaluates the
     // request, so no compensate Decision exists without its required link.
