@@ -1720,10 +1720,10 @@ JWS, not <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span> (see <a
 <code>https://erp.example.com</code> as the operation target
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
 constraints determine the permitted operations within that service.
-In the Mission Status examples, the consumer is the ERP resource
-server, client <code>erp-rs</code>, which the Mission Issuer's configuration
-authorizes for that audience; its client identifier is the
-response's <code>sub</code>.<a href="#section-3.5-4" class="pilcrow">¶</a></p>
+In the audience-scoped Mission Status example below, the consumer is
+the ERP resource server, client <code>erp-rs</code>, which the Mission Issuer's
+configuration authorizes for that audience; its client identifier is
+the response's <code>sub</code>.<a href="#section-3.5-4" class="pilcrow">¶</a></p>
 <p id="section-3.5-5">The signed payload reports the Mission's current state and the
 audience-scoped evidence the consumer needs.<a href="#section-3.5-5" class="pilcrow">¶</a></p>
 <div class="lang-http-message sourcecode" id="section-3.5-6">
@@ -4099,11 +4099,11 @@ revocation that a deployment's policy couples to it commits the same
 <code>revoke</code> transition, state version and event.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.4">
-          <p id="appendix-A-3.4.1">Editorial, no requirement change: in the examples, the Mission
-Status consumer is the ERP resource server, no response shows
-<code>authority_hash</code> to a caller the example does not show holding
-its disclosure privilege, and the revocation's <code>reason</code> describes
-a revocation, not a completion (#1535).<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.4.1">Editorial, no requirement change: in the audience-scoped Mission
+Status example, the consumer is the ERP resource server; no example
+response shows <code>authority_hash</code> to a caller the example does not
+show holding its disclosure privilege; and the revocation's <code>reason</code>
+describes a revocation, not a completion (#1535).<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>
