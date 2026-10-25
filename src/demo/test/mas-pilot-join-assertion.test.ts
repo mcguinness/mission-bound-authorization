@@ -20,7 +20,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { initSigningKeyRing } from "@mission/authorization-server";
+import { initSigningKeyRing, loadSigningKeyRing } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
 import { accessTokenHash, CANONICAL_RESOURCE, type DecisionEvidence, type JoinAssertionSource } from "@mission/mcp-payments";
 import type { EvaluationRequest } from "@mission/pdp";
@@ -105,10 +105,12 @@ beforeAll(async () => {
   dirs.push(dir);
   const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
   const keyRing = join(dir, "keys", "ring.json");
-  await initSigningKeyRing(keyRing, MAS_URL, { asToken, asStatus, asTxn, asContinuation });
-  const ring = JSON.parse(readFileSync(keyRing, "utf8")) as { roles: { asStatus: { kid: string; private_jwk: JWK } } };
-  statusKid = ring.roles.asStatus.kid;
-  statusKey = (await importJWK(ring.roles.asStatus.private_jwk, "ES256")) as CryptoKey;
+  const roles = { asToken, asStatus, asTxn, asContinuation };
+  await initSigningKeyRing(keyRing, MAS_URL, roles);
+  // The MAS's active Status generation, as the AS itself loads it from the ring (#831 B2).
+  const { asStatus: status } = await loadSigningKeyRing(keyRing, MAS_URL, roles);
+  statusKid = status.kid;
+  statusKey = status.privateKey;
   config = joinConfig();
   const configPath = join(dir, "mas-pilot.json");
   writeFileSync(configPath, JSON.stringify(config));
