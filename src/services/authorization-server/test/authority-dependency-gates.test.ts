@@ -42,10 +42,16 @@ const SHIPPED: readonly { sub: string; status?: string; withdrawn_delegations?: 
 
 let source: unknown = SHIPPED;
 let nowMs = Date.now();
+/** While set, each read waits for the test to complete it (`held[i](records)`), as a slow scheduled read does. */
+let held: Array<(records: unknown) => void> | undefined;
 const evidence = new AuthorityDependencyEvidence();
 const resolver = new AuthorityDependencyResolver({
   issuer: ISSUER,
   read: async () => {
+    if (held) {
+      const waiting = held;
+      return new Promise((resolve) => waiting.push(resolve));
+    }
     if (source instanceof Error) throw source;
     return source;
   },
@@ -274,5 +280,29 @@ describe("the issuance gates consult the declared authority dependency beside th
     expect(evidence.entries().at(-1)).toMatchObject({ enforcer: "as", failure: "unavailable" });
     nowMs = Date.now();
     await observe(SHIPPED);
+  });
+
+  it("keeps refusing after an older scheduled read completes late with the Subject still delegating: a read never replaces a newer one's known withdrawal", async () => {
+    nowMs = Date.now();
+    await observe(SHIPPED);
+    const record = approveAtKernel("alice");
+    held = [];
+    const pending = held;
+    try {
+      const older = resolver.refresh();
+      nowMs += 1000;
+      const newer = resolver.refresh();
+      pending[1]?.([{ sub: "alice", withdrawn_delegations: ["ap-agent"] }, { sub: "bob" }, { sub: "dana" }]);
+      await newer;
+      expect(() => as.kernel.checkDerivation(record.id)).toThrow(/declared authority dependency is not established/);
+      pending[0]?.(SHIPPED);
+      await older;
+      expect(() => as.kernel.checkDerivation(record.id)).toThrow(/declared authority dependency is not established/);
+      expect(evidence.entries().at(-1)).toMatchObject({ enforcer: "as", failure: "withdrawn", mission: { id: record.id } });
+    } finally {
+      held = undefined;
+      nowMs = Date.now();
+      await observe(SHIPPED);
+    }
   });
 });

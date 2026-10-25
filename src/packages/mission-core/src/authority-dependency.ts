@@ -425,10 +425,21 @@ export interface PrincipalStateView {
  * synchronously from that read. A failed read keeps the last good one and is
  * reported as an unavailable source; the declaration decides what that means
  * for reliance. Principals of another issuer are unknown to it.
+ *
+ * Reads may overlap (a scheduled refresh and a reconciliation pass). Each
+ * read's observation represents the source as of the moment the read was
+ * issued, not when it completed, so a slow read never renews an old state's
+ * validity. Reads are ordered by issue: a read completing after a later-issued
+ * one has been published is discarded, so an older read never replaces a
+ * newer observation, a known withdrawal included. Source availability is the
+ * outcome of the latest-issued read that has completed.
  */
 export class AuthorityDependencyResolver {
-  private snapshot: { bySub: Map<string, IdentityStateRecord>; observedAtMs: number } | undefined;
-  private lastAttemptOk = true;
+  private snapshot:
+    | { bySub: Map<string, IdentityStateRecord>; observedAtMs: number; issued: number }
+    | undefined;
+  private lastAttempt = { issued: -1, ok: true };
+  private issued = 0;
   private readonly now: () => number;
 
   constructor(
@@ -445,18 +456,30 @@ export class AuthorityDependencyResolver {
     this.now = opts.now ?? (() => Date.now());
   }
 
-  /** Read the source once. Resolves whether the read succeeded; a failure keeps the previous observation. */
+  /**
+   * Read the source once. Resolves whether the read succeeded; a failure
+   * keeps the previous observation, and a success is published only if no
+   * later-issued read has been published first.
+   */
   async refresh(): Promise<boolean> {
+    const issued = this.issued++;
+    const issuedAtMs = this.now();
     try {
       const records = this.opts.parse(await this.opts.read());
       const bySub = new Map(records.map((r) => [r.sub, r]));
-      this.snapshot = { bySub, observedAtMs: this.now() };
-      this.lastAttemptOk = true;
+      if (this.snapshot === undefined || issued > this.snapshot.issued) {
+        this.snapshot = { bySub, observedAtMs: issuedAtMs, issued };
+      }
+      this.noteAttempt(issued, true);
       return true;
     } catch {
-      this.lastAttemptOk = false;
+      this.noteAttempt(issued, false);
       return false;
     }
+  }
+
+  private noteAttempt(issued: number, ok: boolean): void {
+    if (issued > this.lastAttempt.issued) this.lastAttempt = { issued, ok };
   }
 
   /** The time the latest acceptable observation represents, epoch milliseconds. */
@@ -471,12 +494,12 @@ export class AuthorityDependencyResolver {
 
   view(principal: DependencyPrincipal): PrincipalStateView {
     const snapshot = this.snapshot;
-    if (!snapshot) return { sourceAvailable: this.lastAttemptOk };
+    if (!snapshot) return { sourceAvailable: this.lastAttempt.ok };
     const record =
       principal.iss === this.opts.issuer ? snapshot.bySub.get(principal.sub) : undefined;
     const observedAt = new Date(snapshot.observedAtMs).toISOString();
     return {
-      sourceAvailable: this.lastAttemptOk,
+      sourceAvailable: this.lastAttempt.ok,
       observation: record
         ? {
             known: true,
