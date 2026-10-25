@@ -831,21 +831,52 @@ describe("Mission Receipt build + verify", () => {
     expect(result).toEqual({ valid: false, reason: "join_failure" });
   });
 
-  it("rejects an Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3)", async () => {
+  it("rejects a completed or failed Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3, #786)", async () => {
+    // @spec runtime-evidence#execution-evidence-object: "REQUIRED whenever
+    // `authorized_parameter_digest` is present, except on a `suppressed`
+    // record whose executing PEP could not establish the effective
+    // parameters." The exception never excuses the evidence of an effect.
     const decision = await signedDecision();
-    const execution = await signedExecution({ effective_parameter_digest: undefined });
+    for (const variant of [{ outcome: "completed" as const }, { outcome: "failed" as const, error: "connector_error" }]) {
+      const execution = await signedExecution({ ...variant, effective_parameter_digest: undefined });
+      const receipt = await buildAndSignMissionReceipt(
+        { kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution },
+        "receipts.example.com",
+        RECEIPT_SIGNER,
+      );
+      const result = await verifyMissionReceipt(
+        receipt,
+        resolverFor({ decision, execution }),
+        receiptIssuers,
+        resolveEvidenceKey,
+      );
+      expect(result, variant.outcome).toEqual({ valid: false, reason: "join_failure" });
+    }
+  });
+
+  it("accepts a suppressed record that keeps the authorized digest and omits the effective one as comparison unavailable, and reports no parameter deviation (#786)", async () => {
+    // @spec runtime-evidence#execution-evidence-object: "The absence means the
+    // comparison is unavailable, and a consumer MUST NOT read it as equality
+    // or as a parameter deviation." The record has the shape a suppression
+    // for a target that could not be established at use carries.
+    const decision = await signedDecision();
+    const execution = await signedExecution({
+      outcome: "suppressed",
+      error: "target_drift",
+      effective_parameter_digest: undefined,
+    });
+    expect(execution.authorized_parameter_digest).toBe(decision.parameter_digest);
+    expect(JSON.parse(JSON.stringify(execution))).not.toHaveProperty("effective_parameter_digest");
     const receipt = await buildAndSignMissionReceipt(
       { kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution },
       "receipts.example.com",
       RECEIPT_SIGNER,
     );
-    const result = await verifyMissionReceipt(
-      receipt,
-      resolverFor({ decision, execution }),
-      receiptIssuers,
-      resolveEvidenceKey,
-    );
-    expect(result).toEqual({ valid: false, reason: "join_failure" });
+    // Valid, and no `unauthorized_execution` flag: neither equality nor a
+    // deviation is read from the absence.
+    expect(
+      await verifyMissionReceipt(receipt, resolverFor({ decision, execution }), receiptIssuers, resolveEvidenceKey),
+    ).toEqual({ valid: true });
   });
 
   it("verifies a selected target projection against the source record (#739 review point 4)", async () => {
