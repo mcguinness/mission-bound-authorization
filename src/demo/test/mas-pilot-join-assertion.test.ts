@@ -49,6 +49,8 @@ const PEP_ONLY = "mas-pilot-pep-only";
 /** A registered Status client the MAS enrolls for nothing (#1591). */
 const OUTSIDER = "mas-pilot-outsider";
 const DELEGATE = "subagent-invoice-extractor";
+/** A registered Status client enrolled for nothing, recorded as a Mission's delegate to test visibility (#1561). */
+const DELEGATE_PEP = "mas-pilot-delegate-pep";
 const PAYEE = "acct-acme-001";
 
 /**
@@ -114,17 +116,21 @@ beforeAll(async () => {
   pdpKey = pdp.privateJwk;
   const pepOnly = await newStatusClientKey(PEP_ONLY);
   const outsider = await newStatusClientKey(OUTSIDER);
+  const delegatePep = await newStatusClientKey(DELEGATE_PEP);
   callerKeys.set(PEP_ONLY, pepOnly.privateJwk);
   callerKeys.set(OUTSIDER, outsider.privateJwk);
+  callerKeys.set(DELEGATE_PEP, delegatePep.privateJwk);
   // The MAS's introspection client secret, generated here and given to both
   // the MAS and the estate the pilot starts.
   const joinIntrospectionSecret = crypto.randomUUID();
   joinSecret = joinIntrospectionSecret;
   mas = await startMasProcess({
     configPath,
-    statusClients: [pdp.registration, pepOnly.registration, outsider.registration],
+    statusClients: [pdp.registration, pepOnly.registration, outsider.registration, delegatePep.registration],
     keyRing,
     joinIntrospectionSecret,
+    // Delegate edges are recorded only at the MAS's operator console (#1561).
+    operatorConsole: true,
   });
   pilot = await composeSeparatedMasPilot({
     openfga: OPENFGA,
@@ -193,6 +199,26 @@ async function mintAt(
 
 /** The other Status clients' private keys, by client identifier (#1591). */
 const callerKeys = new Map<string, JWK>();
+
+/**
+ * @spec authority-server#join-assertion-request (#1561): record at the MAS's
+ * operator console, under its bearer, that `clientId` acts under the Mission
+ * on `delegatedBy`'s delegation, in the MAS's actor records.
+ */
+async function recordDelegate(
+  missionId: string,
+  clientId: string,
+  delegatedBy: string,
+  bearer?: string,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const opened = mas.console as NonNullable<MasProcess["console"]>;
+  const res = await fetch(`${opened.url}/missions/${missionId}/delegates`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${bearer ?? opened.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ client_id: clientId, delegated_by: delegatedBy }),
+  });
+  return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+}
 
 /** A private-key JWT client assertion for `caller`, audienced to `aud`. */
 async function clientAssertion(caller: string, aud: string = MAS_URL): Promise<string> {
@@ -297,9 +323,9 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
       const res = await read(credential, missionId);
       expect(res.ok, `${format}: ${JSON.stringify(res)}`).toBe(true);
       const missionJoin = requests.at(-1)?.context.mission_join as Record<string, unknown>;
-      // The Mission's own client: depth 0 in the PEP's actor records.
+      // The assertion is the join (#1561): the PEP keeps no actor records on
+      // this path and carries no depth of its own beside it.
       expect(missionJoin, format).toEqual({
-        delegate_depth: 0,
         assertion: obtained.at(-1),
         token_sha256: accessTokenHash(credential.token),
         token_jkt: await calculateJwkThumbprint(await exportJWK(credential.dpopKeys.publicKey)),
@@ -319,25 +345,78 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
     }
   });
 
-  it("joins a delegate at the depth the MAS's actor records give, and denies when the PEP's actor records report another depth", async () => {
+  it("joins a delegate at the depth the MAS's actor records give, recorded at the MAS's operator console; the PEP keeps no records and carries no depth of its own, so nothing contradicts the MAS (#1561)", async () => {
     substitute = undefined;
     const missionId = await approveAtMas("delegate", true);
-    const mission = { id: missionId, issuer: MAS_URL };
-    await mas.recordActor({ mission, clientId: DELEGATE, delegatedBy: "ap-agent" });
-    pilot.actorRecords.record({ mission, clientId: DELEGATE, delegatedBy: "ap-agent" });
+    // One actor-record source: the MAS's. The PEP on this path keeps none.
+    expect(pilot.actorRecords).toBeUndefined();
     const credential = await estateToken(pilot, "estate-extractor-2c1", "u-1001", "invoices.read");
-    const agrees = await read(credential, missionId);
-    expect(agrees.ok, JSON.stringify(agrees)).toBe(true);
-    expect(requests.at(-1)?.context.mission_join).toMatchObject({ delegate_depth: 1 });
-    expect(decodeJwt(obtained.at(-1) as string).join).toEqual({ client_id: DELEGATE, disposition: "delegate", depth: 1 });
+    // Unrecorded: the MAS mints nothing, so no assertion rides the request, and
+    // the PDP denies the read the configuration requires one for.
+    const unrecorded = await read(credential, missionId);
+    expect(obtained.at(-1)).toBeUndefined();
+    expect(requests.at(-1)?.context.mission_join).toEqual({});
+    expectJoinRefused(unrecorded, missionId, "a delegate with no actor record at the MAS");
 
-    // The PEP's records now put the extractor under a relay: depth 2, where the assertion says 1.
-    pilot.actorRecords.record({ mission, clientId: "relay-agent", delegatedBy: "ap-agent" });
-    pilot.actorRecords.record({ mission, clientId: DELEGATE, delegatedBy: "relay-agent" });
-    const disagrees = await read(credential, missionId);
-    expect(requests.at(-1)?.context.mission_join).toMatchObject({ delegate_depth: 2 });
-    expect(decodeJwt(obtained.at(-1) as string).join).toMatchObject({ depth: 1 });
-    expectJoinRefused(disagrees, missionId, "delegate_depth 2 against join.depth 1");
+    expect(await recordDelegate(missionId, DELEGATE, "ap-agent")).toEqual({
+      status: 201,
+      body: { mission_id: missionId, client_id: DELEGATE, delegated_by: "ap-agent", depth: 1 },
+    });
+    const recorded = await read(credential, missionId);
+    expect(recorded.ok, JSON.stringify(recorded)).toBe(true);
+    expect(decodeJwt(obtained.at(-1) as string).join).toEqual({ client_id: DELEGATE, disposition: "delegate", depth: 1 });
+    const carried = requests.at(-1)?.context.mission_join as Record<string, unknown>;
+    expect(carried.assertion).toBe(obtained.at(-1));
+    expect(carried).not.toHaveProperty("delegate_depth");
+
+    // The MAS's records now put the extractor under a relay: depth 2, past the
+    // contract's max_depth. The MAS mints nothing, and the PDP denies.
+    expect((await recordDelegate(missionId, "relay-agent", "ap-agent")).status).toBe(201);
+    expect((await recordDelegate(missionId, DELEGATE, "relay-agent")).body.depth).toBe(2);
+    const tooDeep = await read(credential, missionId);
+    expect(obtained.at(-1)).toBeUndefined();
+    expect(requests.at(-1)?.context.mission_join).toEqual({});
+    expectJoinRefused(tooDeep, missionId, "a delegate the MAS's records hold too deep");
+  });
+
+  it("takes the visibility set's recorded delegates from the MAS's actor records (#1561): a client recorded as a Mission's delegate may request for it, and is not_found for a Mission it is not recorded under", async () => {
+    substitute = undefined;
+    const recordedFor = await approveAtMas("delegate-visibility");
+    const notRecordedFor = await approveAtMas("delegate-visibility-other");
+    const pdpAudience = config.separated_mas.pdp_client_id;
+    const token = (await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read")).token;
+    const asDelegate = (missionId: string) => mintAt({ mission_id: missionId, audience: pdpAudience, access_token: token }, MAS_URL, DELEGATE_PEP);
+    // Enrolled for nothing and not yet recorded: outside the set.
+    expect(await asDelegate(recordedFor)).toMatchObject({ status: 404, body: { error: "not_found" } });
+    expect((await recordDelegate(recordedFor, DELEGATE_PEP, "ap-agent")).status).toBe(201);
+    const inside = await asDelegate(recordedFor);
+    expect(inside.status, JSON.stringify(inside.body)).toBe(200);
+    expect(decodeJwt(inside.body.assertion as string).aud).toBe(pdpAudience);
+    const elsewhere = await asDelegate(notRecordedFor);
+    const unknown = await mintAt({ mission_id: "msn_unknown_0000000000000000000000", audience: pdpAudience, access_token: token });
+    expect(elsewhere).toMatchObject({ status: 404, body: { error: "not_found" } });
+    expect(elsewhere.body).toEqual(unknown.body);
+  });
+
+  it("records a delegate only at the authenticated operator console (#1561): no bearer is refused, an unknown Mission is not found, and the Mission's own client is never a delegate", async () => {
+    const missionId = await approveAtMas("delegate-console");
+    expect((await recordDelegate(missionId, DELEGATE, "ap-agent", "not-the-bearer")).status).toBe(401);
+    expect((await recordDelegate("msn_unknown_0000000000000000000000", DELEGATE, "ap-agent")).status).toBe(404);
+    expect((await recordDelegate(missionId, "ap-agent", "relay-agent")).status).toBe(400);
+    expect((await recordDelegate(missionId, DELEGATE, "")).status).toBe(400);
+    // The test-only operator channel takes no delegate (#1561).
+    const reply = await new Promise<{ ok: boolean; error?: string }>((resolve) => {
+      const id = 9_999_999;
+      const onMessage = (raw: unknown) => {
+        const msg = raw as { id: number; ok: boolean; error?: string };
+        if (msg.id !== id) return;
+        mas.child.off("message", onMessage);
+        resolve(msg);
+      };
+      mas.child.on("message", onMessage);
+      mas.child.send({ id, op: "actor", actor: { mission: { id: missionId, issuer: MAS_URL }, clientId: DELEGATE, delegatedBy: "ap-agent" } });
+    });
+    expect(reply).toMatchObject({ ok: false, error: "unknown operator message actor" });
   });
 
   it("denies mission_binding_failed, with nothing disclosed, an assertion for another PDP, for another token, bound to another key, expired, or with alg none", async () => {
@@ -375,7 +454,8 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
     const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
     substitute = async () => undefined;
     const res = await read(credential, missionId);
-    expect(requests.at(-1)?.context.mission_join).toEqual({ delegate_depth: 0 });
+    // The PEP keeps no actor records on this path (#1561), so it carries no depth.
+    expect(requests.at(-1)?.context.mission_join).toEqual({});
     expectJoinRefused(res, missionId, "required, none carried");
     substitute = undefined;
   });
@@ -430,10 +510,10 @@ d("the separated MAS pilot's Join Assertion path (#1454)", () => {
     await refused("another person", (await estateToken(pilot, "estate-ap-bot-7f3", "alice", "invoices.read")).token);
     const extractor = (await estateToken(pilot, "estate-extractor-2c1", "u-1001", "invoices.read")).token;
     await refused("a delegate with no actor record", extractor);
-    await mas.recordActor({ mission, clientId: "relay-agent", delegatedBy: "ap-agent" });
-    await mas.recordActor({ mission, clientId: DELEGATE, delegatedBy: "relay-agent" });
+    expect((await recordDelegate(mission.id, "relay-agent", "ap-agent")).status).toBe(201);
+    expect((await recordDelegate(mission.id, DELEGATE, "relay-agent")).status).toBe(201);
     await refused("a delegate deeper than the contract's max_depth", extractor);
-    await mas.recordActor({ mission, clientId: DELEGATE, delegatedBy: "ap-agent" });
+    expect((await recordDelegate(mission.id, DELEGATE, "ap-agent")).status).toBe(201);
     expect((await mintAt({ mission_id: missionId, audience: pdpAudience, access_token: extractor })).status).toBe(200);
   });
 });
@@ -534,6 +614,74 @@ d("the separated launcher runs the declared Join Assertion path (#1454)", () => 
         });
         expect(read.ok, `${client}: ${JSON.stringify(read)}`).toBe(true);
       }
+    } finally {
+      await launch.close();
+    }
+  }, 180_000);
+
+  it("joins a delegate an operator recorded at the MAS's operator console, and denies mission_binding_failed one unrecorded or recorded too deep, in an operator launch (#1561)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mas-pilot-join-launcher-delegate-"));
+    dirs.push(dir);
+    const declared = joinConfig();
+    const launched = relocateEstate({ ...declared, separated_mas: { ...declared.separated_mas, port: MAS_PORT + 4 } }, ESTATE_PORT + 4);
+    const configPath = join(dir, "mas-pilot.json");
+    writeFileSync(configPath, JSON.stringify(launched));
+    const env = {
+      OPENFGA_HTTP_URL: OPENFGA.apiUrl,
+      OPENFGA_PRESHARED_KEY: OPENFGA.presharedKey,
+      ...(OPENFGA.caCertPath ? { OPENFGA_CA_CERT: OPENFGA.caCertPath } : {}),
+      MAS_PILOT_CONFIG: configPath,
+      MAS_PILOT_DEVELOPMENT_STORE: "1",
+      MISSION_EPHEMERAL_KEYS: "1",
+    };
+    const started = await launchMasPilot(masPilotLaunchOptions(env, "separated")).catch((e: unknown) => e);
+    expect(started, String(started)).not.toBeInstanceOf(Error);
+    const launch = started as Awaited<ReturnType<typeof launchMasPilot>>;
+    try {
+      // The launcher starts the MAS with no IPC channel: its console is the operator's one path.
+      expect(launch.summary.join("\n")).toContain("no IPC channel");
+      const consoleCall = async (base: string, method: string, path: string, body?: Record<string, unknown>) => {
+        const res = await fetch(`${base}${path}`, {
+          method,
+          headers: { authorization: `Bearer ${launch.consoles.token}`, "content-type": "application/json" },
+          ...(body ? { body: JSON.stringify(body) } : {}),
+        });
+        return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+      };
+      const masConsole = launch.consoles.mas as string;
+      const missionId = (await consoleCall(masConsole, "POST", "/missions", { subject: "alice", label: "join-launcher-delegate", delegate: DELEGATE }))
+        .body.mission_id as string;
+      const credential = (
+        await consoleCall(launch.consoles.pilot, "POST", "/estate-tokens", { client_id: "estate-extractor-2c1", account: "u-1001", scope: "invoices.read" })
+      ).body;
+      const readInvoice = async () =>
+        (await consoleCall(launch.consoles.pilot, "POST", "/calls", {
+          credential_id: credential.credential_id,
+          mission_id: missionId,
+          tool: "get_invoice",
+          arguments: { invoice_id: "inv-1" },
+        })).body;
+      const unrecorded = await readInvoice();
+      expect(unrecorded, JSON.stringify(unrecorded)).toMatchObject({ ok: false, denial_reason: "mission_binding_failed" });
+      expect(await consoleCall(masConsole, "POST", `/missions/${missionId}/delegates`, { client_id: DELEGATE, delegated_by: "ap-agent" })).toEqual({
+        status: 201,
+        body: { mission_id: missionId, client_id: DELEGATE, delegated_by: "ap-agent", depth: 1 },
+      });
+      const recorded = await readInvoice();
+      expect(recorded.ok, JSON.stringify(recorded)).toBe(true);
+      expect((await consoleCall(masConsole, "POST", `/missions/${missionId}/delegates`, { client_id: "relay-agent", delegated_by: "ap-agent" })).status).toBe(201);
+      expect(
+        (await consoleCall(masConsole, "POST", `/missions/${missionId}/delegates`, { client_id: DELEGATE, delegated_by: "relay-agent" })).body.depth,
+      ).toBe(2);
+      const tooDeep = await readInvoice();
+      expect(tooDeep, JSON.stringify(tooDeep)).toMatchObject({ ok: false, denial_reason: "mission_binding_failed" });
+      // The PEP's retained evidence: the PDP's deny, permit, deny, in order.
+      const evidence = (await consoleCall(launch.consoles.pilot, "GET", `/missions/${missionId}/evidence`)).body.records as Record<string, unknown>[];
+      expect(evidence.filter((r) => r.kind === "decision").map((r) => [r.decision, r.denial_reason ?? null])).toEqual([
+        ["deny", "mission_binding_failed"],
+        ["permit", null],
+        ["deny", "mission_binding_failed"],
+      ]);
     } finally {
       await launch.close();
     }
