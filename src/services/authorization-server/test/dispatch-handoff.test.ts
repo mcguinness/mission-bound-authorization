@@ -755,6 +755,74 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
       expect(ok.status, JSON.stringify(okb)).toBe(200);
     }
   });
+
+  // @spec mission#subset, mission#error-mapping (#1513): each vector passes
+  // both subset checks, but the projection drops its entry; the request is
+  // refused rather than issued without it. The second action keeps the
+  // trimmed entry from being covered by the first.
+  it("a requested set the projection cannot issue whole is refused invalid_authorization_details, issuing no handoff grant; the whole set is issued", async () => {
+    const instance = await dispatchInstance();
+    const first = instance.authority[0] as AuthorityEntry;
+    expect(first.actions.length, "the demo instance's first entry needs two actions").toBeGreaterThanOrEqual(2);
+    expect(first.constraints?.vendors, "the demo instance's first entry needs a vendors constraint").toBeDefined();
+    const entryWith = (action: string) => ({ ...first, actions: [action] });
+    const kept = entryWith(first.actions[0] as string);
+    const second = entryWith(first.actions[1] as string);
+    const cases = [
+      { ...second, capability_sources: [{ action: first.actions[1] as string }] },
+      { ...second, constraints: { ...first.constraints, vendors: [] } },
+    ];
+    for (const poisoned of cases) {
+      const res = await handoff(instance.token, { authorization_details: JSON.stringify([kept, poisoned]) });
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, JSON.stringify({ poisoned, body })).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toBe("requested authorization_details cannot be issued whole");
+      expect(body.access_token).toBeUndefined();
+    }
+    const ok = await handoff(instance.token, { authorization_details: JSON.stringify([kept, second]) });
+    const okb = (await ok.json()) as { access_token: string };
+    expect(ok.status, JSON.stringify(okb)).toBe(200);
+    expect(actionsOf(decodeJwt(okb.access_token).authorization_details).sort()).toEqual(
+      [...first.actions.slice(0, 2)].sort(),
+    );
+  });
+
+  // @spec mission#subset (#1513 review): the same beside an overlapping entry
+  // for the same action, which covers the dropped one once bindings are set
+  // aside; the binding the instance records is issued.
+  it("an entry the projection drops is refused beside an overlapping entry that is issued; the recorded binding is issued", async () => {
+    const instance = await dispatchInstance();
+    const first = instance.authority[0] as AuthorityEntry;
+    const action = first.actions[0] as string;
+    const recorded = first.capability_sources?.find((b) => b.action === action);
+    expect(recorded, "the demo instance records a binding for its first action").toBeDefined();
+    const binding = recorded as NonNullable<typeof recorded>;
+    const kept = { ...first, actions: [action] };
+    const cases = [
+      // The recorded binding with another definition's digest.
+      { ...kept, capability_sources: [{ ...binding, source_digest: `sha-256:${"A".repeat(43)}` }] },
+      // An empty vendor list, which the kept entry's vendors cover.
+      { ...kept, constraints: { ...first.constraints, vendors: [] } },
+    ];
+    for (const poisoned of cases) {
+      for (const details of [[poisoned], [kept, poisoned]]) {
+        const res = await handoff(instance.token, { authorization_details: JSON.stringify(details) });
+        const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+        expect(res.status, JSON.stringify({ details, body })).toBe(400);
+        expect(body.error).toBe("invalid_authorization_details");
+        expect(body.error_description).toBe("requested authorization_details cannot be issued whole");
+        expect(body.access_token).toBeUndefined();
+      }
+    }
+    const ok = await handoff(instance.token, {
+      authorization_details: JSON.stringify([{ ...kept, capability_sources: [binding] }]),
+    });
+    const okb = (await ok.json()) as { access_token: string };
+    expect(ok.status, JSON.stringify(okb)).toBe(200);
+    const issued = decodeJwt(okb.access_token).authorization_details as AuthorityEntry[];
+    expect(issued.map((e) => e.capability_sources)).toEqual([[binding]]);
+  });
 });
 
 /** A real handoff grant for `instance`, from the exchange. */
