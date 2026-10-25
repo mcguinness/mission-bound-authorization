@@ -295,16 +295,18 @@ export function noteCountedDerivation(ctx: unknown, missionId: string): void {
 
 /**
  * @spec derivation-limits#counted-operations (#935, D772): settle the
- * derivations `ctx` counted: a response other than 200 delivered no token,
- * so each one failed in process before any artifact left and is returned.
- * A 200 settles nothing, a 200 the release fence then refuses included: that
- * Mission has ended, and the fence refunds nothing (D771).
+ * derivations `ctx` counted: a response other than 200, or an exception that
+ * escaped the request after its response was prepared (Koa then answers 500),
+ * delivered no token, so each one failed in process before any artifact left
+ * and is returned. A 200 that completed settles nothing, a 200 the release
+ * fence then refuses included: that Mission has ended, and the fence refunds
+ * nothing (D771).
  */
-function settleCountedDerivations(kernel: MissionKernel, ctx: { status: number }): void {
+function settleCountedDerivations(kernel: MissionKernel, ctx: { status: number }, threw: boolean): void {
   const counted = derivationsCountedBy.get(ctx);
   if (!counted) return;
   derivationsCountedBy.delete(ctx);
-  if (ctx.status === 200) return;
+  if (ctx.status === 200 && !threw) return;
   for (const missionId of counted) kernel.refundDerivation(missionId);
 }
 
@@ -2769,14 +2771,19 @@ export function buildProvider(opts: AdapterOptions): Provider {
   });
 
   // @spec derivation-limits#counted-operations (#935, D772): settles the
-  // derivations a request counted without a reservation. Registered second,
-  // so it runs inside the fence: its code after `next()` sees the response the
-  // grant produced, before the fence decides, and awaits nothing.
+  // derivations a request counted without a reservation. Registered after the
+  // fence, so it runs inside it: its code after `next()` sees the response the
+  // grant produced, or the exception that escaped it, before the fence
+  // decides, and awaits nothing.
   provider.use(async (ctx, next) => {
+    let threw = false;
     try {
       await next();
+    } catch (e) {
+      threw = true;
+      throw e;
     } finally {
-      settleCountedDerivations(kernel, ctx);
+      settleCountedDerivations(kernel, ctx, threw);
     }
   });
 
