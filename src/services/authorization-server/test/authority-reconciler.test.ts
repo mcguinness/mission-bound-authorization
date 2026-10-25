@@ -69,7 +69,7 @@ const READ = "payments:invoice.read";
 const SEND = "payments:remittance.send";
 const DECLARATION = AUTHORITY_DEPENDENCIES[0] as AuthorityDependencyDeclaration;
 const LAG_MS = (DECLARATION.enforcement.reconciliation_max_lag_seconds as number) * 1000;
-const PRINCIPALS = ["alice", "bob", "dana", "erin", "frank", "gina", "hana", "june", "kim", "lena", "omar", "pat", "quinn", "rui"];
+const PRINCIPALS = ["alice", "bob", "dana", "erin", "frank", "gina", "hana", "june", "kim", "lena", "omar", "pat", "quinn", "rui", "sam"];
 
 type SourceRecord = { sub: string; status?: string; withdrawn_delegations?: string[] };
 /** Every principal active and delegating, with `changes` applied: a principal mapped to null is absent from the source. */
@@ -591,5 +591,27 @@ describe("the reconciler's reads are ordered with the scheduled refreshes and da
     const dec = await decide(m.id);
     expect(dec.decision).toBe(false);
     expect(evidence.entries().at(-1)).toMatchObject({ enforcer: "pdp", failure: "reconciliation_overdue", mission: { id: m.id } });
+  });
+});
+
+describe("a pass over a kernel whose durable state is uncertain (@spec runtime#input-authority-dependency, control-plane#rollback, #830, D813)", () => {
+  it("commits nothing and does not count as current, so the PDP refuses until a pass over a reconciled kernel completes", async () => {
+    nowMs = Date.now();
+    await observe(sourceWith());
+    const m = approve(as, "sam");
+    source = sourceWith({ sam: { status: "disabled" } });
+    // The kernel reports its durable state uncertain (#250 step 3's recovery witness).
+    const uncertainKernel = Object.create(as.kernel, { recoveryUncertainty: { value: () => new Error("uncertain") } });
+    const overUncertain = new AuthorityReconciler({ kernel: uncertainKernel, declaration: DECLARATION, resolver });
+    const pass = await overUncertain.reconcile();
+    expect(pass.ok).toBe(false);
+    expect(pass.transitions).toEqual([]);
+    expect(stateOf(m.id).state).toBe("active");
+    expect(overUncertain.lag()).toEqual({});
+    const dec = await decide(m.id, READ, { ...enforcement(), reconciliation: () => overUncertain.lag() });
+    expect(dec.decision).toBe(false);
+    expect(evidence.entries().at(-1)).toMatchObject({ enforcer: "pdp", failure: "reconciliation_overdue", mission: { id: m.id } });
+    // Reconciled: a pass over the kernel suspends the Mission.
+    expect(mine(await reconciler().reconcile(), m)).toEqual([{ mission: m.id, operation: "suspend", change: "subject_disabled" }]);
   });
 });

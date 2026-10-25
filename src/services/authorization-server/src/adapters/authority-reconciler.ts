@@ -102,6 +102,15 @@ export class AuthorityReconciler {
     }
     const transitions: ReconcileOutcome["transitions"] = [];
     const failures: ReconcileOutcome["failures"] = [];
+    // @spec control-plane#rollback (#250 step 3): a kernel whose durable state
+    // is uncertain loads no Mission for a decision, so a pass over it neither
+    // commits nor counts as current: the PDP's lag refusal applies until the
+    // kernel is reconciled. (Read where the kernel reports it.)
+    const uncertainty = (kernel as { recoveryUncertainty?: () => unknown }).recoveryUncertainty?.();
+    if (uncertainty) {
+      this.lastOutcome = { ok: false, transitions, failures: [{ error: "the kernel's durable state is uncertain" }], unresolved: [] };
+      return this.lastOutcome;
+    }
     let missions: MissionRecord[];
     try {
       missions = kernel.allMissions();
