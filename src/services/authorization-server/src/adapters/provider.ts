@@ -430,6 +430,7 @@ import {
   childMissionClaim,
 } from "../kernel/child-delegation.js";
 import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
+import { JWKS_MAX_AGE_SECONDS } from "../kernel/signing-key-ring.js";
 import { type DpopProofReplay, newDpopProofReplay, refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
   handleTransactionAuthorization,
@@ -825,6 +826,12 @@ export interface AdapterOptions {
    * `subject_token` verifies under. `publicJwks` holds every AS role's key.
    */
   accessTokenJwks: { keys: Record<string, unknown>[] };
+  /**
+   * @spec #831 B2: the key ring revision the AS loaded, served as the
+   * `/jwks` `ETag` so verification can confirm which revision is running.
+   * Absent with keys generated at boot.
+   */
+  jwksRevision?: number;
   /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;
@@ -2042,6 +2049,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
     features: {
       // We serve our own approval interaction (the mission-kernel adapter).
       devInteractions: { enabled: false },
+      // @spec #831 B2: admits the verify-only keys for the access-token
+      // role's overlap generations (VerifyOnlySigningKey) in `jwks`.
+      externalSigningSupport: { enabled: true, ack: "experimental-01" },
       pushedAuthorizationRequests: { enabled: true, requirePushedAuthorizationRequests: true },
       // @spec mission#submission-via-par (#1503): the second carriage of the
       // Submission envelope, a `mission_intent` claim in a signed Request
@@ -2775,10 +2785,14 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // jwks_uri still publishes every role's public key: the provider serves the
   // route, with its CORS handling and content type, and only the key set it
   // answered with is replaced by `publicJwks`.
+  // @spec #831 B2: the response declares an explicit freshness lifetime, the
+  // interval a pending generation is published before it activates.
   provider.use(async (ctx, next) => {
     await next();
     if (ctx.method === "GET" && ctx.path === "/jwks" && ctx.status === 200) {
       ctx.body = { keys: opts.publicJwks.keys };
+      ctx.set("cache-control", `max-age=${JWKS_MAX_AGE_SECONDS}`);
+      if (opts.jwksRevision !== undefined) ctx.set("etag", `"${opts.jwksRevision}"`);
     }
   });
 
@@ -4489,7 +4503,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // members: `nonce` REQUIRED and well formed (a malformed one is refused
       // and never echoed), `mission_id` REQUIRED, `audience` non-empty when sent.
       if (echo === undefined) {
-        refuse(400, "invalid_request", "nonce is required: a string of 1 to 255 characters", undefined);
+        refuse(400, "invalid_request", "nonce is required: a string of 1 to 255 Unicode code points", undefined);
         return;
       }
       const missionId = form.params.mission_id;
@@ -4707,7 +4721,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (nonce === undefined) {
         deliver(400, {
           error: "invalid_request",
-          error_description: "nonce is REQUIRED: a string of 1 to 255 characters",
+          error_description: "nonce is REQUIRED: a string of 1 to 255 Unicode code points",
         });
         return;
       }

@@ -74,11 +74,18 @@ export type LifecycleFormResult =
   | { ok: false; description: string };
 
 /**
- * @spec status#idempotency: a well-formed `nonce`: a string of 1 to 255
- * characters. Anything else is malformed and never echoed.
+ * @spec status#idempotency, status#mission-status-request: a well-formed
+ * `nonce`: a string of 1 to 255 Unicode code points, counted by iterating
+ * the string rather than by its UTF-16 `length`, so a character outside the
+ * Basic Multilingual Plane counts once (#1689 review). Anything else is
+ * malformed and never echoed.
  */
 export function wellFormedNonce(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 && value.length <= 255 ? value : undefined;
+  // A code point is one or two UTF-16 units: past 510 units the bound is
+  // exceeded without counting.
+  return typeof value === "string" && value.length > 0 && value.length <= 510 && [...value].length <= 255
+    ? value
+    : undefined;
 }
 
 /**

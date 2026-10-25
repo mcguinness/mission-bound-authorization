@@ -55,8 +55,8 @@
     "content_sha256": "7045896b9dcf4574459f31fb8725faaf5d4520290b49d751ee028d2c958e8cd2"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "d9be6a8f39befa8f541da77debfb3b49c8e387e8",
-    "content_sha256": "16576c6430fa1676978886c705942f91da72c897801a9dbfb8ecd564981ab95e"
+    "revision": "041fb449df08a925f6a39e4296897dd860bc0378",
+    "content_sha256": "74627111c3bd16ffbdb2cd371116ed1ebb54b234b89f6f35910ce3da05d5e04e"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -16673,9 +16673,15 @@
      "name": "the dev-only path route runs the same engine (@spec status#mission-lifecycle-endpoint, #1191) > answers with the signed state-only response, requires a nonce, and refuses a body naming another Mission",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191) > accepts a nonce of 1 and of 255 code points, inside or outside the Basic Multilingual Plane, echoing it exactly, and refuses an empty one and one of 256 invalid_request with none echoed, after authentication (@spec status#lifecycle-operations, status#idempotency, #1535 finding 17, D805, #1689 review)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. Boundary witness (#1535 finding 17, item 4; D805): 1 and 255 characters accepted, empty and 256 refused, and an unauthenticated 256-character nonce refused invalid_client. Mutations of the shared bound (adapters/lifecycle-endpoint.ts wellFormedNonce): counting UTF-16 units instead of code points, an upper bound of 256 or 254 code points, and a lower bound admitting the empty string or refusing one code point, each fail the cited test at both endpoints."
   },
   {
    "id": "status.idempotency.window-floor",
@@ -19332,6 +19338,36 @@
     }
    ],
    "notes": "#1407 (as #1191 did for the Lifecycle endpoint). Proved by defects that drop the form members the route reads. #1535 Item C (D708): the repeated-parameter and unparseable-body outcomes are the processing-order rows status.read.unparseable-body-refused, status.read.repeated-auth-parameter and status.read.repeated-parameter-malformed, not this row."
+  },
+  {
+   "id": "status.request.nonce-syntax",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "REQUIRED. A string of 1 to 255 Unicode code points. A client-generated nonce binding the response to this request.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Status request whose nonce is empty or longer than 255 Unicode code points is refused invalid_request with no nonce echoed, a nonce of 1 or 255 code points is answered and echoed exactly, whether its code points lie inside or outside the Basic Multilingual Plane, and an unauthenticated request is refused as its authentication failure whatever its nonce",
+    "local": "wellFormedNonce (adapters/lifecycle-endpoint.ts) bounds the nonce at 1 to 255 code points at both endpoints, counting by iteration, not UTF-16 length; authentication precedes it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > accepts a nonce of 1 and of 255 code points, inside or outside the Basic Multilingual Plane, echoing it exactly, and refuses an empty one and one of 256 invalid_request with none echoed, after authentication (@spec status#mission-status-request, #1535 finding 17, D805, #1689 review)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 finding 17, item 4 (D805): a normative constraint on the Mission Status request; Error Responses already refused a malformed nonce at both endpoints, and the only syntax was Lifecycle's idempotency rule. Boundary witnesses at 0, 1, 255 and 256 code points, ASCII and outside the Basic Multilingual Plane (#1689 review: the bound counts code points, not UTF-16 units). Mutations of the shared bound (adapters/lifecycle-endpoint.ts wellFormedNonce): counting UTF-16 units instead of code points, an upper bound of 256 or 254 code points, and a lower bound admitting the empty string or refusing one code point, each fail the cited test at both endpoints."
   },
   {
    "id": "status.response.served-audience-aud",
