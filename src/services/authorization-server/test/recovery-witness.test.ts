@@ -227,7 +227,12 @@ describe("recovery witness: an intent left pending (@spec control-plane#rollback
     expect(() => kernel.transition(missionId, "revoke")).toThrow(RecoveryUncertainError);
     kernel.close();
 
-    expect(readRecoveryWitness(p.witness)).toEqual({ ...before, intent: before.committed + 1 });
+    // The intent may have reached the witness, so the failure is recorded over it.
+    expect(readRecoveryWitness(p.witness)).toMatchObject({
+      ...before,
+      intent: before.committed + 1,
+      uncertain: { reason: "witness_write_failed" },
+    });
     expect(refusal(p).reason).toBe("intent_pending");
     expect(() => reconcileKernelRecovery({ storeFile: p.store, witnessFile: p.witness, action: "acknowledge" })).toThrow(
       RecoveryReconciliationError,
@@ -385,5 +390,146 @@ describe("recovery witness: one writer and every write guarded (@spec control-pl
     expect(() => reconcileKernelRecovery({ storeFile: fresh.store, witnessFile: fresh.witness, action: "init" })).toThrow(
       /witness has advanced/,
     );
+  });
+});
+
+describe("recovery witness: review fixes (@spec control-plane#rollback, #250 step 3)", () => {
+  it("review: a copied store cannot share the witness: the witness is fenced across store paths, and the copy is refused afterwards rather than lowering it", () => {
+    const { p, missionId } = started();
+    backUp(p.store, p.backup);
+    const first = open(p);
+    let second: unknown;
+    try {
+      open({ store: p.backup, witness: p.witness }).close();
+    } catch (e) {
+      second = e;
+    }
+    expect(second).toBeInstanceOf(RecoveryUncertainError);
+    expect((second as RecoveryUncertainError).reason).toBe("witness_locked");
+    first.transition(missionId, "revoke");
+    const revoked = (readRecoveryWitness(p.witness) as RecoveryWitnessRecord).committed;
+    first.close();
+    // The copy, opened once the original released the witness, is older than it.
+    expect(refusal({ store: p.backup, witness: p.witness }).reason).toBe("rollback");
+    expect((readRecoveryWitness(p.witness) as RecoveryWitnessRecord).committed).toBe(revoked);
+    const kept = open(p);
+    expect(kept.get(missionId)?.state).toBe("terminated");
+    kept.close();
+  });
+
+  it("review: a mutating statement run through get, all, iterate, a chained builder or exec is guarded: the witness advances and nothing escapes", () => {
+    const { p, missionId } = started();
+    const kernel = open(p);
+    const sequence = () => markerSequence(kernel);
+    const steps: Array<() => unknown> = [
+      () => kernel.db.prepare("UPDATE missions SET derivation_count = derivation_count + 1 WHERE id = ? RETURNING derivation_count").get(missionId),
+      () => kernel.db.prepare("UPDATE missions SET derivation_count = derivation_count + 1 WHERE id = ? RETURNING id").all(missionId),
+      () => [...kernel.db.prepare("UPDATE missions SET derivation_count = derivation_count + 1 WHERE id = ? RETURNING id").iterate(missionId)],
+      () => kernel.db.prepare("UPDATE missions SET derivation_count = derivation_count + 1 WHERE id = ? RETURNING derivation_count").pluck().get(missionId),
+      () => kernel.db.exec("UPDATE missions SET derivation_count = derivation_count + 1"),
+    ];
+    for (const [i, step] of steps.entries()) {
+      const before = sequence();
+      step();
+      expect(sequence(), String(i)).toBe(before + 1);
+      expect(readRecoveryWitness(p.witness), String(i)).toMatchObject({ committed: before + 1, intent: null });
+    }
+    kernel.transition(missionId, "suspend");
+    expect(kernel.recoveryUncertainty()).toBeUndefined();
+    kernel.close();
+    open(p).close();
+  });
+
+  it("review: an escaped write is recorded in the witness, so a restart refuses until accept takes the store under a new generation", () => {
+    const { p, missionId } = started();
+    const kernel = open(p);
+    const rawPrepare = Object.getPrototypeOf(kernel.db).prepare as typeof kernel.db.prepare;
+    rawPrepare.call(kernel.db, "UPDATE missions SET derivation_count = derivation_count + 1 WHERE id = ?").run(missionId);
+    expect(() => kernel.transition(missionId, "suspend")).toThrow(RecoveryUncertainError);
+    expect(kernel.recoveryUncertainty()?.reason).toBe("escaped_write");
+    kernel.close();
+
+    expect(readRecoveryWitness(p.witness)?.uncertain?.reason).toBe("escaped_write");
+    expect(refusal(p).reason).toBe("escaped_write");
+    for (const action of ["acknowledge", "abandon"] as const) {
+      expect(() => reconcileKernelRecovery({ storeFile: p.store, witnessFile: p.witness, action })).toThrow(/no intent is pending/);
+    }
+    const accepted = reconcileKernelRecovery({ storeFile: p.store, witnessFile: p.witness, action: "accept" });
+    expect(accepted).toMatchObject({ generation: 2, intent: null });
+    expect(accepted.uncertain).toBeUndefined();
+    const resumed = open(p);
+    expect(resumed.get(missionId)?.state).toBe("active");
+    resumed.transition(missionId, "suspend");
+    resumed.close();
+  });
+
+  it("a witness rewritten underneath a running kernel stops it, the change is recorded over what is on disk, and accept never lowers the witness", () => {
+    const { p, missionId, witness } = started();
+    const kernel = open(p);
+    // Another writer, as if the lock were defeated, advanced the witness.
+    writeFileSync(p.witness, JSON.stringify({ ...witness, committed: witness.committed + 5 }));
+    expect(() => kernel.transition(missionId, "suspend")).toThrow(RecoveryUncertainError);
+    expect(kernel.recoveryUncertainty()?.reason).toBe("witness_moved");
+    kernel.close();
+    expect(readRecoveryWitness(p.witness)).toMatchObject({ committed: witness.committed + 5, uncertain: { reason: "witness_moved" } });
+    expect(refusal(p).reason).toBe("witness_moved");
+    // The store is older than the witness it would be accepted under.
+    expect(() => reconcileKernelRecovery({ storeFile: p.store, witnessFile: p.witness, action: "accept" })).toThrow(/older than the witnessed/);
+  });
+
+  it("a kernel stays stopped even when its uncertainty could not be recorded in the witness", () => {
+    const { p, missionId } = started();
+    const kernel = open(p);
+    const guard = kernel.recovery as unknown as { persist(record: RecoveryWitnessRecord): void };
+    // The intent and then the recording of the failure cannot be written; later writes could be.
+    vi.spyOn(guard, "persist")
+      .mockImplementationOnce(() => {
+        throw new Error("injected: the witness cannot be written");
+      })
+      .mockImplementationOnce(() => {
+        throw new Error("injected: the failure cannot be recorded");
+      });
+    expect(() => kernel.transition(missionId, "suspend")).toThrow(RecoveryUncertainError);
+    expect(readRecoveryWitness(p.witness)?.uncertain).toBeUndefined();
+    expect(() => kernel.transition(missionId, "suspend")).toThrow(RecoveryUncertainError);
+    expect(kernel.get(missionId)?.state).toBe("active");
+    kernel.close();
+  });
+
+  it("accept refuses with nothing recorded, and with an intent pending", () => {
+    const { p, witness } = started();
+    expect(() => reconcileKernelRecovery({ storeFile: p.store, witnessFile: p.witness, action: "accept" })).toThrow(/no uncertainty is recorded/);
+    writeFileSync(
+      p.witness,
+      JSON.stringify({ ...witness, intent: witness.committed + 1, uncertain: { reason: "commit_failed", detail: "test" } }),
+    );
+    expect(() => reconcileKernelRecovery({ storeFile: p.store, witnessFile: p.witness, action: "accept" })).toThrow(/acknowledge or abandon/);
+  });
+
+  it("reconciliation of another store is refused while a kernel holds the witness", () => {
+    const { p } = started();
+    const kernel = open(p);
+    try {
+      expect(() =>
+        reconcileKernelRecovery({ storeFile: paths().store, witnessFile: p.witness, action: "init" }),
+      ).toThrow(/the witness is held/);
+    } finally {
+      kernel.close();
+    }
+  });
+
+  it("review: a witness inside the store's directory tree, or a store inside the witness's, is refused by the kernel and by reconciliation", () => {
+    const root = mkdtempSync(join(tmpdir(), "mission-recovery-tree-"));
+    tempDirs.push(root);
+    const store = join(root, "state", "kernel.db");
+    for (const witness of [join(root, "state", "recovery", "kernel.witness"), join(root, "state", "kernel.witness")]) {
+      expect(() => reconcileKernelRecovery({ storeFile: store, witnessFile: witness, action: "init" })).toThrow(
+        /outside the store's directory/,
+      );
+      expect(() => open({ store, witness })).toThrow(/outside the store's directory/);
+    }
+    expect(() =>
+      reconcileKernelRecovery({ storeFile: join(root, "w", "state", "kernel.db"), witnessFile: join(root, "w", "kernel.witness"), action: "init" }),
+    ).toThrow(/outside the store's directory/);
   });
 });

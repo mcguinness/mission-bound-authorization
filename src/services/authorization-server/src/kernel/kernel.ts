@@ -177,6 +177,7 @@ import {
   type RecoveryGuard,
   type RecoveryUncertainError,
   refuseUnwitnessedOpen,
+  witnessSharesStoreTree,
 } from "./recovery-witness.js";
 import { newMissionId } from "./mission-id.js";
 import {
@@ -1043,10 +1044,14 @@ export class MissionKernel {
     if (opts.recoveryWitness && !opts.store?.file) {
       throw new Error("recoveryWitness needs a file-backed kernel store");
     }
+    if (opts.recoveryWitness && opts.store?.file && witnessSharesStoreTree(opts.store.file, opts.recoveryWitness.file)) {
+      throw new Error("the recovery witness must be outside the store's directory, and the store outside the witness's");
+    }
     this.db = openStore(SCHEMA, opts.recoveryWitness ? { ...opts.store, exclusive: true } : (opts.store ?? {}));
     try {
-      if (opts.recoveryWitness) this.recovery = guardKernelStore(this.db, opts.recoveryWitness.file);
-      else if (opts.store?.file) refuseUnwitnessedOpen(this.db);
+      if (opts.recoveryWitness && opts.store?.file) {
+        this.recovery = guardKernelStore(this.db, opts.store.file, opts.recoveryWitness.file);
+      } else if (opts.store?.file) refuseUnwitnessedOpen(this.db);
     } catch (e) {
       this.db.close();
       throw e;
@@ -5255,6 +5260,8 @@ export class MissionKernel {
    */
   close(): void {
     this.db.close();
+    // @spec control-plane#rollback (#250 step 3): and the witness's lock.
+    this.recovery?.release();
   }
 
   /**
