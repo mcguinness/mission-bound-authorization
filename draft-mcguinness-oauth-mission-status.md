@@ -238,7 +238,8 @@ The request is an HTTPS POST with an
   for a specific audience MUST send it.
 
 `nonce`:
-: REQUIRED. A string. A client-generated nonce binding the
+: REQUIRED. A string of 1 to 255 characters. A client-generated
+  nonce binding the
   response to this request. It MUST be unique per request within the
   response lifetime. A consumer MUST reject a response whose `nonce`
   does not equal the one it sent. This is a standard client challenge:
@@ -969,7 +970,8 @@ form-urlencoded body:
   The AS applies it as {{idempotency}} describes.
 
 `nonce`:
-: REQUIRED. A string. A client-generated nonce.
+: REQUIRED. A string of 1 to 255 characters. A client-generated
+  nonce, the request's idempotency key ({{idempotency}}).
 
 The request also carries the client authentication parameters of the
 mechanism it uses, as at the Mission Status endpoint

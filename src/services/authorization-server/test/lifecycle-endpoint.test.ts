@@ -467,6 +467,28 @@ describe("Mission Lifecycle endpoint authorization and request members (@spec st
     expect(as.kernel.get(m.id)?.state).toBe("active");
   });
 
+  it("accepts a nonce of 1 and of 255 characters, and refuses an empty one and one of 256 invalid_request with none echoed, after authentication (@spec status#lifecycle-operations, status#idempotency, #1535 finding 17, D805)", async () => {
+    const m = approve();
+    for (const refused of ["", "n".repeat(256)]) {
+      const answer = await op({ mission_id: m.id, operation: "suspend", nonce: refused });
+      expect(answer.status, answer.text).toBe(400);
+      expect(answer.json?.error).toBe("invalid_request");
+      expect(Object.hasOwn(answer.json ?? {}, "nonce")).toBe(false);
+    }
+    expect(as.kernel.get(m.id)?.state).toBe("active");
+    const suspended = await op({ mission_id: m.id, operation: "suspend", nonce: "s" });
+    expect(suspended.status, suspended.text).toBe(200);
+    const resumed = await op({ mission_id: m.id, operation: "resume", nonce: "r".repeat(255) });
+    expect(resumed.status, resumed.text).toBe(200);
+    expect(as.kernel.get(m.id)?.state).toBe("active");
+    // Authentication precedes member validation: unauthenticated, the
+    // 256-character nonce is the authentication failure's to answer.
+    const unauthenticated = await postLifecycleForm(ISSUER, { mission_id: m.id, operation: "revoke", nonce: "n".repeat(256) });
+    expect(unauthenticated.status, unauthenticated.text).toBe(400);
+    expect(unauthenticated.json?.error).toBe("invalid_client");
+    expect(as.kernel.get(m.id)?.state).toBe("active");
+  });
+
   it("refuses schedule members on another operation, as an incomplete pair, and as a schedule this deployment cannot honor, leaving the Mission unchanged", async () => {
     const m = approve();
     const before = as.kernel.get(m.id);
