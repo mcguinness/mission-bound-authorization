@@ -11,16 +11,16 @@
     "content_sha256": "abc6086f27dc02ea41a48bccb7408faa0aeafdd8464d78a79af5c370084a70e5"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "d32da54c5957197b6a58a0afc954c0c3c68fb532",
-    "content_sha256": "80d0b4206e2ff928e869e5362a58ca6ef0d1dfab8bc01744d1fdfb16392b0b07"
+    "revision": "54bfc7d5077f7ab59f8ac7070b7dd09000854ebf",
+    "content_sha256": "0b573747ea2e4759c7ba509b832e0cb95e1b77b2b2f0e0fa7b18168efce498c5"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
     "content_sha256": "e0466f26a42dc89f7f1637996066ed8de81addad3a6190db9b7f814e21525036"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "d32da54c5957197b6a58a0afc954c0c3c68fb532",
-    "content_sha256": "0b0a65e4ad1b12bfd083a22370b0a0d891543193c4065b63c497c565dd98ce7c"
+    "revision": "54bfc7d5077f7ab59f8ac7070b7dd09000854ebf",
+    "content_sha256": "2589fb9ff1db587d07713a2638dbb74699dd5494bc9678facd31afd467455210"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "d32da54c5957197b6a58a0afc954c0c3c68fb532",
@@ -157,6 +157,10 @@
    "draft-mcguinness-oauth-mission-containment.md": {
     "revision": "d4d2699d92097451df10fe7be7d1b507c43fc2bf",
     "content_sha256": "437ffcf048e52ad43a7c044adb6a46af60a4c9f76faf6142da3794b6456844f6"
+   },
+   "draft-mcguinness-mission-harness.md": {
+    "revision": "1859f68af5307bc7ad368e3cd58383c8b42c7dd9",
+    "content_sha256": "d339ce2786b7f680f388cb23abe5df7a94e68d1ec6b73f4efd3b09d2ebaeefe1"
    }
   }
  },
@@ -173,7 +177,8 @@
    "PRODUCER",
    "RECEIPT-ISSUER",
    "RECEIPT-VERIFIER",
-   "orchestrator"
+   "orchestrator",
+   "harness"
   ],
   "strengths": [
    "MUST",
@@ -315,7 +320,9 @@
    "aauth-management.update-position",
    "aauth-management.delegation-tree",
    "device-authorization.carriage",
-   "core.dpop-nonce"
+   "core.dpop-nonce",
+   "harness.work-item-attachment",
+   "runtime.work-item-attribution"
   ]
  },
  "profiles": [
@@ -4915,9 +4922,135 @@
      "name": "terminal tombstones and identifier nonreuse > records the terminal tombstone in the terminal transition's own transaction",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > an older backup restored under the witness is refused, and the witness is never lowered to match it",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > an older backup is refused the same way after a consumer observed the newer state",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > a lost witness is refused, and init does not recreate one over a store that has a marker",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > a witness behind its store, another store's witness and an unreadable witness are each refused",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: an intent left pending (@spec control-plane#rollback, #250 step 3) > an intent written before a commit that never happened: the kernel stops, the restart refuses, and abandon (not acknowledge) resumes the store as it was",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: an intent left pending (@spec control-plane#rollback, #250 step 3) > a commit whose witness was never finalized: the kernel stops, the restart refuses, and acknowledge (not abandon) resumes the committed state",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: one writer and every write guarded (@spec control-plane#rollback, #250 step 3) > a write that bypasses the guard stops the kernel at the next guarded transaction",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: one writer and every write guarded (@spec control-plane#rollback, #250 step 3) > a second kernel cannot open the store while one holds it, and reconciliation refuses while it is held",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store (@spec control-plane#rollback, #250 step 3) > a running AS whose kernel became uncertain answers every state-dependent request 503 temporarily_unavailable, and still serves discovery and the key set",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store (@spec control-plane#rollback, #250 step 3) > an AS whose kernel store does not match its witness does not build, and releases the store",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store (@spec control-plane#rollback, #250 step 3) > runs the code exchange, a refresh, a delegation handle, an async family and its refresh with every write guarded: nothing escapes, and the witness and the store advance together",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native launcher in process, OpenFGA client stubbed (D332) > refuses to start on a kernel store restored from before its recovery witness, and starts again once the witnessed store is back (#250 step 3)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: one writer and every write guarded (@spec control-plane#rollback, #250 step 3) > a witnessed store does not open without its witness, so nothing writes to it unwitnessed; a store that never had a witness still opens",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: a copied store cannot share the witness: the witness is fenced across store paths, and the copy is refused afterwards rather than lowering it",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: a mutating statement run through get, all, iterate, a chained builder or exec is guarded: the witness advances and nothing escapes",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: an escaped write is recorded in the witness, so a restart refuses until accept takes the store under a new generation",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > a witness rewritten underneath a running kernel stops it, the change is recorded over what is on disk, and accept never lowers the witness",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > a kernel stays stopped even when its uncertainty could not be recorded in the witness",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: a witness inside the store's directory tree, or a store inside the witness's, is refused by the kernel and by reconciliation",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store: review fixes (@spec control-plane#rollback, #250 step 3) > review: refuses a refresh whose kernel becomes uncertain during the final awaited drain, releasing no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store: review fixes (@spec control-plane#rollback, #250 step 3) > the kernel database holds exactly the tables the transaction inventory names (control-plane-deployment.md, Restore admission)",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. The rest of the invariant is unimplemented: the issuer does not refuse state-dependent service while a durable version or commit metadata is uncertain after an out-of-band restore, there is no fenced reconciliation policy that decides when it is certain again, and no retaining-consumer high-water mark is exercised here. No waiver of existing binding-level requirements."
+   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. With a recovery witness configured (#250 step 3, slice A), the kernel holds its store and its witness's lock exclusively (so a copied store cannot share the witness), and opens only when the store's recovery marker matches the witness, a file outside the database restore unit that every write transaction advances (intent before the commit, finalized after it): a restored older store, a lost, unreadable or foreign witness and an unresolved intent refuse to open, a witnessed store refuses to open without its witness, and a run-time witness or commit failure, a witness changed underneath it, or a write that bypassed the guard (every statement API that can write is guarded), stops every further write and is recorded in the witness, so a restart refuses until reconciled. Offline reconciliation under both locks acknowledges or abandons an intent, or accepts a store with a recorded uncertainty under a new generation, and never lowers the witness. The Authorization Server builds only on an admitted store (a shipped launcher requires the witness with MISSION_KERNEL_STORE, and `pnpm as-native` refuses to start on a restored older store), and while a running kernel is uncertain it answers every request but discovery metadata and the key set with 503 temporarily_unavailable, a request already in flight included (the release fence checks again after every await). The transaction inventory (control-plane-deployment.md) names every kernel table and how its writes are witnessed, and a test fails on a table it does not name. Not yet covered: a way back from an older store other than restoring the witnessed one, by invalidating authority under a new generation (slice B); the retaining-consumer high-water mark; and any topology beyond one writer on one host. The escape detector notices a bypassing write only at the next guarded transaction, after that write committed. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.tombstones",
@@ -63222,9 +63355,57 @@
      "name": "a carried child's own expiry at completion (@spec child-delegation#carryover-cas, child-delegation#child-state, #1674) > is excluded and recorded expired under a plan committing state changes, while its sibling carries",
      "level": "cross-component",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge state at a carryover's completion (@spec child-delegation#carryover-cas, child-delegation#carryover-no-reset, #919) > refuses a discharge after rendering that leaves the effective authority unchanged, under a plan that excludes only state changes",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > refuses the batch when the tombstone's detail is pruned, kept no termination, or does not exist",
+     "level": "cross-component",
+     "surface": "derivation"
     }
    ],
-   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses. #919 adds a suspension and a resume after rendering, containment after approval, a rendered record gone at completion, and a discharge after rendering. Containment and discharge are compared by the membership pass (the committed `containment_version` and `effective_authority_hash`); the conditional UPDATE's containment and discharge terms are bound to the row as read in that transaction, so they add nothing beside it, and dropping the discharge term changes no result. Proved by mutation: disabling the membership pass and the UPDATE check together fails the suspension, resume, record and state-only discharge witnesses; dropping only the `record_missing` divergence fails the record witness; dropping only the effective-authority comparison fails the state-only discharge witness, where the plan excludes the discharge's state change but not its narrowed authority. With both halves off, the containment and all-or-nothing discharge witnesses are still refused by another check, so they are not the halves' discriminating witnesses. #1674: a carried row is compared as observed through the expiry clock, so an old child whose own expiry arrived before completion diverges as `state_changed` though no transition was persisted: refused under all-or-nothing, excluded and recorded `expired` under a plan committing that class. A cascade row is compared as stored, since its outcome does not change. Proved by mutation: comparing carried rows as stored fails the exclusion witness; comparing every row as observed fails the rendered-cascade own-expiry witness."
+   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses. #919 adds a suspension and a resume after rendering, containment after approval, a rendered record gone at completion, and a discharge after rendering. Containment and discharge are compared by the membership pass: the committed `containment_version`, the committed `discharged_digests` as a set (#1673, D803) and `effective_authority_hash`; the conditional UPDATE binds the scalar inputs only. A latch on an entry containment already removed leaves the effective authority unchanged, so under a plan excluding only state changes only the discharge-set comparison refuses it; disabling that comparison fails its witness alone. Proved by mutation: disabling the membership pass and the UPDATE check together fails the suspension, resume, record and state-only discharge witnesses; dropping only the `record_missing` divergence fails the record witness; dropping only the effective-authority comparison fails the state-only discharge witness, where the plan excludes the discharge's state change but not its narrowed authority. With both halves off, the containment and all-or-nothing discharge witnesses are still refused by another check, so they are not the halves' discriminating witnesses. #1674: a carried row is compared as observed through the expiry clock, so an old child whose own expiry arrived before completion diverges as `state_changed` though no transition was persisted: refused under all-or-nothing, excluded and recorded `expired` under a plan committing that class. A cascade row is compared as stored, since its outcome does not change. Proved by mutation: comparing carried rows as stored fails the exclusion witness; comparing every row as observed fails the rendered-cascade own-expiry witness. #1675: a missing rendered row excluded under a plan committing `record_missing` must still be recorded; without a usable tombstone the completion is refused."
+  },
+  {
+   "id": "child-delegation.carryover.outcome-per-rendered-row",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-cas",
+   "text": "Each final outcome is recorded against its rendered row, not inferred from set equality over the subtree.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every rendered row has exactly one outcome in the final map and the authenticated Carryover Evidence, including a rendered row whose record no longer exists, or the completion is refused",
+    "local": "the reference records a rendered row its subtree walk did not reach from that row's tombstone, looked up by issuer and Mission identity: the terminal state and the termination committed at its terminal transition (kept on the tombstone since #1675). With no tombstone, a pruned one, or one written before the termination was kept, the batch is refused; no field is reconstructed from the commit time"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > is recorded once, from its tombstone, with the termination it committed, in the map and the signed evidence; the rest carries",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > refuses the batch when the tombstone's detail is pruned, kept no termination, or does not exist",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1675 (D803). Proved by mutation: not recording a rendered row the walk did not reach fails both witnesses; keeping no termination on the tombstone fails the recorded witness; skipping an unusable tombstone instead of refusing fails the refusal witness; pruning that keeps the termination fails the refusal witness's prune assertion. Under all-or-nothing a missing record refuses at the membership pass, before the map."
   },
   {
    "id": "child-delegation.carryover.generation-order",
@@ -63591,9 +63772,15 @@
      "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > cascades an unrendered descendant under disclosed exclusions and lists it explicitly in the authenticated map",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > is recorded once, from its tombstone, with the termination it committed, in the map and the signed evidence; the rest carries",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Signature verification, not payload construction: the retained Carryover Evidence is an ES256 compact JWS signed synchronously inside the completion transaction with the issuer's Status key, verified in-process against the issuer's public key and, at the wire, against the published `/jwks` document. Its payload carries `manifest_hash`, the qualified predecessor and successor references, the committed exclusion policy and the COMPLETE final map, with unrendered descendants listed explicitly."
+   "notes": "Signature verification, not payload construction: the retained Carryover Evidence is an ES256 compact JWS signed synchronously inside the completion transaction with the issuer's Status key, verified in-process against the issuer's public key and, at the wire, against the published `/jwks` document. Its payload carries `manifest_hash`, the qualified predecessor and successor references, the committed exclusion policy and the COMPLETE final map, with unrendered descendants listed explicitly. #1675: the complete map includes a rendered row whose record is gone, recorded from its tombstone; the witness checks the retained map and the signed evidence alike."
   },
   {
    "id": "child-delegation.carryover.observation-correlation",
@@ -80357,6 +80544,832 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Contextual twin of discovery.privacy-considerations.restrict-evidence-access: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
+   "id": "harness.work-item.agent-value-never-merged",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "A value the governed agent can supply, such as a tool argument or model output, never establishes, selects, or changes a work item, and the harness MUST NOT merge one into what it attaches.",
+   "role": "harness",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a tool argument or other agent-supplied value naming a work item, a work-item issuer or a Mission never changes the work item the harness attaches; the arguments pass through as arguments"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/agent/test/harness-work-item.test.ts",
+     "name": "the harness attaches its own work item (@spec harness#work-item-identity, #815) > attaches its work item in the propagated Mission reference on every call, and never from tool arguments",
+     "level": "unit",
+     "surface": "mission-reference"
+    }
+   ]
+  },
+  {
+   "id": "harness.work-item.attach-in-reference",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "the harness attaches the identifier to each governed request it originates for the item, in the Mission reference it propagates",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every governed call the harness originates for a work item carries the work item's work_item_issuer and work_item as members of the propagated Mission reference, beside the item's Mission identifier and issuer",
+    "local": "MediatedHarness takes its work item as configuration (MediatedHarnessOptions.workItem) and attaches it in the MCP params._meta reference key on every callTool."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/agent/test/harness-work-item.test.ts",
+     "name": "the harness attaches its own work item (@spec harness#work-item-identity, #815) > attaches its work item in the propagated Mission reference on every call, and never from tool arguments",
+     "level": "unit",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/agent/test/harness-work-item.test.ts",
+     "name": "harness to PEP to PDP to evidence over the real MCP channel (@spec harness#work-item-identity, authzen#context-work-item, #815) > the harness's work item reaches context.work_item, the permit's condition, Decision Evidence and Execution Evidence",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    }
+   ]
+  },
+  {
+   "id": "harness.work-item.retry-keeps-identifier",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "Retry: a retry or resumed dispatch keeps the identifier and is still a new continuation point",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a resumed submission carries the same work item as the work it resumes and is re-checked before it reaches the channel; a retry of queued work keeps the item's identifier"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/agent/test/harness-work-item.test.ts",
+     "name": "the harness attaches its own work item (@spec harness#work-item-identity, #815) > a resumed submission keeps the same work item, and is re-checked as a new continuation point",
+     "level": "unit",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "Resumed dispatch is witnessed at the harness boundary (a stale-lease refusal, then a fresh-lease submission under the same work item). The retry arm is not witnessed: the reference harness has no retry queue."
+  },
+  {
+   "id": "harness.work-item.concurrency-own-requests",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "Concurrency: concurrent work items, under one Mission or several, have distinct identifiers, and the harness attaches each only to the requests it originates for that item, under that item's Mission.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "concurrent work items each ride only their own calls, under their own Mission, never another item's or another Mission's"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/agent/test/harness-work-item.test.ts",
+     "name": "the harness attaches its own work item (@spec harness#work-item-identity, #815) > concurrent work items under one Mission or two attach distinct identifiers, each under its own Mission",
+     "level": "unit",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "The attaching arm is witnessed. Distinct identifiers are not: the reference harness receives its work item as configuration and does not itself assign identifiers, so distinctness rests on its caller."
+  },
+  {
+   "id": "harness.work-item.inheritance",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "a child governed by a different Mission receives its own identifier, bound to that Mission, never the parent's",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child created from a work item under the same Mission inherits its identifier; a child under a different Mission gets its own identifier bound to that Mission"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference harness creates no child node, job or sub-agent handle, so there is no path to witness."
+  },
+  {
+   "id": "harness.work-item.mapping-only-by-rebinding",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "Mapping: a work item's Mission does not change, except by explicit successor rebinding",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a work item is attached only under the Mission it was bound to, until an explicit successor rebinding moves it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "checkSupersessionContinuity decides whether rebinding may proceed; the reference performs no rebinding, so no path moves a work item between Missions to witness."
+  },
+  {
+   "id": "harness.work-item.members-together",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "Both are Strings, carried together or not at all, in the HTTP and MCP carriages alike.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a reference carrying one work-item member without the other, a non-String or empty member, or one past its bound is malformed in both the Mission-Reference field and the MCP _meta carriage; both members together parse as the work item",
+    "local": "Bounds are the reference's: work_item at most 256 characters and work_item_issuer at most 512, mirroring the tuple's own id and issuer bounds."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/mission-reference.test.ts",
+     "name": "the harness profile's work-item members on the reference tuple (@spec harness#work-item-identity, authority-server#reference-tuple, #815) > accepts work_item_issuer and work_item together, as Strings, in both carriages",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/mission-reference.test.ts",
+     "name": "the harness profile's work-item members on the reference tuple (@spec harness#work-item-identity, authority-server#reference-tuple, #815) > rejects one work-item member without the other, a non-String or empty one, and one past its bound",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ]
+  },
+  {
+   "id": "harness.work-item.pep-attacher-and-verified-reference",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "A PEP implementing this profile MUST take a work item only from these members, once the reference itself verifies, and only where the statement names the harness that `work_item_issuer` identifies as the attacher for the client the PEP authenticated on that request.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a work item reaches the decision request only from a verified reference and only when its work_item_issuer is the harness the statement names for the authenticated client; a verified reference whose work item names another harness, or arrives on another client's request, is not carried; a reference naming another Mission than the credential is refused before any decision"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > carries the work item the verified reference attaches as context.work_item, bound into the permit and recorded on Decision Evidence",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > does not carry a work item whose harness is not the attacher the statement names for the authenticated client",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > refuses a work item attached under another Mission on a call with this Mission's credential, before any decision (one client, two Missions)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The cross-Mission refusal is the authority-server reference verification (mission_reference_conflict), witnessed here with a work item attached."
+  },
+  {
+   "id": "harness.work-item.pep-never-from-arguments",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "It MUST NOT read a work item from tool arguments or any other value the agent supplies, and MUST NOT carry one it cannot attribute to that attacher.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a work_item tool argument never reaches the decision request, alone or beside an attachment, and a work item the PEP cannot attribute to the named attacher is not carried"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > never reads a work item from tool arguments: alone it is never carried, and beside an attachment the attachment governs",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > does not carry a work item whose harness is not the attacher the statement names for the authenticated client",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "harness.queue-item.work-item-stable-across-retries",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "queue-item",
+   "text": "It is the same across retries: `queue_item_id` names the attempt and `retry_of` the attempt before it, while `work_item` names the work every attempt performs.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every attempt of queued work carries the same work_item, while queue_item_id names the attempt"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference harness has no queue."
+  },
+  {
+   "id": "harness.evidence.work-item-issuer-required-where-claimed",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "harness-evidence-object",
+   "text": "REQUIRED with `work_item` where the Enforcement Scope Statement claims work-item attribution for that work.",
+   "role": "harness",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.work-item-attribution"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Harness Evidence record about claimed work carries work_item_issuer beside work_item"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference emits no Harness Evidence."
+  },
+  {
+   "id": "harness.supersession.record-carries-work-item",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "supersession-continuity",
+   "text": "That record carries the item's qualified work-item identifier, and the rebinding is the only change to the item's Mission",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a mission_superseded record carries the qualified work-item identifier of the item it rebinds"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference performs no rebinding and emits no Harness Evidence."
+  },
+  {
+   "id": "authzen.context-work-item.pep-populates-from-attachment-only",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "The PEP populates `context.work_item` only from the harness's authenticated attachment: the work item a verified Mission reference carries, for the attacher the Enforcement Scope Statement declares for the authenticated client",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "context.work_item carries, as {issuer, id}, only a work item a verified Mission reference carried for the attacher the statement declares for the authenticated client, and never a value from tool arguments"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > carries the work item the verified reference attaches as context.work_item, bound into the permit and recorded on Decision Evidence",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > never reads a work item from tool arguments: alone it is never carried, and beside an attachment the attachment governs",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-work-item.malformed-refused",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "The PDP MUST refuse, before evaluation, a request whose `context.work_item` is present but not of that shape",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a present context.work_item that is not exactly an object with string issuer and id is refused before evaluation as the Refusal Record work_item_invalid, in any class: no decision, no evaluation_id, no Decision Evidence and no policy evaluation"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > refuses a malformed work item before evaluation as work_item_invalid, claimed or not: no decision, no evaluation_id, no Decision Evidence and no FGA check",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > records the work_item_invalid refusal as a PDP-signed Refusal Record over the request as submitted, with no evaluation_id",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Owner review at d0821947: a malformed member is an unusable input (D744's split), not the evaluated denial work_item_context_missing."
+  },
+  {
+   "id": "authzen.context-work-item.absent-denied-where-claimed",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "Where the deployment's Enforcement Scope Statement claims work-item attribution for the action's class, the PDP MUST deny with `work_item_context_missing` ({{runtime-denial-classification}}) a decision from which `context.work_item` is absent.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.work-item-attribution"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "in a class the PDP's own statement claims work-item attribution for, a decision with no context.work_item is the evaluated denial work_item_context_missing; the claim is the PDP's binding, and a claim an enforcement component supplies is stripped",
+    "local": "Witnessed only on the co-resident decision point createDecisionPoint builds, which binds workItemAttributedClasses and strips a value an enforcement component supplies. createEphemeralDecisionPoint takes no claimed-class configuration, and the remote PDP server neither binds nor strips it (a remote deployment would supply it through its own getOptions): neither path is verified, and no row claims it."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > on a class the statement claims work-item attribution for, denies work_item_context_missing with no work item and permits with one",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > the decision point applies its own claimed classes and strips any an enforcement component supplies",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-work-item.unclaimed-absence-relaxes-nothing",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "Elsewhere its absence relaxes nothing, and the deployment claims Mission-level attribution only.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "in a class no statement claims, a decision without context.work_item is decided as before, and one with it carries it",
+    "local": "Witnessed only on the co-resident decision point createDecisionPoint builds, which binds workItemAttributedClasses and strips a value an enforcement component supplies. createEphemeralDecisionPoint takes no claimed-class configuration, and the remote PDP server neither binds nor strips it (a remote deployment would supply it through its own getOptions): neither path is verified, and no row claims it."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > on a class no statement claims, carries a present work item into the permit's work_item condition and Decision Evidence, and permits without one",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-work-item.binding-and-cache-key",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "The member is part of the authorization binding and the cache key ({{projections}}), so no cached decision or resumed execution crosses work items",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "two requests differing only in their work item have different cache keys, so a retransmission returns a permit only to the same work item and another work item under the same key is never handed it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work item is part of the authorization binding and the cache key (@spec authzen#projections, authzen#context-work-item, #815) > two requests that differ only in their work item have different cache keys, and an identical one the same",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work item is part of the authorization binding and the cache key (@spec authzen#projections, authzen#context-work-item, #815) > a duplicate keyed dispatch of the same work item is the retransmission of its permit, and another work item under the same key never receives it",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The resumed-execution arm is the PEP's work_item condition comparison (authzen.decision-conditions.work-item-compared-at-use)."
+  },
+  {
+   "id": "authzen.decision-conditions.work-item-required-equal",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "decision-conditions",
+   "text": "REQUIRED on a permit for a decision whose request carried `context.work_item` ({{context-work-item}}), and equal to it.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit for a decision whose request carried context.work_item carries conditions.work_item equal to it; a permit for one without carries none"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > on a class no statement claims, carries a present work item into the permit's work_item condition and Decision Evidence, and permits without one",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > on a class the statement claims work-item attribution for, denies work_item_context_missing with no work item and permits with one",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.decision-conditions.work-item-compared-at-use",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "decision-conditions",
+   "text": "At every use, the executing PEP MUST compare it with the work item it attributes to the request it is executing, and MUST NOT release an effect when they differ or when either is present without the other.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a permit whose work_item condition differs from the request's attributed work item, or is present without it, or absent beside it, releases no effect"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > item swap within one Mission: a permit decided for one work item is refused work_item_mismatch with zero effect when presented for another",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > refuses a permit bound to a work item for a request that carries none, and a permit bound to none for a request that carries one",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "authzen.decision-conditions.work-item-mismatch-carrier",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "decision-conditions",
+   "text": "Such a refusal is Execution Evidence `suppressed` / `work_item_mismatch`, not a PDP denial.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the refusal is recorded as Execution Evidence outcome suppressed with error work_item_mismatch"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > item swap within one Mission: a permit decided for one work item is refused work_item_mismatch with zero effect when presented for another",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "evidence.extensions.work-item-decision-evidence",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "REQUIRED on Decision Evidence when the decision request carried a well-formed work-item context, recorded as presented",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Decision Evidence carries work_item exactly as the request presented it, on a permit or a denial; a request with a malformed one is refused before evaluation and yields no Decision Evidence"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > on a class no statement claims, carries a present work item into the permit's work_item condition and Decision Evidence, and permits without one",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > refuses a malformed work item before evaluation as work_item_invalid, claimed or not: no decision, no evaluation_id, no Decision Evidence and no FGA check",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "evidence.extensions.work-item-execution-evidence",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "on Execution Evidence when the request the disposition concerns carried one, recorded as the executing PEP attributed it",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a suppressed or completed Execution Evidence record carries the work item the executing PEP attributed to the request"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > a completed execution's Execution Evidence carries the request's work item",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > item swap within one Mission: a permit decided for one work item is refused work_item_mismatch with zero effect when presented for another",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The PEP suppression and executor completion records are witnessed. A late completion recorded by claim reconciliation copies the work item its Decision Evidence recorded and has no witness."
+  },
+  {
+   "id": "evidence.execution-error.work-item-mismatch",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`work_item_mismatch` (the permit's work-item condition differs from the work item the executing PEP attributes to the request, or one is present without the other)",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit suppressed for a work-item mismatch records error work_item_mismatch"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > item swap within one Mission: a permit decided for one work item is refused work_item_mismatch with zero effect when presented for another",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "harness.work-item.verification-is-not-attachment",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "verification alone never establishes the attachment",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a Mission reference that verifies against the credential's Mission still carries no work item into the decision unless its work_item_issuer is the attacher the statement declares for the authenticated client"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > does not carry a work item whose harness is not the attacher the statement names for the authenticated client",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-work-item.verified-reference-is-not-attachment",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "A reference that verifies does not by itself establish that attachment, and the PEP never takes a work item from tool arguments or another value the agent supplies.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a verified reference whose work item is not the declared attacher's for the authenticated client, and a work_item tool argument, never reach context.work_item"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > does not carry a work item whose harness is not the attacher the statement names for the authenticated client",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > never reads a work item from tool arguments: alone it is never carried, and beside an attachment the attachment governs",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.failure-condition-coverage.work-item-invalid-unusable-input",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "`evaluation_context_invalid`, and `work_item_invalid` are PDP refusals before evaluation",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a malformed work-item context is carried as a Refusal Record work_item_invalid with no evaluation_id, never as a PDP denial reason or Decision Evidence"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > records the work_item_invalid refusal as a PDP-signed Refusal Record over the request as submitted, with no evaluation_id",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > refuses a malformed work item before evaluation as work_item_invalid, claimed or not: no decision, no evaluation_id, no Decision Evidence and no FGA check",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "evidence.refusal.work-item-invalid",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for one carrying a work-item context that is not well-formed (the harness profile, {{I-D.draft-mcguinness-mission-harness}}), `work_item_invalid`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PDP's Refusal Record for a request with a malformed work-item context carries denial_reason work_item_invalid, signed over the request as submitted, with no evaluation_id"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > records the work_item_invalid refusal as a PDP-signed Refusal Record over the request as submitted, with no evaluation_id",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
   }
  ]
 }

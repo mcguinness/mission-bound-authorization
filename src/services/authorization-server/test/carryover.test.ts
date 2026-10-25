@@ -1740,3 +1740,77 @@ describe("a carried child's own expiry at completion (@spec child-delegation#car
     expect(reservationStates(run2).every((s) => s === "cancelled")).toBe(true);
   });
 });
+
+describe("a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675)", () => {
+  const RECORD_MISSING: CarryoverExclusionPolicy = {
+    mode: "disclosed_exclusions",
+    change_classes: ["record_missing"],
+    dependent_descendant_exclusion: true,
+    unrendered_child_cascade: true,
+  };
+  const removeRecord = (id: string) => kernel.db.prepare("DELETE FROM missions WHERE id = ?").run(id);
+
+  it("is recorded once, from its tombstone, with the termination it committed, in the map and the signed evidence; the rest carries", () => {
+    const pred = approvePredecessor();
+    const gone = addChild(pred.id, "child-a");
+    const kept = addChild(pred.id, "child-b");
+    const run = openApproved(pred.id, { config: config({ exclusionPolicy: RECORD_MISSING }) });
+    const rendered = manifestOf(run).entries.map((e) => e.child_id);
+    kernel.transition(gone.id, "revoke");
+    const committed = (kernel.get(gone.id) as MissionRecord).termination;
+    expect(committed?.reason).toBe("revoked");
+    // The tombstone keeps the termination exactly as committed.
+    expect(kernel.tombstones.find(ISS, gone.id)?.termination).toEqual(committed);
+    removeRecord(gone.id);
+    const out = redeem(run);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    const result = run.store.carryoverResultFor(run.code);
+    if (!result) throw new Error("no carryover result");
+    for (const map of [result.map, decodeCarryoverEvidence(result.evidence_jws).map]) {
+      for (const id of rendered) expect(map.filter((r) => r.old_child.mission_id === id)).toHaveLength(1);
+      expect(map.find((r) => r.old_child.mission_id === gone.id)).toEqual({
+        old_child: { issuer: ISS, mission_id: gone.id },
+        outcome: "excluded",
+        reason: "record_missing",
+        terminal_state: "terminated",
+        termination: committed,
+      });
+      expect(map.find((r) => r.old_child.mission_id === kept.id)?.outcome).toBe("carried");
+    }
+  });
+
+  it("refuses the batch when the tombstone's detail is pruned, kept no termination, or does not exist", () => {
+    const cases: Array<[string, (id: string) => void]> = [
+      [
+        "pruned",
+        (id) => {
+          kernel.transition(id, "revoke");
+          kernel.db.prepare("UPDATE mission_tombstones SET detail_expires_at = 0 WHERE mission_id = ?").run(id);
+          kernel.tombstones.pruneDetails();
+          expect(kernel.tombstones.find(ISS, id)).toMatchObject({ detailPruned: true });
+          expect(kernel.tombstones.find(ISS, id)?.termination).toBeUndefined();
+        },
+      ],
+      [
+        "written before the termination was kept",
+        (id) => {
+          kernel.transition(id, "revoke");
+          kernel.db.prepare("UPDATE mission_tombstones SET termination_json = NULL WHERE mission_id = ?").run(id);
+        },
+      ],
+      ["absent, the record removed with no terminal transition", () => {}],
+    ];
+    for (const [label, prepare] of cases) {
+      const pred = approvePredecessor();
+      const gone = addChild(pred.id, "child-a");
+      addChild(pred.id, "child-b");
+      const run = openApproved(pred.id, { config: config({ exclusionPolicy: RECORD_MISSING }) });
+      const manifest = manifestOf(run);
+      prepare(gone.id);
+      removeRecord(gone.id);
+      expect(redeem(run), label).toEqual({ error: "access_denied" });
+      expect(kernel.get(manifest.successor.mission_id), label).toBeUndefined();
+      expect(kernel.get(pred.id)?.state, label).toBe("active");
+    }
+  });
+});
