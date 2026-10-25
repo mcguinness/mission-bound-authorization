@@ -586,9 +586,12 @@ client the deployment binds the `provenance` disclosure privilege to: the
 `lifecycleClientGrants` policy (`discloseProvenance` in
 `services/authorization-server/src/adapters/provider.ts`). The
 `mission_status` and `mission_lifecycle` grants and Join Disclosure
-enrollment confer none. The pilot binds it to each Status client enrolled in
-the PDP role, whose policy view commits `authority_hash` (`mas-as.ts`). A
-deployment that binds it to no client serves no `authority_hash` on Status
+enrollment confer none. In the pilot the privilege travels with the Status
+client's registration (`disclose` in `MAS_PILOT_STATUS_CLIENTS`;
+`newStatusClientKey` in `mas-as.ts`): the launcher registers the client that
+runs the PDP with `provenance`, since the PDP's policy view commits
+`authority_hash`, whether or not that client is enrolled for Join Disclosure.
+A deployment that binds it to no client serves no `authority_hash` on Status
 responses.
 
 **The PDP's remote Mission Status resolver** (MAS §join-rules rule 2):
