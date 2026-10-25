@@ -37,6 +37,7 @@ import {
   EvaluationContextSalts,
   EvidenceStore,
   type ExecutionEvidence,
+  executionDivergence,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
   operationKey,
@@ -74,7 +75,8 @@ interface DescriptorEntry {
  * The claimed declaration with `payments:payment.execute` moved to a new
  * descriptor version whose facts are unchanged: only the reference differs.
  */
-function republishedPaymentDescriptor(): EvaluationContextBindingDeclarations {
+function republishedPaymentDescriptor(opts: { retainOriginal?: boolean } = {}): EvaluationContextBindingDeclarations {
+  const retainOriginal = opts.retainOriginal ?? true;
   return new EvaluationContextBindingDeclarations(
     claimedStatement((s) => {
       const ecb = s.extensions.evaluation_context_binding as {
@@ -84,6 +86,9 @@ function republishedPaymentDescriptor(): EvaluationContextBindingDeclarations {
       const current = ecb.descriptors.find((d) => d.id.endsWith("/payment-execute")) as DescriptorEntry;
       const document = { ...current.document, version: "2026-10-25" };
       const digest = canonicalDigest(document as JsonValue);
+      // The earlier version stays published (retained) or is withdrawn, so a
+      // binding committed to it can, or cannot, still be recomputed under it.
+      if (!retainOriginal) ecb.descriptors = ecb.descriptors.filter((d) => d !== current);
       ecb.descriptors.push({ id: current.id, version: "2026-10-25", digest, document });
       for (const o of ecb.operations) {
         if (o.operation === "payments:payment.execute") o.descriptor = { id: current.id, version: "2026-10-25", digest };
@@ -514,22 +519,55 @@ describe("the primary error of a context failure at use, with every available di
     expect(record).not.toHaveProperty("effective_evaluation_context_digest");
   });
 
-  it("unchanged facts under a changed descriptor are target_drift: the parameter pair equal, the context pair present and unequal", async () => {
+  it("unchanged facts under a changed descriptor are refused by the descriptor-change check, with the effective context digest computed under the retained original and equal to the authorized one", async () => {
+    // The declaration names a new descriptor version for the operation; the
+    // original stays published. And a declaration that no longer covers the
+    // crossing at all.
+    for (const declaration of [republishedPaymentDescriptor(), UNCLAIMED]) {
+      const h = harness();
+      const refused = await cross(h, COMMIT, () => h.declareAtPep(declaration));
+      expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
+      expect(h.connectors.committedEffects()).toHaveLength(0);
+      const [record] = executions(h);
+      expect(record?.error).toBe("target_drift");
+      expect(record?.effective_parameter_digest).toBe(record?.authorized_parameter_digest);
+      // Comparable: computed under the committed descriptor and salt version.
+      expect(record?.authorized_evaluation_context_digest).toBeDefined();
+      expect(record?.effective_evaluation_context_digest).toBe(record?.authorized_evaluation_context_digest);
+      // So the audit classification reports no divergence: the refusal is the
+      // descriptor change, not context drift.
+      expect(executionDivergence(record as ExecutionEvidence["content"])).toEqual({});
+    }
+  });
+
+  it("a fact that moved under a changed descriptor diverges under the retained original and is target_drift", async () => {
     const h = harness();
-    const refused = await cross(h, COMMIT, () => h.declareAtPep(republishedPaymentDescriptor()));
+    const refused = await cross(h, COMMIT, () => {
+      h.declareAtPep(republishedPaymentDescriptor());
+      h.payments.bumpInvoiceAmount("inv-1", "130.00");
+    });
     expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
     expect(h.connectors.committedEffects()).toHaveLength(0);
     const [record] = executions(h);
     expect(record?.error).toBe("target_drift");
-    expect(record?.effective_parameter_digest).toBe(record?.authorized_parameter_digest);
-    expect(record?.effective_evaluation_context_digest).toBeDefined();
+    // The effective digest is the moved facts committed under the ORIGINAL
+    // descriptor and the binding's salt version, never under the new one.
+    const operation = { action: "payments:payment.execute", phase: "commit" };
+    const mission = { issuer: ISSUER, id: "msn_773" };
+    const underOriginal = captureEvaluationContext({ declarations: CLAIMED, salts: h.salts(), mission, operation, invoiceId: "inv-1", payments: h.payments });
+    const underLive = captureEvaluationContext({ declarations: republishedPaymentDescriptor(), salts: h.salts(), mission, operation, invoiceId: "inv-1", payments: h.payments });
+    if (!underOriginal.ok || !underLive.ok) throw new Error("capture failed");
+    expect(record?.effective_evaluation_context_digest).toBe(underOriginal.digest);
+    expect(record?.effective_evaluation_context_digest).not.toBe(underLive.digest);
     expect(record?.effective_evaluation_context_digest).not.toBe(record?.authorized_evaluation_context_digest);
+    expect(executionDivergence(record as ExecutionEvidence["content"])).toEqual({ parameter: true, evaluation_context: true });
   });
 
   it("an unrecoverable descriptor or salt is target_drift with the effective context digest absent and the parameter pair kept", async () => {
-    // No descriptor applies at use: the declaration no longer covers the crossing.
+    // The committed descriptor is no longer published: the original cannot be
+    // recovered, so no comparison is made under any substitute.
     const withdrawn = harness();
-    expect(await cross(withdrawn, COMMIT, () => withdrawn.declareAtPep(UNCLAIMED))).toEqual({
+    expect(await cross(withdrawn, COMMIT, () => withdrawn.declareAtPep(republishedPaymentDescriptor({ retainOriginal: false })))).toEqual({
       ok: false,
       refusal_reason: "target_drift",
     });
