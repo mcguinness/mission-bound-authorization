@@ -876,6 +876,26 @@ describe("the compensate crossing binds the live resource facts its decision eva
     expectLiveFactDrift(h, await reverse(h, () => h.payments.setInvoiceClassification("inv-1", "restricted")));
   });
 
+  for (const [record, remove] of [
+    ["invoice", (h: Harness) => h.payments.db.prepare("DELETE FROM invoices WHERE id = 'inv-1'").run()],
+    ["vendor", (h: Harness) => h.payments.db.prepare("DELETE FROM vendors WHERE id = 'acme'").run()],
+  ] as const) {
+    it(`an ${record} record removed between the decision and release is refused target_drift with zero effects, the wire's parameter pair kept and no effective context digest`, async () => {
+      const h = harness();
+      const refused = await reverse(h, () => remove(h));
+      expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
+      expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+      const decision = compensating(h);
+      expect(decision?.decision).toBe("permit");
+      const [suppressed] = executions(h).filter((r) => r.outcome === "suppressed");
+      expect(suppressed?.error).toBe("target_drift");
+      expect(suppressed?.authorized_parameter_digest).toBe(decision?.parameter_digest);
+      expect(suppressed?.effective_parameter_digest).toBe(suppressed?.authorized_parameter_digest);
+      expect(suppressed?.authorized_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+      expect(suppressed).not.toHaveProperty("effective_evaluation_context_digest");
+    });
+  }
+
   it("the compensate crossing reads no effect fact from the store: a descriptor naming the invoice's amount for it does not capture", () => {
     const payments = new PaymentsStore();
     payments.seed(
@@ -926,6 +946,66 @@ describe("the compensate crossing binds the live resource facts its decision eva
     expect(capture(CLAIMED).ok).toBe(true);
     expect(capture(storeAmount)).toEqual({ ok: false, reason: "fact_unresolvable" });
   });
+});
+
+describe("a compensating decision and its context are one observation of the live facts (@spec runtime#evaluation-context-binding, resource-access#initial-common-constraints, #773, #252)", () => {
+  const CASES = [
+    {
+      fact: "tenant",
+      member: "tenant",
+      seed: { tenant: "tenant-a", constraints: { tenant: "tenant-a" } },
+      move: (h: Harness) => h.payments.setVendorTenant("acme", "tenant-b"),
+      moved: "tenant-b",
+    },
+    {
+      fact: "issuance",
+      member: "issued_at",
+      seed: { issuedAt: "2026-08-15T00:00:00Z", constraints: { resource_issued_after: "2026-07-01T00:00:00Z" } },
+      move: (h: Harness) => h.payments.setInvoiceIssuedAt("inv-1", "2026-06-01T00:00:00Z"),
+      moved: "2026-06-01T00:00:00Z",
+    },
+    {
+      fact: "classification",
+      member: "data_classification",
+      seed: { classification: "internal", constraints: { data_classification: ["internal"] } },
+      move: (h: Harness) => h.payments.setInvoiceClassification("inv-1", "restricted"),
+      moved: "restricted",
+    },
+  ] as const;
+  for (const c of CASES) {
+    it(`a ${c.fact} moved while the link's evidence is verified reaches the decision as moved: the PDP's bound denies, and the request and its committed context carry the same value`, async () => {
+      const h = harness(c.seed);
+      expect((await cross(h, COMMIT)).ok).toBe(true);
+      // The owner's #1663 review 3 scenario: the fact moves inside the
+      // awaited verification of the retained evidence the link rests on.
+      const verify = h.evidence.verifyRetained.bind(h.evidence);
+      let moved = false;
+      h.evidence.verifyRetained = async (row) => {
+        const valid = await verify(row);
+        if (!moved) {
+          moved = true;
+          c.move(h);
+        }
+        return valid;
+      };
+      const result = await h.server.callTransactionTool(REVERSE, { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, TOKEN);
+      expect(moved).toBe(true);
+      // The decision saw the moved fact: the request carries it.
+      const request = h.requests.at(-1);
+      expect((request?.resource.properties as Record<string, unknown> | undefined)?.[c.member]).toBe(c.moved);
+      // Refused at the decision by the PDP's own bound, never at use.
+      expect(result).toMatchObject({ ok: false, denial_reason: "parameter_violation" });
+      expect(result).not.toHaveProperty("refusal_reason");
+      expect(executions(h).filter((r) => r.outcome === "suppressed")).toHaveLength(0);
+      expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+      // The context the request committed is the same observation.
+      const decision = compensating(h);
+      expect(decision?.decision).toBe("deny");
+      const sameObservation = captureFromWire(h, decision);
+      if (!sameObservation.ok) throw new Error(JSON.stringify(sameObservation));
+      expect(request?.context.evaluation_context_digest).toBe(sameObservation.digest);
+    });
+  }
 });
 
 describe("restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773)", () => {
