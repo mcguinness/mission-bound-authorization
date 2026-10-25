@@ -39,8 +39,13 @@ import {
   entitlementPermits,
   type EntitlementResolver,
   idempotencyScopeDigest,
+  type EvaluationContextBindingDeclarations,
+  type EvaluationContextBindingRef,
   isActionPhase,
   isCurrencyCode,
+  isEvaluationContextBindingRef,
+  isEvaluationContextDigest,
+  sameEvaluationContextBinding,
   isIdempotencyKey,
   isValidAmount,
   MISSION_ORIGIN_SUBJECT_TYP,
@@ -56,7 +61,7 @@ import {
   timeWindowEndMs,
   unsupportedEntryMember,
 } from "@mission/core";
-import { RESOURCE_CONTRACTS } from "@mission/demo-data";
+import { EVALUATION_CONTEXT_BINDING, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { randomUUID } from "node:crypto";
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey, type JWTVerifyGetKey } from "jose";
@@ -352,6 +357,18 @@ export interface EvaluationRequest {
      */
     action_phase?: string;
     /**
+     * @spec authzen#context-evaluation-binding (#773): CONDITIONAL, REQUIRED
+     * for an operation the runtime profile's Evaluation-Context Binding
+     * covers: the prefixed canonical-object digest of the context the PEP
+     * captured, an observation this PDP echoes and cannot recompute without
+     * the PEP's secret salt. Typed `unknown` deliberately: a malformed value
+     * is refused before evaluation (`evaluation_context_invalid`), never
+     * admitted by the type system.
+     */
+    evaluation_context_digest?: unknown;
+    /** @spec authzen#context-evaluation-binding (#773): the versioned descriptor reference `{id, version, digest}`. */
+    evaluation_context_binding?: unknown;
+    /**
      * @spec authzen#context-compensation-link (#252): CONDITIONAL, REQUIRED
      * on a request whose `action_phase` is `compensate`. The `evaluation_id`
      * of the committed effect the operation offsets, which the PEP
@@ -520,7 +537,11 @@ export interface Decision {
  * name unusable decision inputs, not evaluated policy denials (@spec
  * authzen#failure-condition-coverage).
  */
-export type PdpRefusalReason = "operation_target_invalid" | "phase_invalid" | "compensation_link_invalid";
+export type PdpRefusalReason =
+  | "operation_target_invalid"
+  | "phase_invalid"
+  | "compensation_link_invalid"
+  | "evaluation_context_invalid";
 
 /**
  * Thrown by {@link evaluate} for a decision request the PDP refuses before
@@ -842,6 +863,16 @@ export interface EvaluateOptions {
    * phased action, and only an out-of-set phase is refused.
    */
   phasedActions?: ReadonlySet<string>;
+  /**
+   * @spec authzen#context-evaluation-binding, runtime#evaluation-context-binding
+   * (#773): this PDP's own trusted Evaluation-Context Binding claim and
+   * declaration, which the PEP's context inputs are validated against. A
+   * PDP-side binding, like `resourceContracts`: an enforcement component that
+   * could supply it could declare its own inputs compatible. Defaults to the
+   * deployment's statement (`EVALUATION_CONTEXT_BINDING`), which covers
+   * nothing without its claim.
+   */
+  evaluationContextBinding?: EvaluationContextBindingDeclarations;
 }
 
 /**
@@ -885,6 +916,7 @@ export type DecisionOptions = Omit<
   | "resourceContracts"
   | "durationLeases"
   | "phasedActions"
+  | "evaluationContextBinding"
 >;
 
 /** What the claim step left for {@link evaluate} to finish. */
@@ -944,6 +976,36 @@ export type DecisionFn = (req: EvaluationRequest, opts: DecisionOptions) => Prom
  */
 function newDecisionId(): string {
   return `dec_${randomUUID()}`;
+}
+
+/**
+ * @spec authzen#context-evaluation-binding (#773): the request's
+ * evaluation-context inputs as this PDP establishes them against its trusted
+ * declaration. For a covered operation (the action and, for a compound
+ * action, the validated phase the declaration lists): both inputs, the
+ * digest in the canonical-object digest form and the reference exactly
+ * `{id, version, digest}` and equal to the one declared for the operation,
+ * or `"invalid"`. For an operation the declaration does not cover:
+ * `undefined`, the inputs neither required nor established, so nothing is
+ * echoed or recorded for it. Pure, so the permit and its evidence read the
+ * same values the pre-evaluation check accepted.
+ */
+function evaluationContextOf(
+  req: EvaluationRequest,
+  opts: Pick<EvaluateOptions, "evaluationContextBinding">,
+): { digest: string; binding: EvaluationContextBindingRef } | "invalid" | undefined {
+  const declarations = opts.evaluationContextBinding ?? EVALUATION_CONTEXT_BINDING;
+  const r = req as { action?: { name?: unknown }; context?: Record<string, unknown> } | undefined;
+  const action = r?.action?.name;
+  const phase = r?.context?.action_phase;
+  if (typeof action !== "string") return undefined;
+  const entry = declarations.operation(action, isActionPhase(phase) ? phase : undefined);
+  if (!entry) return undefined;
+  const digest = r?.context?.evaluation_context_digest;
+  const binding = r?.context?.evaluation_context_binding;
+  if (!isEvaluationContextDigest(digest) || !isEvaluationContextBindingRef(binding)) return "invalid";
+  if (!sameEvaluationContextBinding(binding, entry.descriptor)) return "invalid";
+  return { digest, binding: { id: binding.id, version: binding.version, digest: binding.digest } };
 }
 
 export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
@@ -1010,6 +1072,19 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   if (linkUnusable) {
     await recordPdpRefusal(opts.refusals, "compensation_link_invalid", req);
     throw new DecisionRequestRefused("compensation_link_invalid");
+  }
+  // @spec authzen#context-evaluation-binding, authzen#failure-condition-coverage,
+  // runtime-evidence#pre-decision-refusal (#773): "The PDP MUST validate their
+  // shape and applicability against the declared operation binding, and MUST
+  // NOT issue a covered permit when either is missing, malformed or
+  // incompatible with that declaration; it refuses such a request before
+  // evaluation". Checked after the phase, so a request failing both is
+  // refused once, as `phase_invalid`. An unusable input, not a policy denial:
+  // a Refusal Record `evaluation_context_invalid`, with no decision, no
+  // evaluation_id and no Decision Evidence.
+  if (evaluationContextOf(req, opts) === "invalid") {
+    await recordPdpRefusal(opts.refusals, "evaluation_context_invalid", req);
+    throw new DecisionRequestRefused("evaluation_context_invalid");
   }
   // @spec authzen#evaluation-request-digest-input: digest the request as
   // submitted, on receipt, before evaluation applies any default or enrichment.
@@ -1099,6 +1174,8 @@ async function emitDecisionEvidence(
       }
     : undefined;
   const capability_source = runtimeCapabilitySourceOf(req.context.capability_source);
+  const contextInputs = evaluationContextOf(req, opts);
+  const contextEvidence = contextInputs === "invalid" ? undefined : contextInputs;
   return emitter.emit({
     ...(capability_source ? { capability_source } : {}),
     mission: {
@@ -1151,6 +1228,13 @@ async function emitDecisionEvidence(
     ...(req.context.credential !== undefined ? { credential: req.context.credential } : {}),
     ...(principal_mapping !== undefined ? { principal_mapping } : {}),
     ...(req.context.parameter_digest !== undefined ? { parameter_digest: req.context.parameter_digest } : {}),
+    // @spec runtime-evidence#decision-evidence-object `evaluation_context_digest`,
+    // `evaluation_context_binding` (#773): REQUIRED for a decision on a covered
+    // operation, permit or denial, "when the corresponding validated input
+    // was established"; a value this PDP did not establish is never signed.
+    ...(contextEvidence !== undefined
+      ? { evaluation_context_digest: contextEvidence.digest, evaluation_context_binding: contextEvidence.binding }
+      : {}),
     ...(decision.context.conditions !== undefined
       ? { conditions: decision.context.conditions as RuntimeConditions }
       : {}),
@@ -1803,6 +1887,13 @@ async function evaluateInner(
   }
   /** The reference the permit binds: present exactly where a contract applies. */
   const permitContract = contractApplies ? resourceContractOf(requestContract) : undefined;
+  /**
+   * @spec authzen#context-evaluation-binding (#773): the validated context
+   * inputs of a covered operation, which `evaluate` already refused when
+   * unusable; absent for an operation the declaration does not cover.
+   */
+  const establishedContextInputs = evaluationContextOf(req, opts);
+  const establishedContext = establishedContextInputs === "invalid" ? undefined : establishedContextInputs;
 
   // 5a. Containment overlay: the entry WAS approved (step 5 matched), but the
   //     containment delta covers this (resource, action) pair, so the issuer
@@ -2549,6 +2640,13 @@ async function evaluateInner(
         // validated request's `resource.properties.resource_contract`". The
         // executing PEP compares it at every use.
         ...(permitContract !== undefined ? { resource_contract: permitContract } : {}),
+        // @spec authzen#response-context `evaluation_context_digest`,
+        // runtime#evaluation-context-binding (#773): "The PDP MUST return the
+        // supplied context digest as a permit condition for a covered
+        // operation", equal to the validated request's. Echoed, never
+        // recomputed: the PDP holds neither the salt nor the PEP's
+        // observation.
+        ...(establishedContext !== undefined ? { evaluation_context_digest: establishedContext.digest } : {}),
       },
     }),
   };

@@ -346,7 +346,8 @@ the decision instant refuses `parameter_violation`.
 
 A change to an invoice or vendor record between the decision and a
 write's execution changes its version, which `parameter_digest` binds, so
-the write refuses `parameter_mismatch`. Refusals are `parameter_violation`
+the write refuses `parameter_mismatch` (`target_drift` on an operation the
+Evaluation-Context Binding below covers). Refusals are `parameter_violation`
 on the Mission bound and `out_of_authority` at the PEP's credential
 bound.
 
@@ -422,10 +423,57 @@ JCS canonicalization of that object (the anchor encoding family; computed
 with `@mission/core`). The digest binds decision to execution: the PEP
 recomputes it immediately before commit after conditionally re-reading the
 same record versions; any mismatch (record changed, parameter mutated) is
-a refusal with reason `parameter_mismatch`. For `send_remittance_email` to
+a refusal with reason `parameter_mismatch`, except on an operation the
+Evaluation-Context Binding below covers, where a changed record is
+`target_drift`. For `send_remittance_email` to
 a vendor whose record names its own remittance routing, the object also
 carries `recipients`: the sorted final recipients, so a routing or list
 change between decision and commit is a mismatch.
+
+## Evaluation-Context Binding (#773)
+
+The deployment claims Runtime's Evaluation-Context Binding at the verified
+property for `payments:payment.execute` (its `check_transfer`,
+`hold_transfer` and `execute_wire_transfer` crossings) and
+`payments:remittance.send`. The declaration, with each versioned
+descriptor and its document, is the Enforcement Scope Statement's
+`extensions.evaluation_context_binding`. Each descriptor names the
+invoice and vendor as the resolved targets, and its facts: the invoice
+revision, the vendor identity and revision, the amount and currency, and
+the payee account, plus the final recipient set for
+`payments:remittance.send`. Each fact names the parameter member it also
+occupies, since the parameter digest above keeps binding the same values.
+
+The compensate crossing `reverse_wire_transfer` (`payments:payment.reverse`,
+an `irreversible_action`) is covered too, under its own descriptor. Its
+effect facts describe the reversal it performs, read from the committed
+wire's ledger record through the link the PEP established (#252): the
+vendor the wire paid, its amount and currency, its payee, and the
+operation key it committed under, with the invoice and vendor that record
+names as the targets. None of them is read from the invoice as it reads
+now, so an invoice amount that changes after its wire committed leaves
+them unchanged. The descriptor also declares the live resource facts the
+compensating decision evaluates through the Common Constraints: the
+invoice's issuance instant and classification, and the tenant of the
+vendor the invoice names, each read from the payments store as the
+decision request carries it (the value, or null when the record names
+none). Each resolver names the crossings it serves, so the compensate
+crossing reads no effect fact from the store. A changed or missing ledger
+record, or a moved live fact, is `target_drift`. The request carries
+`compensates_evaluation_id` beside the context members.
+
+Every crossing of a covered operation captures its context from the
+payments store, or the compensate crossing from the ledger record, before
+the decision request (a capture that fails is
+refused `evaluation_context_unresolvable`) and re-resolves it at admission
+and immediately before release, on all three dispatch paths. A change
+confined to the declared facts is `target_drift`; a changed member the
+descriptor does not declare is `parameter_mismatch`; both digest pairs are
+recorded either way. The salt is per-epoch secret material held in memory
+under random version identifiers: a restart loses every binding, rotation
+retains earlier versions unless it invalidates them, and the PEP runs as
+one process. The parameter digest, the operation key, approvals and
+transaction tokens are unchanged.
 
 ## Targets
 

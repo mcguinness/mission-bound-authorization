@@ -1322,11 +1322,17 @@ export function applyCarryoverInCallerTx(
       divergences.push({ childId: entry.child_id, class: "record_missing", detail: "rendered row is gone" });
       continue;
     }
-    if (record.state !== entry.state || record.version !== entry.version) {
+    // @spec child-delegation#carryover-cas (#1674): a carried row is compared as
+    // observed. An old child whose own `expires_at` is at or before the
+    // completion commit is terminated whether or not that transition was
+    // persisted, so it can no longer be carried. A cascade row's outcome does
+    // not depend on it, and the traversal records its own expiry.
+    const observed = entry.outcome === "carry" ? kernel.observe(record) : record;
+    if (observed.state !== entry.state || observed.version !== entry.version) {
       divergences.push({
         childId: entry.child_id,
         class: "state_changed",
-        detail: `state/version moved from ${entry.state}/${entry.version} to ${record.state}/${record.version}`,
+        detail: `state/version moved from ${entry.state}/${entry.version} to ${observed.state}/${observed.version}`,
       });
     }
     if (record.derivation_count !== entry.derivation_count) {
@@ -1338,6 +1344,18 @@ export function applyCarryoverInCallerTx(
     }
     if ((record.containment?.containment_version ?? 0) !== entry.containment_version) {
       divergences.push({ childId: entry.child_id, class: "authority_narrowed", detail: "containment advanced" });
+    }
+    // @spec child-delegation#carryover-cas (#1673, D803): the committed
+    // discharge state, compared as a set. It usually moves the effective
+    // authority too, but a latch on an entry containment already removed
+    // narrows nothing and is still a discharge the manifest did not commit.
+    const discharged = new Set(kernel.dischargedEntryDigests(record));
+    const committedDischarged = new Set(entry.discharged_digests ?? []);
+    if (
+      discharged.size !== committedDischarged.size ||
+      [...discharged].some((digest) => !committedDischarged.has(digest))
+    ) {
+      divergences.push({ childId: entry.child_id, class: "authority_narrowed", detail: "discharge state moved" });
     }
     const effectiveHash = authorityHash(issuer, kernel.effectiveAuthoritySet(record) as never);
     if (effectiveHash !== entry.effective_authority_hash) {
@@ -1418,23 +1436,20 @@ export function applyCarryoverInCallerTx(
   // through. Two halves cover the spec's full input list, in this one
   // transaction. The CAS below binds the row to the manifest's committed SCALAR
   // inputs (state, lifecycle version, `authority_hash`, `derivation_count`,
-  // `expires_at`) and to the containment and discharge bytes the membership
-  // pass above just verified against the committed `containment_version` and
-  // `effective_authority_hash`. The membership pass owns the STRUCTURAL inputs
-  // the SQL predicate cannot recompute: effective authority, discharge state,
-  // fan-out occupancy, descendant-set membership, and any external meter or
-  // latch input. `derivation_count` is in the CAS precisely because
+  // `expires_at`). The membership pass above owns the inputs the SQL predicate
+  // cannot recompute: containment version, discharge state, effective
+  // authority, fan-out occupancy, descendant-set membership, and any external
+  // meter or latch input. `derivation_count` is in the CAS precisely because
   // `gateDerivation` moves it with no version increment.
   const carryEntries = manifest.entries.filter(
     (e) => e.outcome === "carry" && e.replacement && !excluded.has(e.child_id),
   );
   for (const entry of carryEntries) {
-    const record = current.get(entry.child_id) as MissionRecord;
     const changed = kernel.db
       .prepare(
         `UPDATE missions SET version = version
            WHERE id = ? AND version = ? AND state = ? AND authority_hash = ? AND derivation_count = ?
-             AND expires_at = ? AND IFNULL(containment_json, '') = ? AND IFNULL(discharged_json, '') = ?`,
+             AND expires_at = ?`,
       )
       .run(
         entry.child_id,
@@ -1443,8 +1458,6 @@ export function applyCarryoverInCallerTx(
         entry.authority_hash,
         entry.derivation_count,
         entry.expires_at,
-        record.containment ? JSON.stringify(record.containment) : "",
-        record.discharged ? JSON.stringify(record.discharged) : "",
       );
     if (changed.changes !== 1) {
       throw new CarryoverError(
