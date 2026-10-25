@@ -459,6 +459,7 @@ import {
 import {
   type EffectiveAuthoritySource,
   isSubsetSet,
+  issuedWhole,
   type OriginProjection,
   projectRarThroughMission,
   projectThroughEffective,
@@ -1805,16 +1806,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const requested = JSON.parse(raw) as AuthorityEntry[];
     if (!Array.isArray(requested) || requested.length === 0) return ceiling;
     const granted = Array.isArray(ceiling) ? (ceiling as AuthorityEntry[]) : [];
-    const narrowed = isSubsetSetIgnoringCapabilitySources(requested, granted)
-      ? projectThroughEffective(requested, granted)
-      : [];
-    // Every requested entry is issued whole, or the request is refused. The
-    // comparison sets `capability_sources` aside, as the one above does: an
-    // issued entry carries the ceiling's bindings where the request names none.
-    if (!isSubsetSetIgnoringCapabilitySources(requested, narrowed)) {
+    // Every requested entry is within the grant and issued whole, or the
+    // request is refused (#1508, #1513).
+    if (!isSubsetSetIgnoringCapabilitySources(requested, granted) || !issuedWhole(requested, granted)) {
       throw new InvalidAuthorizationDetails("requested authorization_details are not within the authority of the grant");
     }
-    return narrowed;
+    return projectThroughEffective(requested, granted);
   }
 
   /**
