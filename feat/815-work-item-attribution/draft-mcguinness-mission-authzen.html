@@ -2689,18 +2689,26 @@ the work item.<a href="#section-5.14-1.2.1" class="pilcrow">¶</a></p>
         <dd class="break"></dd>
 </dl>
 <p id="section-5.14-2">The PEP populates <code>context.work_item</code> only from the harness's
-authenticated attachment, never from tool arguments or another value
-the agent supplies. The PDP <span class="bcp14">MUST</span> deny with <code>work_item_context_missing</code>
-(<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>) a decision whose
-<code>context.work_item</code> is present but not of that shape, and, where the
-deployment's Enforcement Scope Statement claims work-item attribution
-for the action's class, one from which it is absent. Elsewhere its
-absence relaxes nothing, and the deployment claims Mission-level
-attribution only.<a href="#section-5.14-2" class="pilcrow">¶</a></p>
-<p id="section-5.14-3">The member is part of the authorization binding and the cache key
+authenticated attachment: the work item a verified Mission reference
+carries, for the attacher the Enforcement Scope Statement declares for
+the authenticated client (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).
+A reference that verifies does not by itself establish that
+attachment, and the PEP never takes a work item from tool arguments or
+another value the agent supplies.<a href="#section-5.14-2" class="pilcrow">¶</a></p>
+<p id="section-5.14-3">The PDP <span class="bcp14">MUST</span> refuse, before evaluation, a request whose
+<code>context.work_item</code> is present but not of that shape: an unusable
+input, recorded as the Refusal Record <code>work_item_invalid</code>
+(<a href="#failure-condition-coverage" class="auto internal xref">Section 6.8</a>), never an evaluated denial. Where
+the deployment's Enforcement Scope Statement claims work-item
+attribution for the action's class, the PDP <span class="bcp14">MUST</span> deny with
+<code>work_item_context_missing</code>
+(<a href="#runtime-denial-classification" class="auto internal xref">Section 6.5</a>) a decision from which
+<code>context.work_item</code> is absent. Elsewhere its absence relaxes nothing,
+and the deployment claims Mission-level attribution only.<a href="#section-5.14-3" class="pilcrow">¶</a></p>
+<p id="section-5.14-4">The member is part of the authorization binding and the cache key
 (<a href="#projections" class="auto internal xref">Section 5.17</a>), so no cached decision or resumed execution crosses
 work items, and a permit for a decision that carried it binds it as
-the <code>work_item</code> condition (<a href="#decision-conditions" class="auto internal xref">Section 6.1.1</a>).<a href="#section-5.14-3" class="pilcrow">¶</a></p>
+the <code>work_item</code> condition (<a href="#decision-conditions" class="auto internal xref">Section 6.1.1</a>).<a href="#section-5.14-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="context-approval">
@@ -3988,10 +3996,10 @@ for the action's class, as the harness profile defines
 carries no <code>context.taint</code> (<a href="#context-taint" class="auto internal xref">Section 5.13</a>).<a href="#section-6.5-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.5">
-            <p id="section-6.5-2.5.1"><code>work_item_context_missing</code>: the decision request carries a
-<code>context.work_item</code> that is not well-formed, or the deployment claims
-work-item attribution for the action's class and the request carries
-none (<a href="#context-work-item" class="auto internal xref">Section 5.14</a>).<a href="#section-6.5-2.5.1" class="pilcrow">¶</a></p>
+            <p id="section-6.5-2.5.1"><code>work_item_context_missing</code>: the deployment claims work-item
+attribution for the action's class and the decision request carries
+no <code>context.work_item</code> (<a href="#context-work-item" class="auto internal xref">Section 5.14</a>). A malformed one is
+the pre-evaluation refusal <code>work_item_invalid</code> instead.<a href="#section-6.5-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.5-2.6">
             <p id="section-6.5-2.6.1"><code>stale_state</code>: the Mission state the decision relies on is not
@@ -4463,6 +4471,14 @@ rule.<a href="#section-6.8-2" class="pilcrow">¶</a></p>
 </td>
             </tr>
             <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>context.work_item</code> present but not an object with exactly the string members <code>issuer</code> and <code>id</code>, at the PDP</td>
+              <td class="text-left" rowspan="1" colspan="1">Refusal Record</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>work_item_invalid</code>
+</td>
+            </tr>
+            <tr>
               <td class="text-left" rowspan="1" colspan="1">Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it</td>
               <td class="text-left" rowspan="1" colspan="1">PDP denial</td>
               <td class="text-left" rowspan="1" colspan="1">
@@ -4536,7 +4552,7 @@ rule.<a href="#section-6.8-2" class="pilcrow">¶</a></p>
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Work-item context malformed, or absent where work-item attribution is claimed for the action's class</td>
+              <td class="text-left" rowspan="1" colspan="1">Work-item context absent where work-item attribution is claimed for the action's class</td>
               <td class="text-left" rowspan="1" colspan="1">PDP denial</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>work_item_context_missing</code>
@@ -4782,8 +4798,9 @@ phase binding, <code>phase_mismatch</code> as Execution Evidence, never a Refusa
 Record.<a href="#section-6.8-5.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-6.8-5.3">
-            <p id="section-6.8-5.3.1">Unusable inputs: <code>phase_invalid</code>, <code>compensation_link_invalid</code>, and
-<code>evaluation_context_invalid</code> are PDP refusals before evaluation. They
+            <p id="section-6.8-5.3.1">Unusable inputs: <code>phase_invalid</code>, <code>compensation_link_invalid</code>,
+<code>evaluation_context_invalid</code>, and <code>work_item_invalid</code> are PDP
+refusals before evaluation. They
 describe decision inputs the PDP cannot use, not an evaluated policy
 denial, and a PDP claiming only the Decision Base records them in its
 own internal form (<a href="#profiles-and-capabilities" class="auto internal xref">Section 2</a>).<a href="#section-6.8-5.3.1" class="pilcrow">¶</a></p>
@@ -5653,8 +5670,9 @@ Protocol (HTTP) Field Name" registry (<span>[<a href="#RFC9110" class="cite xref
 <li class="normal" id="appendix-A-2.1">
           <p id="appendix-A-2.1.1">Work-Item Context: <code>context.work_item</code> is a harness-owned extension
 point the PEP populates only from the harness's authenticated
-attachment. A malformed member, or an absent one where work-item
-attribution is claimed for the action's class, is denied
+attachment. A malformed member is refused before evaluation as
+<code>work_item_invalid</code>, and an absent one where work-item attribution is
+claimed for the action's class is denied
 <code>work_item_context_missing</code>. The member is part of the authorization
 binding and the cache key, a permit binds it as the <code>work_item</code>
 condition, and a permit for another work item is Execution Evidence

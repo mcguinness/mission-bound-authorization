@@ -1960,8 +1960,11 @@ carried together or not at all, in the HTTP and MCP carriages alike.<a href="#se
 <p id="section-6.2-6">A PEP implementing this profile <span class="bcp14">MUST</span> take a work item only from these
 members, once the reference itself verifies, and only where the
 statement names the harness that <code>work_item_issuer</code> identifies as the
-attacher for the client the PEP authenticated on that request. It <span class="bcp14">MUST NOT</span> read a work item from tool arguments or any other value the agent
-supplies, and <span class="bcp14">MUST NOT</span> carry one it cannot attribute to that attacher.
+attacher for the client the PEP authenticated on that request. A
+reference that verifies shows only that it names the request's
+Mission, not which component attached the work item, so verification
+alone never establishes the attachment. It <span class="bcp14">MUST NOT</span> read a work item
+from tool arguments or any other value the agent supplies, and <span class="bcp14">MUST NOT</span> carry one it cannot attribute to that attacher.
 It carries the work item to the decision as <code>context.work_item</code>
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), an object whose <code>issuer</code>
 is <code>work_item_issuer</code> and whose <code>id</code> is <code>work_item</code>.<a href="#section-6.2-6" class="pilcrow">¶</a></p>

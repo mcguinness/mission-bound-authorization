@@ -2120,12 +2120,15 @@ the defined set, or is absent where the PDP's trusted operation
 declaration requires a phase, <code>phase_invalid</code>; for a compensate-phase
 request with no <code>compensates_evaluation_id</code>, or a request whose
 <code>compensates_evaluation_id</code> is malformed, <code>compensation_link_invalid</code>;
-and for one whose
+for one whose
 evaluation-context binding inputs are missing, malformed, or
 incompatible with the declared binding, for an operation the runtime
 profile's Evaluation-Context Binding extension covers,
-<code>evaluation_context_invalid</code>. The last three describe decision inputs
-the PDP cannot use, not an evaluated policy denial. These name
+<code>evaluation_context_invalid</code>; and for one carrying a work-item
+context that is not well-formed (the harness profile,
+<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), <code>work_item_invalid</code>. The
+last four describe decision inputs the PDP cannot use, not an
+evaluated policy denial. These name
 pre-evaluation conditions,
 PEP-side or PDP-side, and are disjoint from the runtime profile's
 PDP denial reasons for an evaluated decision (for example, as
@@ -4849,10 +4852,12 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Extension Members and Execution Evidence: <code>work_item</code>, owned by the
-harness profile, records the qualified work-item identifier on
-Decision and Execution Evidence, joining Harness Evidence, and the
-Execution Evidence <code>error</code> <code>work_item_mismatch</code> records a permit
+          <p id="appendix-A-2.1.1">Extension Members, Refusal Record and Execution Evidence:
+<code>work_item</code>, owned by the harness profile, records the qualified
+work-item identifier on Decision and Execution Evidence, joining
+Harness Evidence; the Refusal Record <code>work_item_invalid</code> records a
+PDP refusal, before evaluation, of a malformed work-item context; and
+the Execution Evidence <code>error</code> <code>work_item_mismatch</code> records a permit
 whose work-item condition differs from the request it would execute
 (#815).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>

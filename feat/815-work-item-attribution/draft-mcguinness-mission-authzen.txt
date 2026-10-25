@@ -1118,13 +1118,22 @@ Table of Contents
       the work item.
 
    The PEP populates context.work_item only from the harness's
-   authenticated attachment, never from tool arguments or another value
-   the agent supplies.  The PDP MUST deny with work_item_context_missing
-   (Section 6.5) a decision whose context.work_item is present but not
-   of that shape, and, where the deployment's Enforcement Scope
-   Statement claims work-item attribution for the action's class, one
-   from which it is absent.  Elsewhere its absence relaxes nothing, and
-   the deployment claims Mission-level attribution only.
+   authenticated attachment: the work item a verified Mission reference
+   carries, for the attacher the Enforcement Scope Statement declares
+   for the authenticated client
+   ([I-D.draft-mcguinness-mission-harness]).  A reference that verifies
+   does not by itself establish that attachment, and the PEP never takes
+   a work item from tool arguments or another value the agent supplies.
+
+   The PDP MUST refuse, before evaluation, a request whose
+   context.work_item is present but not of that shape: an unusable
+   input, recorded as the Refusal Record work_item_invalid
+   (Section 6.8), never an evaluated denial.  Where the deployment's
+   Enforcement Scope Statement claims work-item attribution for the
+   action's class, the PDP MUST deny with work_item_context_missing
+   (Section 6.5) a decision from which context.work_item is absent.
+   Elsewhere its absence relaxes nothing, and the deployment claims
+   Mission-level attribution only.
 
    The member is part of the authorization binding and the cache key
    (Section 5.17), so no cached decision or resumed execution crosses
@@ -2205,10 +2214,10 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-harness]), and the decision request
       carries no context.taint (Section 5.13).
 
-   *  work_item_context_missing: the decision request carries a
-      context.work_item that is not well-formed, or the deployment
-      claims work-item attribution for the action's class and the
-      request carries none (Section 5.14).
+   *  work_item_context_missing: the deployment claims work-item
+      attribution for the action's class and the decision request
+      carries no context.work_item (Section 5.14).  A malformed one is
+      the pre-evaluation refusal work_item_invalid instead.
 
    *  stale_state: the Mission state the decision relies on is not
       current: the PEP-supplied freshness is outside the deployment's
@@ -2585,6 +2594,12 @@ Table of Contents
    |binding, for a covered   |           |                                 |
    |operation, at the PDP    |           |                                 |
    +-------------------------+-----------+---------------------------------+
+   |context.work_item present|Refusal    |work_item_invalid                |
+   |but not an object with   |Record     |                                 |
+   |exactly the string       |           |                                 |
+   |members issuer and id, at|           |                                 |
+   |the PDP                  |           |                                 |
+   +-------------------------+-----------+---------------------------------+
    |Action outside the       |PDP denial |out_of_authority                 |
    |Authority Set (including |           |                                 |
    |an invoked identity      |           |                                 |
@@ -2651,8 +2666,7 @@ Table of Contents
    |External Mission-binding |PDP denial |mission_binding_failed           |
    |join verification fails  |           |                                 |
    +-------------------------+-----------+---------------------------------+
-   |Work-item context        |PDP denial |work_item_context_missing        |
-   |malformed, or absent     |           |                                 |
+   |Work-item context absent |PDP denial |work_item_context_missing        |
    |where work-item          |           |                                 |
    |attribution is claimed   |           |                                 |
    |for the action's class   |           |                                 |
@@ -2832,11 +2846,11 @@ Table of Contents
       its phase binding, phase_mismatch as Execution Evidence, never a
       Refusal Record.
 
-   *  Unusable inputs: phase_invalid, compensation_link_invalid, and
-      evaluation_context_invalid are PDP refusals before evaluation.
-      They describe decision inputs the PDP cannot use, not an evaluated
-      policy denial, and a PDP claiming only the Decision Base records
-      them in its own internal form (Section 2).
+   *  Unusable inputs: phase_invalid, compensation_link_invalid,
+      evaluation_context_invalid, and work_item_invalid are PDP refusals
+      before evaluation.  They describe decision inputs the PDP cannot
+      use, not an evaluated policy denial, and a PDP claiming only the
+      Decision Base records them in its own internal form (Section 2).
 
    *  Target: A target-determining argument that changed under a
       parameter-bound permit is a parameter deviation,
@@ -3585,8 +3599,9 @@ Appendix A.  Document History
 
    *  Work-Item Context: context.work_item is a harness-owned extension
       point the PEP populates only from the harness's authenticated
-      attachment.  A malformed member, or an absent one where work-item
-      attribution is claimed for the action's class, is denied
+      attachment.  A malformed member is refused before evaluation as
+      work_item_invalid, and an absent one where work-item attribution
+      is claimed for the action's class is denied
       work_item_context_missing.  The member is part of the
       authorization binding and the cache key, a permit binds it as the
       work_item condition, and a permit for another work item is
