@@ -343,9 +343,12 @@ By default the shipped launcher (`pnpm issuance-only`, `startIssuanceOnly` in
 loses every store. `MISSION_KERNEL_STORE=<absolute path>` keeps the Mission
 kernel in that file instead, and requires `MISSION_KEY_RING` (#250; the
 inventory is in [control-plane-deployment.md](control-plane-deployment.md)).
-It restores the Mission kernel only, never the provider, and it is restart
-recovery for one process: the file takes no lock and a restore from an older
-backup is not detected.
+It restores the Mission kernel only, never the provider, and it is recovery for
+one process on one host. It also requires a recovery witness
+(`MISSION_KERNEL_WITNESS`, created once with `pnpm kernel-recovery init`): the
+kernel then holds its file exclusively and starts only when the store matches the
+witness, so a restored older store is refused rather than resumed
+([control-plane-deployment.md](control-plane-deployment.md), Restore admission).
 
 | State | In memory (the default) | File-backed Mission kernel (`MISSION_KERNEL_STORE`) |
 |---|---|---|

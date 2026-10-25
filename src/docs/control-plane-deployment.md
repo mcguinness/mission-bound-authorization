@@ -322,10 +322,10 @@ What a process restart keeps, for the AS's state and the state it depends on.
 launchers (`server.ts`, `pnpm as-native` and `pnpm issuance-only`) run the
 kernel in memory unless `MISSION_KERNEL_STORE=<absolute path>` names its file,
 which requires a key ring (`MISSION_KEY_RING`), so that what the kept kernel
-issued or signed still verifies after a restart. That is restart recovery for
-one process on one host: the file takes no lock, so a second process on the same
-file is not refused, and a restore from an older backup is not detected, which
-remain #250's restore and fencing step.
+issued or signed still verifies after a restart, and a recovery witness
+(`MISSION_KERNEL_WITNESS`), so that a restored older store is refused rather than
+resumed ([Restore admission](#restore-admission)). That is recovery for one
+process on one host.
 
 | State | Where it lives | Across a restart |
 |---|---|---|
@@ -370,6 +370,52 @@ after an out-of-band restore, and the fenced reconciliation policy that would
 decide when it is certain again, remain follow-on work. Multi-process
 serialization and claiming remain under #641's explicit deployment trigger;
 this slice adds no such claim.
+
+## Restore admission
+
+With a recovery witness (#250 step 3; `KernelOptions.recoveryWitness`, or
+`kernelStore: { file, witness }`, or `MISSION_KERNEL_WITNESS` for the shipped
+launchers), the file-backed kernel answers Control Plane's rollback resistance for
+one writer on one host.
+
+- **The witness.** A small file at an absolute path in another directory than the
+  store, outside the store's restore unit: restoring the store cannot restore the
+  witness with it. It holds the store's identity, the writer generation, the last
+  committed recovery sequence, and the sequence of a commit in flight. The store
+  holds the matching `recovery_marker` row. `pnpm kernel-recovery init --store
+  <path> --witness <path>` creates both, once, for a new store or one that
+  predates the witness; nothing initializes them automatically.
+- **Every write is witnessed.** Each outermost write transaction on the kernel
+  database writes the witness intent durably before its commit, advances the
+  marker inside it, and finalizes the witness after it, before any lifecycle
+  publication. A bare statement runs as a one-statement guarded transaction. The
+  inventory is therefore every write to the kernel database (its 32 tables, the
+  Mission rows, the outbox, tombstones, reservations, idempotency, continuation,
+  families, deferrals and evidence included), enforced rather than listed: a write
+  that bypasses the guard is detected at the next guarded transaction, after that
+  write committed, and stops the kernel.
+- **One writer.** The kernel holds its store with an exclusive lock: a second
+  process or handle on the same file is refused at open.
+- **A closed boot.** The kernel opens only when the store's marker matches the
+  witness exactly. A store older than the witness (a restored backup), a lost or
+  unreadable witness, another store's witness, a store ahead of its witness and
+  a commit left in flight all refuse, and the AS does not start: `pnpm
+  as-native`, for one, exits 1 with the refusal as its startup-failure line.
+- **Offline reconciliation.** With the AS stopped, `pnpm kernel-recovery
+  acknowledge` records a commit the store holds, and `abandon` clears one it does
+  not; each refuses when the store says otherwise, and both refuse while another
+  writer holds the store. Nothing lowers the witness: an older store is refused
+  until the witnessed one is restored.
+- **Uncertain while running.** A witness write that fails, a commit that fails
+  after its intent, or a write that bypassed the guard leaves the kernel
+  uncertain: every later write refuses, and the AS answers every request but
+  discovery metadata and the key set with 503 `temporarily_unavailable` until it
+  is restarted and reconciled. A commit whose witness could not be finalized
+  publishes nothing; boot recovery publishes it after `acknowledge`.
+
+Not supported: a way back from an older store by invalidating its authority under
+a new generation (#250, slice B), more than one writer, and more than one host
+(#641).
 
 ## Upgrading a kernel written before #1340
 
