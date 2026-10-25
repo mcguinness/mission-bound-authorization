@@ -1852,8 +1852,8 @@ least the Mission's audit horizon
 ({{I-D.draft-mcguinness-oauth-mission}}), so an archived
 `application/mission-status-response+jwt` remains verifiable for
 audit and dispute. This is the issuance profile's retired-key rule
-({{I-D.draft-mcguinness-oauth-mission}}), with the audit horizon as the
-bound.
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Signing and Key
+Rotation"), with the audit horizon as the bound.
 
 A key known or suspected compromised follows the issuance profile's
 compromise rule ({{I-D.draft-mcguinness-oauth-mission}}, Section
