@@ -100,7 +100,7 @@ export class EvaluationContextSalts {
 }
 
 /** The store records a crossing's invoice names: the invoice, and the vendor it names now. */
-interface StoreRecords {
+export interface StoreRecords {
   invoice: Invoice;
   vendor: Vendor;
   payments: PaymentsStore;
@@ -290,16 +290,29 @@ export interface HeldEvaluationContext {
 /**
  * Where a context's facts are read. The invoice the request names, in the
  * payments store; or, with `compensates`, the committed wire's ledger record
- * through `committedEffects`, and nothing from the store.
+ * through `committedEffects`, beside the store records of the invoice it
+ * paid.
+ *
+ * `records` (and, for a compensate crossing, `wire`) are records the caller
+ * already resolved: a capture commits exactly them, so the decision request
+ * the caller builds from the same records and the context it commits come
+ * from one observation (the owner's #1663 review 3). Absent, they are read
+ * here, as recomputation at use always does.
  */
 interface ContextSubject {
   invoiceId: string;
   payments: PaymentsStore;
   compensates?: CompensatedWireRef;
   committedEffects?: CommittedEffectSource;
+  records?: StoreRecords;
+  wire?: CommittedWire;
 }
 
-function storeRecords(payments: PaymentsStore, invoiceId: string): StoreRecords | undefined {
+/**
+ * One synchronous read of the store records an invoice names: the invoice,
+ * and the vendor it names now. `undefined` when either does not resolve.
+ */
+export function readStoreRecords(payments: PaymentsStore, invoiceId: string): StoreRecords | undefined {
   const invoice = payments.getInvoice(invoiceId);
   const vendor = invoice ? payments.getVendor(invoice.vendor_id) : undefined;
   return invoice && vendor ? { invoice, vendor, payments } : undefined;
@@ -307,14 +320,18 @@ function storeRecords(payments: PaymentsStore, invoiceId: string): StoreRecords 
 
 function resolutionSources(subject: ContextSubject): ResolutionSources | undefined {
   if (subject.compensates) {
-    const wire = subject.committedEffects?.committedWire(subject.compensates.opKey, subject.compensates.evaluationId);
+    const wire =
+      subject.wire ?? subject.committedEffects?.committedWire(subject.compensates.opKey, subject.compensates.evaluationId);
+    if (!wire) return undefined;
     // The live facts are the invoice the committed wire paid, and the vendor
     // that invoice names now, as the compensating decision reads them.
-    const records = wire ? storeRecords(subject.payments, wire.invoiceId) : undefined;
-    return wire && records ? { kind: "committed_wire", wire, reverses: subject.compensates.opKey, ...records } : undefined;
+    const records = subject.records ?? readStoreRecords(subject.payments, wire.invoiceId);
+    if (!records || records.invoice.id !== wire.invoiceId) return undefined;
+    return { kind: "committed_wire", wire, reverses: subject.compensates.opKey, ...records };
   }
-  const records = storeRecords(subject.payments, subject.invoiceId);
-  return records ? { kind: "store", ...records } : undefined;
+  const records = subject.records ?? readStoreRecords(subject.payments, subject.invoiceId);
+  if (!records || records.invoice.id !== subject.invoiceId) return undefined;
+  return { kind: "store", ...records };
 }
 
 /** Why a capture or recomputation could not establish the context. */
@@ -413,6 +430,8 @@ export function captureEvaluationContext(
     payments: input.payments,
     ...(input.compensates ? { compensates: input.compensates } : {}),
     ...(input.committedEffects ? { committedEffects: input.committedEffects } : {}),
+    ...(input.records ? { records: input.records } : {}),
+    ...(input.wire ? { wire: input.wire } : {}),
     salt,
     saltVersion,
   });

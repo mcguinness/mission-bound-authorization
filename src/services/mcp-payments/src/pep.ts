@@ -102,7 +102,9 @@ import {
   deviatingParameterMembers,
   EvaluationContextSalts,
   type HeldEvaluationContext,
+  readStoreRecords,
   recomputeEvaluationContext,
+  type StoreRecords,
 } from "./evaluation-context.js";
 import type { PaymentsStore } from "./payments-store.js";
 import { operationKey } from "./transaction.js";
@@ -1349,6 +1351,27 @@ export interface EnforceResult {
 }
 
 /**
+ * @spec resource-access#initial-common-constraints, runtime#evaluation-context-binding
+ * (#1266, #773): the live resource facts a decision request carries for an
+ * invoice-scoped crossing, from one observation of the store records: the
+ * vendor the invoice names, the invoice's issuance instant (an invoice with
+ * none carries no fact, which satisfies no issuance bound), the tenant that
+ * owns it (its vendor's), and its own classification label. The context
+ * capture commits the same records, so the facts the decision evaluates and
+ * the facts its binding commits are one observation, with no await between
+ * them (the owner's #1663 review 3).
+ */
+function liveResourceProperties(records: StoreRecords): Record<string, string> {
+  const { invoice, vendor } = records;
+  return {
+    vendor_id: vendor.id,
+    ...(typeof invoice.issued_at === "string" ? { issued_at: invoice.issued_at } : {}),
+    ...(typeof vendor.tenant === "string" ? { tenant: vendor.tenant } : {}),
+    ...(typeof invoice.classification === "string" ? { data_classification: invoice.classification } : {}),
+  };
+}
+
+/**
  * @spec runtime#compound-actions (#252): one committed effect a compensation
  * offsets, established from verified evidence, never from an agent argument.
  */
@@ -2528,6 +2551,9 @@ export class Pep {
       const bound = recipients && recipientsRouted ? { recipients } : {};
       effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: operationTarget, ...bound });
       amount = effective.amount;
+      // The one observation of the store records this crossing's decision
+      // and context are built from.
+      const records: StoreRecords = { invoice, vendor, payments: this.deps.payments };
       // @spec runtime#evaluation-context-binding, runtime-evidence#pre-decision-refusal
       // (#773): "The enforcing PEP MUST capture the declared facts from their
       // authoritative interfaces and MUST NOT accept agent-supplied values as
@@ -2547,6 +2573,7 @@ export class Pep {
           operation: { action: mapping.action, ...(mapping.phase !== undefined ? { phase: mapping.phase } : {}) },
           invoiceId: invoice.id,
           payments: this.deps.payments,
+          records,
         });
         if (!captured.ok) {
           return await this.refuse(boundary, token, "evaluation_context_unresolvable", mapping.action, view, undefined, {
@@ -2555,24 +2582,12 @@ export class Pep {
         }
         contextCapture = { held: captured.held, declaredParameters: captured.declaredParameters };
       }
-      // @spec resource-access#initial-common-constraints (#1266): the
-      // invoice's issuance instant is this service's own record, never an
-      // argument; an invoice with none carries no fact, which satisfies no
-      // issuance bound. The invoice version the parameter digest binds moves
-      // with any change to it, so a changed fact refuses at reverification.
-      resourceObj = {
-        type: "invoice",
-        id: invoice.id,
-        properties: {
-          vendor_id: vendor.id,
-          ...(typeof invoice.issued_at === "string" ? { issued_at: invoice.issued_at } : {}),
-          // The tenant that owns the invoice is its vendor's, from the vendor
-          // record, whose version the parameter digest also binds.
-          ...(typeof vendor.tenant === "string" ? { tenant: vendor.tenant } : {}),
-          // The invoice's own classification label, from its record.
-          ...(typeof invoice.classification === "string" ? { data_classification: invoice.classification } : {}),
-        },
-      };
+      // @spec resource-access#initial-common-constraints (#1266): the live
+      // facts are this service's own records, never an argument, and the
+      // same observation the capture above committed. The invoice and vendor
+      // versions the parameter digest binds move with any change to them, so
+      // a changed fact refuses at reverification.
+      resourceObj = { type: "invoice", id: invoice.id, properties: liveResourceProperties(records) };
     } else if (mapping.bindsVendorScope) {
       // @spec runtime#read-binding — "a consequential read whose parameters
       // ... request a bulk or export-like result ... MUST bind those
@@ -2716,7 +2731,31 @@ export class Pep {
         reverses: established.link.opKey,
       });
       amount = effective.amount;
-      resourceObj = { ...resourceObj, properties: { ...resourceObj.properties, vendor_id: effective.vendor_id } };
+      // @spec resource-access#initial-common-constraints, runtime#evaluation-context-binding
+      // (#1266, #773; the owner's #1663 review 3): the link was established
+      // across awaits, so the live facts read above may no longer stand. One
+      // synchronous observation of the store records the committed wire's
+      // invoice names, taken now, after the last await of link
+      // establishment, is what both the decision's live properties and the
+      // context capture below are built from, with no await between them.
+      // A record gone by now is the same pre-decision refusal as above.
+      const snapshotInvoice = this.deps.payments.getInvoice(established.wire.invoiceId);
+      if (!snapshotInvoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
+      const snapshotVendor = this.deps.payments.getVendor(snapshotInvoice.vendor_id);
+      if (!snapshotVendor) {
+        return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view, undefined, {
+          resource: { type: "invoice", id: snapshotInvoice.id },
+        });
+      }
+      const snapshot: StoreRecords = { invoice: snapshotInvoice, vendor: snapshotVendor, payments: this.deps.payments };
+      // The vendor the decision evaluates stays the wire's: only the live
+      // facts are read from the store (the owner's ruling: the existing
+      // decision semantics are preserved).
+      resourceObj = {
+        type: "invoice",
+        id: snapshotInvoice.id,
+        properties: { ...liveResourceProperties(snapshot), vendor_id: effective.vendor_id },
+      };
       // @spec runtime#evaluation-context-binding, runtime#compound-actions
       // (#773, #252): a covered compensate crossing captures its own context,
       // and its facts describe the reversal it would perform: the committed
@@ -2735,6 +2774,10 @@ export class Pep {
           payments: this.deps.payments,
           compensates: { opKey: established.link.opKey, evaluationId: established.link.evaluationId },
           ...(this.deps.committedEffects ? { committedEffects: this.deps.committedEffects } : {}),
+          // Exactly the records the decision's properties above and its
+          // effect parameters came from: no second read.
+          records: snapshot,
+          wire: established.wire,
         });
         if (!captured.ok) {
           return await this.refuse(boundary, token, "evaluation_context_unresolvable", mapping.action, view, undefined, {
