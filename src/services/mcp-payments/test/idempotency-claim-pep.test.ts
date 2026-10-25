@@ -465,12 +465,13 @@ describe("reconciliation settles a failure only from the attempt that redeemed t
     for (const holdSettlement of [false, true]) {
       const h = await harness({ holdSettlement });
       const k = key();
-      // The parameters move after the permit and before the commit: the
-      // redeeming attempt refuses itself, parameter_mismatch, with no effect.
+      // The invoice moves after the permit and before the commit: the
+      // redeeming attempt refuses itself with no effect, target_drift under
+      // the deployment's Evaluation-Context Binding claim (#773).
       const refused = await h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: k }, TOKEN, () =>
         h.payments.bumpInvoiceAmount("inv-1", "150.00"),
       );
-      expect(refused.refusal_reason, String(holdSettlement)).toBe("parameter_mismatch");
+      expect(refused.refusal_reason, String(holdSettlement)).toBe("target_drift");
       h.advance(PAST_LEASE_MS);
       if (holdSettlement) {
         const report = await reconcileClaims({ claims: h.channel, evidence: h.evidence, redemption: h.redemption, connectors: h.connectors });

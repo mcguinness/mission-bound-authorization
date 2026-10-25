@@ -870,7 +870,9 @@ describe("retention honors the declared audit window (@spec runtime-evidence#rec
 describe("the deployment's evidence declaration and published key sets (@spec runtime#runtime-conformance)", () => {
   it("the shipped statement claims no Evidence capability, so this deployment designates no receipt issuer", () => {
     const { retention } = retainingDeployment();
-    expect(SHIPPED.claims).toBeUndefined();
+    // The statement's one claim is Evaluation-Context Binding (#773); it
+    // claims no Evidence capability.
+    expect(SHIPPED.claims ?? []).not.toContain("evidence");
     // No EVIDENCE declaration, which is what this test is about. The shipped
     // statement does carry a `transaction_assurance` declaration (#252 C1),
     // published without being claimed.
@@ -957,7 +959,9 @@ describe("the deployment's evidence declaration and published key sets (@spec ru
     // against the lease rules the same config declares (#252 C1).
     const leaseShaped = structuredClone(SHIPPED) as EnforcementScopeStatement;
     expect(leaseShaped.extensions?.transaction_assurance).toBeDefined();
-    expect(leaseShaped.claims).toBeUndefined();
+    // Its one claim is Evaluation-Context Binding (#773), not this declaration's.
+    expect(leaseShaped.claims ?? []).not.toContain("transaction_assurance");
+    expect(leaseShaped.claims ?? []).not.toContain("evidence");
     expect(() => loadRuntimePosture(leaseShaped)).not.toThrow();
     // Publishing is still not claiming: an unclaimed declaration designates
     // no receipt issuer, so receipt verification stays unreachable.

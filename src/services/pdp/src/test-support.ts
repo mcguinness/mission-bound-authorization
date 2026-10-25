@@ -6,6 +6,7 @@
  * real policy (for example `fgaResourcePolicy`) to its decision point.
  */
 
+import { EvaluationContextBindingDeclarations } from "@mission/core";
 import {
   type ResourcePolicy,
   type ResourcePolicyQuery,
@@ -40,6 +41,15 @@ export function resourcePolicyFixture(refuses: (query: ResourcePolicyQuery) => b
     },
   };
 }
+
+/**
+ * @spec runtime#evaluation-context-binding (#773): a declaration that claims
+ * nothing, so it covers no operation. For a unit test whose subject is
+ * another decision input on a covered payments operation, bound PDP-side
+ * exactly as a deployment's declaration is; the claimed path has its own
+ * witnesses (`evaluate-evaluation-context.test.ts`).
+ */
+export const EVALUATION_CONTEXT_UNCLAIMED_FIXTURE = new EvaluationContextBindingDeclarations({});
 
 /** Cannot answer: every check throws, as an unreachable policy backend does. */
 export const RESOURCE_POLICY_UNAVAILABLE_FIXTURE: ResourcePolicy = Object.freeze({

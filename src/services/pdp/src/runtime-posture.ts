@@ -3,6 +3,7 @@ import { enforcementBoundaryFindings } from "./enforcement-boundary.js";
 import {
   type EnforcementScopeStatement,
   type ExecutionCapabilityDeclaration,
+  evaluationContextBindingFindings,
   evidenceDeclarationFindings,
   executionCapabilityFindings,
   resourceContractFindings,
@@ -123,6 +124,12 @@ export function loadRuntimePosture(
   // @spec runtime#resource-contract (#249): the declared contract versions.
   const contracts = resourceContractFindings(input);
   if (contracts.length) throw new PostureConfigError(JSON.stringify(contracts));
+  // @spec runtime#evaluation-context-binding (#773): a claim lacking a covered
+  // operation, a descriptor or a fact's resolver, a descriptor whose bytes do
+  // not hash to its reference, and an enforced property no execution
+  // capability supports are refused here, as an undeclared class is below.
+  const contextBinding = evaluationContextBindingFindings(input);
+  if (contextBinding.length) throw new PostureConfigError(JSON.stringify(contextBinding));
   const state = (input as EnforcementScopeStatement).state_source as unknown as Record<string, unknown>;
   const fail = (why: string): never => { throw new PostureConfigError(why); };
   if (state.pdp_unavailability_posture !== "deny") fail("only deny is implemented; bounded permit reuse is not available");

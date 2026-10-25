@@ -43,7 +43,7 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/runtime-evidence-integrity.js";
 import { createPdpHttpServer, type PdpHttpServerHandle } from "../src/server.js";
-import { resourcePolicyFixture } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, resourcePolicyFixture } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 const AUDIENCE = "http://localhost:4403/mcp";
@@ -140,6 +140,10 @@ async function inProcess(req: EvaluationRequest, over: Partial<EvaluateOptions> 
     resourcePolicy: policy,
     evidence: signingEmitter().emitter,
     refusals: (r) => refusals.push(r),
+    // #773: a deployment that does not claim Evaluation-Context Binding; the
+    // link is this file's subject (evaluate-evaluation-context.test.ts
+    // witnesses the claimed path, refused after the link check).
+    evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
     ...over,
   }).then(
     (decision) => ({ decision: decision as { decision: boolean; context: Record<string, unknown> } }),
@@ -232,6 +236,7 @@ describe("the PDP refuses an unusable compensation link before evaluation (@spec
       getOptions: () => decisionOptions(fga),
       evaluateFn: evaluateRequest,
       resourcePolicy: policy,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
       refusals: createPdpRefusalRecorder({
         signer: { kid: "pdp-252", key: privateKey },
         emitterId: "pdp.example",
