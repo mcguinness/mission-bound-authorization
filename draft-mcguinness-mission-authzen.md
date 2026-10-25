@@ -1152,14 +1152,23 @@ a `stale_state` denial ({{runtime-denial-classification}}).
   the work item.
 
 The PEP populates `context.work_item` only from the harness's
-authenticated attachment, never from tool arguments or another value
-the agent supplies. The PDP MUST deny with `work_item_context_missing`
-({{runtime-denial-classification}}) a decision whose
-`context.work_item` is present but not of that shape, and, where the
-deployment's Enforcement Scope Statement claims work-item attribution
-for the action's class, one from which it is absent. Elsewhere its
-absence relaxes nothing, and the deployment claims Mission-level
-attribution only.
+authenticated attachment: the work item a verified Mission reference
+carries, for the attacher the Enforcement Scope Statement declares for
+the authenticated client ({{I-D.draft-mcguinness-mission-harness}}).
+A reference that verifies does not by itself establish that
+attachment, and the PEP never takes a work item from tool arguments or
+another value the agent supplies.
+
+The PDP MUST refuse, before evaluation, a request whose
+`context.work_item` is present but not of that shape: an unusable
+input, recorded as the Refusal Record `work_item_invalid`
+({{failure-condition-coverage}}), never an evaluated denial. Where
+the deployment's Enforcement Scope Statement claims work-item
+attribution for the action's class, the PDP MUST deny with
+`work_item_context_missing`
+({{runtime-denial-classification}}) a decision from which
+`context.work_item` is absent. Elsewhere its absence relaxes nothing,
+and the deployment claims Mission-level attribution only.
 
 The member is part of the authorization binding and the cache key
 ({{projections}}), so no cached decision or resumed execution crosses
@@ -2258,10 +2267,10 @@ Decision Evidence's `denial_reason`:
   for the action's class, as the harness profile defines
   ({{I-D.draft-mcguinness-mission-harness}}), and the decision request
   carries no `context.taint` ({{context-taint}}).
-- `work_item_context_missing`: the decision request carries a
-  `context.work_item` that is not well-formed, or the deployment claims
-  work-item attribution for the action's class and the request carries
-  none ({{context-work-item}}).
+- `work_item_context_missing`: the deployment claims work-item
+  attribution for the action's class and the decision request carries
+  no `context.work_item` ({{context-work-item}}). A malformed one is
+  the pre-evaluation refusal `work_item_invalid` instead.
 - `stale_state`: the Mission state the decision relies on is not
   current: the PEP-supplied freshness is outside the deployment's
   staleness bound (a freshness-bound violation), the PDP cannot
@@ -2552,6 +2561,7 @@ rule.
 | `action_phase` outside the closed set, or absent where the trusted operation declaration requires a phase, at the PDP | Refusal Record | `phase_invalid` |
 | `compensates_evaluation_id` absent where `action_phase` is `compensate`, or malformed, at the PDP | Refusal Record | `compensation_link_invalid` |
 | Evaluation-context binding inputs missing, malformed, or incompatible with the declared operation binding, for a covered operation, at the PDP | Refusal Record | `evaluation_context_invalid` |
+| `context.work_item` present but not an object with exactly the string members `issuer` and `id`, at the PDP | Refusal Record | `work_item_invalid` |
 | Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
 | Duration-lease renewal names no lease the PDP issued or an ended activity, or fails continuity with the evaluation it renews | PDP denial | `out_of_authority` |
 | Resource policy requires a stronger authentication context, satisfiable by in-process step-up with no change to credential-bound inputs | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
@@ -2563,7 +2573,7 @@ rule.
 | Request Mission `id` or `issuer`, or (when carried) `authority_hash` or `policy_view_id`, inconsistent with the loaded view or the directly evaluated Mission record | PDP denial | `view_inconsistent` |
 | Mission not `active`, including a passed `expires_at` | PDP denial | `mission_inactive` |
 | External Mission-binding join verification fails | PDP denial | `mission_binding_failed` |
-| Work-item context malformed, or absent where work-item attribution is claimed for the action's class | PDP denial | `work_item_context_missing` |
+| Work-item context absent where work-item attribution is claimed for the action's class | PDP denial | `work_item_context_missing` |
 | Required `act` chain missing or malformed | PDP denial | `actor_invalid` |
 | Credential facts expired or inconsistent | PDP denial | `credential_invalid` |
 | Credential authority absent, or carrying an entry the PDP cannot evaluate in full | PDP denial | `credential_invalid` |
@@ -2614,8 +2624,9 @@ identifier:
   presented at a compensating crossing is a post-permit failure of its
   phase binding, `phase_mismatch` as Execution Evidence, never a Refusal
   Record.
-- Unusable inputs: `phase_invalid`, `compensation_link_invalid`, and
-  `evaluation_context_invalid` are PDP refusals before evaluation. They
+- Unusable inputs: `phase_invalid`, `compensation_link_invalid`,
+  `evaluation_context_invalid`, and `work_item_invalid` are PDP
+  refusals before evaluation. They
   describe decision inputs the PDP cannot use, not an evaluated policy
   denial, and a PDP claiming only the Decision Base records them in its
   own internal form ({{profiles-and-capabilities}}).
@@ -3161,8 +3172,9 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 - Work-Item Context: `context.work_item` is a harness-owned extension
   point the PEP populates only from the harness's authenticated
-  attachment. A malformed member, or an absent one where work-item
-  attribution is claimed for the action's class, is denied
+  attachment. A malformed member is refused before evaluation as
+  `work_item_invalid`, and an absent one where work-item attribution is
+  claimed for the action's class is denied
   `work_item_context_missing`. The member is part of the authorization
   binding and the cache key, a permit binds it as the `work_item`
   condition, and a permit for another work item is Execution Evidence
