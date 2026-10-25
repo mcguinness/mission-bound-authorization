@@ -1513,15 +1513,20 @@ moved, and keeps every digest pair the executing PEP can observe:
 | Evaluation context at use | Parameters about to be used | `error` |
 |---|---|---|
 | Established and equal | Equal | none: the bindings hold |
-| Not establishable: a declared fact, target, salt version, or descriptor | Any | `target_drift` |
+| Not establishable: a declared fact, target, salt version, or the committed descriptor | Any | `target_drift` |
 | Established | A parameter the descriptor does not declare as a fact differs | `parameter_mismatch` |
 | Established and unequal to the permit's condition, or the condition missing | Equal, or differing only in declared facts | `target_drift` |
-| Established under a changed descriptor, facts unchanged | Equal | `target_drift` |
+| Established and equal, under a descriptor the operation's declaration no longer names | Equal | `target_drift` |
 
-A parameter the descriptor does not declare as a fact is the request's
-own, so `parameter_mismatch` records a demonstrated change to a request
-parameter, such as an agent-supplied argument. An unavailable context is never compared:
-`effective_evaluation_context_digest` is absent, and so is
+The effective context digest is computed under the descriptor and salt
+version the binding committed, never under one declared since, so
+unchanged facts keep the pair equal under a changed descriptor; the
+change itself is the refusal, and no context divergence is reported for
+it. A parameter the descriptor does not declare as a fact is the
+request's own, so `parameter_mismatch` records a demonstrated change to a
+request parameter, such as an agent-supplied argument. An unavailable
+context, the committed descriptor unrecoverable included, is never
+compared: `effective_evaluation_context_digest` is absent, and so is
 `effective_parameter_digest` where the parameters cannot be established
 ({{execution-evidence-object}}). The audit consumer reports each
 divergent pair whatever the `error`.
@@ -2674,7 +2679,10 @@ evidence representation their shared envelope carries (using the
   and Parameter Deviation gives the one `error` a suppression records
   when the context fails at use: `target_drift` unless the context is
   established and an agent-supplied parameter changed, with every
-  observable digest pair kept and every divergence reported (#773).
+  observable digest pair kept and every divergence reported; the
+  effective context digest is computed under the committed descriptor,
+  so a changed descriptor with unchanged facts is refused without a
+  divergence, and an unrecoverable one leaves the digest absent (#773).
 - Execution Evidence: a PEP that cannot establish the effective
   parameters suppresses execution and omits
   `effective_parameter_digest`, never copying or fabricating it; the

@@ -1945,9 +1945,10 @@ relying on the permit, each evaluated at every use. Members:
 : CONDITIONAL. A string. REQUIRED on a permit for an operation
   covered by {{context-evaluation-binding}}; MUST equal the
   validated request's context digest. The executing PEP MUST
-  recompute it with its own applicable descriptor and authoritative
-  facts, and MUST refuse before an effect on a missing or unequal
-  binding, an unknown descriptor, or an unavailable fact. A mismatch
+  recompute it under the descriptor the binding committed, from
+  authoritative facts, and MUST refuse before an effect on a missing or
+  unequal binding, a descriptor the operation's declaration no longer
+  names, an unrecoverable descriptor, or an unavailable fact. A mismatch
   or inability to re-resolve after a permit is Execution Evidence
   `suppressed`, not a PDP denial reason, with the `error` the runtime
   evidence profile's classification names
@@ -3092,7 +3093,8 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
   `evaluation_context_unresolvable`, and limits the `parameter_mismatch`
   row to a parameter no claimed binding declares as a fact; a context
   failure at use carries the `error` the runtime evidence profile's
-  classification names (#773).
+  classification names; the context digest condition is recomputed under
+  the descriptor the binding committed (#773).
 - Failure-Condition Coverage maps a named target object, or the
   effective parameters it determines, not establishable at use to
   Execution Evidence `target_drift`, the post-permit counterpart of the
