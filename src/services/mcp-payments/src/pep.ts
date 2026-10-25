@@ -3201,9 +3201,10 @@ export class Pep {
    * the compensate crossing's counterpart of {@link reverify}. Its normal
    * form is the committed wire's, so it is re-derived from that wire's ledger
    * record through the established link, never from the invoice as it reads
-   * now, and compared with the digest the permit bound. A record that no
-   * longer answers, or answers differently, is a parameter mismatch and
-   * suppresses the effect.
+   * now, and compared with the digest the permit bound. A record that
+   * answers differently is a parameter mismatch. A record that no longer
+   * answers leaves the effective parameters unestablished: `target_drift`,
+   * with the authorized digest kept and the effective one absent (#786).
    */
   async reverifyCompensation(
     effective: EffectiveParams,
@@ -3215,7 +3216,11 @@ export class Pep {
     const capability = await this.reverifyCapability(effective.capability_snapshot, token, effective.action, attempt);
     if (!capability.ok) return capability;
     const freshDigest = this.observeReversalDigest(effective, link);
-    if (freshDigest === undefined || freshDigest !== expectedDigest) {
+    if (freshDigest === undefined) {
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
+    }
+    if (freshDigest !== expectedDigest) {
       const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
       return { ok: false, error: "parameter_mismatch", disposition };
     }
