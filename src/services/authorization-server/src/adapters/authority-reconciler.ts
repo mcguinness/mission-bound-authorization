@@ -41,7 +41,7 @@
 import {
   type AuthorityDependencyDeclaration,
   type AuthorityDependencyResolver,
-  evaluateAuthorityDependency,
+  classifyObservedInvalidation,
   type InvalidatingChange,
   type ReconciledInvalidation,
   type ReconcilerOperation,
@@ -135,16 +135,24 @@ export class AuthorityReconciler {
     for (const record of missions) {
       if (record.state === "terminated") continue;
       if (!(declaration.governs.authority_sources as readonly string[]).includes(record.authority_source.type)) continue;
-      const view = resolver.view(record.subject);
-      if (view.observation?.known === false) unresolved.push(record.id);
-      // The applicable invalidation this observation shows for the recorded
-      // Subject, classified as direct evaluation classifies it, whether or not
-      // the declaration maps it to a lifecycle operation.
-      const shown = evaluateAuthorityDependency(declaration, view, { clientId: record.client_id, nowMs: observedAtMs });
-      if (!shown.ok && (shown.failure === "withdrawn" || shown.failure === "invalidated")) {
-        invalidated.set(record.id, { failure: shown.failure, observedAt: shown.observedAt ?? new Date(observedAtMs).toISOString() });
+      // What the observation this pass acts on shows for the recorded Subject,
+      // classified as direct evaluation classifies it but from the observation
+      // alone: the source's current availability and the observation's age are
+      // not evidence that an invalidation disappeared. A Mission the pass
+      // cannot classify (no observation of its Subject) keeps the pass from
+      // publishing, as a failed pass.
+      const observation = resolver.view(record.subject).observation;
+      if (observation === undefined) {
+        failures.push({ mission: record.id, error: "no observation of the recorded Subject" });
+        continue;
       }
-      const change = this.changeFor(record);
+      const shown = classifyObservedInvalidation(declaration, observation, record.client_id);
+      if (shown?.failure === "unresolved") unresolved.push(record.id);
+      if (shown !== undefined && shown.failure !== "unresolved") {
+        // An applicable invalidation, mapped to a lifecycle operation or not.
+        invalidated.set(record.id, { failure: shown.failure, observedAt: observation.observedAt });
+      }
+      const change = shown !== undefined && shown.failure !== "unresolved" ? shown.change : undefined;
       if (change === undefined) continue;
       const operation = declaration.enforcement.lifecycle_operations?.[change];
       if (operation === undefined) continue;
@@ -174,24 +182,5 @@ export class AuthorityReconciler {
       invalidated: [...invalidated.keys()],
     };
     return this.lastOutcome;
-  }
-
-  /**
-   * The invalidating change the current observation shows for the Mission's
-   * recorded Subject and client, if the declaration names it: deprovisioning
-   * first, then disablement, then a withdrawn delegation. A principal the
-   * source holds no record of shows none: an unavailable lookup does not
-   * establish deprovisioning.
-   */
-  private changeFor(record: MissionRecord): InvalidatingChange | undefined {
-    const observation = this.opts.resolver.view(record.subject).observation;
-    if (!observation?.known) return undefined;
-    const changes = this.opts.declaration.invalidating_changes;
-    if (observation.status === "deprovisioned" && changes.includes("subject_deprovisioned")) return "subject_deprovisioned";
-    if (observation.status === "disabled" && changes.includes("subject_disabled")) return "subject_disabled";
-    if (changes.includes("delegation_withdrawn") && observation.withdrawnDelegations.includes(record.client_id)) {
-      return "delegation_withdrawn";
-    }
-    return undefined;
   }
 }

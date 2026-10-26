@@ -528,6 +528,45 @@ export class AuthorityDependencyResolver {
   }
 }
 
+/** What one observation shows about a principal for a client, apart from the source's availability or the observation's age. */
+export type ObservedInvalidation =
+  | { failure: "unresolved" }
+  | { failure: "invalidated"; change: "subject_disabled" | "subject_deprovisioned" }
+  | { failure: "withdrawn"; change: "delegation_withdrawn" };
+
+/**
+ * @spec runtime#input-authority-dependency: what `observation` itself shows
+ * about the principal for `clientId`, the one classification direct
+ * evaluation and a reconciler both use. A principal the source holds no
+ * record of is `unresolved`; one deprovisioned or disabled, where the
+ * declaration names that change, `invalidated`; one that withdrew the
+ * delegation from the client, where the declaration names it, `withdrawn`;
+ * otherwise nothing (`undefined`). It reads neither the source's current
+ * availability nor the observation's age: neither is evidence about what the
+ * observation shows.
+ */
+export function classifyObservedInvalidation(
+  declaration: Pick<AuthorityDependencyDeclaration, "invalidating_changes">,
+  observation: PrincipalStateObservation,
+  clientId: string,
+): ObservedInvalidation | undefined {
+  const changes = declaration.invalidating_changes;
+  if (!observation.known) return { failure: "unresolved" };
+  if (observation.status === "deprovisioned" && changes.includes("subject_deprovisioned")) {
+    return { failure: "invalidated", change: "subject_deprovisioned" };
+  }
+  if (observation.status === "disabled" && changes.includes("subject_disabled")) {
+    return { failure: "invalidated", change: "subject_disabled" };
+  }
+  if (
+    changes.includes("delegation_withdrawn") &&
+    observation.withdrawnDelegations.includes(clientId)
+  ) {
+    return { failure: "withdrawn", change: "delegation_withdrawn" };
+  }
+  return undefined;
+}
+
 /** The evaluation's answer: reliance holds until `validUntilMs`, or it stopped, and why. */
 export type DependencyEvaluation =
   | { ok: true; validUntilMs: number; observedAt: string }
@@ -543,10 +582,11 @@ export type DependencyEvaluation =
  *   either way).
  * - The source unreachable where the declaration requires an online check:
  *   `unavailable`, whatever the observation's validity.
- * - A Subject the source holds no record of: `unresolved`, an uncertainty
- *   that refuses but is not recorded as a withdrawal. A Subject that withdrew
- *   the delegation: `withdrawn`. A Subject disabled or deprovisioned, where
- *   the declaration names that change: `invalidated`.
+ * - Then what the observation shows ({@link classifyObservedInvalidation}):
+ *   a Subject the source holds no record of is `unresolved`, an uncertainty
+ *   that refuses but is not recorded as a withdrawal; one that withdrew the
+ *   delegation, `withdrawn`; one disabled or deprovisioned, where the
+ *   declaration names that change, `invalidated`.
  * - Otherwise reliance holds until the observation's validity ends.
  */
 export function evaluateAuthorityDependency(
@@ -564,19 +604,8 @@ export function evaluateAuthorityDependency(
   }
   if (declaration.online_check && !view.sourceAvailable)
     return { ok: false, failure: "unavailable", observedAt };
-  const changes = declaration.invalidating_changes;
-  if (!observation.known) return { ok: false, failure: "unresolved", observedAt };
-  if (observation.status === "disabled" && changes.includes("subject_disabled"))
-    return { ok: false, failure: "invalidated", observedAt };
-  if (observation.status === "deprovisioned" && changes.includes("subject_deprovisioned")) {
-    return { ok: false, failure: "invalidated", observedAt };
-  }
-  if (
-    changes.includes("delegation_withdrawn") &&
-    observation.withdrawnDelegations.includes(input.clientId)
-  ) {
-    return { ok: false, failure: "withdrawn", observedAt };
-  }
+  const shown = classifyObservedInvalidation(declaration, observation, input.clientId);
+  if (shown) return { ok: false, failure: shown.failure, observedAt };
   return { ok: true, validUntilMs, observedAt };
 }
 
