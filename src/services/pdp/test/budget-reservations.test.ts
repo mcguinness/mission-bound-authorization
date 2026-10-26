@@ -1004,7 +1004,9 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
       expect(claims.reservationsFor(b).map((r) => r.state)).toEqual(["committed", "committed"]);
       expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "100.00" }, held: { amount: "0.00" }, committed: { amount: "200.00" } });
-      expect(claims.reconcileHeldReservation(a, { kind: "executed", reference: "again" })).toEqual({ accepted: false, reason: "not_held_released" });
+      // A repeated not_executed on the released reservation is an idempotent no-op; an executed
+      // correction after an incorrect release is the correction path's (witnessed separately).
+      expect(claims.reconcileHeldReservation(a, { kind: "not_executed", reference: "again" })).toEqual({ accepted: true, state: "released" });
       expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
       claims.close();
     });
