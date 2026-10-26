@@ -385,6 +385,22 @@ each record carries its own `evidence_envelope` JWS. A sequence is per
 | Retention and access controls | a 31,536,000 s window from the audit horizon; records are read only through the stores; access control and encryption at rest are the deployment's storage mechanism | met |
 | Recoverable per-emitter sequencing | the PDP's sequence in its claim file, the PEP's and executor's in the retention file; replicas are excluded (one PDP, one PEP) | met |
 
+Cost per action (#288). `pnpm measure:evidence` (`demo/src/measure-evidence.ts`)
+composes the stack in process on fresh store files, with only the OpenFGA
+client stubbed, and prints what one action of each path added. Bytes are the
+logical size of the stored JSON, not file pages:
+
+| Action | Outcome | Records added | Record bytes | Signing operations | Attempt records | Attempt bytes |
+|---|---|---|---|---|---|---|
+| read (`get_invoice`) | completed | decision, execution | 5144 | 2 | 0 | 0 |
+| wire (`execute_wire_transfer`) | completed | decision, execution | 6468 | 2 | 1 | 473 |
+| the same wire under a new key | refused `permit_consumed` after the permit | decision, execution | 6437 | 2 | 0 | 0 |
+
+- **Signing.** Two ES256 signatures per action, the PDP's and the PEP's or executor's, each synchronous at emission. Each Decision Evidence also commits one sequence row in the PDP claim file, and a claimed permit's decision is stored there with its record as well (not counted above).
+- **Retention.** At the mean above, about 6.2 kB per action, 1,000 actions a day held for the 31,536,000 s window is about 2.25 GB of record bytes. Attempt records are never swept.
+- **Key history.** 4 published keys at 1 key-set location, 734 bytes, regenerated per boot and held in memory; a durable key history is #831's.
+- **Export backlog.** None: nothing is exported or registered asynchronously.
+
 Around the effect:
 
 - **Before the effect.** The PEP retains the permit's Decision Evidence before redemption, and the transaction tier commits the attempt record before the connector call: `the transaction tier records each attempt before its effect (@spec runtime#evidence pre-effect durability, #821) > before the connector commits, the attempt's operation identity and its retained Decision Evidence are recorded in the PEP's durable file, and a reopened file still names them`.
