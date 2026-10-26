@@ -2685,7 +2685,8 @@ audiences associated with the entries it carries, never the designated
 client its `aud` names ({{token-claims}}). A designation carries only a
 permitted subset of the presented token's entries ({{subset}},
 {{delegation-constraints}}), each keeping its original approved
-audience ({{transformation-capabilities}}). The delegated token issued
+audience ({{transformation-capabilities}}). An entry without an
+original approved audience is not carried. The delegated token issued
 at its redemption is subject to every rule of this section unchanged
 ({{delegated-exchange}}).
 
@@ -7478,9 +7479,10 @@ Cross-Domain:
 - A designation's `aud` names its redeemer and reassigns no entry's
   original approved audience: the audience rules test the audiences
   associated with the entries it carries, a permitted subset of the
-  presented token's, and the delegated token issued at its redemption
-  is subject to every audience rule (Audience and Token Response,
-  Declared Transformation Capabilities; #1717, D845).
+  presented token's that excludes an entry without an original approved
+  audience, and the delegated token issued at its redemption is subject
+  to every audience rule (Audience and Token Response, Declared
+  Transformation Capabilities; #1717, D845, D859).
 - The AS refuses, with `invalid_target`, a delegated Mission-bound
   token for an audience it has not established as a Mission-aware
   Resource Server that processes the `act` chain; routing and logging
