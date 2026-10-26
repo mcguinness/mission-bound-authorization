@@ -209,7 +209,10 @@ export async function handleCrossOrgChainExchange(
   }
   // @spec mission-template#prohibited-classes (#813, D830 ruling 3): a
   // standing-payment lineage is not delegated across organizations until its
-  // budget accounting extends there.
+  // budget accounting extends there. Defense in depth: this issuer's only
+  // chain-root issuance, deriveCrossOrgRoot, already refuses such a lineage,
+  // so a chain rooted at one of its own standing-payment Missions cannot
+  // arrive here signed by its key.
   if (opts.standingPaymentLineage?.(verified.missionId, verified.missionIssuer) === true) {
     fail(ctx, "invalid_grant", "a standing-payment lineage is not delegated across organizations (#813)");
     return;

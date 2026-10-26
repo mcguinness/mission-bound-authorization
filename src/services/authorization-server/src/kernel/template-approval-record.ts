@@ -35,8 +35,8 @@ import {
 import type { Database } from "@mission/store";
 import {
   type AgrAssertion,
-  type ApprovalGovernanceRecord,
   ApprovalGovernanceError,
+  type ApprovalGovernanceRecord,
   assertAssertionAuthority,
   assertContributing,
   type UnsignedApprovalGovernanceRecord,
@@ -109,21 +109,30 @@ export function templateRecordingRuleFor(
     recency: {
       ceilings: { default: terms.approval_governance.recency.ceilings.default },
       clock_skew_s: terms.approval_governance.recency.clock_skew_s,
-      exceptions: sortedRecord(Object.entries(terms.approval_governance.recency.exceptions)) as TemplateRecordingRule["recency"]["exceptions"],
+      exceptions: sortedRecord(
+        Object.entries(terms.approval_governance.recency.exceptions),
+      ) as TemplateRecordingRule["recency"]["exceptions"],
     },
     deciding_policy: { id: deciding.id, version: deciding.version, digest: deciding.digest },
-    classification: sortedRecord(Object.entries(classification).map(([a, c]) => [a, [...c].sort()])),
+    classification: sortedRecord(
+      Object.entries(classification).map(([a, c]) => [a, [...c].sort()]),
+    ),
   };
   const content = canonicalize(rule as unknown as JsonValue);
   const version = createHash("sha256").update(content, "utf8").digest("base64url").slice(0, 16);
   return { id: TEMPLATE_RECORDING_RULE_ID, version, content_type: "application/json", content };
 }
 
-const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
 const exactly = (o: Record<string, unknown>, keys: string[]): boolean =>
   Object.keys(o).length === keys.length && keys.every((k) => Object.hasOwn(o, k));
 const isRef = (v: unknown): v is ActivationPolicyRef =>
-  isObject(v) && exactly(v, ["id", "version", "digest"]) && typeof v.id === "string" && typeof v.version === "string" && typeof v.digest === "string";
+  isObject(v) &&
+  exactly(v, ["id", "version", "digest"]) &&
+  typeof v.id === "string" &&
+  typeof v.version === "string" &&
+  typeof v.digest === "string";
 
 /** Parse a rule snapshot strictly; its bytes are evaluated as they are. */
 export function parseTemplateRecordingRule(content: string | Uint8Array): TemplateRecordingRule {
@@ -141,28 +150,49 @@ export function parseTemplateRecordingRule(content: string | Uint8Array): Templa
   }
   const r = raw as Record<string, unknown>;
   const recency = r.recency;
-  if (!isObject(recency) || !exactly(recency, ["ceilings", "clock_skew_s", "exceptions"])) fail("recency is not {ceilings, clock_skew_s, exceptions}");
+  if (!isObject(recency) || !exactly(recency, ["ceilings", "clock_skew_s", "exceptions"]))
+    fail("recency is not {ceilings, clock_skew_s, exceptions}");
   const rec = recency as Record<string, unknown>;
-  if (!isObject(rec.ceilings) || !exactly(rec.ceilings, ["default"]) || !Number.isSafeInteger(rec.ceilings.default) || (rec.ceilings.default as number) <= 0) {
+  if (
+    !isObject(rec.ceilings) ||
+    !exactly(rec.ceilings, ["default"]) ||
+    !Number.isSafeInteger(rec.ceilings.default) ||
+    (rec.ceilings.default as number) <= 0
+  ) {
     fail("recency.ceilings is not {default} with a positive integer ceiling");
   }
-  if (!Number.isSafeInteger(rec.clock_skew_s) || (rec.clock_skew_s as number) < 0) fail("recency.clock_skew_s is not a non-negative integer");
+  if (!Number.isSafeInteger(rec.clock_skew_s) || (rec.clock_skew_s as number) < 0)
+    fail("recency.clock_skew_s is not a non-negative integer");
   if (!isObject(rec.exceptions)) fail("recency.exceptions is not an object");
   for (const [cls, e] of Object.entries(rec.exceptions as Record<string, unknown>)) {
-    if (cls !== "irreversible_action" && cls !== CONSUMPTION_BOUND_CLASS) fail(`recency.exceptions names ${cls}`);
-    if (!isObject(e) || !exactly(e, ["max_age_s"]) || !Number.isSafeInteger(e.max_age_s) || (e.max_age_s as number) <= 0) {
+    if (cls !== "irreversible_action" && cls !== CONSUMPTION_BOUND_CLASS)
+      fail(`recency.exceptions names ${cls}`);
+    if (
+      !isObject(e) ||
+      !exactly(e, ["max_age_s"]) ||
+      !Number.isSafeInteger(e.max_age_s) ||
+      (e.max_age_s as number) <= 0
+    ) {
       fail(`recency.exceptions.${cls} is not {max_age_s}`);
     }
   }
   if (!isRef(r.deciding_policy)) fail("deciding_policy is not a policy reference");
-  if (!isObject(r.classification) || !Object.values(r.classification).every((c) => Array.isArray(c) && c.every((x) => typeof x === "string"))) {
+  if (
+    !isObject(r.classification) ||
+    !Object.values(r.classification).every(
+      (c) => Array.isArray(c) && c.every((x) => typeof x === "string"),
+    )
+  ) {
     fail("classification maps each action to an array of classes");
   }
   return raw as unknown as TemplateRecordingRule;
 }
 
 /** The `approval_policy` reference of a registered rule version. */
-export function templateRecordingRuleRef(issuer: string, rule: RegisteredTemplateRecordingRule): ActivationPolicyRef {
+export function templateRecordingRuleRef(
+  issuer: string,
+  rule: RegisteredTemplateRecordingRule,
+): ActivationPolicyRef {
   return { id: rule.id, version: rule.version, digest: approvalPolicyDigest(issuer, rule) };
 }
 
@@ -189,14 +219,24 @@ export function templateGovernanceGate(
     decided_at: string;
   },
 ): { ok: true } | { ok: false; reason: TemplateGovernanceReason; detail: string } {
-  const no = (reason: TemplateGovernanceReason, detail: string) => ({ ok: false as const, reason, detail });
+  const no = (reason: TemplateGovernanceReason, detail: string) => ({
+    ok: false as const,
+    reason,
+    detail,
+  });
   if (!sameRef(facts.deciding, rule.deciding_policy)) {
-    return no("governance_policy_ineligible", "the deciding policy is not the Dispatch Policy the rule admits");
+    return no(
+      "governance_policy_ineligible",
+      "the deciding policy is not the Dispatch Policy the rule admits",
+    );
   }
   const present = new Set<string>();
   for (const action of facts.authority.flatMap((e) => e.actions)) {
-    const classes = Object.hasOwn(rule.classification, action) ? rule.classification[action] : undefined;
-    if (!classes || classes.length === 0) return no("governance_unclassified_action", `${action} is unclassified`);
+    const classes = Object.hasOwn(rule.classification, action)
+      ? rule.classification[action]
+      : undefined;
+    if (!classes || classes.length === 0)
+      return no("governance_unclassified_action", `${action} is unclassified`);
     for (const c of classes) if (HIGH_RISK_ACTION_CLASSES.has(c)) present.add(c);
   }
   if (facts.consumptionBound) present.add(CONSUMPTION_BOUND_CLASS);
@@ -206,7 +246,10 @@ export function templateGovernanceGate(
       ? rule.recency.exceptions[cls as GovernanceExceptionClass]
       : undefined;
     if (!exception) {
-      return no("governance_high_risk", `the high-risk class ${cls} has no committed class-named exception`);
+      return no(
+        "governance_high_risk",
+        `the high-risk class ${cls} has no committed class-named exception`,
+      );
     }
     maximum = Math.min(maximum, exception.max_age_s);
   }
@@ -221,7 +264,10 @@ export function templateGovernanceGate(
     !(approvedMs <= decidedMs + skewMs) ||
     !(decidedMs - approvedMs <= maximum * 1000)
   ) {
-    return no("governance_recency", `the template consent is older than the applicable maximum of ${maximum}s, or out of order`);
+    return no(
+      "governance_recency",
+      `the template consent is older than the applicable maximum of ${maximum}s, or out of order`,
+    );
   }
   return { ok: true };
 }
@@ -242,14 +288,26 @@ export function buildTemplateRecord(
     kind: "policy",
     decision: "approve",
     decided_at: mission.created_at,
-    authority: { policy_id: deciding.id, version: deciding.version, approved_at: basis.approved_at },
+    authority: {
+      policy_id: deciding.id,
+      version: deciding.version,
+      approved_at: basis.approved_at,
+    },
   };
   return {
     approval_event_id: mission.approval_event_id,
-    mission: { issuer: mission.issuer, intent_hash: mission.intent_hash, authority_hash: mission.authority_hash },
+    mission: {
+      issuer: mission.issuer,
+      intent_hash: mission.intent_hash,
+      authority_hash: mission.authority_hash,
+    },
     approval_policy: ruleRef,
     assertions: [assertion],
-    evaluation: { decision: "approved", evaluated_at: mission.created_at, contributing: [TEMPLATE_ASSERTION_ID] },
+    evaluation: {
+      decision: "approved",
+      evaluated_at: mission.created_at,
+      contributing: [TEMPLATE_ASSERTION_ID],
+    },
   };
 }
 
@@ -279,7 +337,8 @@ export function assertTemplateRecord(
       fail((e as Error).message);
     }
   }
-  if (!sameRef(record.approval_policy, ruleRef)) fail("approval_policy is not the recording rule this issuer holds");
+  if (!sameRef(record.approval_policy, ruleRef))
+    fail("approval_policy is not the recording rule this issuer holds");
   if (record.evaluation.decision !== "approved") fail("evaluation did not approve");
   try {
     assertContributing(record);
@@ -289,18 +348,28 @@ export function assertTemplateRecord(
   const policies = record.assertions.filter((a) => a.kind === "policy" && a.decision === "approve");
   if (policies.length !== 1) fail("the record carries not exactly one approving policy assertion");
   const a = policies[0] as AgrAssertion;
-  if (a.principal.iss !== basis.consent_principal.iss || a.principal.sub !== basis.consent_principal.sub) {
+  if (
+    a.principal.iss !== basis.consent_principal.iss ||
+    a.principal.sub !== basis.consent_principal.sub
+  ) {
     fail("the policy assertion's principal is not the template consent principal");
   }
-  if (a.principal.iss === basis.activation_actor.iss && a.principal.sub === basis.activation_actor.sub) {
+  if (
+    a.principal.iss === basis.activation_actor.iss &&
+    a.principal.sub === basis.activation_actor.sub
+  ) {
     fail("the policy assertion's principal is the Dispatcher, not a human consent");
   }
   const auth = a.authority as { policy_id?: unknown; version?: unknown; approved_at?: unknown };
-  if (auth.policy_id !== deciding.id || auth.version !== deciding.version) fail("the policy assertion does not name the Dispatch Policy");
-  if (auth.approved_at !== basis.approved_at) fail("the policy assertion's approved_at is not the template consent instant");
-  if (a.decided_at !== record.evaluation.evaluated_at) fail("the policy assertion was not decided at the evaluation instant");
+  if (auth.policy_id !== deciding.id || auth.version !== deciding.version)
+    fail("the policy assertion does not name the Dispatch Policy");
+  if (auth.approved_at !== basis.approved_at)
+    fail("the policy assertion's approved_at is not the template consent instant");
+  if (a.decided_at !== record.evaluation.evaluated_at)
+    fail("the policy assertion was not decided at the evaluation instant");
   const contributing = record.evaluation.contributing;
-  if (contributing.length !== 1 || contributing[0] !== a.assertion_id) fail("contributing is not exactly the policy assertion");
+  if (contributing.length !== 1 || contributing[0] !== a.assertion_id)
+    fail("contributing is not exactly the policy assertion");
   return a;
 }
 
@@ -357,33 +426,64 @@ export class TemplateApprovalRecordStore {
     rule: RegisteredTemplateRecordingRule,
     inputs: TemplateRecordInputs,
   ): void {
-    if (!this.db.inTransaction) throw new Error("template governance evidence is retained only in the instance's creation transaction");
+    if (!this.db.inTransaction)
+      throw new Error(
+        "template governance evidence is retained only in the instance's creation transaction",
+      );
     this.db
       .prepare(
         "INSERT OR IGNORE INTO template_recording_rules (issuer, policy_id, version, digest, content_type, content) VALUES (?, ?, ?, ?, ?, ?)",
       )
-      .run(issuer, ruleRef.id, ruleRef.version, ruleRef.digest, rule.content_type, Buffer.from(rule.content, "utf8"));
+      .run(
+        issuer,
+        ruleRef.id,
+        ruleRef.version,
+        ruleRef.digest,
+        rule.content_type,
+        Buffer.from(rule.content, "utf8"),
+      );
     this.db
-      .prepare("INSERT INTO template_record_inputs (approval_event_id, mission_id, inputs_json) VALUES (?, ?, ?)")
+      .prepare(
+        "INSERT INTO template_record_inputs (approval_event_id, mission_id, inputs_json) VALUES (?, ?, ?)",
+      )
       .run(inputs.approval_event_id, missionId, JSON.stringify(inputs));
   }
 
-  ruleSnapshot(issuer: string, ref: ActivationPolicyRef): { content_type: string; content: Uint8Array } | undefined {
+  ruleSnapshot(
+    issuer: string,
+    ref: ActivationPolicyRef,
+  ): { content_type: string; content: Uint8Array } | undefined {
     const row = this.db
-      .prepare("SELECT content_type, content FROM template_recording_rules WHERE issuer = ? AND policy_id = ? AND version = ? AND digest = ?")
-      .get(issuer, ref.id, ref.version, ref.digest) as { content_type: string; content: Buffer } | undefined;
-    return row ? { content_type: row.content_type, content: new Uint8Array(row.content) } : undefined;
+      .prepare(
+        "SELECT content_type, content FROM template_recording_rules WHERE issuer = ? AND policy_id = ? AND version = ? AND digest = ?",
+      )
+      .get(issuer, ref.id, ref.version, ref.digest) as
+      | { content_type: string; content: Buffer }
+      | undefined;
+    return row
+      ? { content_type: row.content_type, content: new Uint8Array(row.content) }
+      : undefined;
   }
 
-  inputs(missionId: string): { approval_event_id: string; inputs: TemplateRecordInputs } | undefined {
-    const row = this.db.prepare("SELECT approval_event_id, inputs_json FROM template_record_inputs WHERE mission_id = ?").get(missionId) as
-      | { approval_event_id: string; inputs_json: string }
-      | undefined;
-    return row ? { approval_event_id: row.approval_event_id, inputs: JSON.parse(row.inputs_json) as TemplateRecordInputs } : undefined;
+  inputs(
+    missionId: string,
+  ): { approval_event_id: string; inputs: TemplateRecordInputs } | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT approval_event_id, inputs_json FROM template_record_inputs WHERE mission_id = ?",
+      )
+      .get(missionId) as { approval_event_id: string; inputs_json: string } | undefined;
+    return row
+      ? {
+          approval_event_id: row.approval_event_id,
+          inputs: JSON.parse(row.inputs_json) as TemplateRecordInputs,
+        }
+      : undefined;
   }
 }
 
-const sameJson = (a: unknown, b: unknown): boolean => canonicalize((a ?? null) as JsonValue) === canonicalize((b ?? null) as JsonValue);
+const sameJson = (a: unknown, b: unknown): boolean =>
+  canonicalize((a ?? null) as JsonValue) === canonicalize((b ?? null) as JsonValue);
 
 /** What a re-check reads from the kernel. */
 export interface TemplateRecheckKernel {
@@ -392,7 +492,9 @@ export interface TemplateRecheckKernel {
     verify(
       issuer: string,
       ref: ActivationPolicyRef,
-    ): { status: "verified"; snapshot: { content_type: string; content: Uint8Array | string } } | { status: string };
+    ):
+      | { status: "verified"; snapshot: { content_type: string; content: Uint8Array | string } }
+      | { status: string };
   };
 }
 
@@ -411,10 +513,12 @@ export function recheckTemplateApprovalRecord(
   kernel: TemplateRecheckKernel,
   mission: MissionRecord,
   record: ApprovalGovernanceRecord,
-):
-  | { rechecked: true }
-  | { rechecked: false; step: 2 | 3 | 4 | 5 | 6; reason: string } {
-  const no = (step: 2 | 3 | 4 | 5 | 6, reason: string) => ({ rechecked: false as const, step, reason });
+): { rechecked: true } | { rechecked: false; step: 2 | 3 | 4 | 5 | 6; reason: string } {
+  const no = (step: 2 | 3 | 4 | 5 | 6, reason: string) => ({
+    rechecked: false as const,
+    step,
+    reason,
+  });
   const basis = mission.approval_basis as ApprovalBasisTemplate;
   const store = kernel.templateApprovalRecords;
   const snapshot = store.ruleSnapshot(mission.issuer, record.approval_policy);
@@ -433,7 +537,8 @@ export function recheckTemplateApprovalRecord(
   const inputs = retained.inputs;
   const deciding = inputs.deciding;
   const held = kernel.activationPolicySnapshots.verify(mission.issuer, deciding);
-  if (held.status !== "verified" || !("snapshot" in held)) return no(3, "the retained Dispatch Policy snapshot does not verify");
+  if (held.status !== "verified" || !("snapshot" in held))
+    return no(3, "the retained Dispatch Policy snapshot does not verify");
   let terms: StandingPaymentTerms | undefined;
   try {
     terms = standingPaymentTermsOf({
@@ -443,7 +548,11 @@ export function recheckTemplateApprovalRecord(
   } catch {
     terms = undefined;
   }
-  if (!terms || !sameJson(terms.approval_governance.recency, rule.recency) || !sameRef(rule.deciding_policy, deciding)) {
+  if (
+    !terms ||
+    !sameJson(terms.approval_governance.recency, rule.recency) ||
+    !sameRef(rule.deciding_policy, deciding)
+  ) {
     return no(3, "the retained Dispatch Policy does not commit the recording rule's recency terms");
   }
   if (
@@ -453,7 +562,10 @@ export function recheckTemplateApprovalRecord(
     authorityHash(mission.issuer, inputs.authority as never) !== mission.authority_hash ||
     !sameJson(inputs.consumption_bound, mission.intent.max_budget ?? null)
   ) {
-    return no(4, "the recorded inputs are not bound to this approval event, Intent and Authority Set");
+    return no(
+      4,
+      "the recorded inputs are not bound to this approval event, Intent and Authority Set",
+    );
   }
   const c = inputs.consent;
   if (
@@ -467,7 +579,10 @@ export function recheckTemplateApprovalRecord(
   ) {
     return no(4, "the recorded inputs do not carry this instance's human template consent");
   }
-  if (inputs.decided_at !== record.evaluation.evaluated_at || inputs.decided_at !== mission.created_at) {
+  if (
+    inputs.decided_at !== record.evaluation.evaluated_at ||
+    inputs.decided_at !== mission.created_at
+  ) {
     return no(4, "the recorded inputs were not read at the evaluation instant");
   }
   try {

@@ -15,24 +15,28 @@
  * dispatch accounting committed in the instance's own transaction.
  */
 import { DERIVATION_POLICY, DISPATCH_PROHIBITED_ACTIONS } from "@mission/demo-data";
-import { type CryptoKey, generateKeyPair } from "jose";
+import { type CryptoKey, exportJWK, generateKeyPair } from "jose";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthorityEntry,
   ChildDelegationError,
+  type CreateTemplateInput,
   createChildMission,
   createExpansion,
   createTemplate,
-  type CreateTemplateInput,
   DispatchError,
   type DispatchInput,
   type DispatchPolicies,
+  deriveAttenuationRoot,
+  deriveCrossOrgRoot,
   dispatchFromTemplate,
   IntentError,
+  issueCrossDomainGrant,
   MissionKernel,
   type ProhibitedPredicateMapping,
   recheckTemplateApprovalRecord,
   STANDING_PAYMENT_OPERATION,
+  StandingPaymentLineageError,
   standingPaymentRootOf,
   TEMPLATE_RECORDING_RULE_ID,
   type TemplateConsentProvenance,
@@ -66,7 +70,11 @@ beforeEach(() => {
   kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
-    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, CLIENTS, ["human-approver", "worker", "orchestrator"]),
+    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, CLIENTS, [
+      "human-approver",
+      "worker",
+      "orchestrator",
+    ]),
     statusKey: key,
     statusKid: "as-status",
     now,
@@ -84,12 +92,21 @@ const TERMS = {
   resource: RESOURCE,
   destinations: { acme: "acct-acme-0001" },
   max_amount: { amount: "500.00", currency: "USD" },
-  budget: { owner: "payments-operator", id: "ap-standing-2026", currency: "USD", limit: "5000.00", per_instance_max: "1000.00" },
+  budget: {
+    owner: "payments-operator",
+    id: "ap-standing-2026",
+    currency: "USD",
+    limit: "5000.00",
+    per_instance_max: "1000.00",
+  },
   approval_governance: {
     recency: {
       ceilings: { default: 86400 },
       clock_skew_s: 60,
-      exceptions: { irreversible_action: { max_age_s: 3600 }, consumption_bound: { max_age_s: 7200 } },
+      exceptions: {
+        irreversible_action: { max_age_s: 3600 },
+        consumption_bound: { max_age_s: 7200 },
+      },
     },
   },
 };
@@ -101,24 +118,38 @@ const spPolicy = (id: string, terms: unknown = TERMS, version = "1") => ({
   content_type: "application/json",
   content: JSON.stringify({ id, derivation_limit_ceiling: 3, standing_payment: terms }),
 });
-const withGovernance = (recency: Terms["approval_governance"]["recency"]): Terms => ({ ...TERMS, approval_governance: { recency } });
+const withGovernance = (recency: Terms["approval_governance"]["recency"]): Terms => ({
+  ...TERMS,
+  approval_governance: { recency },
+});
 
 const REGISTRY: DispatchPolicies = {
   "sp-policy": spPolicy("sp-policy"),
   "sp-no-consumption-exception": spPolicy(
     "sp-no-consumption-exception",
-    withGovernance({ ceilings: { default: 86400 }, clock_skew_s: 60, exceptions: { irreversible_action: { max_age_s: 3600 } } as never }),
+    withGovernance({
+      ceilings: { default: 86400 },
+      clock_skew_s: 60,
+      exceptions: { irreversible_action: { max_age_s: 3600 } } as never,
+    }),
   ),
   "sp-no-irreversible-exception": spPolicy(
     "sp-no-irreversible-exception",
-    withGovernance({ ceilings: { default: 86400 }, clock_skew_s: 60, exceptions: { consumption_bound: { max_age_s: 7200 } } as never }),
+    withGovernance({
+      ceilings: { default: 86400 },
+      clock_skew_s: 60,
+      exceptions: { consumption_bound: { max_age_s: 7200 } } as never,
+    }),
   ),
   "sp-default-stricter": spPolicy(
     "sp-default-stricter",
     withGovernance({
       ceilings: { default: 1800 },
       clock_skew_s: 60,
-      exceptions: { irreversible_action: { max_age_s: 3600 }, consumption_bound: { max_age_s: 7200 } },
+      exceptions: {
+        irreversible_action: { max_age_s: 3600 },
+        consumption_bound: { max_age_s: 7200 },
+      },
     }),
   ),
   "sp-no-destinations": spPolicy("sp-no-destinations", { ...TERMS, destinations: {} }),
@@ -134,7 +165,11 @@ const CLASSES: Record<string, string[]> = {
   "payments:remittance.send": ["external_commitment"],
 };
 const mappingOf = (
-  over: { classes?: Record<string, string[]>; external?: string[]; crossDomain?: (r: string) => boolean } = {},
+  over: {
+    classes?: Record<string, string[]>;
+    external?: string[];
+    crossDomain?: (r: string) => boolean;
+  } = {},
 ): ProhibitedPredicateMapping => ({
   classesOf: (_entry, action) => (over.classes ?? CLASSES)[action],
   externalCommunicationActions: new Set(over.external ?? []),
@@ -142,7 +177,10 @@ const mappingOf = (
 });
 
 /** A human consent at the approval floor, as the approval surface records it. */
-const humanConsent = (sub = "human-approver", over: Partial<TemplateConsentProvenance> = {}): TemplateConsentProvenance => ({
+const humanConsent = (
+  sub = "human-approver",
+  over: Partial<TemplateConsentProvenance> = {},
+): TemplateConsentProvenance => ({
   interactive: true,
   principal: { iss: ISS, sub },
   acr: "mfa",
@@ -186,7 +224,8 @@ const consentTo = (
   opts: { consent?: TemplateConsentProvenance | null; policies?: DispatchPolicies } = {},
 ) => {
   const input = body(over);
-  const consent = opts.consent === null ? undefined : (opts.consent ?? humanConsent(input.approver.sub));
+  const consent =
+    opts.consent === null ? undefined : (opts.consent ?? humanConsent(input.approver.sub));
   return createTemplate(store, input, {
     ...kernel.authoritySourceOptions(),
     dispatchPolicies: opts.policies ?? REGISTRY,
@@ -199,7 +238,9 @@ const consentTo = (
   });
 };
 
-const intentWith = (maxBudget: { amount: string; currency: string } | null = { amount: "1000.00", currency: "USD" }) =>
+const intentWith = (
+  maxBudget: { amount: string; currency: string } | null = { amount: "1000.00", currency: "USD" },
+) =>
   kernel.validateIntent(
     JSON.stringify({
       goal: "pay approved Acme invoices",
@@ -225,7 +266,8 @@ const dispatch = (templateId: string, over: Partial<DispatchInput> = {}, mapping
     ...over,
   });
 
-const missionCount = (): number => (kernel.db.prepare("SELECT COUNT(*) AS n FROM missions").get() as { n: number }).n;
+const missionCount = (): number =>
+  (kernel.db.prepare("SELECT COUNT(*) AS n FROM missions").get() as { n: number }).n;
 
 /** The dispatch's refusal reason; fails when it did not refuse with a DispatchError. */
 const refusal = (run: () => unknown): { reason: string; message: string } => {
@@ -256,12 +298,26 @@ describe("standing-payment dispatch admission (@spec mission-template#prohibited
     expect(record?.assertions).toHaveLength(1);
     expect(record?.assertions[0]?.kind).toBe("policy");
     expect(record?.assertions[0]?.principal).toEqual({ iss: ISS, sub: "human-approver" });
-    expect(record?.assertions[0]?.authority).toEqual({ policy_id: "sp-policy", version: "1", approved_at: t.created_at });
-    expect(recheckTemplateApprovalRecord(kernel, mission, record as never)).toEqual({ rechecked: true });
+    expect(record?.assertions[0]?.authority).toEqual({
+      policy_id: "sp-policy",
+      version: "1",
+      approved_at: t.created_at,
+    });
+    expect(recheckTemplateApprovalRecord(kernel, mission, record as never)).toEqual({
+      rechecked: true,
+    });
     const rule = JSON.parse(
-      Buffer.from(kernel.templateApprovalRecords.ruleSnapshot(ISS, (record as { approval_policy: never }).approval_policy)?.content ?? []).toString("utf8"),
+      Buffer.from(
+        kernel.templateApprovalRecords.ruleSnapshot(
+          ISS,
+          (record as { approval_policy: never }).approval_policy,
+        )?.content ?? [],
+      ).toString("utf8"),
     ) as { recency: { exceptions: Record<string, unknown> } };
-    expect(Object.keys(rule.recency.exceptions).sort()).toEqual(["consumption_bound", "irreversible_action"]);
+    expect(Object.keys(rule.recency.exceptions).sort()).toEqual([
+      "consumption_bound",
+      "irreversible_action",
+    ]);
   });
 
   it("records the admission with the policy's budget identity and the instance's max_budget, and counts the dispatch in the kernel database (#813)", () => {
@@ -282,14 +338,20 @@ describe("standing-payment dispatch admission (@spec mission-template#prohibited
 
   it("refuses the payment dispatch_prohibited_class with the capability off, exactly as without the workflow (#813)", () => {
     const t = consentTo();
-    const r = refusal(() => dispatch(t.id, { standingPayment: undefined, intent: intentWith(null) } as never));
+    const r = refusal(() =>
+      dispatch(t.id, { standingPayment: undefined, intent: intentWith(null) } as never),
+    );
     expect(r.reason).toBe("dispatch_prohibited_class");
     expect(r.message).toBe("instance authority includes a dispatch-prohibited action");
   });
 
   it("refuses dispatch_policy_changed when the committed Dispatch Policy was superseded by a new version (#813)", () => {
     const t = consentTo();
-    const r = refusal(() => dispatch(t.id, { dispatchPolicies: { ...REGISTRY, "sp-policy": spPolicy("sp-policy", TERMS, "2") } }));
+    const r = refusal(() =>
+      dispatch(t.id, {
+        dispatchPolicies: { ...REGISTRY, "sp-policy": spPolicy("sp-policy", TERMS, "2") },
+      }),
+    );
     expect(r.reason).toBe("dispatch_policy_changed");
   });
 
@@ -298,7 +360,9 @@ describe("standing-payment dispatch admission (@spec mission-template#prohibited
     const before = missionCount();
     const r = refusal(() => dispatch(t.id));
     expect(r.reason).toBe("dispatch_prohibited_class");
-    expect(r.message).toMatch(/governance_high_risk: the high-risk class consumption_bound has no committed class-named exception/);
+    expect(r.message).toMatch(
+      /governance_high_risk: the high-risk class consumption_bound has no committed class-named exception/,
+    );
     expect(missionCount()).toBe(before);
     expect(kernel.standingPayments.dispatchedInstances(t.id)).toEqual([]);
   });
@@ -307,7 +371,9 @@ describe("standing-payment dispatch admission (@spec mission-template#prohibited
     const t = consentTo({ dispatch_policy: { id: "sp-no-irreversible-exception", version: "1" } });
     const r = refusal(() => dispatch(t.id));
     expect(r.reason).toBe("dispatch_prohibited_class");
-    expect(r.message).toMatch(/the high-risk class irreversible_action has no committed class-named exception/);
+    expect(r.message).toMatch(
+      /the high-risk class irreversible_action has no committed class-named exception/,
+    );
     expect(kernel.standingPayments.dispatchedInstances(t.id)).toEqual([]);
   });
 });
@@ -318,21 +384,33 @@ describe("standing-payment consent (@spec mission-template#template-consent, #81
     const t = consentTo({}, { consent });
     expect(t.consent_provenance).toEqual(consent);
     // The same consented body under another provenance commits the same hash.
-    const again = consentTo({ approval_event_id: "sp-ev-same-body" }, { consent: humanConsent("human-approver", { render_revision: "other" }) });
+    const again = consentTo(
+      { approval_event_id: "sp-ev-same-body" },
+      { consent: humanConsent("human-approver", { render_revision: "other" }) },
+    );
     const twin = consentTo({ approval_event_id: "sp-ev-same-body-2" });
     expect(again.template_hash).toBe(twin.template_hash);
   });
 
   it("refuses a standing-payment template with no human consent at the approval floor, as the service-token stand-in and the boot seed present (#813)", () => {
     expect(() => consentTo({}, { consent: null })).toThrow(TemplateError);
-    expect(() => consentTo({}, { consent: null })).toThrow(/consented only by a human Approver at the approval floor/);
+    expect(() => consentTo({}, { consent: null })).toThrow(
+      /consented only by a human Approver at the approval floor/,
+    );
   });
 
   it("refuses a standing-payment template whose consent is not an interactive login, so no agent-held key or assertion consents (#813)", () => {
-    const headless = { ...humanConsent(), interactive: false } as unknown as TemplateConsentProvenance;
-    expect(() => consentTo({}, { consent: headless })).toThrow(/consented only by a human Approver at the approval floor/);
+    const headless = {
+      ...humanConsent(),
+      interactive: false,
+    } as unknown as TemplateConsentProvenance;
+    expect(() => consentTo({}, { consent: headless })).toThrow(
+      /consented only by a human Approver at the approval floor/,
+    );
     const noFloor = humanConsent("human-approver", { floors: [] });
-    expect(() => consentTo({}, { consent: noFloor })).toThrow(/consented only by a human Approver at the approval floor/);
+    expect(() => consentTo({}, { consent: noFloor })).toThrow(
+      /consented only by a human Approver at the approval floor/,
+    );
   });
 
   it("refuses a standing-payment template consented by its own Agent, so an agent never approves itself (#813)", () => {
@@ -349,7 +427,10 @@ describe("standing-payment consent (@spec mission-template#template-consent, #81
 
   it("refuses a dispatch from a standing-payment template that retains no human consent, even one created before the capability (#813)", () => {
     // Created as the capability-off stand-in would: no standing-payment consent rule ran.
-    const t = createTemplate(store, body(), { ...kernel.authoritySourceOptions(), dispatchPolicies: REGISTRY });
+    const t = createTemplate(store, body(), {
+      ...kernel.authoritySourceOptions(),
+      dispatchPolicies: REGISTRY,
+    });
     kernel.standingPayments.bindBudget("sp-policy", TERMS.budget, new Date(clockMs).toISOString());
     const r = refusal(() => dispatch(t.id));
     expect(r.reason).toBe("dispatch_prohibited_class");
@@ -360,41 +441,65 @@ describe("standing-payment consent (@spec mission-template#template-consent, #81
 describe("prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813)", () => {
   it("refuses remittance in a standing-payment ceiling dispatch_prohibited_class (#813)", () => {
     const t = consentTo({
-      ceiling: [paymentEntry({ actions: ["payments:payment.execute", "payments:remittance.send"] })],
+      ceiling: [
+        paymentEntry({ actions: ["payments:payment.execute", "payments:remittance.send"] }),
+      ],
     });
     const r = refusal(() => dispatch(t.id));
     expect(r.reason).toBe("dispatch_prohibited_class");
-    expect(r.message).toBe("payments:remittance.send is a dispatch-prohibited action no standing payment waives");
+    expect(r.message).toBe(
+      "payments:remittance.send is a dispatch-prohibited action no standing payment waives",
+    );
   });
 
   it("refuses the payment when the published mapping also classifies it as privileged administration (#813)", () => {
     const t = consentTo();
-    const mapping = mappingOf({ classes: { ...CLASSES, [STANDING_PAYMENT_OPERATION]: ["irreversible_action", "privileged_administration"] } });
+    const mapping = mappingOf({
+      classes: {
+        ...CLASSES,
+        [STANDING_PAYMENT_OPERATION]: ["irreversible_action", "privileged_administration"],
+      },
+    });
     const r = refusal(() => dispatch(t.id, {}, mapping));
     expect(r.reason).toBe("dispatch_prohibited_class");
-    expect(r.message).toMatch(/satisfies the prohibited predicate privileged_administration, which no standing payment waives/);
+    expect(r.message).toMatch(
+      /satisfies the prohibited predicate privileged_administration, which no standing payment waives/,
+    );
   });
 
   it("refuses the payment when the published mapping also classifies it as an external commitment (#813)", () => {
     const t = consentTo();
-    const mapping = mappingOf({ classes: { ...CLASSES, [STANDING_PAYMENT_OPERATION]: ["irreversible_action", "external_commitment"] } });
+    const mapping = mappingOf({
+      classes: {
+        ...CLASSES,
+        [STANDING_PAYMENT_OPERATION]: ["irreversible_action", "external_commitment"],
+      },
+    });
     const r = refusal(() => dispatch(t.id, {}, mapping));
     expect(r.reason).toBe("dispatch_prohibited_class");
-    expect(r.message).toMatch(/satisfies the prohibited predicate external_commitment, which no standing payment waives/);
+    expect(r.message).toMatch(
+      /satisfies the prohibited predicate external_commitment, which no standing payment waives/,
+    );
   });
 
   it("refuses the payment when it satisfies the external-communication predicate (#813)", () => {
     const t = consentTo();
-    const r = refusal(() => dispatch(t.id, {}, mappingOf({ external: [STANDING_PAYMENT_OPERATION] })));
+    const r = refusal(() =>
+      dispatch(t.id, {}, mappingOf({ external: [STANDING_PAYMENT_OPERATION] })),
+    );
     expect(r.reason).toBe("dispatch_prohibited_class");
-    expect(r.message).toMatch(/satisfies the prohibited predicate external_communication, which no standing payment waives/);
+    expect(r.message).toMatch(
+      /satisfies the prohibited predicate external_communication, which no standing payment waives/,
+    );
   });
 
   it("refuses the payment on a cross-domain resource (#813)", () => {
     const t = consentTo();
     const r = refusal(() => dispatch(t.id, {}, mappingOf({ crossDomain: (r) => r === RESOURCE })));
     expect(r.reason).toBe("dispatch_prohibited_class");
-    expect(r.message).toMatch(/satisfies the prohibited predicate cross_domain, which no standing payment waives/);
+    expect(r.message).toMatch(
+      /satisfies the prohibited predicate cross_domain, which no standing payment waives/,
+    );
   });
 
   it("refuses an action the published mapping does not classify (#813)", () => {
@@ -408,54 +513,102 @@ describe("prohibited predicates the standing payment never waives (@spec mission
 
 describe("standing-payment ceiling defects (@spec mission-template#prohibited-classes, #813)", () => {
   it("refuses a Dispatch Policy that commits no destination (#813)", () => {
-    expect(() => consentTo({ dispatch_policy: { id: "sp-no-destinations", version: "1" } })).toThrow(/destinations commits no beneficiary/);
+    expect(() =>
+      consentTo({ dispatch_policy: { id: "sp-no-destinations", version: "1" } }),
+    ).toThrow(/destinations commits no beneficiary/);
   });
 
   it("refuses a ceiling vendor the Dispatch Policy commits no destination for (#813)", () => {
     expect(() =>
-      consentTo({ ceiling: [paymentEntry({ constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme", "globex"] } })] }),
-    ).toThrow("the Template Ceiling: entry 0 names vendor globex, which the Dispatch Policy commits no destination for");
+      consentTo({
+        ceiling: [
+          paymentEntry({
+            constraints: {
+              max_amount: { amount: "500.00", currency: "USD" },
+              vendors: ["acme", "globex"],
+            },
+          }),
+        ],
+      }),
+    ).toThrow(
+      "the Template Ceiling: entry 0 names vendor globex, which the Dispatch Policy commits no destination for",
+    );
   });
 
   it("refuses a ceiling that bounds the payment with no per-payment max_amount (#813)", () => {
-    expect(() => consentTo({ ceiling: [paymentEntry({ constraints: { vendors: ["acme"] } })] })).toThrow(
+    expect(() =>
+      consentTo({ ceiling: [paymentEntry({ constraints: { vendors: ["acme"] } })] }),
+    ).toThrow(
       "the Template Ceiling: entry 0 names payments:payment.execute with no per-payment max_amount",
     );
   });
 
   it("refuses a ceiling whose per-payment bound is in a currency other than USD (#813)", () => {
     expect(() =>
-      consentTo({ ceiling: [paymentEntry({ constraints: { max_amount: { amount: "500.00", currency: "EUR" }, vendors: ["acme"] } })] }),
+      consentTo({
+        ceiling: [
+          paymentEntry({
+            constraints: { max_amount: { amount: "500.00", currency: "EUR" }, vendors: ["acme"] },
+          }),
+        ],
+      }),
     ).toThrow("the Template Ceiling: entry 0 bounds payments:payment.execute in EUR, not USD");
   });
 
   it("refuses a ceiling whose per-payment bound is above the policy's max_amount (#813)", () => {
     expect(() =>
-      consentTo({ ceiling: [paymentEntry({ constraints: { max_amount: { amount: "500.01", currency: "USD" }, vendors: ["acme"] } })] }),
-    ).toThrow("the Template Ceiling: entry 0 bounds each payment above the Dispatch Policy's max_amount of 500.00");
+      consentTo({
+        ceiling: [
+          paymentEntry({
+            constraints: { max_amount: { amount: "500.01", currency: "USD" }, vendors: ["acme"] },
+          }),
+        ],
+      }),
+    ).toThrow(
+      "the Template Ceiling: entry 0 bounds each payment above the Dispatch Policy's max_amount of 500.00",
+    );
   });
 
   it("refuses a ceiling that names more than one resource (#813)", () => {
     expect(() =>
       consentTo({
-        ceiling: [paymentEntry(), { type: "mission_resource_access", resource: "http://localhost:4410/api", actions: ["reports:report.read"] }],
+        ceiling: [
+          paymentEntry(),
+          {
+            type: "mission_resource_access",
+            resource: "http://localhost:4410/api",
+            actions: ["reports:report.read"],
+          },
+        ],
       }),
-    ).toThrow(/entry 1 names http:\/\/localhost:4410\/api; a standing-payment ceiling names exactly one resource/);
+    ).toThrow(
+      /entry 1 names http:\/\/localhost:4410\/api; a standing-payment ceiling names exactly one resource/,
+    );
   });
 
   it("refuses a ceiling entry carrying a child or delegation grant (#813)", () => {
     expect(() =>
-      consentTo({ ceiling: [paymentEntry({ delegation: { max_depth: 1, children: { max_children: 1 } } as never })] }),
-    ).toThrow("the Template Ceiling: entry 0 carries delegation; a standing-payment ceiling admits no child and no delegation");
+      consentTo({
+        ceiling: [
+          paymentEntry({ delegation: { max_depth: 1, children: { max_children: 1 } } as never }),
+        ],
+      }),
+    ).toThrow(
+      "the Template Ceiling: entry 0 carries delegation; a standing-payment ceiling admits no child and no delegation",
+    );
   });
 });
 
 describe("standing-payment instance max_budget (@spec metering#bounds, #813 ruling 2)", () => {
   it("refuses dispatch_prohibited_class an instance whose max_budget is above the policy's per_instance_max (#813)", () => {
     const t = consentTo();
-    const r = refusal(() => dispatch(t.id, { intent: intentWith({ amount: "1000.01", currency: "USD" }) }));
+    const r = refusal(() =>
+      dispatch(t.id, { intent: intentWith({ amount: "1000.01", currency: "USD" }) }),
+    );
     expect(r.reason).toBe("dispatch_prohibited_class");
-    expect(r.message).toBe("max_budget of 1000.01 is above the Dispatch Policy's per_instance_max of 1000.00");
+    expect(r.message).toBe(
+      "max_budget of 1000.01 is above the Dispatch Policy's per_instance_max of 1000.00",
+    );
   });
 
   it("refuses dispatch_prohibited_class an instance whose Intent carries no max_budget (#813)", () => {
@@ -467,7 +620,9 @@ describe("standing-payment instance max_budget (@spec metering#bounds, #813 ruli
 
   it("refuses an instance whose max_budget is in a currency other than the budget's (#813)", () => {
     const t = consentTo();
-    const r = refusal(() => dispatch(t.id, { intent: intentWith({ amount: "100.00", currency: "EUR" }) }));
+    const r = refusal(() =>
+      dispatch(t.id, { intent: intentWith({ amount: "100.00", currency: "EUR" }) }),
+    );
     expect(r.reason).toBe("dispatch_prohibited_class");
     expect(r.message).toBe("max_budget is in EUR, not the budget's USD");
   });
@@ -475,11 +630,23 @@ describe("standing-payment instance max_budget (@spec metering#bounds, #813 ruli
   it("refuses max_budget on the dispatch of a template that is not a standing payment (#813)", () => {
     const t = createTemplate(
       store,
-      body({ ceiling: [paymentEntry({ actions: ["payments:invoice.read"] })], dispatch_policy: { id: "plain", version: "1" } }),
-      { ...kernel.authoritySourceOptions(), dispatchPolicies: { plain: { version: "1", content_type: "application/json", content: "{}" } } },
+      body({
+        ceiling: [paymentEntry({ actions: ["payments:invoice.read"] })],
+        dispatch_policy: { id: "plain", version: "1" },
+      }),
+      {
+        ...kernel.authoritySourceOptions(),
+        dispatchPolicies: {
+          plain: { version: "1", content_type: "application/json", content: "{}" },
+        },
+      },
     );
     expect(() =>
-      dispatch(t.id, { dispatchPolicies: { plain: { version: "1", content_type: "application/json", content: "{}" } } }),
+      dispatch(t.id, {
+        dispatchPolicies: {
+          plain: { version: "1", content_type: "application/json", content: "{}" },
+        },
+      }),
     ).toThrow(IntentError);
   });
 });
@@ -487,25 +654,55 @@ describe("standing-payment instance max_budget (@spec metering#bounds, #813 ruli
 describe("standing-payment budget identity (@spec mission-template#prohibited-classes, #813 ruling 1)", () => {
   it("refuses a policy successor that changes the budget identity, so no re-consent starts a fresh counter (#813)", () => {
     consentTo();
-    const successor = { ...REGISTRY, "sp-policy": spPolicy("sp-policy", { ...TERMS, budget: { ...TERMS.budget, id: "ap-standing-2027" } }, "2") };
-    expect(() => consentTo({ template_version: "sp-v2", dispatch_policy: { id: "sp-policy", version: "2" } }, { policies: successor })).toThrow(
+    const successor = {
+      ...REGISTRY,
+      "sp-policy": spPolicy(
+        "sp-policy",
+        { ...TERMS, budget: { ...TERMS.budget, id: "ap-standing-2027" } },
+        "2",
+      ),
+    };
+    expect(() =>
+      consentTo(
+        { template_version: "sp-v2", dispatch_policy: { id: "sp-policy", version: "2" } },
+        { policies: successor },
+      ),
+    ).toThrow(
       "Dispatch Policy sp-policy commits budget payments-operator/ap-standing-2026; a successor naming payments-operator/ap-standing-2027 would start a fresh counter",
     );
-    expect(kernel.standingPayments.budgetBinding("sp-policy")).toEqual({ owner: "payments-operator", id: "ap-standing-2026" });
+    expect(kernel.standingPayments.budgetBinding("sp-policy")).toEqual({
+      owner: "payments-operator",
+      id: "ap-standing-2026",
+    });
   });
 
   it("admits a policy successor that keeps the budget identity, and the pinned identity is unchanged (#813)", () => {
     const first = consentTo();
-    const successor = { ...REGISTRY, "sp-policy": spPolicy("sp-policy", { ...TERMS, budget: { ...TERMS.budget, limit: "6000.00" } }, "2") };
-    const second = consentTo({ template_version: "sp-v2", dispatch_policy: { id: "sp-policy", version: "2" } }, { policies: successor });
+    const successor = {
+      ...REGISTRY,
+      "sp-policy": spPolicy(
+        "sp-policy",
+        { ...TERMS, budget: { ...TERMS.budget, limit: "6000.00" } },
+        "2",
+      ),
+    };
+    const second = consentTo(
+      { template_version: "sp-v2", dispatch_policy: { id: "sp-policy", version: "2" } },
+      { policies: successor },
+    );
     expect(second.id).not.toBe(first.id);
-    expect(kernel.standingPayments.budgetBinding("sp-policy")).toEqual({ owner: "payments-operator", id: "ap-standing-2026" });
+    expect(kernel.standingPayments.budgetBinding("sp-policy")).toEqual({
+      owner: "payments-operator",
+      id: "ap-standing-2026",
+    });
   });
 
   it("refuses another Dispatch Policy claiming a budget identity already pinned to a standing approval (#813)", () => {
     consentTo();
     const other = { ...REGISTRY, "sp-other": spPolicy("sp-other") };
-    expect(() => consentTo({ dispatch_policy: { id: "sp-other", version: "1" } }, { policies: other })).toThrow(
+    expect(() =>
+      consentTo({ dispatch_policy: { id: "sp-other", version: "1" } }, { policies: other }),
+    ).toThrow(
       "budget payments-operator/ap-standing-2026 is committed by Dispatch Policy sp-policy, not sp-other",
     );
   });
@@ -519,7 +716,13 @@ describe("standing-payment lineage (@spec mission-template#instance-composition,
     try {
       createChildMission(kernel, {
         parentId: mission.id,
-        intent: kernel.validateIntent(JSON.stringify({ goal: "pay one invoice", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
+        intent: kernel.validateIntent(
+          JSON.stringify({
+            goal: "pay one invoice",
+            target_resources: [RESOURCE],
+            expires_at: "2027-01-01T00:00:00Z",
+          }),
+        ),
         proposedAuthority: [paymentEntry()],
         childActor: { sub: "subagent-invoice-extractor", sub_profile: "ai_agent" },
       });
@@ -528,7 +731,9 @@ describe("standing-payment lineage (@spec mission-template#instance-composition,
     }
     expect(caught).toBeInstanceOf(ChildDelegationError);
     expect((caught as ChildDelegationError).reason).toBe("delegation_not_permitted");
-    expect((caught as Error).message).toMatch(new RegExp(`descends from standing-payment instance ${mission.id}`));
+    expect((caught as Error).message).toMatch(
+      new RegExp(`descends from standing-payment instance ${mission.id}`),
+    );
   });
 
   it("admits an expansion successor of a standing-payment instance that keeps its max_budget, in the same standing-payment lineage (#813)", () => {
@@ -557,8 +762,94 @@ describe("standing-payment lineage (@spec mission-template#instance-composition,
           approvalEventId: `exp-${seq++}`,
           approvedUntil: "2027-01-01T00:00:00Z",
         }),
-      ).toThrow(`a successor of standing-payment instance ${mission.id} keeps its max_budget of 1000.00 USD`);
+      ).toThrow(
+        `a successor of standing-payment instance ${mission.id} keeps its max_budget of 1000.00 USD`,
+      );
     }
+  });
+});
+
+describe("standing-payment derivations refused (@spec mission-template#prohibited-classes, #813 ruling 3)", () => {
+  const RAS = "https://ras.test";
+
+  it("refuses a cross-domain grant from a standing-payment instance (#813)", async () => {
+    const t = consentTo();
+    const { mission } = dispatch(t.id);
+    await expect(
+      issueCrossDomainGrant(kernel, key, "as-token", {
+        missionId: mission.id,
+        targetAs: RAS,
+        clientId: "worker",
+        cnfJkt: "jkt-1",
+        resourceToAs: () => RAS,
+      }),
+    ).rejects.toThrow(
+      new StandingPaymentLineageError(
+        `mission ${mission.id} descends from standing-payment instance ${mission.id}; a cross-domain grant would not share its budget accounting, so it is refused (#813)`,
+      ),
+    );
+  });
+
+  it("refuses a cross-domain grant from an expansion successor of a standing-payment instance, through its lineage (#813)", async () => {
+    const t = consentTo();
+    const { mission } = dispatch(t.id);
+    const { successor } = createExpansion(kernel, {
+      predecessorId: mission.id,
+      intent: intentWith(),
+      approver: { iss: ISS, sub: "human-approver" },
+      approvalEventId: `exp-${seq++}`,
+      approvedUntil: "2027-01-01T00:00:00Z",
+    });
+    await expect(
+      issueCrossDomainGrant(kernel, key, "as-token", {
+        missionId: successor.id,
+        targetAs: RAS,
+        clientId: "worker",
+        cnfJkt: "jkt-2",
+        resourceToAs: () => RAS,
+      }),
+    ).rejects.toThrow(
+      `mission ${successor.id} descends from standing-payment instance ${mission.id}`,
+    );
+  });
+
+  it("refuses a cross-organization delegation root from a standing-payment instance (#813)", async () => {
+    const t = consentTo();
+    const { mission } = dispatch(t.id);
+    const cnfJwk = await exportJWK(
+      (await generateKeyPair("ES256", { extractable: true })).publicKey,
+    );
+    await expect(
+      deriveCrossOrgRoot(kernel, key, "as-token", {
+        missionId: mission.id,
+        aud: RESOURCE,
+        clientId: "worker",
+        cnfJwk,
+        actor: { iss: "https://id.example", sub: "wl-worker" },
+        mappingVersion: "map-1",
+      }),
+    ).rejects.toThrow(
+      new StandingPaymentLineageError(
+        `mission ${mission.id} descends from standing-payment instance ${mission.id}; a cross-organization delegation root would not share its budget accounting, so it is refused (#813)`,
+      ),
+    );
+  });
+
+  it("refuses an attenuation root, the offline delegation carrier, from a standing-payment instance (#813)", async () => {
+    const t = consentTo();
+    const { mission } = dispatch(t.id);
+    await expect(
+      deriveAttenuationRoot(kernel, key, "as-token", {
+        missionId: mission.id,
+        aud: RESOURCE,
+        clientId: "worker",
+        cnfJkt: "jkt-3",
+      }),
+    ).rejects.toThrow(
+      new StandingPaymentLineageError(
+        `mission ${mission.id} descends from standing-payment instance ${mission.id}; an attenuation root would not share its budget accounting, so it is refused (#813)`,
+      ),
+    );
   });
 });
 
@@ -625,7 +916,9 @@ describe("standing-payment recency boundary (@spec approval-governance#recency-e
     const before = missionCount();
     const r = refusal(() => dispatch(t.id));
     expect(r.reason).toBe("dispatch_prohibited_class");
-    expect(r.message).toMatch(/governance_recency: the template consent is older than the applicable maximum of 3600s/);
+    expect(r.message).toMatch(
+      /governance_recency: the template consent is older than the applicable maximum of 3600s/,
+    );
     expect(missionCount()).toBe(before);
     expect(kernel.standingPayments.dispatchedInstances(t.id)).toEqual([]);
   });

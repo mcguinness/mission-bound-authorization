@@ -292,7 +292,7 @@ export async function issueCrossDomainGrant(
   // Mission in a standing-payment lineage is not continued across a domain
   // until that budget accounting extends there. Refused before any count.
   const mission = kernel.get(input.missionId);
-  if (mission) assertNotStandingPaymentLineage(kernel, mission, "cross-domain grant");
+  if (mission) assertNotStandingPaymentLineage(kernel, mission, "a cross-domain grant");
   const jti = `jag_${randomBytes(12).toString("base64url")}`;
   const operationId = input.operationId ?? jti;
   return kernel.exclusiveDerivation(input.missionId, operationId, () =>

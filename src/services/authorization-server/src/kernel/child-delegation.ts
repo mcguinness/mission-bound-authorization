@@ -410,7 +410,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // standing-payment lineage creates no Child Mission until the budget
   // accounting extends to descendants.
   try {
-    assertNotStandingPaymentLineage(kernel, parent, "Child Mission");
+    assertNotStandingPaymentLineage(kernel, parent, "a Child Mission");
   } catch (e) {
     if (e instanceof StandingPaymentLineageError) throw new ChildDelegationError("delegation_not_permitted", e.message);
     throw e;

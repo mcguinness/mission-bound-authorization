@@ -112,12 +112,14 @@ export class StandingPaymentConfigError extends Error {}
 /** A budget identity a later consent would change (ruling 1). */
 export class StandingPaymentBudgetError extends Error {}
 
-const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
 const nonEmpty = (v: unknown): v is string => typeof v === "string" && v.length > 0;
 const exactly = (o: Record<string, unknown>, keys: readonly string[]): boolean =>
   Object.keys(o).length === keys.length && keys.every((k) => Object.hasOwn(o, k));
 const positiveInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
-const nonNegativeInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
+const nonNegativeInteger = (v: unknown): v is number =>
+  Number.isSafeInteger(v) && (v as number) >= 0;
 
 function usdAmount(v: unknown, at: string): UsdAmount {
   if (!isObject(v) || !exactly(v, ["amount", "currency"])) {
@@ -132,7 +134,10 @@ function usdAmount(v: unknown, at: string): UsdAmount {
   return { amount: v.amount, currency: v.currency };
 }
 
-const EXCEPTION_CLASSES: readonly GovernanceExceptionClass[] = ["irreversible_action", "consumption_bound"];
+const EXCEPTION_CLASSES: readonly GovernanceExceptionClass[] = [
+  "irreversible_action",
+  "consumption_bound",
+];
 
 function parseTerms(raw: unknown): StandingPaymentTerms {
   const fail = (why: string): never => {
@@ -140,27 +145,45 @@ function parseTerms(raw: unknown): StandingPaymentTerms {
   };
   if (
     !isObject(raw) ||
-    !exactly(raw, ["operation", "resource", "destinations", "max_amount", "budget", "approval_governance"])
+    !exactly(raw, [
+      "operation",
+      "resource",
+      "destinations",
+      "max_amount",
+      "budget",
+      "approval_governance",
+    ])
   ) {
-    return fail("members are not operation, resource, destinations, max_amount, budget, approval_governance");
+    return fail(
+      "members are not operation, resource, destinations, max_amount, budget, approval_governance",
+    );
   }
   if (!nonEmpty(raw.operation)) fail("operation is not a non-empty string");
   if (!nonEmpty(raw.resource)) fail("resource is not a non-empty string");
   const destinations = raw.destinations;
   if (!isObject(destinations) || Object.keys(destinations).length === 0) {
-    fail("destinations commits no beneficiary: it is a non-empty object of vendor_id to payee_account");
+    fail(
+      "destinations commits no beneficiary: it is a non-empty object of vendor_id to payee_account",
+    );
   }
   for (const [vendor, account] of Object.entries(destinations as Record<string, unknown>)) {
-    if (!nonEmpty(vendor) || !nonEmpty(account)) fail("each destination is a vendor_id naming a non-empty payee_account");
+    if (!nonEmpty(vendor) || !nonEmpty(account))
+      fail("each destination is a vendor_id naming a non-empty payee_account");
   }
   const maxAmount = usdAmount(raw.max_amount, `${STANDING_PAYMENT_MEMBER}.max_amount`);
   const budget = raw.budget;
-  if (!isObject(budget) || !exactly(budget, ["owner", "id", "currency", "limit", "per_instance_max"])) {
+  if (
+    !isObject(budget) ||
+    !exactly(budget, ["owner", "id", "currency", "limit", "per_instance_max"])
+  ) {
     return fail("budget is not {owner, id, currency, limit, per_instance_max}");
   }
-  if (!nonEmpty(budget.owner) || !nonEmpty(budget.id)) fail("budget owner and id are non-empty strings");
-  if (budget.currency !== STANDING_PAYMENT_CURRENCY) fail(`budget currency is not ${STANDING_PAYMENT_CURRENCY}`);
-  if (typeof budget.limit !== "string" || !isValidAmount(budget.limit)) fail("budget limit is not a decimal amount");
+  if (!nonEmpty(budget.owner) || !nonEmpty(budget.id))
+    fail("budget owner and id are non-empty strings");
+  if (budget.currency !== STANDING_PAYMENT_CURRENCY)
+    fail(`budget currency is not ${STANDING_PAYMENT_CURRENCY}`);
+  if (typeof budget.limit !== "string" || !isValidAmount(budget.limit))
+    fail("budget limit is not a decimal amount");
   if (typeof budget.per_instance_max !== "string" || !isValidAmount(budget.per_instance_max)) {
     fail("budget per_instance_max is not a decimal amount");
   }
@@ -168,23 +191,37 @@ function parseTerms(raw: unknown): StandingPaymentTerms {
     fail("budget per_instance_max is above the budget limit");
   }
   const governance = raw.approval_governance;
-  if (!isObject(governance) || !exactly(governance, ["recency"])) fail("approval_governance is not {recency}");
+  if (!isObject(governance) || !exactly(governance, ["recency"]))
+    fail("approval_governance is not {recency}");
   const recency = (governance as Record<string, unknown>).recency;
   if (!isObject(recency) || !exactly(recency, ["ceilings", "clock_skew_s", "exceptions"])) {
     fail("approval_governance.recency is not {ceilings, clock_skew_s, exceptions}");
   }
   const r = recency as Record<string, unknown>;
-  if (!isObject(r.ceilings) || !exactly(r.ceilings, ["default"]) || !positiveInteger(r.ceilings.default)) {
+  if (
+    !isObject(r.ceilings) ||
+    !exactly(r.ceilings, ["default"]) ||
+    !positiveInteger(r.ceilings.default)
+  ) {
     fail("approval_governance.recency.ceilings is not {default} with a positive integer ceiling");
   }
-  if (!nonNegativeInteger(r.clock_skew_s)) fail("approval_governance.recency.clock_skew_s is not a non-negative integer");
+  if (!nonNegativeInteger(r.clock_skew_s))
+    fail("approval_governance.recency.clock_skew_s is not a non-negative integer");
   if (!isObject(r.exceptions)) fail("approval_governance.recency.exceptions is not an object");
   for (const [cls, exception] of Object.entries(r.exceptions as Record<string, unknown>)) {
     if (!(EXCEPTION_CLASSES as readonly string[]).includes(cls)) {
-      fail(`approval_governance.recency.exceptions names ${cls}, which is not a class-named exception this workflow admits`);
+      fail(
+        `approval_governance.recency.exceptions names ${cls}, which is not a class-named exception this workflow admits`,
+      );
     }
-    if (!isObject(exception) || !exactly(exception, ["max_age_s"]) || !positiveInteger(exception.max_age_s)) {
-      fail(`approval_governance.recency.exceptions.${cls} is not {max_age_s} with a positive integer`);
+    if (
+      !isObject(exception) ||
+      !exactly(exception, ["max_age_s"]) ||
+      !positiveInteger(exception.max_age_s)
+    ) {
+      fail(
+        `approval_governance.recency.exceptions.${cls} is not {max_age_s} with a positive integer`,
+      );
     }
   }
   return {
@@ -204,11 +241,16 @@ function parseTerms(raw: unknown): StandingPaymentTerms {
  * for a member that is present but malformed, so a designating policy is never
  * read as an ordinary one.
  */
-export function standingPaymentTermsOf(policy: ActivationPolicySnapshot): StandingPaymentTerms | undefined {
+export function standingPaymentTermsOf(
+  policy: ActivationPolicySnapshot,
+): StandingPaymentTerms | undefined {
   if (policy.content_type !== "application/json") return undefined;
   let parsed: unknown;
   try {
-    const text = typeof policy.content === "string" ? policy.content : new TextDecoder().decode(policy.content);
+    const text =
+      typeof policy.content === "string"
+        ? policy.content
+        : new TextDecoder().decode(policy.content);
     parsed = JSON.parse(text);
   } catch {
     return undefined;
@@ -226,20 +268,30 @@ export function standingPaymentTermsOf(policy: ActivationPolicySnapshot): Standi
  * `max_amount`, its `vendors` non-empty and within the committed destinations.
  * Throws {@link StandingPaymentTermsError} naming the defect.
  */
-export function assertStandingPaymentCeiling(terms: StandingPaymentTerms, entries: readonly AuthorityEntry[], what: string): void {
+export function assertStandingPaymentCeiling(
+  terms: StandingPaymentTerms,
+  entries: readonly AuthorityEntry[],
+  what: string,
+): void {
   const fail = (why: string): never => {
     throw new StandingPaymentTermsError(`${what}: ${why}`);
   };
   if (terms.operation !== STANDING_PAYMENT_OPERATION) {
-    fail(`the Dispatch Policy designates ${terms.operation}, which is not ${STANDING_PAYMENT_OPERATION}`);
+    fail(
+      `the Dispatch Policy designates ${terms.operation}, which is not ${STANDING_PAYMENT_OPERATION}`,
+    );
   }
   let named = false;
   entries.forEach((entry, i) => {
     if (entry.resource !== terms.resource || (entry.resource_match ?? "exact") !== "exact") {
-      fail(`entry ${i} names ${entry.resource}; a standing-payment ceiling names exactly one resource, ${terms.resource}`);
+      fail(
+        `entry ${i} names ${entry.resource}; a standing-payment ceiling names exactly one resource, ${terms.resource}`,
+      );
     }
     if (entry.delegation !== undefined) {
-      fail(`entry ${i} carries delegation; a standing-payment ceiling admits no child and no delegation`);
+      fail(
+        `entry ${i} carries delegation; a standing-payment ceiling admits no child and no delegation`,
+      );
     }
     if (!entry.actions.includes(terms.operation)) return;
     named = true;
@@ -247,16 +299,23 @@ export function assertStandingPaymentCeiling(terms: StandingPaymentTerms, entrie
     if (!cap) fail(`entry ${i} names ${terms.operation} with no per-payment max_amount`);
     const bound = cap as UsdAmount;
     if (bound.currency !== STANDING_PAYMENT_CURRENCY) {
-      fail(`entry ${i} bounds ${terms.operation} in ${bound.currency}, not ${STANDING_PAYMENT_CURRENCY}`);
+      fail(
+        `entry ${i} bounds ${terms.operation} in ${bound.currency}, not ${STANDING_PAYMENT_CURRENCY}`,
+      );
     }
     if (!isValidAmount(bound.amount) || compareAmounts(bound.amount, terms.max_amount.amount) > 0) {
-      fail(`entry ${i} bounds each payment above the Dispatch Policy's max_amount of ${terms.max_amount.amount}`);
+      fail(
+        `entry ${i} bounds each payment above the Dispatch Policy's max_amount of ${terms.max_amount.amount}`,
+      );
     }
     const vendors = entry.constraints?.vendors;
-    if (!vendors || vendors.length === 0) fail(`entry ${i} names ${terms.operation} with no committed destination`);
+    if (!vendors || vendors.length === 0)
+      fail(`entry ${i} names ${terms.operation} with no committed destination`);
     const uncommitted = (vendors as string[]).find((v) => !Object.hasOwn(terms.destinations, v));
     if (uncommitted !== undefined) {
-      fail(`entry ${i} names vendor ${uncommitted}, which the Dispatch Policy commits no destination for`);
+      fail(
+        `entry ${i} names vendor ${uncommitted}, which the Dispatch Policy commits no destination for`,
+      );
     }
   });
   if (!named) fail(`no entry names ${terms.operation}`);
@@ -269,7 +328,9 @@ export function assertStandingPaymentCeiling(terms: StandingPaymentTerms, entrie
  */
 export function assertStandingPaymentTemplateBounds(body: { expires_at?: unknown }): void {
   if (typeof body.expires_at !== "string" || !isRfc3339Instant(body.expires_at)) {
-    throw new StandingPaymentTermsError("a standing-payment template states an RFC 3339 expires_at");
+    throw new StandingPaymentTermsError(
+      "a standing-payment template states an RFC 3339 expires_at",
+    );
   }
 }
 
@@ -325,11 +386,8 @@ export const CLASS_PREDICATES: ReadonlySet<ProhibitedPredicate> = new Set<Prohib
 ]);
 
 /** Every prohibited predicate. */
-export const ALL_PROHIBITED_PREDICATES: ReadonlySet<ProhibitedPredicate> = new Set<ProhibitedPredicate>([
-  ...CLASS_PREDICATES,
-  "external_communication",
-  "cross_domain",
-]);
+export const ALL_PROHIBITED_PREDICATES: ReadonlySet<ProhibitedPredicate> =
+  new Set<ProhibitedPredicate>([...CLASS_PREDICATES, "external_communication", "cross_domain"]);
 
 /** An action the published mapping classifies as prohibited that the configured set leaves out. */
 export interface DispatchProhibitedCoverageGap {
@@ -362,8 +420,14 @@ export function dispatchProhibitedCoverageGaps(
   for (const c of classification) {
     for (const action of Object.keys(c.actions).sort()) {
       if (covered.has(action)) continue;
-      const entry: AuthorityEntry = { type: "mission_resource_access", resource: c.resource, actions: [action] };
-      const found = (prohibitedPredicatesOf(mapping, entry, action) ?? []).filter((p) => predicates.has(p));
+      const entry: AuthorityEntry = {
+        type: "mission_resource_access",
+        resource: c.resource,
+        actions: [action],
+      };
+      const found = (prohibitedPredicatesOf(mapping, entry, action) ?? []).filter((p) =>
+        predicates.has(p),
+      );
       if (found.length > 0) gaps.push({ action, resource: c.resource, predicates: found });
     }
   }
@@ -457,7 +521,11 @@ export function assertStandingPaymentCoverage(
         `Dispatch Policy ${id} designates ${terms.operation}; only ${STANDING_PAYMENT_OPERATION} is a standing payment`,
       );
     }
-    const probe: AuthorityEntry = { type: "mission_resource_access", resource: terms.resource, actions: [terms.operation] };
+    const probe: AuthorityEntry = {
+      type: "mission_resource_access",
+      resource: terms.resource,
+      actions: [terms.operation],
+    };
     const classes = mapping.classesOf(probe, terms.operation);
     if (classes === undefined) {
       throw new StandingPaymentConfigError(
@@ -583,7 +651,9 @@ export class StandingPaymentStore {
         return;
       }
       const other = this.db
-        .prepare("SELECT policy_id FROM standing_payment_budget_bindings WHERE budget_owner = ? AND budget_id = ?")
+        .prepare(
+          "SELECT policy_id FROM standing_payment_budget_bindings WHERE budget_owner = ? AND budget_id = ?",
+        )
         .get(budget.owner, budget.id) as { policy_id: string } | undefined;
       if (other) {
         throw new StandingPaymentBudgetError(
@@ -601,14 +671,19 @@ export class StandingPaymentStore {
   /** The budget identity pinned for a Dispatch Policy id, if any. */
   budgetBinding(policyId: string): { owner: string; id: string } | undefined {
     const row = this.db
-      .prepare("SELECT budget_owner, budget_id FROM standing_payment_budget_bindings WHERE policy_id = ?")
+      .prepare(
+        "SELECT budget_owner, budget_id FROM standing_payment_budget_bindings WHERE policy_id = ?",
+      )
       .get(policyId) as { budget_owner: string; budget_id: string } | undefined;
     return row ? { owner: row.budget_owner, id: row.budget_id } : undefined;
   }
 
   /** Record an admitted instance; only in its creation transaction. */
   recordAdmissionInCallerTx(admission: StandingPaymentAdmission): void {
-    if (!this.db.inTransaction) throw new Error("a standing-payment admission is recorded only in the instance's creation transaction");
+    if (!this.db.inTransaction)
+      throw new Error(
+        "a standing-payment admission is recorded only in the instance's creation transaction",
+      );
     this.db
       .prepare(
         `INSERT INTO standing_payment_admissions
@@ -628,7 +703,9 @@ export class StandingPaymentStore {
 
   /** The admission of one instance, if it was admitted as a standing payment. */
   admission(missionId: string): StandingPaymentAdmission | undefined {
-    const row = this.db.prepare("SELECT * FROM standing_payment_admissions WHERE mission_id = ?").get(missionId) as
+    const row = this.db
+      .prepare("SELECT * FROM standing_payment_admissions WHERE mission_id = ?")
+      .get(missionId) as
       | {
           mission_id: string;
           template_id: string;
@@ -651,8 +728,16 @@ export class StandingPaymentStore {
   }
 
   /** Record one dispatch for the concurrency and rate bounds; only in the instance's creation transaction. */
-  recordDispatchInCallerTx(input: { missionId: string; templateId: string; dispatchEventId: string; at: string }): void {
-    if (!this.db.inTransaction) throw new Error("standing-payment dispatch accounting commits only in the instance's creation transaction");
+  recordDispatchInCallerTx(input: {
+    missionId: string;
+    templateId: string;
+    dispatchEventId: string;
+    at: string;
+  }): void {
+    if (!this.db.inTransaction)
+      throw new Error(
+        "standing-payment dispatch accounting commits only in the instance's creation transaction",
+      );
     this.db
       .prepare(
         "INSERT INTO standing_payment_dispatches (mission_id, template_id, dispatch_event_id, dispatched_at) VALUES (?, ?, ?, ?)",
@@ -664,7 +749,9 @@ export class StandingPaymentStore {
   dispatchedInstances(templateId: string): string[] {
     return (
       this.db
-        .prepare("SELECT mission_id FROM standing_payment_dispatches WHERE template_id = ? ORDER BY dispatched_at, mission_id")
+        .prepare(
+          "SELECT mission_id FROM standing_payment_dispatches WHERE template_id = ? ORDER BY dispatched_at, mission_id",
+        )
         .all(templateId) as Array<{ mission_id: string }>
     ).map((r) => r.mission_id);
   }
@@ -672,7 +759,9 @@ export class StandingPaymentStore {
   /** Dispatches of a template at or after `sinceIso`. ISO UTC strings compare chronologically. */
   dispatchesSince(templateId: string, sinceIso: string): number {
     const row = this.db
-      .prepare("SELECT COUNT(*) AS n FROM standing_payment_dispatches WHERE template_id = ? AND dispatched_at >= ?")
+      .prepare(
+        "SELECT COUNT(*) AS n FROM standing_payment_dispatches WHERE template_id = ? AND dispatched_at >= ?",
+      )
       .get(templateId, sinceIso) as { n: number };
     return row.n;
   }
@@ -691,7 +780,11 @@ export function standingPaymentRootOf(
   record: MissionRecord,
 ): StandingPaymentAdmission | undefined {
   const seen = new Set<string>();
-  for (let m: MissionRecord | undefined = record; m && !seen.has(m.id); m = m.predecessor ? kernel.get(m.predecessor) : undefined) {
+  for (
+    let m: MissionRecord | undefined = record;
+    m && !seen.has(m.id);
+    m = m.predecessor ? kernel.get(m.predecessor) : undefined
+  ) {
     seen.add(m.id);
     const admission = kernel.standingPayments.admission(m.id);
     if (admission) return admission;
@@ -714,7 +807,7 @@ export function assertNotStandingPaymentLineage(
   const root = standingPaymentRootOf(kernel, record);
   if (root) {
     throw new StandingPaymentLineageError(
-      `mission ${record.id} descends from standing-payment instance ${root.mission_id}; a ${derivation} would not share its budget accounting, so it is refused (#813)`,
+      `mission ${record.id} descends from standing-payment instance ${root.mission_id}; ${derivation} would not share its budget accounting, so it is refused (#813)`,
     );
   }
 }
@@ -724,7 +817,10 @@ export function assertNotStandingPaymentLineage(
  * USD and not above the policy's per-instance maximum. Returns the reason it
  * is refused, or undefined.
  */
-export function maxBudgetRefusal(maxBudget: UsdAmount | undefined, terms: StandingPaymentTerms): string | undefined {
+export function maxBudgetRefusal(
+  maxBudget: UsdAmount | undefined,
+  terms: StandingPaymentTerms,
+): string | undefined {
   if (!maxBudget) return "a standing-payment instance's Intent carries max_budget";
   if (maxBudget.currency !== terms.budget.currency) {
     return `max_budget is in ${maxBudget.currency}, not the budget's ${terms.budget.currency}`;
@@ -753,7 +849,10 @@ export function assertSuccessorMaxBudget(
   const cap = intent.max_budget;
   if (!root) {
     if (cap !== undefined) {
-      throw new IntentError("invalid_request", "max_budget is admitted only on a standing-payment instance and its successors");
+      throw new IntentError(
+        "invalid_request",
+        "max_budget is admitted only on a standing-payment instance and its successors",
+      );
     }
     return;
   }

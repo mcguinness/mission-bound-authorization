@@ -10,17 +10,24 @@
  * seed, the startup checks, and the dispatch grant, unattended, alongside an
  * assembly with the capability off that refuses the payment as today.
  */
-import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, demoReconciliationTemplate } from "@mission/demo-data";
+import type { Server } from "node:http";
+import {
+  CANONICAL_RESOURCE,
+  DEV_SERVICE_TOKEN,
+  demoReconciliationTemplate,
+} from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
-import { ALL_PROVIDER_CAPABILITIES, type ProviderCapability } from "../src/adapters/capabilities.js";
+import {
+  ALL_PROVIDER_CAPABILITIES,
+  type ProviderCapability,
+} from "../src/adapters/capabilities.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import {
   ApprovalSessionStore,
-  buildAuthorizationServer,
   type BuiltAs,
+  buildAuthorizationServer,
   STANDING_PAYMENT_OPERATION,
   StandingPaymentConfigError,
 } from "../src/index.js";
@@ -33,6 +40,8 @@ const OFF_ISSUER = `http://localhost:${OFF_PORT}`;
 const RESOURCE = CANONICAL_RESOURCE;
 const FAR_FUTURE = "2099-01-01T00:00:00Z";
 const ON = new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "standing-payment-dispatch"]);
+/** A designable client (an ai_agent registration). */
+const DESIGNEE = "subagent-invoice-extractor";
 const SESSIONS = new ApprovalSessionStore();
 
 const TERMS = {
@@ -40,12 +49,21 @@ const TERMS = {
   resource: RESOURCE,
   destinations: { acme: "acct-acme-0001" },
   max_amount: { amount: "500.00", currency: "USD" },
-  budget: { owner: "payments-operator", id: "ap-standing-endpoint", currency: "USD", limit: "5000.00", per_instance_max: "1000.00" },
+  budget: {
+    owner: "payments-operator",
+    id: "ap-standing-endpoint",
+    currency: "USD",
+    limit: "5000.00",
+    per_instance_max: "1000.00",
+  },
   approval_governance: {
     recency: {
       ceilings: { default: 86400 },
       clock_skew_s: 60,
-      exceptions: { irreversible_action: { max_age_s: 3600 }, consumption_bound: { max_age_s: 3600 } },
+      exceptions: {
+        irreversible_action: { max_age_s: 3600 },
+        consumption_bound: { max_age_s: 3600 },
+      },
     },
   },
 };
@@ -68,7 +86,10 @@ let seq = 0;
 beforeAll(async () => {
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    capabilities: ON,
+    // Same-Mission delegation by designation is on too, so a designation
+    // from a standing-payment instance reaches its refusal.
+    capabilities: new Set<ProviderCapability>([...ON, "delegation"]),
+    designableClients: [DESIGNEE],
     approvalSessions: SESSIONS,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
@@ -131,7 +152,11 @@ async function rendered(id: string, headers: Record<string, string>): Promise<st
   return res.headers.get(RENDER_REVISION_HEADER);
 }
 
-async function decide(id: string, headers: Record<string, string>, extra: Record<string, unknown> = {}) {
+async function decide(
+  id: string,
+  headers: Record<string, string>,
+  extra: Record<string, unknown> = {},
+) {
   return fetch(`${ISSUER}/templates/proposals/${id}/decide`, {
     method: "POST",
     headers: { "content-type": "application/json", ...headers },
@@ -171,7 +196,11 @@ async function dpopProof(htu: string, extra: Record<string, unknown> = {}): Prom
 }
 
 /** The dispatch grant at `issuer`'s token endpoint, with the dpop-nonce retry. */
-async function dispatch(issuer: string, templateId: string, maxBudget: { amount: string; currency: string } | null = { amount: "1000.00", currency: "USD" }) {
+async function dispatch(
+  issuer: string,
+  templateId: string,
+  maxBudget: { amount: string; currency: string } | null = { amount: "1000.00", currency: "USD" },
+) {
   const htu = `${issuer}/token`;
   const key = issuer === ISSUER ? clientKey : offClientKey;
   const intent = JSON.stringify({
@@ -186,7 +215,10 @@ async function dispatch(issuer: string, templateId: string, maxBudget: { amount:
   const send = async (extra: Record<string, unknown> = {}) =>
     fetch(htu, {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await dpopProof(htu, extra) },
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        dpop: await dpopProof(htu, extra),
+      },
       body: new URLSearchParams({
         grant_type: MISSION_DISPATCH_GRANT_TYPE,
         template_id: templateId,
@@ -225,10 +257,14 @@ describe("standing-payment template consent on the approval surface (@spec templ
   it("renders the standing payment's committed destinations, budget and exceptions on the consent page (#813)", async () => {
     const id = await propose(ISSUER, proposal());
     const { "x-csrf-token": _csrf, ...cookie } = bob(id);
-    const html = await (await fetch(`${ISSUER}/templates/proposals/${id}`, { headers: cookie })).text();
+    const html = await (
+      await fetch(`${ISSUER}/templates/proposals/${id}`, { headers: cookie })
+    ).text();
     expect(html).toContain('<ul class="standing-payment">');
     expect(html).toContain("acme to account acct-acme-0001");
-    expect(html).toContain("Budget payments-operator/ap-standing-endpoint: at most 5000.00 USD in total");
+    expect(html).toContain(
+      "Budget payments-operator/ap-standing-endpoint: at most 5000.00 USD in total",
+    );
     expect(html).toContain('name="render_revision"');
   });
 
@@ -246,7 +282,12 @@ describe("standing-payment template consent on the approval surface (@spec templ
     const res = await fetch(`${ISSUER}/templates`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-      body: JSON.stringify({ ...proposal(), issuer: ISSUER, approver: { iss: ISSUER, sub: "bob" }, approval_event_id: "sp-service-token" }),
+      body: JSON.stringify({
+        ...proposal(),
+        issuer: ISSUER,
+        approver: { iss: ISSUER, sub: "bob" },
+        approval_event_id: "sp-service-token",
+      }),
     });
     const out = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status).toBe(400);
@@ -274,7 +315,12 @@ describe("standing-payment startup checks (@spec template#prohibited-classes, #8
     const built = buildAuthorizationServer({
       issuer: "http://localhost:14998",
       capabilities: ON,
-      dispatchPolicies: { "sp-uncovered": spPolicy("sp-uncovered", { ...TERMS, resource: "https://unclassified.example/api" }) },
+      dispatchPolicies: {
+        "sp-uncovered": spPolicy("sp-uncovered", {
+          ...TERMS,
+          resource: "https://unclassified.example/api",
+        }),
+      },
     });
     await expect(built).rejects.toBeInstanceOf(StandingPaymentConfigError);
     await expect(built).rejects.toThrow(
@@ -287,9 +333,13 @@ describe("standing-payment startup checks (@spec template#prohibited-classes, #8
       buildAuthorizationServer({
         issuer: "http://localhost:14999",
         capabilities: ON,
-        dispatchPolicies: { "sp-reverse": spPolicy("sp-reverse", { ...TERMS, operation: "payments:payment.reverse" }) },
+        dispatchPolicies: {
+          "sp-reverse": spPolicy("sp-reverse", { ...TERMS, operation: "payments:payment.reverse" }),
+        },
       }),
-    ).rejects.toThrow("Dispatch Policy sp-reverse designates payments:payment.reverse; only payments:payment.execute is a standing payment");
+    ).rejects.toThrow(
+      "Dispatch Policy sp-reverse designates payments:payment.reverse; only payments:payment.execute is a standing payment",
+    );
   });
 
   it("refuses startup when the standing-payment capability is on without templates (#813)", async () => {
@@ -312,7 +362,10 @@ describe("standing-payment dispatch grant (@spec template#grant-type, #813)", ()
     const [missionId] = as.kernel.standingPayments.dispatchedInstances(templateId);
     const mission = as.kernel.get(missionId as string);
     expect(mission?.authority_set.flatMap((e) => e.actions)).toEqual([STANDING_PAYMENT_OPERATION]);
-    expect(as.kernel.standingPayments.admission(missionId as string)?.budget).toEqual({ owner: "payments-operator", id: "ap-standing-endpoint" });
+    expect(as.kernel.standingPayments.admission(missionId as string)?.budget).toEqual({
+      owner: "payments-operator",
+      id: "ap-standing-endpoint",
+    });
   });
 
   it("refuses a standing-payment dispatch whose Intent carries no max_budget at the token endpoint (#813)", async () => {
@@ -328,7 +381,12 @@ describe("standing-payment dispatch grant (@spec template#grant-type, #813)", ()
       method: "POST",
       headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
       body: JSON.stringify({
-        ...proposal({ recipients: { subjects: [{ iss: OFF_ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor"] } }),
+        ...proposal({
+          recipients: {
+            subjects: [{ iss: OFF_ISSUER, sub: "bob" }],
+            agents: ["subagent-invoice-extractor"],
+          },
+        }),
         issuer: OFF_ISSUER,
         approver: { iss: OFF_ISSUER, sub: "bob" },
         approval_event_id: "sp-off",
@@ -346,10 +404,49 @@ describe("standing-payment dispatch grant (@spec template#grant-type, #813)", ()
     expect(why.error_description).toBe("unknown top-level member: max_budget");
   });
 
+  it("refuses a designation of a standing-payment instance's access token invalid_target at the token endpoint (@spec mission#designation, #813)", async () => {
+    const templateId = await consented({ max_active: 3 });
+    const dispatched = await dispatch(ISSUER, templateId);
+    const { access_token } = (await dispatched.json()) as { access_token: string };
+    expect(dispatched.status).toBe(200);
+    const htu = `${ISSUER}/token`;
+    const send = async (extra: Record<string, unknown> = {}) =>
+      fetch(htu, {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          dpop: await dpopProof(htu, extra),
+        },
+        body: new URLSearchParams({
+          grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+          subject_token: access_token,
+          subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+          requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
+          audience: DESIGNEE,
+          client_assertion: await clientAssertion(ISSUER, clientKey),
+          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        }).toString(),
+      });
+    let res = await send();
+    const nonce = res.headers.get("dpop-nonce");
+    if (res.status === 400 && nonce) res = await send({ nonce });
+    const out = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(out)).toBe(400);
+    expect(out.error).toBe("invalid_target");
+    expect(out.error_description).toBe("a standing-payment lineage is not delegated (#813)");
+  });
+
   it("admits exactly max_active of concurrent standing-payment dispatches, with one accounting row per committed instance (#813)", async () => {
     const templateId = await consented({ max_active: 1 });
-    const results = await Promise.all([dispatch(ISSUER, templateId), dispatch(ISSUER, templateId), dispatch(ISSUER, templateId)]);
-    const bodies = (await Promise.all(results.map((r) => r.json()))) as Array<{ access_token?: string; mission_denial_reason?: string }>;
+    const results = await Promise.all([
+      dispatch(ISSUER, templateId),
+      dispatch(ISSUER, templateId),
+      dispatch(ISSUER, templateId),
+    ]);
+    const bodies = (await Promise.all(results.map((r) => r.json()))) as Array<{
+      access_token?: string;
+      mission_denial_reason?: string;
+    }>;
     expect(results.filter((r) => r.status === 200)).toHaveLength(1);
     expect(bodies.filter((b) => b.mission_denial_reason === "max_active_exceeded")).toHaveLength(2);
     expect(as.kernel.standingPayments.dispatchedInstances(templateId)).toHaveLength(1);
