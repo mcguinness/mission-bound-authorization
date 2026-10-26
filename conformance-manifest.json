@@ -51,8 +51,8 @@
     "content_sha256": "001ce4ec9ebaafee625fab3271656ff873d2073739b14e1d0e338ae57bce5943"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "b4f67b35b7798a15ebb876f488100282291e98c9",
-    "content_sha256": "7045896b9dcf4574459f31fb8725faaf5d4520290b49d751ee028d2c958e8cd2"
+    "revision": "cfad6a684188e0ae6a3585a00dd22597de09bae0",
+    "content_sha256": "3ee577a53011c4453d6b8a3c571a38e89430d5994e67ddf1feccab112dc4da43"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "f1fcc299596897011b012aa9430a29c75032cbca",
@@ -18581,6 +18581,71 @@
     }
    ],
    "notes": "Both test-side verifiers validate typ exactly before anything else: a receipt fed to the Status verifier and a Status response fed to the receipt verifier are each refused at the typ check, while each verifies as itself. Partial: consumer-side rule, exercised only by the test verifier (no production consumer in src/)."
+  },
+  {
+   "id": "status.discharge.receipt-signed-under-status-key",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-receipt",
+   "text": "signed under the AS's active Mission Status signing key, the key it currently signs Mission Status responses under",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS signs a Discharge Receipt under its active Mission Status signing key: the receipt's `kid` is that key's, and it verifies under that key",
+    "local": "The kernel's signDischargeReceipt signs under the same key and kid as its Mission Status responses (statusKey, statusKid in src/services/authorization-server/src/kernel/kernel.ts)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3) > answers a caller without Status read rights with a signed receipt bound to its aud and nonce, and replays it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#831 (D857): the Discharge Receipt uses the Mission Status signing role. The endpoint witness asserts the real receipt's kid is the configured Mission Status kid and verifies it under a consumer configuration naming that kid. Proven by a kid swap: the kernel holds no other private key, so the defect labels the receipt with another role's kid rather than signing under that role's key; the test fails at its kid assertion."
+  },
+  {
+   "id": "status.discharge.receipt-consumer-authorized-signer",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-receipt",
+   "text": "the JWS signature against a current `jwks_uri` entry for the AS that the consumer's trusted configuration authorizes for that AS's Mission Status responses; a key's presence in the `jwks_uri` does not authorize it",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer refuses a Discharge Receipt signed under a key the AS publishes in its `jwks_uri` but the consumer's trusted configuration does not authorize for that AS's Mission Status responses, and relies on nothing it carries"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge response consumers (@spec discharge#discharge-receipt, #discharge-carryover) > refuses a correctly signed receipt under another role's published key, and accepts it once the configuration authorizes that key (#831, D857)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3) > answers a caller without Status read rights with a signed receipt bound to its aud and nonce, and replays it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#831 (D857). Verified with the TEST-SIDE consumer (test/discharge-consumer.helper.ts, verifyDischargeReceipt), as for the other receipt consumer rows. The unit witness signs a correct receipt under another role's key published beside the Status key (a local key under kid as-token): refused at check 3, and the same bytes accepted once the configuration names that kid. The endpoint witness refuses the real AS's receipt under a configuration naming only the AS's published access-token kid. Proven by dropping the helper's authorization check: both fail at their refusals. A Mission Status Response presented as a receipt stays refused at typ (status.discharge.receipt-typ-exclusive). Partial: no production consumer of receipts exists in src/, so the rule is exercised only by the test verifier."
   },
   {
    "id": "child-delegation.carryover.entry-pairing",
