@@ -35,6 +35,8 @@ normative:
   RFC6838:
   RFC7009:
   RFC7515:
+  RFC7517:
+  RFC7519:
   RFC7523:
   RFC7662:
   RFC8259:
@@ -48,6 +50,13 @@ normative:
   RFC9701:
   RFC9728:
   RFC9700:
+  RFC9111:
+  OpenID.Federation:
+    title: "OpenID Federation 1.0"
+    target: https://openid.net/specs/openid-federation-1_0.html
+    author:
+      - org: OpenID Foundation
+    date: 2026-02-17
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-01
@@ -1790,6 +1799,11 @@ through standard {{RFC8414}} discovery.
   tolerated interval, in seconds, for revocation propagation
   ({{revocation-enforcement-classes}}): the ceiling on reliance on an
   observation of Mission state. When absent, no bound is declared.
+
+`mission_historical_jwks_uri`:
+: CONDITIONAL. A string containing an `https` URL. The URL of the AS's
+  historical key set ({{historical-key-set}}). REQUIRED while that set
+  lists a key.
 {: newline="true"}
 
 `token_endpoint_auth_methods_supported` {{RFC8414}} describes the
@@ -1840,6 +1854,44 @@ Cache-Control: max-age=3600
   "mission_max_stale_seconds": 60
 }
 ~~~
+
+## Historical Key Set {#historical-key-set}
+
+The historical key set holds the public keys the AS has withdrawn as
+compromised ({{signing-key-retention}}), so that responses signed
+under them stay verifiable for audit. It is a JWT {{RFC7519}} with
+`typ` `jwk-set+jwt`, served at `mission_historical_jwks_uri`, which a
+consumer takes only from authorization server metadata it has
+validated ({{Section 3.3 of RFC8414}}). Its claims are `iss` (the AS's
+issuer identifier), `iat`, and `keys`: a JWK Set's `keys` array
+{{RFC7517}} holding each such key's public JWK, under its original
+`kid`, for at least the audit horizon of every Mission whose responses
+it signed.
+
+The AS signs the set under its active Mission Status signing key, the
+key it currently signs Mission Status responses under, and never under
+a key the set lists or a key of another role. When that key is itself
+compromised, the AS signs the set under its replacement and never
+under another published key. A consumer identifies the authorized
+signer through its trusted configuration, not by its presence in the
+`jwks_uri`, since the `jwks_uri` also carries other roles' keys and
+retired keys; it accepts a replacement only once that configuration
+authorizes it. A consumer MUST NOT accept a historical key set whose
+signature does not verify under the key its trusted configuration
+authorizes.
+
+Each listed JWK carries the `revoked` member {{OpenID.Federation}}
+(Section 8.7.2) with `reason` `compromised` and these times:
+
+- `revoked_at`: the time the AS revoked the key; and
+- `compromised_at`: an added member of `revoked`, the established
+  compromise time, the earliest time from which a signature under the
+  key is not trusted. It is absent when no compromise time is
+  established.
+
+Both are NumericDate values {{RFC7519}}. The set reuses OpenID
+Federation's `revoked` encoding only; this document defines no
+OpenID Federation endpoint and claims no conformance to it.
 
 # Conformance {#conformance}
 
@@ -1964,27 +2016,42 @@ dedicated Mission Status operation, and MUST NOT accept an unsigned
 response from the dedicated Mission Status operation in place of the
 signed form it requires.
 
-## Signing-Key Retention for Audit
+## Signing-Key Retention for Audit {#signing-key-retention}
 
 The AS signs Mission Status and Lifecycle responses with a key from
 its `jwks_uri`. The AS MUST keep the public JWK for every `kid` it
-has signed such a response under resolvable in its `jwks_uri` for at
-least the Mission's audit horizon
-({{I-D.draft-mcguinness-oauth-mission}}), so an archived
+has signed such a response under resolvable for at least the Mission's
+audit horizon ({{I-D.draft-mcguinness-oauth-mission}}), so an archived
 `application/mission-status-response+jwt` remains verifiable for
-audit and dispute. This is the issuance profile's retired-key rule
+audit and dispute: a retired key in its `jwks_uri`, and a compromised
+key in its historical key set ({{historical-key-set}}). This is the
+issuance profile's retired-key rule
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Signing and Key
 Rotation"), with the audit horizon as the bound.
 
 A key known or suspected compromised follows the issuance profile's
 compromise rule ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Signing and Key Rotation"): the AS publishes it as revoked, or marks
-it with a compromise time, rather than only rotating it out. Retention
-keeps an archived response verifiable for audit; it is not trust. A
-consumer MUST NOT accept, for a current reliance decision, a response
-signed under a key the AS has published as compromised. An auditor
-examining an archived response signed under such a key classifies it
-by the published compromise information.
+"Signing and Key Rotation"). Rather than only rotating it out, the AS
+stops signing with it and removes it from its `jwks_uri`, and
+publishes it as revoked in its historical key set. Retention keeps an
+archived response verifiable for audit; it is not trust. A consumer
+MUST NOT accept, for a current reliance decision, a response signed
+under a key the AS has published as compromised. A consumer MUST NOT
+use a key from the historical key set to verify a response for a
+current reliance decision. A consumer MUST NOT rely on a cached copy
+of the AS's `jwks_uri` beyond the freshness lifetime its response
+explicitly declares ({{Section 4.2.1 of RFC9111}}). A response without
+valid explicit freshness information is stale when received, and is
+never given a heuristic lifetime ({{Section 4.2.2 of RFC9111}}): the
+consumer revalidates it before reuse. The consumer replaces its cached
+key set with each one it fetches rather than adding to it, so a
+removed key stops verifying within that lifetime. When the cached set
+is stale and revalidation fails, the consumer MUST NOT accept a Status
+or Lifecycle response for a current reliance decision until a fetch or
+revalidation succeeds.
+An auditor examining an archived response signed under a compromised
+key classifies it by the published compromise information,
+`compromised_at` or its absence.
 
 ## General OAuth Security
 
@@ -2100,6 +2167,13 @@ Authorization Server Metadata" registry {{RFC8414}}:
   rely on an observation of Mission state.
 - Change Controller: IESG
 - Specification Document(s): this document, {{as-metadata}}
+
+- Metadata Name: `mission_historical_jwks_uri`
+- Metadata Description: URL of the authorization server's historical
+  key set, the signed set of public keys it has withdrawn as
+  compromised.
+- Change Controller: IESG
+- Specification Document(s): this document, {{historical-key-set}}
 
 ## OAuth Extensions Error Registration {#iana-error-registration}
 
