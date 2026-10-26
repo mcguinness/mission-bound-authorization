@@ -891,6 +891,24 @@ to every outcome.
 : Array of strings. Identifiers of the policy rules applied during
   shaping.
 
+`context_constraints`:
+: Array of objects, one per constraint trusted context supplied
+  ({{context-constraints}}), with the members `source` (string:
+  `deployment_policy`, `subject_preference`, `model_refusal`, or a
+  deployment-defined value), `description` (string, the constraint as
+  its source states it), `source_uri` (string, the source document
+  consulted, when there is one), `source_digest` (string, defined
+  below), `policy_rule` (string, the `policy_decisions` identifier
+  that applied the constraint, when one did), `applies_to` (object
+  naming the `resource` and `action` it bears on, as in
+  `entry_rationales`), `effect` (string: `prohibition`, `bound`,
+  `confirmation`, or `preference`), and `disposition` (string:
+  `excluded`, `constrained`, `action_approval`, `disclosed`,
+  `clarified`, or `refused`). It records how the shaper carried each
+  constraint. Consent Evidence's `constraint_provenance` attributes
+  the bounds the Mission Issuer approved
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+
 `capability_resolutions`:
 : Array of objects, one per resource or action, with the members
   `requested` (string), `resolved` (string), `basis` (string, a
