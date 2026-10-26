@@ -21692,7 +21692,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice. D405: specified, not implemented. #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri."
+   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys. The key ring has generations and a compromise operation (#831 B2 (#1681, D809)), but the historical key set the compromised key is published in is #831 B3. D405: specified, not implemented. #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri."
   },
   {
    "id": "status.signing-keys.compromised-not-relied-on",
@@ -21713,7 +21713,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice, and the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check compromise. D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section."
+   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: the historical key set is #831 B3, though the ring's compromise operation withdraws the key from the jwks_uri (#831 B2 (#1681, D809)). The Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check published compromise; the separated MAS pilot's consumer stops trusting a withdrawn key once its cached set goes stale (#831 C (#1697, #1705, D833)). D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section."
   },
   {
    "id": "status.signing-keys.retention-audit-horizon",
@@ -21739,7 +21739,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3."
+   "notes": "#831 B1 (D774): specified, partly implemented. #831 B2 (#1681, D809) keeps an overlap generation in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime, and refuses retirement when that cannot be established; a compromised key's retention in the historical key set is #831 B3. todo until the witnesses are reviewed (D842)."
   },
   {
    "id": "status.signing-keys.compromised-withdrawn",
@@ -21765,7 +21765,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3."
+   "notes": "#831 B1 (D774): implemented by #831 B2 (#1681, D809): compromising a generation stops signing with it and withdraws it from the jwks_uri, witnessed in signing-key-rotation.test.ts. todo until that witness is reviewed for this row (D842)."
   },
   {
    "id": "status.signing-keys.no-historical-fallback",
@@ -21875,7 +21875,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3. D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization."
+   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization."
   },
   {
    "id": "status.historical-key-set.consumer-validates-signer",
@@ -21896,7 +21896,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+   "notes": "#831 B1 review (D780): specified, not implemented. #831 C (#1697, #1705, D833) gives the Status consumers role-bound trusted kids, but none fetches a historical key set, which is #831 B3."
   },
   {
    "id": "status.historical-key-set.revoked-member",
@@ -21922,7 +21922,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3."
+   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3."
   },
   {
    "id": "status.metadata.historical-jwks-uri",
@@ -21948,7 +21948,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#831 B1 (D774): specified, not implemented; the reference AS's key ring holds one generation per role until #831 B2 and B3."
+   "notes": "#831 B1 (D774): specified, not implemented; the reference AS publishes no historical key set or its metadata until #831 B3."
   },
   {
    "id": "status.mission-status.per-consumer-rate-limit",
