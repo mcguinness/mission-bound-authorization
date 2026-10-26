@@ -39,4 +39,4 @@ export {
   type VectorCase,
 } from "./runner.js";
 export { type SubsetResult, subsetCheck } from "./subset.js";
-export { type AbsoluteUri, parseAbsoluteUri } from "./uri.js";
+export { type AbsoluteUri, type Authority, parseAbsoluteUri } from "./uri.js";

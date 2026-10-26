@@ -75,8 +75,8 @@
     "content_sha256": "510aa2b7589242e78495474cfbc6d6c8edb3d1aa21bcd1359cc98b2f07927e66"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
-    "content_sha256": "a5d4486c5b3f708b16b0a86aabd670a429d37de62aa2436b87c2aadaf10e8ef9"
+    "revision": "45adefd6ad9e16345428d9dd4c93806cc9c6c71f",
+    "content_sha256": "e3f62576d3f69696ab87d0e4d2c29759478532ca150f994386f835a4060f6842"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "dffb5f036c98b5d0a07ce1cb4a8f52282cf3b021",
@@ -95,8 +95,8 @@
     "content_sha256": "b54570c5a1a8170b7fba90bb8e4d9b163e3603e736726d81bbbc8334f1007637"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
-    "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
-    "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
+    "revision": "3a75ab4b90a356972114d858aa7e52b71c4931ef",
+    "content_sha256": "f42a2713d042528189015f468361a76676417bc6dd2355b7562980a7289f5c13"
    },
    "draft-mcguinness-mission-approval-governance.md": {
     "revision": "4a904d2f0a0df0d87f8986fab437600736674163",
@@ -23028,7 +23028,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "governed work with no establishable Mission reference is refused before evaluation, on both arms. On the MAS Join path the propagated reference is the ONLY source: an absent or stripped field refuses unknown_mission and a malformed one refuses mission_reference_conflict, so governed work never runs ungoverned. On the credential-carried path an absent field correctly leaves the credential-established reference in force, and a malformed field still refuses"
+    "normative": "governed work with no usable Mission reference is refused before evaluation, never run ungoverned: where the propagated reference is the only source (the MAS Join path), an absent, stripped or malformed reference refuses; where the credential carries the Mission, an absent field leaves the credential-carried reference in force and a malformed one still refuses",
+    "local": "the reference PEP refuses each of these with mission_reference_conflict, the reason Verification and Conflict assigns to a malformed or missing reference where governance requires one, before any decision (#972 item 13, D289); unknown_mission is kept for a well-formed reference whose Mission does not resolve"
    },
    "level": "unit",
    "coverage": "tested",
@@ -23070,7 +23071,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "Both arms are now exercised (#557 stage C2). The missing/stripped arm needed the MAS Join consumption path, where nothing but the propagated field can name a Mission: with the field absent the request refuses unknown_mission and never reaches evaluation, at unit level and over a real MAS-governed HTTP channel. Malformed carriage was already end-to-end (#557 part 1) and now refuses mission_reference_conflict, distinct from an unknown Mission. Level stays unit: the endpoint entries auto-skip without OpenFGA."
+   "notes": "Both arms are now exercised (#557 stage C2). The missing/stripped arm needed the MAS Join consumption path, where nothing but the propagated field can name a Mission: with the field absent the request refuses mission_reference_conflict (unknown_mission before #972 item 13, D289) and never reaches evaluation, at unit level and over a real MAS-governed HTTP channel. Malformed carriage was already end-to-end (#557 part 1) and now refuses mission_reference_conflict, distinct from an unknown Mission. Level stays unit: the endpoint entries auto-skip without OpenFGA."
   },
   {
    "id": "mas.reference.reject-extra-data",
@@ -59368,6 +59369,37 @@
     }
    ],
    "notes": "#1376 states the D480 host rule (RFC 9110 Sections 4.2.1 and 4.2.2) for an entry's resource; the reference enforced it through #1310. Proved by mutation: an isAbsoluteUri that skips the http(s) host check fails the witness for https:///mcp and https:localhost/mcp. Cases ev-res-02 and ev-res-03 run (entry-validation)."
+  },
+  {
+   "id": "resource-access.entry-validation.http-userinfo-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `resource` is an `http` or `https` URI carrying a userinfo subcomponent",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose http or https resource carries a userinfo subcomponent, an empty one or under an upper-case scheme included, is refused invalid_authorization_details, creating no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses an http or https resource carrying a userinfo subcomponent, empty or not",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376 states RFC 9110 Section 4.2.4's rule for an entry's resource. The reference refuses it at every entry boundary through carriesHttpUserinfo: proposal intake, isAuthorityEntry, the ceiling loaders, template creation and direct derivation; an Intent's target_resources is not held to it. Proved by mutation: an intake that skips the check fails the witness. Cases ev-res-05 to ev-res-08 run (entry-validation); ev-res-09, an @ in the path, is valid."
   },
   {
    "id": "resource-access.entry-validation.resource-match-unrecognized-refused",

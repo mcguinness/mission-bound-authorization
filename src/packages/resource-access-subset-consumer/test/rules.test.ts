@@ -353,6 +353,60 @@ describe("resource syntax (resource-access#entry-validation)", () => {
     expect(validate({ ...base, resource: "http://:80/x" })).toBe("refuse");
     expect(validate({ ...base, resource: "urn:example:orders" })).toBe("valid");
   });
+
+  it("refuses an http or https resource carrying userinfo, the scheme compared case-insensitively", () => {
+    // resource-access#entry-validation: refused when "its resource is an http
+    // or https URI carrying a userinfo subcomponent (Section 4.2.4 of
+    // RFC9110)". Any "@" in the authority delimits one, an empty one included.
+    const refused = [
+      "https://agent@api.example/orders",
+      "https://agent:secret@api.example/orders",
+      "https://@api.example/orders",
+      "https://:@api.example/orders",
+      "HTTP://agent@api.example/orders",
+      "Https://agent@api.example",
+      "http://agent@api.example:8080/orders?id=1",
+      "https://a%40b@api.example/orders",
+      "https://agent@[2001:db8::7]/orders",
+    ];
+    for (const resource of refused) {
+      // Each is an RFC 3986 absolute-URI, so this rule alone refuses it.
+      expect(parseAbsoluteUri(resource), resource).toBeDefined();
+      const result = entryValidationCheck({ ...base, resource }, config);
+      expect(result.outcome, resource).toBe("refuse");
+      expect(result.error, resource).toBe("invalid_authorization_details");
+      expect(result.reason, resource).toContain("userinfo");
+    }
+
+    // An "@" after the authority is path or query data, not userinfo, and
+    // another scheme's userinfo is outside the rule.
+    const admitted = [
+      "https://api.example/orders/a@b",
+      "https://api.example/@",
+      "https://api.example/orders?by=a@b",
+      "https://api.example?by=a@b",
+      "ftp://user@host/x",
+      "ftp://user:pw@host/x",
+      "urn:example:a@b",
+      "mailto:agent@api.example",
+    ];
+    for (const resource of admitted) {
+      expect(validate({ ...base, resource }), resource).toBe("valid");
+    }
+  });
+
+  it("applies the userinfo rule to an entry's resource only", () => {
+    // A subset operand is an entry, so its resource is invalid input there.
+    const withUserinfo = { ...base, resource: "https://agent@payments.example/mcp" };
+    expect(subsetCheck(withUserinfo, withUserinfo).outcome).toBe("refuse");
+    // resource_contract.id is "an absolute URI that names the contract"; the
+    // userinfo rule names resource alone.
+    const contracted = {
+      ...base,
+      resource_contract: { ...reference, id: "https://agent@payments.example/contracts/payments" },
+    };
+    expect(subsetCheck(contracted, contracted).outcome).toBe("subset");
+  });
 });
 
 describe("unsupported input is refused, never dropped", () => {
