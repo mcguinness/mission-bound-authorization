@@ -1015,8 +1015,9 @@ form-urlencoded body:
   extension operation on this endpoint (below).
 
 `reason`:
-: OPTIONAL. A string. A human-readable reason recorded in
-  audit, maximum 1024 characters. Not used by an extension operation
+: OPTIONAL. A string of at most 1024 Unicode code points, a longer
+  one being malformed. A human-readable reason recorded in audit.
+  Not used by an extension operation
   that records its own request members in audit.
 
 `suspend_until`:
