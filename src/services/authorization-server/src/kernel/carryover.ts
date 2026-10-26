@@ -1790,6 +1790,30 @@ export function applyCarryoverInCallerTx(
       });
     }
   }
+  // @spec child-delegation#carryover-cas (#1675, D803): each final outcome is
+  // recorded against its rendered row, so a rendered row the walk did not reach
+  // (its record is gone) is recorded from its tombstone, looked up by issuer
+  // and Mission identity: the terminal state and the termination it committed.
+  // With no tombstone, a pruned one, or one that kept no termination, its
+  // outcome cannot be recorded and the batch is refused; nothing is invented.
+  const recorded = new Set(map.map((row) => row.old_child.mission_id));
+  for (const entry of manifest.entries) {
+    if (recorded.has(entry.child_id)) continue;
+    const tombstone = kernel.tombstones.find(entry.issuer, entry.child_id);
+    if (!tombstone || tombstone.detailPruned || !tombstone.terminalState || !tombstone.termination) {
+      throw new CarryoverError(
+        "subtree_changed",
+        `the rendered row ${entry.child_id} is gone and its committed termination is not retained`,
+      );
+    }
+    map.push({
+      old_child: { issuer: entry.issuer, mission_id: entry.child_id },
+      outcome: "excluded",
+      reason: excluded.get(entry.child_id) ?? entry.reason ?? "record_missing",
+      terminal_state: tombstone.terminalState,
+      termination: tombstone.termination,
+    });
+  }
 
   // The traversal owns the descent, so the post-supersession cascade has
   // nothing left. Asserted, not assumed: a descendant left non-terminal here
