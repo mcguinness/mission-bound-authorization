@@ -14,7 +14,9 @@ import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type ActionPhase,
+  type AuthorityDependencyEnforcement,
   canonicalDigest,
+  checkAuthorityDependency,
   type CollectionMemberFacts,
   type ConstraintFacts,
   type CredentialAuthorityEntry,
@@ -738,6 +740,8 @@ interface PermitUseCheck {
       profile: ActionMapping | undefined;
       boundary: BoundaryEstablishment;
       contracts: ResourceContractDeclarations;
+      /** The declared authority dependency's recheck at this use (synchronous, over the resolver's cached observation). */
+      dependency: (attempt: ExecutionAttempt, now: Date) => string | undefined;
       /** @spec runtime#evaluation-context-binding (#773): the attempt's context re-resolved and compared now. */
       evaluationContext: (attempt: ExecutionAttempt) => string | undefined;
     },
@@ -864,6 +868,18 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
     // (`Pep.evaluationContextFailure`).
     name: "evaluation_context",
     failure: (attempt, { evaluationContext }) => evaluationContext(attempt),
+  },
+  {
+    // @spec runtime#input-authority-dependency (#830, D798, D813): a permit
+    // relying on a declared authority dependency releases no effect once the
+    // observation it relied on has passed its accepted validity (the ceiling
+    // the composed step carried from admission), nor once a known withdrawal,
+    // an observed invalidation or a loss of every acceptable observation has
+    // reached this PEP. Synchronous over the resolver's cached observation, as
+    // this table requires, and refused as that mechanism refuses,
+    // `resource_policy`.
+    name: "authority_dependency",
+    failure: (attempt, { dependency, now }) => dependency(attempt, now),
   },
   {
     // @spec authzen#response-context, runtime-evidence#execution-evidence-object
@@ -1200,6 +1216,17 @@ export interface PepDeps {
    * other actors in the chain (the orchestrator) keep working.
    */
   revokedInstances?: Set<string>;
+  /**
+   * @spec runtime#input-authority-dependency, runtime#input-resource-policy
+   * (#830, D798): a declared authority dependency this PEP evaluates as a
+   * composed resource-policy step, where the declaration routes direct
+   * evaluation to the PEP. After the PDP permits and before anything is
+   * released, an action under a Mission the declaration governs is refused
+   * `resource_policy` unless an acceptable observation establishes the
+   * dependency: the PDP permits within Mission authority, and this step still
+   * refuses. The cause is retained in the deployment's dependency evidence.
+   */
+  authorityDependency?: AuthorityDependencyEnforcement;
   /**
    * @spec harness#work-item-identity (#815): the work-item attachers the
    * Enforcement Scope Statement names, each authenticated client mapped to
@@ -1546,6 +1573,15 @@ export interface ExecutionAttempt {
    * verified decision, never recomputed locally and never extended.
    */
   permitValidUntil?: unknown;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798, D813): present where
+   * this PEP holds a declared authority dependency governing the Mission. It
+   * is rechecked at every use of the permit, release included. Where the
+   * dependency is routed to this PEP's composed step, `validUntilMs` is the
+   * ceiling that step established at admission: the accepted validity of the
+   * observation it relied on, which the effect is never released after.
+   */
+  authorityDependency?: { validUntilMs?: number };
   /**
    * @spec authzen#decision-conditions `work_item` (#815): the permit's
    * `conditions.work_item` EXACTLY as the verified decision carried it,
@@ -3499,6 +3535,30 @@ export class Pep {
       return { permitted: false, refusal_reason: "unrecognized_condition" };
     }
 
+    // @spec runtime#input-authority-dependency (#830, D798): the composed
+    // resource-policy step for a declared dependency routed to this PEP, after
+    // the permit and before any obligation runs or effect is released. A
+    // dependency not established suppresses the permit, and the refusal is
+    // this mechanism's own, `resource_policy`.
+    const dependency = this.deps.authorityDependency;
+    if (dependency !== undefined && dependency.declaration.enforcement.direct === "pep") {
+      const checked = checkAuthorityDependency(dependency, { id: missionAnchor.id, issuer: missionAnchor.issuer }, {
+        enforcer: "pep",
+        action: mapping.action,
+      });
+      if (!checked.ok) {
+        await this.suppressExecution(attempt, "resource_policy");
+        return { permitted: false, decision, denial_reason: "resource_policy" };
+      }
+      // The ceiling travels with the permit into execution admission and is
+      // enforced at release (the `authority_dependency` use check).
+      attempt.authorityDependency = checked.validUntilMs !== undefined ? { validUntilMs: checked.validUntilMs } : {};
+    } else if (dependency !== undefined && dependency.governed({ id: missionAnchor.id, issuer: missionAnchor.issuer })) {
+      // Routed to the PDP, whose permit carries the ceiling as `valid_until`:
+      // this PEP still rechecks known invalidations at release.
+      attempt.authorityDependency = {};
+    }
+
     // @spec authzen#obligation-processing (#1640, D744 ruling 8): "on a
     // permit the PEP MUST fulfill each obligation before releasing the
     // action's effect", and "MUST treat an obligation it does not recognize,
@@ -3944,6 +4004,41 @@ export class Pep {
    * `operation_already_claimed` record was written), where a second record
    * under the same execution identity would be refused.
    */
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798, D813): the declared
+   * dependency's recheck at a use of the permit. The ceiling the composed step
+   * carried from admission refuses once reached, whatever a later read shows;
+   * then the dependency is evaluated again over the resolver's current cached
+   * observation wherever the declaration routes direct evaluation, so a known
+   * withdrawal, an observed invalidation or a lost observation that reached
+   * this PEP after the decision stops the release. Each refusal is recorded
+   * in the deployment's dependency evidence.
+   */
+  private authorityDependencyAtUse(attempt: ExecutionAttempt, now: Date): string | undefined {
+    const dependency = this.deps.authorityDependency;
+    const carried = attempt.authorityDependency;
+    if (dependency === undefined || carried === undefined) return undefined;
+    const mission = { id: attempt.mission.id, issuer: attempt.mission.issuer };
+    const governed = dependency.governed(mission);
+    if (governed === undefined) return undefined;
+    if (carried.validUntilMs !== undefined && now.getTime() >= carried.validUntilMs) {
+      dependency.evidence?.record({
+        enforcer: "pep",
+        dependency: dependency.declaration.id,
+        failure: "stale",
+        mission,
+        subject: governed.subject,
+        client: governed.clientId,
+        action: attempt.action,
+        at: now.toISOString(),
+      });
+      return "resource_policy";
+    }
+    if (dependency.declaration.enforcement.direct === undefined) return undefined;
+    const checked = checkAuthorityDependency(dependency, mission, { enforcer: "pep", action: attempt.action });
+    return checked.ok ? undefined : "resource_policy";
+  }
+
   permitUseFailure(attempt: ExecutionAttempt): string | undefined {
     for (const check of PERMIT_USE_CHECKS) {
       const now = this.now();
@@ -3954,6 +4049,7 @@ export class Pep {
         profile: this.toolActionUnder(attempt.tool, attempt.operationProfile),
         boundary: this.boundaryContext.establish(now),
         contracts: this.contracts(),
+        dependency: (a, at) => this.authorityDependencyAtUse(a, at),
         evaluationContext: (a) => this.evaluationContextFailure(a),
       });
       if (error !== undefined) return error;

@@ -1,0 +1,21 @@
+[
+  {
+    "id": "subject-delegation",
+    "dependency": "The Mission Subject's continuing delegation to the client acting under the Mission: the Subject's account is active and the Subject has not withdrawn the delegation from that client.",
+    "source": {
+      "id": "reference-identity-source",
+      "description": "The deployment's configuration-backed identity source (config/identity.json: each principal's status and the clients it has withdrawn its delegation from), read by the authorization server's identity-state resolver and re-read without a restart."
+    },
+    "observation": "One read of the identity source: the Subject's account status and the clients it has withdrawn delegation from, as of that read.",
+    "governs": {
+      "authority_sources": ["user_delegated"],
+      "scope": "Existing Missions whose recorded authority source is user-delegated, and every action they authorize: each issuance under them (approval, code redemption, refresh, token exchange, child and expansion derivation) and each action decided under them."
+    },
+    "invalidating_changes": ["subject_disabled", "subject_deprovisioned", "delegation_withdrawn"],
+    "max_staleness_seconds": 300,
+    "online_check": false,
+    "enforcement": { "direct": "pdp", "lifecycle": false },
+    "recovery": "Reliance resumes when an observation within the bound shows the Subject active and the delegation held. Re-enablement is a basis for future issuance only: it restores no authority removed through Containment and revives no terminated Mission.",
+    "responsibility_transfer": "None: a user-delegated Mission's authority is the Subject's own. Work that must continue without the Subject is a new Mission approved under an authority source that names its successor, through an authorized process; the original approval's attribution is unchanged."
+  }
+]

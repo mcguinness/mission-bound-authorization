@@ -7,11 +7,13 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { dirname, join, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ACTION_PHASES,
   type ActionPhase,
+  type AuthorityDependencyDeclaration,
   type AuthorityEntry,
   actionOutsideGrammar,
   computeAnchor,
@@ -19,9 +21,11 @@ import {
   DuplicateMemberError,
   EvaluationContextBindingDeclarations,
   GOVERNED_POLICY_TYP,
+  type IdentityStateRecord,
   isAbsoluteUri,
   isActionPhase,
   isAuthorityEntry,
+  parseAuthorityDependencyDeclarations,
   parseScopeProjectionMapping,
   parseStrictJson,
   ResourceContractDeclarations,
@@ -607,6 +611,67 @@ function loadUsers(): SeededUser[] {
 }
 
 export const USERS: SeededUser[] = loadUsers();
+
+/** @spec runtime#input-authority-dependency (#830): the identity source's file, re-read without a restart. */
+export const IDENTITY_SOURCE_FILE = join(CONFIG_DIR, "identity.json");
+
+/**
+ * @spec runtime#input-authority-dependency (#830, D798): the identity
+ * source's continuing state for each principal: `status` (`active`,
+ * `disabled` or `deprovisioned`; absent, `active`), the clients the principal
+ * has withdrawn its delegation from (`withdrawn_delegations`; absent, none),
+ * and when the source recorded the latest change (`changed_at`, RFC 3339;
+ * absent, unstated). The strict reader refuses an unknown status, a malformed
+ * list or instant, and a principal listed twice. The source may be rewritten
+ * while the deployment runs: the identity-state resolver re-reads it.
+ */
+export function parseIdentityState(raw: unknown, file = "identity.json"): IdentityStateRecord[] {
+  const seen = new Set<string>();
+  return asArray(file, raw, "identity").map((entry, i) => {
+    const ctx = `identity[${i}]`;
+    const u = asObject(file, entry, ctx);
+    const sub = reqString(file, u, "sub", ctx);
+    if (seen.has(sub)) throw new ConfigError(file, `${ctx}.sub ${sub} is listed twice`);
+    seen.add(sub);
+    const status = u.status === undefined ? "active" : u.status;
+    if (status !== "active" && status !== "disabled" && status !== "deprovisioned") {
+      throw new ConfigError(file, `${ctx}.status must be active, disabled or deprovisioned`);
+    }
+    const withdrawn =
+      u.withdrawn_delegations === undefined
+        ? []
+        : reqStringArray(file, u, "withdrawn_delegations", ctx);
+    const changedAt = u.changed_at;
+    if (
+      changedAt !== undefined &&
+      (typeof changedAt !== "string" || !Number.isFinite(Date.parse(changedAt)))
+    ) {
+      throw new ConfigError(file, `${ctx}.changed_at must be an RFC 3339 instant`);
+    }
+    return {
+      sub,
+      status,
+      withdrawn_delegations: withdrawn,
+      ...(changedAt !== undefined ? { changed_at: changedAt as string } : {}),
+    };
+  });
+}
+
+/** Read the identity source as JSON, asynchronously; a missing or unreadable file rejects (an unavailable source). */
+export async function readIdentitySource(path: string = IDENTITY_SOURCE_FILE): Promise<unknown> {
+  return JSON.parse(await readFile(path, "utf8"));
+}
+
+/** @spec runtime#input-authority-dependency (#830): the deployment's declared authority dependencies (config/authority-dependencies.json). */
+export const AUTHORITY_DEPENDENCIES: readonly AuthorityDependencyDeclaration[] = (() => {
+  const file = "authority-dependencies.json";
+  try {
+    return parseAuthorityDependencyDeclarations(readJson(file));
+  } catch (e) {
+    if (e instanceof ConfigError) throw e;
+    throw new ConfigError(file, (e as Error).message);
+  }
+})();
 
 export interface VendorSeed {
   id: string;
