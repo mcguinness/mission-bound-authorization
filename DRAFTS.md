@@ -51,7 +51,7 @@ own Introduction and carry no Status section.
 
 52 documents: 1 core, 5 adapter-binding, 43 companion, 3 guide.
 Spec maturity: 1 candidate, 44 experimental, 4 sketch, 3 not applicable (guide documents; protocol maturity does not apply).
-Conformance ledger (`conformance-manifest.json`): 2301 requirement rows across 40 audited specs (1192 tested, 293 partial, 813 todo, 3 blocked); 12 documents carry no rows in the audited set yet.
+Conformance ledger (`conformance-manifest.json`): 2302 requirement rows across 40 audited specs (1193 tested, 293 partial, 813 todo, 3 blocked); 12 documents carry no rows in the audited set yet.
 
 <!-- generated:family-counts:end -->
 
