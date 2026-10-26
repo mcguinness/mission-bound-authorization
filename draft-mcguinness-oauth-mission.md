@@ -2983,10 +2983,11 @@ The entry projects to `payments.small`, since the mapping shows that
 the target independently enforces its constraint. The same entry with
 a `max_amount` of 200.00 USD does not project, since `payments.small`
 does not convey the narrower value. With no other carried entry
-supplying a safe projection, step 5 then refuses issuance to the API,
-with `invalid_target`, or with `invalid_scope` where the request names
-`payments.small` ({{error-mapping}}). The Mission Resource Access
-Profile gives the same pair
+supplying a safe projection, issuance to the API is refused: under
+step 5 with `invalid_target`, or, where the request names
+`payments.small`, with `invalid_scope` under the rule for an
+explicitly requested value above ({{error-mapping}}). The Mission
+Resource Access Profile gives the same pair
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 The runtime profile's enforcement-scope declarations
