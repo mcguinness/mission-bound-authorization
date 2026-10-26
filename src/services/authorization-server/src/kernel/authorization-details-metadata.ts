@@ -14,6 +14,7 @@
 import {
   actionFamilyRefusal,
   actionOutsideGrammar,
+  carriesHttpUserinfo,
   delegateMatcherListViolation,
   entryDelegateMatcherViolation,
   isAbsoluteUri,
@@ -318,6 +319,11 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   // kept as submitted.
   if (!isAbsoluteUri(e.resource)) {
     return `resource ${JSON.stringify(e.resource)} is not an RFC 3986 absolute URI`;
+  }
+  // @spec resource-access#entry-validation (#1376): "its `resource` is an
+  // `http` or `https` URI carrying a userinfo subcomponent".
+  if (carriesHttpUserinfo(e.resource)) {
+    return `resource ${JSON.stringify(e.resource)} carries a userinfo subcomponent, which an http or https resource never does`;
   }
   // @spec resource-access#resource-access-type, resource-access#entry-validation
   // (#1276): `exact` or `prefix`, and "A `resource` value under `prefix` MUST

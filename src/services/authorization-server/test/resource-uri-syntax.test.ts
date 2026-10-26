@@ -10,7 +10,11 @@
  * IPvFuture literal, and an entry's `resource` was checked only as a string.
  * Validation answers yes or no: an accepted value keeps its spelling.
  *
- * PAR is in rar-carriage.test.ts.
+ * An entry's `http` or `https` `resource` also carries no userinfo
+ * subcomponent (#1376, RFC 9110 Section 4.2.4), at the same three places.
+ * The rule is the entry's: an Intent's `target_resources` is not held to it.
+ *
+ * PAR is in rar-carriage.test.ts and entry-validation.test.ts.
  */
 
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -41,6 +45,21 @@ const MALFORMED: ReadonlyArray<readonly [string, string]> = [
   ["an http(s) URI with an empty host", "https:///x"],
   ["a raw space", "https://erp.example.com/a b"],
   ["a fragment", "https://erp.example.com/a#b"],
+];
+
+/** http and https resources carrying a userinfo subcomponent (#1376). */
+const USERINFO: ReadonlyArray<readonly [string, string]> = [
+  ["a user name", "https://user@erp.example.com/invoices"],
+  ["a user name and password", "https://user:secret@erp.example.com/invoices"],
+  ["an empty userinfo", "https://@erp.example.com/invoices"],
+  ["an upper-case http scheme", "HTTP://user@erp.example.com/invoices"],
+];
+
+/** An @ outside the authority, and another scheme's userinfo: no http(s) userinfo (#1376). */
+const NOT_USERINFO: readonly string[] = [
+  "https://erp.example.com/invoices/a@b",
+  "https://erp.example.com/invoices?owner=a@b",
+  "ftp://user@files.example/invoices",
 ];
 
 /** Well-formed values, recorded with their spelling unchanged. */
@@ -105,6 +124,24 @@ describe("an entry's resource is an RFC 3986 absolute URI at the proposal intake
 
   it("admits each well-formed resource unchanged (positive control)", () => {
     for (const value of WELL_FORMED) {
+      expect(validateMissionResourceAccessSchema(entry(value)), value).toBeUndefined();
+      expect(validateAuthorityProposal(JSON.stringify([entry(value)]), [value])).toEqual([entry(value)]);
+    }
+  });
+
+  it("refuses an http or https resource carrying userinfo, naming it, at both intake checks (#1376)", () => {
+    for (const [name, value] of USERINFO) {
+      expect(validateMissionResourceAccessSchema(entry(value)), name).toBe(
+        `resource ${JSON.stringify(value)} carries a userinfo subcomponent, which an http or https resource never does`,
+      );
+      const e = refusal(() => validateAuthorityProposal(JSON.stringify([entry(value)]), [value]));
+      expect(e.code, name).toBe("invalid_authorization_details");
+      expect(e.message, name).toMatch(/carries a userinfo subcomponent/);
+    }
+  });
+
+  it("admits an @ outside the authority and another scheme's userinfo (positive control, #1376)", () => {
+    for (const value of NOT_USERINFO) {
       expect(validateMissionResourceAccessSchema(entry(value)), value).toBeUndefined();
       expect(validateAuthorityProposal(JSON.stringify([entry(value)]), [value])).toEqual([entry(value)]);
     }
@@ -184,7 +221,17 @@ describe("config loaders refuse a ceiling entry whose resource is not an RFC 398
     );
   });
 
-  it("the shipped configuration loads, its resources unchanged (positive control for the four refusals)", async () => {
+  it("parseCeilingEntry (policy.json) rejects a ceiling entry whose https resource carries userinfo, naming the entry and the value (#1376)", async () => {
+    const value = "https://user@erp.example.com/invoices";
+    configDirWith("policy.json", (raw) => {
+      (raw as { ceiling: Record<string, unknown>[] }).ceiling[0].resource = value;
+    });
+    await expect(import("@mission/demo-data")).rejects.toThrow(
+      `[config:policy.json] policy.ceiling[0] has resource ${JSON.stringify(value)}, which carries a userinfo subcomponent`,
+    );
+  });
+
+  it("the shipped configuration loads, its resources unchanged (positive control for the five refusals)", async () => {
     configDirWith("policy.json", (raw) => {
       (raw as { policy_version: string }).policy_version = "resource-uri-fixture-1310";
     });
@@ -218,6 +265,25 @@ describe("direct derivation (deriveAuthoritySet) refuses an entry whose resource
       expect(e.code, name).toBe("invalid_authorization_details");
       expect(e.message, name).toMatch(/is not an RFC 3986 absolute URI/);
     }
+  });
+
+  it("refuses a ceiling entry or a submitted proposal entry whose http or https resource carries userinfo (#1376)", () => {
+    for (const [name, value] of USERINFO) {
+      const ceiling = refusal(() => deriveAuthoritySet(intent([CANONICAL_RESOURCE]), policy([entry(CANONICAL_RESOURCE), entry(value)])));
+      expect(ceiling.code, name).toBe("invalid_authorization_details");
+      expect(ceiling.message, name).toMatch(/carries a userinfo subcomponent/);
+      const proposal = refusal(() =>
+        deriveAuthoritySet(intent([CANONICAL_RESOURCE]), policy([entry(CANONICAL_RESOURCE)]), [entry(value)]),
+      );
+      expect(proposal.code, name).toBe("invalid_authorization_details");
+      expect(proposal.message, name).toMatch(/carries a userinfo subcomponent/);
+    }
+  });
+
+  it("derives from a resource with an @ outside the authority (positive control, #1376)", () => {
+    const value = NOT_USERINFO[0] as string;
+    const derived = deriveAuthoritySet(intent([value]), policy([entry(value)]), [entry(value)]);
+    expect(derived.map((e) => e.resource)).toEqual([value]);
   });
 
   it("derives from a well-formed resource, keeping its spelling (positive control)", () => {

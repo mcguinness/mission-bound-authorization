@@ -480,7 +480,14 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
           `DecisionEvidenceEmitter: refusing to sign a record for audience "${input.audience}"; this emitter's key is published for "${config.audience}"`,
         );
       }
-      const action_class = input.action_class ?? "consequential_read";
+      // @spec runtime-evidence#decision-evidence-object, runtime#classification
+      // (#956, D814): `action_class` is the class the PDP applied. A request
+      // with none is refused before evaluation (`action_class_missing`), so
+      // no class is ever manufactured here.
+      if (typeof input.action_class !== "string" || input.action_class.length === 0) {
+        throw new Error("Decision Evidence requires the action class the PDP applied");
+      }
+      const action_class = input.action_class;
       if (input.parameter_digest !== undefined) requiredString(input.parameter_digest);
       if (input.conditions?.use_limit !== undefined && (!Number.isSafeInteger(input.conditions.use_limit) || input.conditions.use_limit < 1)) {
         throw new Error("Decision Evidence use_limit must be a positive integer");
@@ -533,7 +540,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
       ) {
         throw new Error("Decision Evidence authority_bound names a bound on a deny one decided");
       }
-      const class_source: RuntimeClassSource = input.action_class !== undefined ? "deployment" : "default";
+      const class_source: RuntimeClassSource = "deployment";
       if (input.parameter_digest === undefined && !(typeof input.evaluation_request_digest === "string" && input.evaluation_request_digest.length > 0)) {
         throw new Error("Decision Evidence requires the evaluation request digest when parameter_digest is absent");
       }

@@ -126,9 +126,11 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
     // class may rely on token-lifetime freshness as its state source, but that
     // never excuses omitting the required state input.
     it("a missing observation denies stale_state at every class below the high-consequence floor too, audit_only included", async () => {
-      for (const actionClass of ["consequential_write", "consequential_read", undefined, "audit_only"]) {
-        const label = actionClass ?? "no class (consequential_read)";
-        const classed = actionClass !== undefined ? { actionClass } : {};
+      // #956 (D814): there is no default class, so no unclassified row; a
+      // request with none is refused before evaluation (evaluate-fail-closed).
+      for (const actionClass of ["consequential_write", "consequential_read", "audit_only"]) {
+        const label = actionClass;
+        const classed = { actionClass };
         const denied = await evaluate(observedRequest({ ...classed, observation: null }), options({ stateSourcePlacement: "pep" }));
         expect(denied.decision, label).toBe(false);
         expect(denied.context.denial_reason, label).toBe("stale_state");
@@ -502,17 +504,19 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
     // #1049 review P2-b: the requirement is rule 1's, not the high-consequence
     // floor's, so it holds for every class that reaches a permit under a bound.
     it("with no read of its own, denies stale_state below the high-consequence floor too: a consequential write and a read", async () => {
-      for (const actionClass of ["consequential_write", "consequential_read", undefined]) {
-        const label = actionClass ?? "no class (consequential_read)";
+      // #956 (D814): there is no default class, so no unclassified row; a
+      // request with none is refused before evaluation (evaluate-fail-closed).
+      for (const actionClass of ["consequential_write", "consequential_read"]) {
+        const label = actionClass;
         const denied = await evaluate(
-          observedRequest({ ...(actionClass !== undefined ? { actionClass } : {}), observation: null }),
+          observedRequest({ actionClass, observation: null }),
           options({ stateSourcePlacement: "pdp" }),
         );
         expect(denied.decision, label).toBe(false);
         expect(denied.context.denial_reason, label).toBe("stale_state");
         // Control: the PDP's own read within the bound establishes state.
         const permitted = await evaluate(
-          observedRequest({ ...(actionClass !== undefined ? { actionClass } : {}), observation: null }),
+          observedRequest({ actionClass, observation: null }),
           options({ stateSourcePlacement: "pdp", stateObservedAt: NOW.toISOString() }),
         );
         expect(permitted.decision, `${label}: ${JSON.stringify(permitted.context)}`).toBe(true);
