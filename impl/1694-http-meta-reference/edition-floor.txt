@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-26T21:07:31Z
-Source repository commit: 0f2cb1f4e4dabea293f43aa5580fec38d7579ad7
+Generated: 2026-10-26T21:17:06Z
+Source repository commit: 646da89d48a412aa0947f6b212bff69d0dc74b69
 Member count: 7
 
 Reading order:
@@ -18757,8 +18757,16 @@ Table of Contents
       establishes a Mission in this mode only under a separately
       specified verified join ([I-D.draft-mcguinness-mission-aauth]).
 
-   The mode each enforcement scope uses is part of its Enforcement Scope
-   Statement (Section 5.2).  In either mode, the established Mission is
+   Each enforcement scope declares the modes it serves as
+   mission_establishment_mode in its Enforcement Scope Statement
+   (Section 5.2): credential_carried, externally_established, or a non-
+   empty list of those values without duplicates where it serves both.
+   A scope declares only the modes it actually serves.  Declaring both
+   creates no fallback: the binding profile's precedence decides which
+   reference establishes the Mission (under the Mission Authority Server
+   profile, a credential-carried reference governs), and a conflicting
+   selector or an invalid credential is not rescued by an externally
+   established reference.  In either mode, the established Mission is
    the Mission every input of Section 2.7 (authority, Resource policy,
    parameters, actor, time, state) is evaluated against, and the Mission
    reference the permit and the evidence record bind.
@@ -20154,7 +20162,7 @@ Table of Contents
      "action_classes": ["irreversible_action"],
      "execution_paths": ["tool-gateway"],
      "pep_locations": ["tool-gateway"],
-     "mission_establishment_mode": "mission_claim"
+     "mission_establishment_mode": "credential_carried"
    }
 
    Resource identifiers and path names are non-empty strings.  Resource
@@ -20403,10 +20411,15 @@ Table of Contents
    the resource server's object-level authorization, and that does not
    materially affect the resource set or disclosure risk, need not be
    classified a consequential read, and is then not separately PDP-gated
-   by this profile.  A deployment MUST NOT, however, use classification
-   to evade the floor or a Resource-policy minimum, and once an action
-   is a consequential write or higher it MUST be gated and bound as the
-   table requires.
+   by this profile.  A request that does reach the PDP within a mediated
+   scope with no action class established, where the Enforcement Scope
+   Statement declares action classes, is a request fault: it is refused
+   before evaluation, never evaluated under a class it was not assigned,
+   and no class is recorded for it
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).  A deployment MUST
+   NOT, however, use classification to evade the floor or a Resource-
+   policy minimum, and once an action is a consequential write or higher
+   it MUST be gated and bound as the table requires.
 
    One predicate cuts across the classes.  An *external-communication
    action* is a consequential action, of any class, whose effect carries
@@ -23404,6 +23417,15 @@ Appendix D.  Document History
       normalization, applied identically at commitment and execution
       reverification.
 
+   *  Changes a requirement (#956, D814): a mediated request that
+      reaches the PDP with no action class established, where the
+      Enforcement Scope Statement declares classes, is a request fault
+      refused before evaluation and is never evaluated or recorded under
+      a class it was not assigned. mission_establishment_mode takes
+      credential_carried, externally_established, or a non-empty
+      duplicate-free list of the modes a scope serves; declaring both
+      creates no fallback, the binding's precedence deciding.
+
    *  Runtime Enforcement Evidence (#821): durability is ordered around
       the effect.  For a high-consequence action, the component that
       releases the effect releases it only after the permit's Decision
@@ -24360,17 +24382,19 @@ Table of Contents
       target is absent, malformed, or outside the enforcement scope the
       requesting PEP is authorized for
       ([I-D.draft-mcguinness-mission-authzen]),
-      operation_target_invalid; for one whose action phase is outside
-      the defined set, or is absent where the PDP's trusted operation
-      declaration requires a phase, phase_invalid; for a compensate-
-      phase request with no compensates_evaluation_id, or a request
-      whose compensates_evaluation_id is malformed,
-      compensation_link_invalid; for one whose evaluation-context
-      binding inputs are missing, malformed, or incompatible with the
-      declared binding, for an operation the runtime profile's
-      Evaluation-Context Binding extension covers,
-      evaluation_context_invalid; and for one carrying a work-item
-      context that is not well-formed (the harness profile,
+      operation_target_invalid; for a mediated request with no action
+      class established, where the runtime Enforcement Scope Statement
+      declares action classes, action_class_missing, recorded with no
+      class; for one whose action phase is outside the defined set, or
+      is absent where the PDP's trusted operation declaration requires a
+      phase, phase_invalid; for a compensate-phase request with no
+      compensates_evaluation_id, or a request whose
+      compensates_evaluation_id is malformed, compensation_link_invalid;
+      for one whose evaluation-context binding inputs are missing,
+      malformed, or incompatible with the declared binding, for an
+      operation the runtime profile's Evaluation-Context Binding
+      extension covers, evaluation_context_invalid; and for one carrying
+      a work-item context that is not well-formed (the harness profile,
       [I-D.draft-mcguinness-mission-harness]), work_item_invalid.  The
       last four describe decision inputs the PDP cannot use, not an
       evaluated policy denial; evaluation_context_unresolvable is
@@ -26610,6 +26634,11 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Refusal Record: action_class_missing records a PDP refusal of a
+      mediated request with no action class established, where the
+      runtime Enforcement Scope Statement declares classes, with no
+      class recorded (#956, D814).
+
    *  Extension Members, Refusal Record and Execution Evidence:
       work_item, owned by the harness profile, records the qualified
       work-item identifier on Decision and Execution Evidence, joining
@@ -28226,6 +28255,16 @@ Table of Contents
    consequential action without Mission evaluation is an enforcement
    bypass, not a decision ([I-D.draft-mcguinness-mission-runtime]).
 
+   Likewise, where the runtime Enforcement Scope Statement declares
+   action classes, a mediated request that reaches the PDP with no
+   action class established, neither carried from the PEP's Operation
+   Profile nor assigned by the PDP's own trusted declaration, is
+   malformed: the PDP MUST refuse it before evaluation, MUST NOT
+   evaluate it under a default class or record a class in Decision
+   Evidence, and MUST record the refusal as a Refusal Record with
+   denial_reason action_class_missing
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).
+
    In addition to evaluating the decision inputs the runtime profile
    requires, the PDP MUST verify that the AuthZEN-carried envelope is
    self-consistent:
@@ -29323,6 +29362,13 @@ Table of Contents
    |enforcement scope at the |           |                                 |
    |PDP                      |           |                                 |
    +-------------------------+-----------+---------------------------------+
+   |No action class          |Refusal    |action_class_missing             |
+   |established for a        |Record     |                                 |
+   |mediated request where   |           |                                 |
+   |the Enforcement Scope    |           |                                 |
+   |Statement declares action|           |                                 |
+   |classes, at the PDP      |           |                                 |
+   +-------------------------+-----------+---------------------------------+
    |action_phase outside the |Refusal    |phase_invalid                    |
    |closed set, or absent    |Record     |                                 |
    |where the trusted        |           |                                 |
@@ -29599,10 +29645,11 @@ Table of Contents
       Refusal Record.
 
    *  Unusable inputs: phase_invalid, compensation_link_invalid,
-      evaluation_context_invalid, and work_item_invalid are PDP refusals
-      before evaluation.  They describe decision inputs the PDP cannot
-      use, not an evaluated policy denial, and a PDP claiming only the
-      Decision Base records them in its own internal form (Section 2).
+      evaluation_context_invalid, work_item_invalid, and
+      action_class_missing are PDP refusals before evaluation.  They
+      describe decision inputs the PDP cannot use, not an evaluated
+      policy denial, and a PDP claiming only the Decision Base records
+      them in its own internal form (Section 2).
 
    *  Target: A target-determining argument that changed under a
       parameter-bound permit is a parameter deviation,
@@ -30357,6 +30404,13 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Changes a requirement (#956, D814): where the runtime Enforcement
+      Scope Statement declares action classes, the PDP refuses a
+      mediated request with no action class established before
+      evaluation, records the Refusal Record action_class_missing, and
+      never evaluates it under a default class or records one in
+      Decision Evidence.
 
    *  Work-Item Context: context.work_item is a harness-owned extension
       point the PEP populates only from the harness's authenticated
