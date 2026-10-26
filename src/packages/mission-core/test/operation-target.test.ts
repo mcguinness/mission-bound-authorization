@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CredentialAuthorityError,
+  carriesHttpUserinfo,
   contractCanEstablish,
   credentialAuthorityPermits,
   establishOperationTarget,
@@ -124,6 +125,42 @@ describe("operation target well-formedness (@spec resource-access#resource-match
     expect(matchResource({ resource: "https://example.com/%41" }, "https://example.com/%41")).toBe(
       "match",
     );
+  });
+});
+
+// @spec resource-access#entry-validation (#1376): "its `resource` is an
+// `http` or `https` URI carrying a userinfo subcomponent". The helper answers
+// for the authority's userinfo only, read from the absolute-URI grammar.
+describe("an http or https URI carrying userinfo (@spec resource-access#entry-validation, #1376)", () => {
+  it("answers for an http or https absolute URI with userinfo, empty userinfo and any scheme case included", () => {
+    for (const v of [
+      "https://user@erp.example.com/invoices",
+      "https://user:secret@erp.example.com/invoices",
+      "https://@erp.example.com/invoices",
+      "http://u%40v@erp.example.com:8443/invoices",
+      "HTTP://user@erp.example.com",
+      "HtTpS://user@erp.example.com",
+    ]) {
+      expect(carriesHttpUserinfo(v), v).toBe(true);
+    }
+  });
+
+  it("does not answer for an @ outside the authority, another scheme's userinfo, a value that is not an absolute URI, or a non-string", () => {
+    for (const v of [
+      "https://erp.example.com/invoices/a@b",
+      "https://erp.example.com/invoices?owner=a@b",
+      "https://erp.example.com",
+      "ftp://user@files.example/x",
+      "mailto:user@example.com",
+      "urn:example:user@host",
+      "//user@erp.example.com/invoices",
+      "https://user@erp.example.com/invoices#frag",
+      undefined,
+      42,
+      ["https://user@erp.example.com"],
+    ]) {
+      expect(carriesHttpUserinfo(v), JSON.stringify(v)).toBe(false);
+    }
   });
 });
 
