@@ -179,6 +179,12 @@ export async function startEstateAuthorizationServer(
   // grant the requested resource scope, within what the registration allows
   // (the provider filters scopes against the resource server's vocabulary
   // and the client's registered scope). An unknown account is refused.
+  // @spec #831 C2b: the key set declares an explicit freshness lifetime, so a
+  // consumer holding it through IssuerKeys need not revalidate on every use.
+  provider.use(async (ctx, next) => {
+    await next();
+    if (ctx.method === "GET" && ctx.path === "/jwks" && ctx.status === 200) ctx.set("cache-control", "max-age=300");
+  });
   provider.use(async (ctx, next) => {
     const match = ctx.path.match(/^\/interaction\/([^/]+)$/);
     if (!match || ctx.method !== "GET") return next();

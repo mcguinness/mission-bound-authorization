@@ -105,6 +105,7 @@ async function close(stack: DemoStack): Promise<void> {
   await stack.masGovernedChannel?.close();
   stack.pdpClaims.close();
   stack.writeReservations.close();
+  stack.evidenceRetention.close();
   stack.payments.db.close();
   stack.kernel.db.close();
 }
@@ -133,7 +134,7 @@ const decisionsOf = (stack: DemoStack, missionId: string) =>
     .map((e) => e.content as unknown as { audience: string });
 
 const atLocation = (stack: DemoStack, boundary: string) =>
-  stack.evidenceRetention.resolver({ locations: [evidenceKeySetLocation(boundary)] });
+  stack.evidenceKeySets.resolver({ locations: [evidenceKeySetLocation(boundary)] });
 
 /** A declared change whose new version keeps the stack's keys, completed over `mode`. */
 async function completeCutover(mode: "co-resident" | "remote"): Promise<void> {
@@ -272,7 +273,7 @@ describe("a declared change of boundary identifier through the composed stack (@
       const { token, missionId } = demoCredential(stack);
       expect((await stack.server.callReadTool("get_invoice", { invoice_id: "inv-seed" }, token)).ok).toBe(true);
       // The rotated key is published for the new boundary; the settlement verifier still does not hold it.
-      stack.evidenceRetention.publishKey({
+      stack.evidenceKeySets.publishKey({
         location: evidenceKeySetLocation(NEW),
         kid: "pep-rotated",
         emitterId: CANONICAL_RESOURCE,

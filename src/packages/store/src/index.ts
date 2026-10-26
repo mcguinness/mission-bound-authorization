@@ -19,13 +19,32 @@ export interface StoreOptions {
    * writer. Meaningful only with `file`.
    */
   exclusive?: boolean;
+  /**
+   * The file's durability, set independently of locking (#1684, D826):
+   * `FULL` adds a WAL synchronization at each commit, which supports
+   * power-loss durability where the storage stack honors synchronization.
+   * The value is read back and the open refused if it did not take. Absent,
+   * WAL's default applies, unless `exclusive` asks for FULL.
+   */
+  synchronous?: "FULL";
 }
+
+/** A store whose requested durability did not take: the open is refused. */
+export class StoreDurabilityError extends Error {}
 
 export function openStore(schemaSql: string, options: StoreOptions = {}): Database.Database {
   const db = new Database(options.file ?? ":memory:", options.exclusive ? { timeout: 0 } : {});
   if (options.exclusive) db.pragma("locking_mode = EXCLUSIVE");
   db.pragma("journal_mode = WAL");
-  if (options.exclusive) db.pragma("synchronous = FULL");
+  if (options.exclusive || options.synchronous === "FULL") {
+    db.pragma("synchronous = FULL");
+    // 2 is FULL. Verified, not assumed: a build or environment that ignored
+    // the pragma would otherwise run with less durability than asked for.
+    if (db.pragma("synchronous", { simple: true }) !== 2) {
+      db.close();
+      throw new StoreDurabilityError("the store did not accept synchronous=FULL");
+    }
+  }
   db.pragma("foreign_keys = ON");
   // Under EXCLUSIVE, the first write takes the lock and keeps it until close.
   if (options.exclusive) db.transaction(() => undefined).immediate();

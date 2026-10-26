@@ -99,6 +99,8 @@ export interface MasPilotConfig {
     issuer: string;
     host: string;
     port: number;
+    /** @spec #831 C2b (D825): the kids the pilot trusts for the estate issuer's tokens. */
+    trusted_kids: string[];
     accounts: string[];
     clients: MasPilotClientConfig[];
     resource_servers: Record<string, { scope: string }>;
@@ -254,7 +256,10 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
     "routes",
     "inventory",
   ]);
-  const estate = obj(root.estate, "estate", ["issuer", "host", "port", "accounts", "clients", "resource_servers"]);
+  const estate = obj(root.estate, "estate", ["issuer", "host", "port", "trusted_kids", "accounts", "clients", "resource_servers"]);
+  // @spec #831 C2b (D825): the estate issuer's trusted kids, configured, never read off its key set.
+  const trustedKids = strs(estate.trusted_kids, "estate.trusted_kids");
+  if (trustedKids.length === 0) throw new MasPilotConfigError("estate.trusted_kids must list at least one kid");
   const port = estate.port;
   if (typeof port !== "number" || !Number.isInteger(port) || port <= 0) {
     throw new MasPilotConfigError("estate.port must be a positive integer");
@@ -351,7 +356,7 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
     pilot: str(root.pilot, "pilot"),
     mission_issuer: missionIssuer,
     mas_delegates: strs(root.mas_delegates, "mas_delegates"),
-    estate: { issuer, host: str(estate.host, "estate.host"), port, accounts: strs(estate.accounts, "estate.accounts"), clients, resource_servers },
+    estate: { issuer, host: str(estate.host, "estate.host"), port, trusted_kids: trustedKids, accounts: strs(estate.accounts, "estate.accounts"), clients, resource_servers },
     mapping_cache: { max_stale_seconds: maxStale },
     introspection: { client_id: introspectionClient, timeout_ms: timeoutMs, cache_max_seconds: cacheMax },
     separated_mas: separatedMas(root.separated_mas),
