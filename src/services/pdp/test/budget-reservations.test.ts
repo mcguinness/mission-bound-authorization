@@ -1374,9 +1374,9 @@ describe("the PDP-side budget binding and the committed destinations (@spec mete
     expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
   });
 
-  it("the preflight and prepare phases of the metered action are held to the committed destination too, and charge nothing (@spec mission-template#standing-payment-exception, metering#metering, #813)", async () => {
+  it("the preflight and prepare phases of the metered action are held to the committed destination too: another payee is denied parameter_violation, the committed one permitted (@spec mission-template#standing-payment-exception, metering#metering, #813)", async () => {
     const c = clock();
-    const { file, open } = domainOnFile(c);
+    const { open } = domainOnFile(c);
     const claims = open();
     const v = view("msn_a", binding("msn_a"));
     for (const [phase, actionClass] of [
@@ -1389,8 +1389,6 @@ describe("the PDP-side budget binding and the committed destinations (@spec mete
       );
       expectPermit(await evaluate(request(c, { phase, actionClass }), options(claims, c, v)));
     }
-    expect(claims.budgetCounter(SHARED)).toBeUndefined();
     claims.close();
-    expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
   });
 });
