@@ -120,6 +120,15 @@ informative:
       - org: OpenID Foundation
     date: 2026
   I-D.draft-ietf-wimse-aims:
+  I-D.draft-hardt-oauth-aauth-protocol:
+    title: "AAuth Protocol"
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026-09-25
+    seriesinfo:
+      Internet-Draft: draft-hardt-oauth-aauth-protocol-11
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-cecchetti-oauth-rar-cedar:
@@ -5971,6 +5980,9 @@ Token Claims" registry:
 - Change Controller: IETF
 - Specification Document(s): this document, {{mission-claim}}
 
+{{adjacent-work}} distinguishes this claim from similarly named claims
+and concepts of adjacent work.
+
 ## OAuth Token Introspection Response Registration {#oauth-token-introspection-response-registration}
 
 This document requests registration of the following in the "OAuth Token
@@ -6581,6 +6593,15 @@ unchanged: the agent is the client, and the delegating principal is
 the token `sub` ({{principal-model}}). An agent authenticated and
 delegated per that document uses these mechanisms to obtain
 Mission-bound tokens.
+
+The `mission` claim ({{mission-claim}}) references a Mission, the
+authorization object this document defines. It is distinct from
+AAuth's `mission_s256` claim ({{I-D.draft-hardt-oauth-aauth-protocol}}),
+the SHA-256 digest that identifies an AAuth mission, and from the
+agent's mission that {{I-D.draft-ietf-wimse-aims}} names, the purpose
+this document translates into authorization. The two claim names do
+not collide in the JSON Web Token Claims registry
+({{json-web-token-claims-registration}}).
 
 Decision-layer access-request and approval workflows, such as the
 OpenID AuthZEN Access Request and Approval Profile {{AuthZEN.ARAP}},
