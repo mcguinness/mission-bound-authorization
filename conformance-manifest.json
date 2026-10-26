@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "6f526837284ef4bf36b2b1811d5143bfe6ed5778",
-    "content_sha256": "da4a97aaf10d2898a4517eb300c1c87dbe8e37266a219550c36c032874b3cb45"
+    "revision": "367c3df46c8970782defa2bc33a84d697373da2a",
+    "content_sha256": "d2611e84d794eb7cd05ac292304aff1b333575daefe5ca1fec7de89b5a95d2ba"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "45adefd6ad9e16345428d9dd4c93806cc9c6c71f",
@@ -8752,6 +8752,29 @@
     }
    ],
    "notes": "#1532 item 3 (D845, with #1722). The rendering of client-supplied text is attributed to the client the AS identified (the client_id it resolved the request to from its registration), on both reference approval surfaces that render client text: renderApprovalPage (authorization-code and device approval) and Expansion's renderDeferralPage, since Expansion reuses the binding's approval event. Proved by eight mutants, each killed by a cited test: dropping the Intent attribution or the proposal attribution on either page, attributing no client, attributing from the client's goal text, and rendering the client text inside the derived (or successor) authority section."
+  },
+  {
+   "id": "core.rendering-safeguards.intent-rendered-as-recorded",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "The rendering presents `goal` and `task_bounds` as recorded, without truncation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "given an Intent whose goal and task_bounds exceed any display length the AS would otherwise apply, the consent rendering shows each exactly as recorded, with nothing truncated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1532, D859. Replaces the removed misleading-goal refusal, which would have gated issuance on goal text against the binding's prohibition on gating issuance on goal, goal_lang or task_bounds. No test renders an over-long goal and checks it is not truncated."
   },
   {
    "id": "core.approval-event.authority-source-rendering",
