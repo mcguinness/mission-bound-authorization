@@ -539,6 +539,19 @@ lifetime-bounded action-time posture only: it cannot reflect a
 revocation faster than the credential lifetime, so it cannot host a
 class whose bound demands that.
 
+These bounds run from a Mission state change. A deployment that claims
+a bound on how quickly an external authority change stops dependent
+actions ({{input-authority-dependency}}) MUST state it from the time
+the authoritative system records the change to the time a dependent
+action can no longer begin an effect, and MUST state separately how
+work already started is treated. The claim accounts for detecting the
+change, evaluating its effect, any resulting Mission or policy state
+change, downstream reliance on earlier observations, and the remaining
+validity of issued permits. A bound measured from a Mission state
+change does not establish a bound from the authority change, and a
+measured successful disablement does not establish it when an event is
+lost, a feed is disconnected, or a reconciler fails.
+
 - The PDP MUST refuse a consequential action when it cannot establish,
   within the deployment's published staleness bound, that the Mission
   is `active`.
@@ -1029,6 +1042,64 @@ and credential lifecycles gate conjunctively; a valid credential never
 overrides a revoked agent or a non-active Mission
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
+### Authority Dependencies {#input-authority-dependency}
+
+A deployment's policy can make reliance on a Mission depend on an
+external authority remaining effective: an entitlement, a delegation,
+the approving principal's continuing role, an accountable owner's
+sponsorship, or a governing policy. Approval evidence does not by
+itself establish that such a condition still holds
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Single Accountable
+Approver"), and whether a later change affects an existing Mission is
+the deployment's policy. The agent-registry evaluation of
+{{input-actor}} is one such dependency.
+
+A deployment that declares an authority dependency MUST state in its
+Enforcement Scope Statement ({{runtime-conformance}}):
+
+- the dependency, its authoritative source, and the state an
+  observation of it represents;
+- what it governs: future Mission activations, an existing Mission,
+  selected authority entries or actions, or reliance on one particular
+  business approval;
+- which changes at the source invalidate reliance;
+- its maximum staleness, separately from the Mission-state freshness
+  declaration ({{state-freshness}});
+- how it is enforced: by direct evaluation, by lifecycle-mediated
+  enforcement, or both; and
+- what restores reliance after it fails, and how responsibility passes
+  to a successor through an authorized process that leaves the
+  original approval's attribution unchanged.
+
+Under direct evaluation, the PDP, or a composed resource-policy step
+({{input-resource-policy}}), establishes the dependency for each
+decision it governs from an acceptable authoritative observation.
+Under lifecycle-mediated enforcement, a trusted reconciler translates
+a relevant change into a Mission restriction, such as a lifecycle
+operation or a narrowing where a containment overlay runs, through an
+upstream observation path whose delay is bounded and monitored. A
+current `active` state does not show that this reconciliation is
+current: when upstream observation or reconciliation exceeds its
+declared bound, the deployment MUST refuse the actions the dependency
+governs until it is current again.
+
+The deployment MUST refuse an action governed by a declared dependency,
+through its declared enforcement route, when the dependency is known
+to be withdrawn, when an applicable invalidation has been observed, or
+when no acceptable authoritative observation remains. Unless the deployment requires an online check, an outage
+alone does not invalidate an observation still within its accepted
+validity. That validity runs from the time the observation represents,
+never from a later re-issue or re-signing
+({{I-D.draft-mcguinness-mission-control-plane}}). A permit issued in
+reliance on a dependency observation MUST expire no later than that
+observation's accepted validity.
+
+Retained evidence of such a refusal, from whichever component enforces
+the dependency, distinguishes a known withdrawal, a stale observation
+and an unavailable source. A dependency enforced through
+an existing mechanism keeps that mechanism's refusal: an inactive
+Mission, contained authority, or a failed resource-policy condition.
+
 ### Time {#input-time}
 
 The PDP MUST refuse if the decision context indicates the credential
@@ -1103,15 +1174,16 @@ that digest immediately before acting
 
 - `parameter_digest` is `sha-256:` followed by the base64url, no
   padding, SHA-256 {{RFC6234}} of the JCS {{RFC8785}} serialization of
-  the normalized parameter object. It MUST be computed under the same
-  canonicalization rules the issuance profile defines (duplicate
-  member rejection, significant array order, byte-for-byte URI
-  comparison); this document does not define a second canonicalization.
-  It is a canonical-object digest under the substrate's default
-  commitment construction, which this document imports normatively
-  ({{I-D.draft-mcguinness-mission-substrate}}): the I-JSON
-  requirement and the reject-unknown-prefix rule apply to computing
-  and verifying it unchanged.
+  the normalized parameter object. It MUST be computed under the
+  substrate's default commitment construction, which this document
+  imports normatively ({{I-D.draft-mcguinness-mission-substrate}}): a
+  duplicate member is rejected at parse time, array order is
+  significant because JCS preserves it, a URI-valued parameter is
+  preserved unless the Operation Profile defines its normalization
+  ({{parameter-binding}}), and this document defines no second
+  canonicalization. It is a canonical-object digest under that
+  construction: the I-JSON requirement and the reject-unknown-prefix
+  rule apply to computing and verifying it unchanged.
 - Every parameter that influences the action's external effect (for
   example, the recipient, destination, amount, or target object) MUST
   enter the `parameter_digest`. A field the deployment excludes MUST be
@@ -1452,7 +1524,10 @@ identifier and issuer, the kernel's Mission Reference and Controller;
 the lifecycle state space with its only-`active`-permits rule, the
 kernel's governance gate; the immutable Approved Context, the
 approval-time fixity behind every anchor its records cite; and the
-Mission's audit horizon, which bounds the ordered governance record.
+Mission's retention period as its binding declares it (the audit
+horizon in the OAuth binding), which bounds the ordered governance
+record and is the floor for this document's records
+({{record-integrity}}).
 The kernel requires no particular integrity anchors: `intent_hash`
 and `authority_hash` are the OAuth binding's commitment to the
 Approved Context, supplied by the issuance profile, not by the
@@ -2452,8 +2527,8 @@ The materialized policy view MUST satisfy three properties:
 
 - Reproducible: identical manifest inputs, including the compiler
   identity, produce a byte-identical manifest, and therefore an
-  identical `policy_view_id`, under the canonicalization rules of
-  {{I-D.draft-mcguinness-oauth-mission}}.
+  identical `policy_view_id`, under the substrate's default commitment
+  construction ({{I-D.draft-mcguinness-mission-substrate}}).
 - Identifiable: the view carries a `policy_view_id`, so PDP cache
   entries are addressable.
 - Bounded: materialization is faithful and does not enlarge the
@@ -2463,10 +2538,10 @@ The materialized policy view MUST satisfy three properties:
 The committed object is a canonical JSON manifest, never the engine
 binary itself: JCS canonicalization applies to the manifest, and an
 engine-native artifact enters the manifest only by digest, never
-directly. `policy_view_id` is the integrity-anchor encoded form
-({{I-D.draft-mcguinness-oauth-mission}}) of the SHA-256 {{RFC6234}} of
-the JCS {{RFC8785}} canonical bytes of that profile's domain-separated,
-issuer-bound integrity-anchor envelope with `typ` `mission-policy-view`:
+directly. `policy_view_id` is the `sha-256:` encoded SHA-256
+{{RFC6234}} of the JCS {{RFC8785}} canonical bytes of a
+domain-separated, issuer-bound envelope with `typ`
+`mission-policy-view`:
 
 ~~~
 SHA-256(JCS({
@@ -2573,7 +2648,14 @@ implementers of the same operation bind the same bytes:
 - default insertion and omitted-optional-field rules applied before
   canonicalization;
 - set-like array handling and any other canonicalization beyond the
-  issuance profile's rules;
+  substrate's default commitment construction;
+- the normalization of URI-valued parameters. Absent one, a URI-valued
+  parameter is preserved as presented. A defined normalization applies
+  identically before the commitment and at execution reverification
+  ({{execution-reverification}}); it never changes how authority
+  entries match resources
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) and never
+  rewrites an approved identifier;
 - exactly which fields enter the `parameter_digest`;
 - where Evaluation-Context Binding is claimed, the versioned descriptor
   of decision-relevant resource-resolved facts and their granularity
@@ -3273,13 +3355,24 @@ The detailed object schema is the Execution Evidence Object, defined
 by the runtime evidence companion
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
+Durability is ordered around the effect. For an action in the
+high-consequence classes, the component that releases the effect MUST
+NOT release it until the permit's Decision Evidence and the
+identifiers that recover the action's disposition (the evaluation
+identifier, and any idempotency claim or consumption reservation the
+action holds) are durably committed. If they cannot be committed,
+that component MUST refuse the action. A crash after an irreversible
+external effect is released and before its outcome is recorded leaves
+an unknown outcome, reconciled as below, with recovery under
+{{execution-capabilities}} and {{idempotency}}.
+
 Reconciliation is bounded in time by the reconciliation window,
 orphan-detection component, and alerting obligation the Enforcement
 Scope Statement declares ({{runtime-conformance}}): an
 execution-outcome record is expected for each decision within the
 window, and the named component detects orphaned evidence (a decision
-with no matching execution-outcome record within it) and sequence
-gaps in a Mission's records ({{record-integrity}}).
+with no matching execution-outcome record within it) and per-emitter
+sequence gaps in a Mission's records ({{record-integrity}}).
 
 An unknown outcome has an owner and a deadline, not only a window:
 the declared component MUST actively reconcile each unresolved
@@ -3348,7 +3441,8 @@ The following requirements apply to every record:
 - The Resource Server runtime profile MUST define the record's
   concrete serialization and canonicalization before storage and
   integrity protection. JSON records SHOULD use JCS {{RFC8785}} under
-  the issuance profile's canonicalization rules.
+  the substrate's default commitment construction
+  ({{I-D.draft-mcguinness-mission-substrate}}).
 - It MUST be append-only and integrity-protected; the enforcement
   scope MUST name the mechanism (a hash-linked log, signed segments, a
   transparency anchor, or equivalent). Where a JSON record is
@@ -3373,14 +3467,34 @@ The following requirements apply to every record:
   across emitters; that ordering is best-effort, from the
   correlation members and each record's timestamps together
   ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+- An emitter MUST NOT reuse a sequence value for one Mission,
+  including across a restart and among replicas acting as that
+  emitter: a value it cannot use leaves a detectable gap rather than
+  being issued again.
 - The retention window declared in the Enforcement Scope Statement
-  MUST be no shorter than the Mission's audit horizon, as defined in
-  the Mission Record section of {{I-D.draft-mcguinness-oauth-mission}}.
+  MUST be no shorter than the Mission's retention period as its
+  Mission Substrate Binding declares it
+  ({{I-D.draft-mcguinness-mission-substrate}}, Section "Ordered
+  Governance Record"), nor shorter than any longer period a companion
+  the deployment adopts requires. That period is a floor for every
+  required record, not only for the governance record it is declared
+  for. The OAuth binding realizes it as the Mission's audit horizon
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Provenance and
+  Expiry"), which covers the Mission Record and its evidence.
+
+Export, transparency registration, and signing for portable
+verification run from the producer's durable store. They run
+asynchronously only as the audit companion's Registration
+Availability ({{I-D.draft-mcguinness-mission-audit}}) and the
+signer-outage rule of {{agent-isolated-evidence-emission}} permit,
+without losing a required record, and a record a composing profile
+requires to be individually signed stays individually signed
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 Digest encoding is uniform across this document family: every digest a
 family document defines uses the `sha-256:` prefixed base64url,
-no-padding encoding of the issuance profile's integrity-anchor rules
-({{I-D.draft-mcguinness-oauth-mission}}). The exceptions are externally
+no-padding encoding of the substrate's default commitment construction
+({{I-D.draft-mcguinness-mission-substrate}}). The exceptions are externally
 fixed encodings: the COSE hashed payload of the audit companion's
 Signed Statements ({{I-D.draft-mcguinness-mission-audit}}) carries the
 raw digest bytes the COSE hash-envelope mechanism requires, and the
@@ -4020,7 +4134,7 @@ the normalized parameter object is:
 
 The `parameter_digest` is `sha-256:` followed by the base64url,
 no-padding SHA-256 of the JCS {{RFC8785}} serialization of that object,
-under the issuance profile's canonicalization rules (no envelope; the
+under the substrate's default commitment construction (no envelope; the
 normalized parameter object is digested directly). The JCS canonical
 bytes are a single line with sorted member names and no whitespace:
 
@@ -4149,6 +4263,39 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Changes a requirement (#854, D814): the record retention floor is the
+  Mission's retention period as its Mission Substrate Binding declares
+  it, realized in the OAuth binding as the audit horizon (the Mission
+  Record and its evidence), and no shorter than a longer period an
+  adopted companion requires; it is a floor for every required record,
+  not only the governance record. Commitment construction,
+  canonicalization and digest encoding are imported from the
+  substrate's default commitment construction, OAuth references
+  remaining for OAuth-owned anchors. A URI-valued parameter is
+  preserved unless the Operation Profile defines its normalization,
+  applied identically at commitment and execution reverification.
+- Runtime Enforcement Evidence (#821): durability is ordered around
+  the effect. For a high-consequence action, the component that
+  releases the effect releases it only after the permit's Decision
+  Evidence and the identifiers that recover the action's disposition
+  are durably committed, and refuses the action when they cannot be. A
+  crash after an irreversible external effect is released and before
+  its outcome is recorded is an unknown outcome under the existing
+  reconciliation rules. An emitter never reuses a sequence value for
+  one Mission, across a restart or among its replicas; a value it
+  cannot use is a detectable gap. Export, transparency registration
+  and portable signing run from the producer's durable store under the
+  existing asynchronous rules, and orphan detection names per-emitter
+  sequence gaps.
+
+- Authority Dependencies: a deployment that makes reliance depend on an
+  external authority remaining effective declares the dependency, its
+  source, what it governs, invalidating changes, its staleness bound,
+  its enforcement route (direct evaluation, lifecycle-mediated, or
+  both) and its recovery; reliance stops when no acceptable
+  observation remains, and a permit does not outlive the observation.
+  Mission State and Freshness states how a bound from an external
+  authority change is measured (#830).
 - Evaluation-Context Binding (#773): the salt survives restart and is
   available to every replica that can use its bindings, or is held per
   epoch, so that a restart or a replica without the version loses those
@@ -4161,13 +4308,11 @@ worked example shows the concrete record
   observable digest pair kept. The context is recomputed under the
   descriptor the binding committed, and a changed descriptor is refused
   on its own.
-
 - Compound Actions: a compensation's parameters are those of the
   committed effect it offsets, established from that effect's retained
   record before the Decision and bound through `parameter_digest`, and
   the executing resource refuses an offset whose parameters differ
   (#252).
-
 - Deployment Considerations: a gated action waits for its gate in
   every class; whether the decision waits on the network depends on
   where the state it consults is held. The Mission is the partition

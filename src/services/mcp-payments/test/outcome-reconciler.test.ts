@@ -21,8 +21,9 @@
  * never redeemed), and missing evidence after an effect (the effect stands,
  * the claim is never settled as if nothing happened). Every case counts
  * CONNECTOR LEDGER entries, not evidence records, to show that no retry and
- * no reconciliation repeats an effect: the ledger recovery path records a
- * new completed record under a fresh execution id by design.
+ * no reconciliation repeats an effect. The ledger recovery path records the
+ * completed record the effect never got, under the redeeming attempt's own
+ * execution identity from its pre-effect record (#821).
  */
 
 import { randomUUID } from "node:crypto";
@@ -53,6 +54,7 @@ import {
   indeterminateClaimAlert,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
+  openWriteReservationStore,
   operationKey,
   OutcomeReconciler,
   OutcomeReconcilerConfigError,
@@ -132,6 +134,8 @@ interface HarnessOptions {
   clock?: Clock;
   /** Hold the PEP's live settlements, as a lost acknowledgement does; the reconciler's channel is unaffected. */
   holdSettlement?: boolean;
+  /** The PEP's write-reservation file; a second harness on the same file is a restarted PEP (#821). */
+  reservationsFile?: string;
 }
 
 /** One process: the PDP claim domain and decision point, and the executing PEP with its reconciler. */
@@ -196,7 +200,9 @@ async function harness(o: HarnessOptions = {}) {
   };
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const connectors = new Connectors(now);
-  const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep", now });
+  const writeReservations = o.reservationsFile
+    ? openWriteReservationStore({ file: o.reservationsFile, owner: "mcp-payments-pep", now })
+    : openEphemeralWriteReservationStore({ owner: "mcp-payments-pep", now });
   let lastDecision: Record<string, unknown> | undefined;
   const pep = new Pep({
     decide: channel.decide,
@@ -531,6 +537,62 @@ describe("the declared outcome reconciler runs the reconciliation (@spec runtime
       expect((await wire(after, k)).denial_reason).toBe("duplicate_suppressed");
       expect(after.lastDecision()?.next_action).toBe("none");
       expect(after.connectors.ledgerEntries()).toHaveLength(0);
+    } finally {
+      await after.close();
+    }
+  });
+
+  it("missing evidence after an effect: the late completed record from the ledger is the redeeming attempt's own, under its execution_id and attempted_at (#821)", async () => {
+    const h = await harness();
+    try {
+      await wireWithLostEvidence(h, key());
+      // The attempt was recorded before the effect; its record never was.
+      const [attempt] = h.writeReservations.attempts();
+      expect(attempt).toBeDefined();
+      h.clock.advance(PAST_LEASE_MS);
+      const run = await h.reconciler.runOnce();
+      expect(Object.values(run.claims?.states ?? {})).toEqual(["completed"]);
+      const late = executions(h, "completed").flatMap((e) => (e.kind === "execution" ? [e.content] : []));
+      expect(late.map((r) => [r.evaluation_id, r.execution_id, r.attempted_at])).toEqual([
+        [attempt?.evaluationId, attempt?.executionId, new Date(attempt?.attemptedAtMs as number).toISOString()],
+      ]);
+      expect(h.connectors.ledgerEntries()).toHaveLength(1);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("a prior process's attempt record survives a restart and leaves its operation undetermined: the empty ledger proves nothing, no record is fabricated, the claim closes indeterminate, and nothing executes again (#821)", async () => {
+    const c = clock();
+    const claimsFile = tempClaimsFile();
+    const reservationsFile = join(mkdtempSync(join(tmpdir(), "reservations-821-")), "write-reservations.sqlite");
+    const before = await harness({ claimsFile, reservationsFile, clock: c });
+    const k = key();
+    await wireWithLostEvidence(before, k);
+    const recorded = before.writeReservations.attempts();
+    expect(recorded).toHaveLength(1);
+    const evaluationId = recorded[0]?.evaluationId as string;
+    await before.close();
+    // A new process on the same files: the in-memory connector ledger, the
+    // redemption records and the evidence are gone; the attempt record is not.
+    c.advance(1_000);
+    const after = await harness({ claimsFile, reservationsFile, clock: c });
+    try {
+      expect(after.writeReservations.attempts()).toEqual(recorded);
+      expect(after.connectors.ledgerEntries()).toEqual([]);
+      const forAttempt = () =>
+        after.evidence.all().filter((e) => e.kind === "execution" && e.content.evaluation_id === evaluationId);
+      expect((await after.reconciler.runOnce()).claims).toEqual({ settled: [], unredeemed: [], open: [], states: {}, errors: [] });
+      expect(forAttempt()).toEqual([]);
+      c.set(WINDOW_CLOSE_MS);
+      await after.reconciler.runOnce();
+      expect(after.alerts.alerts.map((a) => [a.kind, a.evaluation_id, a.cause])).toEqual([["claim_indeterminate", evaluationId, "window_closed"]]);
+      // Undetermined, never resolved by the restarted process: no record for
+      // the attempt, no second effect, no second attempt.
+      expect(forAttempt()).toEqual([]);
+      expect((await wire(after, k)).denial_reason).toBe("duplicate_suppressed");
+      expect(after.connectors.ledgerEntries()).toEqual([]);
+      expect(after.writeReservations.attempts()).toEqual(recorded);
     } finally {
       await after.close();
     }

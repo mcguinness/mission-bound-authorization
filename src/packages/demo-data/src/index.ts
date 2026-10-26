@@ -7,11 +7,13 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { dirname, join, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ACTION_PHASES,
   type ActionPhase,
+  type AuthorityDependencyDeclaration,
   type AuthorityEntry,
   actionOutsideGrammar,
   computeAnchor,
@@ -19,9 +21,11 @@ import {
   DuplicateMemberError,
   EvaluationContextBindingDeclarations,
   GOVERNED_POLICY_TYP,
+  type IdentityStateRecord,
   isAbsoluteUri,
   isActionPhase,
   isAuthorityEntry,
+  parseAuthorityDependencyDeclarations,
   parseScopeProjectionMapping,
   parseStrictJson,
   ResourceContractDeclarations,
@@ -190,6 +194,18 @@ function reqNumber(file: string, obj: Record<string, unknown>, key: string, ctx:
 export interface TopologyKey {
   kid: string;
   alg: string;
+  /**
+   * @spec #831 C: the `kid`s this deployment's consumers trust for the key's
+   * role, when they differ from `kid` alone: during a rotation the operator
+   * adds the next generation's `kid` here before activating it, and removes a
+   * withdrawn one. The signer never reads it. Read through {@link trustedKids}.
+   */
+  trusted?: readonly string[];
+}
+
+/** The `kid`s consumers trust for a key's role: its `trusted` list, or its `kid` alone. */
+export function trustedKids(key: TopologyKey): readonly string[] {
+  return key.trusted ?? [key.kid];
 }
 
 /**
@@ -288,8 +304,14 @@ export interface Topology {
    * `pepWriteReservations.file` (#918) is the enforcing PEP's reservation and
    * retention store for keyed reversible writes: a separate file, opened
    * single-writer by that PEP alone, never shared with the PDP's.
+   * `pepEvidenceRetention.file` (#821) is the same PEP's evidence retention
+   * store: the records it retains and its per-emitter sequences.
    */
-  stores: { pdpIdempotencyClaims: { file: string }; pepWriteReservations: { file: string } };
+  stores: {
+    pdpIdempotencyClaims: { file: string };
+    pepWriteReservations: { file: string };
+    pepEvidenceRetention: { file: string };
+  };
 }
 
 function reqTxnChallenge(
@@ -315,9 +337,15 @@ function reqTxnChallenge(
 
 function reqKey(file: string, obj: Record<string, unknown>, key: string, ctx: string): TopologyKey {
   const k = asObject(file, obj[key], `${ctx}.${key}`);
+  const trusted =
+    k.trusted === undefined ? undefined : reqStringArray(file, k, "trusted", `${ctx}.${key}`);
+  if (trusted && (trusted.length === 0 || trusted.some((t) => t.length === 0))) {
+    throw new ConfigError(file, `${ctx}.${key}.trusted must list at least one non-empty kid`);
+  }
   return {
     kid: reqString(file, k, "kid", `${ctx}.${key}`),
     alg: reqString(file, k, "alg", `${ctx}.${key}`),
+    ...(trusted ? { trusted } : {}),
   };
 }
 
@@ -353,6 +381,18 @@ function loadTopology(): Topology {
     throw new ConfigError(
       file,
       "stores.pepWriteReservations.file must differ from stores.pdpIdempotencyClaims.file",
+    );
+  }
+  const retentionStore = asObject(file, stores.pepEvidenceRetention, "stores.pepEvidenceRetention");
+  const retentionFile = resolvePath(
+    dirname(CONFIG_DIR),
+    reqString(file, retentionStore, "file", "stores.pepEvidenceRetention"),
+  );
+  // #821: each durable store is its own single-writer file.
+  if (retentionFile === claimFile || retentionFile === reservationFile) {
+    throw new ConfigError(
+      file,
+      "stores.pepEvidenceRetention.file must differ from every other store's file",
     );
   }
   return {
@@ -407,12 +447,22 @@ function loadTopology(): Topology {
     stores: {
       pdpIdempotencyClaims: { file: claimFile },
       pepWriteReservations: { file: reservationFile },
+      pepEvidenceRetention: { file: retentionFile },
     },
   };
 }
 
 /** The validated deployment topology; consumers inject these values (no cycles). */
 export const TOPOLOGY: Topology = loadTopology();
+
+/**
+ * @spec #831 C2 (D825): the topology's keys as `topology.json` holds them
+ * now, read from disk afresh, for a consumer's reload of its trusted kids
+ * while it runs. {@link TOPOLOGY} is the file as it was at startup.
+ */
+export function readTopologyKeys(): Topology["keys"] {
+  return loadTopology().keys;
+}
 
 /** The default (pre-env-override) payments resource, from topology.json. */
 const DEFAULT_PAYMENTS_RESOURCE = TOPOLOGY.resources.payments;
@@ -588,6 +638,67 @@ function loadUsers(): SeededUser[] {
 }
 
 export const USERS: SeededUser[] = loadUsers();
+
+/** @spec runtime#input-authority-dependency (#830): the identity source's file, re-read without a restart. */
+export const IDENTITY_SOURCE_FILE = join(CONFIG_DIR, "identity.json");
+
+/**
+ * @spec runtime#input-authority-dependency (#830, D798): the identity
+ * source's continuing state for each principal: `status` (`active`,
+ * `disabled` or `deprovisioned`; absent, `active`), the clients the principal
+ * has withdrawn its delegation from (`withdrawn_delegations`; absent, none),
+ * and when the source recorded the latest change (`changed_at`, RFC 3339;
+ * absent, unstated). The strict reader refuses an unknown status, a malformed
+ * list or instant, and a principal listed twice. The source may be rewritten
+ * while the deployment runs: the identity-state resolver re-reads it.
+ */
+export function parseIdentityState(raw: unknown, file = "identity.json"): IdentityStateRecord[] {
+  const seen = new Set<string>();
+  return asArray(file, raw, "identity").map((entry, i) => {
+    const ctx = `identity[${i}]`;
+    const u = asObject(file, entry, ctx);
+    const sub = reqString(file, u, "sub", ctx);
+    if (seen.has(sub)) throw new ConfigError(file, `${ctx}.sub ${sub} is listed twice`);
+    seen.add(sub);
+    const status = u.status === undefined ? "active" : u.status;
+    if (status !== "active" && status !== "disabled" && status !== "deprovisioned") {
+      throw new ConfigError(file, `${ctx}.status must be active, disabled or deprovisioned`);
+    }
+    const withdrawn =
+      u.withdrawn_delegations === undefined
+        ? []
+        : reqStringArray(file, u, "withdrawn_delegations", ctx);
+    const changedAt = u.changed_at;
+    if (
+      changedAt !== undefined &&
+      (typeof changedAt !== "string" || !Number.isFinite(Date.parse(changedAt)))
+    ) {
+      throw new ConfigError(file, `${ctx}.changed_at must be an RFC 3339 instant`);
+    }
+    return {
+      sub,
+      status,
+      withdrawn_delegations: withdrawn,
+      ...(changedAt !== undefined ? { changed_at: changedAt as string } : {}),
+    };
+  });
+}
+
+/** Read the identity source as JSON, asynchronously; a missing or unreadable file rejects (an unavailable source). */
+export async function readIdentitySource(path: string = IDENTITY_SOURCE_FILE): Promise<unknown> {
+  return JSON.parse(await readFile(path, "utf8"));
+}
+
+/** @spec runtime#input-authority-dependency (#830): the deployment's declared authority dependencies (config/authority-dependencies.json). */
+export const AUTHORITY_DEPENDENCIES: readonly AuthorityDependencyDeclaration[] = (() => {
+  const file = "authority-dependencies.json";
+  try {
+    return parseAuthorityDependencyDeclarations(readJson(file));
+  } catch (e) {
+    if (e instanceof ConfigError) throw e;
+    throw new ConfigError(file, (e as Error).message);
+  }
+})();
 
 export interface VendorSeed {
   id: string;

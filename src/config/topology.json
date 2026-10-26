@@ -61,6 +61,7 @@
   },
   "stores": {
     "pdpIdempotencyClaims": { "file": "var/pdp-idempotency-claims.sqlite" },
-    "pepWriteReservations": { "file": "var/pep-write-reservations.sqlite" }
+    "pepWriteReservations": { "file": "var/pep-write-reservations.sqlite" },
+    "pepEvidenceRetention": { "file": "var/pep-evidence-retention.sqlite" }
   }
 }

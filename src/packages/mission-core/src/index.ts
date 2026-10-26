@@ -55,6 +55,30 @@ export {
   toolsSubset,
   verifyAttenuationChain,
 } from "./attenuation-chain.js";
+export {
+  AuthorityDependencyConfigError,
+  type AuthorityDependencyDeclaration,
+  type AuthorityDependencyEnforcement,
+  AuthorityDependencyEvidence,
+  type AuthorityDependencyRefusal,
+  AuthorityDependencyResolver,
+  checkAuthorityDependency,
+  classifyObservedInvalidation,
+  type DependencyEvaluation,
+  type DependencyFailure,
+  type DependencyPrincipal,
+  evaluateAuthorityDependency,
+  type GovernedAuthoritySource,
+  type IdentityStateRecord,
+  type InvalidatingChange,
+  type ObservedInvalidation,
+  type PrincipalStateObservation,
+  type PrincipalStateView,
+  type PrincipalStatus,
+  parseAuthorityDependencyDeclarations,
+  type ReconciledInvalidation,
+  type ReconcilerOperation,
+} from "./authority-dependency.js";
 export type {
   AuthorityEntry,
   ChildFanoutControls,
@@ -221,6 +245,17 @@ export {
   type ScopeActorInput,
   VOLATILE_SCOPE_MEMBERS,
 } from "./idempotency.js";
+export {
+  explicitFreshnessSeconds,
+  freshUntil,
+  IssuerKeyError,
+  type IssuerKeyRefusal,
+  type IssuerKeyRole,
+  IssuerKeys,
+  type IssuerKeysFetch,
+  type IssuerKeysOptions,
+  keyThumbprint,
+} from "./issuer-keys.js";
 export {
   type LocalApprovedSetRetrieval,
   LocalApprovedSetVerificationError,

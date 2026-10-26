@@ -8,8 +8,10 @@
  * the estate's published keys (the estate's own contract, an HTTP 400 with
  * that error, which RFC 7662 does not define); an inactive answer is refused with no local
  * check; an estate that cannot be asked is `unavailable`, with no local
- * fallback; and an opaque token is introspection only. Defined for the
- * owner's confirmation. No OpenFGA.
+ * fallback; and an opaque token is introspection only. Local validation uses
+ * only the estate kids the configuration trusts (`estate.trusted_kids`, #831
+ * C2b), never every key the estate publishes. Defined for the owner's
+ * confirmation. No OpenFGA.
  */
 
 import { createServer, type Server } from "node:http";
@@ -27,6 +29,7 @@ type Answer = { status: number; body: unknown; delayMs?: number };
 let server: Server;
 let base: string;
 let signer: CryptoKey;
+let untrustedSigner: CryptoKey;
 let introspection: (token: string) => Answer;
 const asked: string[] = [];
 
@@ -34,6 +37,10 @@ beforeAll(async () => {
   const key = await generateKeyPair("ES256", { extractable: true });
   signer = key.privateKey;
   const jwk = { ...(await exportJWK(key.publicKey)), kid: "stub-estate-1", alg: "ES256", use: "sig" };
+  // Published by the estate, but not among the kids the pilot's configuration trusts.
+  const untrusted = await generateKeyPair("ES256", { extractable: true });
+  untrustedSigner = untrusted.privateKey;
+  const untrustedJwk = { ...(await exportJWK(untrusted.publicKey)), kid: "stub-estate-2", alg: "ES256", use: "sig" };
   server = createServer((req, res) => {
     const chunks: Buffer[] = [];
     req.on("data", (c: Buffer) => chunks.push(c));
@@ -45,7 +52,7 @@ beforeAll(async () => {
       if (req.url === "/.well-known/openid-configuration") {
         return send(200, { issuer: base, jwks_uri: `${base}/jwks`, introspection_endpoint: `${base}/introspect` });
       }
-      if (req.url === "/jwks") return send(200, { keys: [jwk] });
+      if (req.url === "/jwks") return send(200, { keys: [jwk, untrustedJwk] });
       const token = new URLSearchParams(Buffer.concat(chunks).toString("utf8")).get("token") ?? "";
       asked.push(token);
       const answer = introspection(token);
@@ -61,12 +68,13 @@ afterAll(() => {
   server.close();
 });
 
-/** The pilot's configuration with the estate at the stub, the path declared, and a short introspection deadline. */
-function deploymentAtStub() {
+/** The pilot's configuration with the estate at the stub, its trusted kids, the path declared, and a short introspection deadline. */
+function deploymentAtStub(trustedKids = ["stub-estate-1"]) {
   const port = Number(new URL(base).port);
   const moved: MasPilotConfig = relocateEstate(loadMasPilotConfig(), port);
   const config: MasPilotConfig = {
     ...moved,
+    estate: { ...moved.estate, trusted_kids: trustedKids },
     introspection: { ...moved.introspection, timeout_ms: 300, cache_max_seconds: 0 },
     join_assertion: { introspection_client_id: "mas-join-introspector", required: false, required_classes: [], pdp_algorithms: ["ES256"] },
   };
@@ -120,6 +128,22 @@ describe("the pilot MAS introspects every acting token first (@spec authority-se
       .setExpirationTime("5m")
       .sign((await generateKeyPair("ES256")).privateKey);
     expect(await deploymentAtStub().establishActingToken({ accessToken: forged })).toEqual({ ok: false, reason: "inactive" });
+  });
+
+  it("validates locally only under the estate kids the configuration trusts, never every key the estate publishes (#831 C2b, D825)", async () => {
+    introspection = () => unsupported;
+    const published = await new SignJWT({ client_id: "estate-ap-bot-7f3", aud: CANONICAL_RESOURCE, cnf: { jkt: "jkt-stub" } })
+      .setProtectedHeader({ alg: "ES256", kid: "stub-estate-2", typ: "at+jwt" })
+      .setIssuer(base)
+      .setSubject("u-1001")
+      .setExpirationTime("5m")
+      .sign(untrustedSigner);
+    expect(await deploymentAtStub().establishActingToken({ accessToken: published })).toEqual({ ok: false, reason: "inactive" });
+    // The same token, once the configuration names its kid: the refusal was the configuration's.
+    expect(await deploymentAtStub(["stub-estate-1", "stub-estate-2"]).establishActingToken({ accessToken: published })).toMatchObject({
+      ok: true,
+      token: { subject: "u-1001" },
+    });
   });
 
   it("refuses a JWT the estate reports inactive, though it would validate locally", async () => {
