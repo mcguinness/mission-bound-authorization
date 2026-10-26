@@ -72,6 +72,7 @@ export {
 } from "./state-observation.js";
 export {
   declaredStatusKeys,
+  refreshingStatusKeys,
   MISSION_STATUS_SKEW_SECONDS,
   MISSION_STATUS_STATES,
   type MissionStatusFailure,
