@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { calculateJwkThumbprint, createLocalJWKSet, exportJWK, generateKeyPair, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type PlainRsHandler, type PlainRsOptions, plainResourceServer, startPlainResourceServer } from "../src/index.js";
+import { type PlainRsHandler, type PlainRsOptions, plainResourceServer, startPlainResourceServer, trustedKidsFromEnv } from "../src/index.js";
 
 const PORT = 14711;
 const INTROSPECT_PORT = 14712;
@@ -465,6 +465,33 @@ describe("plain-rs with a key resolver the deployment supplies (#831 C2)", () =>
       expect(served).toEqual(["k1", "k2"]);
     } finally {
       await new Promise<void>((r) => server.close(() => r()));
+    }
+  });
+});
+
+describe("plain-rs's configured trusted kids (#831 C2b)", () => {
+  it("refuses a token naming any kid but the trusted ones, whatever the key set publishes", async () => {
+    const port = PORT + 21;
+    const { server } = await serve(port, { issuer: ISSUER, audience: AUDIENCE, jwks, trustedKids: ["k-other"], baseUrl: `http://localhost:${port}` });
+    try {
+      // k1 is published and signs the token, but is not trusted.
+      expect((await call("GET", await accessToken(), { base: `http://localhost:${port}` })).status).toBe(401);
+    } finally {
+      await new Promise<void>((r) => server.close(() => r()));
+    }
+    const trusting = await serve(port + 1, { issuer: ISSUER, audience: AUDIENCE, jwks, trustedKids: ["k1"], baseUrl: `http://localhost:${port + 1}` });
+    try {
+      expect((await call("GET", await accessToken(), { base: `http://localhost:${port + 1}` })).status).toBe(200);
+    } finally {
+      await new Promise<void>((r) => trusting.server.close(() => r()));
+    }
+    expect(() => plainResourceServer({ issuer: ISSUER, audience: AUDIENCE, jwks, trustedKids: [] })).toThrow(/trustedKids must list at least one kid/);
+  });
+
+  it("the standalone launcher requires PLAIN_RS_TRUSTED_KIDS: trust is configured, never inferred", () => {
+    expect(trustedKidsFromEnv("as-token, as-token-2")).toEqual(["as-token", "as-token-2"]);
+    for (const value of [undefined, "", " , "]) {
+      expect(() => trustedKidsFromEnv(value)).toThrow(/PLAIN_RS_TRUSTED_KIDS must name/);
     }
   });
 });

@@ -78,6 +78,12 @@ export interface PlainRsOptions {
    */
   keys?: JWTVerifyGetKey;
   /**
+   * #831 C2b: the key identifiers this server trusts. A token naming any
+   * other `kid` is refused before any key is resolved, whatever the key
+   * source publishes. The standalone launcher requires it.
+   */
+  trustedKids?: readonly string[];
+  /**
    * The external base URL requests arrive at (scheme, host, port), used to
    * rebuild the DPoP `htu`. Defaults to the audience's origin.
    */
@@ -124,12 +130,40 @@ class Refusal extends Error {
 
 const b64url = (buf: Buffer) => buf.toString("base64url");
 
+/**
+ * #831 C2b: the trusted key identifiers from a comma-separated value (the
+ * standalone launcher's PLAIN_RS_TRUSTED_KIDS). Refuses when it names none:
+ * trust is configured, never inferred from what the key set holds.
+ */
+export function trustedKidsFromEnv(value: string | undefined): string[] {
+  const kids = (value ?? "")
+    .split(",")
+    .map((k) => k.trim())
+    .filter((k) => k.length > 0);
+  if (kids.length === 0) {
+    throw new Error("plain-rs: PLAIN_RS_TRUSTED_KIDS must name the key identifiers trusted for the issuer's tokens");
+  }
+  return kids;
+}
+
 /** Build the request handler for a plain Resource Server. */
 export function plainResourceServer(opts: PlainRsOptions): PlainRsHandler {
   const given = [opts.jwks, opts.jwksUri, opts.keys].filter((k) => k !== undefined).length;
   if (given !== 1) throw new Error("plain-rs: give exactly one of jwks, jwksUri and keys");
-  const keys =
+  const source =
     opts.keys ?? (opts.jwks ? createLocalJWKSet(opts.jwks) : createRemoteJWKSet(new URL(opts.jwksUri as string)));
+  if (opts.trustedKids !== undefined && opts.trustedKids.length === 0) {
+    throw new Error("plain-rs: trustedKids must list at least one kid");
+  }
+  const trusted = opts.trustedKids;
+  const keys: JWTVerifyGetKey = trusted
+    ? (header, token) => {
+        if (typeof header.kid !== "string" || !trusted.includes(header.kid)) {
+          throw new Error(`kid ${String(header.kid)} is not trusted`);
+        }
+        return source(header, token);
+      }
+    : source;
   const operations = opts.operations ?? OPERATIONS;
   const algorithms = opts.algorithms ?? DEFAULT_ALGS;
   const baseUrl = (opts.baseUrl ?? new URL(opts.audience).origin).replace(/\/$/, "");
