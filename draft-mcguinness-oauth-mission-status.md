@@ -905,10 +905,14 @@ This extension adds the following to that projection:
   additionally carry `fresh_until`, an RFC 3339 {{RFC3339}} date-time
   giving the point until which the consumer MAY rely on the reported
   `state` without re-checking. The caching rule of
-  {{mission-status-caching}} applies with the terms the response
-  carries: an {{RFC9701}} response has an `iat` and no response
-  `exp`, and an unsigned response has neither, so an absent term
-  drops out. The AS sets `fresh_until` no later than the time of the
+  {{mission-status-caching}} applies with the response-level terms
+  the response carries, and a term it does not carry drops out: an
+  {{RFC9701}} response's top-level `iat` dates it, and a top-level
+  `exp`, which {{RFC9701}} discourages but permits, bounds reliance
+  where present; an unsigned response carries neither. The `iat` and
+  `exp` members of the {{RFC7662}} introspection response describe
+  the token, not the observation of Mission state, and are not these
+  terms. The AS sets `fresh_until` no later than the time of the
   response plus any advertised `mission_max_stale_seconds`. When
   `fresh_until` is absent (for example a non-issuer projection), the
   issuance profile's per-use rule governs: the consumer MUST NOT reuse
@@ -949,8 +953,8 @@ for a token whose Mission is `active`:
 
 Per {{RFC9701}}, the signed response is a JWT of `typ`
 `token-introspection+jwt` whose {{RFC7662}} members, including the
-`mission` projection, ride in the `token_introspection` claim; only
-`iss`, `aud`, and `iat` are top-level.
+`mission` projection, ride in the `token_introspection` claim, beside
+the top-level `iss`, `aud`, and `iat` the JWT always carries.
 
 A consumer holding only a `mission_id`, or one that needs signed
 evidence independent of a specific token (an auditor or an
