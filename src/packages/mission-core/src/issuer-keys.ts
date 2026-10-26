@@ -19,9 +19,14 @@
  *   while running through {@link IssuerKeys.setRoles}, which takes effect at
  *   the next resolution. A header's `jku` or `x5u` is never followed.
  * - **Freshness comes only from the response.** The cached set is used for
- *   the freshness lifetime the response explicitly declares (`max-age`, less
- *   any `Age`; RFC 9111 Section 4.2.1). A response that declares none is
- *   stale when received and is given no heuristic lifetime (Section 4.2.2).
+ *   the freshness lifetime the response explicitly declares (`max-age`; RFC
+ *   9111 Section 4.2.1), less its age when received (Section 4.2.3): the
+ *   larger of its apparent age by `Date` and its `Age` plus the time the
+ *   request took, so the lifetime never runs from later than the request. A
+ *   response that declares no lifetime, or whose `Age` or `Date` is not one
+ *   valid value, is stale when received and is given no heuristic lifetime
+ *   (Section 4.2.2). A 304 updates the stored response (Section 4.3.4): its
+ *   own `Cache-Control`, when it carries one, replaces the stored one.
  * - **A stale set is revalidated before reuse** (with `If-None-Match` when
  *   the response carried an `ETag`), and if revalidation fails the set is not
  *   used: no stale-if-error.
@@ -94,9 +99,9 @@ export class IssuerKeyError extends Error {
 
 /**
  * The freshness lifetime, in seconds, a response explicitly declares: its
- * `Cache-Control` `max-age`, less its `Age`. Zero when it declares none, or
- * declares `no-store`, `no-cache` or conflicting `max-age` values: such a
- * response is stale when received.
+ * `Cache-Control` `max-age` (RFC 9111 Section 4.2.1). Zero when it declares
+ * none, or declares `no-store`, `no-cache` or conflicting `max-age` values:
+ * such a response is stale when received.
  */
 export function explicitFreshnessSeconds(headers: Headers): number {
   const directives = (headers.get("cache-control") ?? "")
@@ -109,9 +114,29 @@ export function explicitFreshnessSeconds(headers: Headers): number {
     .filter((d) => d.startsWith("max-age="))
     .map((d) => d.slice("max-age=".length).replace(/^"(.*)"$/, "$1"));
   if (maxAges.length !== 1 || !/^\d+$/.test(maxAges[0] as string)) return 0;
+  return Number(maxAges[0]);
+}
+
+/**
+ * When a response stops being fresh, on the consumer's clock: its explicit
+ * freshness lifetime less its age when received, from `responseTime` (RFC
+ * 9111 Section 4.2). Its age when received is the larger of its apparent
+ * age (`responseTime` less its `Date`) and its `Age` plus the time since the
+ * request was sent at `requestTime` (Section 4.2.3). An `Age` or `Date` that
+ * is not one valid value leaves the response stale when received.
+ */
+export function freshUntil(headers: Headers, requestTime: number, responseTime: number): number {
+  const lifetimeMs = explicitFreshnessSeconds(headers) * 1000;
   const age = headers.get("age");
-  const ageS = age !== null && /^\d+$/.test(age.trim()) ? Number(age.trim()) : 0;
-  return Math.max(0, Number(maxAges[0]) - ageS);
+  if (age !== null && !/^\d+$/.test(age.trim())) return responseTime;
+  const ageMs = age === null ? 0 : Number(age.trim()) * 1000;
+  const date = headers.get("date")?.trim();
+  // Every HTTP-date form is in GMT; the asctime form does not say so (RFC 9110 Section 5.6.7).
+  const dateMs =
+    date === undefined ? responseTime : Date.parse(date.endsWith("GMT") ? date : `${date} GMT`);
+  if (Number.isNaN(dateMs)) return responseTime;
+  const initialAgeMs = Math.max(responseTime - dateMs, ageMs + (responseTime - requestTime));
+  return responseTime + Math.max(0, lifetimeMs - initialAgeMs);
 }
 
 const THUMBPRINT_MEMBERS: Record<string, readonly string[]> = {
@@ -142,6 +167,7 @@ interface CachedSet {
   keys: Map<string, CachedKey>;
   freshUntil: number;
   etag?: string;
+  cacheControl?: string;
 }
 
 /** Each trusted kid's role, refusing an algorithm list that is empty and a kid trusted for two roles. */
@@ -269,9 +295,19 @@ export class IssuerKeys {
       const headers: Record<string, string> = this.#cache?.etag
         ? { "if-none-match": this.#cache.etag }
         : {};
+      const requestTime = this.#now();
       const res = await this.#fetch(uri, { headers, signal: controller.signal });
+      const responseTime = this.#now();
       if (res.status === 304 && this.#cache) {
-        this.#cache.freshUntil = this.#now() + explicitFreshnessSeconds(res.headers) * 1000;
+        // RFC 9111 Section 4.3.4: the 304's header fields update the stored response's.
+        const cache = this.#cache;
+        const cacheControl = res.headers.get("cache-control") ?? cache.cacheControl;
+        const updated = new Headers(res.headers);
+        if (cacheControl !== undefined) updated.set("cache-control", cacheControl);
+        cache.freshUntil = freshUntil(updated, requestTime, responseTime);
+        if (cacheControl !== undefined) cache.cacheControl = cacheControl;
+        const etag = res.headers.get("etag");
+        if (etag) cache.etag = etag;
         return;
       }
       if (res.status !== 200)
@@ -282,11 +318,13 @@ export class IssuerKeys {
       const published = body.keys as Record<string, unknown>[];
       const fetched = this.#select(published, this.#roleOfKid);
       const etag = res.headers.get("etag");
+      const cacheControl = res.headers.get("cache-control");
       this.#cache = {
         published,
         keys: fetched,
-        freshUntil: this.#now() + explicitFreshnessSeconds(res.headers) * 1000,
+        freshUntil: freshUntil(res.headers, requestTime, responseTime),
         ...(etag ? { etag } : {}),
+        ...(cacheControl !== null ? { cacheControl } : {}),
       };
     } catch (e) {
       if (e instanceof IssuerKeyError) throw e;
