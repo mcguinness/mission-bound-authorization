@@ -382,6 +382,7 @@ describe("Decision Evidence never signs a context binding it did not establish (
     subject: { id: "alice" },
     resource: { type: "invoice", id: "inv-1" },
     action: { name: PAY },
+    action_class: "consequential_read" as const,
     audience: AUDIENCE,
     evaluation_id: "dec_773",
     evaluated_at: NOW.toISOString(),

@@ -50,7 +50,8 @@
 
 import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
-import { evaluate as evaluateRequest, type EvaluationRequest } from "../src/evaluate.js";
+import type { DecisionEvidenceEmitter } from "../src/decision-evidence.js";
+import { DecisionRequestRefused, evaluate as evaluateRequest, type EvaluationRequest, type PdpRefusal } from "../src/evaluate.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type AuthorityEntry, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
@@ -230,13 +231,60 @@ describe("evaluateInner fail-closed gaps (#608)", () => {
       expect(dec.context.denial_reason).toBe("stale_state");
     });
 
-    it("no action_class at all, context.mission_state_observation absent under pep placement -> deny stale_state (unclassified requests are not exempt)", async () => {
-      const dec = await evaluate(
-        req({ context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } } }),
+    // @spec runtime#classification, authzen#pdp-consistency-checks,
+    // runtime-evidence#pre-decision-refusal (#956, D814): there is no default
+    // class. A request with none is not evaluated as `consequential_read`
+    // (where an absent observation would deny stale_state); it is refused
+    // before evaluation, with or without the state input.
+    it("a mediated request with no action_class is refused before evaluation as action_class_missing: no decision, no Decision Evidence, never consequential_read (@spec runtime#classification, authzen#pdp-consistency-checks, #956)", async () => {
+      const mission = { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" };
+      const fresh = { state: "active" as const, mode: "fresh" as const, freshness_at: NOW.toISOString() };
+      for (const observation of [undefined, fresh]) {
+        const label = observation ? "observation present" : "observation absent";
+        // `action_class` is named, as undefined, so the fixture passes it through.
+        const unclassified = withCredential(
+          req({ context: { mission, action_class: undefined, ...(observation ? { mission_state_observation: observation } : {}) } }),
+        );
+        const refusals: PdpRefusal[] = [];
+        const emitted: unknown[] = [];
+        const resolved: Array<string | undefined> = [];
+        let fgaCalls = 0;
+        const outcome = await evaluateRequest(unclassified, {
+          ...opts(view(entry)),
+          fga: {
+            checkWithContext: async () => {
+              fgaCalls += 1;
+              return true;
+            },
+          } as unknown as Fga,
+          stalenessBound: (actionClass) => {
+            resolved.push(actionClass);
+            return stalenessBound(actionClass);
+          },
+          evidence: { emit: async (record: unknown) => emitted.push(record) } as unknown as DecisionEvidenceEmitter,
+          refusals: (r) => refusals.push(r),
+        }).then(
+          (decision) => ({ decision }),
+          (error: unknown) => ({ error }),
+        );
+        expect(outcome, label).toEqual({ error: expect.any(DecisionRequestRefused) });
+        expect((outcome as { error: DecisionRequestRefused }).error.denial_reason, label).toBe("action_class_missing");
+        expect(refusals, label).toHaveLength(1);
+        expect(refusals[0], label).toMatchObject({ denial_reason: "action_class_missing", missionId: "msn_test_1", audience: RESOURCE });
+        expect(refusals[0]?.evaluation_request, label).toBe(unclassified);
+        expect(refusals[0], label).not.toHaveProperty("evaluation_id");
+        expect(refusals[0], label).not.toHaveProperty("action_class");
+        expect(emitted, label).toHaveLength(0);
+        // No class was ever resolved, consequential_read included, and nothing was evaluated.
+        expect(resolved, label).toEqual([]);
+        expect(fgaCalls, label).toBe(0);
+      }
+      // Control: the same request carrying the class its PEP assigns is evaluated and permitted.
+      const classed = await evaluate(
+        req({ context: { mission, action_class: "consequential_read", mission_state_observation: fresh } }),
         opts(view(entry)),
       );
-      expect(dec.decision, JSON.stringify(dec.context)).toBe(false);
-      expect(dec.context.denial_reason).toBe("stale_state");
+      expect(classed.decision, JSON.stringify(classed.context)).toBe(true);
     });
   });
 
