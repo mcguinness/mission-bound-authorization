@@ -6254,8 +6254,10 @@ Host: as.example.com
 ~~~
 
 The AS (`as.example.com`) validates both, derives this Authority Set
-(each entry a same-type subset of a proposed entry,
-{{authority-proposal}}), and renders it for `alice`'s consent:
+under a declared `narrowing` capability (each entry a same-type subset
+of a proposed entry, {{authority-proposal}},
+{{transformation-capabilities}}), and renders it for `alice`'s
+consent:
 
 ~~~ json
 [
@@ -6973,12 +6975,13 @@ write:
 ]
 ~~~
 
-The resulting Authority Set contains the proposed `invoices.read`
-entry unchanged, and the proposed `journal-entries.write` entry with
-`max_amount` narrowed to `500.00 USD`. The ceiling's unrequested
-`journal-entries.read` does not appear. Each proposed entry
-intersects the same-resource ceiling entries; an empty action
-intersection contributes no authority.
+Under a declared `narrowing` capability
+({{transformation-capabilities}}), the resulting Authority Set
+contains the proposed `invoices.read` entry unchanged, and the
+proposed `journal-entries.write` entry with `max_amount` narrowed to
+`500.00 USD`. The ceiling's unrequested `journal-entries.read` does
+not appear. Each proposed entry intersects the same-resource ceiling
+entries; an empty action intersection contributes no authority.
 
 Negative fixtures accompany this positive result; none is a special
 case that relaxes the type's relation:
