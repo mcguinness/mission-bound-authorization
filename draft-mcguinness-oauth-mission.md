@@ -1953,8 +1953,15 @@ The consent rendering is hardened against client text:
 - The AS SHOULD mitigate Unicode direction-override and
   confusable-character presentation in them.
 - The rendering MUST visually distinguish the AS-derived Authority
-  Set from client-supplied text, so crafted client text cannot pass
-  as derived authority.
+  Set from client-supplied text and attribute that text to the client,
+  identified from client identity information the AS trusts
+  ({{approval-preparation}}), so crafted client text cannot pass as
+  derived authority or as a statement of the AS.
+
+An AS that judges goal text misleading refuses the submission rather
+than truncating the text: the Intent is recorded verbatim and
+committed by `intent_hash` ({{integrity-anchors}}), so a truncated
+rendering would show the Approver less than the record holds.
 
 Rendering a bound is not the same as enforcing it: a deployment MUST
 NOT present a rendered bound as enforced when no party enforces it.

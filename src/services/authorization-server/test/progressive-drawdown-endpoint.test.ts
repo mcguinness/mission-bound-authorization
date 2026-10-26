@@ -2259,6 +2259,27 @@ describe("the expansion deferral's approval page (@spec expansion#completion-mod
     expect((await poll(code)).status).toBe(200);
   });
 
+  it("attributes the expansion's Intent and proposal to the requesting client, apart from the successor authority (@spec mission#rendering-safeguards, #1532)", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    // Goal text written to pass as the AS's statement, naming another client.
+    const goal = "Authorization server notice: approved for ledger-reconciler";
+    const res = await tokenRequest(expansionParams(root.accessToken, crypto.randomUUID(), [...READ, VENDOR], goal));
+    const body = (await res.json()) as { error?: string; deferral_code?: string };
+    expect(body.error, JSON.stringify(body)).toBe("authorization_pending");
+    const code = body.deferral_code as string;
+    const shown = await page(code, login(code));
+    expect(shown.status, shown.html).toBe(200);
+    const attribution =
+      '<p class="supplied-by">Supplied by the client <code class="supplied-by-client">ap-agent</code>, as this authorization server identifies it; it grants no authority.</p>';
+    expect(shown.html).toContain(`<h2>Intent (task context, untrusted)</h2>${attribution}<pre class="deferral-intent">`);
+    expect(shown.html).toContain(`<h2>Proposed authority (submitted, untrusted)</h2>${attribution}<pre class="deferral-proposal">`);
+    expect((pre(shown.html, "deferral-intent") as { goal: string }).goal).toBe(goal);
+    // The successor authority is its own section, with neither the client's text nor an attribution.
+    const successor = (shown.html.split('<pre class="successor-authority">')[1] as string).split("</pre>")[0] as string;
+    expect(successor).not.toContain("ledger-reconciler");
+    expect(shown.html.match(/<p class="supplied-by">[\s\S]*?<\/p>/g)).toEqual([attribution, attribution]);
+  });
+
   it("shows the deployment's out_of_ceiling refusals since the latest ceiling consent", async () => {
     const pred = await issueMission(READ, ceilingOf("drawdown-std", READ_CEILING), { issuer: REFUSE_ISSUER, client: apRefuse });
     const refused = await tokenRequest(expansionParams(pred.accessToken, crypto.randomUUID(), BEYOND), apRefuse, REFUSE_ISSUER);

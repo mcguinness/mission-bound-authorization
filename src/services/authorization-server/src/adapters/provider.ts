@@ -7809,6 +7809,15 @@ function renderRegisteredClient(client: { clientId: string; clientName?: string 
 `;
 }
 
+/**
+ * @spec mission#rendering-safeguards (#1532): client-supplied text is
+ * attributed to the client, named by the `client_id` this AS resolved the
+ * request to from its registration, never by text the client supplies.
+ */
+function renderSuppliedBy(clientId: string): string {
+  return `<p class="supplied-by">Supplied by the client <code class="supplied-by-client">${escapeHtml(clientId)}</code>, as this authorization server identifies it; it grants no authority.</p>`;
+}
+
 function renderApprovalPage(
   uid: string,
   intent: unknown,
@@ -7834,7 +7843,7 @@ function renderApprovalPage(
   // proposal (untrusted client input) from the derived Authority Set (what
   // approval grants); the proposal section appears only when one was submitted.
   const proposalSection = proposal
-    ? `<h2>Proposed authority (submitted, untrusted)</h2><pre>${escapeHtml(JSON.stringify(proposal, null, 2))}</pre>`
+    ? `<h2>Proposed authority (submitted, untrusted)</h2>${renderSuppliedBy(client.clientId)}<pre>${escapeHtml(JSON.stringify(proposal, null, 2))}</pre>`
     : "";
   // @spec mission#intent-submission-evidence — MATERIAL verified provenance is
   // rendered to the Approver as normalized FACTS (never raw artifacts); the
@@ -7918,7 +7927,7 @@ ${inheritance}`
       : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
-${deviceSection}${clientSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
+${deviceSection}${clientSection}<h2>Intent (task context, untrusted)</h2>${renderSuppliedBy(client.clientId)}<pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
 ${sourceSection}
 ${proposalSection}
 ${provenanceSection}
