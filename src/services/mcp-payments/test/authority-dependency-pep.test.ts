@@ -88,8 +88,13 @@ const TOKEN: TokenFacts = {
 };
 
 /** The shipped declaration with direct evaluation routed to the PEP's composed step, or to the PDP. */
-function routedTo(direct: "pep" | "pdp"): AuthorityDependencyDeclaration {
+function routedTo(direct: "pep" | "pdp" | "lifecycle"): AuthorityDependencyDeclaration {
   const shipped = AUTHORITY_DEPENDENCIES[0] as AuthorityDependencyDeclaration;
+  if (direct === "lifecycle") {
+    // Lifecycle-only, with an online check declared.
+    const { direct: _direct, ...lifecycleOnly } = shipped.enforcement;
+    return parseAuthorityDependencyDeclarations([{ ...shipped, online_check: true, enforcement: lifecycleOnly }])[0] as AuthorityDependencyDeclaration;
+  }
   return parseAuthorityDependencyDeclarations([{ ...shipped, enforcement: { ...shipped.enforcement, direct } }])[0] as AuthorityDependencyDeclaration;
 }
 
@@ -99,7 +104,7 @@ function routedTo(direct: "pep" | "pdp"): AuthorityDependencyDeclaration {
  * the PEP (the default), its composed step evaluates it; routed to the PDP,
  * the decision point evaluates it and the PEP rechecks it at release.
  */
-async function build(route: "pep" | "pdp" = "pep") {
+async function build(route: "pep" | "pdp" | "lifecycle" = "pep") {
   let source: unknown = [{ sub: "alice" }];
   let nowMs = T0;
   const evidence = new AuthorityDependencyEvidence();
@@ -115,11 +120,15 @@ async function build(route: "pep" | "pdp" = "pep") {
   // The resolver the enforcement reads: the test can hand it a different one
   // between admission and release, as a read completing in that window would.
   let viewing = resolver;
+  let reconciledInvalidations: ReadonlyMap<string, { failure: "withdrawn" | "invalidated"; observedAt: string }> = new Map();
   const dependency = {
     declaration: routedTo(route),
     resolver: { view: (principal: { iss: string; sub: string }) => viewing.view(principal) } as unknown as AuthorityDependencyResolver,
     evidence,
     now: () => nowMs,
+    // The declaration is lifecycle-mediated too; its reconciler is current
+    // here, and the test can hand it the invalidations a pass established.
+    reconciliation: () => ({ lastReconciledAtMs: nowMs, invalidated: reconciledInvalidations }),
     governed: (mission: { id: string }) => (mission.id === view.id ? { subject: { iss: ISSUER, sub: "alice" }, clientId: "ap-agent" } : undefined),
   };
   // The transaction tier's high-consequence class needs the PDP's claim
@@ -129,7 +138,7 @@ async function build(route: "pep" | "pdp" = "pep") {
     emitterId: CANONICAL_RESOURCE,
     audience: CANONICAL_RESOURCE,
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
-    ...(route === "pdp" ? { authorityDependency: dependency } : {}),
+    ...(route !== "pep" ? { authorityDependency: dependency } : {}),
     claims: openEphemeralClaimDomain({
       owner: RUNTIME_POSTURE.pdps[0] as string,
       statement: RUNTIME_POSTURE,
@@ -204,6 +213,10 @@ async function build(route: "pep" | "pdp" = "pep") {
         server.callTransactionTool("execute_wire_transfer", { invoice_id: invoice, idempotency_key: `idem_${randomUUID()}` }, TOKEN, hook),
     } as Record<string, (hook?: () => void, invoice?: string) => Promise<{ ok: boolean; refusal_reason?: string; result?: unknown }>>,
     ledger: () => connectors.ledgerEntries(view.id),
+    /** From now on the reconciliation's published invalidations are `next`. */
+    reconciled: (next: ReadonlyMap<string, { failure: "withdrawn" | "invalidated"; observedAt: string }>) => {
+      reconciledInvalidations = next;
+    },
     /** From now on the enforcement reads `next` (a resolver the test refreshed). */
     observeWith: (next: AuthorityDependencyResolver) => {
       viewing = next;
@@ -414,6 +427,60 @@ describe("a permit is held to the observation it was admitted on, and a PEP hold
         expect(refused.refusal_reason, path).toBe("resource_policy");
         expect((x.decisions.at(-1) as { decision: boolean }).decision, path).toBe(true);
         expect(x.evidence.entries().at(-1), path).toMatchObject({ enforcer: "pep", failure: "withdrawn" });
+      }
+      expect(x.ledger()).toHaveLength(0);
+    } finally {
+      await x.close();
+    }
+  });
+});
+
+describe("lifecycle-only enforcement keeps the declaration's observation limits at release (@spec runtime#input-authority-dependency, #830)", () => {
+  it("refuses at release, on every dispatch path, a permit whose source read failed after the decision where the declaration requires an online check", async () => {
+    const x = await build("lifecycle");
+    try {
+      await x.resolver.refresh();
+      let reachable = true;
+      const failing = new AuthorityDependencyResolver({
+        issuer: ISSUER,
+        read: async () => {
+          if (!reachable) throw new Error("identity source unreachable");
+          return [{ sub: "alice" }];
+        },
+        parse: (raw) => parseIdentityState(raw),
+      });
+      await failing.refresh();
+      reachable = false;
+      expect(await failing.refresh()).toBe(false);
+      expect((await x.read()).ok).toBe(true);
+      for (const [path, call] of Object.entries(x.paths)) {
+        x.observeWith(x.resolver);
+        const refused = await call(() => x.observeWith(failing));
+        expect(refused.ok, `${path}: ${JSON.stringify(refused)}`).toBe(false);
+        expect(refused.refusal_reason, path).toBe("resource_policy");
+        expect((x.decisions.at(-1) as { decision: boolean }).decision, path).toBe(true);
+        expect(x.evidence.entries().at(-1), path).toMatchObject({ enforcer: "pep", failure: "unavailable" });
+      }
+      expect(x.ledger()).toHaveLength(0);
+    } finally {
+      await x.close();
+    }
+  });
+});
+
+describe("lifecycle-only enforcement keeps an established invalidation at release (@spec runtime#input-authority-dependency, #830)", () => {
+  it("refuses at release, on every dispatch path, a permit under a Mission the reconciliation found invalidated after the decision, whatever its state reads", async () => {
+    const x = await build("lifecycle");
+    try {
+      await x.resolver.refresh();
+      const established = new Map([[view.id, { failure: "invalidated" as const, observedAt: new Date().toISOString() }]]);
+      for (const [path, call] of Object.entries(x.paths)) {
+        x.reconciled(new Map());
+        const refused = await call(() => x.reconciled(established));
+        expect(refused.ok, `${path}: ${JSON.stringify(refused)}`).toBe(false);
+        expect(refused.refusal_reason, path).toBe("resource_policy");
+        expect((x.decisions.at(-1) as { decision: boolean }).decision, path).toBe(true);
+        expect(x.evidence.entries().at(-1), path).toMatchObject({ enforcer: "pep", failure: "invalidated" });
       }
       expect(x.ledger()).toHaveLength(0);
     } finally {

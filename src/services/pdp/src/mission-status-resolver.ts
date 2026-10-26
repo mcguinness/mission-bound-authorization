@@ -57,6 +57,7 @@
  * then carries neither.
  */
 
+import { IssuerKeys, type IssuerKeysFetch } from "@mission/core";
 import { type KeyObject, randomUUID } from "node:crypto";
 import { createLocalJWKSet, type JSONWebKeySet, type JWTVerifyGetKey, SignJWT } from "jose";
 import { deriveJoinDelegation, type KernelDelegationPolicy } from "./mas-join.js";
@@ -162,6 +163,32 @@ export interface ResolveOptions {
  */
 export function declaredStatusKeys(jwks: JSONWebKeySet, kids: readonly string[]): JWTVerifyGetKey {
   return createLocalJWKSet({ keys: jwks.keys.filter((k) => typeof k.kid === "string" && kids.includes(k.kid)) });
+}
+
+/**
+ * @spec #831 C2: {@link declaredStatusKeys} over the issuer's published set
+ * rather than a snapshot, held through `IssuerKeys` (`@mission/core`): only
+ * the declared `kid`s, refreshed within the freshness the issuer declares and
+ * refused rather than reused when it cannot be revalidated, so a Status key
+ * rotation is followed without a restart once the declared `kid`s list the
+ * new one: `trust` replaces them while the consumer runs (D825), taking
+ * effect at the next verification.
+ */
+export function refreshingStatusKeys(
+  jwksUri: string,
+  kids: readonly string[],
+  opts: { algs: readonly string[]; now?: () => number; fetch?: IssuerKeysFetch },
+): { keys: JWTVerifyGetKey; trust: (kids: readonly string[]) => void } {
+  const held = new IssuerKeys({
+    jwksUri,
+    roles: { status: { kids, algs: opts.algs } },
+    ...(opts.now ? { now: opts.now } : {}),
+    ...(opts.fetch ? { fetch: opts.fetch } : {}),
+  });
+  return {
+    keys: held.resolver("status") as unknown as JWTVerifyGetKey,
+    trust: (next) => held.setRoles({ status: { kids: next, algs: opts.algs } }),
+  };
 }
 
 /**

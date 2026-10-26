@@ -4011,8 +4011,11 @@ export class Pep {
    * then the dependency is evaluated again over the resolver's current cached
    * observation wherever the declaration routes direct evaluation, so a known
    * withdrawal, an observed invalidation or a lost observation that reached
-   * this PEP after the decision stops the release. Each refusal is recorded
-   * in the deployment's dependency evidence.
+   * this PEP after the decision stops the release. Under lifecycle-only
+   * enforcement the route's own checks run instead: the reconciliation's
+   * currency, an unresolved Subject, and the declared observation limits
+   * (`max_staleness_seconds`, and the online check where declared). Each
+   * refusal is recorded in the deployment's dependency evidence.
    */
   private authorityDependencyAtUse(attempt: ExecutionAttempt, now: Date): string | undefined {
     const dependency = this.deps.authorityDependency;
@@ -4034,8 +4037,16 @@ export class Pep {
       });
       return "resource_policy";
     }
-    if (dependency.declaration.enforcement.direct === undefined) return undefined;
-    const checked = checkAuthorityDependency(dependency, mission, { enforcer: "pep", action: attempt.action });
+    // Lifecycle-only, the route's own checks: the reconciliation's currency,
+    // an unresolved Subject, and the declared observation limits (staleness
+    // and any online check); a direct route evaluates the observation itself.
+    const lifecycleOnly = dependency.declaration.enforcement.direct === undefined;
+    const checked = checkAuthorityDependency(
+      dependency,
+      mission,
+      { enforcer: "pep", action: attempt.action },
+      lifecycleOnly ? { direct: false, lag: true } : { direct: true, lag: false },
+    );
     return checked.ok ? undefined : "resource_policy";
   }
 
