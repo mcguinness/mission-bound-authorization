@@ -15,8 +15,8 @@
     "content_sha256": "0b573747ea2e4759c7ba509b832e0cb95e1b77b2b2f0e0fa7b18168efce498c5"
    },
    "draft-mcguinness-mission-metering.md": {
-    "revision": "9f8e8aca8a6bd9b40e432e49183f6e22b6a54840",
-    "content_sha256": "67c94ef32a2a23ab74079ea9008fe06426c80d4b28b0e92644c7f64e50670720"
+    "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
+    "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "54bfc7d5077f7ab59f8ac7070b7dd09000854ebf",
@@ -37159,6 +37159,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+  },
+  {
+   "id": "metering.topology.exact-corrected-evidence-recorded",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "topology",
+   "text": "if corrected evidence establishes execution after an incorrect release, accounting records that consumption, reports any excess, and refuses further reservations while no headroom remains",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "metering.exact-budget"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after an incorrect release, an authenticated correction establishing execution commits the reserved quantity whatever the claim's settlement window, reports any excess over the limit, and later reservations are refused while the counter has no headroom"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#816, owner review of #1713 (2026-10-26). Witnessed by slice 2's correction path once it lands."
   },
   {
    "id": "metering.retry.key-reuse-reserves-nothing",
