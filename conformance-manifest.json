@@ -51,8 +51,8 @@
     "content_sha256": "001ce4ec9ebaafee625fab3271656ff873d2073739b14e1d0e338ae57bce5943"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "cfad6a684188e0ae6a3585a00dd22597de09bae0",
-    "content_sha256": "3ee577a53011c4453d6b8a3c571a38e89430d5994e67ddf1feccab112dc4da43"
+    "revision": "80c1db147fe08da664cbe7be4c94b4e000d3d09a",
+    "content_sha256": "0da69ed76df7edfd2fc4d18c0628c7cec0a87344e12f2114c30b663b32cf12c7"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "3832d435322edf4bfc1fa485a0eb9a653d045db7",
@@ -18517,7 +18517,7 @@
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-receipt",
    "text": "A consumer MUST verify, before relying on a Discharge Receipt, for example before it stops retrying:",
-   "role": "AS",
+   "role": "verifier",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
@@ -18591,7 +18591,7 @@
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-receipt",
    "text": "A consumer MUST validate `typ` exactly and MUST NOT accept a Discharge Receipt as a Mission Status Response, or a Mission Status Response as a Discharge Receipt",
-   "role": "AS",
+   "role": "verifier",
    "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
