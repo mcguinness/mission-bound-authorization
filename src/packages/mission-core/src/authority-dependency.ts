@@ -302,6 +302,17 @@ export function parseAuthorityDependencyDeclarations(
         `${ctx}.enforcement.lifecycle_operations applies to lifecycle-mediated enforcement only`,
       );
     }
+    // Lifecycle-only, nothing else refuses a change the reconciler is not
+    // told to commit, so every invalidating change needs an operation. With a
+    // direct route as well, direct evaluation refuses an unmapped change.
+    if (enforcement.lifecycle === true && direct === undefined) {
+      const unmapped = (changes as InvalidatingChange[]).filter((c) => operations[c] === undefined);
+      if (unmapped.length > 0) {
+        throw new AuthorityDependencyConfigError(
+          `${ctx}.enforcement.lifecycle_operations must map every invalidating change under lifecycle-only enforcement (no direct route); unmapped: ${unmapped.join(", ")}. With a direct route as well, a partial mapping is valid: direct evaluation refuses an unmapped change`,
+        );
+      }
+    }
     let bound: AuthorityDependencyDeclaration["external_change_bound"];
     if (o.external_change_bound !== undefined) {
       const b = objectOf(o.external_change_bound);
@@ -605,6 +616,13 @@ export class AuthorityDependencyEvidence {
   }
 }
 
+/** An applicable invalidation a complete reconciliation observed for one Mission's recorded Subject. */
+export interface ReconciledInvalidation {
+  failure: "withdrawn" | "invalidated";
+  /** The time the observation that showed it represents (RFC 3339). */
+  observedAt: string;
+}
+
 /** What an enforcing component holds to apply one declared dependency. */
 export interface AuthorityDependencyEnforcement {
   declaration: AuthorityDependencyDeclaration;
@@ -623,11 +641,18 @@ export interface AuthorityDependencyEnforcement {
   now?: () => number;
   /**
    * Under lifecycle-mediated enforcement, the reconciler's progress: the time
-   * the observation its last complete reconciliation acted on represents, and
-   * the governed Missions whose Subject that observation could not resolve.
-   * Absent where no reconciler runs.
+   * the observation its last complete reconciliation acted on represents, the
+   * governed Missions whose Subject that observation could not resolve, and
+   * those whose Subject it showed an applicable invalidation for (mapped to
+   * a lifecycle operation or not), each with the classification direct
+   * evaluation gives it and the observation's time. Absent where no
+   * reconciler runs.
    */
-  reconciliation?: () => { lastReconciledAtMs?: number; unresolved?: ReadonlySet<string> };
+  reconciliation?: () => {
+    lastReconciledAtMs?: number;
+    unresolved?: ReadonlySet<string>;
+    invalidated?: ReadonlyMap<string, ReconciledInvalidation>;
+  };
 }
 
 /**
@@ -643,7 +668,9 @@ export interface AuthorityDependencyEnforcement {
  *   whatever the Mission's state reads. Fresh progress does not authorize
  *   reliance on a dependency the reconciliation could not resolve: a Mission
  *   whose Subject the last complete reconciliation found no record of is
- *   refused `unresolved`. With `lag` alone (lifecycle-only), the declared
+ *   refused `unresolved`, and one whose Subject it observed an applicable
+ *   invalidation for is refused `withdrawn` or `invalidated` until a later
+ *   complete pass observes it gone, whatever the Mission's state reads. With `lag` alone (lifecycle-only), the declared
  *   observation limits still hold: the reconciliation's observation older
  *   than `max_staleness_seconds` is refused `stale`, a failed latest read
  *   under a declared online check `unavailable`, and the ceiling is the
@@ -690,6 +717,11 @@ export function checkAuthorityDependency(
     if (progress?.unresolved?.has(mission.id)) {
       return refuse("unresolved", new Date(last).toISOString());
     }
+    // An invalidation the last complete reconciliation established refuses
+    // whatever the Mission's state reads, a Mission resumed meanwhile
+    // included, until a later complete pass observes it gone.
+    const invalidation = progress?.invalidated?.get(mission.id);
+    if (invalidation) return refuse(invalidation.failure, invalidation.observedAt);
     reconciledUntilMs = last + lagBound * 1000;
     if (!apply.direct) {
       // Lifecycle-only: the declared observation limits hold on this route

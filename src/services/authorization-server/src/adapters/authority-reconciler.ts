@@ -23,7 +23,10 @@
  *   record of, and a disabled Subject never revoke. A governed Mission whose
  *   Subject the source holds no record of is recorded as unresolved with the
  *   pass's progress, so the PDP refuses its actions: fresh progress never
- *   authorizes reliance on a dependency the pass could not resolve.
+ *   authorizes reliance on a dependency the pass could not resolve. Likewise
+ *   each pass records the governed Missions whose Subject shows an applicable
+ *   invalidation (disabled, withdrawn, deprovisioned; mapped to an operation
+ *   or not), so a Mission resumed while it holds is still refused.
  * - Re-enablement is never reconciled into a resumption: a suspended Mission
  *   resumes only through an authorized lifecycle operation, after which every
  *   remaining check (the issuance gates' dependency check included) still
@@ -38,7 +41,9 @@
 import {
   type AuthorityDependencyDeclaration,
   type AuthorityDependencyResolver,
+  evaluateAuthorityDependency,
   type InvalidatingChange,
+  type ReconciledInvalidation,
   type ReconcilerOperation,
 } from "@mission/core";
 import type { MissionKernel } from "../kernel/kernel.js";
@@ -54,6 +59,8 @@ export interface ReconcileOutcome {
   failures: { mission?: string; error: string }[];
   /** The governed, non-terminal Missions whose Subject the observation holds no record of. */
   unresolved: string[];
+  /** The governed, non-terminal Missions whose Subject the observation shows an applicable invalidation for. */
+  invalidated: string[];
 }
 
 export interface AuthorityReconcilerOptions {
@@ -67,6 +74,7 @@ export interface AuthorityReconcilerOptions {
 export class AuthorityReconciler {
   private lastReconciledAtMs: number | undefined;
   private lastUnresolved: ReadonlySet<string> = new Set();
+  private lastInvalidated: ReadonlyMap<string, ReconciledInvalidation> = new Map();
   private lastOutcome: ReconcileOutcome | undefined;
 
   constructor(private readonly opts: AuthorityReconcilerOptions) {
@@ -79,9 +87,13 @@ export class AuthorityReconciler {
    * The time the observation the last complete pass acted on represents
    * (absent before the first), with the Missions that pass could not resolve.
    */
-  lag(): { lastReconciledAtMs?: number; unresolved?: ReadonlySet<string> } {
+  lag(): {
+    lastReconciledAtMs?: number;
+    unresolved?: ReadonlySet<string>;
+    invalidated?: ReadonlyMap<string, ReconciledInvalidation>;
+  } {
     return this.lastReconciledAtMs !== undefined
-      ? { lastReconciledAtMs: this.lastReconciledAtMs, unresolved: this.lastUnresolved }
+      ? { lastReconciledAtMs: this.lastReconciledAtMs, unresolved: this.lastUnresolved, invalidated: this.lastInvalidated }
       : {};
   }
 
@@ -97,7 +109,7 @@ export class AuthorityReconciler {
     const read = await resolver.refresh();
     const observedAtMs = resolver.observedAtMs();
     if (!read || observedAtMs === undefined) {
-      this.lastOutcome = { ok: false, transitions: [], failures: [{ error: "the identity source could not be read" }], unresolved: [] };
+      this.lastOutcome = { ok: false, transitions: [], failures: [{ error: "the identity source could not be read" }], unresolved: [], invalidated: [] };
       return this.lastOutcome;
     }
     const transitions: ReconcileOutcome["transitions"] = [];
@@ -108,21 +120,30 @@ export class AuthorityReconciler {
     // kernel is reconciled. (Read where the kernel reports it.)
     const uncertainty = (kernel as { recoveryUncertainty?: () => unknown }).recoveryUncertainty?.();
     if (uncertainty) {
-      this.lastOutcome = { ok: false, transitions, failures: [{ error: "the kernel's durable state is uncertain" }], unresolved: [] };
+      this.lastOutcome = { ok: false, transitions, failures: [{ error: "the kernel's durable state is uncertain" }], unresolved: [], invalidated: [] };
       return this.lastOutcome;
     }
     let missions: MissionRecord[];
     try {
       missions = kernel.allMissions();
     } catch (e) {
-      this.lastOutcome = { ok: false, transitions, failures: [{ error: e instanceof Error ? e.message : String(e) }], unresolved: [] };
+      this.lastOutcome = { ok: false, transitions, failures: [{ error: e instanceof Error ? e.message : String(e) }], unresolved: [], invalidated: [] };
       return this.lastOutcome;
     }
     const unresolved: string[] = [];
+    const invalidated = new Map<string, ReconciledInvalidation>();
     for (const record of missions) {
       if (record.state === "terminated") continue;
       if (!(declaration.governs.authority_sources as readonly string[]).includes(record.authority_source.type)) continue;
-      if (resolver.view(record.subject).observation?.known === false) unresolved.push(record.id);
+      const view = resolver.view(record.subject);
+      if (view.observation?.known === false) unresolved.push(record.id);
+      // The applicable invalidation this observation shows for the recorded
+      // Subject, classified as direct evaluation classifies it, whether or not
+      // the declaration maps it to a lifecycle operation.
+      const shown = evaluateAuthorityDependency(declaration, view, { clientId: record.client_id, nowMs: observedAtMs });
+      if (!shown.ok && (shown.failure === "withdrawn" || shown.failure === "invalidated")) {
+        invalidated.set(record.id, { failure: shown.failure, observedAt: shown.observedAt ?? new Date(observedAtMs).toISOString() });
+      }
       const change = this.changeFor(record);
       if (change === undefined) continue;
       const operation = declaration.enforcement.lifecycle_operations?.[change];
@@ -136,11 +157,22 @@ export class AuthorityReconciler {
       }
     }
     const ok = failures.length === 0;
+    // Published together, recomputed from this pass alone: a Mission leaves a
+    // set only when a later complete pass observes the condition gone, and a
+    // failed or partial pass leaves the previous sets standing.
     if (ok) {
       this.lastReconciledAtMs = observedAtMs;
       this.lastUnresolved = new Set(unresolved);
+      this.lastInvalidated = invalidated;
     }
-    this.lastOutcome = { ok, observedAt: new Date(observedAtMs).toISOString(), transitions, failures, unresolved };
+    this.lastOutcome = {
+      ok,
+      observedAt: new Date(observedAtMs).toISOString(),
+      transitions,
+      failures,
+      unresolved,
+      invalidated: [...invalidated.keys()],
+    };
     return this.lastOutcome;
   }
 
