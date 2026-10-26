@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 28 April 2027</td>
+<td class="center">Expires 29 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-harness-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-25" class="published">25 October 2026</time>
+<time datetime="2026-10-26" class="published">26 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-28">28 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-29">29 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1143,7 +1143,7 @@ treats session continuity as proof that Mission authority continues.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 28 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 29 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1202,6 +1202,9 @@ treats session continuity as proof that Mission authority continues.<a href="#se
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
                 <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-binding-inheritance" class="internal xref">Binding Inheritance</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-work-item-identity" class="internal xref">Work-Item Identity</a></p>
 </li>
             </ul>
 </li>
@@ -1401,22 +1404,26 @@ engine state or of engine state into the Mission record
 nodes (<a href="#mission-binding" class="auto internal xref">Section 6</a>);<a href="#section-2-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.3">
-          <p id="section-2-2.3.1">resume-time checks (<a href="#resume-checks" class="auto internal xref">Section 7</a>);<a href="#section-2-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.3.1">qualified work-item identity and its attachment
+(<a href="#work-item-identity" class="auto internal xref">Section 6.2</a>);<a href="#section-2-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.4">
-          <p id="section-2-2.4.1">queued work and retry behavior (<a href="#queues" class="auto internal xref">Section 9</a>);<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.4.1">resume-time checks (<a href="#resume-checks" class="auto internal xref">Section 7</a>);<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.5">
-          <p id="section-2-2.5.1">cached credential and tool-connection handling (<a href="#cached-access" class="auto internal xref">Section 10</a>);<a href="#section-2-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.5.1">queued work and retry behavior (<a href="#queues" class="auto internal xref">Section 9</a>);<a href="#section-2-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.6">
-          <p id="section-2-2.6.1">sub-agent handle requirements (<a href="#subagents" class="auto internal xref">Section 11</a>);<a href="#section-2-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.6.1">cached credential and tool-connection handling (<a href="#cached-access" class="auto internal xref">Section 10</a>);<a href="#section-2-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.7">
-          <p id="section-2-2.7.1">harness evidence (<a href="#harness-evidence" class="auto internal xref">Section 15</a>); and<a href="#section-2-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.7.1">sub-agent handle requirements (<a href="#subagents" class="auto internal xref">Section 11</a>);<a href="#section-2-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.8">
-          <p id="section-2-2.8.1">conformance for a Mission-aware harness (<a href="#conformance" class="auto internal xref">Section 17</a>).<a href="#section-2-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-2-2.8.1">harness evidence (<a href="#harness-evidence" class="auto internal xref">Section 15</a>); and<a href="#section-2-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-2-2.9">
+          <p id="section-2-2.9.1">conformance for a Mission-aware harness (<a href="#conformance" class="auto internal xref">Section 17</a>).<a href="#section-2-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-2-3">This document does not define a new OAuth token, a new agent protocol,
@@ -1898,6 +1905,83 @@ record the distinct Mission binding and the relationship to the parent
 item.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="work-item-identity">
+<section id="section-6.2">
+        <h3 id="name-work-item-identity">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-work-item-identity" class="section-name selfRef">Work-Item Identity</a>
+        </h3>
+<p id="section-6.2-1">A qualified work-item identifier names one unit of governed work. It
+is the pair of <code>work_item_issuer</code>, a URI the deployment assigns to the
+harness that issued the identifier, and <code>work_item</code>, that harness's
+own string identifier for the item, unique within its issuer. Harness
+Evidence's <code>work_item</code> (<a href="#harness-evidence-object" class="auto internal xref">Section 15.1</a>) is the second
+member of the pair, and <code>work_item_issuer</code> qualifies it.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2-2">The harness is the attacher. When it creates a governed work item, it
+assigns the identifier and binds the item to exactly one Mission, the
+item's Mission binding (<a href="#mission-binding" class="auto internal xref">Section 6</a>). A queue or scheduler
+that dispatches work is a deployment variant of this attacher, never a
+second one: it authenticates to the harness, which assigns, records,
+and attaches the identifier under this section. A value the governed
+agent can supply, such as a tool argument or model output, never
+establishes, selects, or changes a work item, and the harness <span class="bcp14">MUST NOT</span>
+merge one into what it attaches.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.2-3">The harness <span class="bcp14">MUST</span> keep these properties of the identifier:<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.2-4.1">
+            <p id="section-6.2-4.1.1">Mapping: a work item's Mission does not change, except by explicit
+successor rebinding (<a href="#supersession-continuity" class="auto internal xref">Section 13.2</a>).<a href="#section-6.2-4.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.2-4.2">
+            <p id="section-6.2-4.2.1">Inheritance: a child node, job, or sub-agent handle created from the
+item under the same Mission inherits its identifier
+(<a href="#binding-inheritance" class="auto internal xref">Section 6.1</a>); a child governed by a different Mission
+receives its own identifier, bound to that Mission, never the
+parent's.<a href="#section-6.2-4.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.2-4.3">
+            <p id="section-6.2-4.3.1">Retry: a retry or resumed dispatch keeps the identifier and is still
+a new continuation point (<a href="#queues" class="auto internal xref">Section 9</a>).<a href="#section-6.2-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-6.2-4.4">
+            <p id="section-6.2-4.4.1">Concurrency: concurrent work items, under one Mission or several,
+have distinct identifiers, and the harness attaches each only to the
+requests it originates for that item, under that item's Mission.<a href="#section-6.2-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-6.2-5">Where the deployment's Enforcement Scope Statement
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) names the harness as a
+work-item attacher, the harness attaches the identifier to each
+governed request it originates for the item, in the Mission reference
+it propagates (<a href="#mission-binding" class="auto internal xref">Section 6</a>). <code>work_item_issuer</code> and
+<code>work_item</code> are extension members of the Mission reference tuple,
+defined here under that tuple's extension rule
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>). Both are Strings,
+carried together or not at all, in the HTTP and MCP carriages alike.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+<p id="section-6.2-6">A PEP implementing this profile <span class="bcp14">MUST</span> take a work item only from these
+members, once the reference itself verifies, and only where the
+statement names the harness that <code>work_item_issuer</code> identifies as the
+attacher for the client the PEP authenticated on that request. A
+reference that verifies shows only that it names the request's
+Mission, not which component attached the work item, so verification
+alone never establishes the attachment. It <span class="bcp14">MUST NOT</span> read a work item
+from tool arguments or any other value the agent supplies, and <span class="bcp14">MUST NOT</span> carry one it cannot attribute to that attacher.
+It carries the work item to the decision as <code>context.work_item</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), an object whose <code>issuer</code>
+is <code>work_item_issuer</code> and whose <code>id</code> is <code>work_item</code>.<a href="#section-6.2-6" class="pilcrow">¶</a></p>
+<p id="section-6.2-7">Where the statement claims work-item attribution for an action class,
+the <code>work-item-attributed</code> composition of
+<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>, the decision for each
+action in that class requires the work item, the permit binds it, and
+the executing PEP refuses a permit for another work item
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>). Decision and Execution
+Evidence carry it (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>),
+joining the item's Harness Evidence. Elsewhere the deployment claims
+Mission-level attribution only, and an attached work item is carried
+but never required. Attribution says which work item an action was
+requested for. It proves neither that the action serves the item's
+purpose nor isolation between items in one process.<a href="#section-6.2-7" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="resume-checks">
@@ -2200,9 +2284,20 @@ otherwise.<a href="#section-9.1-2.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-9.1-2.13">
-<code>idempotency_key</code>:</dt>
+<code>work_item</code>, <code>work_item_issuer</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-9.1-2.14">
-            <p id="section-9.1-2.14.1"><span class="bcp14">REQUIRED</span> when retrying an action whose runtime profile requires one.<a href="#section-9.1-2.14.1" class="pilcrow">¶</a></p>
+            <p id="section-9.1-2.14.1"><span class="bcp14">REQUIRED</span> where the Enforcement Scope Statement claims work-item
+attribution for the item's class, <span class="bcp14">OPTIONAL</span> otherwise. The qualified
+work-item identifier of the work the item performs
+(<a href="#work-item-identity" class="auto internal xref">Section 6.2</a>). It is the same across retries:
+<code>queue_item_id</code> names the attempt and <code>retry_of</code> the attempt before
+it, while <code>work_item</code> names the work every attempt performs.<a href="#section-9.1-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-9.1-2.15">
+<code>idempotency_key</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-9.1-2.16">
+            <p id="section-9.1-2.16.1"><span class="bcp14">REQUIRED</span> when retrying an action whose runtime profile requires one.<a href="#section-9.1-2.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2236,6 +2331,8 @@ is in a high-consequence action class:<a href="#section-9.1-5" class="pilcrow">�
   "not_before": "2026-11-02T02:00:00Z",
   "expires_at": "2026-11-02T06:00:00Z",
   "retry_of": "queue_journal_post_6",
+  "work_item": "work_jrnl_2026q3_0042",
+  "work_item_issuer": "https://harness.example.com",
   "idempotency_key": "idem_jrnl_2026q3_0042"
 }
 </pre><a href="#section-9.1-6" class="pilcrow">¶</a>
@@ -2644,10 +2741,12 @@ authority, not a credential or a permit carried over from the
 predecessor. The harness records the rebinding as Harness Evidence
 with <code>event_type</code> <code>mission_superseded</code> (<a href="#harness-evidence" class="auto internal xref">Section 15</a>), naming
 both the predecessor and the successor, so the continuity is
-auditable. A harness that cannot establish the successor state, whose
-<code>superseded</code> termination names no <code>successor</code>, or for which the item's
-actions are not within the successor, suppresses per the matrix
-above.<a href="#section-13.2-4" class="pilcrow">¶</a></p>
+auditable. That record carries the item's qualified work-item
+identifier, and the rebinding is the only change to the item's Mission
+(<a href="#work-item-identity" class="auto internal xref">Section 6.2</a>). A harness that cannot establish the
+successor state, whose <code>superseded</code> termination names no <code>successor</code>,
+or for which the item's actions are not within the successor,
+suppresses per the matrix above.<a href="#section-13.2-4" class="pilcrow">¶</a></p>
 <p id="section-13.2-5">For irreversible actions, external commitments, and privileged
 administration, <code>handoff</code> or orchestration handling under a deployment
 unwind plan <span class="bcp14">SHOULD</span> be used when work may already be in flight.<a href="#section-13.2-5" class="pilcrow">¶</a></p>
@@ -2941,7 +3040,8 @@ copy);<a href="#section-15-3.2.1" class="pilcrow">¶</a></p>
           <p id="section-15-3.3.1"><code>session_id</code>;<a href="#section-15-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-3.4">
-          <p id="section-15-3.4.1">task graph node or queue item identifier;<a href="#section-15-3.4.1" class="pilcrow">¶</a></p>
+          <p id="section-15-3.4.1">task graph node or queue item identifier, qualified by the harness
+that issued it (<a href="#work-item-identity" class="auto internal xref">Section 6.2</a>);<a href="#section-15-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-3.5">
           <p id="section-15-3.5.1">prior and resulting harness state;<a href="#section-15-3.5.1" class="pilcrow">¶</a></p>
@@ -2972,8 +3072,9 @@ execution-continuity decisions, not resource server authorization.<a href="#sect
 retention requirements of the runtime profile
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), imported here by
 reference: append-only integrity protection under a named mechanism, a
-per-Mission sequence indicator, no raw parameters in the record, and a
-retention window no shorter than the Mission's audit horizon.<a href="#section-15-6" class="pilcrow">¶</a></p>
+per-emitter sequence indicator for each Mission, no raw parameters in
+the record, and a retention window no shorter than the Mission's audit
+horizon.<a href="#section-15-6" class="pilcrow">¶</a></p>
 <p id="section-15-7">A Harness Evidence record is registrable on the Mission's
 transparency feed (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>). Its
 canonical bytes are the record's JCS canonicalization under the
@@ -3038,104 +3139,114 @@ evidence companion's complete compromise-boundary rule
 <code>work_item</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.10">
             <p id="section-15.1-2.10.1"><span class="bcp14">OPTIONAL</span>. Task graph node, queue item, background job, or child
-handle identifier.<a href="#section-15.1-2.10.1" class="pilcrow">¶</a></p>
+handle identifier: for a work item with a qualified work-item
+identifier, its <code>work_item</code> (<a href="#work-item-identity" class="auto internal xref">Section 6.2</a>).<a href="#section-15.1-2.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.11">
-<code>actor</code>:</dt>
+<code>work_item_issuer</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.12">
-            <p id="section-15.1-2.12.1"><span class="bcp14">OPTIONAL</span>. The actor or sub-agent identifier the record concerns, when
-applicable (for example, the child whose work was stopped or
-continued under a <code>subagent_stopped</code> or <code>subagent_continued</code> event).<a href="#section-15.1-2.12.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.12.1"><span class="bcp14">OPTIONAL</span>. A string. The <code>work_item_issuer</code> of the record's work item
+(<a href="#work-item-identity" class="auto internal xref">Section 6.2</a>). <span class="bcp14">REQUIRED</span> with <code>work_item</code> where the
+Enforcement Scope Statement claims work-item attribution for that
+work.<a href="#section-15.1-2.12.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.13">
-<code>state</code>:</dt>
+<code>actor</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.14">
-            <p id="section-15.1-2.14.1"><span class="bcp14">REQUIRED</span>. The Mission state observed or <code>unknown</code>.<a href="#section-15.1-2.14.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.14.1"><span class="bcp14">OPTIONAL</span>. The actor or sub-agent identifier the record concerns, when
+applicable (for example, the child whose work was stopped or
+continued under a <code>subagent_stopped</code> or <code>subagent_continued</code> event).<a href="#section-15.1-2.14.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.15">
-<code>termination</code>:</dt>
+<code>state</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.16">
-            <p id="section-15.1-2.16.1"><span class="bcp14">REQUIRED</span> when <code>state</code> is <code>terminated</code> and the state source reported
-one; absent otherwise. The Mission's <code>termination</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
-Termination").<a href="#section-15.1-2.16.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.16.1"><span class="bcp14">REQUIRED</span>. The Mission state observed or <code>unknown</code>.<a href="#section-15.1-2.16.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.17">
-<code>prior_harness_state</code>, <code>resulting_harness_state</code>:</dt>
+<code>termination</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.18">
-            <p id="section-15.1-2.18.1"><span class="bcp14">OPTIONAL</span>. The harness execution state before and after the recorded
-decision, each a value from the harness execution states of
-<a href="#harness-states" class="auto internal xref">Section 12</a> (for example, <code>running</code> to <code>suppressed</code>).<a href="#section-15.1-2.18.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.18.1"><span class="bcp14">REQUIRED</span> when <code>state</code> is <code>terminated</code> and the state source reported
+one; absent otherwise. The Mission's <code>termination</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Termination").<a href="#section-15.1-2.18.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.19">
-<code>state_source</code>:</dt>
+<code>prior_harness_state</code>, <code>resulting_harness_state</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.20">
-            <p id="section-15.1-2.20.1"><span class="bcp14">REQUIRED</span>. A value from the single <code>state_source</code> enumeration of
-<a href="#mission-binding" class="auto internal xref">Section 6</a>.<a href="#section-15.1-2.20.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.20.1"><span class="bcp14">OPTIONAL</span>. The harness execution state before and after the recorded
+decision, each a value from the harness execution states of
+<a href="#harness-states" class="auto internal xref">Section 12</a> (for example, <code>running</code> to <code>suppressed</code>).<a href="#section-15.1-2.20.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.21">
-<code>freshness</code>:</dt>
+<code>state_source</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.22">
-            <p id="section-15.1-2.22.1"><span class="bcp14">OPTIONAL</span>. Object containing <code>checked_at</code> and <code>expires_at</code>.<a href="#section-15.1-2.22.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.22.1"><span class="bcp14">REQUIRED</span>. A value from the single <code>state_source</code> enumeration of
+<a href="#mission-binding" class="auto internal xref">Section 6</a>.<a href="#section-15.1-2.22.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.23">
-<code>decision</code>:</dt>
+<code>freshness</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.24">
-            <p id="section-15.1-2.24.1"><span class="bcp14">REQUIRED</span>. One of <code>continue</code>, <code>suppress</code>, <code>pause</code>, <code>terminate</code>, or
-<code>handoff</code>.<a href="#section-15.1-2.24.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.24.1"><span class="bcp14">OPTIONAL</span>. Object containing <code>checked_at</code> and <code>expires_at</code>.<a href="#section-15.1-2.24.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.25">
-<code>reason</code>:</dt>
+<code>decision</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.26">
-            <p id="section-15.1-2.26.1"><span class="bcp14">REQUIRED</span>. String reason.<a href="#section-15.1-2.26.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.26.1"><span class="bcp14">REQUIRED</span>. One of <code>continue</code>, <code>suppress</code>, <code>pause</code>, <code>terminate</code>, or
+<code>handoff</code>.<a href="#section-15.1-2.26.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.27">
-<code>review</code>:</dt>
+<code>reason</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.28">
-            <p id="section-15.1-2.28.1"><span class="bcp14">OPTIONAL</span>. An object for a <code>human_review_completed</code> event: the
-<code>outcome</code> (<code>approve</code>, <code>reject</code>, or <code>expire</code>), the reviewer
-identity, and the authority basis of the review
-(<a href="#review-outcomes" class="auto internal xref">Section 13.3</a>).<a href="#section-15.1-2.28.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.28.1"><span class="bcp14">REQUIRED</span>. String reason.<a href="#section-15.1-2.28.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.29">
-<code>termination_outcome</code>:</dt>
+<code>review</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.30">
-            <p id="section-15.1-2.30.1"><span class="bcp14">OPTIONAL</span>. For a <code>subagent_stopped</code> event: <code>acknowledged</code>,
-<code>timed_out</code>, or <code>unknown</code> (<a href="#subagent-stop" class="auto internal xref">Section 11.1</a>).<a href="#section-15.1-2.30.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.30.1"><span class="bcp14">OPTIONAL</span>. An object for a <code>human_review_completed</code> event: the
+<code>outcome</code> (<code>approve</code>, <code>reject</code>, or <code>expire</code>), the reviewer
+identity, and the authority basis of the review
+(<a href="#review-outcomes" class="auto internal xref">Section 13.3</a>).<a href="#section-15.1-2.30.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.31">
-<code>taint</code>:</dt>
+<code>termination_outcome</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.32">
-            <p id="section-15.1-2.32.1"><span class="bcp14">OPTIONAL</span>. An object for an <code>egress_downgraded</code> event: the tainting
-source class, the provenance basis (<code>parameter</code> or <code>session</code>), and
-the applied action (a fresh action-bound approval required, or the
-action suppressed) (<a href="#session-taint" class="auto internal xref">Section 14</a>).<a href="#section-15.1-2.32.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.32.1"><span class="bcp14">OPTIONAL</span>. For a <code>subagent_stopped</code> event: <code>acknowledged</code>,
+<code>timed_out</code>, or <code>unknown</code> (<a href="#subagent-stop" class="auto internal xref">Section 11.1</a>).<a href="#section-15.1-2.32.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.33">
-<code>egress</code>:</dt>
+<code>taint</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.34">
-            <p id="section-15.1-2.34.1"><span class="bcp14">OPTIONAL</span>. An object for an <code>egress_refused</code> event: the
-<code>channel_class</code> and <code>destination</code> of the refused egress and the
-<code>disposition</code> the statement declares for that channel
-(<a href="#mediated-egress" class="auto internal xref">Section 5</a>). <span class="bcp14">REQUIRED</span> for an <code>egress_refused</code> event.<a href="#section-15.1-2.34.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.34.1"><span class="bcp14">OPTIONAL</span>. An object for an <code>egress_downgraded</code> event: the tainting
+source class, the provenance basis (<code>parameter</code> or <code>session</code>), and
+the applied action (a fresh action-bound approval required, or the
+action suppressed) (<a href="#session-taint" class="auto internal xref">Section 14</a>).<a href="#section-15.1-2.34.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.1-2.35">
-<code>scope_statement_digest</code>:</dt>
+<code>egress</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.36">
-            <p id="section-15.1-2.36.1"><span class="bcp14">OPTIONAL</span>. A string. The integrity-anchor encoded digest
+            <p id="section-15.1-2.36.1"><span class="bcp14">OPTIONAL</span>. An object for an <code>egress_refused</code> event: the
+<code>channel_class</code> and <code>destination</code> of the refused egress and the
+<code>disposition</code> the statement declares for that channel
+(<a href="#mediated-egress" class="auto internal xref">Section 5</a>). <span class="bcp14">REQUIRED</span> for an <code>egress_refused</code> event.<a href="#section-15.1-2.36.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.1-2.37">
+<code>scope_statement_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.1-2.38">
+            <p id="section-15.1-2.38.1"><span class="bcp14">OPTIONAL</span>. A string. The integrity-anchor encoded digest
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) of the published
 Enforcement Scope Statement (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>),
 or of this profile's execution-environment scope statement where
@@ -3144,13 +3255,13 @@ when this record was made, so a record can be joined to the
 published scope claim after the fact. It is a raw-octet digest
 over the referenced statement's exact published bytes, under the
 substrate's default commitment construction, which this document
-imports normatively (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-15.1-2.36.1" class="pilcrow">¶</a></p>
+imports normatively (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>).<a href="#section-15.1-2.38.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-15.1-2.37">
+<dt id="section-15.1-2.39">
 <code>occurred_at</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.1-2.38">
-            <p id="section-15.1-2.38.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-15.1-2.38.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-15.1-2.40">
+            <p id="section-15.1-2.40.1"><span class="bcp14">REQUIRED</span>. RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> timestamp.<a href="#section-15.1-2.40.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -3345,12 +3456,16 @@ execution-environment scope statement (<a href="#mediated-egress" class="auto in
           <p id="section-17-2.5.1">prevent sub-agent authority by session ancestry;<a href="#section-17-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-17-2.6">
-          <p id="section-17-2.6.1">emit Harness Evidence for stop and resume decisions; and<a href="#section-17-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-17-2.6.1">where named as a work-item attacher, keep and attach qualified
+work-item identifiers (<a href="#work-item-identity" class="auto internal xref">Section 6.2</a>);<a href="#section-17-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-17-2.7">
-          <p id="section-17-2.7.1">apply the stop behavior for stale state under the per-action-class
+          <p id="section-17-2.7.1">emit Harness Evidence for stop and resume decisions; and<a href="#section-17-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-17-2.8">
+          <p id="section-17-2.8.1">apply the stop behavior for stale state under the per-action-class
 staleness bounds the Enforcement Scope Statement declares
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-17-2.7.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-17-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-17-3">The runtime profile's non-normative freshness table
@@ -3519,7 +3634,10 @@ every reset and egress direction comes through the surface
 workspace identifiers, tool usage, agent topology, and Mission
 relationships. Deployments <span class="bcp14">SHOULD</span> minimize retained harness state,
 control access to evidence, and avoid storing raw workspace content in
-Harness Evidence unless required for audit.<a href="#section-19-1" class="pilcrow">¶</a></p>
+Harness Evidence unless required for audit. A qualified work-item
+identifier is a stable correlator across an item's requests and
+records, and the Mission reference's forwarding rules apply to it
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>).<a href="#section-19-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
@@ -3591,6 +3709,10 @@ of <a href="#harness-evidence" class="auto internal xref">Section 15</a> is loca
 <a href="#section-21.2" class="section-number selfRef">21.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-architecture">[I-D.draft-mcguinness-mission-architecture]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="edition-agent-1-draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-audit">[I-D.draft-mcguinness-mission-audit]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Audit Transparency"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-audit.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
@@ -3746,37 +3868,51 @@ exists.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">The taint baseline, taint reset and egress direction no longer key
+          <p id="appendix-B-2.1.1">Harness Evidence: the imported sequence indicator is per emitter for
+each Mission, as the runtime profile scopes it. No requirement
+changed (#821).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Work-Item Identity: the harness assigns a qualified work-item
+identifier (<code>work_item_issuer</code> and <code>work_item</code>), binds it to one
+Mission, and attaches it as extension members of the propagated
+Mission reference, with mapping, inheritance, retry, and concurrency
+rules. A PEP carries it to the decision only from that attachment.
+The Queue Item Object and Harness Evidence carry it, and a
+<code>mission_superseded</code> record names it (#815).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">The taint baseline, taint reset and egress direction no longer key
 on the Subject. Content from the Approver or from the delegating
 person of a user-delegated Mission does not taint, and a workload or
 organizational Subject confers no baseline trust. A reset or an
 egress direction is a trusted direction, given through a surface the
 governed agent cannot invoke; being the Subject, identity alone, and
 administrative metadata authorize none. Inherited taint and the
-transformed-content rule are unchanged (#1193).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+transformed-content rule are unchanged (#1193).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">The Mission binding and Harness Evidence carry <code>termination</code> beside
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">The Mission binding and Harness Evidence carry <code>termination</code> beside
 a <code>terminated</code> state. The stop-behavior matrix is keyed on
 <code>terminated</code> and <code>termination.reason</code>, with a row for an
 unrecognized or absent termination, and continuation by rebinding
 keys on reason <code>superseded</code> and follows <code>termination.successor</code>
-(#705).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+(#705).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Interaction with Mission Containment keys the residual on the
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">Interaction with Mission Containment keys the residual on the
 action class's containment property, not on a deployment's level.
-No requirement changed.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+No requirement changed.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1"><code>status_checked_at</code> is the harness's observation as its own clock
+        <li class="normal" id="appendix-B-2.6">
+          <p id="appendix-B-2.6.1"><code>status_checked_at</code> is the harness's observation as its own clock
 read it, preceding the relied-on status's <code>iat</code> by no more than the
 published maximum clock skew; <code>status_expires_at</code> is its reliance
 end, never later than a Mission Status Response's
-<code>mission.fresh_until</code>.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Client-instance references follow their successors:
+        <li class="normal" id="appendix-B-2.7">
+          <p id="appendix-B-2.7.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -3786,13 +3922,13 @@ Context's <code>iss</code> and <code>id</code>, instead of <code>agent_instance_
 instance <code>sub</code>. The retired profile's
 guarantee that sub-agent chains cannot shed identity now depends on
 the harness's own durable association between each sub-agent handle
-and its instance.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+and its instance.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">Linked the limits of provenance-backed taint control to the Security
+        <li class="normal" id="appendix-B-2.8">
+          <p id="appendix-B-2.8.1">Linked the limits of provenance-backed taint control to the Security
 Model's Enforcement Perimeter and distinguished the per-channel
 egress disposition from the runtime profile's per-entry perimeter
-disposition; no taint requirement changed (#758).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+disposition; no taint requirement changed (#758).<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
