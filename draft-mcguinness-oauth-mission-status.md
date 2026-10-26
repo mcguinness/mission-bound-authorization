@@ -1851,7 +1851,8 @@ An implementation claiming an extension MUST meet its requirements:
   introspection response ({{introspection-projection}}), signing it
   with {{RFC9701}} as that section provides.
 - **Mission Lifecycle**: serve the Mission Lifecycle endpoint
-  ({{mission-lifecycle-endpoint}}), gate the `suspended` state and the
+  ({{mission-lifecycle-endpoint}}) with its four base operations,
+  gate the `suspended` state and the
   `completed` termination it introduces exactly as the issuance profile
   gates on non-`active` state, and advertise `mission_lifecycle_endpoint`,
   `mission_lifecycle_endpoint_auth_methods_supported`,
@@ -1875,8 +1876,10 @@ An implementation claiming an extension MUST meet its requirements:
   `private_key_jwt`,
   `mission_lifecycle_endpoint_auth_signing_alg_values_supported`. The
   class requires no other operation and not the Mission Status
-  operation; an
-  implementation that adopts one meets its requirements as well, and
+  operation; an implementation that also serves another base operation
+  or the Mission Status operation meets that operation's requirements,
+  and one that serves `suspend` serves `resume`, without widening who
+  may perform either ({{lifecycle-authorization}}); and
   the `suspended` state and `completed` termination arrive only with
   the operations that introduce them. An implementation claiming
   Mission Lifecycle meets this class.
