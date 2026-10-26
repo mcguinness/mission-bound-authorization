@@ -1914,7 +1914,11 @@ enforces each counter under one of two named enforcement profiles:<a href="#sect
 balance: a single serializing PDP for the counter, a shared
 linearizable counter, or per-PDP sub-budgets that are structurally
 exact because they sum to the cap. The bound never over-consumes;
-it is a hard cap.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+it is a hard cap. The Exact guarantee depends on correct
+reconciliation evidence: if corrected evidence establishes execution
+after an incorrect release, accounting records that consumption,
+reports any excess, and refuses further reservations while no
+headroom remains.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.1-2.3">Bounded-consistency enforcement profile:</dt>
@@ -2965,7 +2969,11 @@ version or a fresh consent continues the counter, and fresh consent
 neither releases a reservation that remains charged nor resets
 consumption. A Child Mission is refused under an instance the budget
 meters unless charged to it. A <code>metering</code> entry is one per counter,
-and a restart never releases a reservation.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+and a restart never releases a reservation. The Exact guarantee
+depends on correct reconciliation evidence: corrected evidence of
+execution after an incorrect release is recorded, any excess is
+reported, and further reservations are refused while no headroom
+remains.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
           <p id="appendix-A-2.2.1"><code>max_budget</code>'s <code>currency</code> takes the form Resource Access gives

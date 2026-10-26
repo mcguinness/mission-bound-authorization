@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-26T05:07:31Z
-Source repository commit: f863dda592ad1cf4de6d36c1eccba6a21819224b
+Generated: 2026-10-26T21:01:29Z
+Source repository commit: b28a851899ba7f47fcc1d6f1e3a51b80fed517ae
 Member count: 9
 
 Reading order:
@@ -22066,13 +22066,24 @@ Table of Contents
    is the Execution Evidence Object, defined by the runtime evidence
    companion ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
+   Durability is ordered around the effect.  For an action in the high-
+   consequence classes, the component that releases the effect MUST NOT
+   release it until the permit's Decision Evidence and the identifiers
+   that recover the action's disposition (the evaluation identifier, and
+   any idempotency claim or consumption reservation the action holds)
+   are durably committed.  If they cannot be committed, that component
+   MUST refuse the action.  A crash after an irreversible external
+   effect is released and before its outcome is recorded leaves an
+   unknown outcome, reconciled as below, with recovery under Section 8.2
+   and Section 9.3.
+
    Reconciliation is bounded in time by the reconciliation window,
    orphan-detection component, and alerting obligation the Enforcement
    Scope Statement declares (Section 5.2): an execution-outcome record
    is expected for each decision within the window, and the named
    component detects orphaned evidence (a decision with no matching
-   execution-outcome record within it) and sequence gaps in a Mission's
-   records (Section 11.3).
+   execution-outcome record within it) and per-emitter sequence gaps in
+   a Mission's records (Section 11.3).
 
    An unknown outcome has an owner and a deadline, not only a window:
    the declared component MUST actively reconcile each unresolved
@@ -22170,10 +22181,24 @@ Table of Contents
       correlation members and each record's timestamps together
       ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
+   *  An emitter MUST NOT reuse a sequence value for one Mission,
+      including across a restart and among replicas acting as that
+      emitter: a value it cannot use leaves a detectable gap rather than
+      being issued again.
+
    *  The retention window declared in the Enforcement Scope Statement
       MUST be no shorter than the Mission's audit horizon, as defined in
       the Mission Record section of
       [I-D.draft-mcguinness-oauth-mission].
+
+   Export, transparency registration, and signing for portable
+   verification run from the producer's durable store.  They run
+   asynchronously only as the audit companion's Registration
+   Availability ([I-D.draft-mcguinness-mission-audit]) and the signer-
+   outage rule of Section 5.8 permit, without losing a required record,
+   and a record a composing profile requires to be individually signed
+   stays individually signed
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
    Digest encoding is uniform across this document family: every digest
    a family document defines uses the sha-256: prefixed base64url, no-
@@ -23351,6 +23376,20 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Runtime Enforcement Evidence (#821): durability is ordered around
+      the effect.  For a high-consequence action, the component that
+      releases the effect releases it only after the permit's Decision
+      Evidence and the identifiers that recover the action's disposition
+      are durably committed, and refuses the action when they cannot be.
+      A crash after an irreversible external effect is released and
+      before its outcome is recorded is an unknown outcome under the
+      existing reconciliation rules.  An emitter never reuses a sequence
+      value for one Mission, across a restart or among its replicas; a
+      value it cannot use is a detectable gap.  Export, transparency
+      registration and portable signing run from the producer's durable
+      store under the existing asynchronous rules, and orphan detection
+      names per-emitter sequence gaps.
 
    *  Authority Dependencies: a deployment that makes reliance depend on
       an external authority remaining effective declares the dependency,
@@ -31932,8 +31971,9 @@ Table of Contents
    retention requirements of the runtime profile
    ([I-D.draft-mcguinness-mission-runtime]), imported here by reference:
    append-only integrity protection under a named mechanism, a per-
-   Mission sequence indicator, no raw parameters in the record, and a
-   retention window no shorter than the Mission's audit horizon.
+   emitter sequence indicator for each Mission, no raw parameters in the
+   record, and a retention window no shorter than the Mission's audit
+   horizon.
 
    A Harness Evidence record is registrable on the Mission's
    transparency feed ([I-D.draft-mcguinness-mission-audit]).  Its
@@ -32531,6 +32571,10 @@ Appendix A.  Mapping to Durable-Execution Engines
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Harness Evidence: the imported sequence indicator is per emitter
+      for each Mission, as the runtime profile scopes it.  No
+      requirement changed (#821).
 
    *  Work-Item Identity: the harness assigns a qualified work-item
       identifier (work_item_issuer and work_item), binds it to one
