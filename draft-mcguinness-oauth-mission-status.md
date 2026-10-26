@@ -1144,16 +1144,10 @@ recording a termination reason of its own.
 
 An operation is legal only from the source states below. The
 `terminated` state admits no transition, whatever its termination
-reason. An operation whose resulting state and, for `terminated`,
-termination reason equal the current ones is idempotent success
-({{idempotency}}). This table governs Mission-level state; an
-extension operation that changes no Mission state is not a row of
-it.
-
-`resume` is the sole exception: it is legal only from `suspended`
-(its resulting state, `active`, is also the baseline a Mission holds
-before any suspension), so `resume` on an `active` or `terminated`
-Mission is a conflict, not idempotent success.
+reason. {{idempotency}} decides an operation not legal from the
+current state as idempotent success or a conflict. This table
+governs Mission-level state; an extension operation that changes no
+Mission state is not a row of it.
 
 | Operation | Legal from | Resulting state | Termination reason |
 |---|---|---|---|
@@ -1168,12 +1162,7 @@ a monotonic narrowing to `terminated` and needs no derivation
 window, so a suspended Mission need not first be resumed to be
 completed.
 
-Requests are adjudicated by the single rule of {{idempotency}}: an
-operation whose resulting state and termination reason equal the
-Mission's current ones is idempotent success, with the `resume`
-exception above. Any other
-operation not legal from the current state, including `resume` on a
-Mission that is not `suspended`, is refused as a conflict. A Mission
+A Mission
 that reaches its `expires_at` from `active` or `suspended` is
 `terminated` with reason `expired` independently of this endpoint, at
 every decision whether or not the transition is persisted. When a
@@ -1509,8 +1498,9 @@ the baseline a Mission holds before any suspension, so `resume` on an
 `active` Mission (one never suspended, or already resumed) or on a
 `terminated` Mission is not idempotent success but a conflict.
 
-One idempotent case carries metadata. A `suspend` against a
-`suspended` Mission that carries a `suspend_until` and `on_expiry`
+A `suspend` against a `suspended` Mission leaves its state unchanged
+but can change its schedule. One that carries a `suspend_until` and
+`on_expiry`
 pair differing from the recorded schedule, or where none is recorded,
 replaces the schedule once authorized ({{lifecycle-authorization}}):
 the AS MUST update the recorded values and their committing party,
