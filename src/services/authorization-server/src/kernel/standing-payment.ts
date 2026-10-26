@@ -549,7 +549,8 @@ export function assertStandingPaymentCoverage(
  * deployment's Enforcement Scope Statement fails to declare for one
  * designating Dispatch Policy, or `undefined` when it declares all of it. The
  * statement must claim `budget_metering`, declare it under the Exact
- * enforcement profile, and list the policy's budget (its owner and id) with
+ * enforcement profile in the policy's currency, meter the designated
+ * operation at `commit`, and list the policy's budget (its owner and id) with
  * the policy's currency and limit and a `policies` entry equal, member for
  * member, to the policy's committed `{id, version, digest}` (the digest the
  * Mission Issuer computes over the snapshot it holds). Read structurally:
@@ -570,6 +571,15 @@ export function standingPaymentExactProfileGap(
   const declared = isObject(statement.extensions) ? statement.extensions.budget_metering : undefined;
   if (!isObject(declared) || declared.enforcement_profile !== "exact") {
     return "the Enforcement Scope Statement does not declare budget_metering under the exact enforcement profile";
+  }
+  if (!isObject(declared.unit) || declared.unit.currency !== terms.budget.currency) {
+    return `the Enforcement Scope Statement's budget_metering counts in another unit than the policy's ${terms.budget.currency}`;
+  }
+  const meteredAtCommit =
+    Array.isArray(declared.metered_actions) &&
+    declared.metered_actions.some((m) => isObject(m) && m.action === terms.operation && m.phase === "commit");
+  if (!meteredAtCommit) {
+    return `the Enforcement Scope Statement's budget_metering does not meter ${terms.operation} at commit`;
   }
   const entry = (Array.isArray(declared.budgets) ? declared.budgets : []).find(
     (b): b is Record<string, unknown> => isObject(b) && b.owner === terms.budget.owner && b.budget_id === terms.budget.id,
@@ -934,20 +944,31 @@ export function standingPaymentBudgetBindingOf(
   record: MissionRecord,
 ): StandingPaymentBudgetBindingResult {
   const underivable = (reason: string): StandingPaymentBudgetBindingResult => ({ kind: "underivable", reason });
-  // The successor chain, as standingPaymentRootOf walks it, except that a
-  // predecessor the kernel holds no record of ends the walk underivable
-  // rather than reading the lineage as an ordinary one.
+  // The lineage: the successor chain, as standingPaymentRootOf walks it,
+  // and past it the parent chain of a Child Mission, so every descendant of
+  // a standing-payment instance is found. A predecessor or parent the kernel
+  // holds no record of ends the walk underivable rather than reading the
+  // lineage as an ordinary one.
   let root: StandingPaymentAdmission | undefined;
+  let viaParent = false;
   const seen = new Set<string>();
   for (let m: MissionRecord | undefined = record; m && !seen.has(m.id); ) {
     seen.add(m.id);
     root = kernel.standingPayments.admission(m.id);
-    if (root || m.predecessor === undefined) break;
-    const predecessor: string = m.predecessor;
-    m = kernel.get(predecessor);
-    if (!m) return underivable(`mission ${record.id} names predecessor ${predecessor}, which this kernel holds no record of`);
+    const next = m.predecessor ?? m.parent?.id;
+    if (root || next === undefined) break;
+    const edge = m.predecessor !== undefined ? "predecessor" : "parent";
+    if (edge === "parent") viaParent = true;
+    m = kernel.get(next);
+    if (!m) return underivable(`mission ${record.id} names ${edge} ${next}, which this kernel holds no record of`);
   }
   if (!root) return { kind: "unbound" };
+  // Ruling 3: a child's spend is not charged to the budget's counters, so a
+  // Mission derived as a child from a standing-payment lineage (which the
+  // issuance profile refuses to create) is never metered as unbound.
+  if (viaParent) {
+    return underivable(`mission ${record.id} descends as a Child Mission from standing-payment instance ${root.mission_id}, whose budget accounting covers no child`);
+  }
   const instance = kernel.get(root.mission_id);
   const ref = root.dispatch_policy;
   const committed = instance?.template?.dispatch_policy;

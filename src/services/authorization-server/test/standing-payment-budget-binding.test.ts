@@ -14,7 +14,6 @@ import { DERIVATION_POLICY, DISPATCH_PROHIBITED_ACTIONS } from "@mission/demo-da
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
-  type AuthorityEntry,
   createExpansion,
   createTemplate,
   type DispatchPolicies,
@@ -148,7 +147,17 @@ function dispatched() {
       approvalEventId: `sp-binding-exp-${seq++}`,
       approvedUntil: "2027-01-01T00:00:00Z",
     }).successor;
-  return { kernel, template, mission, successor };
+  /** An ordinary Mission, outside every standing-payment lineage. */
+  const ordinary = () =>
+    kernel.approve({
+      intent: kernel.validateIntent(JSON.stringify({ goal: "read invoices", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
+      proposedAuthority: [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }],
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "human-approver" },
+      clientId: "worker",
+      approvalEventId: `sp-binding-ordinary-${seq++}`,
+    });
+  return { kernel, template, mission, successor, ordinary };
 }
 
 describe("the budget binding the kernel derives for a standing payment (@spec metering#metering, mission-template#standing-payment-exception, #813, #816, decision d)", () => {
@@ -176,20 +185,11 @@ describe("the budget binding the kernel derives for a standing payment (@spec me
   });
 
   it("derives no binding for a Mission outside every standing-payment lineage (#813, #816)", () => {
-    const { kernel } = dispatched();
-    const proposedAuthority: AuthorityEntry[] = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
-    const ordinary = kernel.approve({
-      intent: kernel.validateIntent(JSON.stringify({ goal: "read invoices", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
-      proposedAuthority,
-      subject: { iss: ISS, sub: "alice" },
-      approver: { iss: ISS, sub: "human-approver" },
-      clientId: "worker",
-      approvalEventId: `sp-binding-ordinary-${seq++}`,
-    });
-    expect(standingPaymentBudgetBindingOf(kernel, ordinary)).toEqual({ kind: "unbound" });
+    const { kernel, ordinary } = dispatched();
+    expect(standingPaymentBudgetBindingOf(kernel, ordinary())).toEqual({ kind: "unbound" });
   });
 
-  it("reports underivable, never unbound, a standing payment whose retained snapshot is gone or no longer reproduces its digest, whose admission names another Dispatch Policy or budget than the instance commits, whose Mission does not carry the instance's max_budget, or a successor whose predecessor record the kernel no longer holds (#813, #816, decision d)", () => {
+  it("reports underivable, never unbound, a standing payment whose retained snapshot is gone or no longer reproduces its digest, whose admission names another Dispatch Policy or budget than the instance commits, whose Mission does not carry the instance's max_budget, a Mission recorded as a Child Mission anywhere in the lineage, or a successor or child whose predecessor or parent record the kernel no longer holds (#813, #816, decision d)", () => {
     const cases: Array<[string, (k: ReturnType<typeof dispatched>) => { id: string }, (k: ReturnType<typeof dispatched>) => string]> = [
       [
         "the retained snapshot is gone",
@@ -234,6 +234,37 @@ describe("the budget binding the kernel derives for a standing payment (@spec me
           return mission;
         },
         ({ mission }) => `mission ${mission.id} does not carry the max_budget of standing-payment instance ${mission.id}`,
+      ],
+      [
+        "a Mission recorded as a Child Mission of the instance",
+        ({ kernel, mission, ordinary }) => {
+          const child = ordinary();
+          const parent = { id: mission.id, issuer: ISS, authority_hash: mission.authority_hash, depth: 1 };
+          kernel.db.prepare("UPDATE missions SET parent_id = ?, parent_json = ? WHERE id = ?").run(mission.id, JSON.stringify(parent), child.id);
+          return child;
+        },
+        ({ mission }) => `descends as a Child Mission from standing-payment instance ${mission.id}, whose budget accounting covers no child`,
+      ],
+      [
+        "a Mission recorded as a Child Mission of the instance's successor",
+        ({ kernel, successor, ordinary }) => {
+          const next = successor();
+          const child = ordinary();
+          const parent = { id: next.id, issuer: ISS, authority_hash: next.authority_hash, depth: 1 };
+          kernel.db.prepare("UPDATE missions SET parent_id = ?, parent_json = ? WHERE id = ?").run(next.id, JSON.stringify(parent), child.id);
+          return child;
+        },
+        ({ mission }) => `descends as a Child Mission from standing-payment instance ${mission.id}, whose budget accounting covers no child`,
+      ],
+      [
+        "a child whose parent record is gone",
+        ({ kernel, ordinary }) => {
+          const child = ordinary();
+          const parent = { id: "msn_gone", issuer: ISS, authority_hash: "sha-256:gone", depth: 1 };
+          kernel.db.prepare("UPDATE missions SET parent_id = ?, parent_json = ? WHERE id = ?").run("msn_gone", JSON.stringify(parent), child.id);
+          return child;
+        },
+        () => "names parent msn_gone, which this kernel holds no record of",
       ],
       [
         "the successor's predecessor record is gone",
