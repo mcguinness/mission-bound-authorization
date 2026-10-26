@@ -1424,7 +1424,9 @@ authorization ({{lifecycle-processing}}). The comparison covers the
 operation's request members (`operation`, `reason`, `suspend_until`,
 `on_expiry`, `expected_version`, and any member an extension operation
 defines), present or absent alike, and excludes client authentication
-parameters and HTTP headers, which a retry regenerates. The same
+parameters and HTTP headers, which a retry regenerates. Members are
+compared as decoded values, character for character, in any order,
+so two spellings of one instant differ. The same
 `nonce` paired with request members that differ from the original's
 MUST be refused `invalid_request` ({{mission-status-errors}}); the AS
 MUST NOT answer it with the unrelated original response. A retransmit
@@ -1435,6 +1437,24 @@ no `nonce`: the AS retains nothing for the refusal and leaves any
 response already retained under that `nonce` unchanged, so the rules
 above apply to a later request carrying it as though the refused
 request had never arrived.
+
+A retransmit that arrives while the original is still being
+processed never commits the operation a second time: the AS answers
+it with the original response once that is retained, or with
+`unavailable` until then, so every answer reports the one committed
+operation's outcome. A replay is the original response unchanged,
+with its original `iat` and `exp`.
+
+A Lifecycle client verifies a response by the checks of
+{{mission-status-response}}, with keys from the AS's `jwks_uri` and
+never a key the AS has published as compromised. A replay whose `exp`
+has passed fails check 9, except that the client MAY accept it as
+confirmation of its original operation's outcome when it correlates
+the response to that retained request (its `mission_id` and `nonce`)
+and every other check passes. Such a replay confirms that outcome
+only: it refreshes no cached state, authorizes no action, and does
+not establish the Mission's current state, for which the client
+obtains a fresh Mission Status Response.
 
 The window MUST be at least the validity
 span of the signed response the AS would replay (its `iat` to `exp`,
