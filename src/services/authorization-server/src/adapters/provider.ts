@@ -510,7 +510,7 @@ import {
   SourceUnavailableError,
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
-import { IntentError } from "../kernel/intent.js";
+import { ExpiryPassedError, IntentError } from "../kernel/intent.js";
 import { evaluateApprovalFloor } from "../kernel/approval-floor.js";
 import { audienceProjection, audienceReferences, unapprovedCarriage } from "../kernel/approved-audience.js";
 import {
@@ -6882,6 +6882,18 @@ function approvalGrantId(uid: string): string {
   return createHash("sha256").update(`mission-approval-grant:${uid}`).digest("base64url");
 }
 
+/**
+ * @spec mission#approval-commit (#1721, D845): how a direct approval decision
+ * completes the authorization request on an intake or commit refusal. A
+ * requested ceiling that passed while the approval was pending, whether the
+ * decision's re-validation or the commit's own atomic check finds it, is
+ * `access_denied`, with no Mission and no code; every other refusal keeps
+ * its mapped code.
+ */
+function decisionRefusal(e: IntentError): { error: string; error_description: string } {
+  return { error: e instanceof ExpiryPassedError ? "access_denied" : e.code, error_description: e.message };
+}
+
 async function decide(
   provider: Provider,
   opts: AdapterOptions,
@@ -7019,12 +7031,13 @@ async function decide(
   // requested ceiling that passed while the approval pends completes the
   // request with its refusal, as the commit's own expiry check does when it
   // passes during the commit, before anything is written and never a 500.
+  // Both complete `access_denied` (@spec mission#approval-commit, #1721).
   let submission: ReturnType<typeof opts.kernel.validateSubmission>;
   try {
     submission = opts.kernel.validateSubmission(String(params.mission_intent));
   } catch (e) {
     if (e instanceof IntentError) {
-      await finish({ error: e.code, error_description: e.message });
+      await finish(decisionRefusal(e));
       return;
     }
     throw e;
@@ -7074,7 +7087,7 @@ async function decide(
         : undefined;
   } catch (e) {
     if (e instanceof IntentError) {
-      await finish({ error: e.code, error_description: e.message });
+      await finish(decisionRefusal(e));
       return;
     }
     throw e;
@@ -7182,10 +7195,7 @@ async function decide(
       authority = opts.kernel.resolveFreshCapabilities(opts.kernel.derive(intent, proposedAuthority, scopeKey));
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({
-          error: e.code,
-          error_description: e.message,
-        });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7214,7 +7224,7 @@ async function decide(
       opts.kernel.assertDrawdownPolicyHeld(ceiling);
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({ error: e.code, error_description: e.message });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7379,7 +7389,7 @@ async function decide(
       current = currentContext(authority, rendered);
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({ error: e.code, error_description: e.message });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7451,10 +7461,7 @@ async function decide(
         prepared = opts.kernel.prepareApproval(approveInput);
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({
-            error: e.code,
-            error_description: e.message,
-          });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;
@@ -7532,7 +7539,7 @@ async function decide(
         }
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({ error: e.code, error_description: e.message });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;
@@ -7547,10 +7554,7 @@ async function decide(
         record = opts.kernel.approve({ ...approveInput, grantId }, prepared);
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({
-            error: e.code,
-            error_description: e.message,
-          });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;
