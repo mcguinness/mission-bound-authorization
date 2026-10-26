@@ -52,6 +52,24 @@ function classificationsFor(
   return sameType.filter((c) => entryOverlapsResource(entry, c.resource));
 }
 
+/**
+ * @spec mission-template#prohibited-classes (#813): the classes the published
+ * classification gives one action of one entry, through the same matcher the
+ * floor uses: every applicable classification must name the action, and each
+ * class any of them names applies. Undefined when the action is unclassified
+ * there (no classification contains the entry, or one is silent on it).
+ */
+export function actionClassesAt(
+  policy: ApprovalFloorPolicy,
+  entry: AuthorityEntry,
+  action: string,
+): string[] | undefined {
+  const applicable = classificationsFor(policy, entry) ?? [];
+  const classes = applicable.map((c) => (Object.hasOwn(c.actions, action) ? c.actions[action] : undefined));
+  if (classes.length === 0 || classes.includes(undefined)) return undefined;
+  return [...new Set(classes as string[])];
+}
+
 /** The achieved authentication context the approval surface supplied. */
 export interface AchievedApproverContext {
   acr?: unknown;

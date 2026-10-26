@@ -41,6 +41,7 @@ import { withoutCapabilitySources } from "@mission/core";
 import type { CreationIdempotencyStore } from "./creation-idempotency.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
+import { assertNotStandingPaymentLineage, StandingPaymentLineageError } from "./standing-payment.js";
 import {
   committedPerChildMaximum,
   STANDING_CONSENT_LIMIT_MEMBER,
@@ -404,6 +405,15 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // derivation cap. (Pre-attenuation: no evidence — the child is not yet known.)
   if (kernel.applyExpiry(parent).state !== "active") {
     throw new ChildDelegationError("parent_not_active", `parent mission ${parent.id} is not active`);
+  }
+  // @spec mission-template#prohibited-classes (#813, D830 ruling 3): a
+  // standing-payment lineage creates no Child Mission until the budget
+  // accounting extends to descendants.
+  try {
+    assertNotStandingPaymentLineage(kernel, parent, "Child Mission");
+  } catch (e) {
+    if (e instanceof StandingPaymentLineageError) throw new ChildDelegationError("delegation_not_permitted", e.message);
+    throw e;
   }
 
   // @spec child-delegation#child-client-identity — the child actor is the OAuth

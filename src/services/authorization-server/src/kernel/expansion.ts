@@ -26,6 +26,7 @@ import type { ExpansionDeferralStore } from "./deferred.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import { type ReconsentedCeiling, successorCeilingMembers } from "./progressive.js";
+import { assertSuccessorMaxBudget } from "./standing-payment.js";
 import {
   type ApprovalBasis,
   type AuthorityEntry,
@@ -180,6 +181,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
   if (kernel.applyExpiry(predecessor).state !== "active") {
     throw new Error("predecessor is not active");
   }
+  assertSuccessorMaxBudget(kernel, predecessor, input.intent);
 
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
   // @spec capability-binding#capability-source-binding — carry the

@@ -748,7 +748,39 @@ export {
   type CreateTemplateInput,
   type DispatchInput,
   type DispatchResult,
+  type StandingPaymentConsentOptions,
+  type StandingPaymentDispatchOptions,
 } from "./kernel/template.js";
+export { prohibitedPredicateMappingOf } from "./adapters/provider.js";
+export {
+  ALL_PROHIBITED_PREDICATES,
+  assertDispatchProhibitedCoverage,
+  assertNotStandingPaymentLineage,
+  assertStandingPaymentCoverage,
+  CLASS_PREDICATES,
+  CONSUMPTION_BOUND_CLASS,
+  DispatchProhibitedCoverageError,
+  dispatchProhibitedCoverageGaps,
+  type ProhibitedPredicateMapping,
+  prohibitedPredicatesOf,
+  STANDING_PAYMENT_MEMBER,
+  STANDING_PAYMENT_OPERATION,
+  type StandingPaymentAdmission,
+  StandingPaymentConfigError,
+  StandingPaymentLineageError,
+  StandingPaymentStore,
+  type StandingPaymentTerms,
+  standingPaymentRootOf,
+  standingPaymentTermsOf,
+  type TemplateConsentProvenance,
+} from "./kernel/standing-payment.js";
+export {
+  recheckTemplateApprovalRecord,
+  TEMPLATE_RECORDING_RULE_ID,
+  TemplateApprovalRecordStore,
+  templateGovernanceGate,
+  type TemplateRecordInputs,
+} from "./kernel/template-approval-record.js";
 export {
   AUTHORITY_SOURCE_TYPES,
   assertLocalPrincipal,
@@ -1597,6 +1629,10 @@ export async function buildAuthorizationServer(opts: {
     // @spec mission#transformation-capabilities (D733): the same trusted
     // mapping the kernel below reads, retained at this consent.
     entryAudiences: (entries) => entries.map((entry) => mappedAudiences(opts.scopeProjection ?? SCOPE_PROJECTION, entry)),
+    // @spec mission-template#prohibited-classes (#813): the boot seed is no
+    // human consent at the approval floor, so under the capability a seed
+    // whose Dispatch Policy designates the standing payment refuses startup.
+    ...(capabilityEnabled(opts, "standing-payment-dispatch") ? { standingPayment: {} } : {}),
   });
   // @spec async-delegation — forward reference to the provider (assigned after
   // buildProvider, like statusListPublisher). Captured by the terminal subscriber in
