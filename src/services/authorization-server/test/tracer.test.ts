@@ -258,6 +258,18 @@ describe("M1 tracer slice", () => {
     expect(record?.subject.sub).toBe("alice");
   });
 
+  // @spec status#revocation-enforcement-classes (#1686): where revocation must
+  // take effect through the baseline derivation-time check, a Mission-bound
+  // access token lives no longer than the advertised staleness bound.
+  it("the issued Mission-bound access token lives no longer than the advertised mission_max_stale_seconds", async () => {
+    const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
+    const bound = meta.mission_max_stale_seconds as number;
+    expect(typeof bound).toBe("number");
+    const { iat, exp } = decodeJwt(accessToken) as { iat: number; exp: number };
+    expect(exp - iat).toBeGreaterThan(0);
+    expect(exp - iat).toBeLessThanOrEqual(bound);
+  });
+
   it("the MCP skeleton serves get_invoice after PDP-stub evaluation", async () => {
     const res = await fetch("http://localhost:14431/tools/get_invoice", {
       headers: { authorization: `DPoP ${accessToken}` },

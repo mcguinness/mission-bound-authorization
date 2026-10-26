@@ -175,6 +175,12 @@ export interface MasPilotLaunch {
   /** The operator consoles and the bearer every request to them presents. */
   consoles: { mas?: string; pilot: string; token: string };
   summary: string[];
+  /**
+   * @spec #831 C2 (D825): reload the MAS kids the pilot trusts from
+   * `topology.json`, while serving. The separated topology reloads its Status
+   * kids; in process the pilot reads the MAS's kernel and verifies none.
+   */
+  reloadTrust: () => void;
   /** Close every listener and store this launcher opened, and stop the MAS process it started. Idempotent. */
   close: () => Promise<void>;
 }
@@ -382,6 +388,9 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
       pilot,
       ...(masProcess ? { masProcess } : {}),
       consoles,
+      reloadTrust: () => {
+        if ("reloadTrust" in pilot && typeof pilot.reloadTrust === "function") pilot.reloadTrust();
+      },
       summary: [
         `MAS pilot, ${options.topology === "in-process" ? "in process" : "separated"} (#818)`,
         `  MAS                ${config.mission_issuer}  (${options.topology === "in-process" ? "this process" : masProcess ? `process ${masProcess.pid}, no IPC channel` : "running elsewhere"})`,

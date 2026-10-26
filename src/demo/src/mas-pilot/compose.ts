@@ -290,12 +290,11 @@ export async function assembleMasPilot(
       }),
       (e) => e.close(),
     );
-    // The gateway trusts what the estate PUBLISHES at its jwks_uri, fetched
-    // over HTTP, not a key handed across in process.
-    const published = (await scope.step(fetch(estate.jwksUri, { signal: scope.signal }).then((r) => r.json()))) as {
-      keys: Record<string, unknown>[];
-    };
-    const estateKids = published.keys.map((k) => k.kid).filter((kid): kid is string => typeof kid === "string");
+    // The gateway verifies under what the estate publishes at its jwks_uri,
+    // over HTTP, not a key handed across in process. @spec #831 C2b (D825):
+    // only the estate kids the configuration trusts, never every kid the set
+    // happens to hold, refreshed within the freshness the estate declares.
+    const estateKids = config.estate.trusted_kids;
 
     // The Mission Issuer's own token-verification key: in MAS mode it signs
     // no access token, so the resource route verifies against a key nothing
@@ -392,7 +391,7 @@ export async function assembleMasPilot(
       pep,
       payments,
       loadView,
-      jwks: published,
+      jwksUri: estate.jwksUri,
       keyRoles: { accessToken: estateKids, attenuationRoot: [], transactionToken: [] },
       issuer: estate.issuer,
       ordinaryOnly: true,
