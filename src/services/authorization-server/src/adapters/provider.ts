@@ -30,6 +30,7 @@ import {
   PROGRESSIVE_PROFILE,
   USERS,
   WRITE_ACTIONS,
+  type ActionApprovalPolicy,
   type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import {
@@ -1038,6 +1039,13 @@ export interface AdapterOptions {
    * Policies: the Agent selection rule of a template listing several Agents.
    */
   dispatchPolicies?: DispatchPolicies;
+  /**
+   * @spec runtime#action-approval, mission-template#prohibited-classes
+   * (#813): the deployment's action-approval predicate (which actions need an
+   * action-bound approval, and who gives it), rendered by a standing-payment
+   * consent. Absent, no action is declared to need one.
+   */
+  actionApprovalPolicy?: ActionApprovalPolicy;
   /**
    * @spec containment#protected-events — the trusted protected-event source
    * registry, keyed by source IDENTITY (NOT the transport origin). An incoming
@@ -4050,6 +4058,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       asyncDelegation: opts.familyStore !== undefined,
       ...(capabilityResolver ? { capabilityResolver } : {}),
       ...(standingPaymentOn ? { standingPayment: true } : {}),
+      ...(opts.actionApprovalPolicy ? { actionApprovalPolicy: opts.actionApprovalPolicy } : {}),
     });
   };
   /**

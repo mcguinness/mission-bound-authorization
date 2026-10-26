@@ -933,3 +933,148 @@ describe("standing-payment recency boundary (@spec approval-governance#recency-e
     expect(r.message).toMatch(/applicable maximum of 1800s/);
   });
 });
+
+/** Rewrite a stored template's columns, as a store written by an earlier build or edited at rest would hold them. */
+const tamper = (templateId: string, columns: Record<string, string>) => {
+  for (const [column, value] of Object.entries(columns)) {
+    store.db.prepare(`UPDATE templates SET ${column} = ? WHERE id = ?`).run(value, templateId);
+  }
+};
+
+describe("standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813)", () => {
+  it("refuses dispatch_prohibited_class at dispatch when the stored Template Ceiling has lost its per-payment max_amount, committing no instance (#813)", () => {
+    const t = consentTo();
+    tamper(t.id, {
+      ceiling_json: JSON.stringify([paymentEntry({ constraints: { vendors: ["acme"] } })]),
+    });
+    const before = missionCount();
+    const r = refusal(() => dispatch(t.id));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toBe(
+      "the Template Ceiling: entry 0 names payments:payment.execute with no per-payment max_amount",
+    );
+    expect(missionCount()).toBe(before);
+  });
+
+  it("refuses dispatch_prohibited_class at dispatch when the stored Template Ceiling bounds the payment in a currency other than the budget's, committing no instance (#813)", () => {
+    // A derivation policy bounding the payment in EUR, so the instance keeps
+    // the stored ceiling's EUR bound through the double intersection.
+    const euro = structuredClone(DERIVATION_POLICY) as {
+      ceiling: Array<{
+        actions: string[];
+        constraints?: { max_amount?: { amount: string; currency: string } };
+      }>;
+    };
+    for (const entry of euro.ceiling) {
+      if (entry.actions.includes(STANDING_PAYMENT_OPERATION) && entry.constraints?.max_amount) {
+        entry.constraints.max_amount = { amount: "500.00", currency: "EUR" };
+      }
+    }
+    kernel = new MissionKernel({
+      issuer: ISS,
+      policy: euro as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(euro.ceiling, CLIENTS, [
+        "human-approver",
+        "worker",
+        "orchestrator",
+      ]),
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+    });
+    const t = consentTo();
+    tamper(t.id, {
+      ceiling_json: JSON.stringify([
+        paymentEntry({
+          constraints: { max_amount: { amount: "500.00", currency: "EUR" }, vendors: ["acme"] },
+        }),
+      ]),
+    });
+    const before = missionCount();
+    const r = refusal(() => dispatch(t.id));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toBe(
+      "the Template Ceiling: entry 0 bounds payments:payment.execute in EUR, not USD",
+    );
+    expect(missionCount()).toBe(before);
+  });
+
+  it("refuses dispatch_prohibited_class at dispatch when the stored Template Ceiling names a vendor the policy commits no destination for, committing no instance (#813)", () => {
+    const t = consentTo();
+    tamper(t.id, {
+      ceiling_json: JSON.stringify([
+        paymentEntry({
+          constraints: {
+            max_amount: { amount: "500.00", currency: "USD" },
+            vendors: ["acme", "globex"],
+          },
+        }),
+      ]),
+    });
+    const before = missionCount();
+    const r = refusal(() => dispatch(t.id));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toBe(
+      "the Template Ceiling: entry 0 names vendor globex, which the Dispatch Policy commits no destination for",
+    );
+    expect(missionCount()).toBe(before);
+  });
+
+  it("refuses dispatch_prohibited_class at dispatch a template whose committed Dispatch Policy commits no destination, created before the capability (#813)", () => {
+    const t = createTemplate(
+      store,
+      body({ dispatch_policy: { id: "sp-no-destinations", version: "1" } }),
+      {
+        ...kernel.authoritySourceOptions(),
+        dispatchPolicies: REGISTRY,
+      },
+    );
+    tamper(t.id, { consent_provenance_json: JSON.stringify(humanConsent()) });
+    const r = refusal(() => dispatch(t.id));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toBe(
+      `template ${t.id} dispatch policy sp-no-destinations states unusable standing-payment terms: standing_payment: destinations commits no beneficiary: it is a non-empty object of vendor_id to payee_account`,
+    );
+  });
+
+  it("refuses dispatch_prohibited_class at dispatch a template whose stored approver of record is its Dispatcher (#813)", () => {
+    const t = consentTo();
+    tamper(t.id, {
+      approver_sub: "orchestrator",
+      consent_provenance_json: JSON.stringify(humanConsent("orchestrator")),
+    });
+    const r = refusal(() => dispatch(t.id));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toBe(
+      `template ${t.id} was consented by a Dispatcher or an Agent, not a human`,
+    );
+  });
+
+  it("refuses dispatch_prohibited_class at dispatch a template whose stored approver of record is the instance's Agent, committing no instance (#813)", () => {
+    const t = consentTo();
+    tamper(t.id, {
+      approver_sub: "worker",
+      consent_provenance_json: JSON.stringify(humanConsent("worker")),
+    });
+    const before = missionCount();
+    const r = refusal(() => dispatch(t.id));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toBe(
+      `template ${t.id} was consented by a Dispatcher or an Agent, not a human`,
+    );
+    expect(missionCount()).toBe(before);
+  });
+});
+
+describe("standing-payment budget commitment (@spec mission-template#prohibited-classes, #813 ruling 1)", () => {
+  for (const member of ["owner", "id", "currency", "limit", "per_instance_max"] as const) {
+    it(`refuses a Dispatch Policy whose budget omits ${member} (#813)`, () => {
+      const { [member]: _omitted, ...budget } = TERMS.budget;
+      const id = `sp-budget-without-${member}`;
+      const policies = { ...REGISTRY, [id]: spPolicy(id, { ...TERMS, budget }) };
+      expect(() => consentTo({ dispatch_policy: { id, version: "1" } }, { policies })).toThrow(
+        `dispatch_policy ${id}: standing_payment: budget is not {owner, id, currency, limit, per_instance_max}`,
+      );
+    });
+  }
+});

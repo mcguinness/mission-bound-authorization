@@ -37,6 +37,13 @@ const PORT = 14995;
 const OFF_PORT = 14996;
 const ISSUER = `http://localhost:${PORT}`;
 const OFF_ISSUER = `http://localhost:${OFF_PORT}`;
+const ALT_PORT = 15001;
+const ALT_ISSUER = `http://localhost:${ALT_PORT}`;
+/** The alternate deployment's action-approval predicate: it names the payment. */
+const ALT_ACTION_APPROVAL = {
+  actions: [STANDING_PAYMENT_OPERATION],
+  approver: "the payments operations lead",
+};
 const RESOURCE = CANONICAL_RESOURCE;
 const FAR_FUTURE = "2099-01-01T00:00:00Z";
 const ON = new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "standing-payment-dispatch"]);
@@ -76,10 +83,13 @@ const POLICIES = { "sp-endpoint": spPolicy("sp-endpoint") };
 
 let as: BuiltAs;
 let off: BuiltAs;
+let alt: BuiltAs;
 let server: Server;
 let offServer: Server;
+let altServer: Server;
 let clientKey: CryptoKey;
 let offClientKey: CryptoKey;
+let altClientKey: CryptoKey;
 let dpopKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
 let seq = 0;
 
@@ -98,18 +108,33 @@ beforeAll(async () => {
   server = as.provider.listen(PORT);
   off = await buildAuthorizationServer({ issuer: OFF_ISSUER, dispatchPolicies: POLICIES });
   offServer = off.provider.listen(OFF_PORT);
+  // A deployment whose action-approval predicate names the payment, and
+  // whose payments resource another AS serves, so authority there is
+  // cross-domain.
+  alt = await buildAuthorizationServer({
+    issuer: ALT_ISSUER,
+    capabilities: ON,
+    approvalSessions: SESSIONS,
+    dispatchPolicies: POLICIES,
+    actionApprovalPolicy: ALT_ACTION_APPROVAL,
+    resourceToAs: (resource) =>
+      resource === RESOURCE ? "https://payments-as.other.test" : ALT_ISSUER,
+  });
+  altServer = alt.provider.listen(ALT_PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
   offClientKey = (await importJWK(off.agentClientJwk as never, "ES256")) as CryptoKey;
+  altClientKey = (await importJWK(alt.agentClientJwk as never, "ES256")) as CryptoKey;
   dpopKeys = await generateKeyPair("ES256", { extractable: true });
 });
 
 afterAll(() => {
   server?.close();
   offServer?.close();
+  altServer?.close();
 });
 
 /** The standing-payment template proposal: no approver, approval event or issuer. */
-const proposal = (over: Record<string, unknown> = {}) => ({
+const proposal = (over: Record<string, unknown> = {}, issuer = ISSUER) => ({
   template_version: `sp-endpoint-${seq++}`,
   ceiling: [
     {
@@ -121,7 +146,7 @@ const proposal = (over: Record<string, unknown> = {}) => ({
   ],
   dispatch_policy: { id: "sp-endpoint", version: "1" },
   dispatchers: ["ap-agent"],
-  recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
+  recipients: { subjects: [{ iss: issuer, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
   per_instance_lifetime_s: 900,
   max_active: 1,
   rate_per_min: 30,
@@ -145,9 +170,13 @@ async function propose(issuer: string, body: unknown): Promise<string> {
 const bob = (id: string) => floorApprovalHeaders(SESSIONS, id, "", { sub: "bob", subject: null });
 
 /** Render the consent page to `headers` and return the revision it retained. */
-async function rendered(id: string, headers: Record<string, string>): Promise<string | null> {
+async function rendered(
+  id: string,
+  headers: Record<string, string>,
+  issuer = ISSUER,
+): Promise<string | null> {
   const { "x-csrf-token": _csrf, ...cookieOnly } = headers;
-  const res = await fetch(`${ISSUER}/templates/proposals/${id}`, { headers: cookieOnly });
+  const res = await fetch(`${issuer}/templates/proposals/${id}`, { headers: cookieOnly });
   expect(res.status).toBe(200);
   return res.headers.get(RENDER_REVISION_HEADER);
 }
@@ -156,8 +185,9 @@ async function decide(
   id: string,
   headers: Record<string, string>,
   extra: Record<string, unknown> = {},
+  issuer = ISSUER,
 ) {
-  return fetch(`${ISSUER}/templates/proposals/${id}/decide`, {
+  return fetch(`${issuer}/templates/proposals/${id}/decide`, {
     method: "POST",
     headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify({ decision: "approve", ...extra }),
@@ -165,11 +195,11 @@ async function decide(
 }
 
 /** A consented standing-payment template's id. */
-async function consented(over: Record<string, unknown> = {}): Promise<string> {
-  const id = await propose(ISSUER, proposal(over));
+async function consented(over: Record<string, unknown> = {}, issuer = ISSUER): Promise<string> {
+  const id = await propose(issuer, proposal(over, issuer));
   const headers = bob(id);
-  const revision = await rendered(id, headers);
-  const res = await decide(id, headers, { render_revision: revision });
+  const revision = await rendered(id, headers, issuer);
+  const res = await decide(id, headers, { render_revision: revision }, issuer);
   const out = (await res.json()) as { template_id: string };
   expect(res.status, JSON.stringify(out)).toBe(201);
   return out.template_id;
@@ -202,7 +232,7 @@ async function dispatch(
   maxBudget: { amount: string; currency: string } | null = { amount: "1000.00", currency: "USD" },
 ) {
   const htu = `${issuer}/token`;
-  const key = issuer === ISSUER ? clientKey : offClientKey;
+  const key = issuer === ISSUER ? clientKey : issuer === ALT_ISSUER ? altClientKey : offClientKey;
   const intent = JSON.stringify({
     intent: {
       goal: "pay approved Acme invoices",
@@ -450,5 +480,100 @@ describe("standing-payment dispatch grant (@spec template#grant-type, #813)", ()
     expect(results.filter((r) => r.status === 200)).toHaveLength(1);
     expect(bodies.filter((b) => b.mission_denial_reason === "max_active_exceeded")).toHaveLength(2);
     expect(as.kernel.standingPayments.dispatchedInstances(templateId)).toHaveLength(1);
+  });
+});
+
+/** The consent page a logged-in Approver sees for a proposal at `issuer`. */
+async function consentPage(over: Record<string, unknown> = {}, issuer = ISSUER): Promise<string> {
+  const id = await propose(issuer, proposal(over, issuer));
+  const { "x-csrf-token": _csrf, ...cookie } = bob(id);
+  const res = await fetch(`${issuer}/templates/proposals/${id}`, { headers: cookie });
+  expect(res.status).toBe(200);
+  return res.text();
+}
+
+/** The standing payment's ceiling entry, with `requires_action_approval` set. */
+const approvalBoundCeiling = [
+  {
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions: [STANDING_PAYMENT_OPERATION],
+    constraints: {
+      max_amount: { amount: "500.00", currency: "USD" },
+      vendors: ["acme"],
+      requires_action_approval: true,
+    },
+  },
+];
+
+describe("standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813)", () => {
+  it("renders the designated operation on the standing-payment consent page (#813)", async () => {
+    expect(await consentPage()).toContain(
+      `Standing payment: ${STANDING_PAYMENT_OPERATION} at ${RESOURCE},`,
+    );
+  });
+
+  it("renders the committed destinations on the standing-payment consent page (#813)", async () => {
+    expect(await consentPage()).toContain(
+      "only to these committed destinations: acme to account acct-acme-0001. A changed payee account is not approved.",
+    );
+  });
+
+  it("renders the per-payment bound on the standing-payment consent page (#813)", async () => {
+    expect(await consentPage()).toContain("at most 500.00 USD per payment");
+  });
+
+  it("renders the budget with its per-instance maximum on the standing-payment consent page (#813)", async () => {
+    const html = await consentPage();
+    expect(html).toContain(
+      "Budget payments-operator/ap-standing-endpoint: at most 5000.00 USD in total",
+    );
+    expect(html).toContain("each instance's own max_budget is at most 1000.00 USD");
+  });
+
+  it("renders that no payment requires an action-bound approval where neither the action-approval predicate nor the ceiling requires one (#813)", async () => {
+    expect(await consentPage()).toContain(
+      "Action-bound approval for each payment: none. Each payment executes under this standing consent and a fresh runtime decision, with no per-payment human approval.",
+    );
+  });
+
+  it("renders that each payment requires an action-bound approval, and from whom, where the Template Ceiling sets requires_action_approval (#813)", async () => {
+    expect(await consentPage({ ceiling: approvalBoundCeiling })).toContain(
+      "Action-bound approval for each payment: required, from an Approver on the Access Request Service's approval surface, bound to that payment's exact parameters (the Template Ceiling sets requires_action_approval).",
+    );
+  });
+
+  it("renders that each payment requires an action-bound approval, and from whom, where the deployment's action-approval predicate names the payment (#813)", async () => {
+    expect(await consentPage({}, ALT_ISSUER)).toContain(
+      "Action-bound approval for each payment: required, from the payments operations lead, bound to that payment's exact parameters (the deployment's action-approval predicate names payments:payment.execute).",
+    );
+  });
+});
+
+describe("standing-payment prohibited classes at the token endpoint (@spec template#prohibited-classes, #813)", () => {
+  it("refuses dispatch_prohibited_class at the token endpoint a standing-payment dispatch whose authority includes another prohibited class, remittance (#813)", async () => {
+    const templateId = await consented({
+      max_active: 3,
+      ceiling: [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: [STANDING_PAYMENT_OPERATION, "payments:remittance.send"],
+          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+        },
+      ],
+    });
+    const res = await dispatch(ISSUER, templateId);
+    const out = (await res.json()) as { error?: string; mission_denial_reason?: string };
+    expect(res.status, JSON.stringify(out)).toBe(400);
+    expect(out.mission_denial_reason).toBe("dispatch_prohibited_class");
+  });
+
+  it("refuses dispatch_prohibited_class at the token endpoint the payment where it is also cross-domain authority, waiving no predicate but irreversible_action (#813)", async () => {
+    const templateId = await consented({ max_active: 3 }, ALT_ISSUER);
+    const res = await dispatch(ALT_ISSUER, templateId);
+    const out = (await res.json()) as { error?: string; mission_denial_reason?: string };
+    expect(res.status, JSON.stringify(out)).toBe(400);
+    expect(out.mission_denial_reason).toBe("dispatch_prohibited_class");
   });
 });
