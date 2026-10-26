@@ -15,8 +15,8 @@
     "content_sha256": "0b573747ea2e4759c7ba509b832e0cb95e1b77b2b2f0e0fa7b18168efce498c5"
    },
    "draft-mcguinness-mission-metering.md": {
-    "revision": "005cb84b170d4018966324f16a7e746a5f9973fa",
-    "content_sha256": "d4bfab6a9dcaa1dab584c189eec3817215560ebc4f85ddae38c101751d204cb9"
+    "revision": "9f8e8aca8a6bd9b40e432e49183f6e22b6a54840",
+    "content_sha256": "67c94ef32a2a23ab74079ea9008fe06426c80d4b28b0e92644c7f64e50670720"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "54bfc7d5077f7ab59f8ac7070b7dd09000854ebf",
@@ -63,8 +63,8 @@
     "content_sha256": "483287bedfb2209de40290df596ca9bc2ea3178e485e6eaa226a46e903e1d6c2"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "005cb84b170d4018966324f16a7e746a5f9973fa",
-    "content_sha256": "1bf70c04d4723527e21e499271a32a437c34ff17ab55970e911c8eaa02063b50"
+    "revision": "9f8e8aca8a6bd9b40e432e49183f6e22b6a54840",
+    "content_sha256": "7268d249b9685c5ed5f9739af2dee18f8a6b1c1c19b0a7e97c3fbb4bde4bd5c4"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
@@ -37455,7 +37455,7 @@
    "id": "metering.capacity-across-missions.standing-consent-child-refused",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "capacity-across-missions",
-   "text": "a Mission Issuer MUST refuse to create a Child Mission under an instance it meters unless the child is charged to that budget's counter",
+   "text": "a Mission Issuer MUST refuse to create a Child Mission under an instance the budget meters unless the child is charged to that budget's counter",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37474,7 +37474,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
   },
   {
    "id": "metering.aggregate-bounds.refusal-names-counter",
@@ -37505,7 +37505,7 @@
    "id": "metering.aggregate-bounds.standing-consent-instances-share",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "aggregate-bounds",
-   "text": "every Mission dispatched under the template, and every successor of one, draws on one shared counter keyed by that identifier, recorded with `counter_scope` `standing_consent`",
+   "text": "Every Mission dispatched under any template committing that budget, and every successor of one, draws on one shared counter keyed by the owner and identifier, recorded with `counter_scope` `standing_consent`",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -37519,18 +37519,18 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "payments under two instances dispatched from one template draw on one standing-consent counter: a reservation under one reduces the remaining the other sees, and both records carry the same counter_id with counter_scope standing_consent"
+    "normative": "payments under instances dispatched from one template, or from different templates committing the same budget, draw on one standing-consent counter: a reservation under one reduces the remaining the others see, and every record carries the same counter_id with counter_scope standing_consent"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The counter now spans every template committing the budget."
   },
   {
    "id": "metering.aggregate-bounds.standing-consent-successors-share",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "aggregate-bounds",
-   "text": "every Mission dispatched under the template, and every successor of one, draws on one shared counter keyed by that identifier, recorded with `counter_scope` `standing_consent`",
+   "text": "Every Mission dispatched under any template committing that budget, and every successor of one, draws on one shared counter keyed by the owner and identifier, recorded with `counter_scope` `standing_consent`",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -37549,13 +37549,13 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
   },
   {
    "id": "metering.aggregate-bounds.owner-qualified-key",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "aggregate-bounds",
-   "text": "a budget identifier, qualified within the budget owner's accounting domain",
+   "text": "one shared counter keyed by the owner and identifier",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -37574,13 +37574,13 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. D830 ruling 1."
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 1."
   },
   {
    "id": "metering.aggregate-bounds.policy-is-limit-home",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "aggregate-bounds",
-   "text": "The committed policy is the limit's authoritative home.",
+   "text": "The committed Dispatch Policy is the limit's authoritative home.",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -37594,21 +37594,21 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "the limit enforced on the standing-consent counter is the committed Dispatch Policy version's; a budget binding whose limit or committed policy version differs from the Enforcement Scope Statement's declaration is refused instead of metered against either",
+    "normative": "the limit enforced on the standing-consent counter is the committed Dispatch Policy's; a budget binding whose limit or committed policy version differs from the Enforcement Scope Statement's declaration is refused instead of metered against either",
     "local": "the refusal is constraint_unsupported (design decision b)"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. D830 ruling 5."
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 5."
   },
   {
    "id": "metering.aggregate-bounds.statement-discloses-bound",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "aggregate-bounds",
-   "text": "it identifies the policy's committed version and makes the budget's scope, currency, and limit discoverable; the identifier alone does not disclose the bound",
+   "text": "it MUST identify the policy by its `id`, `version`, and `digest` and make the budget's scope, currency, and limit discoverable",
    "role": "PDP",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "capabilities",
     "all_of": [
@@ -37620,18 +37620,18 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each standing-consent budget the Enforcement Scope Statement declares identifies the committed policy and its version and discloses its counter scope, currency and limit; a declaration carrying only a budget identifier is refused at load"
+    "normative": "a standing-consent budget declaration that references the Dispatch Policy identifies it by id, version and digest and discloses the budget's counter scope, currency and limit; a declaration carrying only a budget identifier, or a policy reference missing any of the three, is refused at load"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. D830 ruling 5."
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST, adding the digest. D830 ruling 5."
   },
   {
    "id": "metering.aggregate-bounds.restart-continues-counter",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "aggregate-bounds",
-   "text": "A restart, a replacement template, a policy successor, or a fresh consent continues the counter and never creates a fresh one.",
+   "text": "A restart, a successor policy version, or a fresh consent continues the counter",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -37650,13 +37650,13 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
   },
   {
    "id": "metering.aggregate-bounds.reconsent-continues-counter",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "aggregate-bounds",
-   "text": "A restart, a replacement template, a policy successor, or a fresh consent continues the counter and never creates a fresh one.",
+   "text": "A restart, a successor policy version, or a fresh consent continues the counter",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -37670,18 +37670,18 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a new template_version, a replacement template naming the same budget owner and identifier, or a policy successor continues the same standing-consent counter with its consumption to date"
+    "normative": "a successor Dispatch Policy version or a fresh consent continues the same standing-consent counter with its consumption to date"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. D830 ruling 1."
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The replacement-template clause is now covered by template.standing-payment counter sharing across templates (metering.aggregate-bounds.standing-consent-instances-share). D830 ruling 1."
   },
   {
    "id": "metering.aggregate-bounds.fresh-consent-no-release",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "aggregate-bounds",
-   "text": "Fresh consent is not evidence of non-execution: it neither releases a held reservation nor resets consumption",
+   "text": "Fresh consent is not evidence of non-execution: it neither releases a reservation that remains charged nor resets consumption",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -37695,12 +37695,12 @@
    "surface": "decision-request",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a fresh template consent leaves every held reservation held and every committed quantity committed on the standing-consent counter, so the next instance sees the reduced remaining"
+    "normative": "a fresh template consent leaves every reservation that remains charged still charged and every committed quantity committed on the standing-consent counter, so the next instance sees the reduced remaining"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. D830 ruling 7. Also homes the template's 'the approval neither releases a held reservation nor resets consumption'."
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 7. Also homes the template's 'The approval neither releases a reservation that remains charged nor resets consumption'."
   },
   {
    "id": "metering.aggregate-bounds.raised-limit-measured-against-exposure",
@@ -37726,6 +37726,107 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+  },
+  {
+   "id": "metering.aggregate-bounds.counters-reserve-together",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "aggregate-bounds",
+   "text": "A metered action is reserved against that counter and the Mission's own `max_budget` counter together",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.standing-payment",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "a permitted payment reserves its amount on the standing-consent counter and the Mission's max_budget counter in one atomic step: no observer, concurrent decision or crash sees one reservation without the other"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. New at 9f8e8aca. Design decision a: both counters are debited in the transaction of the PDP idempotency claim."
+  },
+  {
+   "id": "metering.aggregate-bounds.refusal-charges-neither",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "aggregate-bounds",
+   "text": "where either would be exceeded, the PDP refuses with `quota_exceeded` and charges neither",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.standing-payment",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a payment that would exceed either the standing-consent counter or the Mission's max_budget counter is refused quota_exceeded, and neither counter's remaining changes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. New at 9f8e8aca."
+  },
+  {
+   "id": "metering.aggregate-bounds.statement-declares-budget",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "aggregate-bounds",
+   "text": "The Enforcement Scope Statement MUST declare each standing-consent budget the deployment meters, with its enforcement profile",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.standing-payment",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every standing-consent budget the deployment meters appears in the Enforcement Scope Statement with its enforcement profile, and a budget binding the declaration does not list is not metered as if declared",
+    "local": "design decision c: budget_metering.budgets entries, enforcement_profile exact; an undeclared binding is refused constraint_unsupported (design decision b)"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. New at 9f8e8aca."
+  },
+  {
+   "id": "metering.aggregate-bounds.new-identifier-starts-counter",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "aggregate-bounds",
+   "text": "only a new budget identifier, which a human approves as a new budget, starts another",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.standing-payment",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a fresh standing-consent counter exists only for a budget identifier a human approved as a new budget; a restart, a successor policy version, a fresh consent, or another template committing the same owner and identifier never starts one"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. New at 9f8e8aca. D830 ruling 1."
   },
   {
    "id": "metering.metering-evidence.decision-evidence-carries-metering",
@@ -37789,12 +37890,12 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a payment decision under an instance metered by its max_budget and a standing-consent budget carries one metering entry per bound: counter_scope mission for the instance counter and counter_scope standing_consent for the shared one"
+    "normative": "the metering entry for an instance's max_budget counter carries counter_scope mission, and the entry for a standing-consent budget's counter carries counter_scope standing_consent"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. D830 ruling 8."
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. D830 ruling 8. Quote unchanged at 9f8e8aca; observation narrowed now that one-per-counter has its own row."
   },
   {
    "id": "metering.metering-evidence.counter-id-stable",
@@ -37905,6 +38006,31 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+  },
+  {
+   "id": "metering.metering-evidence.one-entry-per-counter",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "metering-evidence",
+   "text": "An array of one or more entries, one per counter the evaluation metered.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.standing-payment",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a payment decision under an instance metered by its max_budget and a standing-consent budget carries exactly two metering entries, one per counter, each with its own counter_id"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, #816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. New at 9f8e8aca."
   },
   {
    "id": "metering.authzen-binding.deny-quota-exceeded",
@@ -38241,7 +38367,7 @@
    "id": "metering.settlement-states.timeout-never-releases",
    "spec": "draft-mcguinness-mission-metering.md",
    "anchor": "settlement-states",
-   "text": "timeout alone never releases a reservation, in any action class",
+   "text": "neither a timeout nor a restart releases a reservation, in any action class",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -38252,12 +38378,12 @@
    "surface": "decision-request",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "neither lease expiry, a timeout nor a PDP restart releases a budget reservation: the remaining stays reduced"
+    "normative": "neither lease expiry nor any timeout releases a budget reservation: the remaining stays reduced"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. D830 rulings 7 and 10."
+   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 rulings 7 and 10. The restart half is metering.settlement-states.restart-never-releases."
   },
   {
    "id": "metering.settlement-states.release-only-on-non-execution",
@@ -38349,6 +38475,29 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Design decision e holds a reservation indefinitely, with an alert, where no reconciliation path exists; a departure is recorded, not failed."
+  },
+  {
+   "id": "metering.settlement-states.restart-never-releases",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "settlement-states",
+   "text": "neither a timeout nor a restart releases a reservation, in any action class",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "metering.exact-budget"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a reservation outstanding when the PDP stops is still charged after it restarts, and a reservation whose permit may have issued stays charged until reconciliation",
+    "local": "design decision e: a crash before the decision is persisted, or a prior boot's claim with no persisted decision, releases (no permit existed); a permit_issued reservation becomes held"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. New at 9f8e8aca. D830 ruling 7."
   },
   {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
@@ -49280,7 +49429,7 @@
    "id": "template.standing-payment.other-classes-stay-prohibited",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "External-commitment, privileged-administration and cross-domain authority, and authority satisfying the external-communication predicate, stay prohibited",
+   "text": "The exception never admits external-commitment, privileged-administration, or cross-domain authority, or authority satisfying the external-communication predicate",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49296,13 +49445,13 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
   },
   {
    "id": "template.standing-payment.no-other-predicate-waived",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "the exception never waives another prohibited predicate the operation satisfies under the published mapping",
+   "text": "never waives another prohibited predicate the operation satisfies",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49313,18 +49462,18 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a designated operation the published mapping states as satisfying any prohibited predicate besides the irreversible class is never admitted: its Dispatch is refused dispatch_prohibited_class"
+    "normative": "a designated operation that also satisfies a prohibited predicate besides the irreversible class is never admitted: its Dispatch is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
   },
   {
    "id": "template.standing-payment.mapping-designates-operation",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "The published mapping designates the operation and states every prohibited predicate it satisfies",
+   "text": "the published mapping classifies it as irreversible and as no other prohibited class",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49335,18 +49484,18 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment's published mapping designates exactly one payment-execution operation for the exception and lists every prohibited predicate it satisfies, the irreversible class alone"
+    "normative": "the deployment's published mapping classifies the designated operation as irreversible and as no other prohibited class"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The designation itself moved to the Dispatch Policy (template.standing-payment.only-designated-operation-admitted)."
   },
   {
    "id": "template.standing-payment.only-designated-operation-admitted",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "Nothing else is admitted.",
+   "text": "The Dispatch Policy names the designated operation",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49357,18 +49506,18 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "under a template that admits the exception, a Dispatch whose surviving set grants any irreversible action other than the designated operation (for example a payment reversal) is refused dispatch_prohibited_class"
+    "normative": "under a template that admits the exception, only the operation its committed Dispatch Policy names is admitted; a Dispatch whose surviving set grants any other prohibited-class action, for example another irreversible action such as a payment reversal, is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
   },
   {
    "id": "template.standing-payment.designated-operation-stays-prohibited",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "The designated operation stays in the configured dispatch-prohibited set",
+   "text": "The operation stays in the configured dispatch-prohibited set",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49384,13 +49533,13 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. The existing dispatch_prohibited_class witnesses cover the template that does not admit the exception."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The existing dispatch_prohibited_class witnesses cover the template that does not admit the exception."
   },
   {
-   "id": "template.standing-payment.bounded-ceiling",
+   "id": "template.standing-payment.per-payment-max-amount",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "The ceiling entry granting it names one resource, the approved vendors, and a per-payment `max_amount` in one currency.",
+   "text": "the ceiling entry granting the operation carries a per-payment `max_amount`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49401,40 +49550,18 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the designated operation is admitted only from a Template Ceiling entry naming one resource, a vendors constraint listing the approved vendors, and a max_amount in one currency; a Dispatch drawing it from an entry lacking any of these is refused dispatch_prohibited_class"
+    "normative": "the designated operation is admitted only from a Template Ceiling entry carrying a per-payment max_amount; a Dispatch drawing it from an entry without one is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
-  },
-  {
-   "id": "template.standing-payment.ceiling-grants-no-delegation",
-   "spec": "draft-mcguinness-oauth-mission-template.md",
-   "anchor": "standing-payment-exception",
-   "text": "It grants no delegation authority.",
-   "role": "AS",
-   "strength": "stated",
-   "applicability": {
-    "kind": "capability",
-    "capability": "template.standing-payment"
-   },
-   "profiles": [],
-   "surface": "token-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "a ceiling entry granting the designated operation that also carries delegation authority does not admit it: the Dispatch is refused dispatch_prohibited_class"
-   },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. The shipped derivation-policy ceiling entries carry a delegation member, so a template entry for the exception must drop it."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Narrowed: the single-resource clause was dropped, vendors moved to the committed destinations, and the currency to template.standing-payment.one-currency."
   },
   {
    "id": "template.standing-payment.committed-destinations",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "The Dispatch Policy commits, for each approved vendor, the payee account approved for it.",
+   "text": "The Dispatch Policy commits the approved vendors, each with the payee account approved for it",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49445,18 +49572,18 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the designated operation is admitted only where the committed Dispatch Policy snapshot maps every approved vendor to its approved payee account; a snapshot missing the destination of any approved vendor refuses the Dispatch with dispatch_prohibited_class"
+    "normative": "the designated operation is admitted only where the committed Dispatch Policy snapshot commits the approved vendors, each with its approved payee account; a snapshot without them refuses the Dispatch with dispatch_prohibited_class"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
   },
   {
    "id": "template.standing-payment.policy-commits-budget",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "The Dispatch Policy commits a budget: an identifier qualified within the budget owner's accounting domain, its currency, its limit, and a per-instance maximum.",
+   "text": "The Dispatch Policy commits a budget: its owner, an identifier qualified within that owner's accounting domain, its limit, and a per-instance maximum.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49467,12 +49594,12 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the designated operation is admitted only where the committed Dispatch Policy snapshot carries a budget with an owner-qualified identifier, a currency, a limit and a per-instance maximum; a snapshot missing any of them refuses the Dispatch with dispatch_prohibited_class"
+    "normative": "the designated operation is admitted only where the committed Dispatch Policy snapshot carries a budget with its owner, an owner-qualified identifier, a limit and a per-instance maximum; a snapshot missing any of them refuses the Dispatch with dispatch_prohibited_class"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
   },
   {
    "id": "template.standing-payment.instance-max-budget-within-maximum",
@@ -49492,18 +49619,18 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Dispatch under the exception whose instance Mission Intent omits max_budget, carries one larger than the Dispatch Policy's per-instance maximum, or carries one in a currency other than the budget's is refused dispatch_prohibited_class and commits no instance"
+    "normative": "a Dispatch under the exception whose instance Mission Intent omits max_budget, or carries one larger than the Dispatch Policy's per-instance maximum, is refused dispatch_prohibited_class and commits no instance"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Quote unchanged at 9f8e8aca; the currency clause moved to template.standing-payment.one-currency."
   },
   {
    "id": "template.standing-payment.exact-profile-required",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "Both are enforced under the metering profile's Exact profile",
+   "text": "Both bounds are enforced under the metering profile's Exact profile",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49522,13 +49649,13 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. The declaration itself is metering.topology.profile-named-per-counter."
+   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The declaration itself is metering.aggregate-bounds.statement-declares-budget and metering.topology.profile-named-per-counter."
   },
   {
    "id": "template.standing-payment.both-bounds-enforced",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "neither substitutes for the other",
+   "text": "Neither substitutes for the other.",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -49542,42 +49669,45 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a payment within the standing-consent budget's remaining but beyond the instance's max_budget remaining is denied on the instance counter, and one within the instance's remaining but beyond the budget's remaining is denied on the standing-consent counter; a permit reserves on both",
+    "normative": "a payment within the standing-consent budget's remaining but beyond the instance's max_budget remaining is denied on the instance counter, and one within the instance's remaining but beyond the budget's remaining is denied on the standing-consent counter",
     "local": "the denial is quota_exceeded with a Decision Evidence metering entry naming the exhausted counter's counter_scope (mission or standing_consent) and counter_id"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Design decision a: both counters are debited in the transaction of the PDP idempotency claim."
+   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Joint reservation and the no-charge refusal are homed by metering.aggregate-bounds.counters-reserve-together and metering.aggregate-bounds.refusal-charges-neither."
   },
   {
    "id": "template.standing-payment.governed-class-exceptions",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "The template approval's retained policy snapshot commits the class-named exceptions for the irreversible class and the consumption-bound class, each with its recency ceiling",
+   "text": "its retained `approval_policy` snapshot commits class-named exceptions for the irreversible class and the consumption-bound class, each with its recency ceiling",
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "capability",
-    "capability": "template.standing-payment"
+    "kind": "capabilities",
+    "all_of": [
+     "template.standing-payment",
+     "core.governance-record"
+    ]
    },
    "profiles": [],
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the designated operation is admitted only where the template approval's retained policy snapshot commits a class-named exception, with a recency ceiling, for the irreversible class and for the consumption-bound class; a snapshot lacking either refuses the Dispatch with dispatch_prohibited_class",
+    "normative": "where a Governance Record is recorded for an instance, the designated operation is admitted only where its retained approval_policy snapshot commits a class-named exception, with a recency ceiling, for the irreversible class and for the consumption-bound class; a snapshot lacking either refuses the Dispatch with dispatch_prohibited_class",
     "local": "the reference-local key consumption_bound names the consumption-bound class (D830 ruling 9); Approval Governance is unchanged"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Gated with core.governance-record: the condition binds where the deployment records an Approval Governance Record."
   },
   {
    "id": "template.standing-payment.approval-authentication-floor",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "The template consent meets the issuance profile's approval-authentication floor for the irreversible class",
+   "text": "The consenting principal is a human Approver authenticated at the issuance profile's approval-authentication floor for the irreversible class",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49588,18 +49718,18 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the designated operation is admitted only where the retained template consent meets the published approval-authentication floor for the irreversible class; a template consented below it refuses the Dispatch with dispatch_prohibited_class"
+    "normative": "the designated operation is admitted only where the retained template consent records a human Approver authenticated at the published approval-authentication floor for the irreversible class; a template consented below it refuses the Dispatch with dispatch_prohibited_class"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
   },
   {
    "id": "template.standing-payment.approver-not-dispatcher-or-agent",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "the consenting principal is neither a Dispatcher nor the instance's Agent, nor a key or assertion the Agent holds",
+   "text": "and is neither a Dispatcher nor the instance's Agent.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49610,18 +49740,18 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a template whose consenting principal is one of its allowed Dispatchers or the instance's selected Agent, or was authenticated by a key or assertion the Agent holds, does not admit the exception: the Dispatch is refused dispatch_prohibited_class"
+    "normative": "a template whose consenting principal is one of its allowed Dispatchers or the instance's selected Agent does not admit the exception: the Dispatch is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The key-or-assertion clause was dropped."
   },
   {
    "id": "template.standing-payment.fresh-runtime-decision",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "Each payment still takes a fresh runtime decision, with parameter binding, execution reverification, transaction assurance, and every applicable action-approval requirement",
+   "text": "Each payment still takes a fresh runtime decision, with parameter binding, execution reverification, the transaction-assurance tier, and every applicable action-approval requirement",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -49632,18 +49762,18 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "admission confers no execution: each designated-operation payment under an admitted instance is evaluated by a fresh runtime decision, and a request lacking parameter binding, failing transaction assurance, or missing an applicable action approval is refused as under any other Mission"
+    "normative": "admission confers no execution: each designated-operation payment under an admitted instance is evaluated by a fresh runtime decision, and a request lacking parameter binding, failing its transaction-assurance tier, or missing an applicable action approval is refused as under any other Mission"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
   },
   {
    "id": "template.standing-payment.payee-compared-with-destination",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "The PDP compares the payee the enforcing PEP establishes for the effect with the destination committed for the vendor",
+   "text": "The PDP compares the payee the enforcing PEP establishes for the effect with the destination committed for its vendor",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -49654,18 +49784,18 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "a payment whose PEP-established payee account differs from the destination the Dispatch Policy commits for its vendor is denied, and a payment outside the committed envelope (an unapproved vendor or an amount above the per-payment max_amount) is refused under the instance"
+    "normative": "a payment whose PEP-established payee account differs from the destination committed for its vendor, or whose vendor has no committed destination, is denied, and a payment above the per-payment max_amount is refused under the instance"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. The out-of-band escalation to a freshly approved Mission is not observable at this surface. D830 ruling 4."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The out-of-band escalation to a freshly approved Mission is not observable at this surface. D830 ruling 4."
   },
   {
    "id": "template.standing-payment.payee-bound-by-reverification",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "execution reverification binds that payee: a payee account other than the committed one, including a changed bank account for an approved vendor, inherits no approval",
+   "text": "execution reverification binds that payee: a vendor without a committed destination, or a payee account other than the committed one, including a changed bank account for an approved vendor, inherits no approval",
    "role": "PEP",
    "strength": "stated",
    "applicability": {
@@ -49681,13 +49811,13 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. D830 ruling 4."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 4."
   },
   {
    "id": "template.standing-payment.raise-needs-new-version",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "Raising the budget, the per-payment bound, or the destinations is a new `template_version` and a fresh human approval.",
+   "text": "Changing the destinations, or raising the budget or the per-payment bound, is a new `template_version` and a fresh human approval",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49698,18 +49828,207 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a raised budget, per-payment max_amount or destination set takes effect only under a new template_version a human approved; a Dispatch evaluated against a Dispatch Policy changed in place is refused dispatch_policy_changed"
+    "normative": "a changed destination set or a raised budget or per-payment max_amount takes effect only under a new template_version a human approved; a Dispatch evaluated against a Dispatch Policy changed in place is refused dispatch_policy_changed"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed."
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
   },
   {
    "id": "template.standing-payment.raise-disclosure-renders-exposure",
    "spec": "draft-mcguinness-oauth-mission-template.md",
    "anchor": "standing-payment-exception",
-   "text": "Its disclosure renders the budget's consumption to date and its outstanding reservations",
+   "text": "whose disclosure MUST render the budget's consumption to date and its outstanding reservations",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.standing-payment",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the human approval of a new template_version that changes destinations or raises the budget or per-payment bound renders the standing-consent budget's consumption to date and its outstanding reservations, read from the shared counter"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST. The no-release clause that follows is homed by metering.aggregate-bounds.fresh-consent-no-release."
+  },
+  {
+   "id": "template.standing-payment.consent-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "standing-payment-exception",
+   "text": "the designated operation, the committed destinations, the per-payment bound, the budget with its per-instance maximum, and whether each payment requires an action-bound approval, and from whom",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.standing-payment"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the consent page of a template admitting the exception renders, beside the template-consent minimum, the designated operation, each approved vendor's committed destination, the per-payment max_amount, the budget with its per-instance maximum, and whether each payment requires an action-bound approval and from whom"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Also homes Metering's statement that a standing-consent budget's consent renders it beside the per-instance bound (capacity-across-missions)."
+  },
+  {
+   "id": "template.standing-payment.one-currency",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "standing-payment-exception",
+   "text": "The per-payment `max_amount`, the budget, and every `max_budget` share one currency.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.standing-payment",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Dispatch under the exception is admitted only where the ceiling entry's per-payment max_amount, the Dispatch Policy's budget, and the instance's max_budget name one currency, compared exactly; any mismatch refuses the Dispatch with dispatch_prohibited_class"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. New at 9f8e8aca."
+  },
+  {
+   "id": "template.standing-payment.conveys-policy-view",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "standing-payment-exception",
+   "text": "The Mission Issuer conveys the committed destinations and the budget to the runtime with each instance's policy view, bound to the template's `dispatch_policy` digest.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.standing-payment"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the policy view the runtime receives for an admitted instance carries the committed destinations and the budget exactly as the Dispatch Policy whose digest the template commits states them, never values from the Dispatch request",
+    "local": "design decision d: the budget binding is PDP-local (MissionView.budget, derived from the kernel's committed policy snapshot) and never enters req.context"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. New at 9f8e8aca."
+  },
+  {
+   "id": "template.standing-payment.failed-remains-charged",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "standing-payment-exception",
+   "text": "A payment whose outcome is `failed` remains charged until reconciliation.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.standing-payment",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a designated-operation payment settled with outcome failed stays charged on the instance counter and the standing-consent counter until reconciliation; no failed settlement releases either"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. New at 9f8e8aca. D830 ruling 10. Fixes the commit-or-refund rule that metering.settlement-states.failed-rule-defined asks for; metering.settlement-states.failed-stays-charged covers the absent-rule default."
+  },
+  {
+   "id": "template.instance-composition.child-refused",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "instance-composition",
+   "text": "its Mission Issuer MUST refuse to create a Child Mission under it unless the child is charged to the budget's counters",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.standing-payment"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Child Mission creation request under an instance holding authority admitted under the Standing Payment Exception is refused and creates nothing, since no child is charged to the budget's counters"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST in Metering's form (refused unless charged). Live: D830 ruling 3 refuses children; the charged-child alternative is deferred. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused."
+  },
+  {
+   "id": "template.instance-composition.cross-boundary-derivation-refused",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "instance-composition",
+   "text": "MUST refuse any cross-organization or cross-domain derivation from it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "template.standing-payment"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a cross-organization or cross-domain derivation requested from such an instance is refused and issues nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST. D830 ruling 3."
+  },
+  {
+   "id": "template.instance-composition.successor-carries-budget",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "instance-composition",
+   "text": "An expansion successor of such an instance carries the budget forward and continues both counters",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "template.standing-payment",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "payments under an expansion successor of such an instance remain bound by the budget and draw on the predecessor's instance counter and the same standing-consent counter, consumption to date included; the successor never runs unmetered or on a fresh budget"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. New at 9f8e8aca. Shares witnesses with metering.capacity-across-missions.successor-continues-counter and metering.aggregate-bounds.standing-consent-successors-share."
+  },
+  {
+   "id": "template.instance-composition.successor-approval-renders-consumption",
+   "spec": "draft-mcguinness-oauth-mission-template.md",
+   "anchor": "instance-composition",
+   "text": "its approval renders the budget's consumption to date and outstanding reservations",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49723,78 +50042,12 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the human approval of a raised template_version renders the standing-consent budget's consumption to date and its outstanding reserved and held quantity, read from the shared counter"
+    "normative": "the human approval of an expansion successor of such an instance renders the standing-consent budget's consumption to date and its outstanding reservations, whether or not the successor raises a bound"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. The sentence's no-release clause is homed by metering.aggregate-bounds.fresh-consent-no-release."
-  },
-  {
-   "id": "template.standing-payment.consent-disclosure",
-   "spec": "draft-mcguinness-oauth-mission-template.md",
-   "anchor": "standing-payment-exception",
-   "text": "the designated operation, the committed destinations, the per-payment bound, the budget with its per-instance maximum, and that each payment executes without a per-payment human approval",
-   "role": "AS",
-   "strength": "MUST",
-   "applicability": {
-    "kind": "capability",
-    "capability": "template.standing-payment"
-   },
-   "profiles": [],
-   "surface": "approval-ceremony",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "the consent page of a template admitting the exception renders, beside the template-consent minimum, the designated operation, each approved vendor's committed destination, the per-payment max_amount, the budget with its currency, limit and per-instance maximum, and that each payment executes without a per-payment human approval"
-   },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Also homes Metering's statement that a standing-consent budget's consent renders it beside the per-instance bound (capacity-across-missions)."
-  },
-  {
-   "id": "template.instance-composition.child-refused",
-   "spec": "draft-mcguinness-oauth-mission-template.md",
-   "anchor": "instance-composition",
-   "text": "its Mission Issuer refuses to create a Child Mission, or any cross-organization or cross-domain derivation, under it",
-   "role": "AS",
-   "strength": "stated",
-   "applicability": {
-    "kind": "capability",
-    "capability": "template.standing-payment"
-   },
-   "profiles": [],
-   "surface": "token-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "a Child Mission creation request under an instance holding authority admitted under the Standing Payment Exception is refused and no Child Mission is created"
-   },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. D830 ruling 3. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused; the sentence's successor clause is homed by metering.capacity-across-missions.successor-continues-counter and metering.aggregate-bounds.standing-consent-successors-share."
-  },
-  {
-   "id": "template.instance-composition.cross-boundary-derivation-refused",
-   "spec": "draft-mcguinness-oauth-mission-template.md",
-   "anchor": "instance-composition",
-   "text": "its Mission Issuer refuses to create a Child Mission, or any cross-organization or cross-domain derivation, under it",
-   "role": "AS",
-   "strength": "stated",
-   "applicability": {
-    "kind": "capability",
-    "capability": "template.standing-payment"
-   },
-   "profiles": [],
-   "surface": "token-endpoint",
-   "assertion": "refusal",
-   "observation": {
-    "normative": "a cross-organization or cross-domain derivation requested under such an instance is refused and issues nothing"
-   },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. D830 ruling 3."
+   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. New at 9f8e8aca. Broader than metering.capacity-across-missions.raised-bound-renders-consumption, which binds only a successor that raises a bound."
   },
   {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
