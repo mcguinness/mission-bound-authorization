@@ -94,8 +94,9 @@ authority to a durable, human-approved Mission and gates issuance on
 Mission state, but it observes Mission state only through token lifetime
 and optional token introspection. This document
 defines the Mission state-management surfaces it defers: the Mission
-Status operation (keyed by `mission_id`) with signed responses, the
-Mission projection for token introspection, the Mission Lifecycle
+Status operation (keyed by `mission_id`) with signed responses, a
+freshness member and signing for the issuance profile's token
+introspection projection, the Mission Lifecycle
 endpoint with `revoke`, `suspend`, `resume`, and `complete`
 operations, the `suspended` state and the `completed` termination
 reason with the transitions between the lifecycle states, and
@@ -130,9 +131,9 @@ that build on the issuance profile. The capabilities are:
   ({{mission-status}}), which an authenticated, authorized consumer
   holding a `mission_id` resolves, with responses signed as a JWS
   {{RFC7515}}.
-- An extension to OAuth token introspection that carries a Mission
-  projection, which a deployment can return as a {{RFC9701}}-signed
-  response ({{introspection-projection}}).
+- A freshness member for the issuance profile's Mission projection on
+  token introspection, which a deployment can return as a
+  {{RFC9701}}-signed response ({{introspection-projection}}).
 - A **Mission Lifecycle endpoint** ({{mission-lifecycle-endpoint}})
   for explicit `revoke`, `suspend`, `resume`, and `complete`
   operations, distinct from {{RFC7009}} token revocation, with an
@@ -863,11 +864,15 @@ This extension adds the following to that projection:
 - When the responding AS is the Mission's issuer, the projection MAY
   additionally carry `fresh_until`, an RFC 3339 {{RFC3339}} date-time
   giving the point until which the consumer MAY rely on the reported
-  `state` without re-checking, governed by the caching rule of
-  {{mission-status-caching}}. When `fresh_until` is absent (for example
-  a non-issuer projection), the consumer MUST NOT cache the reported
-  `state` across requests and re-checks per use or relies on the
-  token's own lifetime.
+  `state` without re-checking. The caching rule of
+  {{mission-status-caching}} applies with the terms the response
+  carries: an {{RFC9701}} response has an `iat` and no response
+  `exp`, and an unsigned response has neither, so an absent term
+  drops out. The AS sets `fresh_until` no later than the time of the
+  response plus any advertised `mission_max_stale_seconds`. When
+  `fresh_until` is absent (for example a non-issuer projection), the
+  issuance profile's per-use rule governs: the consumer MUST NOT reuse
+  the reported `state` for a later decision.
 
 This projection and the dedicated Mission Status Response
 ({{mission-status-response}}) carry Mission facts in a `mission` object
