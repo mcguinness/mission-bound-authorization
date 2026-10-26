@@ -23,8 +23,8 @@
     "content_sha256": "2589fb9ff1db587d07713a2638dbb74699dd5494bc9678facd31afd467455210"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "80378d7762a658e6c2f89b066d93a48a5e8906c0",
-    "content_sha256": "6dd7bb6708133bcef6ee979c66d057151b35a1ebf2b62f5290714fa4243256cd"
+    "revision": "76deca489239fb70dd7d154a2518db710391583d",
+    "content_sha256": "013f9650d6bec4584c95ddd641f18ad0eacea52a26fba2700432b96ec151a8b2"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -31382,7 +31382,7 @@
    "id": "runtime.record-integrity.sequence-and-retention-floor",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "record-integrity",
-   "text": "The retention window declared in the Enforcement Scope Statement MUST be no shorter than the Mission's audit horizon",
+   "text": "The retention window declared in the Enforcement Scope Statement MUST be no shorter than the Mission's retention period as its Mission Substrate Binding declares it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -31394,11 +31394,12 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "records for one Mission carry a per-emitter sequence indicator, and the declared retention window is never shorter than the Mission's audit horizon"
+    "normative": "records for one Mission carry a per-emitter sequence indicator, and the declared retention window is never shorter than the Mission's retention period as its substrate binding declares it (the audit horizon, covering the Mission Record and its evidence, in the OAuth binding), nor than a longer period an adopted companion requires; the floor applies to every required record, not only the governance record"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Re-quoted for #854 (D814): the floor moved from the OAuth audit horizon to the substrate binding's declared retention period, with the audit horizon as its OAuth realization."
   },
   {
    "id": "runtime.record-integrity.sequence-not-reused-pdp",
