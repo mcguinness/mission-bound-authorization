@@ -49201,7 +49201,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. partial: the kernel unit test and the /token test witness the irreversible class (payments:payment.execute, within both ceilings, refused dispatch_prohibited_class), and the AAM e2e step 2 (live OpenFGA only) witnesses the external-commitment class (payments:remittance.send). Gaps: no witness asserts that the refused Dispatch commits no Mission and no dispatch row (the review_cadence and dispatcher_not_allowed witnesses do); no reference action is privileged-administration, external-communication or cross-domain; the exception branch is unimplemented, which is conformant since the exception is a MAY. Mutation proof owed before landing: remove the prohibited-class guard (step d of dispatchFromTemplate in kernel/template.ts) and confirm all three fail."
+   "notes": "#813, D830. partial: the kernel unit test and the /token test witness the irreversible class (payments:payment.execute, within both ceilings, refused dispatch_prohibited_class), and the AAM e2e step 2 (live OpenFGA only) witnesses the external-commitment class (payments:remittance.send). Gaps: no witness asserts that the refused Dispatch commits no Mission and no dispatch row (the review_cadence and dispatcher_not_allowed witnesses do); no reference action is privileged-administration, external-communication or cross-domain; the exception branch is unimplemented, which is conformant since the exception is a MAY. Mutation proof owed before landing: remove the prohibited-class guard (step d of dispatchFromTemplate in kernel/template.ts) and confirm all three fail. Mutation (2026-10-25): with the kernel guard in dispatchFromTemplate disabled (step d), the kernel unit test and the /token test each fail; the AAM test needs live OpenFGA and was not run locally."
   },
   {
    "id": "template.prohibited-classes.dispatch-policy-never-dispatches",
@@ -49230,7 +49230,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. partial: the /token witness dispatches under a wide Dispatch Policy (wide-reconciliation, ceiling equal to the derivation-policy ceiling) and is refused. The reference keeps the prohibition in the issuer's configured set, outside the policy snapshot, so the policy's own duty is witnessed only through the issuer's refusal; no test varies the policy snapshot to show no policy content lifts it. Shares the mutation proof of template.prohibited-classes.dispatch-never-instantiates."
+   "notes": "#813, D830. partial: the /token witness dispatches under a wide Dispatch Policy (wide-reconciliation, ceiling equal to the derivation-policy ceiling) and is refused. The reference keeps the prohibition in the issuer's configured set, outside the policy snapshot, so the policy's own duty is witnessed only through the issuer's refusal; no test varies the policy snapshot to show no policy content lifts it. Shares the mutation proof of template.prohibited-classes.dispatch-never-instantiates. Mutation (2026-10-25): with the kernel guard in dispatchFromTemplate disabled (step d), the kernel unit test and the /token test each fail; the AAM test needs live OpenFGA and was not run locally."
   },
   {
    "id": "template.prohibited-classes.configured-set-covers-mapping",
