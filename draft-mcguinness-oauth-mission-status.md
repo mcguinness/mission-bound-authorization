@@ -111,7 +111,8 @@ profile.
 
 # Introduction
 
-The issuance profile {{I-D.draft-mcguinness-oauth-mission}} makes a
+The issuance profile {{I-D.draft-mcguinness-oauth-mission}}, the
+OAuth binding of Mission-Bound Authorization, makes a
 Mission a first-class OAuth artifact: a structured, human-approved,
 integrity-bound task whose authority bounds and outlives every token
 an agent derives. It is, by design, a minimum-viable issuance layer.
@@ -119,7 +120,7 @@ It gates derivation on Mission state, carries the `mission` claim on
 every derived token, and offers only OPTIONAL token introspection
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission State via
 Token Introspection") as a way for a resource server to observe
-Mission state. It names this profile for the canonical Mission Status
+Mission state. It names this document for the canonical Mission Status
 surface (keyed by `mission_id`) and its signed status evidence, and
 defers a standardized management endpoint for lifecycle transitions to
 this document.
@@ -197,6 +198,18 @@ Effective Authority Set:
   profile defining its own subtraction. No narrowing mechanism adds or
   restores authority. Membership in this set is necessary, never
   sufficient, for an action to proceed.
+
+Metadata-only change:
+: A committed change to a Mission that leaves its `state` and
+  `termination` unchanged: a schedule replacement ({{idempotency}}),
+  or a change a companion profile defines as one.
+
+Transition event:
+: The lifecycle event a state-distribution companion defines for a
+  committed transition or metadata-only change
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+  Lifecycle"). To emit one is to make the committed change available
+  to that companion; this document defines no event or channel.
 
 All JSON shown in this document is non-normative and illustrative; the
 member definitions in the surrounding text are authoritative. HTTP
@@ -463,7 +476,7 @@ omits the `application/` prefix; the full media type
 ({{media-type-registration}}) is used as the HTTP `Content-Type`.
 Exact validation of the protected
 `typ` value, together with mutually exclusive validation rules for
-the artifact profiles, implements the substitution defense of
+the other JWTs the AS signs, implements the substitution defense of
 {{Section 3.11 of RFC8725}} and {{Section 3.12 of RFC8725}}.
 
 A Mission Status Response is evidence of Mission state for the
@@ -580,23 +593,23 @@ The members are:
     authoritative
     state space is the issuance profile's
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-    Lifecycle"): `active` and `terminated`, this profile's `suspended`
+    Lifecycle"): `active` and `terminated`, this document's `suspended`
     when the Mission Lifecycle endpoint's `suspend` operation
     ({{lifecycle-operations}}) is deployed, and any further state a
     companion profile defines and
     the deployment runs. A consumer applies the issuance profile's
     forward-compatibility rule: only `active` permits reliance, and
     every other value, recognized or not, is non-active. This
-    profile's reliance behavior does not depend on recognizing a
+    document's reliance behavior does not depend on recognizing a
     companion-defined state; the fail-safe rule above governs. A
-    non-active state gates new authorization only: it does not
-    establish that work already accepted under the Mission has
+    non-active state gates new authorization decisions only: it
+    does not establish that work already accepted under the Mission has
     stopped, or that completed effects were undone.
   - `termination`: CONDITIONAL. Present exactly when `state` is
     `terminated`: the Mission's `termination`
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
     Termination"), with its `reason` (`revoked` or `expired` from the
-    issuance profile, this profile's `completed`, or a reason a
+    issuance profile, this document's `completed`, or a reason a
     companion profile defines), its `terminated_at`, the members its
     reason defines, and `version`: the state version (below) of the
     transition that committed the termination. `version` is REQUIRED
@@ -1115,7 +1128,7 @@ request still replays its original response after the deadline passes
 ## Legal Transitions {#legal-transitions}
 
 {{lifecycle-states}} shows the Mission lifecycle states and the
-transitions this profile defines. An approval event creates a Mission
+transitions this document defines. An approval event creates a Mission
 in `active` ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
 Lifecycle"), and only `active` permits derivation. A deadline is a
 schedule's `suspend_until` ({{lifecycle-operations}}). A companion
@@ -1254,7 +1267,7 @@ Which parties may perform which operation on which Missions is
 deployment-defined. Typical
 deployments authorize `revoke` to the Mission's Subject or Approver and
 to administrators; `suspend` and `resume` to administrators; and
-`complete` to the requesting client or an administrator.
+`complete` to the Mission's client or an administrator.
 
 Because `resume` returns a suspended Mission to `active` and so undoes
 the containment a `suspend` established, a deployment SHOULD require a
@@ -1553,9 +1566,10 @@ not-found response, never a replay, `stale_version` or `conflict`.
 The AS MUST durably commit a transition, with the state version it
 produces, before it sends any response that acknowledges it; a
 transition whose commit fails is never answered as a success. The
-final issuance check of {{I-D.draft-mcguinness-oauth-mission}}
-(Section "Issuance Gating"), which applies to an acknowledged
-revocation, is not extended to suspension: a suspension refuses later
+issuance profile's refusal of a derivation answered after an
+acknowledged revocation ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Issuance Gating") is not extended to suspension: a
+suspension refuses later
 derivations at their gate, and a derivation already past its gate
 when the suspension commits can complete.
 
@@ -1604,7 +1618,7 @@ self-contained tokens by their lifetime and OPTIONAL token
 introspection ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Revocation"). A deployment that needs a Mission state change to take
 effect faster than token lifetime alone combines the propagation
-mechanisms this suite offers and sizes token lifetimes to match.
+mechanisms below and sizes token lifetimes to match.
 
 The mechanisms are each discovered from their own metadata, not from a
 separate posture list:
@@ -1667,7 +1681,9 @@ objective considered when choosing `mission_max_stale_seconds` and the
 availability consequence when recovery takes longer than that bound.
 
 The security ceiling governs the choice: an operational recovery objective
-never authorizes extending a published freshness horizon during an incident.
+never authorizes extending a reliance bound
+({{mission-status-caching}}) or the advertised
+`mission_max_stale_seconds` during an incident.
 An existing observation's remaining validity is not reset when an outage is
 detected. An issuer outage and a state-source outage are distinct where the
 topology provides an independently available authoritative source.
@@ -1696,7 +1712,7 @@ metadata document {{RFC8414}}, in addition to the issuance profile's
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization Server
 Metadata"). Unlike the issuance profile, which advertises only that
 boolean, this document defines OAuth AS metadata members for the
-endpoints and classes it introduces, so a consumer discovers them
+surfaces it introduces, so a consumer discovers them
 through standard {{RFC8414}} discovery.
 
 `mission_status_endpoint`:
