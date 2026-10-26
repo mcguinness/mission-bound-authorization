@@ -67,6 +67,8 @@ async function start(opts: {
   store: string;
   approve?: boolean;
   barrier?: { nonce: string; file: string };
+  /** Run the child's clock this far ahead of wall time. */
+  clockOffsetMs?: number;
 }): Promise<{ child: ChildProcess; ready: Ready }> {
   const child = spawn(process.execPath, ["--import", TSX_LOADER, CHILD], {
     env: {
@@ -76,6 +78,7 @@ async function start(opts: {
       CRASH_STORE: opts.store,
       CRASH_CLIENT: JSON.stringify(client.metadata),
       ...(opts.approve ? { CRASH_APPROVE: "1" } : {}),
+      ...(opts.clockOffsetMs ? { CRASH_CLOCK_OFFSET_MS: String(opts.clockOffsetMs) } : {}),
       ...(opts.barrier ? { CRASH_BARRIER_NONCE: opts.barrier.nonce, CRASH_BARRIER_FILE: opts.barrier.file } : {}),
     },
     stdio: ["ignore", "ignore", "pipe", "ipc"],
@@ -214,7 +217,10 @@ describe("a lifecycle transition survives an abrupt process exit (@spec status#l
       const observation = material.observation;
       expect(observation.payload.mission.version).toBe(afterCrash.mission.version);
 
-      const second = await start({ issuer, port, store });
+      // The recovering child's clock runs explicitly ahead, so a recovery
+      // that re-dated the observation would sign a later iat, whichever
+      // wall-clock second the restart lands in.
+      const second = await start({ issuer, port, store, clockOffsetMs: 10_000 });
       expect(second.ready).toMatchObject({ journal: "wal", synchronous: 2, locking: "normal" });
       const recovered = await lifecycleRequest(issuer, client, members);
       expect(recovered.status, recovered.text).toBe(200);

@@ -6,6 +6,8 @@
  *  - CRASH_ISSUER, CRASH_PORT, CRASH_STORE: the issuer, its port, the store file;
  *  - CRASH_CLIENT: the lifecycle test client's registration metadata (JSON);
  *  - CRASH_APPROVE=1: approve a Mission and report its identifier;
+ *  - CRASH_CLOCK_OFFSET_MS: run the AS's clock this far ahead of wall time, so
+ *    a restarted child's clock is explicitly later than the one it recovers;
  *  - CRASH_BARRIER_NONCE, CRASH_BARRIER_FILE: the deterministic crash barrier.
  *    When the endpoint retains the response for that nonce, after the
  *    transition's transaction has committed and before the bytes are
@@ -33,6 +35,7 @@ const store = env.CRASH_STORE as string;
 const client = JSON.parse(env.CRASH_CLIENT as string) as Record<string, unknown> & { client_id: string };
 const barrierNonce = env.CRASH_BARRIER_NONCE;
 const barrierFile = env.CRASH_BARRIER_FILE;
+const clockOffsetMs = Number(env.CRASH_CLOCK_OFFSET_MS ?? 0);
 
 if (barrierNonce && barrierFile) {
   const record = LifecycleResponseStore.prototype.record;
@@ -48,6 +51,7 @@ if (barrierNonce && barrierFile) {
 
 const as = await buildAuthorizationServer({
   issuer,
+  ...(clockOffsetMs ? { now: () => new Date(Date.now() + clockOffsetMs) } : {}),
   kernelStore: { file: store },
   testClients: [client],
   lifecycleClientGrants: { [client.client_id]: [MISSION_LIFECYCLE_SCOPE] },
