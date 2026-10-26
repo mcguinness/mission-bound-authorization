@@ -4218,6 +4218,11 @@ Mission Identifier ({{mission-id}}) identifies it. Its members are
 immutable after creation, except `state` and the `termination` member
 written once when the Mission terminates ({{termination}}).
 
+The record is a logical object: this document constrains its members
+and their values and requires no storage form. Where a surface or
+profile exchanges or signs the record, the record's JSON form, with
+the members this section defines, governs.
+
 Record member names omit the `mission` prefix because the record is
 the Mission. Prefixed names, such as the `mission_intent` request
 parameter and the `mission_id` response parameter, belong to surfaces
