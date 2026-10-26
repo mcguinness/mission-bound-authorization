@@ -1511,7 +1511,10 @@ the first step that fails:
 4. Apply deduplication ({{idempotency}}): replay the original response
    to a retransmit, or refuse a reused `nonce` whose request members
    differ.
-5. Check `expected_version`, when present ({{idempotency}}).
+5. Refuse `invalid_request` a `suspend` whose `suspend_until` is not
+   later than the time the AS processes it
+   ({{lifecycle-operations}}), then check `expected_version`, when
+   present ({{idempotency}}).
 6. Apply the transition rules ({{idempotency}}) and commit the
    transition.
 
