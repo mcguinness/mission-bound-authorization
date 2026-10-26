@@ -48,6 +48,7 @@ normative:
   RFC8707:
   RFC9068:
   RFC9101:
+  RFC9110:
   RFC9126:
   RFC9207:
   RFC9396:
@@ -3419,6 +3420,8 @@ exchange rows of the third table.
 | Protected resource: DPoP proof missing, invalid, or mismatched ({{rs-enforcement}}) | `DPoP` `invalid_token` challenge ({{Section 7.1 of RFC9449}}). Detail: none |
 | Protected resource: DPoP nonce required, missing, or stale ({{rs-denials}}) | `DPoP` `use_dpop_nonce` challenge ({{Section 9 of RFC9449}}). Detail: fresh nonce |
 | Protected resource: certificate-bound token's presented certificate mismatch ({{rs-enforcement}}) | Bearer `invalid_token` challenge ({{Section 3.1 of RFC6750}}, per {{Section 3 of RFC8705}}). Detail: none |
+| Protected resource: an opaque Mission-bound token that its introspection response or issuer-local resolution reports inactive ({{introspected-consumption}}) | `invalid_token` ({{Section 3.1 of RFC6750}}), in the `DPoP` scheme for a DPoP-bound token ({{Section 7.1 of RFC9449}}). Detail: none |
+| Protected resource: introspection or issuer-local resolution of an opaque Mission-bound token cannot be completed ({{introspected-consumption}}) | No error code reporting the token invalid: HTTP 503 ({{Section 15.6.4 of RFC9110}}), with `Retry-After` where a retry time is meaningful. Detail: none |
 | Protected resource: insufficient carried authority, or an unenforceable constraint ({{rs-denials}}) | `insufficient_scope` ({{Section 3.1 of RFC6750}}) or the RAR-remediation challenge ({{remediation-grains}}). Detail: `mission_denial` ({{rs-enforcement}}), minimized |
 {: title="Protected resource challenges"}
 
@@ -3602,10 +3605,20 @@ profiled.
   - MUST enforce the response's `authorization_details` under the
     same rules as the token-carried form ({{rs-enforcement}}), the
     fail-closed duties included.
+- A resource server whose introspection response for an opaque
+  Mission-bound token is `active: false`, or whose issuer-local
+  resolution resolves it as inactive, MUST refuse the request with
+  the `invalid_token` error code ({{Section 3.1 of RFC6750}}), in the
+  `DPoP` scheme for a DPoP-bound token ({{Section 7.1 of RFC9449}}).
 - A resource server that cannot obtain a valid introspection response
   or issuer-local resolution for an opaque Mission-bound token MUST
   refuse the request rather than serve it from any cached or
-  out-of-band belief about the token's authority.
+  out-of-band belief about the token's authority. The failure
+  establishes nothing about the token: the resource server MUST
+  respond with HTTP status code 503 (Service Unavailable)
+  ({{Section 15.6.4 of RFC9110}}), adding a `Retry-After` header field
+  where a retry time is meaningful, and MUST NOT report the token as
+  invalid, such as with the `invalid_token` error code.
 
 The per-use freshness rule of {{introspection}} covers the whole
 response in this mode: each response is one observation of the
