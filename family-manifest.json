@@ -2302,7 +2302,6 @@
     "draft-mcguinness-oauth-mission"
    ],
    "references": [
-    "draft-mcguinness-mission-mandate",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-resource-access"
    ]
