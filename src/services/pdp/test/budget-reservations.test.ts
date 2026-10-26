@@ -891,7 +891,7 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
   });
 
   describe("Decision Evidence (@spec metering#metering-evidence)", () => {
-    it("the signed Decision Evidence metering entries name each counter's scope and id, with the reservation on a permit and the exhausted counter's unchanged remainder on a quota_exceeded refusal (@spec metering#metering-evidence, #816)", async () => {
+    it("a charged permit's signed Decision Evidence carries one metering entry per counter, mission and standing_consent, with the reservation, and a quota_exceeded refusal carries the exhausted counter's entry with its unchanged remainder and charges neither counter (@spec metering#metering-evidence, #816)", async () => {
       const c = clock();
       const { open } = domainOnFile(c);
       const claims = open();
@@ -948,6 +948,12 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       expect(verified.valid).toBe(true);
       expect(JSON.stringify(record.metering)).not.toContain(OWNER);
       expect(JSON.stringify(record.metering)).not.toContain(BUDGET_ID);
+      // The exhausted counter is named, and the refusal charged neither counter.
+      const exhausted = (record.metering ?? []).filter((e) => Number(e.requested.amount) > Number(e.remaining.amount));
+      expect(exhausted.map((e) => [e.counter_scope, e.counter_id])).toEqual([["standing_consent", SHARED]]);
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("600.00");
+      expect(claims.budgetCounter(instanceCounter("msn_b"))).toBeUndefined();
+      expect(claims.reservationsFor(refused.context.evaluation_id as string)).toEqual([]);
       claims.close();
     });
   });
