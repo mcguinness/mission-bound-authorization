@@ -62,6 +62,18 @@ informative:
   RFC8725:
   RFC9110:
   RFC9457:
+  OIDC-SSF:
+    title: "OpenID Shared Signals Framework Specification 1.0"
+    author:
+      org: "OpenID Foundation"
+    date: 2025
+    target: "https://openid.net/specs/openid-sharedsignals-framework-1_0.html"
+  OIDC-CAEP:
+    title: "OpenID Continuous Access Evaluation Profile 1.0"
+    author:
+      org: "OpenID Foundation"
+    date: 2025
+    target: "https://openid.net/specs/openid-caep-1_0.html"
   I-D.draft-mcguinness-mission-mandate:
     title: "Mission Mandate"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
@@ -154,6 +166,17 @@ all defined in {{I-D.draft-mcguinness-oauth-mission}}; the
 Mission Resource Access Profile
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}); both are
 referenced, not re-specified, here.
+
+The OpenID Shared Signals Framework {{OIDC-SSF}} and its Continuous
+Access Evaluation Profile {{OIDC-CAEP}} push events to a receiver,
+and a companion profile can carry Mission transitions that way
+({{revocation-enforcement-classes}}). An event reports that state
+changed; a Mission Status Response reports the state and how long a
+consumer may rely on it, so a push speeds learning of transitions
+without replacing the Status operation ({{status-operational}}).
+OAuth token revocation {{RFC7009}} acts on a token, not a Mission;
+the Lifecycle endpoint standardizes the means to revoke a Mission
+that the issuance profile requires.
 
 # Conventions and Terminology {#conventions-and-definitions}
 
