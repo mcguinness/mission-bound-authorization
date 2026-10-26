@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "931982580ed457109b26482997db1bd632fe837d",
-    "content_sha256": "257f895a250c28c257038ea61fc73285fc4c961c4340eebbd4f4a2cf80f1bdbb"
+    "revision": "b2e6e9fce114cb40a4645966b1dd4899b589878d",
+    "content_sha256": "111d21eadcdbab2a4998b442b2afcb0abb9a54902a1fb4f62c0be407fffbbbb5"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -14525,7 +14525,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1720 item 7 (D845). The reference is nonconforming under this ruling. It declares no narrowing capability for mission_resource_access: no mission_transformation_capabilities member in its metadata entry (kernel/authorization-details-metadata.ts), none in its documentation (src/docs/resource-access-transformation-capabilities.md section 1 says it declares none), and no configuration that declares one. Its approval-time derivation nonetheless modifies proposed entries: deriveAuthoritySetWithProvenance (kernel/derive.ts:533) builds each entry with intersect (derive.ts:572), which drops actions the ceiling lacks, takes the smaller max_amount, intersects vendors and the Common Constraints, adds ceiling constraints a proposal omits, and narrows delegation. Witnesses of the modification: common-constraints-endpoint.test.ts 'a proposal narrowing the window derives the overlap, and refresh and introspection carry it' (the proposed time_window is cut to the ceiling's not_after and the ceiling's other constraints are added) and 'a proposal omitting the ceiling's window derives with the ceiling's window, never without it'. Configured-mapping candidates keyed on purpose or target_resources are self-intersected and come out unchanged (derive.ts:524); candidates keyed on requested scope values are narrowed against every governing ceiling entry. Two routes, the owner's choice: declare narrowing for the type (the qualified supported-subset declaration that #1377's audit governs, D538), or change derivation to retain or omit each valid candidate unchanged. The row stays todo until one is taken."
+   "notes": "#1720 item 7 (D845, D859). The reference is nonconforming under this ruling. It declares no narrowing capability for mission_resource_access: no mission_transformation_capabilities member in its metadata entry (kernel/authorization-details-metadata.ts), none in its documentation (src/docs/resource-access-transformation-capabilities.md section 1 says it declares none), and no configuration that declares one. Its approval-time derivation nonetheless modifies proposed entries: deriveAuthoritySetWithProvenance (kernel/derive.ts:533) builds each entry with intersect (derive.ts:572), which drops actions the ceiling lacks, takes the smaller max_amount, intersects vendors and the Common Constraints, adds ceiling constraints a proposal omits, and narrows delegation. Witnesses of the modification: common-constraints-endpoint.test.ts 'a proposal narrowing the window derives the overlap, and refresh and introspection carry it' (the proposed time_window is cut to the ceiling's not_after and the ceiling's other constraints are added) and 'a proposal omitting the ceiling's window derives with the ceiling's window, never without it'. Configured-mapping candidates keyed on purpose or target_resources are self-intersected and come out unchanged (derive.ts:524); candidates keyed on requested scope values are narrowed against every governing ceiling entry. Route (D859): the reference declares narrowing for the type only after #1377's audit (D538), which requires a precisely supported subset and positive evidence for it; no whole-type narrowing is advertised before then, and the gap stays explicit here. The row stays todo until that declaration lands with a witness. #1717's witness (a), the capability-dependent delegation-without-narrowing case (row core.other-types.designation-equal-entry-issued), also belongs to #1377; declaring narrowing does not supply it (D859)."
   },
   {
    "id": "core.authority-proposal.same-type-subset-under-narrowing",
@@ -14549,7 +14549,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1720 item 7 (D845), the proposal-mode statement of row core.other-types.narrowing-governs-derivation. The same-type subset half is what the reference does; the carried-through-unchanged half is not, for the reason that row gives: the reference narrows proposed mission_resource_access entries at derivation without declaring narrowing."
+   "notes": "#1720 item 7 (D845, D859), the proposal-mode statement of row core.other-types.narrowing-governs-derivation. The same-type subset half is what the reference does; the carried-through-unchanged half is not, for the reason that row gives: the reference narrows proposed mission_resource_access entries at derivation without declaring narrowing. It stays todo on the route that row records (D859): narrowing is declared for the type only after #1377's audit establishes a precisely supported subset with positive evidence. #1717's witness (a), the capability-dependent delegation-without-narrowing case (row core.other-types.designation-equal-entry-issued), also belongs to #1377; declaring narrowing does not supply it (D859)."
   },
   {
    "id": "core.other-types.delegation-only-unchanged",
@@ -68407,7 +68407,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a refresh, authorization code exchange or async-delegation Token Exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token; on refresh this includes an entry inside the Mission but outside a refresh-token family whose grant is narrower than the Mission",
+    "normative": "a refresh, authorization code exchange or async-delegation Token Exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token; on refresh this includes an entry inside the Mission but outside a refresh-token family whose grant is narrower than the Mission; an AROP deferral initiation whose requested entries exceed the active Mission's effective authority (an action outside it, a larger max_amount) is refused invalid_authorization_details likewise, opening no deferral",
     "local": "on a refresh the reference refuses before consuming the presented refresh token, so a rotating lineage survives the refusal; the binding states that preservation only for a scope-projection refusal"
    },
    "level": "endpoint",
@@ -68466,9 +68466,15 @@
      "name": "a requested family set the projection cannot issue whole is refused, never trimmed (@spec mission#subset, mission#error-mapping, #1513) > an entry the projection drops is refused beside an overlapping entry that is issued; the recorded binding is issued",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "requested authority the deferral initiation cannot establish as a subset of the active Mission (@spec mission#subset, mission#error-mapping, #1720 item 3, D859) > refuses requested authority that exceeds the active Mission (an action outside it, a larger max_amount) with invalid_authorization_details, opening no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness. #1513: the async-delegation exchange also refuses a request its projection cannot issue whole, such as an entry naming a capability_sources binding the Mission does not record (beyond the grant under the Subset Rule), which it had opened as a narrower family; the check compares each requested entry with its own projection, so a sibling entry for the same action cannot cover a dropped one; disabling it fails the two #1513 witnesses alone, and comparing the whole set instead fails only the overlap witness, and the whole-issue refusal carries its own description, so the containment witness still catches the Mission check alone."
+   "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness. #1513: the async-delegation exchange also refuses a request its projection cannot issue whole, such as an entry naming a capability_sources binding the Mission does not record (beyond the grant under the Subset Rule), which it had opened as a narrower family; the check compares each requested entry with its own projection, so a sibling entry for the same action cannot cover a dropped one; disabling it fails the two #1513 witnesses alone, and comparing the whole set instead fails only the overlap witness, and the whole-issue refusal carries its own description, so the containment witness still catches the Mission check alone. #1720 item 3 (D859): the AROP deferral initiation answered an excess invalid_request; it answers invalid_authorization_details, apart from the not-active, ownership and authentication refusals, which keep their codes. Mutation-proved: answering the initiation's subset failure invalid_request fails the AROP witness; removing the initiation's subset check fails it, the request then pending."
   },
   {
    "id": "core.error-mapping.token-rar-undecidable",
@@ -68487,7 +68493,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a refresh request whose authorization_details carries an entry the comparison cannot decide (an unrecognized top-level member, an action family) is refused with invalid_authorization_details and issues no token"
+    "normative": "a token request whose requested authorization_details carries an entry the comparison cannot decide is refused with invalid_authorization_details and issues no token: on refresh, an entry carrying an unrecognized top-level member or naming an action family; at the AROP deferral initiation, a max_amount in a currency the Mission's cap does not use, and a request against an approved entry carrying an unrecognized member"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -68503,9 +68509,21 @@
      "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an entry naming an action family is refused invalid_authorization_details saving no refresh token, and the same token still refreshes (#1377)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "requested entries carrying an unsupported member on the deferral initiation (@spec mission#subset, #1399) > refuses a clean request against a Mission whose approved entry carries an unsupported member with invalid_authorization_details, opening no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "requested authority the deferral initiation cannot establish as a subset of the active Mission (@spec mission#subset, mission#error-mapping, #1720 item 3, D859) > refuses requested authority the comparison cannot decide (a max_amount in a currency the Mission's cap does not use) with invalid_authorization_details, opening no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1720 item 3 (D845); the error-table row for core.subset.token-endpoint-undecidable-refused, with the same witnesses and mutation proof."
+   "notes": "#1720 item 3 (D845, D859); the error-table row for core.subset.token-endpoint-undecidable-refused, with the same witnesses and mutation proof."
   },
   {
    "id": "core.error-mapping.original-audience-invalid-target",
@@ -69418,6 +69436,12 @@
      "surface": "token-endpoint"
     },
     {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "requested entries carrying an unsupported member on the deferral initiation (@spec mission#subset, #1399) > refuses a clean request against a Mission whose approved entry carries an unsupported member with invalid_authorization_details, opening no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
      "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
      "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > a requested entry carrying an unsupported member is refused invalid_authorization_details, issuing no handoff grant",
      "level": "endpoint",
@@ -69478,7 +69502,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1399 (D538). One shared set (SUPPORTED_ENTRY_MEMBERS and unsupportedEntryMember in @mission/core, beside REFUSED_ENTRY_MEMBERS) backs every boundary that admits or rebuilds a mission_resource_access entry: the published schema (top level closed), the proposal validator and the requested-authority intakes (refusedMemberViolation), direct derivation, template consent, the config loaders, isAuthorityEntry (foreign grants), projection and isSubsetEntry. The ceiling side of an exchange that issues requested entries unprojected (the ICA continuation, the deferral initiation) rests on isSubsetEntry: a comparison involving an unsupported member is refused unless the two entries are byte-identical under the canonical form, which keeps the Subset Rule's equal-entry clause, since an identical candidate carries the member unchanged. The approved set is rebuilt member by member, so no intake produces that state; the ceiling witnesses write it into the stored record. The ICA witnesses and the stored-record helper are ported from a parallel build of #1399 (68d7d7b7). Proved by disabling each guard alone, each caught only by its own witnesses: the request-side validator branch (the PAR, device, refresh, deferral, handoff, async and ICA candidate tests fail; with it disabled the handoff and async exchanges are still refused by projection's drop, on the subset message, so those two catch it by the message), derivation's check (the three derivation tests), each projection guard (one test each), isAuthorityEntry (the RAS test and the mission-core helper tests), template consent, the config loader check, the closed schema, the capability_sources type check, and the isSubsetEntry guard (the ICA ceiling witness, the deferral initiation's ceiling witness and the helper test). The deferral initiation answers that ceiling case invalid_request, its error for any excess, so its witness (dtr-endpoint.test.ts) is not cited. Not cited, since their error or level differs from this row: the config loaders (a native configuration error naming the entry and the member) and the template admin plane (invalid_request), witnessed in unknown-entry-member.test.ts and template-dispatch-endpoint.test.ts. Positive controls: resource_match exact and capability_sources are still admitted and derived, and the same requests without the member are issued. Resource Access's entry-validation list names no top-level-member rule, so the row quotes the OAuth binding's Subset Rule posture. No vector case."
+   "notes": "#1399 (D538). One shared set (SUPPORTED_ENTRY_MEMBERS and unsupportedEntryMember in @mission/core, beside REFUSED_ENTRY_MEMBERS) backs every boundary that admits or rebuilds a mission_resource_access entry: the published schema (top level closed), the proposal validator and the requested-authority intakes (refusedMemberViolation), direct derivation, template consent, the config loaders, isAuthorityEntry (foreign grants), projection and isSubsetEntry. The ceiling side of an exchange that issues requested entries unprojected (the ICA continuation, the deferral initiation) rests on isSubsetEntry: a comparison involving an unsupported member is refused unless the two entries are byte-identical under the canonical form, which keeps the Subset Rule's equal-entry clause, since an identical candidate carries the member unchanged. The approved set is rebuilt member by member, so no intake produces that state; the ceiling witnesses write it into the stored record. The ICA witnesses and the stored-record helper are ported from a parallel build of #1399 (68d7d7b7). Proved by disabling each guard alone, each caught only by its own witnesses: the request-side validator branch (the PAR, device, refresh, deferral, handoff, async and ICA candidate tests fail; with it disabled the handoff and async exchanges are still refused by projection's drop, on the subset message, so those two catch it by the message), derivation's check (the three derivation tests), each projection guard (one test each), isAuthorityEntry (the RAS test and the mission-core helper tests), template consent, the config loader check, the closed schema, the capability_sources type check, and the isSubsetEntry guard (the ICA ceiling witness, the deferral initiation's ceiling witness and the helper test). The deferral initiation answers that ceiling case invalid_authorization_details (#1720 item 3, D859), so its witness is cited; re-proved after the remap: ignoring the reference side's unsupported member in isSubsetEntry fails it alone in dtr-endpoint.test.ts. Not cited, since their error or level differs from this row: the config loaders (a native configuration error naming the entry and the member) and the template admin plane (invalid_request), witnessed in unknown-entry-member.test.ts and template-dispatch-endpoint.test.ts. Positive controls: resource_match exact and capability_sources are still admitted and derived, and the same requests without the member are issued. Resource Access's entry-validation list names no top-level-member rule, so the row quotes the OAuth binding's Subset Rule posture. No vector case."
   },
   {
    "id": "core.subset.action-family-refused",
@@ -69577,8 +69601,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a refresh request whose authorization_details carries an entry the comparison cannot decide (an unrecognized top-level member, an action family) is refused with invalid_authorization_details and issues no token",
-    "local": "the reference refuses before consuming the presented refresh token, saving none, so the same token still refreshes"
+    "normative": "a token request whose requested authorization_details carries an entry the comparison cannot decide is refused with invalid_authorization_details and issues no token: on refresh, an entry carrying an unrecognized top-level member or naming an action family; at the AROP deferral initiation, a max_amount in a currency the Mission's cap does not use, and a request against an approved entry carrying an unrecognized member",
+    "local": "the reference refuses a refresh before consuming the presented refresh token, saving none, so the same token still refreshes; it refuses the deferral initiation before any deferral opens, counting no derivation"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -69594,9 +69618,21 @@
      "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an entry naming an action family is refused invalid_authorization_details saving no refresh token, and the same token still refreshes (#1377)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "requested entries carrying an unsupported member on the deferral initiation (@spec mission#subset, #1399) > refuses a clean request against a Mission whose approved entry carries an unsupported member with invalid_authorization_details, opening no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "requested authority the deferral initiation cannot establish as a subset of the active Mission (@spec mission#subset, mission#error-mapping, #1720 item 3, D859) > refuses requested authority the comparison cannot decide (a max_amount in a currency the Mission's cap does not use) with invalid_authorization_details, opening no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1720 item 3 (D845). Both witnesses existed (#1399, #1377); no AS change was needed. Mutation-proved: refusing the intake's schema violation with invalid_request instead of invalid_authorization_details (the validate hook in adapters/provider.ts) fails both witnesses on the error code; disabling the unsupported-member branch of refusedMemberViolation fails the member witness, whose request is then refused by the subset comparison's own guard with the subset message, still invalid_authorization_details. Not cited: the AROP deferred grant answers a ceiling-side undecidable comparison invalid_request, its error for any excess (dtr-endpoint.test.ts), as row core.subset.unrecognized-member-refused notes."
+   "notes": "#1720 item 3 (D845, D859). The refresh witnesses existed (#1399, #1377). Mutation-proved: refusing the intake's schema violation with invalid_request instead of invalid_authorization_details (the validate hook in adapters/provider.ts) fails both refresh witnesses on the error code; disabling the unsupported-member branch of refusedMemberViolation fails the member witness, whose request is then refused by the subset comparison's own guard with the subset message, still invalid_authorization_details. The AROP deferral initiation answered both of its cases invalid_request, its error for any excess; D859 maps the subset failure to invalid_authorization_details, apart from the not-active, ownership and authentication refusals, which keep their codes, and DTR's originating-grant validation (draft-ietf-oauth-deferred-token-response-00 Section 5.3.1) needs no exception. Mutation-proved for the AROP deferral initiation: answering its subset failure invalid_request (the handleDeferredGrant catch in adapters/provider.ts, the pre-D859 mapping) fails both AROP witnesses; removing the initiation's subset check (DeferralStore.open, kernel/deferred.ts) fails both, the request then pending. A separation witness in the same describe (an initiation on the client's own Mission that is not active keeps invalid_request) fails when every deferral refusal is answered invalid_authorization_details, or when the kernel codes the not-active refusal as a subset failure; it witnesses no clause of this row and is not cited."
   },
   {
    "id": "core.self-exchange.result-subset",
