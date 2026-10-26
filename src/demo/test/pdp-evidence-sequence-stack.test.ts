@@ -113,6 +113,7 @@ describe("the composed stack's PDP keeps its Decision Evidence counters in its c
         subject: { id: "alice" },
         resource: last.resource,
         action: last.action,
+        action_class: last.action_class,
         audience: last.audience,
         evaluation_id,
         decision: "deny",

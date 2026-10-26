@@ -479,9 +479,18 @@ deployment establishes it in one of two modes:
   establishes a Mission in this mode only under a separately specified
   verified join ({{I-D.draft-mcguinness-mission-aauth}}).
 
-The mode each enforcement scope uses is part of its Enforcement
-Scope Statement ({{runtime-conformance}}). In either mode, the
-established Mission is the Mission every input of {{decision-inputs}}
+Each enforcement scope declares the modes it serves as
+`mission_establishment_mode` in its Enforcement Scope Statement
+({{runtime-conformance}}): `credential_carried`,
+`externally_established`, or a non-empty list of those values without
+duplicates where it serves both. A scope declares only the modes it
+actually serves. Declaring both creates no fallback: the binding
+profile's precedence decides which reference establishes the Mission
+(under the Mission Authority Server profile, a credential-carried
+reference governs), and a conflicting selector or an invalid
+credential is not rescued by an externally established reference.
+In either mode, the established Mission is the Mission every input of
+{{decision-inputs}}
 (authority, Resource policy, parameters, actor, time, state) is
 evaluated against, and the Mission reference the permit and the
 evidence record bind.
@@ -1670,7 +1679,7 @@ The nested declaration has this shape:
   "action_classes": ["irreversible_action"],
   "execution_paths": ["tool-gateway"],
   "pep_locations": ["tool-gateway"],
-  "mission_establishment_mode": "mission_claim"
+  "mission_establishment_mode": "credential_carried"
 }
 ~~~
 
@@ -1888,8 +1897,14 @@ A read that is already fully constrained by the token's audience,
 resource, and the resource server's object-level authorization, and
 that does not materially affect the resource set or disclosure risk,
 need not be classified a consequential read, and is then not
-separately PDP-gated by this profile. A deployment MUST NOT, however,
-use classification to evade the floor or a Resource-policy minimum, and
+separately PDP-gated by this profile. A request that does reach the
+PDP within a mediated scope with no action class established, where
+the Enforcement Scope Statement declares action classes, is a request
+fault: it is refused before evaluation, never evaluated under a class
+it was not assigned, and no class is recorded for it
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). A deployment
+MUST NOT, however, use classification to evade the floor or a
+Resource-policy minimum, and
 once an action is a consequential write or higher it MUST be gated and
 bound as the table requires.
 
@@ -4274,6 +4289,14 @@ worked example shows the concrete record
   remaining for OAuth-owned anchors. A URI-valued parameter is
   preserved unless the Operation Profile defines its normalization,
   applied identically at commitment and execution reverification.
+- Changes a requirement (#956, D814): a mediated request that reaches the
+  PDP with no action class established, where the Enforcement Scope
+  Statement declares classes, is a request fault refused before
+  evaluation and is never evaluated or recorded under a class it was not
+  assigned. `mission_establishment_mode` takes `credential_carried`,
+  `externally_established`, or a non-empty duplicate-free list of the
+  modes a scope serves; declaring both creates no fallback, the
+  binding's precedence deciding.
 - Runtime Enforcement Evidence (#821): durability is ordered around
   the effect. For a high-consequence action, the component that
   releases the effect releases it only after the permit's Decision
