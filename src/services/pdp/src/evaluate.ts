@@ -137,6 +137,14 @@ export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, Prin
 const HIGH_CONSEQUENCE_ACTION_CLASSES = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
 
 /**
+ * @spec metering#metering (#816, decision h): the state-changing classes in
+ * which an action carrying an amount spends under a budget-bound Mission. An
+ * amount-bearing action in one of them that the statement does not meter is
+ * refused `constraint_unsupported`; a read spends nothing.
+ */
+const BUDGET_SPENDING_CLASSES = new Set(["consequential_write", "irreversible_action"]);
+
+/**
  * @spec runtime#state-freshness: the default allowed future skew for
  * `freshness_at`, seconds. Small enough to absorb ordinary clock drift
  * between a state source and the PDP without meaningfully widening even the
@@ -2677,10 +2685,12 @@ async function evaluateInner(
   // is charged the request's amount, the same `context.amount` the
   // `max_amount` step reads, against both counters inside the claim (step
   // 9). The declared action's other phases (preflight, prepare) are covered
-  // by that charge and charge nothing; any other consequential action
-  // carrying an amount is a spend this PDP does not meter, refused
-  // `constraint_unsupported` rather than passed through unmetered (decision
-  // h). A view without a binding is unmetered and reaches none of this.
+  // by that charge and charge nothing; any other state-changing action
+  // ({@link BUDGET_SPENDING_CLASSES}) carrying an amount is a spend this PDP
+  // does not meter, refused `constraint_unsupported` rather than passed
+  // through unmetered (decision h). A read spends nothing and is neither
+  // charged nor refused on budget grounds. A view without a binding is
+  // unmetered and reaches none of this.
   let budgetCharge: BudgetChargeRequest | undefined;
   if (view.budget !== undefined) {
     const budgets = opts.decisionChannel === "remote" ? undefined : opts.budgets;
@@ -2706,8 +2716,7 @@ async function evaluateInner(
     } else if (
       !budgets.declaresAction(req.action.name) &&
       req.context.amount !== undefined &&
-      actionClass !== "non_consequential" &&
-      actionClass !== "audit_only"
+      BUDGET_SPENDING_CLASSES.has(actionClass ?? "")
     ) {
       return deny("constraint_unsupported");
     }
