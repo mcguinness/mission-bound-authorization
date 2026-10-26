@@ -1487,6 +1487,37 @@ describe("a budget-bound permit suppressed before redemption (@spec metering#set
     claims.close();
   });
 
+  it("after a PDP restart holds a permit's reservation, the permit's own PEP's signed suppression with an unconsumed answer releases it, while one with no answer is refused and leaves it held (@spec metering#settlement-states, #813, #816, D830 ruling 7, decision e)", async () => {
+    const c = clock();
+    const held: HeldReservation[] = [];
+    const released: ReleasedReservation[] = [];
+    const { open } = domainOnFile(c, { held, released, consumptionTimeoutMs: 50 });
+    let claims = open();
+    const answered = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    const unanswered = await permitted(claims, c, view("msn_b", binding("msn_b")), { amount: "200.00" });
+    // The PDP restarts; the PEP, and its epoch, do not.
+    claims.close();
+    claims = open();
+    expect(states(claims, answered)).toEqual(["held", "held"]);
+    expect(states(claims, unanswered)).toEqual(["held", "held"]);
+    expect(held.map((h) => [h.evaluation_id, h.cause])).toEqual([
+      [answered, "restart_unknown"],
+      [unanswered, "restart_unknown"],
+    ]);
+    expect(await claims.releaseUnredeemed(REQUESTER, await executionRecord(answered, "suppressed"), unconsumed)).toEqual({
+      accepted: true,
+      released: 2,
+    });
+    expect(states(claims, answered)).toEqual(["released", "released"]);
+    expect(released.map((r) => [r.evaluation_id, r.cause])).toEqual([[answered, "suppressed_unredeemed"]]);
+    expect(
+      await claims.releaseUnredeemed(REQUESTER, await executionRecord(unanswered, "suppressed"), () => new Promise<never>(() => {})),
+    ).toEqual({ accepted: false, reason: "redemption_status_unknown" });
+    expect(states(claims, unanswered)).toEqual(["held", "held"]);
+    expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "200.00" } });
+    claims.close();
+  });
+
   it("a suppression arriving after the claim's reconciliation window has closed is refused window_closed and releases nothing, as the closed claim's indeterminate outcome holds it (@spec metering#settlement-states, #813, #816)", async () => {
     const c = clock();
     const released: ReleasedReservation[] = [];
