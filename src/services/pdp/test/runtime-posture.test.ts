@@ -67,7 +67,10 @@ describe("published runtime posture (@spec runtime#runtime-operational, status#s
       seconds: (RUNTIME_POSTURE.state_source.per_class.non_consequential as { max_staleness_seconds: number }).max_staleness_seconds,
     });
     expect(stalenessBound("audit_only")).toEqual({ kind: "none" });
-    expect(stalenessBound(undefined)).toEqual(stalenessBound("consequential_read"));
+    // @spec runtime#classification (#956, D814): a missing class is not a
+    // class. It resolves to `undeclared`, never to the consequential_read window.
+    expect(stalenessBound(undefined)).toEqual({ kind: "undeclared" });
+    expect(stalenessBound(undefined)).not.toEqual(stalenessBound("consequential_read"));
     for (const label of ["unknown", "__proto__", "toString", ""]) {
       expect(stalenessBound(label), label).toEqual({ kind: "undeclared" });
     }

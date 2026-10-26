@@ -18,12 +18,14 @@
  */
 
 import {
+  type AuthorityDependencyDeclaration,
   EVALUATION_CONTEXT_BINDING_EXTENSION,
   EvaluationContextBindingDeclarations,
   type EvaluationContextBindingRef,
   type EvaluationContextGranularity,
   type EvaluationContextProperty,
   IDEMPOTENCY_SCOPE_DIMENSIONS,
+  parseAuthorityDependencyDeclarations,
   isScopeDimension,
   isVolatileScopeMember,
   type ResourceContractDeclaration,
@@ -57,7 +59,11 @@ export interface EnforcementScopeBaseline {
     pep_locations: readonly string[];
     /** May be empty: a deployment that excludes no path still declares the (empty) set. */
     excluded_paths: ReadonlyArray<DeclaredExcludedPath>;
-    mission_establishment_mode: string;
+    /**
+     * @spec runtime#mission-binding (#956, D814): the modes this scope serves,
+     * one value or a non-empty, duplicate-free list of them.
+     */
+    mission_establishment_mode: MissionEstablishmentMode | readonly MissionEstablishmentMode[];
   };
   authority_entry_types: ReadonlyArray<{ type: string; evaluator: string }>;
   pdps: readonly string[];
@@ -319,6 +325,13 @@ export interface EnforcementExtensionDeclarations {
    * Runtime wire member.
    */
   resource_contracts?: ReadonlyArray<ResourceContractDeclaration>;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): each declared
+   * authority dependency, with every element the Runtime requires
+   * ({@link authorityDependencyFindings}). A reference-statement
+   * representation, not a Runtime wire member.
+   */
+  authority_dependencies?: ReadonlyArray<AuthorityDependencyDeclaration>;
 }
 
 /**
@@ -371,6 +384,21 @@ function isNonEmptyString(v: unknown): v is string {
 }
 function isNonEmptyStringArray(v: unknown): v is readonly string[] {
   return Array.isArray(v) && v.length > 0 && v.every((x) => isNonEmptyString(x));
+}
+
+/** @spec runtime#mission-binding (#956, D814): the two Mission-establishment modes. */
+export const MISSION_ESTABLISHMENT_MODES = ["credential_carried", "externally_established"] as const;
+export type MissionEstablishmentMode = (typeof MISSION_ESTABLISHMENT_MODES)[number];
+
+/**
+ * @spec runtime#mission-binding (#956, D814): `mission_establishment_mode` is
+ * one named mode, or a non-empty list of named modes without duplicates. Any
+ * other value, an empty list and a repeated mode are malformed.
+ */
+export function isMissionEstablishmentModes(v: unknown): v is MissionEstablishmentMode | readonly MissionEstablishmentMode[] {
+  const named = (x: unknown): boolean => (MISSION_ESTABLISHMENT_MODES as readonly unknown[]).includes(x);
+  if (typeof v === "string") return named(v);
+  return Array.isArray(v) && v.length > 0 && v.every(named) && new Set(v).size === v.length;
 }
 function object(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
@@ -450,11 +478,11 @@ export function validateEnforcementScopeStatement(
     isNonEmptyStringArray(scope.execution_paths) &&
     isNonEmptyStringArray(scope.pep_locations) &&
     Array.isArray(scope.excluded_paths) &&
-    isNonEmptyString(scope.mission_establishment_mode);
+    isMissionEstablishmentModes(scope.mission_establishment_mode);
   if (!scopeOk) {
     push(
       "mediated_scope",
-      "missing the mediated resources/action classes/execution paths, PEP locations, excluded paths, or Mission-establishment mode",
+      "missing the mediated resources/action classes/execution paths, PEP locations or excluded paths, or a Mission-establishment mode that is not credential_carried, externally_established, or a non-empty duplicate-free list of them",
     );
   } else {
     findings.push(...indexEntries(scope.resources as unknown[], "resources").findings);
@@ -665,6 +693,28 @@ export function resourceContractFindings(input: unknown): EnforcementScopeFindin
     return [];
   } catch (e) {
     return [{ member: "extensions.resource_contracts", problem: (e as Error).message }];
+  }
+}
+
+/**
+ * @spec runtime#input-authority-dependency (#830, D798): "A deployment that
+ * declares an authority dependency MUST state in its Enforcement Scope
+ * Statement" the dependency and its source, what it governs, the invalidating
+ * changes, its maximum staleness, its enforcement route and its recovery and
+ * responsibility transfer. The `authority_dependencies` declarations, checked
+ * wherever they appear through the one parser every enforcing component reads
+ * them with: a declaration missing any element is refused at load.
+ */
+export function authorityDependencyFindings(input: unknown): EnforcementScopeFinding[] {
+  const stmt = object(input) ? input : {};
+  const extensions = object(stmt.extensions) ? stmt.extensions : {};
+  const declared = extensions.authority_dependencies;
+  if (declared === undefined) return [];
+  try {
+    parseAuthorityDependencyDeclarations(declared);
+    return [];
+  } catch (e) {
+    return [{ member: "extensions.authority_dependencies", problem: (e as Error).message }];
   }
 }
 

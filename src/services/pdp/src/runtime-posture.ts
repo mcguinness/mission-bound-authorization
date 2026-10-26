@@ -1,6 +1,8 @@
 import { AUDIT_HORIZON_SECONDS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
 import { enforcementBoundaryFindings } from "./enforcement-boundary.js";
+import type { AuthorityDependencyDeclaration } from "@mission/core";
 import {
+  authorityDependencyFindings,
   type EnforcementScopeStatement,
   type ExecutionCapabilityDeclaration,
   evaluationContextBindingFindings,
@@ -124,6 +126,10 @@ export function loadRuntimePosture(
   // @spec runtime#resource-contract (#249): the declared contract versions.
   const contracts = resourceContractFindings(input);
   if (contracts.length) throw new PostureConfigError(JSON.stringify(contracts));
+  // @spec runtime#input-authority-dependency (#830): a declared authority
+  // dependency missing an element the Runtime requires is refused here.
+  const dependencies = authorityDependencyFindings(input);
+  if (dependencies.length) throw new PostureConfigError(JSON.stringify(dependencies));
   // @spec runtime#evaluation-context-binding (#773): a claim lacking a covered
   // operation, a descriptor or a fact's resolver, a descriptor whose bytes do
   // not hash to its reference, and an enforced property no execution
@@ -267,10 +273,28 @@ export function stateSourcePlacement(posture: RuntimePosture): StateSourcePlacem
 }
 
 export function postureStalenessBound(posture: RuntimePosture, actionClass: string | undefined): StalenessBound {
-  const name = actionClass ?? "consequential_read";
+  // @spec runtime#classification (#956, D814): no class is not a class. A
+  // missing one is never read as `consequential_read`; it resolves to
+  // `undeclared`, which the PDP refuses.
+  if (actionClass === undefined) return { kind: "undeclared" };
+  const name = actionClass;
   if (!Object.hasOwn(posture.state_source.per_class, name)) return { kind: "undeclared" };
   const declared = posture.state_source.per_class[name as ActionClass];
   return declared.freshness_posture === "none"
     ? { kind: "none" }
     : { kind: "bounded", seconds: declared.max_staleness_seconds };
+}
+
+/**
+ * @spec runtime#input-authority-dependency (#830, D798): `statement` with the
+ * deployment's declared authority dependencies stated in it, for a
+ * composition that enforces them, validated as any statement is. A
+ * composition that enforces none publishes the statement unchanged.
+ */
+export function withAuthorityDependencies(
+  statement: RuntimePosture,
+  declarations: readonly AuthorityDependencyDeclaration[],
+): RuntimePosture {
+  if (declarations.length === 0) return statement;
+  return loadRuntimePosture({ ...statement, extensions: { ...(statement.extensions ?? {}), authority_dependencies: declarations } });
 }

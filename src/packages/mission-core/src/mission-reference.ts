@@ -189,3 +189,31 @@ export function parseMcpReferenceMeta(value: unknown): PropagatedMissionReferenc
   if (workItem === "malformed") return { malformed: true };
   return workItem === undefined ? { id: missionId, issuer } : { id: missionId, issuer, workItem };
 }
+
+/**
+ * @spec authority-server#reference-verification, authority-server#mcp-reference:
+ * the one reference a request carries when it can arrive by two carriages at
+ * once (the HTTP `Mission-Reference` field and the MCP `params._meta` key on
+ * an MCP-over-HTTP `tools/call`). Either carriage alone is the reference. Two
+ * carriages are one reference only when they agree on every member: `id`,
+ * `issuer`, and the work item (both absent, or both present and equal, #815).
+ * A malformed carriage, or two that disagree, is one unusable reference
+ * (`{ malformed: true }`), which the PEP refuses `mission_reference_conflict`
+ * wherever governance requires a reference: the conflict is a deny, never a
+ * silent pick-one, and a well-formed carriage never rescues a malformed one.
+ */
+export function reconcilePropagatedReferences(
+  a: PropagatedMissionReference | undefined,
+  b: PropagatedMissionReference | undefined,
+): PropagatedMissionReference | undefined {
+  if (a === undefined) return b;
+  if (b === undefined) return a;
+  if ("malformed" in a || "malformed" in b) return { malformed: true };
+  const sameWorkItem =
+    a.workItem === undefined
+      ? b.workItem === undefined
+      : b.workItem !== undefined &&
+        a.workItem.issuer === b.workItem.issuer &&
+        a.workItem.id === b.workItem.id;
+  return a.id === b.id && a.issuer === b.issuer && sameWorkItem ? a : { malformed: true };
+}

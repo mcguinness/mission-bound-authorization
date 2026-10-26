@@ -28,6 +28,7 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { type EvaluationRequest, evaluate, type MissionView, stalenessBound } from "../src/index.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { withActionClass } from "./with-credential.js";
 
 const DIR = fileURLToPath(new URL("../../../../vectors/mission-resource-access/", import.meta.url));
 
@@ -88,7 +89,7 @@ async function decide(input: Record<string, unknown>): Promise<boolean> {
     subject: { iss: "https://as.test", sub: "alice" },
     client_id: "ap-agent",
   };
-  const req: EvaluationRequest = {
+  const req: EvaluationRequest = withActionClass({
     subject: { id: "alice" },
     resource: {
       type: "invoice",
@@ -106,7 +107,7 @@ async function decide(input: Record<string, unknown>): Promise<boolean> {
       credential: { authority: [{ type: "mission_resource_access", resource: target, actions: [action] }] },
       ...(input.amount !== undefined ? { amount: input.amount as { amount: string; currency: string } } : {}),
     },
-  };
+  });
   const decision = await evaluate(req, {
     view,
     fga: alwaysAllowFga,

@@ -131,6 +131,7 @@ describe("pnpm keys migrate, rotate, retire, compromise and verify (@spec #831 B
       expect(staged.split("\n")).toEqual([
         "staged as-status-2 for asStatus: to be published, not signing",
         `next: start the AS with this ring, then \`pnpm keys verify --ring ${ring} --issuer ${issuer}\`; the edit is not in effect until then. Activation waits 300s from the publication that verification confirms`,
+        "before activating, add as-status-2 to each consumer's trusted kids for asStatus (this deployment: config/topology.json keys.asStatus.trusted) and reload each consumer (SIGUSR2 to the demo's processes); publication alone grants no trust",
       ]);
       // Neither the staging's age nor any wait stands in for a confirmed publication.
       age(ring, 3600);
@@ -197,7 +198,9 @@ describe("pnpm keys migrate, rotate, retire, compromise and verify (@spec #831 B
         {},
       );
       expect(out.split("\n")[0]).toBe("withdrew as-token for asToken as compromised; as-token-2 replaces it as the signer");
-      expect(out.split("\n")[1]).toContain("authorizes a replacement only through its own trusted rotation");
+      expect(out.split("\n")[1]).toContain(
+        "accepts as-token-2 only once its trusted kids for asToken list it (this deployment: config/topology.json keys.asToken.trusted, then SIGUSR2 to the demo's processes)",
+      );
       expect(generations(ring, "asToken").map((g) => [g.kid, g.state, g.compromised_at])).toEqual([
         ["as-token", "compromised", "2026-10-01T00:00:00.000Z"],
         ["as-token-2", "active", undefined],

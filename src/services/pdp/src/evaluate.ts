@@ -25,6 +25,8 @@ import {
   compareAmounts,
   computeAnchor,
   type ConstraintFacts,
+  type AuthorityDependencyEnforcement,
+  checkAuthorityDependency,
   conditionsNoBroader,
   type CredentialAuthorityEntry,
   entryMatchesTarget,
@@ -559,7 +561,8 @@ export type PdpRefusalReason =
   | "evaluation_context_invalid"
   // @spec authzen#context-work-item (#815): a present `context.work_item`
   // that is not exactly `{issuer, id}`, an unusable input like the phase.
-  | "work_item_invalid";
+  | "work_item_invalid"
+  | "action_class_missing";
 
 /**
  * Thrown by {@link evaluate} for a decision request the PDP refuses before
@@ -658,6 +661,17 @@ export interface EvaluateOptions {
    * Mission bound alone binds a named fixture from `@mission/pdp/test-support`.
    */
   resourcePolicy: ResourcePolicy;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): a declared
+   * authority dependency this PDP evaluates directly, as part of its
+   * Resource-policy step: an action under a Mission the declaration governs
+   * is refused `resource_policy` (the mechanism's own refusal) unless an
+   * acceptable observation establishes the dependency, and a permit expires
+   * no later than that observation's accepted validity. Applied only where
+   * the declaration routes direct evaluation to the PDP. Bound PDP-side, like
+   * `resourcePolicy`, and never supplied by an enforcement component.
+   */
+  authorityDependency?: AuthorityDependencyEnforcement;
   now: () => Date;
   /**
    * The declared freshness posture per action class: a window in seconds, an
@@ -931,6 +945,7 @@ export type DecisionOptions = Omit<
   | "requester"
   | "consumptionStatus"
   | "resourcePolicy"
+  | "authorityDependency"
   | "refusals"
   | "resourceContracts"
   | "durationLeases"
@@ -1116,6 +1131,20 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   if (presentedWorkItem !== undefined && parseWorkItem(presentedWorkItem) === undefined) {
     await recordPdpRefusal(opts.refusals, "work_item_invalid", req);
     throw new DecisionRequestRefused("work_item_invalid");
+  }
+  // @spec runtime#classification, authzen#pdp-consistency-checks,
+  // runtime-evidence#pre-decision-refusal (#956, D814): every Enforcement Scope
+  // Statement declares action classes (the loader requires a non-empty
+  // `mediated_scope.action_classes`), so a mediated request that reaches the
+  // PDP with no action class established is a request fault, refused before
+  // evaluation as a Refusal Record `action_class_missing`: no decision, no
+  // evaluation_id and no Decision Evidence. It is never evaluated under a
+  // default class such as `consequential_read`, and no class is recorded.
+  // Checked after the evaluation context and the work item, so an earlier
+  // fault keeps its code.
+  if ((req as { context?: { action_class?: unknown } } | undefined)?.context?.action_class === undefined) {
+    await recordPdpRefusal(opts.refusals, "action_class_missing", req);
+    throw new DecisionRequestRefused("action_class_missing");
   }
   // @spec authzen#evaluation-request-digest-input: digest the request as
   // submitted, on receipt, before evaluation applies any default or enrichment.
@@ -2299,6 +2328,33 @@ async function evaluateInner(
   // contract's resolution from step 4b: the policy stays a bound evaluated
   // independently of the join (@spec authority-server#mission-join rule 8,
   // #818).
+  // @spec runtime#input-authority-dependency (#830, D798): direct
+  // evaluation of a declared authority dependency, composed into this
+  // Resource-policy step: "A dependency enforced through an existing
+  // mechanism keeps that mechanism's refusal", so a dependency not
+  // established refuses `resource_policy`, and the refusal's cause
+  // (withdrawn, invalidated, stale or unavailable) is retained in the
+  // deployment's dependency evidence, not on the wire.
+  let dependencyValidUntilMs: number | undefined;
+  const dependency = opts.authorityDependency;
+  // @spec runtime#input-authority-dependency (#830): under lifecycle-mediated
+  // enforcement the PDP also refuses while the reconciliation is overdue,
+  // whatever the Mission's state reads ("A current `active` state does not
+  // show that this reconciliation is current").
+  const directHere = dependency?.declaration.enforcement.direct === "pdp";
+  const lifecycleHere = dependency?.declaration.enforcement.lifecycle === true;
+  if (dependency !== undefined && (directHere || lifecycleHere)) {
+    const checked = checkAuthorityDependency(
+      dependency,
+      { id: view.id, issuer: view.issuer },
+      { enforcer: "pdp", action: req.action.name },
+      { direct: directHere, lag: lifecycleHere },
+    );
+    if (!checked.ok) {
+      return { decision: false, context: base({ denial_reason: "resource_policy", reason: "resource_policy", next_action: "none" }) };
+    }
+    dependencyValidUntilMs = checked.validUntilMs;
+  }
   const iss = req.subject.properties?.iss;
   const client = req.context.actor?.client_id;
   const policy = await checkResourcePolicy(opts.resourcePolicy, {
@@ -2530,6 +2586,10 @@ async function evaluateInner(
       ...windowCeilings,
       // @spec metering#metering (#1440): a duration-leased permit expires with its lease.
       ...(lease.kind === "leased" ? [lease.ceiling] : []),
+      // @spec runtime#input-authority-dependency (#830): "A permit issued in
+      // reliance on a dependency observation MUST expire no later than that
+      // observation's accepted validity."
+      ...(dependencyValidUntilMs !== undefined ? [{ name: "authority_dependency_valid_until", atMs: dependencyValidUntilMs }] : []),
     ],
   });
   if (deadline.kind === "elapsed") {

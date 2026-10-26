@@ -1,0 +1,39 @@
+[
+  {
+    "id": "subject-delegation",
+    "dependency": "The Mission Subject's continuing delegation to the client acting under the Mission: the Subject's account is active and the Subject has not withdrawn the delegation from that client.",
+    "source": {
+      "id": "reference-identity-source",
+      "description": "The deployment's configuration-backed identity source (config/identity.json: each principal's status and the clients it has withdrawn its delegation from), read by the authorization server's identity-state resolver and re-read without a restart."
+    },
+    "observation": "One read of the identity source: the Subject's account status and the clients it has withdrawn delegation from, as of that read.",
+    "governs": {
+      "authority_sources": ["user_delegated"],
+      "scope": "Existing Missions whose recorded authority source is user-delegated, and every action they authorize: each issuance under them (approval, code redemption, refresh, token exchange, child and expansion derivation) and each action decided under them."
+    },
+    "invalidating_changes": ["subject_disabled", "subject_deprovisioned", "delegation_withdrawn"],
+    "max_staleness_seconds": 300,
+    "online_check": false,
+    "enforcement": {
+      "direct": "pdp",
+      "lifecycle": true,
+      "reconciliation_max_lag_seconds": 60,
+      "lifecycle_operations": {
+        "subject_disabled": "suspend",
+        "delegation_withdrawn": "suspend",
+        "subject_deprovisioned": "revoke"
+      }
+    },
+    "recovery": "Reliance resumes when an observation within the bound shows the Subject active and the delegation held. A suspended Mission resumes only through an authorized lifecycle operation, after which every remaining check still applies. Re-enablement is a basis for future issuance only: it restores no authority removed through Containment and revives no terminated Mission.",
+    "responsibility_transfer": "None: a user-delegated Mission's authority is the Subject's own. Work that must continue without the Subject is a new Mission approved under an authority source that names its successor, through an authorized process; the original approval's attribution is unchanged.",
+    "external_change_bound": {
+      "seconds": 60,
+      "start": "The identity source records the change (identity.json's changed_at for the principal).",
+      "end": "No action under a governed Mission can begin an effect: every issuance gate and every PDP decision under it refuses, a PEP holding the dependency releases no effect under a permit issued before the change, and the reconciler has suspended or revoked the Mission.",
+      "already_started": "Work whose effect began before the change completes within that request. Permit issuance is not already-started work: a permit issued before the change and not yet used is rechecked at release by a PEP holding the dependency, and releases no effect after the cutoff. A permit relied on beyond its request expires no later than its valid_until: at most max_staleness_seconds after the observation it relied on, and at most reconciliation_max_lag_seconds after the observation the last complete reconciliation acted on. Access tokens already issued run to their expiry, but every issuance and every decision they reach refuses.",
+      "path": "Detection: the resolver re-reads the source at least every detection_period_seconds, and each reconciliation pass reads it afresh. Evaluation: each issuance gate and each PDP decision evaluates the latest read synchronously. State change: a reconciliation pass at least every reconciliation_period_seconds commits suspend or revoke. Downstream reliance: an observation is relied on for at most max_staleness_seconds, and the PDP refuses once the last complete reconciliation rests on an observation older than reconciliation_max_lag_seconds. Permit validity: no permit outlives the observation it relied on or the reconciliation it relied on. Release: a PEP holding the dependency rechecks it before releasing any effect, so a permit issued before the change releases nothing once a read shows the change. Each observation is dated from when its read was issued, and overlapping reads publish in that order. A composition may schedule either period faster than declared, never slower: the authorization server refuses to start otherwise. The bound holds for a successful observation path; when the source cannot be read or a reconciliation fails, the PDP refuses once the reconciliation lag passes its bound, no later than reconciliation_max_lag_seconds after the change, and the issuance gates once the observation passes max_staleness_seconds.",
+      "detection_period_seconds": 30,
+      "reconciliation_period_seconds": 30
+    }
+  }
+]

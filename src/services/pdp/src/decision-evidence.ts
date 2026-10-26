@@ -418,15 +418,47 @@ export interface DecisionEvidenceEmitterConfig {
    * for no boundary the active version does not authorize it for.
    */
   authorizesAudience?: (audience: string) => boolean;
+  /**
+   * @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+   * (#821, D814): where this emitter's per-Mission counters live. Present,
+   * every sequence position comes from it, so a durable source (the PDP's
+   * claim domain, `IdempotencyClaimDomain.evidenceSequences`) continues
+   * each stream across a restart instead of re-issuing numbers already signed
+   * into retained records. A source that throws fails the emission, and the
+   * PDP issues no decision. Absent, the counters are in memory and restart at
+   * zero with the process.
+   */
+  sequences?: DecisionEvidenceSequences;
+}
+
+/**
+ * A per-emitter sequence source: `next(key)` returns the next position for
+ * one opaque (Mission, emitter id, role) key, starting at 0, and never
+ * returns a position twice for that key.
+ */
+export interface DecisionEvidenceSequences {
+  next(key: string): number;
+}
+
+/** The default source: this process's memory, so every counter restarts at zero with it. */
+function inMemorySequences(): DecisionEvidenceSequences {
+  const counters = new Map<string, number>();
+  return {
+    next: (key) => {
+      const n = counters.get(key) ?? 0;
+      counters.set(key, n + 1);
+      return n;
+    },
+  };
 }
 
 /**
  * @spec runtime-evidence#decision-evidence-object (line 508): "each emitter
  * maintains its own monotonically increasing per-Mission sequence."
  * `emitter` is the `{id, role}` object, so the counter is scoped per
- * (Mission, emitter id, role). In-memory and per process: a durable counter
- * and instance-epoch binding are a separate concern from the emission
- * boundary this module establishes.
+ * (Mission, emitter id, role). The counters live in the configured
+ * {@link DecisionEvidenceEmitterConfig.sequences} source, or in this
+ * process's memory when none is configured.
  */
 /** @spec authzen#evidence `authority_bound`: the bound an authority deny failed. */
 export type AuthorityBound = "credential" | "mission";
@@ -434,13 +466,9 @@ const AUTHORITY_BOUNDS: readonly string[] = ["credential", "mission"];
 const AUTHORITY_BOUND_REASONS: readonly string[] = ["out_of_authority", "parameter_violation"];
 
 export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterConfig): DecisionEvidenceEmitter {
-  const sequences = new Map<string, number>();
-  const nextSequence = (mission: RuntimeMissionRef): number => {
-    const key = JSON.stringify([mission.issuer, mission.id, config.emitterId, "pdp"]);
-    const n = sequences.get(key) ?? 0;
-    sequences.set(key, n + 1);
-    return n;
-  };
+  const sequences = config.sequences ?? inMemorySequences();
+  const nextSequence = (mission: RuntimeMissionRef): number =>
+    sequences.next(JSON.stringify([mission.issuer, mission.id, config.emitterId, "pdp"]));
 
   return {
     emit: async (input: DecisionEvidenceEmissionInput): Promise<DecisionEvidenceObject> => {
@@ -452,7 +480,14 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
           `DecisionEvidenceEmitter: refusing to sign a record for audience "${input.audience}"; this emitter's key is published for "${config.audience}"`,
         );
       }
-      const action_class = input.action_class ?? "consequential_read";
+      // @spec runtime-evidence#decision-evidence-object, runtime#classification
+      // (#956, D814): `action_class` is the class the PDP applied. A request
+      // with none is refused before evaluation (`action_class_missing`), so
+      // no class is ever manufactured here.
+      if (typeof input.action_class !== "string" || input.action_class.length === 0) {
+        throw new Error("Decision Evidence requires the action class the PDP applied");
+      }
+      const action_class = input.action_class;
       if (input.parameter_digest !== undefined) requiredString(input.parameter_digest);
       if (input.conditions?.use_limit !== undefined && (!Number.isSafeInteger(input.conditions.use_limit) || input.conditions.use_limit < 1)) {
         throw new Error("Decision Evidence use_limit must be a positive integer");
@@ -505,7 +540,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
       ) {
         throw new Error("Decision Evidence authority_bound names a bound on a deny one decided");
       }
-      const class_source: RuntimeClassSource = input.action_class !== undefined ? "deployment" : "default";
+      const class_source: RuntimeClassSource = "deployment";
       if (input.parameter_digest === undefined && !(typeof input.evaluation_request_digest === "string" && input.evaluation_request_digest.length > 0)) {
         throw new Error("Decision Evidence requires the evaluation request digest when parameter_digest is absent");
       }

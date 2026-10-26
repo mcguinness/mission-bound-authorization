@@ -1,15 +1,24 @@
 /**
  * Standalone launcher. Configuration comes from the environment only:
  * PLAIN_RS_ISSUER, PLAIN_RS_AUDIENCE (default http://localhost:4410/api),
- * PLAIN_RS_JWKS_URI (default `${issuer}/jwks`), PLAIN_RS_BASE_URL, and, for
+ * PLAIN_RS_JWKS_URI (default `${issuer}/jwks`), PLAIN_RS_TRUSTED_KIDS (required:
+ * the comma-separated key identifiers trusted for the issuer's tokens; trust is
+ * configured, never inferred from what the key set holds), PLAIN_RS_BASE_URL, and, for
  * introspection mode, PLAIN_RS_INTROSPECTION_ENDPOINT with
  * PLAIN_RS_INTROSPECTION_CLIENT_ID, PLAIN_RS_INTROSPECTION_CLIENT_SECRET and
  * PLAIN_RS_INTROSPECTION_TIMEOUT_MS (default 2000). PLAIN_RS_CLOCK_TOLERANCE_SECONDS
  * (default 0) sets the accepted clock skew for the access token's times.
  */
-import { startPlainResourceServer } from "./index.js";
+import { startPlainResourceServer, trustedKidsFromEnv } from "./index.js";
 
 const env = process.env;
+let trustedKids: string[];
+try {
+  trustedKids = trustedKidsFromEnv(env.PLAIN_RS_TRUSTED_KIDS);
+} catch (err) {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+}
 const issuer = env.PLAIN_RS_ISSUER ?? "http://localhost:4400";
 const audience = env.PLAIN_RS_AUDIENCE ?? "http://localhost:4410/api";
 const endpoint = env.PLAIN_RS_INTROSPECTION_ENDPOINT;
@@ -20,6 +29,7 @@ await startPlainResourceServer(
     issuer,
     audience,
     jwksUri: env.PLAIN_RS_JWKS_URI ?? `${issuer}/jwks`,
+    trustedKids,
     ...(env.PLAIN_RS_BASE_URL ? { baseUrl: env.PLAIN_RS_BASE_URL } : {}),
     ...(env.PLAIN_RS_CLOCK_TOLERANCE_SECONDS
       ? { clockToleranceSeconds: Number(env.PLAIN_RS_CLOCK_TOLERANCE_SECONDS) }

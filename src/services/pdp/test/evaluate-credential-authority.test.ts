@@ -21,6 +21,7 @@ import {
   stalenessBound,
 } from "../src/index.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { withActionClass } from "./with-credential.js";
 
 const RESOURCE = "http://localhost:4403/mcp";
 const ISSUER = "https://as.test";
@@ -58,11 +59,14 @@ const opts = (v: MissionView = view()) => ({
 
 type Credential = NonNullable<EvaluationRequest["context"]["credential"]>;
 
-/** A decision request carrying exactly the credential given (no fixture default). */
+/**
+ * A decision request carrying exactly the credential given (no fixture
+ * default), classed `consequential_read` by the fixture (#956, D814).
+ */
 const req = (
   credential: Credential,
   over: { action?: string; vendor?: string; vendors?: string[]; extra?: Record<string, unknown> } = {},
-): EvaluationRequest => ({
+): EvaluationRequest => withActionClass({
   subject: { id: "alice" },
   resource: {
     type: over.vendors ? "vendor" : "invoice",

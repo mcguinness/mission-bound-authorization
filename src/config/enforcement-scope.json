@@ -5,7 +5,7 @@
     "execution_paths": ["mcp:tools/call"],
     "pep_locations": ["mcp-payments-pep"],
     "excluded_paths": [],
-    "mission_establishment_mode": "token-claim"
+    "mission_establishment_mode": ["credential_carried", "externally_established"]
   },
   "authority_entry_types": [{"type": "mission_resource_access", "evaluator": "fga-contextual-check"}],
   "pdps": ["mcp-payments-pdp"],
