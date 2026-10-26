@@ -74,7 +74,8 @@ hold: the pass's observation older than `max_staleness_seconds` refuses
 permit expires at the earlier of the staleness and lag deadlines. Each
 complete pass also records the Missions whose Subject shows an applicable
 invalidation, mapped or not, and the PDP refuses them whatever their state
-reads until a later complete pass observes the invalidation gone. A
+reads until a later complete pass observes the invalidation gone (an
+unreachable source or an old observation never counts as that). A
 lifecycle-only declaration must map every invalidating change; with a direct
 route as well, a partial mapping is valid because direct evaluation refuses
 an unmapped change.

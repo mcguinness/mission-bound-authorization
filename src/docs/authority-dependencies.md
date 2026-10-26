@@ -63,6 +63,10 @@ The enforcers split the failure cases:
   resume while the Subject is still disabled restores nothing. The set is
   recomputed by every complete pass and kept through a failed one; a Mission
   leaves it only when a later complete pass observes the invalidation gone.
+  A pass classifies what its own observation shows; the source being
+  unreachable or the observation being old is never taken as the
+  invalidation gone, and a pass that cannot classify a governed Mission
+  publishes nothing.
 - A lifecycle-only declaration maps every invalidating change to a
   lifecycle operation; the reader refuses one that leaves a change unmapped.
   With a direct route as well, a partial mapping is valid, because direct

@@ -79,7 +79,7 @@ const READ = "payments:invoice.read";
 const SEND = "payments:remittance.send";
 const DECLARATION = AUTHORITY_DEPENDENCIES[0] as AuthorityDependencyDeclaration;
 const LAG_MS = (DECLARATION.enforcement.reconciliation_max_lag_seconds as number) * 1000;
-const PRINCIPALS = ["alice", "bob", "dana", "erin", "frank", "gina", "hana", "june", "kim", "lena", "omar", "pat", "quinn", "rui", "sam", "tess", "uma", "val", "wes", "xia", "yan", "zed"];
+const PRINCIPALS = ["alice", "bob", "dana", "erin", "frank", "gina", "hana", "june", "kim", "lena", "omar", "pat", "quinn", "rui", "sam", "tess", "uma", "val", "wes", "xia", "yan", "zed", "ari", "bea", "cyd", "dov"];
 
 type SourceRecord = { sub: string; status?: string; withdrawn_delegations?: string[] };
 /** Every principal active and delegating, with `changes` applied: a principal mapped to null is absent from the source. */
@@ -872,5 +872,118 @@ describe("the AS terminates a deprovisioned Subject's Missions, identified by th
     // The same sub deprovisioned in this issuer's own source: revoked.
     source = sourceWith({ yan: { status: "deprovisioned" } });
     expect(mine(await reconciler().reconcile(), m)).toEqual([{ mission: m.id, operation: "revoke", change: "subject_deprovisioned" }]);
+  });
+});
+
+describe("a pass classifies what its own observation shows, never the source's availability or the observation's age (@spec runtime#input-authority-dependency, #830)", () => {
+  /** A lifecycle-only, online-checked reconciler over the shared kernel and resolver, and the PDP enforcement reading its progress. */
+  function onlineReconciler() {
+    const online = { ...LIFECYCLE_ONLY, online_check: true } as AuthorityDependencyDeclaration;
+    const r = new AuthorityReconciler({ kernel: as.kernel, declaration: online, resolver });
+    return { r, dependency: { ...enforcement(), declaration: online, reconciliation: () => r.lag() } };
+  }
+
+  /**
+   * The owner's sequence: a complete pass records the invalidation and
+   * suspends; another pass issues its read, a newer scheduled refresh issued
+   * after it fails (or the pass's read is already older than the staleness
+   * bound when it completes), and the pass's read completes still showing the
+   * invalidation; then the source answers, still showing it, and an authorized
+   * resume makes the Mission active.
+   */
+  async function maskedPass(sub: string, invalidated: Omit<SourceRecord, "sub">, mask: "unavailable" | "stale") {
+    nowMs = Date.now();
+    await observe(sourceWith());
+    const m = approve(as, sub);
+    const { r, dependency } = onlineReconciler();
+    const shown = sourceWith({ [sub]: invalidated });
+    source = shown;
+    const first = await r.reconcile();
+    expect(first.invalidated).toContain(m.id);
+    expect(stateOf(m.id).state).toBe("suspended");
+    held = [];
+    const pending = held;
+    if (mask === "stale") nowMs = Date.now() - (DECLARATION.max_staleness_seconds + 100) * 1000;
+    const pass = r.reconcile();
+    held = undefined;
+    if (mask === "unavailable") {
+      nowMs += 1000;
+      source = new Error("identity source unreachable");
+      expect(await resolver.refresh()).toBe(false);
+    } else {
+      nowMs = Date.now();
+    }
+    pending[0]?.(shown);
+    expect((await pass).ok).toBe(true);
+    return { m, r, dependency, shown };
+  }
+
+  it("keeps a disabled Subject's invalidation when a newer failed refresh overlaps the pass's successful read (the owner's probe)", async () => {
+    const { m, r, dependency, shown } = await maskedPass("zed", { status: "disabled" }, "unavailable");
+    expect(r.lag().invalidated?.get(m.id)).toMatchObject({ failure: "invalidated" });
+    source = shown;
+    await resolver.refresh();
+    expect((await resume(m.id)).status).toBe(200);
+    expect(stateOf(m.id).state).toBe("active");
+    const dec = await decide(m.id, READ, dependency);
+    expect(dec.decision).toBe(false);
+    expect(evidence.entries().at(-1)).toMatchObject({ enforcer: "pdp", failure: "invalidated", mission: { id: m.id } });
+  });
+
+  it("keeps a withdrawn delegation's invalidation through the same overlap", async () => {
+    const { m, r, dependency, shown } = await maskedPass("ari", { withdrawn_delegations: ["ap-agent"] }, "unavailable");
+    expect(r.lag().invalidated?.get(m.id)).toMatchObject({ failure: "withdrawn" });
+    source = shown;
+    await resolver.refresh();
+    expect((await resume(m.id)).status).toBe(200);
+    const dec = await decide(m.id, READ, dependency);
+    expect(dec.decision).toBe(false);
+    expect(evidence.entries().at(-1)).toMatchObject({ enforcer: "pdp", failure: "withdrawn", mission: { id: m.id } });
+  });
+
+  it("keeps the invalidation when the pass's read is already older than the staleness bound as it completes", async () => {
+    const { m, r } = await maskedPass("bea", { status: "disabled" }, "stale");
+    expect(r.lag().invalidated?.get(m.id)).toMatchObject({ failure: "invalidated" });
+  });
+
+  it("removes the Mission from the set only when a later complete pass observes the recovery (control)", async () => {
+    const { m, r, dependency } = await maskedPass("cyd", { status: "disabled" }, "unavailable");
+    expect(r.lag().invalidated?.has(m.id)).toBe(true);
+    source = sourceWith();
+    const recovered = await r.reconcile();
+    expect(recovered.ok).toBe(true);
+    expect(r.lag().invalidated?.has(m.id)).toBe(false);
+    expect((await resume(m.id)).status).toBe(200);
+    expect((await decide(m.id, READ, dependency)).decision).toBe(true);
+  });
+
+  it("publishes nothing from a pass that cannot classify a governed Mission (no observation of its Subject): the previous sets and progress stand", async () => {
+    nowMs = Date.now();
+    await observe(sourceWith());
+    const m = approve(as, "dov");
+    // A resolver that, while `hide` is set, holds no observation of dov's principal though its read succeeds.
+    let hide = false;
+    const blind = {
+      refresh: () => resolver.refresh(),
+      observedAtMs: () => resolver.observedAtMs(),
+      view: (principal: { iss: string; sub: string }) => (hide && principal.sub === "dov" ? { sourceAvailable: true } : resolver.view(principal)),
+    } as unknown as AuthorityDependencyResolver;
+    const r = new AuthorityReconciler({ kernel: as.kernel, declaration: { ...LIFECYCLE_ONLY, online_check: true } as AuthorityDependencyDeclaration, resolver: blind });
+    source = sourceWith({ dov: { status: "disabled" } });
+    expect((await r.reconcile()).invalidated).toContain(m.id);
+    const before = r.lag();
+    // The Subject recovers at the source, but this pass cannot classify dov's Mission.
+    source = sourceWith();
+    nowMs += 1000;
+    hide = true;
+    const unclassified = await r.reconcile();
+    expect(unclassified.ok).toBe(false);
+    expect(unclassified.failures).toContainEqual({ mission: m.id, error: "no observation of the recorded Subject" });
+    expect(r.lag()).toEqual(before);
+    expect(r.lag().invalidated?.has(m.id)).toBe(true);
+    // Classifiable again: the recovery is observed and the Mission leaves the set.
+    hide = false;
+    expect((await r.reconcile()).ok).toBe(true);
+    expect(r.lag().invalidated?.has(m.id)).toBe(false);
   });
 });
