@@ -132,6 +132,7 @@ export async function keysAdmin(
       return [
         `staged ${staged.kid} for ${role}: to be published, not signing`,
         `${next}. Activation waits ${JWKS_MAX_AGE_SECONDS}s from the publication that verification confirms`,
+        `before activating, add ${staged.kid} to each consumer's trusted kids for ${role} (this deployment: config/topology.json keys.${role}.trusted) and reload each consumer (SIGUSR2 to the demo's processes); publication alone grants no trust`,
       ].join("\n");
     }
     case "retire": {
@@ -167,7 +168,7 @@ export async function keysAdmin(
       const done = await compromiseSigningKeyGeneration(ring, issuer, roles, role, kid, compromisedAt ? { compromisedAt } : {});
       return [
         `withdrew ${kid} for ${role} as compromised${done.replacement ? `; ${done.replacement} replaces it as the signer` : ""}`,
-        `${next}. Until the AS restarts it keeps the key set it loaded; a consumer keeps a key set it fetched until it fetches again, and authorizes a replacement only through its own trusted rotation`,
+        `${next}. Until the AS restarts it keeps the key set it loaded; a consumer keeps a key set it fetched until it fetches again, and accepts ${done.replacement ?? "a replacement"} only once its trusted kids for ${role} list it (this deployment: config/topology.json keys.${role}.trusted, then SIGUSR2 to the demo's processes)`,
       ].join("\n");
     }
   }

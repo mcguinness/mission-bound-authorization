@@ -449,7 +449,11 @@ export class GateError extends Error {
       // operation identity was settled by an authoritative NON-acceptance and
       // its count was returned. That identity is TERMINAL: retrying it would
       // mint a second artifact for one operation, off a count nobody holds.
-      | "operation_refunded",
+      | "operation_refunded"
+      // @spec runtime#input-authority-dependency (#830, D798): a declared
+      // authority dependency the Mission relies on is not established. It
+      // refuses `invalid_grant` with no `mission_error`.
+      | "authority_dependency",
     message: string,
   ) {
     super(message);
@@ -702,6 +706,28 @@ export interface KernelOptions {
    * {@link MissionKernel.registerDurableSubscriber} instead.
    */
   onLifecycleCommit?: (commit: LifecycleCommit) => void;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): the issuance
+   * gates' check of a declared authority dependency, beside the `active`
+   * check: consulted at the approval decision ({@link prepareApproval},
+   * {@link approve}) and at every gate a derivation passes
+   * ({@link gateActive}, {@link gateDerivation}, {@link checkDerivation}),
+   * before any count is written. It reads a cached observation and does no
+   * I/O, so it never holds a transaction across a source read. A refusal
+   * names its cause, which the caller retains; the wire refusal is the
+   * gate's own (`access_denied` at the approval, `invalid_grant` at a
+   * derivation), with no new identifier. Absent, no dependency is gated.
+   */
+  authorityDependencyGate?: (
+    candidate: {
+      /** The Mission, once it exists; absent at the approval decision. */
+      mission?: { id: string; issuer: string };
+      subject: { iss: string; sub: string };
+      clientId: string;
+      authoritySource: string;
+    },
+    surface: "approval" | "derivation",
+  ) => { failure: string } | undefined;
   /**
    * @spec draft-mcguinness-oauth-mission#per-entry-enforcement,
    * child-delegation#fanout — the AS's actor-type ASSERTION registry: a map from
@@ -1671,6 +1697,7 @@ export class MissionKernel {
       approver: input.approver,
     });
     this.assertAuthorityWithinSource(resolvedSource, authoritySet);
+    this.assertAuthorityDependency(input, resolvedSource);
     return {
       proposal,
       authoritySet,
@@ -1678,6 +1705,20 @@ export class MissionKernel {
       childActorProvenance: derived.childActorProvenance,
       resolvedSource,
     };
+  }
+
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): the approval
+   * decision's check of a declared authority dependency, for the Subject and
+   * client the new Mission would carry under its established source. Refuses
+   * `access_denied`, the approval decision's refusal, naming no cause.
+   */
+  private assertAuthorityDependency(input: ApproveInput, resolvedSource: AuthoritySourceResolution): void {
+    const refused = this.opts.authorityDependencyGate?.(
+      { subject: input.subject, clientId: input.clientId, authoritySource: resolvedSource.provenance.type },
+      "approval",
+    );
+    if (refused) throw new IntentError("access_denied", "the approval's declared authority dependency is not established");
   }
 
   /**
@@ -1751,6 +1792,9 @@ export class MissionKernel {
       );
     }
     this.assertAuthorityWithinSource(current, prepared.authoritySet);
+    // @spec runtime#input-authority-dependency (#830): checked again at the
+    // commit, as the source is: the observation can change during the grant save.
+    this.assertAuthorityDependency(input, current);
     return current;
   }
 
@@ -4335,6 +4379,21 @@ export class MissionKernel {
         );
       }
       ancestor = fresh.parent;
+    }
+    // @spec runtime#input-authority-dependency (#830, D798): beside the
+    // `active` check, the Mission's declared authority dependency, before any
+    // count is written.
+    const dependency = this.opts.authorityDependencyGate?.(
+      {
+        mission: { id: record.id, issuer: record.issuer },
+        subject: record.subject,
+        clientId: record.client_id,
+        authoritySource: record.authority_source.type,
+      },
+      "derivation",
+    );
+    if (dependency) {
+      throw new GateError("authority_dependency", `mission ${id}: its declared authority dependency is not established`);
     }
     return record;
   }

@@ -18,12 +18,14 @@
  */
 
 import {
+  type AuthorityDependencyDeclaration,
   EVALUATION_CONTEXT_BINDING_EXTENSION,
   EvaluationContextBindingDeclarations,
   type EvaluationContextBindingRef,
   type EvaluationContextGranularity,
   type EvaluationContextProperty,
   IDEMPOTENCY_SCOPE_DIMENSIONS,
+  parseAuthorityDependencyDeclarations,
   isScopeDimension,
   isVolatileScopeMember,
   type ResourceContractDeclaration,
@@ -319,6 +321,13 @@ export interface EnforcementExtensionDeclarations {
    * Runtime wire member.
    */
   resource_contracts?: ReadonlyArray<ResourceContractDeclaration>;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): each declared
+   * authority dependency, with every element the Runtime requires
+   * ({@link authorityDependencyFindings}). A reference-statement
+   * representation, not a Runtime wire member.
+   */
+  authority_dependencies?: ReadonlyArray<AuthorityDependencyDeclaration>;
 }
 
 /**
@@ -665,6 +674,28 @@ export function resourceContractFindings(input: unknown): EnforcementScopeFindin
     return [];
   } catch (e) {
     return [{ member: "extensions.resource_contracts", problem: (e as Error).message }];
+  }
+}
+
+/**
+ * @spec runtime#input-authority-dependency (#830, D798): "A deployment that
+ * declares an authority dependency MUST state in its Enforcement Scope
+ * Statement" the dependency and its source, what it governs, the invalidating
+ * changes, its maximum staleness, its enforcement route and its recovery and
+ * responsibility transfer. The `authority_dependencies` declarations, checked
+ * wherever they appear through the one parser every enforcing component reads
+ * them with: a declaration missing any element is refused at load.
+ */
+export function authorityDependencyFindings(input: unknown): EnforcementScopeFinding[] {
+  const stmt = object(input) ? input : {};
+  const extensions = object(stmt.extensions) ? stmt.extensions : {};
+  const declared = extensions.authority_dependencies;
+  if (declared === undefined) return [];
+  try {
+    parseAuthorityDependencyDeclarations(declared);
+    return [];
+  } catch (e) {
+    return [{ member: "extensions.authority_dependencies", problem: (e as Error).message }];
   }
 }
 
