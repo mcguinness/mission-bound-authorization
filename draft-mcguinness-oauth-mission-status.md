@@ -1897,9 +1897,8 @@ issuer-held narrowing mechanism a
 deployment runs, including any a companion profile defines, MUST feed
 the single
 Effective Authority Set computation. Every derivation and every
-authority-reporting surface MUST use that same computation; no
-mechanism computes a parallel view, and no surface reports authority
-the computation has not reduced.
+authority-reporting surface MUST use that same computation, so no
+surface reports authority the computation has not reduced.
 
 # Security Considerations {#security-considerations}
 
