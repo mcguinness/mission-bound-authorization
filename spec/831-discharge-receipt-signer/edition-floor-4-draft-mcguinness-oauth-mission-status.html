@@ -1936,7 +1936,9 @@ rejecting <code>none</code> and any algorithm not listed;<a href="#section-3.5-1
 </li>
           <li id="section-3.5-14.3">
             <p id="section-3.5-14.3.1">the JWS signature against a current <code>jwks_uri</code> entry for the
-<code>issuer</code> AS;<a href="#section-3.5-14.3.1" class="pilcrow">¶</a></p>
+<code>issuer</code> AS that the consumer's trusted configuration authorizes for
+that AS's Mission Status responses; a key's presence in the
+<code>jwks_uri</code> does not authorize it (<a href="#historical-key-set" class="auto internal xref">Section 8.1</a>);<a href="#section-3.5-14.3.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.5-14.4">
             <p id="section-3.5-14.4.1"><code>iss</code> equals the expected AS issuer URL, and <code>mission.issuer</code>
@@ -4219,35 +4221,41 @@ reliance when that fails, and never verify a current reliance
 decision under a historical key (#831, D774, D780).<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.2">
-          <p id="appendix-A-3.2.1">A transition is durably committed before any response acknowledges
-it, and the OAuth binding's final issuance check is not extended to
-suspension.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.2.1">The consumer's signature check is strengthened: a consumer verifies
+a Mission Status response only under a key its trusted configuration
+authorizes for that AS's Mission Status responses, never merely
+because the key appears in <code>jwks_uri</code> (#831, D842).<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.3">
-          <p id="appendix-A-3.3.1">A schedule's deadline governs later decisions, and expiry governs
-when the first decision after the deadline comes at or after
-<code>expires_at</code>; a revoke schedule terminates at its <code>suspend_until</code>,
-and a past <code>suspend_until</code> is refused only on a new request.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.3.1">A transition is durably committed before any response acknowledges
+it, and the OAuth binding's final issuance check is not extended to
+suspension.<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.4">
-          <p id="appendix-A-3.4.1">An RFC 7009 revocation does not by itself revoke a Mission, and a
-revocation that a deployment's policy couples to it commits the same
-<code>revoke</code> transition, state version and event.<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.4.1">A schedule's deadline governs later decisions, and expiry governs
+when the first decision after the deadline comes at or after
+<code>expires_at</code>; a revoke schedule terminates at its <code>suspend_until</code>,
+and a past <code>suspend_until</code> is refused only on a new request.<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.5">
-          <p id="appendix-A-3.5.1">Editorial, no requirement change: in the audience-scoped Mission
+          <p id="appendix-A-3.5.1">An RFC 7009 revocation does not by itself revoke a Mission, and a
+revocation that a deployment's policy couples to it commits the same
+<code>revoke</code> transition, state version and event.<a href="#appendix-A-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.6">
+          <p id="appendix-A-3.6.1">Editorial, no requirement change: in the audience-scoped Mission
 Status example, the consumer is the ERP resource server; no example
 response shows <code>authority_hash</code> to a caller the example does not
 show holding its disclosure privilege; and the revocation's <code>reason</code>
-describes a revocation, not a completion (#1535).<a href="#appendix-A-3.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-3.6">
-          <p id="appendix-A-3.6.1">The <code>nonce</code> is a string of 1 to 255 Unicode code points at both
-endpoints, a constraint the Mission Status request now states
-(#1535).<a href="#appendix-A-3.6.1" class="pilcrow">¶</a></p>
+describes a revocation, not a completion (#1535).<a href="#appendix-A-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.7">
-          <p id="appendix-A-3.7.1">Conformance's introspection-signing and TTL-sizing items defer to
+          <p id="appendix-A-3.7.1">The <code>nonce</code> is a string of 1 to 255 Unicode code points at both
+endpoints, a constraint the Mission Status request now states
+(#1535).<a href="#appendix-A-3.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.8">
+          <p id="appendix-A-3.8.1">Conformance's introspection-signing and TTL-sizing items defer to
 the sections that state those rules, resolving language that
 conflicted with them; each lifecycle value arrives with the
 operation that introduces it; an otherwise-valid access token
@@ -4255,7 +4263,7 @@ without the <code>mission_status</code> scope receives the not-found response,
 not <code>insufficient_scope</code>; a 401's challenge errors are distinct from
 its JSON body's <code>unauthorized</code>; and a companion registers an
 extension operation by defining it in its own specification
-(#1535).<a href="#appendix-A-3.7.1" class="pilcrow">¶</a></p>
+(#1535).<a href="#appendix-A-3.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>
