@@ -21636,6 +21636,120 @@
    "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice, and the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check compromise. D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty."
   },
   {
+   "id": "status.mission-status.per-consumer-rate-limit",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "security-considerations",
+   "text": "The AS MUST implement per-consumer rate limiting (returning `rate_limited`, {{mission-status-errors}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authenticated consumer over its limit on the Mission Status operation is refused `rate_limited` (HTTP 429); the limit is per consumer, so another consumer is unaffected, and the refusal reveals nothing about the referenced Mission",
+    "local": "a fixed window per authenticated client across both Status routes, default 120 requests per 60 seconds (`missionStatusRateLimit`). On the advertised form POST it is counted between request syntax and authorization (Processing Order steps 2 and 3), so a malformed request keeps its invalid_request refusal and no Mission has been read; on the development GET, after authentication. An unauthenticated request is an authentication failure and is not counted. The windows are in-process, as the deployment is single-process; a refused request is not counted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > refuses a client over its limit rate_limited (429) with Retry-After, retry_after and its nonce, while another client is unaffected",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > decides before any Mission is read: over the limit, an unknown Mission and a known one get the same refusal",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > keeps the processing order: an over-limit client's malformed request is still refused invalid_request",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > an unauthenticated request is refused as an authentication failure and counts against no client",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > limits the development GET route per service principal the same way; an unauthenticated GET counts against no one",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1686 (filed on the owner's review of #1535 finding 17, which kept this a MUST). Proved by mutation: a limiter that never refuses fails the three route witnesses; removing the form POST's check fails its two witnesses, and the GET's its one; one window shared by every client fails the other-client and unauthenticated witnesses; counting the claimed client before authentication fails the unauthenticated witness; placing the check before request syntax fails the processing-order witness. The Lifecycle endpoint is not limited by this row."
+  },
+  {
+   "id": "status.errors.rate-limited-retry-after",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-errors",
+   "text": "For `rate_limited`, the response SHOULD include a `Retry-After` header {{RFC9110}} and a `retry_after` body member in seconds.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a `rate_limited` response carries a `Retry-After` header and a `retry_after` body member, the same whole seconds",
+    "local": "the seconds until the client's window resets, at least 1"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > refuses a client over its limit rate_limited (429) with Retry-After, retry_after and its nonce, while another client is unaffected",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1686. The witness asserts the header and the body member agree and fall within the window."
+  },
+  {
+   "id": "status.revocation-propagation.ttl-within-max-stale",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "revocation-enforcement-classes",
+   "text": "Where a deployment needs Mission revocation to take effect but only the baseline derivation-time check is in use, Mission-bound access tokens SHOULD use TTLs no longer than the declared `mission_max_stale_seconds`.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.revocation-propagation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-bound access token the AS issues lives no longer than the `mission_max_stale_seconds` it advertises",
+    "local": "the reference issues 300-second access tokens and advertises 300 (`src/config/topology.json`, `enforcement-scope.json`); the MAY branch, longer lifetimes where revocation propagates out of band, is not exercised"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > the issued Mission-bound access token lives no longer than the advertised mission_max_stale_seconds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1686. Proved by mutation: doubling the issued access-token lifetime fails the witness."
+  },
+  {
    "id": "management.bulk.scheduled-resume-grant-dry-run",
    "spec": "draft-mcguinness-oauth-mission-management.md",
    "anchor": "dry-run",

@@ -135,6 +135,42 @@ describe("Mission Status rate limiting per consumer (@spec status#security-consi
     }
   });
 
+  // @spec status#mission-status-processing: the limit sits after request
+  // syntax (step 2) and before authorization (step 3), so a malformed request
+  // keeps its step-2 refusal whatever the client's count.
+  it("keeps the processing order: an over-limit client's malformed request is still refused invalid_request", async () => {
+    const malformed = await newLifecycleClient("rate-limit-malformed");
+    const local = await buildAuthorizationServer({
+      issuer: ISSUER,
+      testClients: [malformed.metadata],
+      lifecycleClientGrants: { [malformed.clientId]: [MISSION_STATUS_SCOPE] },
+      missionStatusRateLimit: { requests: 1, windowSeconds: 60 },
+    });
+    const localServer = local.provider.listen(PORT + 100);
+    try {
+      const at = `http://localhost:${PORT + 100}${STATUS_ENDPOINT_PATH}`;
+      const send = async (form: Record<string, string>) =>
+        readAnswer(
+          await fetch(at, {
+            method: "POST",
+            headers: { "content-type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              ...form,
+              client_assertion_type: CLIENT_ASSERTION_TYPE,
+              client_assertion: await lifecycleClientAssertion(ISSUER, malformed),
+            }).toString(),
+          }),
+        );
+      expect((await send({ mission_id: UNKNOWN, nonce: nonce() })).status).toBe(404);
+      expect((await send({ mission_id: UNKNOWN, nonce: nonce() })).json?.error).toBe("rate_limited");
+      const missingMission = await send({ nonce: nonce() });
+      expect(missingMission.status).toBe(400);
+      expect(missingMission.json?.error).toBe("invalid_request");
+    } finally {
+      localServer.close();
+    }
+  });
+
   it("an unauthenticated request is refused as an authentication failure and counts against no client", async () => {
     const record = approve();
     const forged = await lifecycleClientAssertion(ISSUER, { ...unauthenticated, privateKey: reader.privateKey });

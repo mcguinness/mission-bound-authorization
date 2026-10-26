@@ -4598,7 +4598,6 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         }
         return;
       }
-      if (statusRateLimited(auth.clientId, echo)) return;
       // @spec status#mission-status-processing step 2 (#1535 Item C, D708): any
       // other repeated parameter makes the request malformed.
       const repeatedParameter = form.repeated[0];
@@ -4623,6 +4622,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         refuse(400, "invalid_request", "audience, when sent, names an audience", echo);
         return;
       }
+      // @spec status#security-considerations, status#mission-status-processing
+      // (#1686): the per-consumer limit falls between request syntax (step 2)
+      // and authorization (step 3), so the processing order's refusals are
+      // unchanged and no Mission has been read.
+      if (statusRateLimited(auth.clientId, echo)) return;
       const principal: ServiceTokenPrincipal = {
         principal_id: auth.clientId,
         scopes: [...lifecycleGrantList(lifecycleClientGrants[auth.clientId])],
