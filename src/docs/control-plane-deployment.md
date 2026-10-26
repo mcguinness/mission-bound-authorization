@@ -593,6 +593,10 @@ makes no claim:
   surface, and the consumer-side reconciliation clauses, are not witnessed.
 - `control-plane.consistency.rollback`: one writer on one host only, and no way
   back from an older store but restoring the witnessed one (D820).
+- `control-plane.consistency.rollback-retaining-consumer`: the Signals receiver
+  keeps its high-water mark across a restart, but a restore of its store from an
+  older backup loses the marks taken since; the receiver has no recovery
+  admission.
 - `control-plane.consistency.partitions`: the refusal is witnessed in the
   single-writer topology; the multi-node cases cannot be constructed here.
 - `control-plane.consistency.emergency-deny`: the deny-entry clauses have no
