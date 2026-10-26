@@ -70,6 +70,8 @@ const evaluate = (req: EvaluationRequest, opts: EvaluateOptions) => evaluateRequ
 const RESOURCE = "http://localhost:4403/mcp";
 const ISSUER = "https://as.test";
 const EXECUTE = "payments:payment.execute";
+const SCHEDULE = "payments:payment.schedule";
+const REMIT = "payments:remittance.send";
 const T0 = Date.parse("2026-10-25T12:00:00Z");
 /** irreversible_action: the 30 s staleness bound caps the permit; the published lease is 30 s more. */
 const PAST_LEASE_MS = 61_000;
@@ -209,7 +211,7 @@ function view(id: string, budget?: MissionBudgetBinding): MissionView {
     state: "active",
     version: 1,
     authority_hash: `sha-256:h-${id}`,
-    authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [EXECUTE] }],
+    authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [EXECUTE, SCHEDULE, REMIT] }],
     subject: { iss: ISSUER, sub: "alice" },
     client_id: "ap-agent",
     ...(budget ? { budget } : {}),
@@ -217,6 +219,8 @@ function view(id: string, budget?: MissionBudgetBinding): MissionView {
 }
 
 interface RequestOptions {
+  action?: string;
+  actionClass?: string;
   missionId?: string;
   key?: string;
   amount?: string;
@@ -230,11 +234,11 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
   return {
     subject: { id: "alice", properties: { iss: ISSUER } },
     resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme", audience: RESOURCE, operation_target: RESOURCE } },
-    action: { name: EXECUTE, properties: { idempotency_key: o.key ?? freshKey() } },
+    action: { name: o.action ?? EXECUTE, properties: { idempotency_key: o.key ?? freshKey() } },
     context: {
       mission: { id: o.missionId ?? "msn_a", issuer: ISSUER },
       actor: { client_id: "ap-agent" },
-      action_class: "irreversible_action",
+      action_class: o.actionClass ?? "irreversible_action",
       parameter_digest: o.digest ?? `sha-256:pay-${amount}`,
       amount: { amount, currency: o.currency ?? "USD" },
       mission_state_observation: { state: "active", mode: "fresh", freshness_at: c.now().toISOString() },
@@ -712,15 +716,49 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       expect(countsOf(file)).toEqual({ claims: 1, reservations: 0, counters: 0 });
     });
 
-    it("an action or phase the statement does not meter proceeds unmetered under a budget-bound Mission (@spec metering#metering, #816)", async () => {
+    it("the metered action's preflight and prepare phases charge nothing and its commit phase charges the amount once (@spec metering#metering, #816, decision h)", async () => {
       const c = clock();
       const { file, open } = domainOnFile(c);
       const claims = open();
-      const d = await evaluate(request(c, { amount: "5000.00", phase: "prepare" }), options(claims, c, view("msn_a", binding("msn_a"))));
-      expectPermit(d);
-      expect((d.context.decision_evidence as DecisionEvidenceObject).metering).toBeUndefined();
+      const v = view("msn_a", binding("msn_a"));
+      for (const phase of ["preflight", "prepare"]) {
+        const d = await evaluate(request(c, { amount: "300.00", phase }), options(claims, c, v));
+        expectPermit(d);
+        expect((d.context.decision_evidence as DecisionEvidenceObject).metering, phase).toBeUndefined();
+      }
+      expect(claims.budgetCounter(SHARED)).toBeUndefined();
+      const key = freshKey();
+      const commit = await evaluate(request(c, { key, amount: "300.00", phase: "commit" }), options(claims, c, v));
+      expectPermit(commit);
+      expect(meteringOf(commit)).toHaveLength(2);
+      expectDenied(await evaluate(request(c, { key, amount: "300.00", phase: "commit" }), options(claims, c, v)), "duplicate_suppressed");
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("300.00");
+      expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("300.00");
       claims.close();
-      expect(countsOf(file).reservations).toBe(0);
+      expect(countsOf(file)).toEqual({ claims: 3, reservations: 2, counters: 2 });
+    });
+
+    it("any other consequential action carrying an amount under a budget-bound Mission is denied constraint_unsupported and reserves and claims nothing (@spec metering#metering, #816, decision h)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const others: Array<[string, string]> = [
+        [REMIT, "external_commitment"],
+        [SCHEDULE, "consequential_write"],
+      ];
+      for (const [action, actionClass] of others) {
+        const d = await evaluate(request(c, { action, actionClass, phase: null }), options(claims, c, view("msn_a", binding("msn_a"))));
+        expect(d.decision, action).toBe(false);
+        expect(d.context.denial_reason, action).toBe("constraint_unsupported");
+      }
+      claims.close();
+      expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+      // Control: the same requests under a Mission with no budget binding are permitted.
+      const unbound = open();
+      for (const [action, actionClass] of others) {
+        expectPermit(await evaluate(request(c, { action, actionClass, phase: null, missionId: "msn_plain" }), options(unbound, c, view("msn_plain"))));
+      }
+      unbound.close();
     });
 
     it("a remote PDP and an ephemeral decision point deny a budget-bound Mission constraint_unsupported and reserve nothing, while the co-resident decision point over the same domain meters it (@spec metering#topology, #816, decision f)", async () => {

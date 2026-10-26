@@ -64,6 +64,7 @@ import {
   type BudgetAmount,
   type BudgetMeteringDeclaration,
   decimalOf,
+  declaresMeteredAction,
   metersAction,
   type MissionBudgetBinding,
   resolveBudgetCharge,
@@ -273,6 +274,8 @@ export interface BudgetMetering {
   readonly domain: IdempotencyClaimDomain;
   /** Whether the declaration meters this action at this phase. */
   meters(action: string, phase: ActionPhase | undefined): boolean;
+  /** Whether the declaration names this action at any phase (#816, decision h). */
+  declaresAction(action: string): boolean;
 }
 
 /**
@@ -678,7 +681,11 @@ export class IdempotencyClaimDomain {
   budgetMetering(): BudgetMetering | undefined {
     const declaration = this.budgets;
     if (!declaration) return undefined;
-    return { domain: this, meters: (action, phase) => metersAction(declaration, action, phase) };
+    return {
+      domain: this,
+      meters: (action, phase) => metersAction(declaration, action, phase),
+      declaresAction: (action) => declaresMeteredAction(declaration, action),
+    };
   }
 
   /**

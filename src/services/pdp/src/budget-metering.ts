@@ -198,6 +198,15 @@ export function metersAction(declaration: BudgetMeteringDeclaration, action: str
 }
 
 /**
+ * Whether the declaration names `action` at any phase. The declared action's
+ * unmetered phases (preflight and prepare of a payment committed at
+ * `commit`) are covered by its metered phase's charge.
+ */
+export function declaresMeteredAction(declaration: BudgetMeteringDeclaration, action: string): boolean {
+  return declaration.metered_actions.some((m) => m.action === action);
+}
+
+/**
  * @spec metering#topology, metering#retry, metering#aggregate-bounds (#816):
  * the loader findings for a `budget_metering` declaration, checked wherever
  * it appears (claimed or not), so a malformed one refuses the statement and

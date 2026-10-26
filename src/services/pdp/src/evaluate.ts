@@ -2676,8 +2676,11 @@ async function evaluateInner(
   // consume the budget. Where it can meter, an action the statement meters
   // is charged the request's amount, the same `context.amount` the
   // `max_amount` step reads, against both counters inside the claim (step
-  // 9); one it does not meter proceeds unmetered. A view without a binding
-  // is unmetered and reaches none of this.
+  // 9). The declared action's other phases (preflight, prepare) are covered
+  // by that charge and charge nothing; any other consequential action
+  // carrying an amount is a spend this PDP does not meter, refused
+  // `constraint_unsupported` rather than passed through unmetered (decision
+  // h). A view without a binding is unmetered and reaches none of this.
   let budgetCharge: BudgetChargeRequest | undefined;
   if (view.budget !== undefined) {
     const budgets = opts.decisionChannel === "remote" ? undefined : opts.budgets;
@@ -2700,6 +2703,13 @@ async function evaluateInner(
         missionId: view.id,
         amount: { amount: amount.amount, currency: amount.currency },
       };
+    } else if (
+      !budgets.declaresAction(req.action.name) &&
+      req.context.amount !== undefined &&
+      actionClass !== "non_consequential" &&
+      actionClass !== "audit_only"
+    ) {
+      return deny("constraint_unsupported");
     }
   }
 
