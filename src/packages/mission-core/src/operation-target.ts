@@ -91,7 +91,7 @@ const HOST = `(?<host>${IP_LITERAL}|${REG_NAME})`;
 /** `port = *DIGIT` (Section 3.2.3). */
 const PORT = "[0-9]*";
 /** `authority = [ userinfo "@" ] host [ ":" port ]` (Section 3.2). */
-const AUTHORITY = `(?:${USERINFO}@)?${HOST}(?::${PORT})?`;
+const AUTHORITY = `(?:(?<userinfo>${USERINFO})@)?${HOST}(?::${PORT})?`;
 
 /** `segment = *pchar`, `segment-nz = 1*pchar` (Section 3.3). */
 const SEGMENT = `${PCHAR}*`;
@@ -150,6 +150,23 @@ export function isAbsoluteUri(value: unknown): value is string {
   if (m === null) return false;
   const { scheme, host } = m.groups ?? {};
   return !HTTP_SCHEME.test(scheme ?? "") || (host !== undefined && host.length > 0);
+}
+
+/**
+ * @spec resource-access#entry-validation (#1376): whether `value` is an `http`
+ * or `https` absolute URI carrying a userinfo subcomponent, an `@` in its
+ * authority, empty userinfo included. An entry's `resource` never carries one:
+ * RFC 9110 Section 4.2.4 forbids generating it in an `http` or `https` URI and
+ * has a recipient "treat its presence as an error". Applied to an entry's
+ * `resource` only, never to an Intent's `target_resources` or an operation
+ * target, which {@link isAbsoluteUri} governs.
+ */
+export function carriesHttpUserinfo(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const m = ABSOLUTE_URI.exec(value);
+  if (m === null) return false;
+  const { scheme, userinfo } = m.groups ?? {};
+  return HTTP_SCHEME.test(scheme ?? "") && userinfo !== undefined;
 }
 
 /**

@@ -154,8 +154,8 @@ records. It defines:
 * **Intent Admission Evidence** ({{intent-admission-evidence}}): the
   registry's first registered payload type and the first consumer of
   the OAuth binding's Intent Submission Evidence dispatch, which
-  shipped with an empty type registry that refuses every presented
-  entry until a profile registers one.
+  defines no evidence types of its own: an AS that supports none
+  refuses every presented entry.
 
 This document does not migrate Decision Evidence, Execution Evidence,
 Refusal Records, the Mission Receipt, Consent Evidence, Approval
@@ -539,9 +539,9 @@ hook does
 ({{I-D.draft-mcguinness-oauth-mission}}). Inbound, a client presents an
 **Intent Admission Assertion** as an Intent Submission Evidence entry
 ({{intent-admission-assertion}}): this is the first type this document
-series registers under the Mission Intent Submission envelope's
-evidence dispatch, which shipped with an empty type registry and
-refuses every presented entry until a profile registers one
+series defines for the Mission Intent Submission envelope's evidence
+dispatch, which defines no evidence types of its own: an AS that
+supports none refuses every presented entry
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
 "Evidence Entries"). Emitted,
 the AS records its own admission attestation as a **Mission Intent

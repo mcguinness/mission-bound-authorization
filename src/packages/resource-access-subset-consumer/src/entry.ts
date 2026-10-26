@@ -160,6 +160,13 @@ export function parseEntry(value: unknown): ParseResult {
   ) {
     return refuse("an http or https resource lacks the // authority form with a non-empty host");
   }
+  // resource-access#entry-validation: refused when "its resource is an http or
+  // https URI carrying a userinfo subcomponent (Section 4.2.4 of RFC9110)".
+  // Any "@" in the authority delimits a userinfo (RFC 3986 section 3.2.1), so
+  // an empty userinfo is refused too; an "@" in the path or query is not one.
+  if ((scheme === "http" || scheme === "https") && uri.authority?.userinfo !== undefined) {
+    return refuse("an http or https resource carries a userinfo subcomponent");
+  }
 
   // resource-access#resource-access-type resource_match: "exact (the default
   // when the member is absent) or prefix". The subset admits exact only.

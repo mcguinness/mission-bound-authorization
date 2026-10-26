@@ -680,7 +680,9 @@ A consumer MUST verify, before honoring a response:
    `mission_status_signing_alg_values_supported` ({{as-metadata}}),
    rejecting `none` and any algorithm not listed;
 3. the JWS signature against a current `jwks_uri` entry for the
-   `issuer` AS;
+   `issuer` AS that the consumer's trusted configuration authorizes for
+   that AS's Mission Status responses; a key's presence in the
+   `jwks_uri` does not authorize it ({{historical-key-set}});
 4. `iss` equals the expected AS issuer URL, and `mission.issuer`
    equals `iss`;
 5. `aud` equals the `audience` the request named or, for a
