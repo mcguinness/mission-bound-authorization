@@ -1945,14 +1945,19 @@ ceiling is present.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
 <p id="section-6.4-1">Trusted context can supply constraints the request does not state: a
 deployment policy, a preference the Subject recorded earlier, or a
 model's refusal to perform a step. Such a constraint narrows the
-proposal or is disclosed in it; it never widens it. When applicable
-constraints conflict, the more restrictive one governs: a Subject's
-preference can narrow deployment policy but never widen it, and an
-exception to deployment policy is the Mission Issuer's decision, not
-the shaper's. Resolving a conflict in the broadening direction is an
-ambiguity resolution (<a href="#ambiguity" class="auto internal xref">Section 7</a>).<a href="#section-6.4-1" class="pilcrow">¶</a></p>
-<p id="section-6.4-2">The shaper carries each constraint through the mechanism that matches
-what the constraint requires:<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+proposal or is disclosed in it; it never widens it.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+<p id="section-6.4-2">The proposal satisfies every applicable mandatory constraint.
+Comparable bounds combine toward the narrower result. If the
+constraints cannot be satisfied together, the shaper requests
+clarification (<a href="#clarifications" class="auto internal xref">Section 7.1</a>), refuses (<a href="#refusal" class="auto internal xref">Section 7.2</a>), or produces
+an explicitly partial proposal under the existing rules
+(<a href="#ambiguity" class="auto internal xref">Section 7</a>). A Subject's preference never widens deployment
+policy. An exception to deployment policy is the Mission Issuer's
+decision, and the Mission Issuer approves one only where the governing
+policy authorizes it; recording a broadening ambiguity resolution
+(<a href="#ambiguity" class="auto internal xref">Section 7</a>) does not itself authorize an exception.<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+<p id="section-6.4-3">The shaper carries each constraint through the mechanism that matches
+what the constraint requires:<a href="#section-6.4-3" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
           <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -1972,7 +1977,7 @@ what the constraint requires:<a href="#section-6.4-2" class="pilcrow">¶</a></p>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Confirmation before an action</td>
-              <td class="text-left" rowspan="1" colspan="1">The entry's <code>requires_action_approval</code> constraint (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), enforced at the point of use (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Action-Bound Approval")</td>
+              <td class="text-left" rowspan="1" colspan="1">The entry's <code>requires_action_approval</code> constraint (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), which requires an action-bound approval at the point of use (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Action-Bound Approval"); the deployment's approval policy establishes who may give it</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">A preference</td>
@@ -1981,14 +1986,23 @@ what the constraint requires:<a href="#section-6.4-2" class="pilcrow">¶</a></p>
             </tr>
           </tbody>
         </table>
-<p id="section-6.4-4">A preference the Subject requires to hold is carried as a bound or a
-confirmation, not as prose. A model's refusal can remove a step from
+<p id="section-6.4-5">The <code>requires_action_approval</code> constraint requires an approval but
+does not name who gives it: an independent Approver or a policy
+authority can satisfy it. A confirmation the Subject must give
+therefore also needs an approval policy that requires the Subject's
+authenticated confirmation of the concrete action.<a href="#section-6.4-5" class="pilcrow">¶</a></p>
+<p id="section-6.4-6">A condition the Subject requires to hold is carried as a bound that
+enforces it, not as prose, and not as a confirmation: an approval at
+the point of use could permit an action the condition forbids. If no
+supported mechanism enforces a required condition, the shaper requests
+clarification, refuses, or produces an explicitly partial proposal
+under the existing rules. A model's refusal can remove a step from
 the proposal but never adds one (<a href="#model-output" class="auto internal xref">Section 12.1</a>). Shaping Evidence
 records each constraint and how the shaper carried it
 (<a href="#shaping-evidence" class="auto internal xref">Section 8</a>). Whether a later change at the source affects
 an approved Mission is a declared authority dependency
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Authority
-Dependencies"), not something the evidence decides.<a href="#section-6.4-4" class="pilcrow">¶</a></p>
+Dependencies"), not something the evidence decides.<a href="#section-6.4-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="delegation">
@@ -3115,10 +3129,14 @@ the travel service's operation contract defines a <code>cabin</code> constraint
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <p id="appendix-B-2">The shaper proposes <code>flights.book</code> at <code>https://travel.example.com</code>
 with a <code>cabin</code> constraint of <code>economy</code> and the
-<code>requires_action_approval</code> constraint set to <code>true</code>. It restates both
-in <code>task_bounds</code>, with the overnight-flight preference
-(<a href="#context-constraints" class="auto internal xref">Section 6.4</a>). Shaping Evidence records the three
-constraints:<a href="#appendix-B-2" class="pilcrow">¶</a></p>
+<code>requires_action_approval</code> constraint set to <code>true</code>. That constraint
+requires an approval before each booking; the deployment's trusted
+approval policy for <code>flights.book</code> requires the Subject's
+authenticated confirmation of the concrete itinerary, so the approval
+is the Subject's and no other approver can satisfy it. The shaper
+restates the cabin bound and the confirmation in <code>task_bounds</code>, with
+the overnight-flight preference (<a href="#context-constraints" class="auto internal xref">Section 6.4</a>). Shaping
+Evidence records the three constraints:<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="appendix-B-3">
 <pre>
 {
@@ -3169,10 +3187,14 @@ constraints:<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 </div>
 <p id="appendix-B-4">Nothing enforces the overnight-flight preference; it guides which
 flight the agent selects. Had the Subject required it, the shaper would
-carry it as a bound. Had the request asked for business class, the
-travel policy would govern: the shaper excludes that authority, records
-it in <code>excluded_authority</code>, and leaves any exception to the Mission
-Issuer.<a href="#appendix-B-4" class="pilcrow">¶</a></p>
+carry it as a bound only if the travel service's operation contract
+defines one that enforces it, such as a departure-time window;
+otherwise it would request clarification or refuse, and never leave
+the condition to an approval at the point of use. Had the request
+asked for business class, the
+travel policy would govern: the shaper excludes that authority and
+records it in <code>excluded_authority</code>. An exception is possible only
+where the travel policy authorizes the Mission Issuer to approve one.<a href="#appendix-B-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="document-history">
@@ -3186,8 +3208,11 @@ Issuer.<a href="#appendix-B-4" class="pilcrow">¶</a></p>
           <p id="appendix-C-2.1.1">Constraints from Trusted Context (<a href="#context-constraints" class="auto internal xref">Section 6.4</a>)
 describes how the shaper carries a deployment policy, a preference
 the Subject recorded, or a model's refusal into the proposal: the
-more restrictive governs, and each kind of constraint maps to the
-mechanism that carries it. Shaping Evidence gains a
+proposal satisfies every applicable mandatory constraint, comparable
+bounds combine toward the narrower result, constraints that cannot
+be satisfied together lead to clarification, refusal, or a partial
+proposal, and each kind of constraint maps to the mechanism that
+carries it. Shaping Evidence gains a
 <code>context_constraints</code> member among its recommended content, with an
 example. No requirement keyword is added or changed.<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
 </li>
