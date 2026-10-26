@@ -63,6 +63,7 @@ export {
   type AuthorityDependencyRefusal,
   AuthorityDependencyResolver,
   checkAuthorityDependency,
+  classifyObservedInvalidation,
   type DependencyEvaluation,
   type DependencyFailure,
   type DependencyPrincipal,
@@ -70,10 +71,13 @@ export {
   type GovernedAuthoritySource,
   type IdentityStateRecord,
   type InvalidatingChange,
+  type ObservedInvalidation,
   type PrincipalStateObservation,
   type PrincipalStateView,
   type PrincipalStatus,
   parseAuthorityDependencyDeclarations,
+  type ReconciledInvalidation,
+  type ReconcilerOperation,
 } from "./authority-dependency.js";
 export type {
   AuthorityEntry,
