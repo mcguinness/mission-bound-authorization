@@ -1,5 +1,6 @@
 /** Assembly: kernel + adapters + keys. Used by server.ts and tests. */
 
+import type { MissionStatusRateLimit } from "./adapters/status-rate-limit.js";
 import {
   INTROSPECTION_PRINCIPALS,
   DESIGNABLE_CLIENTS,
@@ -1265,6 +1266,11 @@ export async function buildAuthorizationServer(opts: {
    */
   dpopProofReplay?: DpopProofReplay;
   /**
+   * @spec status#security-considerations (#1686): the per-consumer limit on
+   * the Mission Status operation. Defaults to DEFAULT_MISSION_STATUS_RATE_LIMIT.
+   */
+  missionStatusRateLimit?: MissionStatusRateLimit;
+  /**
    * @spec authority-server#mission-join (#557) — DEV ONLY: serve
    * `POST /dev/ordinary-token`, which mints an ORDINARY DPoP-bound access
    * token (a `scope`, the join route's audience, no `mission` claim) on a
@@ -2079,6 +2085,7 @@ export async function buildAuthorizationServer(opts: {
       ? { stateRecoveryRetryAfter: opts.stateRecoveryRetryAfter }
       : {}),
     dpopProofReplay,
+    ...(opts.missionStatusRateLimit ? { missionStatusRateLimit: opts.missionStatusRateLimit } : {}),
     ...(joinAssertionService ? { joinAssertionService } : {}),
     // @spec mission#scope-projection — the trusted out-of-band mapping.
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
@@ -2213,3 +2220,8 @@ export function startupRemediationNotices(
       : []),
   ];
 }
+export {
+  DEFAULT_MISSION_STATUS_RATE_LIMIT,
+  type MissionStatusRateLimit,
+  MissionStatusRateLimiter,
+} from "./adapters/status-rate-limit.js";
