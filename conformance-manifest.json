@@ -39660,7 +39660,8 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a suppressed outcome for a permitted payment releases its reservation on every counter it reserved, restoring the remaining"
+    "normative": "a suppressed outcome for a permitted payment releases its reservation on every counter it reserved, restoring the remaining",
+    "local": "In the reference a suppressed outcome settles only when the attempt that redeemed the permit reports it, for its own evaluation. The wire PEP sends nothing for a permit it refuses before redemption, because its redemption store cannot durably cancel the permit, so that reservation stays charged until the permit and its lease elapse and is then held with the alert, until an operator's reconciliation or a later redeeming attempt's own settlement (owner ruling; witnessed on metering.settlement-states.release-only-on-non-execution)."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -39682,27 +39683,9 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > a suppressed settlement for a different evaluation releases nothing held under another (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
-    },
-    {
-     "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > the permit holder's suppression before redemption releases a reservation already held for its elapsed lease too, with one resolution notice for the held alert (@spec metering#settlement-states, #813, #816, decision e)",
-     "level": "endpoint",
-     "surface": "evidence-emission"
-    },
-    {
-     "file": "src/demo/test/standing-payment-e2e.test.ts",
-     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)",
-     "level": "cross-component",
-     "surface": "evidence-emission"
-    },
-    {
-     "file": "src/services/mcp-payments/test/budget-exhaustion.test.ts",
-     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > the PEP sends its signed suppression of a budget-bound permit it refused before redeeming it, the reservation is released and nothing executes, while a suppressed permit with no budget binding sends nothing new (@spec metering#settlement-states, runtime#execution-reverification, #813, #816, decision e)",
-     "level": "cross-component",
-     "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a suppressed settlement from the redeeming attempt releases its reservation on both counters, open or held, restoring the remaining (the next 1000.00 permits), and releases nothing held under another evaluation. Not releasing an open reservation (T8b) fails the open witness, not releasing a held one (M1) fails the held witness, and releasing every held reservation (M2) fails the other-evaluation witness alone. Slice 3b (impl/813-budget-binding-3b at 62325958): a budget-bound permit suppressed before redemption releases both its reservations, open or already held for an elapsed lease, without settling the claim: the PEP sends its signed suppressed record over the claim channel with the redemption owner's unconsumed answer, and the PDP releases on it, restoring the remaining (through the composed stack both counters return to zero and stay there past the lease); a suppressed permit with no budget binding sends nothing. Not releasing a held reservation (S14) fails the held witness; the PEP never sending, never marking the permit budget-reserved, the PDP's channel offering no release, or the channel passing no consumption status (S1, S3, S4, V2c, V2d) fails the end-to-end and executing-PEP witnesses; sending for every unredeemed suppression (S2) fails the executing-PEP witness."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a suppressed settlement from the redeeming attempt releases its reservation on both counters, open or held, restoring the remaining (the next 1000.00 permits), and releases nothing held under another evaluation. Not releasing an open reservation (T8b) fails the open witness, not releasing a held one (M1) fails the held witness, and releasing every held reservation (M2) fails the other-evaluation witness alone. Slice 3b (impl/813-binding at 33a88d93): the owner review removed the pre-redemption release path and retired its witnesses; a PEP's suppression of a permit no attempt redeemed is no settlement (observation.local)."
   },
   {
    "id": "metering.settlement-states.completed-commits",
@@ -39753,15 +39736,9 @@
      "name": "exact budget exhaustion through the executing PEP (@spec metering#aggregate-bounds, #816) > a completed wire commits its 125.00 against a 200.00 standing-consent budget, and the next 125.00 wire is denied quota_exceeded with nothing executed (@spec metering#aggregate-bounds, metering#metering-evidence, #816)",
      "level": "cross-component",
      "surface": "evidence-emission"
-    },
-    {
-     "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > the permit holder's signed suppressed record for a permit no attempt redeemed releases both reservations without settling the claim, and the redeeming attempt's later completed settlement still commits them (@spec metering#settlement-states, #813, #816, decision e)",
-     "level": "endpoint",
-     "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a completed settlement commits the reserved amount on both counters, whether the reservation is open, held after a restart, or already released by the operator (then the overspend alert names each counter pushed past its limit), at the claim domain and through the executing PEP. Not committing on completed (T8e), not committing a released reservation (R4), and raising no overspend alert (R5) fail their witnesses. Slice 3b (impl/813-budget-binding-3b at 62325958): after the permit holder's suppression before redemption released both reservations without settling the claim, the redeeming attempt's later completed settlement commits them from released on both counters; a release that settles the claim (S13) refuses the later settlement and fails the witness. Partial: the reference ignores a conveyed consumed amount and commits the reserved amount, so committing the conveyed amount and releasing a reserved excess are not exercised."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a completed settlement commits the reserved amount on both counters, whether the reservation is open, held after a restart, or already released by the operator (then the overspend alert names each counter pushed past its limit), at the claim domain and through the executing PEP. Not committing on completed (T8e), not committing a released reservation (R4), and raising no overspend alert (R5) fail their witnesses. Partial: the reference ignores a conveyed consumed amount and commits the reserved amount, so committing the conveyed amount and releasing a reserved excess are not exercised."
   },
   {
    "id": "metering.settlement-states.failed-rule-defined",
@@ -39822,15 +39799,9 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > operator reconciliation releases or commits a held reservation, a restart does not release it, and a reservation that is not held is refused unchanged (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
-    },
-    {
-     "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > a release on a suppression before redemption does not outlive the redeeming attempt's later failed settlement, which holds the reservations again (@spec metering#settlement-states, #813, #816, D830 ruling 10)",
-     "level": "endpoint",
-     "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 10. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a failed settlement holds the reservation on both counters and raises the operator alert; a held reservation, whatever held it, survives lease expiry, the reconciliation window, the claim horizon and a restart, released only by operator reconciliation. Releasing on failed (C2) fails the first witness; releasing on lease or restart (C1), at the window close (C6), or at the horizon purge (C7) fails the others. Slice 3b (impl/813-budget-binding-3b at 62325958): a release on the permit holder's suppression before redemption does not outlive the redeeming attempt's later failed settlement, which holds both reservations again; not holding them again (S12) fails the witness."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 10. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a failed settlement holds the reservation on both counters and raises the operator alert; a held reservation, whatever held it, survives lease expiry, the reconciliation window, the claim horizon and a restart, released only by operator reconciliation. Releasing on failed (C2) fails the first witness; releasing on lease or restart (C1), at the window close (C6), or at the horizon purge (C7) fails the others."
   },
   {
    "id": "metering.settlement-states.bounded-lease",
@@ -39870,7 +39841,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a reservation whose lease expires unsettled enters reconciliation and stays charged, never released by the expiry",
-    "local": "design decision e: the reservation is held and an operator alert is raised; release from held only by explicit operator reconciliation, or by the permit holder's signed suppression with the redemption owner's unconsumed answer (affirmative non-execution), each raising a resolution notice"
+    "local": "design decision e: the reservation is held and an operator alert is raised; it is released from held only by an operator's not_executed reconciliation, accepted once the permit and its lease can no longer be used, or by the redeeming attempt's own suppressed settlement, either raising a resolution notice"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -39898,9 +39869,15 @@
      "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > raises the operator alert when a wired payment's lost settlement leaves its reservation held, a resolution notice when an operator releases it, and the overspend alert when its late completed settlement commits the released reservation and pushes the shared counter past its limit (@spec metering#settlement-states, #813, #816, D830 rulings 7 and 10)",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "a budget-bound permit suppressed before redemption stays charged (@spec metering#settlement-states, #813, #816, owner ruling) > an operator's not_executed on a held reservation releases it with one resolution notice, and a repeated not_executed on the released reservation is an idempotent no-op raising none (@spec metering#settlement-states, #813, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 7. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): an unsettled reservation whose lease expires is listed for reconciliation and held, still charged (the next request sees the reduced remaining), until operator reconciliation releases or commits it. Releasing on lease or restart (C1) fails all three; releasing at the window close (C6) fails the second. Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack a wired payment whose settlement never reaches the PDP is held at the sweep past its permit and lease, still charged on the shared counter, with an operator alert of kind budget_reservation_held and cause lease_elapsed on the deployment's alert sink, until an operator reconciles it. Leaving the held alert unwired, naming another kind, or dropping its cause (A1, A2, A3) fails the witness at the alert; when the operator releases it a resolution notice follows, and raising no notice or not wiring it (V4, V4b) fails the witness there."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 7. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): an unsettled reservation whose lease expires is listed for reconciliation and held, still charged (the next request sees the reduced remaining), until operator reconciliation releases or commits it. Releasing on lease or restart (C1) fails all three; releasing at the window close (C6) fails the second. Slice 3b (impl/813-binding at 33a88d93): through the composed stack a wired payment whose settlement never reaches the PDP is held at the sweep past its permit and lease, still charged on the shared counter, with an operator alert of kind budget_reservation_held and cause lease_elapsed on the deployment's alert sink, until an operator reconciles it. Leaving the held alert unwired, naming another kind, or dropping its cause (A1, A2, A3) fails the witness at the alert; when the operator releases it a resolution notice follows, and raising no notice or not wiring it (V4, V4b) fails the witness there. At the decision point a reservation held for its elapsed lease, with the lease_elapsed alert, is released by the operator's not_executed with one resolution notice, and a repeated not_executed is an idempotent no-op raising none; raising no notice (owner-review mutant V4) fails it."
   },
   {
    "id": "metering.settlement-states.timeout-never-releases",
@@ -39953,7 +39930,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a held reservation is released only by a suppressed outcome or by a reconciliation establishing that the permit was never redeemed; any other input leaves it charged",
-    "local": "In the reference two inputs establish non-execution. The permit holder's signed suppressed Execution Evidence, presented by the PEP and epoch the permit was issued to, with the redemption owner answering unconsumed in time, before the claim's reconciliation window closes and before any settlement, releases an open reservation or one held by an elapsed lease or by a PDP restart (D830 ruling 7: affirmative non-execution). An operator reconciliation recording non-execution, accepted only after the permit and its lease can no longer be used, releases a held one. Any other redemption answer (consumed, unknown, a throw, none in time), another PEP or epoch, a closed window, a settled claim, and the PEP's unredeemed report leave the reservation charged."
+    "local": "In the reference non-execution is established by the operator's reconciliation recording not_executed, accepted only after the permit and its lease can no longer be used, which is the durable proof, or by a suppressed settlement from the attempt that redeemed the permit, for its own evaluation. A PEP's suppression of a permit no attempt redeemed releases nothing: the wire's redemption store cannot durably cancel a permit, so that reservation stays charged until the permit and its lease elapse and is then held. The PEP's unredeemed report leaves a held reservation held."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -40002,30 +39979,18 @@
     },
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > the permit holder's suppression before redemption releases a reservation already held for its elapsed lease too, with one resolution notice for the held alert (@spec metering#settlement-states, #813, #816, decision e)",
+     "name": "a budget-bound permit suppressed before redemption stays charged (@spec metering#settlement-states, #813, #816, owner ruling) > the owner's sequence: a permit of 300 suppressed before redemption stays charged, its PEP-signed suppressed record is no settlement without the redeeming attempt, the next 1,000 against a 1,000 budget is quota_exceeded naming the standing_consent counter, and the permit's later completed commits its own 300 alone (@spec metering#settlement-states, metering#aggregate-bounds, #813, #816, owner ruling)",
      "level": "endpoint",
      "surface": "decision-request"
     },
     {
-     "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > after a PDP restart holds a permit's reservation, the permit's own PEP's signed suppression with an unconsumed answer releases it, while one with no answer is refused and leaves it held (@spec metering#settlement-states, #813, #816, D830 ruling 7, decision e)",
-     "level": "endpoint",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > a suppression arriving after the claim's reconciliation window has closed is refused window_closed and releases nothing, as the closed claim's indeterminate outcome holds it (@spec metering#settlement-states, #813, #816)",
-     "level": "endpoint",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > a suppression is refused and releases nothing unless the redemption owner answers unconsumed in time (consumed, a throw, no answer or unknown), and when the record marks a consumed permit or is not a PEP's suppressed record, another PEP or epoch presents it, the domain is bound to no redemption record, the claim is already settled, or the permit reserved no budget (@spec metering#settlement-states, runtime#idempotency, #813, #816)",
-     "level": "endpoint",
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose reservation stays charged, held with the alert once the lease elapses, so a second instance's payment against the budget is quota_exceeded (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, owner ruling)",
+     "level": "cross-component",
      "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a held reservation is released only by the redeeming attempt's suppressed settlement for its own evaluation, or by the operator's not_executed reconciliation once the permit and its lease can no longer be used; another evaluation's suppressed settlement, the PEP's unredeemed reconciliation, an operator answer while the permit is still redeemable, lease expiry, the window, the horizon, a restart and a re-consent all leave it held. Not releasing on suppressed (M1), releasing every held reservation (M2), releasing on the PEP's unredeemed answer (C5), accepting the operator's answer while redeemable (R3), accepting operator reconciliation of a reservation that is not held (C4), releasing on lease or restart (C1) and releasing at the window close (C6) each fail their witness. Slice 3b (impl/813-budget-binding-3b at 62325958) (owner ruling: a same-epoch suppression with a positive unconsumed answer is affirmative non-execution under D830 ruling 7): the permit holder's signed suppression with an unconsumed answer releases a reservation held for an elapsed lease or by a PDP restart, while one with no answer in time leaves the restart-held reservation held; a suppression after the window closes is refused window_closed; and a suppression releases nothing when the redemption owner answers consumed, throws, does not answer or answers unknown, the record marks a consumed permit, is an executor's or a failed record, another PEP or another epoch presents it, the domain is bound to no redemption record, the claim is already settled, or the permit reserved no budget. Accepting an answer other than unconsumed (V2) fails the restart and refusal witnesses; not checking the window (V3b) fails the window witness; accepting a consumed permit, an executor's record or another outcome, not checking the PEP or its epoch, or accepting a settled claim (S6 to S9b, S11) each fail their case, and a missing redemption record or a consumed answer by the reason assertion only (V2e, V2b); releasing on a refused suppression (SZ) fails the zero-count alone; not releasing a held reservation (S14) fails the held witness."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a held reservation is released only by the redeeming attempt's suppressed settlement for its own evaluation, or by the operator's not_executed reconciliation once the permit and its lease can no longer be used; another evaluation's suppressed settlement, the PEP's unredeemed reconciliation, an operator answer while the permit is still redeemable, lease expiry, the window, the horizon, a restart and a re-consent all leave it held. Not releasing on suppressed (M1), releasing every held reservation (M2), releasing on the PEP's unredeemed answer (C5), accepting the operator's answer while redeemable (R3), accepting operator reconciliation of a reservation that is not held (C4), releasing on lease or restart (C1) and releasing at the window close (C6) each fail their witness. Slice 3b (impl/813-binding at 33a88d93) (owner ruling: a reservation is released only with durable proof): the owner's sequence at the decision point, a permit of 300.00 refused before redemption whose PEP-signed suppressed record names no redeeming attempt, is no settlement: both reservations stay reserved, the next 1000.00 against the 1000.00 budget is quota_exceeded naming the standing_consent counter, and a later completed commits the 300.00 alone; through the composed stack the changed-account permit suppressed at admission stays charged, is held with the alert once the lease elapses, and the second instance's payment is quota_exceeded. Settling a suppression without its redeeming attempt at the PDP (owner-review mutant W2) fails the decision-point witness; that together with the PEP settling every suppression (W3) fails the end-to-end one. The earlier same-epoch release witnesses and their mutants (S and V series) are retired with the path."
   },
   {
    "id": "metering.settlement-states.compensation-not-non-execution",
@@ -51947,12 +51912,12 @@
     },
     {
      "file": "src/demo/test/standing-payment-e2e.test.ts",
-     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose reservation stays charged, held with the alert once the lease elapses, so a second instance's payment against the budget is quota_exceeded (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, owner ruling)",
      "level": "cross-component",
      "surface": "decision-request"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3b (impl/813-budget-binding-3b at 62325958): each payment of a dispatched instance is decided afresh by the PDP, which denies parameter_violation, reserving and claiming nothing, a metered payment whose disclosed parameters do not recompute to its parameter_digest or name another vendor, amount or currency than the request; through the composed stack an admitted instance's payment to a changed account is denied by its own Decision Evidence and nothing is wired. Not recomputing the digest, or not comparing vendor, amount or currency (P3, P4, P5, P5b), fails the decision-point witness; removing the destination check (P1) or the payee comparison (P2) lets the composed payment execute. Partial: the transaction-assurance tier and an applicable action-bound approval under an admitted instance are not exercised, and a request carrying no parameter_digest is not a case."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3b (impl/813-binding at 33a88d93): each payment of a dispatched instance is decided afresh by the PDP, which denies parameter_violation, reserving and claiming nothing, a metered payment whose disclosed parameters do not recompute to its parameter_digest or name another vendor, amount or currency than the request; through the composed stack an admitted instance's payment to a changed account is denied by its own Decision Evidence and nothing is wired. Not recomputing the digest, or not comparing vendor, amount or currency (P3, P4, P5, P5b), fails the decision-point witness; removing the destination check (P1) or the payee comparison (P2) lets the composed payment execute. Partial: the transaction-assurance tier and an applicable action-bound approval under an admitted instance are not exercised, and a request carrying no parameter_digest is not a case. The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged."
   },
   {
    "id": "template.standing-payment.payee-compared-with-destination",
@@ -51972,7 +51937,7 @@
     "normative": "a payment whose PEP-established payee account differs from the destination committed for its vendor, or whose vendor has no committed destination, is denied, and a payment above the per-payment max_amount is refused under the instance"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -51994,12 +51959,18 @@
     },
     {
      "file": "src/demo/test/standing-payment-e2e.test.ts",
-     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose reservation stays charged, held with the alert once the lease elapses, so a second instance's payment against the budget is quota_exceeded (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, owner ruling)",
      "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > under a standing-payment instance the PDP itself refuses parameter_violation a payment over the entry's per-payment max_amount, decided on the Mission bound with an unconstrained credential, reserving and claiming nothing, and permits and charges exactly the bound (@spec mission-template#standing-payment-exception, mission#max-amount, #813)",
+     "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The out-of-band escalation to a freshly approved Mission is not observable at this surface. D830 ruling 4. Slice 3b (impl/813-budget-binding-3b at 62325958): for every crossing of the metered action (commit, preflight and prepare) the PDP recomputes parameter_digest over the PEP-disclosed parameters, requires their vendor, amount and currency to be the request's, and compares their payee_account with the destination the policy commits for that vendor: a changed bank account for an approved vendor, a vendor without a committed destination, or absent parameters is denied parameter_violation and reserves and claims nothing, at the decision point and through the composed stack. Removing the destination check (P1) fails all four witnesses; not comparing the payee (P2) fails the payee, phase and end-to-end witnesses; not holding the covered phases (P6) fails the phase witness; not recomputing the digest or not comparing vendor, amount or currency (P3, P4, P5, P5b) fails the consistency witness; deferring the payee refusal past the claim (Z1) fails the zero-counts alone. Partial (gap kept by owner ruling): no PDP-level refusal of a payment above the per-payment max_amount under a standing-payment instance is witnessed, because the PEP's credential bound refuses it out_of_authority before any decision; the PDP's max_amount step is witnessed only for an ordinary Mission."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The out-of-band escalation to a freshly approved Mission is not observable at this surface. D830 ruling 4. Slice 3b (impl/813-binding at 33a88d93): for every crossing of the metered action (commit, preflight and prepare) the PDP recomputes parameter_digest over the PEP-disclosed parameters, requires their vendor, amount and currency to be the request's, and compares their payee_account with the destination the policy commits for that vendor: a changed bank account for an approved vendor, a vendor without a committed destination, or absent parameters is denied parameter_violation and reserves and claims nothing, at the decision point and through the composed stack. Removing the destination check (P1) fails all four witnesses; not comparing the payee (P2) fails the payee, phase and end-to-end witnesses; not holding the covered phases (P6) fails the phase witness; not recomputing the digest or not comparing vendor, amount or currency (P3, P4, P5, P5b) fails the consistency witness; deferring the payee refusal past the claim (Z1) fails the zero-counts alone. Under a standing-payment instance the PDP itself refuses parameter_violation a payment of 500.01 over the entry's 500.00 max_amount, decided on the Mission bound (authority_bound mission) with an unconstrained credential, reserving and claiming nothing, and permits and charges exactly 500.00: removing the PDP's max_amount comparison or making the bound exclusive (owner-review mutants C1, C2) fails it, and deferring the cap refusal past the claim (Z3) fails the zero-count alone. Through the composed stack the PEP's credential bound refuses the same payment first, so the PDP-level witness is the decision-point one. The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged."
   },
   {
    "id": "template.standing-payment.payee-bound-by-reverification",
@@ -52023,12 +51994,12 @@
    "tests": [
     {
      "file": "src/demo/test/standing-payment-e2e.test.ts",
-     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose reservation stays charged, held with the alert once the lease elapses, so a second instance's payment against the budget is quota_exceeded (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, owner ruling)",
      "level": "cross-component",
      "surface": "resource-operation"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 4. Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack, an approved vendor's account changed between the permit and its use suppresses the permit at admission with target_drift, and nothing is wired. Reverification binds the payee twice, through the effective parameters parameter_digest covers and through the evaluation-context payee fact: freezing the fact (Rb) turns the refusal into parameter_mismatch and fails the witness, and blinding both layers (Rab) lets the wire execute; keeping the decided payee in the fresh parameters alone (Ra) survives by design, since the evaluation-context layer still suppresses. Partial on level only: the witness is cross-component; no endpoint-level resource-operation witness."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 4. Slice 3b (impl/813-binding at 33a88d93): through the composed stack, an approved vendor's account changed between the permit and its use suppresses the permit at admission with target_drift, and nothing is wired. Reverification binds the payee twice, through the effective parameters parameter_digest covers and through the evaluation-context payee fact: freezing the fact (Rb) turns the refusal into parameter_mismatch and fails the witness, and blinding both layers (Rab) lets the wire execute; keeping the decided payee in the fresh parameters alone (Ra) survives by design, since the evaluation-context layer still suppresses. Partial on level only: the witness is cross-component; no endpoint-level resource-operation witness. The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged."
   },
   {
    "id": "template.standing-payment.raise-needs-new-version",
@@ -52252,7 +52223,7 @@
     },
     {
      "file": "src/demo/test/standing-payment-e2e.test.ts",
-     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose reservation stays charged, held with the alert once the lease elapses, so a second instance's payment against the budget is quota_exceeded (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, owner ruling)",
      "level": "cross-component",
      "surface": "propagation"
     },
@@ -52263,7 +52234,7 @@
      "surface": "propagation"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3b (impl/813-budget-binding-3b at 62325958): the Mission Issuer's kernel derives each instance's budget binding (owner, id, currency, limit, committed policy, destinations and the instance's max_budget) from the Dispatch Policy snapshot the instance's activation retained, and the stack hands it to the co-resident decision point as its budget source. Taking the limit from per_instance_max (KB1) or dropping the destinations (KB2) fails the derivation witness; a stack source that answers nothing (Pa) or a kernel that derives no binding (Pb) lets the composed payment run unmetered and the changed-account payment execute, and Pb fails the end-to-end binding match. A snapshot that is gone or no longer reproduces the committed digest, an admission naming another policy or budget, a Mission without the instance's max_budget, a Child Mission anywhere in the lineage, or a missing predecessor or parent record derives underivable, never unbound: accepting them (F6 to F10, V9, V11; F10 and V10 by the reason assertion only) fails the kernel witness, and reading underivable, an unheld Mission or another issuer's Mission as unbound (F4, F5, F5b) fails the end-to-end one. Partial: no endpoint-level propagation witness (the binding reaches the runtime only through the kernel function and the composed stack), and no Dispatch request carries a conflicting destination or budget, since the dispatch intake admits neither member."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3b (impl/813-binding at 33a88d93): the Mission Issuer's kernel derives each instance's budget binding (owner, id, currency, limit, committed policy, destinations and the instance's max_budget) from the Dispatch Policy snapshot the instance's activation retained, and the stack hands it to the co-resident decision point as its budget source. Taking the limit from per_instance_max (KB1) or dropping the destinations (KB2) fails the derivation witness; a stack source that answers nothing (Pa) or a kernel that derives no binding (Pb) lets the composed payment run unmetered and the changed-account payment execute, and Pb fails the end-to-end binding match. A snapshot that is gone or no longer reproduces the committed digest, an admission naming another policy or budget, a Mission without the instance's max_budget, a Child Mission anywhere in the lineage, or a missing predecessor or parent record derives underivable, never unbound: accepting them (F6 to F10, V9, V11; F10 and V10 by the reason assertion only) fails the kernel witness, and reading underivable, an unheld Mission or another issuer's Mission as unbound (F4, F5, F5b) fails the end-to-end one. Partial: no endpoint-level propagation witness (the binding reaches the runtime only through the kernel function and the composed stack), and no Dispatch request carries a conflicting destination or budget, since the dispatch intake admits neither member. The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged."
   },
   {
    "id": "template.standing-payment.failed-remains-charged",
@@ -52299,15 +52270,9 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > operator reconciliation releases or commits a held reservation, a restart does not release it, and a reservation that is not held is refused unchanged (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
-    },
-    {
-     "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > a release on a suppression before redemption does not outlive the redeeming attempt's later failed settlement, which holds the reservations again (@spec metering#settlement-states, #813, #816, D830 ruling 10)",
-     "level": "endpoint",
-     "surface": "evidence-emission"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. D830 ruling 10. Fixes the commit-or-refund rule that metering.settlement-states.failed-rule-defined asks for; metering.settlement-states.failed-stays-charged covers the absent-rule default. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a payment settled failed stays held on both counters with the operator alert, and only operator reconciliation releases or commits a held reservation (a restart does not). Releasing on failed (C2) and releasing on restart (C1) fail their witnesses. Slice 3b (impl/813-budget-binding-3b at 62325958): a reservation released on the permit holder's suppression before redemption is held again on both counters when the redeeming attempt later settles failed; not holding it again (S12) fails the witness."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. D830 ruling 10. Fixes the commit-or-refund rule that metering.settlement-states.failed-rule-defined asks for; metering.settlement-states.failed-stays-charged covers the absent-rule default. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a payment settled failed stays held on both counters with the operator alert, and only operator reconciliation releases or commits a held reservation (a restart does not). Releasing on failed (C2) and releasing on restart (C1) fail their witnesses."
   },
   {
    "id": "template.instance-composition.child-refused",
