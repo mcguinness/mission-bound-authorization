@@ -2601,7 +2601,14 @@ authenticated client presenting the Mission's grant.
 
 Derived tokens SHOULD be short-lived so that a transition to
 `terminated` takes effect promptly without per-request
-revocation checks.
+revocation checks. A resource server that does not check Mission state
+per request can accept a derived token until its `exp`, so the token's
+lifetime is the termination latency there ({{runtime-boundary}}).
+Short-lived means within the termination latency the deployment
+accepts. This document sets no numerical bound; a deployment profile
+can. The cap at the Mission's `expires_at`
+({{token-authentication-lifetime}}) does not by itself make a token
+short-lived.
 
 ## Token Claims {#token-claims}
 
