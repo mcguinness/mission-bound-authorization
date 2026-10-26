@@ -338,6 +338,31 @@ describe("a consumer's trusted roles, changed while it runs (@spec #831 C2 revie
   });
 });
 
+describe("a resolution under way when the trusted roles change (@spec #831 C2 review)", () => {
+  it("refuses a key whose kid moved to another role while its fetch was in flight", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const moved = key("as-token");
+    const fetch: IssuerKeysFetch = async () => {
+      await gate;
+      return new Response(JSON.stringify({ keys: [moved] }), { headers: fresh(300) });
+    };
+    const keys = new IssuerKeys({
+      jwksUri: JWKS_URI,
+      roles: { accessToken: { kids: ["as-token"] }, status: { kids: [] } },
+      fetch,
+      now: clock().now,
+    });
+    const pending = keys.resolver("accessToken")({ kid: "as-token", alg: "ES256" });
+    keys.setRoles({ accessToken: { kids: [] }, status: { kids: ["as-token"] } });
+    release();
+    await expect(pending).rejects.toEqual(refusal("unknown_kid"));
+    expect(material(await keys.resolver("status")({ kid: "as-token", alg: "ES256" }))).toBe(publicOf(moved));
+  });
+});
+
 describe("a role's algorithms, from the consumer's policy or the published key (@spec #831 C2 review)", () => {
   it("accepts whatever the published key admits when the role lists none, and only the listed algorithms when it does", async () => {
     const p521 = generateKeyPairSync("ec", { namedCurve: "P-521" }).publicKey.export({
