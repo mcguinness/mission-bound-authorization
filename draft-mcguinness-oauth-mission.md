@@ -2635,10 +2635,13 @@ A delegated token is sender-constrained to the delegate's own key
 sender-constraint for credentials that cross a trust domain
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
-An AS MUST publish its token verification keys (for example, at its
-{{RFC8414}} `jwks_uri`, as {{Section 4 of RFC9068}} recommends);
+An AS that issues Mission-bound JWT access tokens for resource servers
+to consume MUST publish its token verification keys (for example, at
+its {{RFC8414}} `jwks_uri`, as {{Section 4 of RFC9068}} recommends);
 rotation retires a key from signing, never from resolvability while
-tokens signed under it remain valid.
+tokens signed under it remain valid. A token the AS issues only for
+presentation back to itself, such as a designation ({{designation}}),
+creates no publication duty by itself.
 
 Every emitted `authorization_details` entry is a subset of a Mission
 Authority Set entry ({{subset}}).
