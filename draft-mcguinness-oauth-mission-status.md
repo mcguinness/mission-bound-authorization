@@ -333,6 +333,13 @@ request presenting `client_assertion` is mechanism 3, and any client
 certificate is not treated as client authentication; otherwise a request
 presenting only a client certificate is mechanism 1. This order keeps
 "exactly one mechanism" satisfiable when mTLS terminates at the edge.
+The parameters of a mechanism the order does not select, such as a
+`client_assertion` beside an access token, are not evaluated as
+client authentication. A
+request whose selected mechanism the endpoint does not advertise, or
+whose only credential is of a kind no mechanism uses (HTTP Basic, a
+client secret), is answered as one that presented no credential
+({{mission-status-auth-failures}}).
 
 An authenticated caller MUST additionally carry an explicit read
 authorization: a `mission_status` scope on the presented access token,
