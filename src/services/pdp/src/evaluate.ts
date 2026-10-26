@@ -103,7 +103,7 @@ import {
   vendorConstraintSatisfied,
   viewHoldsCommittedSet,
 } from "./policy-view.js";
-import { COVERED_PHASES } from "./budget-metering.js";
+import { COVERED_PHASES, committedDestinationHolds, isMissionBudgetBinding } from "./budget-metering.js";
 import { type DurationLeaseDomain, durationLeaseStep, renewalClaimIdentity } from "./duration-lease.js";
 import { permitDeadline } from "./permit-deadline.js";
 import {
@@ -301,6 +301,16 @@ export interface EvaluationRequest {
        * reads it; an absent identity satisfies no such bound.
        */
       tool?: string;
+      /**
+       * @spec authzen#parameter-digest `parameters`, authzen#pdp-consistency-checks
+       * check 8 (#813): CONDITIONAL, the operation-profile-normalized parameter
+       * object, the same bytes `context.parameter_digest` is computed over.
+       * Read where the PDP needs a raw parameter value: a budget-bound
+       * Mission's metered action, whose payee is compared with the committed
+       * destination (step 8c) after the PDP recomputes the digest over it.
+       * Typed `unknown` deliberately: only `committedDestinationHolds` reads it.
+       */
+      parameters?: unknown;
     };
   };
   context: {
@@ -2697,14 +2707,44 @@ async function evaluateInner(
   // `constraint_unsupported` rather than passed through unmetered (decision
   // h). An unclassified action is not exempt. A view without a binding is
   // unmetered and reaches none of this.
+  //
+  // A binding this PDP cannot read, the decision point's `UNDERIVABLE_BUDGET`
+  // marker included (#813: the kernel records the Mission as a standing
+  // payment but its binding cannot be derived), denies every decision that
+  // would otherwise permit `constraint_unsupported`, as a budget it cannot
+  // meter does: never evaluated as unmetered.
+  //
+  // @spec mission-template#standing-payment-exception (#813, D830 ruling 4):
+  // every crossing of the declared metered action, its covered phases
+  // included, is also held to the committed destinations: the payee the PEP
+  // established (inside the digest-verified `action.properties.parameters`)
+  // must be the destination the approved policy commits for the request's
+  // vendor, else `parameter_violation`, before anything is reserved.
   let budgetCharge: BudgetChargeRequest | undefined;
   if (view.budget !== undefined) {
     const budgets = opts.decisionChannel === "remote" ? undefined : opts.budgets;
     if (budgets === undefined || opts.claims === undefined || budgets.domain !== opts.claims) {
       return deny("constraint_unsupported");
     }
+    const binding = view.budget;
+    if (!isMissionBudgetBinding(binding)) return deny("constraint_unsupported");
     const phase = isActionPhase(req.context.action_phase) ? req.context.action_phase : undefined;
-    if (budgets.meters(req.action.name, phase)) {
+    const metered = budgets.meters(req.action.name, phase);
+    const covered =
+      !metered && budgets.declaresAction(req.action.name) && phase !== undefined && COVERED_PHASES.has(phase);
+    if (
+      (metered || covered) &&
+      !committedDestinationHolds({
+        parameters: req.action.properties?.parameters,
+        parameterDigest: req.context.parameter_digest,
+        vendorId: req.resource.properties?.vendor_id,
+        amount: req.context.amount,
+        destinations: binding.destinations,
+      })
+    ) {
+      return deny("parameter_violation");
+    }
+    if (metered) {
       contributions.add("max_budget");
       // The reservation runs inside the claim: a metered action outside the
       // classes the domain claims has nowhere to reserve.
@@ -2714,7 +2754,7 @@ async function evaluateInner(
         return deny("parameter_violation");
       }
       budgetCharge = {
-        binding: view.budget,
+        binding,
         issuer: view.issuer,
         missionId: view.id,
         amount: { amount: amount.amount, currency: amount.currency },
@@ -2722,7 +2762,7 @@ async function evaluateInner(
     } else if (
       req.context.amount !== undefined &&
       (actionClass === undefined || !BUDGET_EXEMPT_CLASSES.has(actionClass)) &&
-      !(budgets.declaresAction(req.action.name) && phase !== undefined && COVERED_PHASES.has(phase))
+      !covered
     ) {
       return deny("constraint_unsupported");
     }

@@ -759,6 +759,7 @@ export {
   assertDispatchProhibitedCoverage,
   assertNotStandingPaymentLineage,
   assertStandingPaymentCoverage,
+  assertStandingPaymentExactProfile,
   CLASS_PREDICATES,
   CONSUMPTION_BOUND_CLASS,
   DispatchProhibitedCoverageError,
@@ -771,7 +772,11 @@ export {
   StandingPaymentConfigError,
   StandingPaymentLineageError,
   StandingPaymentStore,
+  type StandingPaymentBudgetBinding,
+  type StandingPaymentBudgetBindingResult,
   type StandingPaymentTerms,
+  standingPaymentBudgetBindingOf,
+  standingPaymentExactProfileGap,
   standingPaymentRootOf,
   standingPaymentTermsOf,
   type TemplateConsentProvenance,
@@ -1070,6 +1075,16 @@ export async function buildAuthorizationServer(opts: {
    * declaration the runtime decision policy also reads.
    */
   actionApprovalPolicy?: ActionApprovalPolicy;
+  /**
+   * @spec mission-template#standing-payment-exception (#813, #816): the
+   * deployment's Enforcement Scope Statement, the one its PDP meters under.
+   * Read only under the opt-in `standing-payment-dispatch` capability:
+   * construction refuses a Dispatch Policy designating the standing payment
+   * whose budget the statement does not declare under `budget_metering` with
+   * the Exact profile, the policy's currency and limit, and a `policies`
+   * entry equal to the policy's committed `{id, version, digest}`.
+   */
+  enforcementScopeStatement?: unknown;
   /**
    * @spec mission#standing-consent-bases — the activation policies the kernel
    * evaluates for a policy-adjudicated child creation, keyed by policy `id`.
@@ -2113,6 +2128,7 @@ export async function buildAuthorizationServer(opts: {
     templateStore,
     dispatchPolicies,
     actionApprovalPolicy: opts.actionApprovalPolicy ?? ACTION_APPROVAL_POLICY,
+    ...(opts.enforcementScopeStatement !== undefined ? { enforcementScopeStatement: opts.enforcementScopeStatement } : {}),
     protectedEventSources,
     issuerEvidence,
     // @spec issuance-grant#effective-set-projection (#617 review 1) — the

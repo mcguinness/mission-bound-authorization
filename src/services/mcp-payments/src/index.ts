@@ -136,7 +136,9 @@ export { TransactionEngine, operationKey, type OpState } from "./transaction.js"
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
 export { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";
 export {
+  budgetOverspendAlert,
   CollectingAlertSink,
+  heldReservationAlert,
   indeterminateClaimAlert,
   type OperatorAlert,
   type OperatorAlertKind,

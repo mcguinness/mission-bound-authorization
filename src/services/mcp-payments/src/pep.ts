@@ -89,6 +89,7 @@ import {
   type EffectiveParams,
   type ListEffectiveParams,
   listMembers,
+  normalizedParameters,
   parameterDigest,
 } from "./effective-params.js";
 import type {
@@ -3029,6 +3030,17 @@ export class Pep {
                 // @spec resource-access#initial-common-constraints (#1266): the
                 // resolved recipients, from this resource's records only.
                 ...(recipients ? { recipients } : {}),
+                // @spec authzen#parameter-digest `parameters`,
+                // mission-template#standing-payment-exception (#813): under a
+                // Mission whose loaded view carries a budget binding, the
+                // normalized parameters `parameter_digest` is computed over,
+                // the payee from this resource's records among them, so the
+                // PDP compares that payee with the committed destination after
+                // recomputing the digest. Every other request keeps its
+                // decision bytes. The PDP derives the binding itself, so a view
+                // without one never exempts a budget-bound Mission: the PDP
+                // then lacks the parameters and refuses.
+                ...(effective && view.budget !== undefined ? { parameters: normalizedParameters(effective) } : {}),
               },
             }),
       },

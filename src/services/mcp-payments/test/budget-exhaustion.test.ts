@@ -5,8 +5,9 @@
  * and its evidence store, over a co-resident decision point
  * (`createDecisionPoint`) whose claim domain claims `budget_metering`.
  *
- * The Mission view the PEP loads carries a budget binding, injected here as
- * the authorization server's kernel will supply it; nothing in this file
+ * The Mission view the PEP loads carries a budget binding, and the decision
+ * point derives the same binding from its own source, as the composed stack
+ * derives it from the authorization server's kernel; nothing in this file
  * enables the capability in any shipped configuration. The claim domain is a
  * real file in a fresh temporary directory, and the FGA layer is a stub that
  * always permits, so this file never skips.
@@ -22,6 +23,7 @@ import {
   type EnforcementScopeStatement,
   type EvidenceKeyResolver,
   type Fga,
+  type MissionBudgetBinding,
   type MissionView,
   openEphemeralClaimDomain,
   RUNTIME_POSTURE,
@@ -88,6 +90,21 @@ function meteringStatement(): EnforcementScopeStatement {
   return statement;
 }
 
+/**
+ * The binding the authorization server's kernel derives for `msn_816` (#813):
+ * the PEP's loaded view carries it, and the decision point takes it from its
+ * own source, never from the view the PEP supplies.
+ */
+const BINDING: MissionBudgetBinding = {
+  owner: "acme-treasury",
+  budget_id: "vendor-payments-2026",
+  currency: "USD",
+  limit: "200.00",
+  policy: DISPATCH_POLICY,
+  destinations: { acme: "acct-acme" },
+  instance: { max_budget: { amount: "1000.00", currency: "USD" }, root_mission_id: "msn_816" },
+};
+
 const view = (): MissionView => ({
   id: "msn_816",
   issuer: "https://as.test",
@@ -104,14 +121,7 @@ const view = (): MissionView => ({
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
-  budget: {
-    owner: "acme-treasury",
-    budget_id: "vendor-payments-2026",
-    currency: "USD",
-    limit: "200.00",
-    policy: DISPATCH_POLICY,
-    instance: { max_budget: { amount: "1000.00", currency: "USD" }, root_mission_id: "msn_816" },
-  },
+  budget: BINDING,
 });
 
 async function harness() {
@@ -146,6 +156,7 @@ async function harness() {
     },
     claims,
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+    budgetBindings: (m) => (m.id === "msn_816" && m.issuer === "https://as.test" ? BINDING : undefined),
   });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
   pepKeys = keys.resolver;

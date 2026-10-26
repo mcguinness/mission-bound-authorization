@@ -18,7 +18,7 @@ import {
   type TerminalWhenCondition,
 } from "@mission/core";
 import type { TupleKey } from "@openfga/sdk";
-import type { MissionBudgetBinding } from "./budget-metering.js";
+import type { MissionBudgetBinding, UnderivableBudget } from "./budget-metering.js";
 
 /**
  * @spec runtime#input-authority — the one `authorization_details` type the
@@ -182,18 +182,23 @@ export interface MissionView {
   discharged?: { entry_digests: string[] };
   /**
    * @spec metering#metering, metering#aggregate-bounds,
-   * metering#capacity-across-missions (#816, D830): the budget this Mission
-   * is bound to, PDP-local, derived by the view's loader from the kernel's
-   * committed policy snapshot: the budget owner and id, the currency, the
-   * approved policy's shared limit and the committed policy reference, and
-   * the instance bound (the Intent's `max_budget` and the first Mission of
-   * the successor chain). Never a request member, so it is no part of the
+   * metering#capacity-across-missions (#816, #813, D830): the budget this
+   * Mission is bound to, PDP-local, derived from the kernel's committed policy
+   * snapshot: the budget owner and id, the currency, the approved policy's
+   * shared limit, the committed policy reference and destinations, and the
+   * instance bound (the Intent's `max_budget` and the first Mission of the
+   * successor chain). Never a request member, so it is no part of the
    * authorization binding or the cache key, and a metered decision is never
-   * answered from a stored one. Not a `policyViewId` input. Absent, the
-   * Mission is unmetered. Present at a PDP that cannot meter it, every
-   * decision that would otherwise permit is denied `constraint_unsupported`.
+   * answered from a stored one. Not a `policyViewId` input.
+   *
+   * A decision point replaces the caller's value with its own PDP-side
+   * source's (decision d), absence included; one with no source never meters
+   * a caller's binding. Absent, the Mission is unmetered. A binding this PDP
+   * cannot read, {@link UnderivableBudget} included, or one it cannot meter
+   * denies every decision that would otherwise permit
+   * `constraint_unsupported`.
    */
-  budget?: MissionBudgetBinding;
+  budget?: MissionBudgetBinding | UnderivableBudget;
 }
 
 export function policyViewId(view: MissionView, modelId: string): string {

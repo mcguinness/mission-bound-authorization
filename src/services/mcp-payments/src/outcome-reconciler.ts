@@ -35,7 +35,14 @@
  * steps b to d only read and alert.
  */
 
-import { type ClaimChannel, type EnforcementScopeStatement, type IndeterminateClaim, retentionWindowSeconds } from "@mission/pdp";
+import {
+  type BudgetOverspend,
+  type ClaimChannel,
+  type EnforcementScopeStatement,
+  type HeldReservation,
+  type IndeterminateClaim,
+  retentionWindowSeconds,
+} from "@mission/pdp";
 import { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";
 import type { Connectors } from "./connectors.js";
 import type { EvidenceStore } from "./evidence.js";
@@ -53,7 +60,18 @@ export type OperatorAlertKind =
   /** `completed` Execution Evidence names an effect no connector committed. */
   | "orphaned_evidence"
   /** A `reserved` write reservation has no recorded outcome. */
-  | "reservation_unresolved";
+  | "reservation_unresolved"
+  /**
+   * @spec metering#settlement-states (#816, D830 ruling 7): a budget
+   * reservation became `held`; it stays charged until an operator reconciles
+   * it.
+   */
+  | "budget_reservation_held"
+  /**
+   * @spec metering#settlement-states (#816): a late `completed` settlement
+   * committed a released reservation and pushed a counter past its limit.
+   */
+  | "budget_overspend";
 
 /**
  * One operator alert: a structured event carrying identifiers and a fixed
@@ -93,6 +111,37 @@ export function indeterminateClaimAlert(claim: IndeterminateClaim): OperatorAler
     ...(claim.mission_id !== undefined ? { mission_id: claim.mission_id } : {}),
     cause: "window_closed",
     at: claim.closed_at,
+  };
+}
+
+/**
+ * @spec metering#settlement-states (#816, D830 ruling 7): the declared alert
+ * for a budget reservation the PDP holds (a `failed` settlement, an elapsed
+ * lease, a restart that left the permit's outcome unknown). Identifiers and
+ * the hold's cause only.
+ */
+export function heldReservationAlert(reservation: HeldReservation): OperatorAlert {
+  return {
+    kind: "budget_reservation_held",
+    evaluation_id: reservation.evaluation_id,
+    mission_id: reservation.mission_id,
+    cause: reservation.cause,
+    at: reservation.held_at,
+  };
+}
+
+/**
+ * @spec metering#settlement-states (#816): the declared alert for a counter a
+ * late `completed` settlement pushed past its limit. Identifiers and the
+ * counter's scope only.
+ */
+export function budgetOverspendAlert(overspend: BudgetOverspend): OperatorAlert {
+  return {
+    kind: "budget_overspend",
+    evaluation_id: overspend.evaluation_id,
+    mission_id: overspend.mission_id,
+    cause: `${overspend.counter_scope}_limit_exceeded`,
+    at: overspend.detected_at,
   };
 }
 

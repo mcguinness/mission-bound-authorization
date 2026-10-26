@@ -147,9 +147,13 @@ export {
   budgetMeteringFindings,
   type DispatchPolicyRef,
   isDispatchPolicyRef,
+  committedDestinationHolds,
   isMissionBudgetBinding,
   type MeteredAction,
   type MissionBudgetBinding,
+  type MissionBudgetSource,
+  UNDERIVABLE_BUDGET,
+  type UnderivableBudget,
 } from "./budget-metering.js";
 export { authorizationBinding, decisionCacheKey, idempotencyScopeOf, operationIdentity } from "./projections.js";
 export {
