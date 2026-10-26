@@ -56,6 +56,13 @@ describe("a resource server across the AS's key rotation (@spec #831 C2)", () =>
       jwksUri: `${ISSUER}/jwks`,
       roles: { accessToken: { kids: [asToken.kid], algs: [asToken.alg] } },
       now: () => t,
+      // The issuer's clock agrees with the resource server's: its answer's Date is the injected time.
+      fetch: async (url, init) => {
+        const res = await fetch(url, init);
+        const headers = new Headers(res.headers);
+        headers.set("date", new Date(t).toUTCString());
+        return new Response(res.body, { status: res.status, headers });
+      },
     });
     const trust = (...kids: string[]) => keys.setRoles({ accessToken: { kids, algs: [asToken.alg] } });
     const rs: Server = await startPlainResourceServer(
