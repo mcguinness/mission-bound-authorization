@@ -105,9 +105,10 @@ CREATE TABLE consumed_permits (
 ) STRICT;
 `,
   // Version 3 (#821, D814): the transaction tier's pre-effect attempt
-  // records. One row per attempt that reached its effect's release, written
-  // before the effect, naming its operation and the Decision Evidence that
-  // authorized it. Never swept: a restarted process reads them back.
+  // records. One row per attempt that took a single-use permit, written
+  // before its final checks and its effect, naming its operation and the
+  // Decision Evidence that authorized it. Never swept: a restarted process
+  // reads them back.
   `
 CREATE TABLE execution_attempts (
   execution_id TEXT PRIMARY KEY,
@@ -581,7 +582,7 @@ export class WriteReservationStore {
 
   /**
    * @spec runtime#evidence (pre-effect durability) (#821, D814): record one
-   * transaction-tier attempt before its effect is released: its execution
+   * transaction-tier attempt before its final checks and its effect: its execution
    * identity, operation key and evaluation, and the retained Decision
    * Evidence that authorizes it. One insert, committed before it returns, on
    * this PEP's durable file. A store that cannot be written throws, and the
@@ -618,7 +619,7 @@ export class WriteReservationStore {
 
   /**
    * The recorded attempt for one evaluation, read-only: the attempt that
-   * reached the effect under that single-use permit, or `undefined`.
+   * took that single-use permit, or `undefined`.
    */
   attemptFor(evaluationId: string): ExecutionAttemptRecord | undefined {
     const row = this.db

@@ -2040,6 +2040,36 @@ export class McpPaymentsServer {
 
     beforeCommit?.();
 
+    // @spec runtime#evidence (pre-effect durability) (#821, D814): before the
+    // final checks and the effect. This attempt's operation identity (its
+    // execution identity, operation key and evaluation) and the retained
+    // Decision Evidence that authorizes it are committed to this PEP's
+    // durable file, so a crash after the effect leaves an operation whose
+    // disposition can be recovered, never one nothing names. Written ahead of
+    // the checks, so a slow write is followed by them rather than by the
+    // effect (#821 review). A write that fails prevents the effect: the
+    // action is refused and nothing executes.
+    let attemptRecord: ExecutionAttemptRecord | undefined;
+    if (PRE_EFFECT_ATTEMPT_CLASSES.has(profile?.actionClass ?? "")) {
+      try {
+        if (!this.deps.writeReservations || !attempt.decisionEvidence) throw new Error("no pre-effect attempt record");
+        attemptRecord = this.deps.writeReservations.recordAttempt({
+          executionId: attempt.executionId,
+          opKey,
+          evaluationId: permitId,
+          missionId: resolvedMission.id,
+          action: res.effective.action,
+          decisionEvidence: attempt.decisionEvidence,
+        });
+      } catch {
+        const refused = await this.refuseSuppressed(attempt, EVIDENCE_UNAVAILABLE_ERROR, {
+          refusal_reason: "evidence_unavailable",
+        });
+        tx.engine.advance(opKey, "abandoned");
+        return refused;
+      }
+    }
+
     // A moved catalog snapshot is its own error, not a parameter mismatch.
     const capability = await this.deps.pep.reverifyCapability(
       res.capabilitySnapshot,
@@ -2137,32 +2167,18 @@ export class McpPaymentsServer {
       }
     }
 
-    // @spec runtime#evidence (pre-effect durability) (#821, D814): the last
-    // step before the effect is released. This attempt's operation identity
-    // (its execution identity, operation key and evaluation) and the retained
-    // Decision Evidence that authorizes it are committed to this PEP's
-    // durable file, so a crash after the effect leaves an operation whose
-    // disposition can be recovered, never one nothing names. A write that
-    // fails prevents the effect: the action is refused and nothing executes.
-    let attemptRecord: ExecutionAttemptRecord | undefined;
-    if (PRE_EFFECT_ATTEMPT_CLASSES.has(profile?.actionClass ?? "")) {
-      try {
-        if (!this.deps.writeReservations || !attempt.decisionEvidence) throw new Error("no pre-effect attempt record");
-        attemptRecord = this.deps.writeReservations.recordAttempt({
-          executionId: attempt.executionId,
-          opKey,
-          evaluationId: permitId,
-          missionId: resolvedMission.id,
-          action: res.effective.action,
-          decisionEvidence: attempt.decisionEvidence,
-        });
-      } catch {
-        const refused = await this.refuseSuppressed(attempt, EVIDENCE_UNAVAILABLE_ERROR, {
-          refusal_reason: "evidence_unavailable",
-        });
-        tx.engine.advance(opKey, "abandoned");
-        return refused;
-      }
+    // @spec runtime#execution-reverification, runtime#evidence (#821 review):
+    // nothing slow sits between the last comparison and the effect. The
+    // durable attempt record is written before the checks above; the `txn`
+    // consumption cannot move ahead of them, so the permit and the lease are
+    // compared once more, synchronously on a fresh clock read, with no await
+    // before the connector call. A permit or lease that ran out while a store
+    // was being written releases nothing.
+    const atRelease = this.deps.pep.permitUseFailure(attempt) ?? (tx.engine.leaseValid(opKey) ? undefined : "permit_expired");
+    if (atRelease !== undefined) {
+      const refused = await this.refuseSuppressed(attempt, atRelease, { refusal_reason: atRelease });
+      tx.engine.advance(opKey, "abandoned");
+      return refused;
     }
 
     // Commit point (D36): connector accepts with the idempotency key. The

@@ -138,10 +138,11 @@ async function fromLedger(input: ReconcileInput, evaluationId: string): Promise<
   // @spec runtime-evidence#execution-evidence-object `execution_id` (#821):
   // the late record is the disposition of the attempt that released the
   // effect, so it carries that attempt's identity and timing, read from the
-  // record the attempt wrote before its release. Not the redemption store's
-  // link: a redeeming attempt can dispose of itself before release, and its
-  // identity then already names that disposition. Only an effect no
-  // pre-effect record names takes a fresh identity.
+  // record the transaction tier wrote before its final checks and the
+  // effect. Not the redemption store's link: it can name an attempt whose
+  // own disposition is already recorded (#1016), and a late `completed`
+  // cannot share that identity. Only an effect no pre-effect record names
+  // takes a fresh identity.
   const recorded = input.attempts?.attemptFor(evaluationId);
   const executed = await input.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
     permitId: evaluationId,

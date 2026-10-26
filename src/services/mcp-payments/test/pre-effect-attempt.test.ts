@@ -87,11 +87,11 @@ const view = (): MissionView => ({
  * files is a restarted PEP.
  */
 async function harness(
-  files: { reservations?: string; retention?: string } = {},
+  files: { reservations?: string; retention?: string; now?: () => Date } = {},
 ) {
   const reservationsFile = files.reservations ?? tempFile("pep-attempts-", "write-reservations.sqlite");
   const retentionFile = files.retention ?? tempFile("pep-retention-", "evidence-retention.sqlite");
-  const now = () => new Date();
+  const now = files.now ?? (() => new Date());
   const payments = new PaymentsStore();
   payments.seed(
     [{ id: "acme", name: "Acme", status: "approved" }],
@@ -107,6 +107,7 @@ async function harness(
     owner: RUNTIME_POSTURE.pdps[0] as string,
     statement: RUNTIME_POSTURE,
     settlementKeys: (params) => pepKeys?.(params),
+    now,
   });
   const point = createEphemeralDecisionPoint({
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
@@ -135,10 +136,10 @@ async function harness(
       stateSourcePlacement: "pep" as const,
     }),
   });
-  const retention = openEvidenceRetentionStore({ file: retentionFile, owner: PEP_LOCATION, retentionWindowSeconds: 3_600 });
+  const retention = openEvidenceRetentionStore({ file: retentionFile, owner: PEP_LOCATION, retentionWindowSeconds: 3_600, now });
   const evidence = new EvidenceStore(keys.signing, keys.resolver, retention);
   const connectors = new Connectors(now);
-  const writeReservations: WriteReservationStore = openWriteReservationStore({ file: reservationsFile, owner: PEP_LOCATION });
+  const writeReservations: WriteReservationStore = openWriteReservationStore({ file: reservationsFile, owner: PEP_LOCATION, now });
   const alerts = new CollectingAlertSink();
   const pep = new Pep({
     decide: channel.decide,
@@ -172,6 +173,7 @@ async function harness(
     evidence,
     writeReservations,
     server,
+    pep,
     close: async () => {
       await channel.close();
       claims.close();
@@ -264,6 +266,59 @@ function failWrites(h: Harness, role: "pep" | "executor"): { restore: () => void
   });
   return { restore: () => spy.mockRestore() };
 }
+
+describe("nothing slow sits between the last check and the effect (@spec runtime#execution-reverification, runtime#evidence, #821 review)", () => {
+  /** A clock the test moves; the permit is valid 30 s and the published lease is 30 s. */
+  const movable = () => {
+    let at = Date.parse("2026-10-26T12:00:00.000Z");
+    return { now: () => new Date(at), advance: (ms: number) => void (at += ms) };
+  };
+
+  it("a slow attempt write cannot release an effect after the lease: the clock passes the lease inside the write, and the action is refused permit_expired with zero effects and a suppressed disposition", async () => {
+    const clock = movable();
+    const h = await harness({ now: clock.now });
+    const recordAttempt = h.writeReservations.recordAttempt.bind(h.writeReservations);
+    vi.spyOn(h.writeReservations, "recordAttempt").mockImplementation((input) => {
+      const recorded = recordAttempt(input);
+      clock.advance(120_000); // the durable write takes 120 s
+      return recorded;
+    });
+    try {
+      const refused = await wire(h, key());
+      expect(refused).toEqual({ ok: false, refusal_reason: "permit_expired" });
+      expect(h.connectors.ledgerEntries()).toEqual([]);
+      expect(executionsOf(h).map((r) => [r.outcome, r.error])).toEqual([["suppressed", "permit_expired"]]);
+      // The attempt is recorded, and its disposition says it released nothing.
+      expect(h.writeReservations.attempts().map((a) => a.executionId)).toEqual(executionsOf(h).map((r) => r.execution_id));
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("time that passes after the last awaited check still releases nothing: the permit and the lease are compared again, synchronously, before the connector call", async () => {
+    const clock = movable();
+    const h = await harness({ now: clock.now });
+    const verify = h.pep.verifyPermitAtUse.bind(h.pep);
+    let calls = 0;
+    vi.spyOn(h.pep, "verifyPermitAtUse").mockImplementation(async (attempt) => {
+      const outcome = await verify(attempt);
+      calls += 1;
+      // After the final awaited check passes, a store write that follows it
+      // (the `txn` consumption, on a challenged operation) takes 120 s.
+      if (calls === 2) clock.advance(120_000);
+      return outcome;
+    });
+    try {
+      const refused = await wire(h, key());
+      expect(calls).toBe(2);
+      expect(refused).toEqual({ ok: false, refusal_reason: "permit_expired" });
+      expect(h.connectors.ledgerEntries()).toEqual([]);
+      expect(executionsOf(h).map((r) => [r.outcome, r.error])).toEqual([["suppressed", "permit_expired"]]);
+    } finally {
+      await h.close();
+    }
+  });
+});
 
 describe("the PEP's per-Mission sequence across a restart (@spec runtime#record-integrity, #821)", () => {
   it("a PEP restarted on the same files continues its per-Mission sequence: no value is issued twice, a value it could not use stays a gap, and no second writer shares the store", async () => {
