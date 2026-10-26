@@ -629,7 +629,11 @@ Exact enforcement profile:
   balance: a single serializing PDP for the counter, a shared
   linearizable counter, or per-PDP sub-budgets that are structurally
   exact because they sum to the cap. The bound never over-consumes;
-  it is a hard cap.
+  it is a hard cap. The Exact guarantee depends on correct
+  reconciliation evidence: if corrected evidence establishes execution
+  after an incorrect release, accounting records that consumption,
+  reports any excess, and refuses further reservations while no
+  headroom remains.
 
 Bounded-consistency enforcement profile:
 : Multiple or distributed PDPs (for example, resource server-hosted
@@ -1397,7 +1401,11 @@ this registry.
   neither releases a reservation that remains charged nor resets
   consumption. A Child Mission is refused under an instance the budget
   meters unless charged to it. A `metering` entry is one per counter,
-  and a restart never releases a reservation.
+  and a restart never releases a reservation. The Exact guarantee
+  depends on correct reconciliation evidence: corrected evidence of
+  execution after an incorrect release is recorded, any excess is
+  reported, and further reservations are refused while no headroom
+  remains.
 - `max_budget`'s `currency` takes the form Resource Access gives
   `max_amount`'s `currency`: exactly three upper-case ASCII letters,
   compared exactly.
