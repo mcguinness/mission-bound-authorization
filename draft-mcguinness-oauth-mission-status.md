@@ -223,10 +223,18 @@ holding a token the
 authorization server (AS)
 issued.
 
-The Mission Issuer publishes its Mission Status endpoint URL in
-authorization server metadata ({{as-metadata}}) as
-`mission_status_endpoint`, which a consumer resolves from a
-credential's `mission.issuer`. The endpoint MUST be served over TLS
+The Mission Issuer serves the operation at its Mission Status
+endpoint, whose URL it publishes in authorization server metadata
+({{as-metadata}}) as `mission_status_endpoint`. A consumer resolves
+it from the expected issuer, which comes from its own issuer trust
+or configuration, never from the response under verification: for a
+resource server, the `mission.issuer` of an access token it accepted
+under the issuance profile ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Resource Server Enforcement"). It retrieves that issuer's
+metadata, validated as {{Section 3.3 of RFC8414}} requires (the
+metadata's `issuer` equals the issuer identifier used to retrieve
+it), and verifies responses with keys from that issuer's `jwks_uri`.
+The endpoint MUST be served over TLS
 1.2 or later (TLS 1.3 RECOMMENDED), following the recommendations of
 {{RFC9325}}.
 
