@@ -10,7 +10,9 @@
  * and the others still run.
  *
  * a. Claims: the PDP's unresolved claims of this epoch, settled over the claim
- *    channel from what the execution side observed (`reconcileClaims`).
+ *    channel from what the execution side observed (`reconcileClaims`). A
+ *    late record from the ledger carries the redeeming attempt's identity,
+ *    read from its pre-effect record (#821).
  * b. Orphans: per Mission, `completed` Execution Evidence joined to the
  *    connectors' committed effects (`reconcile`). What remains unmatched after
  *    step a is alerted once: evidence of an effect that never committed at
@@ -53,7 +55,9 @@ export type OperatorAlertKind =
   /** `completed` Execution Evidence names an effect no connector committed. */
   | "orphaned_evidence"
   /** A `reserved` write reservation has no recorded outcome. */
-  | "reservation_unresolved";
+  | "reservation_unresolved"
+  /** A transaction-tier disposition record could not be written after one retry (#821). */
+  | "evidence_emission_failed";
 
 /**
  * One operator alert: a structured event carrying identifiers and a fixed
@@ -227,6 +231,7 @@ export class OutcomeReconciler {
         evidence: o.evidence,
         redemption: o.redemption,
         connectors: o.connectors,
+        attempts: o.writeReservations,
       });
       report.claims = claims;
       // A claim whose reconciliation threw is isolated by `reconcileClaims`

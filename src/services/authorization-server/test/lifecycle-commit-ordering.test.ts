@@ -8,11 +8,12 @@
  * connection to the store file, never the writing one (which can see its own
  * uncommitted writes): the writing connection has no open transaction, and the
  * second connection already sees the transition, its version and the claimed
- * nonce. The kernel's file store is WAL with `synchronous=NORMAL`, under which
- * a committed transaction survives a process crash; an operating-system crash
- * or power loss can lose the most recent commits, so the configuration
- * assertions are process-crash evidence, not proof against arbitrary hardware
- * failure. A crash/restart witness is not part of this file.
+ * nonce. The kernel's file store is WAL with `synchronous=FULL` (#1684,
+ * D826), under normal locking, which this witness's second connection needs:
+ * FULL adds a WAL synchronization at each commit, which supports power-loss
+ * durability where the storage stack honors synchronization. The
+ * configuration assertion states the setting; it proves no hardware failure
+ * case. The crash/restart witnesses are lifecycle-crash-restart.test.ts.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import type { Server } from "node:http";
@@ -81,12 +82,11 @@ afterEach(() => {
 });
 
 describe("a lifecycle transition is committed before its acknowledgement is released (@spec status#lifecycle-processing, #1659 D771)", () => {
-  it("runs on a WAL store with synchronous NORMAL, under which a committed transaction survives a process crash", () => {
+  it("runs on a WAL store with synchronous FULL under normal locking", () => {
     expect(String(as.kernel.db.pragma("journal_mode", { simple: true })).toLowerCase()).toBe("wal");
-    // NORMAL (1) is the floor: in WAL mode a commit is in the WAL file when it
-    // returns, so it survives the process; only an OS crash or power loss can
-    // lose it. FULL (2) also passes.
-    expect(as.kernel.db.pragma("synchronous", { simple: true })).toBeGreaterThanOrEqual(1);
+    // 2 is FULL (#1684, D826): a WAL synchronization at each commit.
+    expect(as.kernel.db.pragma("synchronous", { simple: true })).toBe(2);
+    expect(String(as.kernel.db.pragma("locking_mode", { simple: true })).toLowerCase()).toBe("normal");
   });
 
   it("holds no open transaction at response release, and the committed rows already carry the transition, its version and the claimed nonce; the retransmit replays with no second transition", async () => {

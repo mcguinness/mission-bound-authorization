@@ -113,6 +113,7 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
       await stack.decisionChannel.close();
       stack.pdpClaims.close();
       stack.writeReservations.close();
+      stack.evidenceRetention.close();
       // Last: everything above may still read the kernel while it stops.
       if (options.kernelStore) stack.kernel.close();
     })());

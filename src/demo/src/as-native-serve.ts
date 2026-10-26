@@ -26,6 +26,17 @@ try {
 }
 for (const line of launched.summary) console.log(line);
 
+// @spec #831 C2 (D825): SIGUSR2 reloads the trusted AS kids of the stack's
+// consumers from config/topology.json, so a key rotation reaches them running.
+process.on("SIGUSR2", () => {
+  try {
+    launched.stack.reloadTrust();
+    console.log("as-native: trusted kids reloaded from topology.json");
+  } catch (err) {
+    console.error(`as-native: trusted kids not reloaded: ${reason(err)}`);
+  }
+});
+
 // Close once, on the first of SIGINT, SIGTERM or SIGHUP. A terminal Ctrl-C
 // reaches this process twice (from the terminal and forwarded by the
 // wrapper), so a repeat is ignored while the close runs.
