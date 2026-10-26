@@ -545,8 +545,12 @@ Decoded JWS payload:
 The members are:
 
 - The signed JWT envelope `iss`, `aud`, `sub`, `nonce`, `iat`, `exp`.
-  The `aud` is the response's audience binding and the `nonce` its
-  request binding. When the request omitted `audience`
+  The `aud`, a single string, is the response's audience binding and
+  the `nonce` its request binding. On a response to the Mission Status
+  operation or a base lifecycle operation, the AS MUST set `sub` to
+  the authenticated client's identifier: the presented access token's
+  `client_id`, or the client that authenticated directly. When the
+  request omitted `audience`
   ({{mission-status-request}}), the response is state-only and the AS
   MUST set `aud` to the authenticated client's `client_id`, as the
   Lifecycle endpoint does ({{mission-lifecycle-endpoint}}); the
@@ -1230,10 +1234,10 @@ authorization, follow from the authentication case:
    authenticated client is the acting party. The AS MUST check the
    deployment-defined lifecycle grant bound to that client.
 
-In every case the AS MUST record the acting party and SHOULD reflect
-it in the signed response's audit surface: the response envelope's
-`sub`, distinct from any access token's `sub`, or a deployment-defined
-audit member of the Mission Status Response.
+In every case the AS MUST record the acting party, and the response
+envelope's `sub` carries it ({{mission-status-response}}), distinct
+from any access token's `sub`. A deployment-defined audit member of
+the Mission Status Response MAY carry it as well.
 
 Which parties may perform which operation on which Missions is
 deployment-defined. Typical
