@@ -522,20 +522,102 @@ describe("requested entries carrying an unsupported member on the deferral initi
   // The ceiling side: the deferred token carries the requested entries as
   // submitted, without projection, so the subset check alone stands between a
   // clean request and a token without the approved entry's restriction. The
-  // initiation answers a request the Mission does not cover with
-  // invalid_request, as for any other excess (AROP never widens).
-  it("refuses a clean request against a Mission whose approved entry carries an unsupported member with invalid_request, opening no deferral", async () => {
+  // comparison cannot decide, so the initiation refuses it with
+  // invalid_authorization_details, as for an excess (@spec mission#subset,
+  // #1720 item 3, D859).
+  it("refuses a clean request against a Mission whose approved entry carries an unsupported member with invalid_authorization_details, opening no deferral", async () => {
     const count = () =>
       (as.deferrals.db.prepare("SELECT COUNT(*) AS n FROM deferrals").get() as { n: number }).n;
     const before = count();
     const requested = subset(["payments:remittance.send"]);
     const res = await withStoredUnsupportedMember(as.kernel.db, missionId, () => initiate(requested));
-    const body = (await res.json()) as { error?: string; deferral_code?: string; access_token?: string };
+    const body = (await res.json()) as {
+      error?: string;
+      error_description?: string;
+      deferral_code?: string;
+      access_token?: string;
+    };
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_request");
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(body.error_description).toMatch(/not within the active Mission/);
     expect(body.deferral_code).toBeUndefined();
     expect(body.access_token).toBeUndefined();
     expect(count()).toBe(before);
+  });
+});
+
+describe("requested authority the deferral initiation cannot establish as a subset of the active Mission (@spec mission#subset, mission#error-mapping, #1720 item 3, D859)", () => {
+  // AROP never widens: requested authority the comparison cannot establish as
+  // a subset of the active Mission is refused with invalid_authorization_details,
+  // whether it exceeds the Mission or the comparison cannot decide. A Mission
+  // that is not active is a different refusal and keeps invalid_request.
+  type Body = { error?: string; error_description?: string; deferral_code?: string; access_token?: string };
+  const deferralRows = (): number =>
+    (as.deferrals.db.prepare("SELECT COUNT(*) AS n FROM deferrals").get() as { n: number }).n;
+  const derivations = (id: string): number => (as.kernel.get(id) as { derivation_count: number }).derivation_count;
+
+  /** Initiate `requested` on `mission` and assert the subset refusal, opening no deferral and counting nothing. */
+  async function expectSubsetRefusal(requested: AuthorityEntry[], mission = missionId): Promise<void> {
+    const rows = deferralRows();
+    const before = derivations(mission);
+    const res = await tokenRequest({
+      grant_type: DEFERRED_GRANT_TYPE,
+      deferred_authorization: JSON.stringify({ mission_id: mission, requested }),
+    });
+    const body = (await res.json()) as Body;
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(body.error_description).toMatch(/not within the active Mission/);
+    expect(body.deferral_code).toBeUndefined();
+    expect(body.access_token).toBeUndefined();
+    expect(deferralRows()).toBe(rows);
+    expect(derivations(mission)).toBe(before);
+  }
+
+  it("refuses requested authority that exceeds the active Mission (an action outside it, a larger max_amount) with invalid_authorization_details, opening no deferral", async () => {
+    const action = subset(["payments:invoice.read"]).map((e) => ({ ...e, actions: ["payments:payment.execute"] }));
+    await expectSubsetRefusal(action);
+    const amount = subset(["payments:remittance.send"]).map((e) => ({
+      ...e,
+      constraints: { ...e.constraints, max_amount: { amount: "900.00", currency: "USD" } },
+    }));
+    await expectSubsetRefusal(amount as AuthorityEntry[]);
+    // The same entry within the Mission opens a deferral, denied here so no
+    // later initiation resumes it.
+    const within = (await (await initiate(subset(["payments:remittance.send"]))).json()) as Body;
+    expect(within.error).toBe("authorization_pending");
+    expect(within.deferral_code).toMatch(/^dfr_/);
+    as.deferrals.deny(within.deferral_code as string);
+  });
+
+  it("refuses requested authority the comparison cannot decide (a max_amount in a currency the Mission's cap does not use) with invalid_authorization_details, opening no deferral", async () => {
+    const incomparable = subset(["payments:remittance.send"]).map((e) => ({
+      ...e,
+      constraints: { ...e.constraints, max_amount: { amount: "100.00", currency: "EUR" } },
+    }));
+    await expectSubsetRefusal(incomparable as AuthorityEntry[]);
+  });
+
+  it("an initiation by the Mission's own client on its Mission that is not active keeps invalid_request, not the subset refusal, opening no deferral", async () => {
+    const own = await issueBaseMissionToken();
+    const requested = (as.kernel.get(own.missionId) as { authority_set: AuthorityEntry[] }).authority_set
+      .filter((e) => e.actions.includes("payments:invoice.read"))
+      .map((e) => ({ ...e, actions: ["payments:invoice.read"] }));
+    as.kernel.transition(own.missionId, "suspend");
+    const rows = deferralRows();
+    for (const req of [requested, requested.map((e) => ({ ...e, actions: ["payments:payment.execute"] }))]) {
+      const res = await tokenRequest({
+        grant_type: DEFERRED_GRANT_TYPE,
+        deferred_authorization: JSON.stringify({ mission_id: own.missionId, requested: req }),
+      });
+      const body = (await res.json()) as Body;
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toBe("mission is not active");
+      expect(body.deferral_code).toBeUndefined();
+      expect(body.access_token).toBeUndefined();
+    }
+    expect(deferralRows()).toBe(rows);
   });
 });
 
@@ -730,8 +812,8 @@ describe("the AROP deferral is bound to the Mission's client and the opening key
     expect(own.error).toBe("authorization_pending");
     expect(own.deferral_code).toMatch(/^dfr_/);
     const ownBeyond = (await (await initiate(beyond)).json()) as Body;
-    expect(ownBeyond.error).toBe("invalid_request");
-    expect(ownBeyond.error_description).toMatch(/exceeds the active Mission/);
+    expect(ownBeyond.error).toBe("invalid_authorization_details");
+    expect(ownBeyond.error_description).toMatch(/not within the active Mission/);
   });
 
   it("a poll by another client, under the opening key or another, is refused invalid_grant as an unknown code is, with no token and no derivation; the Mission's own client then redeems the deferral", async () => {
