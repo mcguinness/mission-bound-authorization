@@ -23,6 +23,7 @@
  */
 
 import { generateKeyPairSync, randomUUID } from "node:crypto";
+import type { AuthorityDependencyEnforcement } from "@mission/core";
 import {
   type ClaimChannel,
   type ClaimRequester,
@@ -104,6 +105,8 @@ export interface CreateEphemeralEvidenceKeysOptions {
    * caller that needs a permit names its policy, a fixture included.
    */
   resourcePolicy?: ResourcePolicy;
+  /** @spec runtime#input-authority-dependency (#830): the declared dependency bound to the decision point constructed here (ignored with `decisionPoint`). */
+  authorityDependency?: AuthorityDependencyEnforcement;
 }
 
 /**
@@ -141,6 +144,7 @@ export function createEphemeralEvidenceKeys(
       emitterId,
       audience,
       ...(options.resourcePolicy ? { resourcePolicy: options.resourcePolicy } : {}),
+      ...(options.authorityDependency ? { authorityDependency: options.authorityDependency } : {}),
       claims: openEphemeralClaimDomain({
         owner: RUNTIME_POSTURE.pdps[0] as string,
         statement: RUNTIME_POSTURE,
