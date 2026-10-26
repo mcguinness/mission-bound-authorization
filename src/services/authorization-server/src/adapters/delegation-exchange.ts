@@ -396,6 +396,11 @@ export async function handleDesignationExchange(
     // RFC 8693 Section 2.2.1: usable only at this AS's delegated exchange, never as an access token.
     token_type: "N_A",
     expires_in: lifetime,
+    // @spec mission#mission-response-parameters (#1719, D845): a designation
+    // response SHOULD carry both members, taken up here; the committed record
+    // values, verbatim.
+    mission_id: active.id,
+    mission_expires_at: active.expires_at,
     authorization_details: authority,
   };
   ctx.set("cache-control", "no-store");
@@ -584,6 +589,11 @@ export async function handleDelegatedExchange(
     token_type: "DPoP",
     expires_in: lifetime,
     ...((at as { scope?: string }).scope ? { scope: (at as { scope?: string }).scope } : {}),
+    // @spec mission#mission-response-parameters (#1719, D845): a delegated
+    // exchange response MUST carry both members, since the delegate never
+    // received the creating response; the committed record values, verbatim.
+    mission_id: active.id,
+    mission_expires_at: active.expires_at,
     authorization_details: carried,
   };
   ctx.set("cache-control", "no-store");
