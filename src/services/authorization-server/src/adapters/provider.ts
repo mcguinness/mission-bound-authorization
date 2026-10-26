@@ -4060,6 +4060,23 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
 
   /**
+   * @spec status#mission-status-authentication (#1724 D1, D847): the Missions
+   * a reader's read authorization covers, under the deployment's policy: the
+   * `missions` its client policy binds, or every Mission at this AS where its
+   * policy binds none (this reference's documented default). The read grant
+   * alone establishes nothing more. A Mission outside the coverage gets the
+   * not-found response an unknown Mission gets.
+   */
+  const readCovers = (principal: ServiceTokenPrincipal, missionId: string): boolean => {
+    const entry = Object.hasOwn(lifecycleClientGrants, principal.principal_id)
+      ? lifecycleClientGrants[principal.principal_id]
+      : undefined;
+    if (entry === undefined || !("grants" in entry) || entry.missions === undefined) return true;
+    const record = kernel.get(missionId);
+    return record !== undefined && withinLifecycleMissionScope(entry.missions, record);
+  };
+
+  /**
    * @spec status#mission-status-response (#1682, D795): whether the
    * authenticated caller holds the deployment's audit-or-correlation
    * disclosure privilege, `provenance`, in ONE place for every Mission Status
@@ -4516,6 +4533,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // A caller without the read grant gets the same not-found body as an
         // unknown reference (@spec status#mission-status-anti-oracle).
         if (!mayReadStatus(principal)) throw new Error("status read not authorized");
+        if (!readCovers(principal, statusMatch[1] as string)) throw new Error("mission not within the read authorization");
         const jws = await kernel.signedStatus(statusMatch[1] as string, {
           ...optional("audience", statusAudience),
           ...optional("nonce", statusNonce),
@@ -4643,6 +4661,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // A client without the read grant gets the same not-found body as an
         // unknown reference (@spec status#mission-status-anti-oracle).
         if (!mayReadStatus(principal)) throw new Error("status read not authorized");
+        if (!readCovers(principal, missionId)) throw new Error("mission not within the read authorization");
         const jws = await kernel.signedStatus(missionId, {
           ...optional("audience", audience),
           nonce: echo,

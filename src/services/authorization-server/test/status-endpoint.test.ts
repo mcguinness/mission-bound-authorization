@@ -64,6 +64,10 @@ let pdp: LifecycleTestClient;
 let reader: LifecycleTestClient;
 /** Registered and authenticates, holds no grant. */
 let ungranted: LifecycleTestClient;
+/** Holds `mission_status`, its policy covering only another client's Missions (#1724 D1). */
+let narrow: LifecycleTestClient;
+/** Holds `mission_status`, its policy covering the Missions of `MISSION_CLIENT`. */
+let covering: LifecycleTestClient;
 let approvals = 0;
 
 function approve(): MissionRecord {
@@ -120,10 +124,17 @@ beforeAll(async () => {
   pdp = await newLifecycleClient("status-endpoint-pdp");
   reader = await newLifecycleClient("status-endpoint-reader");
   ungranted = await newLifecycleClient("status-endpoint-ungranted");
+  narrow = await newLifecycleClient("status-endpoint-narrow");
+  covering = await newLifecycleClient("status-endpoint-covering");
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    testClients: [pdp.metadata, reader.metadata, ungranted.metadata],
-    lifecycleClientGrants: { [pdp.clientId]: [MISSION_STATUS_SCOPE], [reader.clientId]: [MISSION_STATUS_SCOPE] },
+    testClients: [pdp.metadata, reader.metadata, ungranted.metadata, narrow.metadata, covering.metadata],
+    lifecycleClientGrants: {
+      [pdp.clientId]: [MISSION_STATUS_SCOPE],
+      [reader.clientId]: [MISSION_STATUS_SCOPE],
+      [narrow.clientId]: { grants: [MISSION_STATUS_SCOPE], missions: { clients: ["some-other-client"] } },
+      [covering.clientId]: { grants: [MISSION_STATUS_SCOPE], missions: { clients: [MISSION_CLIENT] } },
+    },
     joinEnrollment: { [pdp.clientId]: { roles: ["pdp"], enforcementScopes: [CANONICAL_RESOURCE] } },
     serviceTokenPrincipals: { [SERVICE_TOKEN]: { principal_id: SERVICE_PRINCIPAL, scopes: [MISSION_STATUS_SCOPE] } },
   });
@@ -275,6 +286,20 @@ describe("Mission Status endpoint errors (@spec status#mission-status-auth-failu
       expect(unauthenticated.status, unauthenticated.text).toBe(400);
       expect(unauthenticated.json?.error).toBe("invalid_client");
     }
+  });
+
+  it("reads a Mission only within the read authorization's coverage, and answers one outside it with the not-found response an unknown Mission gets (@spec status#mission-status-authentication, status#mission-status-anti-oracle, #1724 D1, D847)", async () => {
+    const record = approve();
+    const members = { mission_id: record.id, audience: CANONICAL_RESOURCE };
+    const covered = await read(covering, { ...members, nonce: nonce() });
+    expect(covered.status, covered.text).toBe(200);
+    expect((await verified(covered.text)).mission).toMatchObject({ id: record.id });
+    const n = nonce();
+    const outside = await read(narrow, { ...members, nonce: n });
+    const unknown = await read(narrow, { mission_id: UNKNOWN, audience: CANONICAL_RESOURCE, nonce: n });
+    expect(outside.status, outside.text).toBe(404);
+    expect(outside.text).toBe(unknown.text);
+    expect(outside.cacheControl).toBe(unknown.cacheControl);
   });
 
   it("refuses a failed or absent client authentication invalid_client (HTTP 400) with no challenge, before any Mission is read", async () => {
