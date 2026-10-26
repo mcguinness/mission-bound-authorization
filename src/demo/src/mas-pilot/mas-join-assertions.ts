@@ -48,7 +48,8 @@ import {
   IntrospectionUnavailableError,
   TokenIntrospector,
 } from "@mission/mcp-payments";
-import { createRemoteJWKSet, type JWTVerifyGetKey, jwtVerify } from "jose";
+import { IssuerKeys } from "@mission/core";
+import { type JWTVerifyGetKey, jwtVerify } from "jose";
 import type { MasPilotConfig } from "./config.js";
 import { MappingContractCache } from "./mapping-contract.js";
 
@@ -79,7 +80,10 @@ export function pilotJoinAssertions(config: MasPilotConfig, opts: PilotJoinAsser
     published ??= fetch(`${estate}/.well-known/openid-configuration`, { signal: AbortSignal.timeout(config.introspection.timeout_ms) })
       .then((r) => r.json() as Promise<{ jwks_uri: string; introspection_endpoint: string }>)
       .then((m) => ({
-        keys: createRemoteJWKSet(new URL(m.jwks_uri)),
+        // @spec #831 C2b (D825): the configured estate kids only, never every kid the set holds.
+        keys: new IssuerKeys({ jwksUri: m.jwks_uri, roles: { accessToken: { kids: config.estate.trusted_kids } } }).resolver(
+          "accessToken",
+        ) as unknown as JWTVerifyGetKey,
         introspector: new TokenIntrospector(
           {
             endpoint: m.introspection_endpoint,

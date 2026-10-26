@@ -270,6 +270,14 @@ describe("pilot configuration: the estate's development Resource-policy grants (
     expect(() => parseMasPilotConfig(withSeparated({ extra: true }))).toThrow(/unknown member extra/);
   });
 
+  it("names the estate issuer's trusted kids explicitly, and refuses a configuration that names none (#831 C2b, D825)", () => {
+    expect(loadMasPilotConfig().estate.trusted_kids).toEqual(["estate-signing-1"]);
+    const estate = raw().estate as Record<string, unknown>;
+    const { trusted_kids: _dropped, ...without } = estate;
+    expect(() => parseMasPilotConfig({ ...raw(), estate: without })).toThrow(/estate is missing trusted_kids/);
+    expect(() => parseMasPilotConfig({ ...raw(), estate: { ...estate, trusted_kids: [] } })).toThrow(/estate.trusted_kids must list at least one kid/);
+  });
+
   it("refuses an enrollee with no roles member, no role, an unknown role, or one role twice (#1591, D708)", () => {
     const separated = raw().separated_mas as Record<string, unknown> & { enrollment: Array<Record<string, unknown>> };
     const enrollee = separated.enrollment[0] as Record<string, unknown>;
