@@ -7516,6 +7516,18 @@ Cross-Domain:
   presented token's, and the delegated token issued at its redemption
   is subject to every audience rule (Audience and Token Response,
   Declared Transformation Capabilities; #1717, D845).
+- The key-publication requirement applies to an AS that issues
+  Mission-bound JWT access tokens for resource servers to consume, not
+  to one issuing only designations; the first capability carrier that
+  declares a member governs, `true` or `false`, and a declaration
+  waives no check; the declared `narrowing` capability also governs
+  Authority Set derivation, where without it a candidate entry is
+  retained unchanged or omitted; an undecidable token-endpoint subset
+  comparison is refused with `invalid_authorization_details`; and
+  short-lived is related to the termination latency a deployment
+  accepts, with numerical bounds left to deployment profiles (Token
+  Claims, Declared Transformation Capabilities, Authority Proposal,
+  Derivation Modes, Subset Rule, Issuance Gating; #1720, D845).
 - The AS refuses, with `invalid_target`, a delegated Mission-bound
   token for an audience it has not established as a Mission-aware
   Resource Server that processes the `act` chain; routing and logging
