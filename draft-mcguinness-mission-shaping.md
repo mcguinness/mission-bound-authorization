@@ -199,8 +199,7 @@ Mission Issuer, derives an Authority Set, obtains the Approver's
 consent, and binds issued tokens to the approved Mission. The issuance
 profile does not specify how a deployment turns an open-ended task
 request, such as "resolve this billing dispute", into a Mission Intent
-with a goal, target resources, task bounds, success criteria, purpose,
-and expiry.
+with a goal, target resources, task bounds, purpose, and expiry.
 
 This document describes that step, performed by a client-side Mission
 Shaper. The shaper can be a rules engine, a form, a workflow, or a
