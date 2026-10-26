@@ -25,6 +25,7 @@ import { randomBytes } from "node:crypto";
 import {
   actionOutsideGrammar,
   authorityHash,
+  carriesHttpUserinfo,
   canonicalize,
   computeAnchor,
   entryDelegateMatcherViolation,
@@ -256,6 +257,9 @@ export function assertTemplateBody(input: TemplateProposalBody): void {
       throw new TemplateError(
         `ceiling[${i}] has resource ${JSON.stringify(entry.resource)}, which is not an RFC 3986 absolute URI`,
       );
+    }
+    if (carriesHttpUserinfo(entry.resource)) {
+      throw new TemplateError(`ceiling[${i}] has resource ${JSON.stringify(entry.resource)}, which carries a userinfo subcomponent`);
     }
     const malformedAction = actionOutsideGrammar(entry);
     if (malformedAction !== undefined) {

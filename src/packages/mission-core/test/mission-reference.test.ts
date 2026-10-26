@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseMcpReferenceMeta, parseMissionReferenceField } from "../src/mission-reference.js";
+import {
+  parseMcpReferenceMeta,
+  parseMissionReferenceField,
+  reconcilePropagatedReferences,
+} from "../src/mission-reference.js";
 
 const ID = "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-";
 const ISS = "https://mas.example.com";
@@ -154,5 +158,60 @@ describe("the harness profile's work-item members on the reference tuple (@spec 
     ];
     for (const value of metaCases)
       expect(parseMcpReferenceMeta(value), JSON.stringify(value)).toEqual({ malformed: true });
+  });
+});
+
+describe("one reference from two carriages (@spec authority-server#reference-verification, authority-server#mcp-reference, #1694)", () => {
+  const REF = { id: ID, issuer: ISS };
+  const W1 = { issuer: "https://harness.example.com", id: "work-1" };
+  const W2 = { issuer: "https://harness.example.com", id: "work-2" };
+
+  it("takes either carriage alone, and two that agree on every member", () => {
+    expect(reconcilePropagatedReferences(undefined, undefined)).toBeUndefined();
+    expect(reconcilePropagatedReferences(REF, undefined)).toEqual(REF);
+    expect(reconcilePropagatedReferences(undefined, REF)).toEqual(REF);
+    expect(reconcilePropagatedReferences(REF, { ...REF })).toEqual(REF);
+    expect(
+      reconcilePropagatedReferences({ ...REF, workItem: W1 }, { ...REF, workItem: { ...W1 } }),
+    ).toEqual({
+      ...REF,
+      workItem: W1,
+    });
+  });
+
+  it("is unusable when the carriages disagree on the Mission, the issuer, or the work item, never a pick-one", () => {
+    const pairs: [object, object][] = [
+      [REF, { ...REF, id: "msn_other" }],
+      [REF, { ...REF, issuer: "https://other.example" }],
+      [
+        { ...REF, workItem: W1 },
+        { ...REF, workItem: W2 },
+      ],
+      [
+        { ...REF, workItem: W1 },
+        { ...REF, workItem: { ...W1, issuer: "https://other-harness.example" } },
+      ],
+      [{ ...REF, workItem: W1 }, REF],
+    ];
+    for (const [a, b] of pairs) {
+      const label = JSON.stringify([a, b]);
+      expect(reconcilePropagatedReferences(a as typeof REF, b as typeof REF), label).toEqual({
+        malformed: true,
+      });
+      expect(reconcilePropagatedReferences(b as typeof REF, a as typeof REF), label).toEqual({
+        malformed: true,
+      });
+    }
+  });
+
+  it("is unusable when either carriage is malformed, even beside a well-formed one", () => {
+    expect(reconcilePropagatedReferences({ malformed: true }, REF)).toEqual({ malformed: true });
+    expect(reconcilePropagatedReferences(REF, { malformed: true })).toEqual({ malformed: true });
+    expect(reconcilePropagatedReferences({ malformed: true }, undefined)).toEqual({
+      malformed: true,
+    });
+    expect(reconcilePropagatedReferences(undefined, { malformed: true })).toEqual({
+      malformed: true,
+    });
   });
 });

@@ -1531,6 +1531,16 @@ members the PDP itself can attest. A permit issued to an in-scope
 consequential action without Mission evaluation is an enforcement
 bypass, not a decision ({{I-D.draft-mcguinness-mission-runtime}}).
 
+Likewise, where the runtime Enforcement Scope Statement declares
+action classes, a mediated request that reaches the PDP with no
+action class established, neither carried from the PEP's Operation
+Profile nor assigned by the PDP's own trusted declaration, is
+malformed: the PDP MUST refuse it before evaluation, MUST NOT evaluate
+it under a default class or record a class in Decision Evidence, and
+MUST record the refusal as a Refusal Record with `denial_reason`
+`action_class_missing`
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+
 In addition to evaluating the decision inputs the runtime profile
 requires, the PDP MUST verify that the AuthZEN-carried envelope is
 self-consistent:
@@ -2562,6 +2572,7 @@ rule.
 | Decision Evidence for a permit absent or not verifiable, so no relied-upon decision was obtained | Refusal Record | `decision_evidence_unverifiable` |
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
 | Operation target absent, malformed, or outside the requesting PEP's enforcement scope at the PDP | Refusal Record | `operation_target_invalid` |
+| No action class established for a mediated request where the Enforcement Scope Statement declares action classes, at the PDP | Refusal Record | `action_class_missing` |
 | `action_phase` outside the closed set, or absent where the trusted operation declaration requires a phase, at the PDP | Refusal Record | `phase_invalid` |
 | `compensates_evaluation_id` absent where `action_phase` is `compensate`, or malformed, at the PDP | Refusal Record | `compensation_link_invalid` |
 | Evaluation-context binding inputs missing, malformed, or incompatible with the declared operation binding, for a covered operation, at the PDP | Refusal Record | `evaluation_context_invalid` |
@@ -2629,8 +2640,8 @@ identifier:
   phase binding, `phase_mismatch` as Execution Evidence, never a Refusal
   Record.
 - Unusable inputs: `phase_invalid`, `compensation_link_invalid`,
-  `evaluation_context_invalid`, and `work_item_invalid` are PDP
-  refusals before evaluation. They
+  `evaluation_context_invalid`, `work_item_invalid`, and
+  `action_class_missing` are PDP refusals before evaluation. They
   describe decision inputs the PDP cannot use, not an evaluated policy
   denial, and a PDP claiming only the Decision Base records them in its
   own internal form ({{profiles-and-capabilities}}).
@@ -3182,6 +3193,11 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 \[\[ To be removed from the final specification ]]
 
+- Changes a requirement (#956, D814): where the runtime Enforcement
+  Scope Statement declares action classes, the PDP refuses a mediated
+  request with no action class established before evaluation, records
+  the Refusal Record `action_class_missing`, and never evaluates it
+  under a default class or records one in Decision Evidence.
 - Work-Item Context: `context.work_item` is a harness-owned extension
   point the PEP populates only from the harness's authenticated
   attachment. A malformed member is refused before evaluation as

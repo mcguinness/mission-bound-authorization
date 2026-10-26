@@ -1612,6 +1612,66 @@ describe("a designation keeps its entries' resource-audience associations, and i
       delete (mapping.audiences as Record<string, unknown>)[ORIGIN_AUDIENCE];
     }
   });
+
+  /** A second delegable payments entry, approved for the same audience as the invoice read. */
+  const delegableVendorRead = () => ({ ...vendorRead(), delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "ai_agent" }] } });
+  /** Replace the Mission's stored original approved audiences (null: the record retains none). */
+  const storeAudiences = (missionId: string, retained: string[][] | null) =>
+    h.as.kernel.db
+      .prepare("UPDATE missions SET approved_audiences_json = ? WHERE id = ?")
+      .run(retained === null ? null : JSON.stringify(retained), missionId);
+
+  it("a designation whose presented token carries one entry with an original approved audience and one without carries only the first, in the designation, its response and its accounting (#1717, D859)", async () => {
+    const { missionId, accessToken } = await baseMission(h, [delegable(), delegableVendorRead()]);
+    expect(actionsOf(accessToken)).toEqual(["payments:invoice.read", "payments:vendor.read"]);
+    const presentedRead = entriesOf(accessToken).find((e) => (e.actions as string[]).includes("payments:invoice.read"));
+    expect(presentedRead).toBeDefined();
+    // After the token is issued, the vendor read loses its recorded
+    // association: the Mission retains no audience for it.
+    const record = h.as.kernel.get(missionId);
+    expect(record?.authority_set).toHaveLength(2);
+    storeAudiences(
+      missionId,
+      (record?.authority_set ?? []).map((e) => (e.actions.includes("payments:vendor.read") ? [] : [RESOURCE])),
+    );
+    expect(approvedAudiencesOf(missionId, "payments:invoice.read")).toEqual([RESOURCE]);
+    expect(approvedAudiencesOf(missionId, "payments:vendor.read")).toEqual([]);
+    const before = derivations(h, missionId);
+
+    const designation = await designate(h, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const jwt = designation.body.access_token as string;
+    expect(entriesOf(jwt)).toEqual([presentedRead]);
+    expect(designation.body.authorization_details).toEqual([presentedRead]);
+    expect(h.as.tokenIssuanceStore.resolve(h.issuer, jtiOf(jwt))?.authorizationDetails).toEqual([presentedRead]);
+    expect(derivations(h, missionId)).toBe(before + 1);
+
+    // Its redemption for the read's approved audience carries the read alone.
+    const delegated = await redeem(h, jwt, SUBAGENT, undefined, { resource: RESOURCE });
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect(entriesOf(delegated.body.access_token as string)).toEqual([presentedRead]);
+  });
+
+  it("a designation whose every carried entry lacks an original approved audience is refused invalid_target, issuing nothing and counting no derivation (#1717, D859)", async () => {
+    const { missionId, accessToken } = await baseMission(h);
+    // The owner's probe: the Mission's recorded association is removed, so
+    // no entry's original approved audience can be established.
+    storeAudiences(missionId, null);
+    expect(h.as.kernel.get(missionId)?.approved_audiences).toBeUndefined();
+    const before = derivations(h, missionId);
+    const recorded = vi.spyOn(h.as.tokenIssuanceStore, "recordDelegation");
+    try {
+      const refused = await designate(h, accessToken, SUBAGENT);
+      expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      expect(refused.body.error_description).toBe("no entry the designation would carry has an original approved audience");
+      expect(refused.body.access_token).toBeUndefined();
+      expect(recorded).not.toHaveBeenCalled();
+      expect(derivations(h, missionId)).toBe(before);
+    } finally {
+      recorded.mockRestore();
+    }
+  });
 });
 
 /**

@@ -28,7 +28,7 @@ const baseline = (): EnforcementScopeStatement => ({
     execution_paths: ["mcp:tools/call"],
     pep_locations: ["mcp-payments-pep"],
     excluded_paths: [],
-    mission_establishment_mode: "token-claim",
+    mission_establishment_mode: "credential_carried",
   },
   authority_entry_types: [{ type: "mission_resource_access", evaluator: "fga-contextual-check" }],
   pdps: ["mcp-payments-pdp"],
@@ -252,5 +252,47 @@ describe("Enforcement Scope Statement validation (@spec runtime#runtime-conforma
   it("a claim naming an execution path outside the declared scope is rejected", () => {
     const stmt = baseline();
     expect(claimsWithinScope(stmt, { resource: RESOURCE, execution_path: "mcp:tools/unlisted" })).toBe(false);
+  });
+});
+
+// @spec runtime#mission-binding (#956, D814): `mission_establishment_mode` is
+// `credential_carried`, `externally_established`, or a non-empty list of them
+// without duplicates. One named `it` per case, as above, so the ledger can
+// cite each by exact name.
+describe("mission_establishment_mode values (@spec runtime#mission-binding, #956)", () => {
+  const withMode = (mode: unknown): EnforcementScopeStatement =>
+    ({ ...baseline(), mediated_scope: { ...baseline().mediated_scope, mission_establishment_mode: mode } }) as unknown as EnforcementScopeStatement;
+  const accepts = (mode: unknown) => {
+    const stmt = withMode(mode);
+    expect(validateEnforcementScopeStatement(stmt)).toEqual([]);
+    expect(claimsWithinScope(stmt, { resource: RESOURCE })).toBe(true);
+  };
+  const refuses = (mode: unknown) => {
+    const stmt = withMode(mode);
+    expect(validateEnforcementScopeStatement(stmt)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ member: "mediated_scope" })]),
+    );
+    expect(claimsWithinScope(stmt, { resource: RESOURCE })).toBe(false);
+  };
+  it("credential_carried is accepted", () => {
+    accepts("credential_carried");
+  });
+  it("externally_established is accepted", () => {
+    accepts("externally_established");
+  });
+  it("a list naming both modes is accepted", () => {
+    accepts(["credential_carried", "externally_established"]);
+  });
+  it("an empty list is refused", () => {
+    refuses([]);
+  });
+  it("a list repeating a mode is refused", () => {
+    refuses(["credential_carried", "credential_carried"]);
+  });
+  it("a free-string value outside the two modes (token-claim) is refused", () => {
+    refuses("token-claim");
+  });
+  it("a list carrying a value outside the two modes is refused", () => {
+    refuses(["credential_carried", "token-claim"]);
   });
 });
