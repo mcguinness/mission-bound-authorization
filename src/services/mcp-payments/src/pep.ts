@@ -14,6 +14,7 @@ import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type ActionPhase,
+  canonicalDigest,
   type CollectionMemberFacts,
   type ConstraintFacts,
   type CredentialAuthorityEntry,
@@ -1585,6 +1586,12 @@ export interface ExecutionAttempt {
    * Evidence's `evaluation_context_digest`, absent when it carries none.
    */
   authorizedEvaluationContextDigest?: string;
+  /**
+   * @spec runtime#evidence (pre-effect durability) (#821, D814): the permit's
+   * RETAINED Decision Evidence, by its `evidence_id` and complete-object
+   * digest: the authorization evidence an attempt's pre-effect record names.
+   */
+  decisionEvidence?: { evidenceId: string; digest: string };
   /** One execution identity per disposition attempt; reused for emission retries. */
   executionId: string;
   /**
@@ -3400,6 +3407,14 @@ export class Pep {
         : {}),
       ...(typeof retained?.evaluation_context_digest === "string"
         ? { authorizedEvaluationContextDigest: retained.evaluation_context_digest }
+        : {}),
+      ...(retained !== undefined
+        ? {
+            decisionEvidence: {
+              evidenceId: retained.evidence_id,
+              digest: canonicalDigest(retained as unknown as JsonValue),
+            },
+          }
         : {}),
       executionId: newRecordId("exe"),
       permitId: decision.context.decision_id as string,

@@ -88,6 +88,7 @@ import { recordRedeemingAttempt } from "./redemption-status.js";
 import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
 import {
   CONSUMED_PERMIT_RETENTION_MARGIN_MS,
+  type ExecutionAttemptRecord,
   type WriteEffectOutcome,
   type WriteReservation,
   type WriteReservationStore,
@@ -440,8 +441,18 @@ export const CONNECTOR_REFUSAL_ERRORS: Readonly<Record<NonNullable<CommitResult[
  * result discloses nothing, so the permit's final disposition is a
  * suppression, under a collision-resistant name for the same reason as the
  * refusals above. The caller-visible diagnostic is `evidence_unavailable`.
+ * The transaction tier refuses under it too when its pre-effect attempt
+ * record cannot be written (#821).
  */
 export const EVIDENCE_UNAVAILABLE_ERROR = "https://payments.demo/execution-errors/evidence_unavailable";
+
+/**
+ * @spec runtime#evidence (pre-effect durability) (#821, D814): the classes
+ * whose connector effect is released only after a durable attempt record:
+ * the irreversible and external-commitment effects the transaction tier
+ * commits.
+ */
+const PRE_EFFECT_ATTEMPT_CLASSES: ReadonlySet<string> = new Set(["irreversible_action", "external_commitment"]);
 
 /**
  * Test-only failpoints on the keyed reversible-write path (#918): the awaited
@@ -2115,6 +2126,32 @@ export class McpPaymentsServer {
       }
     }
 
+    // @spec runtime#evidence (pre-effect durability) (#821, D814): the last
+    // step before the effect is released. This attempt's operation identity
+    // (its execution identity, operation key and evaluation) and the retained
+    // Decision Evidence that authorizes it are committed to this PEP's
+    // durable file, so a crash after the effect leaves an operation whose
+    // disposition can be recovered, never one nothing names. A write that
+    // fails prevents the effect: the action is refused and nothing executes.
+    let attemptRecord: ExecutionAttemptRecord | undefined;
+    if (PRE_EFFECT_ATTEMPT_CLASSES.has(profile?.actionClass ?? "")) {
+      try {
+        if (!this.deps.writeReservations || !attempt.decisionEvidence) throw new Error("no pre-effect attempt record");
+        attemptRecord = this.deps.writeReservations.recordAttempt({
+          executionId: attempt.executionId,
+          opKey,
+          evaluationId: permitId,
+          missionId: resolvedMission.id,
+          action: res.effective.action,
+          decisionEvidence: attempt.decisionEvidence,
+        });
+      } catch {
+        await this.deps.pep.suppressExecution(attempt, EVIDENCE_UNAVAILABLE_ERROR);
+        tx.engine.advance(opKey, "abandoned");
+        return { ok: false, refusal_reason: "evidence_unavailable" };
+      }
+    }
+
     // Commit point (D36): connector accepts with the idempotency key. The
     // operation is resolved from the explicit per-tool mapping above, never
     // from a ternary whose else-branch would email on any unrecognized name.
@@ -2203,6 +2240,9 @@ export class McpPaymentsServer {
       // @spec runtime-evidence#evidence-extensions `work_item` (#815): the
       // work item the PEP attributed to this request.
       ...(attempt.workItem ? { work_item: attempt.workItem } : {}),
+      // #821: the instant the attempt was recorded before its effect, as a
+      // late record from reconciliation carries it too.
+      ...(attemptRecord ? { attempted_at: new Date(attemptRecord.attemptedAtMs).toISOString() } : {}),
       ...(token.jti
         ? {
             hop_reference: {
