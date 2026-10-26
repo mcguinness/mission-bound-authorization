@@ -26,6 +26,8 @@ import {
   USERS,
   APPROVAL_FLOOR,
   WRITE_ACTIONS,
+  ACTION_APPROVAL_POLICY,
+  type ActionApprovalPolicy,
   type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import { randomBytes } from "node:crypto";
@@ -748,7 +750,39 @@ export {
   type CreateTemplateInput,
   type DispatchInput,
   type DispatchResult,
+  type StandingPaymentConsentOptions,
+  type StandingPaymentDispatchOptions,
 } from "./kernel/template.js";
+export { prohibitedPredicateMappingOf } from "./adapters/provider.js";
+export {
+  ALL_PROHIBITED_PREDICATES,
+  assertDispatchProhibitedCoverage,
+  assertNotStandingPaymentLineage,
+  assertStandingPaymentCoverage,
+  CLASS_PREDICATES,
+  CONSUMPTION_BOUND_CLASS,
+  DispatchProhibitedCoverageError,
+  dispatchProhibitedCoverageGaps,
+  type ProhibitedPredicateMapping,
+  prohibitedPredicatesOf,
+  STANDING_PAYMENT_MEMBER,
+  STANDING_PAYMENT_OPERATION,
+  type StandingPaymentAdmission,
+  StandingPaymentConfigError,
+  StandingPaymentLineageError,
+  StandingPaymentStore,
+  type StandingPaymentTerms,
+  standingPaymentRootOf,
+  standingPaymentTermsOf,
+  type TemplateConsentProvenance,
+} from "./kernel/standing-payment.js";
+export {
+  recheckTemplateApprovalRecord,
+  TEMPLATE_RECORDING_RULE_ID,
+  TemplateApprovalRecordStore,
+  templateGovernanceGate,
+  type TemplateRecordInputs,
+} from "./kernel/template-approval-record.js";
 export {
   AUTHORITY_SOURCE_TYPES,
   assertLocalPrincipal,
@@ -1029,6 +1063,13 @@ export async function buildAuthorizationServer(opts: {
    * digest at consent and Dispatch verifies it before evaluating anything.
    */
   dispatchPolicies?: DispatchPolicies;
+  /**
+   * @spec runtime#action-approval, mission-template#prohibited-classes
+   * (#813): the deployment's action-approval predicate a standing-payment
+   * consent renders. Defaults to {@link ACTION_APPROVAL_POLICY}, the shipped
+   * declaration the runtime decision policy also reads.
+   */
+  actionApprovalPolicy?: ActionApprovalPolicy;
   /**
    * @spec mission#standing-consent-bases — the activation policies the kernel
    * evaluates for a policy-adjudicated child creation, keyed by policy `id`.
@@ -1597,6 +1638,10 @@ export async function buildAuthorizationServer(opts: {
     // @spec mission#transformation-capabilities (D733): the same trusted
     // mapping the kernel below reads, retained at this consent.
     entryAudiences: (entries) => entries.map((entry) => mappedAudiences(opts.scopeProjection ?? SCOPE_PROJECTION, entry)),
+    // @spec mission-template#prohibited-classes (#813): the boot seed is no
+    // human consent at the approval floor, so under the capability a seed
+    // whose Dispatch Policy designates the standing payment refuses startup.
+    ...(capabilityEnabled(opts, "standing-payment-dispatch") ? { standingPayment: {} } : {}),
   });
   // @spec async-delegation — forward reference to the provider (assigned after
   // buildProvider, like statusListPublisher). Captured by the terminal subscriber in
@@ -2067,6 +2112,7 @@ export async function buildAuthorizationServer(opts: {
     continuationGrantKid: continuationKeys.kid,
     templateStore,
     dispatchPolicies,
+    actionApprovalPolicy: opts.actionApprovalPolicy ?? ACTION_APPROVAL_POLICY,
     protectedEventSources,
     issuerEvidence,
     // @spec issuance-grant#effective-set-projection (#617 review 1) — the

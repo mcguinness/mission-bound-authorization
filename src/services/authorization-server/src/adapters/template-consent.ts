@@ -19,6 +19,9 @@ import { type ActivationPolicyRef, type AuthorityEntry, canonicalize, type JsonV
 import { verifiedActivationPolicy } from "../kernel/activation-policy.js";
 import type { CapabilitySourceResolver } from "../kernel/capability-binding.js";
 import { standingConsentLines, standingConsentMaximumOf } from "../kernel/standing-consent-limit.js";
+import { type StandingPaymentTerms, standingPaymentTermsOf } from "../kernel/standing-payment.js";
+import type { ActionApprovalPolicy } from "@mission/demo-data";
+import { contentDigest } from "./approval-render-revision.js";
 import { type DispatchPolicies, type TemplateProposalBody, templateCeiling } from "../kernel/template.js";
 
 /** Prefix of a template proposal's identifier. */
@@ -98,6 +101,8 @@ export interface TemplateConsentDisclosure {
   bounds: string[];
   /** The remaining consented terms. */
   terms: string[];
+  /** @spec mission-template#prohibited-classes (#813): the standing payment's committed terms, when the template designates one. */
+  standing_payment?: string[];
 }
 
 /**
@@ -109,7 +114,15 @@ export interface TemplateConsentDisclosure {
 export function templateConsentDisclosure(
   proposal: TemplateProposal,
   dispatchPolicies: DispatchPolicies | undefined,
-  opts: { issuer: string; asyncDelegation: boolean; capabilityResolver?: CapabilitySourceResolver },
+  opts: {
+    issuer: string;
+    asyncDelegation: boolean;
+    capabilityResolver?: CapabilitySourceResolver;
+    /** @spec mission-template#prohibited-classes (#813): the `standing-payment-dispatch` capability is on. */
+    standingPayment?: boolean;
+    /** @spec runtime#action-approval (#813): the deployment's action-approval predicate. */
+    actionApprovalPolicy?: ActionApprovalPolicy;
+  },
 ): { disclosure: TemplateConsentDisclosure } | { refusal: string } {
   const { body } = proposal;
   const held = verifiedActivationPolicy(opts.issuer, dispatchPolicies, proposal.dispatch_policy);
@@ -118,6 +131,21 @@ export function templateConsentDisclosure(
     return {
       refusal: `The Dispatch Policy ${body.dispatch_policy.id} version ${body.dispatch_policy.version} is not the one this template was proposed under, so its per-instance derivation limit cannot be shown. This consent is refused; propose the template again.`,
     };
+  }
+  // @spec mission-template#prohibited-classes, metering#consent (#813): a
+  // standing payment's terms are part of what the Approver consents to, so
+  // the page renders every committed limit, destination and exception, and
+  // the consumption product, or refuses a statement it cannot render.
+  let standing: string[] = [];
+  if (opts.standingPayment) {
+    try {
+      const terms = standingPaymentTermsOf(held as NonNullable<typeof held>);
+      standing = terms ? standingPaymentLines(terms, body, opts.actionApprovalPolicy) : [];
+    } catch (e) {
+      return {
+        refusal: `The Dispatch Policy ${body.dispatch_policy.id} states standing-payment terms that cannot be shown (${(e as Error).message}). This consent is refused.`,
+      };
+    }
   }
   // @spec capability-binding#conformance: the page renders the ceiling the
   // template would commit, so a trusted binding that now resolves differently
@@ -137,7 +165,11 @@ export function templateConsentDisclosure(
   return {
     disclosure: {
       ceiling: body.ceiling,
-      statements: [TEMPLATE_CEILING_STATEMENT, MACHINE_SPEED_STATEMENT, PROHIBITED_CLASSES_STATEMENT],
+      statements: [
+        TEMPLATE_CEILING_STATEMENT,
+        MACHINE_SPEED_STATEMENT,
+        standing.length > 0 ? STANDING_PAYMENT_STATEMENT : PROHIBITED_CLASSES_STATEMENT,
+      ],
       bounds: [
         `At most ${body.max_active} dispatched instances are active at once.`,
         `At most ${body.rate_per_min} dispatches per minute.`,
@@ -154,8 +186,101 @@ export function templateConsentDisclosure(
         `Dispatch Policy: ${body.dispatch_policy.id} version ${body.dispatch_policy.version}.`,
         `Template version: ${body.template_version}.`,
       ],
+      ...(standing.length > 0 ? { standing_payment: standing } : {}),
     },
   };
+}
+
+/**
+ * @spec mission-template#prohibited-classes (#813): the standing payment's
+ * rendering in place of the plain high-consequence statement.
+ */
+export const STANDING_PAYMENT_STATEMENT =
+  "Policy dispatches one high-consequence operation unattended: the standing payment below, whose irreversible-action class alone is waived. " +
+  "It never dispatches any other irreversible, external-commitment or privileged-administration action, external communication " +
+  "(the exfiltration leg) or cross-domain authority. Each still requires a fresh human decision, and work outside these terms is refused.";
+
+/**
+ * @spec mission-template#prohibited-classes, metering#consent (#813, D830
+ * rulings 1, 2, 4, 5 and 9): the committed standing-payment terms as plain
+ * lines, the consumption product included: the budget is shared by every
+ * instance and successor, so `max_active` concurrent instances can each draw
+ * up to the per-instance maximum while the shared limit still binds them all.
+ */
+export function standingPaymentLines(
+  terms: StandingPaymentTerms,
+  body: TemplateProposalBody,
+  actionApproval?: ActionApprovalPolicy,
+): string[] {
+  const destinations = Object.entries(terms.destinations)
+    .map(([vendor, account]) => `${vendor} to account ${account}`)
+    .join(", ");
+  const exceptions = Object.entries(terms.approval_governance.recency.exceptions)
+    .map(([cls, e]) => `${cls} (at most ${e?.max_age_s} seconds after this approval)`)
+    .join(", ");
+  return [
+    `Standing payment: ${terms.operation} at ${terms.resource}, at most ${terms.max_amount.amount} ${terms.max_amount.currency} per payment, only to these committed destinations: ${destinations}. A changed payee account is not approved.`,
+    `Budget ${terms.budget.owner}/${terms.budget.id}: at most ${terms.budget.limit} ${terms.budget.currency} in total across every dispatched instance and its successors, retries and replacement credentials included; each instance's own max_budget is at most ${terms.budget.per_instance_max} ${terms.budget.currency}.`,
+    `Up to ${body.max_active} instances may each draw up to ${terms.budget.per_instance_max} ${terms.budget.currency} at once, at most ${body.rate_per_min} dispatches per minute, always within the shared ${terms.budget.limit} ${terms.budget.currency} budget.`,
+    `Approval Governance exceptions committed by this consent: ${exceptions || "none"}; recency ceiling ${terms.approval_governance.recency.ceilings.default} seconds, clock-skew allowance ${terms.approval_governance.recency.clock_skew_s} seconds.`,
+    actionApprovalLine(terms, body, actionApproval),
+    "No instance creates a Child Mission, delegates, or is continued across an organization or a domain. Raising any limit needs a new template version and a fresh consent.",
+  ];
+}
+
+/**
+ * @spec mission-template#prohibited-classes, runtime#action-approval (#813):
+ * whether each payment requires an action-bound approval, and from whom. It
+ * is required where the deployment's action-approval predicate names the
+ * designated operation, or where a Template Ceiling entry naming it carries
+ * the `requires_action_approval` Common Constraint (every instance entry
+ * then carries it too); the approver is the one the predicate declares.
+ */
+export function actionApprovalLine(
+  terms: StandingPaymentTerms,
+  body: TemplateProposalBody,
+  actionApproval?: ActionApprovalPolicy,
+): string {
+  const byPredicate = actionApproval?.actions.includes(terms.operation) === true;
+  const byConstraint = body.ceiling.some(
+    (e) => e.actions.includes(terms.operation) && e.constraints?.requires_action_approval === true,
+  );
+  if (!byPredicate && !byConstraint) {
+    return "Action-bound approval for each payment: none. Each payment executes under this standing consent and a fresh runtime decision, with no per-payment human approval.";
+  }
+  const why = [
+    ...(byPredicate ? [`the deployment's action-approval predicate names ${terms.operation}`] : []),
+    ...(byConstraint ? ["the Template Ceiling sets requires_action_approval"] : []),
+  ].join("; ");
+  const from = actionApproval?.approver ?? "an Approver the deployment does not name";
+  return `Action-bound approval for each payment: required, from ${from}, bound to that payment's exact parameters (${why}).`;
+}
+
+/**
+ * @spec mission#approval-context-changes, mission-template#template-consent
+ * (#1446, D583, D718; #813): the context a template consent rendering showed,
+ * committed so a decision approves exactly what was rendered.
+ */
+export interface TemplateConsentContext {
+  proposal_id: string;
+  body: TemplateProposalBody;
+  dispatch_policy: ActivationPolicyRef;
+  disclosure: TemplateConsentDisclosure;
+}
+
+/** The rendering's context and commitment, or undefined when the disclosure cannot be rendered. */
+export function templateConsentRendering(
+  proposal: TemplateProposal,
+  rendered: { disclosure: TemplateConsentDisclosure } | { refusal: string },
+): { context: TemplateConsentContext; commitment: string } | undefined {
+  if ("refusal" in rendered) return undefined;
+  const context: TemplateConsentContext = {
+    proposal_id: proposal.id,
+    body: proposal.body,
+    dispatch_policy: proposal.dispatch_policy,
+    disclosure: rendered.disclosure,
+  };
+  return { context, commitment: contentDigest(context) };
 }
 
 function escapeHtml(s: string): string {
@@ -176,7 +301,7 @@ function renderLines(lines: readonly string[], cls: string): string {
 export function renderTemplateConsentPage(
   proposal: TemplateProposal,
   rendered: { disclosure: TemplateConsentDisclosure } | { refusal: string },
-  opts: { loginHref?: string; csrf?: string },
+  opts: { loginHref?: string; csrf?: string; revision?: string },
 ): string {
   const id = encodeURIComponent(proposal.id);
   const head = `<!doctype html><title>Template consent</title>
@@ -196,7 +321,7 @@ export function renderTemplateConsentPage(
   const decision = opts.csrf
     ? `<form method="post" action="/templates/proposals/${id}/decide">
 <input type="hidden" name="csrf_token" value="${escapeHtml(opts.csrf)}">
-<button name="decision" value="approve">Approve</button>
+${opts.revision ? `<input type="hidden" name="render_revision" value="${escapeHtml(opts.revision)}">\n` : ""}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`
     : opts.loginHref
       ? `<p class="sign-in"><a href="${escapeHtml(opts.loginHref)}">Sign in to decide</a></p>`
@@ -207,5 +332,5 @@ export function renderTemplateConsentPage(
   )}</pre>
 <h2>Dispatch bounds</h2>${renderLines(disclosure.bounds, "dispatch-bounds")}
 <h2>Terms</h2>${renderLines(disclosure.terms, "template-terms")}
-${decision}`;
+${disclosure.standing_payment ? `<h2>Standing payment</h2>${renderLines(disclosure.standing_payment, "standing-payment")}\n` : ""}${decision}`;
 }

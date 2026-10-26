@@ -98,6 +98,7 @@ import {
 } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
+import { StandingPaymentLineageError, standingPaymentRootOf } from "../kernel/standing-payment.js";
 import {
   adjudicateDrawdown,
   createCeilingDrawdownInCallerTx,
@@ -474,6 +475,10 @@ export async function handleTokenExchangeGrant(
         verifyDpop: (proofJws) => verifyTokenEndpointDpop(opts, proofJws),
         now: () => opts.kernel.nowDate(),
         ...(opts.scopeProjection ? { scopeProjection: opts.scopeProjection } : {}),
+        standingPaymentLineage: (missionId, issuer) => {
+          const mission = issuer === opts.issuer ? opts.kernel.get(missionId) : undefined;
+          return mission !== undefined && standingPaymentRootOf(opts.kernel, mission) !== undefined;
+        },
       },
       ctx,
     );
@@ -943,6 +948,12 @@ export async function handleTokenExchangeGrant(
   } catch (e) {
     if (e instanceof ContinuationRefusal) {
       txError(ctx, 400, e.code, e.message);
+      return;
+    }
+    // @spec mission-template#prohibited-classes (#813, ruling 3): a
+    // standing-payment lineage is not continued across a domain.
+    if (e instanceof StandingPaymentLineageError) {
+      txError(ctx, 400, "invalid_grant", e.message);
       return;
     }
     // The requested authorization_details no longer fit (a state change since
@@ -2746,7 +2757,14 @@ export async function handleExpansionExchange(
   }
   let submission: MissionIntentSubmission;
   try {
-    submission = opts.kernel.validateSubmission(missionIntentRaw);
+    // @spec metering#bounds (#813, ruling 2): the successor of a
+    // standing-payment instance keeps its `max_budget`, so this intake admits
+    // the member exactly there.
+    submission = opts.kernel.validateSubmission(
+      missionIntentRaw,
+      undefined,
+      standingPaymentRootOf(opts.kernel, resolved.record) ? { admitMaxBudget: true } : {},
+    );
   } catch (e) {
     if (e instanceof IntentError) throw intentErrorToOidc(e);
     throw new errors.InvalidRequest(e instanceof Error ? e.message : "invalid mission_intent");

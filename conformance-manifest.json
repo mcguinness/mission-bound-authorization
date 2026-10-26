@@ -37096,9 +37096,16 @@
     "normative": "an Intent carrying max_budget is refused at intake by a Mission Issuer whose deployment does not meter it (no budget metering declared, or a currency other than the declared one), and no Mission is created"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Unconditional: the duty binds exactly where metering.exact-budget is not claimed (the reference today), and where it is claimed it binds a max_budget the declaration does not cover. Todo: the closed Intent top level refuses max_budget structurally today, but no test submits one (kernel.test.ts's closed-top-level test uses authority_hash)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment dispatch grant (@spec template#grant-type, #813) > refuses the payment dispatch_prohibited_class at the token endpoint with the capability off, and max_budget as an unknown member (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#816, D830. Unconditional: the duty binds exactly where metering.exact-budget is not claimed (the reference today), and where it is claimed it binds a max_budget the declaration does not cover. Slice 3a (impl/813-standing-payment-admission at a7063aab): with the standing-payment capability off, a dispatch Intent carrying max_budget is refused 400 at /token with 'unknown top-level member: max_budget'. Mutations: capability always on, or removed from the opt-in list, fail the test (the report does not show which assertion). Partial: the row's surface is PAR and no PAR test submits max_budget; no assertion that no Mission is created. With the capability on the AS admits max_budget while nothing meters it (3b), so the capability stays unclaimed until 3b."
   },
   {
    "id": "metering.metering.intent-bound-metered",
@@ -37494,9 +37501,16 @@
     "normative": "a Child Mission creation request under a Mission carrying max_budget is refused and creates nothing, since the deployment neither charges ancestors nor escrows"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Live, not deferred: D830 ruling 3 refuses children until their accounting is supported, so this refusal is the required behavior. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment lineage (@spec mission-template#instance-composition, #813 ruling 3) > refuses a Child Mission of a standing-payment instance delegation_not_permitted (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#816, D830. Live, not deferred: D830 ruling 3 refuses children until their accounting is supported, so this refusal is the required behavior. The reference meters no max_budget yet; the capability stays disabled and unclaimed. Slice 3a (impl/813-standing-payment-admission at a7063aab): in the reference only a standing-payment lineage carries max_budget, and a Child Mission under its instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Partial: only the dispatched instance is exercised, not an expansion successor carrying max_budget; no assertion that nothing is created; no endpoint witness."
   },
   {
    "id": "metering.capacity-across-missions.child-charged-to-ancestors",
@@ -37706,9 +37720,16 @@
     "normative": "a Child Mission creation request under an instance a standing-consent budget meters is refused and creates nothing, since no child is charged to that budget's counter"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment lineage (@spec mission-template#instance-composition, #813 ruling 3) > refuses a Child Mission of a standing-payment instance delegation_not_permitted (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. The reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): shares the witness of template.instance-composition.child-refused: a Child Mission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Partial: no assertion that nothing is created; no endpoint witness."
   },
   {
    "id": "metering.aggregate-bounds.refusal-names-counter",
@@ -50141,9 +50162,51 @@
      "name": "AAM Nightly Reconciliation, realized on Missions > step 2 (machine-speed dispatch): only the low-consequence read intent is admitted; remittance and over-ceiling are both refused",
      "level": "cross-component",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses remittance in a standing-payment ceiling dispatch_prohibited_class (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when the published mapping also classifies it as privileged administration (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when the published mapping also classifies it as an external commitment (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when it satisfies the external-communication predicate (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment on a cross-domain resource (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment prohibited classes at the token endpoint (@spec template#prohibited-classes, #813) > refuses dispatch_prohibited_class at the token endpoint a standing-payment dispatch whose authority includes another prohibited class, remittance (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment prohibited classes at the token endpoint (@spec template#prohibited-classes, #813) > refuses dispatch_prohibited_class at the token endpoint the payment where it is also cross-domain authority, waiving no predicate but irreversible_action (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. partial: the kernel unit test and the /token test witness the irreversible class (payments:payment.execute, within both ceilings, refused dispatch_prohibited_class), and the AAM e2e step 2 (live OpenFGA only) witnesses the external-commitment class (payments:remittance.send). Gaps: no witness asserts that the refused Dispatch commits no Mission and no dispatch row (the review_cadence and dispatcher_not_allowed witnesses do); no reference action is privileged-administration, external-communication or cross-domain; the exception branch is unimplemented, which is conformant since the exception is a MAY. Mutation proof owed before landing: remove the prohibited-class guard (step d of dispatchFromTemplate in kernel/template.ts) and confirm all three fail. Mutation (2026-10-25): with the kernel guard in dispatchFromTemplate disabled (step d), the kernel unit test and the /token test each fail; the AAM test needs live OpenFGA and was not run locally."
+   "notes": "#813, D830. partial: the kernel unit test and the /token test witness the irreversible class (payments:payment.execute, within both ceilings, refused dispatch_prohibited_class), and the AAM e2e step 2 (live OpenFGA only) witnesses the external-commitment class (payments:remittance.send). Mutation (2026-10-25): with the kernel guard in dispatchFromTemplate disabled (step d), the kernel unit test and the /token test each fail; the AAM test needs live OpenFGA and was not run locally. Slice 3a (impl/813-standing-payment-admission at a7063aab): under a designating template with the capability on, remittance (external commitment) and the payment where it is also cross-domain authority are refused dispatch_prohibited_class at /token, and the kernel refuses the payment where the mapping also classifies it privileged administration, external commitment or external communication. Mutations: the /token remittance test fails only when the predicate admission and the AGR high-risk gate are both disabled (two independent layers); the /token cross-domain test fails when the predicate admission refuses nothing, when every predicate of the payment is waived, or when the cross-domain predicate is unmapped; round-1 mutants kill the kernel tests. Still partial: the shipped configured set leaves out payments:vendor.read (external communication in config/progressive.json) and the ledger actions at the cross-domain resource, so per the builder's finding the ordinary dispatch path admits authority its own mapping prohibits (#1710); and no predicate refusal asserts that nothing is committed (deferring the admission refusal past the commit leaves the external-communication and cross-domain kernel tests passing)."
   },
   {
    "id": "template.prohibited-classes.dispatch-policy-never-dispatches",
@@ -50170,9 +50233,57 @@
      "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > dispatch_prohibited_class: within both ceilings, but a dispatch-prohibited action",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch admission (@spec mission-template#prohibited-classes, #813) > refuses the payment dispatch_prohibited_class with the capability off, exactly as without the workflow (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses remittance in a standing-payment ceiling dispatch_prohibited_class (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when the published mapping also classifies it as privileged administration (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when the published mapping also classifies it as an external commitment (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when it satisfies the external-communication predicate (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment on a cross-domain resource (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment prohibited classes at the token endpoint (@spec template#prohibited-classes, #813) > refuses dispatch_prohibited_class at the token endpoint a standing-payment dispatch whose authority includes another prohibited class, remittance (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment prohibited classes at the token endpoint (@spec template#prohibited-classes, #813) > refuses dispatch_prohibited_class at the token endpoint the payment where it is also cross-domain authority, waiving no predicate but irreversible_action (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. partial: the /token witness dispatches under a wide Dispatch Policy (wide-reconciliation, ceiling equal to the derivation-policy ceiling) and is refused. The reference keeps the prohibition in the issuer's configured set, outside the policy snapshot, so the policy's own duty is witnessed only through the issuer's refusal; no test varies the policy snapshot to show no policy content lifts it. Shares the mutation proof of template.prohibited-classes.dispatch-never-instantiates. Mutation (2026-10-25): with the kernel guard in dispatchFromTemplate disabled (step d), the kernel unit test and the /token test each fail; the AAM test needs live OpenFGA and was not run locally."
+   "notes": "#813, D830. partial: the /token witness dispatches under a wide Dispatch Policy (wide-reconciliation, ceiling equal to the derivation-policy ceiling) and is refused. The reference keeps the prohibition in the issuer's configured set, outside the policy snapshot, so the policy's own duty is witnessed through the issuer's refusal. Shares the mutation proof of template.prohibited-classes.dispatch-never-instantiates. Mutation (2026-10-25): with the kernel guard in dispatchFromTemplate disabled (step d), the kernel unit test and the /token test each fail; the AAM test needs live OpenFGA and was not run locally. Slice 3a (impl/813-standing-payment-admission at a7063aab): the policy snapshot varies. A Dispatch Policy designating the standing payment does not lift the prohibition with the capability off (kernel), and with it on it still leaves remittance and every other prohibited predicate of the payment refused dispatch_prohibited_class (kernel and /token). Mutations: removing the capability-off configured refusal fails the kernel capability-off test; the /token and kernel predicate tests are killed as recorded on template.prohibited-classes.dispatch-never-instantiates. Still partial: the shipped configured set leaves out the external-communication and cross-domain actions of the published mapping, so a Dispatch bearing them is admitted under any policy (#1710)."
   },
   {
    "id": "template.prohibited-classes.configured-set-covers-mapping",
@@ -50192,9 +50303,40 @@
     "normative": "every action the published classification maps to the irreversible, external-commitment or privileged-administration class, to the external-communication predicate, or to cross-domain authority appears in the configured dispatch-prohibited action set"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no test compares the configured set with the published mapping. The shipped config is narrower than its mapping: src/config/policy.json dispatch_prohibited_actions lists payments:payment.execute and payments:remittance.send, but approval-floor.json's classification and enforcement-scope.json's execution capabilities and resource contract both classify payments:payment.reverse as irreversible_action. The shipped derivation-policy ceiling does not grant payment.reverse, so no Dispatch can confer it today, but the MUST is on the mapping, not on reachability."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set covers every action the published classification classifies as irreversible, external-commitment or privileged-administration (@spec template#prohibited-classes)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set includes payments:payment.reverse, which the published classification classifies as irreversible (@spec template#prohibited-classes)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > names every classified action a configured set leaves out, with the predicates it satisfies (@spec template#prohibited-classes)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > names an external-communication action and a cross-domain action a configured set leaves out (@spec template#prohibited-classes)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > refuses a configured set that leaves out an action the published classification classifies as irreversible, naming it (@spec template#prohibited-classes)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#813, D830. approval-floor.json's classification and enforcement-scope.json's execution capabilities and resource contract classify payments:payment.reverse as irreversible_action; the MUST is on the mapping, not on reachability. Slice 3a (impl/813-standing-payment-admission at a7063aab): config/policy.json adds payments:payment.reverse to dispatch_prohibited_actions, and dispatchProhibitedCoverageGaps / assertDispatchProhibitedCoverage check all five predicates. A unit check holds the shipped set to the three class predicates. Mutations: dropping payment.reverse from policy.json fails the first, second, fourth and fifth coverage tests; a gap check that skips every action fails the third, fourth and fifth. Partial: the external-communication and cross-domain clauses are not asserted for the shipped set, and per the builder's finding they fail today (payments:vendor.read, ledger:vendor.read, ledger:journal.write); #1710 owns them. The check runs as a unit test, not a startup refusal."
   },
   {
    "id": "template.prohibited-classes.checked-after-intersection",
@@ -50236,9 +50378,52 @@
     "normative": "under a template that admits the exception, a Dispatch whose surviving set grants external-commitment, privileged-administration or cross-domain authority, or authority satisfying the external-communication predicate, is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses remittance in a standing-payment ceiling dispatch_prohibited_class (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when the published mapping also classifies it as privileged administration (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when the published mapping also classifies it as an external commitment (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when it satisfies the external-communication predicate (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment on a cross-domain resource (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment prohibited classes at the token endpoint (@spec template#prohibited-classes, #813) > refuses dispatch_prohibited_class at the token endpoint a standing-payment dispatch whose authority includes another prohibited class, remittance (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment prohibited classes at the token endpoint (@spec template#prohibited-classes, #813) > refuses dispatch_prohibited_class at the token endpoint the payment where it is also cross-domain authority, waiving no predicate but irreversible_action (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): witnessed per excluded class under a designating template. External commitment: remittance refused dispatch_prohibited_class at /token and in the kernel, and the payment refused where the mapping also classifies it external commitment. Cross-domain: the payment refused at /token on an AS whose resourceToAs places the payments resource at another AS, and in the kernel. Privileged administration and external communication: the payment refused in the kernel where a mapping so classifies it (no shipped action is privileged administration). Mutations: /token remittance fails only with the predicate admission and the AGR high-risk gate both disabled; /token cross-domain fails with the predicate admission refusing nothing, every predicate waived, or the cross-domain predicate unmapped; kernel remittance fails with the configured-set refusal removed; the four kernel predicate tests fail with every predicate of the payment waived."
   },
   {
    "id": "template.standing-payment.no-other-predicate-waived",
@@ -50258,9 +50443,40 @@
     "normative": "a designated operation that also satisfies a prohibited predicate besides the irreversible class is never admitted: its Dispatch is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when the published mapping also classifies it as privileged administration (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when the published mapping also classifies it as an external commitment (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment when it satisfies the external-communication predicate (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses the payment on a cross-domain resource (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment prohibited classes at the token endpoint (@spec template#prohibited-classes, #813) > refuses dispatch_prohibited_class at the token endpoint the payment where it is also cross-domain authority, waiving no predicate but irreversible_action (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): the payment is refused dispatch_prohibited_class wherever it satisfies another prohibited predicate: at /token where it is also cross-domain authority, and in the kernel where the mapping also classifies it privileged administration or external commitment or it satisfies the external-communication or cross-domain predicate. Mutations: waiving every predicate of the payment, not only irreversible_action, fails the /token test and all four kernel tests; the /token test also fails with the predicate admission refusing nothing or the cross-domain predicate unmapped."
   },
   {
    "id": "template.standing-payment.mapping-designates-operation",
@@ -50280,9 +50496,16 @@
     "normative": "the deployment's published mapping classifies the designated operation as irreversible and as no other prohibited class"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The designation itself moved to the Dispatch Policy (template.standing-payment.only-designated-operation-admitted)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment startup checks (@spec template#prohibited-classes, #813) > refuses startup when a Dispatch Policy designates an operation at a resource the published mapping does not cover (#813)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The designation itself moved to the Dispatch Policy (template.standing-payment.only-designated-operation-admitted). Slice 3a (impl/813-standing-payment-admission at a7063aab): startup refuses a Dispatch Policy designating the payment at a resource the published mapping does not cover (StandingPaymentConfigError). Mutation: admitting an uncovered operation at startup fails it. Partial: no test asserts the shipped mapping classifies payments:payment.execute as irreversible and as no other prohibited class; the startup branch refusing a covered operation not classified irreversible is unwitnessed; a mapping adding another prohibited class is caught at dispatch (template.standing-payment.no-other-predicate-waived)."
   },
   {
    "id": "template.standing-payment.only-designated-operation-admitted",
@@ -50302,9 +50525,22 @@
     "normative": "under a template that admits the exception, only the operation its committed Dispatch Policy names is admitted; a Dispatch whose surviving set grants any other prohibited-class action, for example another irreversible action such as a payment reversal, is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "prohibited predicates the standing payment never waives (@spec mission-template#prohibited-classes, #813) > refuses remittance in a standing-payment ceiling dispatch_prohibited_class (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment prohibited classes at the token endpoint (@spec template#prohibited-classes, #813) > refuses dispatch_prohibited_class at the token endpoint a standing-payment dispatch whose authority includes another prohibited class, remittance (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): a designating template whose ceiling also grants payments:remittance.send is refused dispatch_prohibited_class (kernel, naming remittance as a dispatch-prohibited action no standing payment waives, and /token). Mutations: removing the configured-set refusal fails the kernel test; disabling both the predicate admission and the AGR high-risk gate fails the /token test. Partial: no test puts another irreversible action (payments:payment.reverse, now in the configured set) in a designating ceiling and shows it refused."
   },
   {
    "id": "template.standing-payment.designated-operation-stays-prohibited",
@@ -50324,9 +50560,112 @@
     "normative": "the configured dispatch-prohibited set still lists the designated operation, so a Dispatch granting it from a template that does not admit the exception, or that fails any condition of the section, is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The existing dispatch_prohibited_class witnesses cover the template that does not admit the exception."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment dispatch grant (@spec template#grant-type, #813) > refuses the payment dispatch_prohibited_class at the token endpoint with the capability off, and max_budget as an unknown member (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment dispatch grant (@spec template#grant-type, #813) > refuses a standing-payment dispatch whose Intent carries no max_budget at the token endpoint (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch admission (@spec mission-template#prohibited-classes, #813) > refuses the payment dispatch_prohibited_class with the capability off, exactly as without the workflow (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment consent (@spec mission-template#template-consent, #813) > refuses a dispatch from a standing-payment template that retains no human consent, even one created before the capability (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment instance max_budget (@spec metering#bounds, #813 ruling 2) > refuses dispatch_prohibited_class an instance whose max_budget is above the policy's per_instance_max (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment instance max_budget (@spec metering#bounds, #813 ruling 2) > refuses dispatch_prohibited_class an instance whose Intent carries no max_budget (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment instance max_budget (@spec metering#bounds, #813 ruling 2) > refuses an instance whose max_budget is in a currency other than the budget's (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch admission (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class when the committed policy has no class-named exception for the consumption bound, committing nothing (@spec approval-governance#recency-high-risk, #813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch admission (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class when the committed policy has no class-named exception for the irreversible action (@spec approval-governance#recency-high-risk, #813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment recency boundary (@spec approval-governance#recency-evaluation, #1546, #813) > refuses dispatch_prohibited_class a dispatch one second past the class-named exception's maximum age, committing nothing (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch when the stored Template Ceiling has lost its per-payment max_amount, committing no instance (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch when the stored Template Ceiling bounds the payment in a currency other than the budget's, committing no instance (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch when the stored Template Ceiling names a vendor the policy commits no destination for, committing no instance (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch a template whose committed Dispatch Policy commits no destination, created before the capability (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch a template whose stored approver of record is its Dispatcher (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch a template whose stored approver of record is the instance's Agent, committing no instance (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set covers every action the published classification classifies as irreversible, external-commitment or privileged-administration (@spec template#prohibited-classes)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The existing dispatch_prohibited_class witnesses cover the template that does not admit the exception. Slice 3a (impl/813-standing-payment-admission at a7063aab): with the capability off the payment is refused dispatch_prohibited_class with the configured-set message (kernel and /token); the coverage check holds payments:payment.execute in the shipped configured set. With the capability on each failed condition refuses dispatch_prohibited_class at dispatch: no human consent retained; a stored ceiling without a per-payment max_amount, bounding in another currency, or naming a vendor without a committed destination; a policy committing no destination; a stored approver who is the Dispatcher or the Agent; max_budget absent, above per_instance_max or in another currency; a missing class-named exception; recency past the exception's maximum. Mutations: capability-off configured refusal removed (kernel); capability always on or removed from the opt-in list (/token); stored ceiling not re-checked; Dispatcher or Agent not re-checked; unusable terms read as an ordinary template; admission refusal deferred past the commit; max_budget presence, per_instance_max and currency checks; dispatch-time consent check; round-1 gate and recency mutants. Partial: a budget-member defect is refused at consent, not at Dispatch, and the Exact-profile condition is not implemented (3b)."
   },
   {
    "id": "template.standing-payment.per-payment-max-amount",
@@ -50346,9 +50685,22 @@
     "normative": "the designated operation is admitted only from a Template Ceiling entry carrying a per-payment max_amount; a Dispatch drawing it from an entry without one is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Narrowed: the single-resource clause was dropped, vendors moved to the committed destinations, and the currency to template.standing-payment.one-currency."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment ceiling defects (@spec mission-template#prohibited-classes, #813) > refuses a ceiling that bounds the payment with no per-payment max_amount (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch when the stored Template Ceiling has lost its per-payment max_amount, committing no instance (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Narrowed: the single-resource clause was dropped, vendors moved to the committed destinations, and the currency to template.standing-payment.one-currency. Slice 3a (impl/813-standing-payment-admission at a7063aab): a payment entry without a per-payment max_amount is refused at consent, and a stored ceiling that has lost it is refused dispatch_prohibited_class at dispatch, committing no instance. Mutations: accepting a missing per-payment bound fails both; skipping the stored-ceiling re-check fails the dispatch test; deferring the admission refusal past the commit fails its count assertion. Partial on level only: kernel witnesses, no /token witness at the row's endpoint level."
   },
   {
    "id": "template.standing-payment.committed-destinations",
@@ -50368,9 +50720,34 @@
     "normative": "the designated operation is admitted only where the committed Dispatch Policy snapshot commits the approved vendors, each with its approved payee account; a snapshot without them refuses the Dispatch with dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment ceiling defects (@spec mission-template#prohibited-classes, #813) > refuses a Dispatch Policy that commits no destination (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment ceiling defects (@spec mission-template#prohibited-classes, #813) > refuses a ceiling vendor the Dispatch Policy commits no destination for (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch a template whose committed Dispatch Policy commits no destination, created before the capability (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch when the stored Template Ceiling names a vendor the policy commits no destination for, committing no instance (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): a Dispatch Policy committing no destination is refused at consent and, for a template created before the capability, dispatch_prohibited_class at dispatch; a ceiling vendor with no committed destination is refused at consent and, from a stored ceiling, at dispatch, committing no instance. Mutations: accepting empty destinations fails the consent and dispatch no-destination tests; accepting an uncommitted vendor fails both vendor tests; reading unusable terms as an ordinary template fails the dispatch no-destination test; skipping the stored-ceiling re-check fails the dispatch vendor test. Partial: kernel only (no /token witness at the row's level), and a destination naming an empty payee account is unwitnessed."
   },
   {
    "id": "template.standing-payment.policy-commits-budget",
@@ -50390,9 +50767,40 @@
     "normative": "the designated operation is admitted only where the committed Dispatch Policy snapshot carries a budget with its owner, an owner-qualified identifier, a limit and a per-instance maximum; a snapshot missing any of them refuses the Dispatch with dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment budget commitment (@spec mission-template#prohibited-classes, #813 ruling 1) > refuses a Dispatch Policy whose budget omits owner (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment budget commitment (@spec mission-template#prohibited-classes, #813 ruling 1) > refuses a Dispatch Policy whose budget omits id (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment budget commitment (@spec mission-template#prohibited-classes, #813 ruling 1) > refuses a Dispatch Policy whose budget omits currency (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment budget commitment (@spec mission-template#prohibited-classes, #813 ruling 1) > refuses a Dispatch Policy whose budget omits limit (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment budget commitment (@spec mission-template#prohibited-classes, #813 ruling 1) > refuses a Dispatch Policy whose budget omits per_instance_max (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): a designating Dispatch Policy whose budget omits owner, id, currency, limit or per_instance_max is refused at consent with the terms parser's exact message. Mutation: not requiring the budget member set fails all five. Partial: the observation's Dispatch-time refusal dispatch_prohibited_class for a budget defect is unasserted (the same parse path at dispatch is witnessed only for missing destinations, on template.standing-payment.committed-destinations), and there is no /token witness."
   },
   {
    "id": "template.standing-payment.instance-max-budget-within-maximum",
@@ -50415,9 +50823,28 @@
     "normative": "a Dispatch under the exception whose instance Mission Intent omits max_budget, or carries one larger than the Dispatch Policy's per-instance maximum, is refused dispatch_prohibited_class and commits no instance"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Quote unchanged at 9f8e8aca; the currency clause moved to template.standing-payment.one-currency."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment instance max_budget (@spec metering#bounds, #813 ruling 2) > refuses dispatch_prohibited_class an instance whose max_budget is above the policy's per_instance_max (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment instance max_budget (@spec metering#bounds, #813 ruling 2) > refuses dispatch_prohibited_class an instance whose Intent carries no max_budget (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment dispatch grant (@spec template#grant-type, #813) > refuses a standing-payment dispatch whose Intent carries no max_budget at the token endpoint (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Quote unchanged at 9f8e8aca; the currency clause moved to template.standing-payment.one-currency. Slice 3a (impl/813-standing-payment-admission at a7063aab): an instance Intent with no max_budget (kernel and /token), or one above the policy's per_instance_max, is refused dispatch_prohibited_class. Mutations: per_instance_max off by one fails the above-maximum test; not requiring max_budget fails both no-max_budget tests. Partial: no witness asserts the refusal commits no instance."
   },
   {
    "id": "template.standing-payment.exact-profile-required",
@@ -50442,7 +50869,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The declaration itself is metering.aggregate-bounds.statement-declares-budget and metering.topology.profile-named-per-counter."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The declaration itself is metering.aggregate-bounds.statement-declares-budget and metering.topology.profile-named-per-counter. Todo after slice 3a (a7063aab): the AS reads no Enforcement Scope Statement budget declaration under the Exact profile (slice 3b)."
   },
   {
    "id": "template.standing-payment.both-bounds-enforced",
@@ -50511,9 +50938,28 @@
     "local": "the reference-local key consumption_bound names the consumption-bound class (D830 ruling 9); Approval Governance is unchanged"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Gated with core.governance-record: the condition binds where the deployment records an Approval Governance Record."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch admission (@spec mission-template#prohibited-classes, #813) > commits the instance's Approval Governance Record under the template recording rule, and a re-check replays it from retained state (@spec approval-governance#re-check, #813)",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch admission (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class when the committed policy has no class-named exception for the consumption bound, committing nothing (@spec approval-governance#recency-high-risk, #813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch admission (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class when the committed policy has no class-named exception for the irreversible action (@spec approval-governance#recency-high-risk, #813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Gated with core.governance-record: the condition binds where the deployment records an Approval Governance Record. Slice 3a (impl/813-standing-payment-admission at a7063aab): the committed record's rule snapshot carries both class-named exceptions and its re-check replays, and a policy missing the consumption_bound or the irreversible_action exception is refused dispatch_prohibited_class, committing no instance and no dispatch row. Mutations: a re-check refusing a true consent commitment fails the record test; accounting written before the transaction, and gate refusal deferred past commit, fail both missing-exception tests on their zero-count assertions. Partial: kernel only (no /token witness at the row's level), and no recorded mutant drops the class-named-exception requirement in the kernel (the AGR-gate mutant ran only against the endpoint file)."
   },
   {
    "id": "template.standing-payment.approval-authentication-floor",
@@ -50533,9 +50979,34 @@
     "normative": "the designated operation is admitted only where the retained template consent records a human Approver authenticated at the published approval-authentication floor for the irreversible class; a template consented below it refuses the Dispatch with dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment consent (@spec mission-template#template-consent, #813) > refuses a dispatch from a standing-payment template that retains no human consent, even one created before the capability (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment consent (@spec mission-template#template-consent, #813) > refuses a standing-payment template whose consent is not an interactive login, so no agent-held key or assertion consents (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment template consent on the approval surface (@spec template#template-consent, #813) > refuses the service-token template route a template designating the standing payment, creating none (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment startup checks (@spec template#prohibited-classes, #813) > refuses startup when the boot seed's Dispatch Policy designates the standing payment (#813)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): a dispatch from a template retaining no human floor consent is refused dispatch_prohibited_class; a consent that is not an interactive login or meets no floor is refused at consent; the service-token route and the boot seed cannot create a designating template. Mutations: dispatch-time consent check removed; human-at-floor check removed; template stored before the consent rule fails the service-token test; boot seed rule not applied fails the startup test. Partial: no /token witness, and the dispatch-time witness uses a template with no provenance, not one consented below the floor."
   },
   {
    "id": "template.standing-payment.approver-not-dispatcher-or-agent",
@@ -50555,9 +51026,34 @@
     "normative": "a template whose consenting principal is one of its allowed Dispatchers or the instance's selected Agent does not admit the exception: the Dispatch is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The key-or-assertion clause was dropped."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment consent (@spec mission-template#template-consent, #813) > refuses a standing-payment template consented by its own Agent, so an agent never approves itself (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment consent (@spec mission-template#template-consent, #813) > refuses a standing-payment template consented by its Dispatcher (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch a template whose stored approver of record is its Dispatcher (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch a template whose stored approver of record is the instance's Agent, committing no instance (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The key-or-assertion clause was dropped. Slice 3a (impl/813-standing-payment-admission at a7063aab): consent by the template's own Agent or its Dispatcher is refused at consent, and a stored approver of record who is the Dispatcher or the Agent is refused dispatch_prohibited_class at dispatch (the Agent case asserting no instance committed). Mutations: removing the Dispatcher/Agent/client check fails both consent tests; not re-checking at dispatch fails both dispatch tests (the Dispatcher case then fails on the AGR commit gate's own refusal, a second layer); deferring the admission refusal past the commit fails both. Partial on level only: kernel witnesses, no /token witness at the row's endpoint level."
   },
   {
    "id": "template.standing-payment.fresh-runtime-decision",
@@ -50579,7 +51075,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Todo after slice 3a (a7063aab): needs the PDP standing-payment decision (slice 3b)."
   },
   {
    "id": "template.standing-payment.payee-compared-with-destination",
@@ -50601,7 +51097,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The out-of-band escalation to a freshly approved Mission is not observable at this surface. D830 ruling 4."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The out-of-band escalation to a freshly approved Mission is not observable at this surface. D830 ruling 4. Todo after slice 3a (a7063aab): needs the PDP destination comparison (slice 3b)."
   },
   {
    "id": "template.standing-payment.payee-bound-by-reverification",
@@ -50623,7 +51119,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 4."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 4. Todo after slice 3a (a7063aab): needs PEP execution reverification of the payee (slice 3b or later)."
   },
   {
    "id": "template.standing-payment.raise-needs-new-version",
@@ -50643,9 +51139,22 @@
     "normative": "a changed destination set or a raised budget or per-payment max_amount takes effect only under a new template_version a human approved; a Dispatch evaluated against a Dispatch Policy changed in place is refused dispatch_policy_changed"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch admission (@spec mission-template#prohibited-classes, #813) > refuses dispatch_policy_changed when the committed Dispatch Policy was superseded by a new version (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment budget identity (@spec mission-template#prohibited-classes, #813 ruling 1) > admits a policy successor that keeps the budget identity, and the pinned identity is unchanged (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): a dispatch whose committed Dispatch Policy was superseded is refused dispatch_policy_changed, and a raised budget limit is accepted only through a new template_version a human consents to. Mutations: reading the Dispatch Policy unverified fails the supersession test; refusing every successor of a pinned budget fails the raise test. Partial: no test changes destinations, the budget or the per-payment bound in place and dispatches (the supersession test changes only the version); no /token witness."
   },
   {
    "id": "template.standing-payment.raise-disclosure-renders-exposure",
@@ -50670,7 +51179,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST. The no-release clause that follows is homed by metering.aggregate-bounds.fresh-consent-no-release."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST. The no-release clause that follows is homed by metering.aggregate-bounds.fresh-consent-no-release. Todo after slice 3a (a7063aab): the approval of a raise cannot render consumption to date or reservations until the shared counter exists (slice 3b)."
   },
   {
    "id": "template.standing-payment.consent-disclosure",
@@ -50690,9 +51199,52 @@
     "normative": "the consent page of a template admitting the exception renders, beside the template-consent minimum, the designated operation, each approved vendor's committed destination, the per-payment max_amount, the budget with its per-instance maximum, and whether each payment requires an action-bound approval and from whom"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Also homes Metering's statement that a standing-consent budget's consent renders it beside the per-instance bound (capacity-across-missions)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > renders the designated operation on the standing-payment consent page (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > renders the committed destinations on the standing-payment consent page (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > renders the per-payment bound on the standing-payment consent page (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > renders the budget with its per-instance maximum on the standing-payment consent page (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > renders that no payment requires an action-bound approval where neither the action-approval predicate nor the ceiling requires one (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > renders that each payment requires an action-bound approval, and from whom, where the Template Ceiling sets requires_action_approval (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > renders that each payment requires an action-bound approval, and from whom, where the deployment's action-approval predicate names the payment (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Also homes Metering's statement that a standing-consent budget's consent renders it beside the per-instance bound (capacity-across-missions). Slice 3a (impl/813-standing-payment-admission at a7063aab): the consent page renders the designated operation and resource, each committed destination with its payee account, the per-payment bound, the budget with its limit and per-instance maximum, and the action-bound approval line in all three cases: none under the shipped predicate; required, from an Approver on the Access Request Service's approval surface, where the ceiling sets requires_action_approval; required, from the predicate's declared approver, where the deployment's action-approval predicate (ACTION_APPROVAL_POLICY) names the payment. Mutations: dropping the operation, destinations, per-payment bound, per-instance maximum or action-approval line each fails its test; ignoring the predicate or the ceiling constraint fails its case. Partial: the template-consent minimum is not asserted on the capability-on page, where its high-consequence statement becomes the standing-payment statement."
   },
   {
    "id": "template.standing-payment.one-currency",
@@ -50715,9 +51267,28 @@
     "normative": "a Dispatch under the exception is admitted only where the ceiling entry's per-payment max_amount, the Dispatch Policy's budget, and the instance's max_budget name one currency, compared exactly; any mismatch refuses the Dispatch with dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. New at 9f8e8aca."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment instance max_budget (@spec metering#bounds, #813 ruling 2) > refuses an instance whose max_budget is in a currency other than the budget's (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment ceiling defects (@spec mission-template#prohibited-classes, #813) > refuses a ceiling whose per-payment bound is in a currency other than USD (#813)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment dispatch-time re-checks (@spec mission-template#prohibited-classes, #813) > refuses dispatch_prohibited_class at dispatch when the stored Template Ceiling bounds the payment in a currency other than the budget's, committing no instance (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): an instance max_budget in EUR against a USD budget is refused dispatch_prohibited_class; a ceiling bounding the payment in EUR is refused at consent and, from a stored ceiling under an EUR derivation policy, at dispatch, committing no instance. Mutations: not checking the max_budget currency fails the first; not checking the ceiling currency fails the consent and dispatch tests; skipping the stored-ceiling re-check fails the dispatch test. Partial: a budget in another currency (refused by the terms parser) is unwitnessed, and there is no /token witness."
   },
   {
    "id": "template.standing-payment.conveys-policy-view",
@@ -50740,7 +51311,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. New at 9f8e8aca."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Todo after slice 3a (a7063aab): the policy view's budget binding is slice 3b."
   },
   {
    "id": "template.standing-payment.failed-remains-charged",
@@ -50798,9 +51369,16 @@
     "normative": "a Child Mission creation request under an instance holding authority admitted under the Standing Payment Exception is refused and creates nothing, since no child is charged to the budget's counters"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST in Metering's form (refused unless charged). Live: D830 ruling 3 refuses children; the charged-child alternative is deferred. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment lineage (@spec mission-template#instance-composition, #813 ruling 3) > refuses a Child Mission of a standing-payment instance delegation_not_permitted (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST in Metering's form (refused unless charged). Live: D830 ruling 3 refuses children; the charged-child alternative is deferred. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused. Slice 3a (impl/813-standing-payment-admission at a7063aab): createChildMission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (the refusal becomes not_strict_subset, since the proposal equals the parent's authority; a strict-subset proposal would show the guard alone refuses). Partial: no witness asserts the refusal creates nothing; no endpoint witness."
   },
   {
    "id": "template.instance-composition.cross-boundary-derivation-refused",
@@ -50820,9 +51398,28 @@
     "normative": "a cross-organization or cross-domain derivation requested from such an instance is refused and issues nothing"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST. D830 ruling 3."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment derivations refused (@spec mission-template#prohibited-classes, #813 ruling 3) > refuses a cross-domain grant from a standing-payment instance (#813)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment derivations refused (@spec mission-template#prohibited-classes, #813 ruling 3) > refuses a cross-domain grant from an expansion successor of a standing-payment instance, through its lineage (#813)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment derivations refused (@spec mission-template#prohibited-classes, #813 ruling 3) > refuses a cross-organization delegation root from a standing-payment instance (#813)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST. D830 ruling 3. Slice 3a (impl/813-standing-payment-admission at a7063aab): issueCrossDomainGrant from an instance and from its expansion successor, and deriveCrossOrgRoot from an instance, throw StandingPaymentLineageError. Mutations: cross-domain guard removed fails both cross-domain tests; cross-organization root guard removed fails the root test; a lineage walk that stops at the Mission itself fails the successor test. Partial: kernel only (the continuation-grant invalid_grant mapping and the cross-organization root have no endpoint witness); no assertion that nothing is persisted; the destination-side check in handleCrossOrgChainExchange is unwitnessed (unreachable per the builder)."
   },
   {
    "id": "template.instance-composition.successor-carries-budget",
@@ -50879,7 +51476,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. Todo: no implementation yet; the capability stays disabled and unclaimed. New at 9f8e8aca. Broader than metering.capacity-across-missions.raised-bound-renders-consumption, which binds only a successor that raises a bound."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Broader than metering.capacity-across-missions.raised-bound-renders-consumption, which binds only a successor that raises a bound. Todo after slice 3a (a7063aab): the successor approval cannot render consumption to date or reservations until the shared counter exists (slice 3b)."
   },
   {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",

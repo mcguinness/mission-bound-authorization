@@ -55,6 +55,7 @@ import {
   type RegisteredActivationPolicy,
   verifiedActivationPolicy,
 } from "./activation-policy.js";
+import { signApprovalGovernanceRecord } from "./approval-governance.js";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import { inheritCapabilitySources, resolveFreshCapabilitySources, type CapabilitySourceResolver } from "./capability-binding.js";
 import { UniqueViolationError } from "@mission/store";
@@ -69,6 +70,28 @@ import {
   standingConsentMaximumOf,
   withinStandingConsentMaximum,
 } from "./standing-consent-limit.js";
+import {
+  assertStandingPaymentCeiling,
+  assertStandingPaymentTemplateBounds,
+  isHumanFloorConsent,
+  maxBudgetRefusal,
+  type ProhibitedPredicateMapping,
+  StandingPaymentBudgetError,
+  type StandingPaymentStore,
+  type StandingPaymentTerms,
+  StandingPaymentTermsError,
+  standingPaymentPredicateRefusal,
+  standingPaymentTermsOf,
+  type TemplateConsentProvenance,
+} from "./standing-payment.js";
+import {
+  assertTemplateRecord,
+  buildTemplateRecord,
+  parseTemplateRecordingRule,
+  templateGovernanceGate,
+  templateRecordingRuleFor,
+  templateRecordingRuleRef,
+} from "./template-approval-record.js";
 import {
   type MissionTemplate,
   type TemplateCreate,
@@ -392,6 +415,14 @@ export function createTemplate(
      * association, and its instances carry no entry in any token.
      */
     entryAudiences?: (entries: readonly AuthorityEntry[]) => string[][] | undefined;
+    /**
+     * @spec mission-template#prohibited-classes (#813): present exactly where
+     * the `standing-payment-dispatch` capability is on. A template whose
+     * Dispatch Policy designates the standing payment is then created only
+     * from a human consent at the approval floor, with its ceiling and bounds
+     * meeting the workflow's conditions and its budget identity pinned.
+     */
+    standingPayment?: StandingPaymentConsentOptions;
   },
 ): MissionTemplate {
   assertTemplateBody(input);
@@ -418,6 +449,14 @@ export function createTemplate(
   const ceiling = templateCeiling(input.ceiling, options.capabilityResolver);
 
   const dispatch_policy = pinDispatchPolicy(input.issuer, options.dispatchPolicies, input.dispatch_policy);
+  // @spec mission-template#template-consent (#813): the consent provenance
+  // of a standing-payment template, retained outside `template_hash`.
+  const consent_provenance = standingPaymentConsentOf(
+    input,
+    ceiling,
+    verifiedActivationPolicy(input.issuer, options.dispatchPolicies, dispatch_policy),
+    options.standingPayment,
+  );
   const templateBody = {
     template_version: input.template_version,
     ceiling,
@@ -450,8 +489,91 @@ export function createTemplate(
     authority_source,
     source_bindings,
     ...(ceiling_audiences ? { ceiling_audiences } : {}),
+    ...(consent_provenance ? { consent_provenance } : {}),
   };
   return store.create(create);
+}
+
+/**
+ * @spec mission-template#prohibited-classes, mission-template#template-consent
+ * (#813): what a standing-payment template's consent needs under the
+ * `standing-payment-dispatch` capability.
+ */
+export interface StandingPaymentConsentOptions {
+  /**
+   * The provenance the approval surface established for this consent: the
+   * Approver's login on the browser surface at the approval floor, under the
+   * render revision the decision approved. Absent on the service-token
+   * stand-in and the boot seed, which therefore never create one.
+   */
+  consent?: TemplateConsentProvenance;
+  /** Whether `sub` is a registered client (an Agent or Dispatcher), which never consents. */
+  isClient?: (sub: string) => boolean;
+  /** The kernel's standing-payment store, where the budget identity is pinned. */
+  budgets?: StandingPaymentStore;
+  /** The consent instant's clock; the system clock when absent. */
+  now?: () => Date;
+}
+
+/**
+ * @spec mission-template#prohibited-classes, mission-template#template-consent
+ * (#813, D830 ruling 1): a template whose committed Dispatch Policy designates
+ * the standing payment is consented only by a human at the approval floor on
+ * the approval surface, never a Dispatcher, an Agent, an agent-held key or an
+ * assertion; its ceiling and bounds meet the workflow's conditions; and its
+ * budget identity is the one pinned for that policy id, so a re-consent or a
+ * policy successor never silently starts a fresh counter. Returns the
+ * provenance to retain, or undefined for a template that does not designate
+ * the workflow (or where the capability is off).
+ */
+function standingPaymentConsentOf(
+  input: CreateTemplateInput,
+  ceiling: readonly AuthorityEntry[],
+  held: DispatchPolicy | undefined,
+  options: StandingPaymentConsentOptions | undefined,
+): TemplateConsentProvenance | undefined {
+  if (!options || !held) return undefined;
+  let terms: StandingPaymentTerms | undefined;
+  try {
+    terms = standingPaymentTermsOf(held);
+  } catch (e) {
+    throw new TemplateError(`dispatch_policy ${input.dispatch_policy.id}: ${(e as Error).message}`);
+  }
+  if (!terms) return undefined;
+  const consent = options.consent;
+  if (
+    !consent ||
+    !isHumanFloorConsent(consent) ||
+    consent.principal.iss !== input.approver.iss ||
+    consent.principal.sub !== input.approver.sub
+  ) {
+    throw new TemplateError(
+      "a standing-payment template is consented only by a human Approver at the approval floor on the approval surface; this consent establishes none",
+    );
+  }
+  const sub = consent.principal.sub;
+  if (input.dispatchers.includes(sub) || input.recipients.agents.includes(sub) || options.isClient?.(sub) === true) {
+    throw new TemplateError(
+      `the consenting principal ${sub} is a Dispatcher or an Agent; a standing-payment template is consented by a human`,
+    );
+  }
+  try {
+    assertStandingPaymentTemplateBounds(input);
+    assertStandingPaymentCeiling(terms, ceiling, "the Template Ceiling");
+  } catch (e) {
+    if (e instanceof StandingPaymentTermsError) throw new TemplateError(e.message);
+    throw e;
+  }
+  if (!options.budgets) {
+    throw new TemplateError("no standing-payment budget store is configured, so the budget identity cannot be pinned");
+  }
+  try {
+    options.budgets.bindBudget(input.dispatch_policy.id, terms.budget, (options.now?.() ?? new Date()).toISOString());
+  } catch (e) {
+    if (e instanceof StandingPaymentBudgetError) throw new TemplateError(e.message);
+    throw e;
+  }
+  return consent;
 }
 
 /**
@@ -583,6 +705,20 @@ export interface DispatchInput {
    * `dispatch_prohibited_class`, even when it is within both ceilings.
    */
   dispatchProhibitedActions?: readonly string[];
+  /**
+   * @spec mission-template#prohibited-classes (#813): present exactly where
+   * the `standing-payment-dispatch` capability is on. A template whose
+   * committed Dispatch Policy designates the standing payment then dispatches
+   * through the capability-aware admission; every other template, and every
+   * template with the capability off, dispatches exactly as without it.
+   */
+  standingPayment?: StandingPaymentDispatchOptions;
+}
+
+/** @spec mission-template#prohibited-classes (#813): the standing-payment admission's inputs. */
+export interface StandingPaymentDispatchOptions {
+  /** The deployment's published prohibited-predicate mapping. */
+  mapping: ProhibitedPredicateMapping;
 }
 
 export interface DispatchResult {
@@ -812,6 +948,27 @@ export function dispatchFromTemplate(
       `template ${template.id} dispatch policy ${template.dispatch_policy.id} states no usable ${STANDING_CONSENT_LIMIT_MEMBER}; re-consent the template`,
     );
   }
+  // @spec mission-template#prohibited-classes (#813): under the
+  // `standing-payment-dispatch` capability, a template whose verified
+  // Dispatch Policy states standing-payment terms dispatches through the
+  // capability-aware admission below. A statement that no longer parses
+  // admits nothing.
+  let standing: StandingPaymentTerms | undefined;
+  if (input.standingPayment) {
+    try {
+      standing = standingPaymentTermsOf(dispatchPolicy);
+    } catch (e) {
+      throw new DispatchError(
+        "dispatch_prohibited_class",
+        `template ${template.id} dispatch policy ${template.dispatch_policy.id} states unusable standing-payment terms: ${(e as Error).message}`,
+      );
+    }
+  }
+  // @spec metering#bounds (#813, ruling 2): `max_budget` is a standing-payment
+  // instance's bound; on any other dispatch nothing would meter it.
+  if (input.intent.max_budget !== undefined && !standing) {
+    throw new IntentError("invalid_request", "max_budget is admitted only on the dispatch of a standing-payment template");
+  }
   // @spec mission-template#the-mission-template — the Mission Issuer selects
   // the instance's Agent under the Dispatch Policy, never from Dispatcher
   // input. It is committed below as the instance's `client_id`; a retried
@@ -839,23 +996,34 @@ export function dispatchFromTemplate(
   // max-active: count non-terminal instances (store rows filtered by the
   // OBSERVED kernel state: an instance past its `expires_at` is terminated
   // whether or not that transition has been persisted).
-  const active = store.activeInstanceCount(template.id, (missionId) => {
+  const isTerminal = (missionId: string): boolean => {
     const m = kernel.observedRecord(missionId);
     return !m || TERMINAL_STATES.has(m.state);
-  });
-  if (active >= template.max_active) {
-    throw new DispatchError(
-      "max_active_exceeded",
-      `template ${template.id} has ${active} active instances (max ${template.max_active})`,
-    );
-  }
-  // rate: dispatches in the trailing 60s window.
+  };
   const sinceIso = new Date(nowMs - 60_000).toISOString();
-  if (store.dispatchesSince(template.id, sinceIso) >= template.rate_per_min) {
-    throw new DispatchError(
-      "rate_exceeded",
-      `template ${template.id} exceeded ${template.rate_per_min} dispatches/min`,
-    );
+  /** The concurrency and rate bounds over `dispatched` instances and the trailing 60s `recent` count. */
+  const assertDispatchBounds = (dispatched: readonly string[] | number, recent: number): void => {
+    const active = typeof dispatched === "number" ? dispatched : dispatched.filter((m) => !isTerminal(m)).length;
+    if (active >= template.max_active) {
+      throw new DispatchError(
+        "max_active_exceeded",
+        `template ${template.id} has ${active} active instances (max ${template.max_active})`,
+      );
+    }
+    // rate: dispatches in the trailing 60s window.
+    if (recent >= template.rate_per_min) {
+      throw new DispatchError(
+        "rate_exceeded",
+        `template ${template.id} exceeded ${template.rate_per_min} dispatches/min`,
+      );
+    }
+  };
+  // @spec mission-template#prohibited-classes (#813): a standing payment's
+  // bounds are read from, and its dispatch counted in, the kernel database
+  // inside the instance's creation transaction (below), never the template
+  // store's own database after it.
+  if (!standing) {
+    assertDispatchBounds(store.activeInstanceCount(template.id, isTerminal), store.dispatchesSince(template.id, sinceIso));
   }
 
   // c. Double intersection. FIRST: derive under the kernel's derivation policy
@@ -926,13 +1094,21 @@ export function dispatchFromTemplate(
   }
 
   // d. Prohibited-class guard: refuse high-consequence actions regardless of
-  // ceiling membership.
-  const prohibited = new Set(input.dispatchProhibitedActions ?? []);
-  if (prohibited.size > 0 && final.some((e) => e.actions.some((a) => prohibited.has(a)))) {
-    throw new DispatchError(
-      "dispatch_prohibited_class",
-      `instance authority includes a dispatch-prohibited action`,
-    );
+  // ceiling membership. @spec mission-template#prohibited-classes (#813):
+  // under the `standing-payment-dispatch` capability, a standing-payment
+  // template's instance goes through the capability-aware admission instead;
+  // every other dispatch keeps the configured refusal unchanged.
+  if (standing && input.standingPayment) {
+    const refusal = standingPaymentAdmissionRefusal(kernel, template, standing, input, final);
+    if (refusal) throw new DispatchError("dispatch_prohibited_class", refusal);
+  } else {
+    const prohibited = new Set(input.dispatchProhibitedActions ?? []);
+    if (prohibited.size > 0 && final.some((e) => e.actions.some((a) => prohibited.has(a)))) {
+      throw new DispatchError(
+        "dispatch_prohibited_class",
+        `instance authority includes a dispatch-prohibited action`,
+      );
+    }
   }
 
   // @spec mission#authority-sources, mission#approval-event (step 3) — a
@@ -1061,6 +1237,27 @@ export function dispatchFromTemplate(
   };
   try {
     idem.createCompleted(reservation, () => {
+      // @spec mission-template#prohibited-classes (#813): a standing payment's
+      // concurrency and rate bounds are read, and its dispatch counted, in
+      // this transaction, and its Approval Governance Record is gated here at
+      // the creation instant: a refusal rolls back the reservation and the
+      // count with it, and a crash cannot leave an instance without its
+      // accounting or accounting without its instance.
+      const governed =
+        standing && input.standingPayment
+          ? admitStandingPaymentInCallerTx(kernel, {
+              template,
+              terms: standing,
+              mapping: input.standingPayment.mapping,
+              record,
+              dispatchEventId: input.dispatchEventId,
+              assertBounds: () =>
+                assertDispatchBounds(
+                  kernel.standingPayments.dispatchedInstances(template.id),
+                  kernel.standingPayments.dispatchesSince(template.id, sinceIso),
+                ),
+            })
+          : undefined;
       kernel.insertRecord(record, undefined, {
         source: { inherited: recipientRoot },
         // @spec mission#standing-consent-bases: the Dispatch Policy snapshot
@@ -1072,6 +1269,7 @@ export function dispatchFromTemplate(
         // never the mapping current at this dispatch.
         audiences: { inherited: inheritedAudiences(final, audienceReferences(template.ceiling, template.ceiling_audiences)) },
       });
+      governed?.retain();
       return { missionId: id, value: undefined };
     });
   } catch (e) {
@@ -1081,11 +1279,153 @@ export function dispatchFromTemplate(
     }
     throw e;
   }
-  // Audit + rate/max-active trail (the template store's own database).
-  store.recordDispatch({
-    dispatchEventId: input.dispatchEventId,
-    templateId: template.id,
-    missionId: id,
-  });
+  // Audit + rate/max-active trail (the template store's own database). A
+  // standing payment's trail is the kernel-database accounting committed with
+  // the instance above.
+  if (!standing) {
+    store.recordDispatch({
+      dispatchEventId: input.dispatchEventId,
+      templateId: template.id,
+      missionId: id,
+    });
+  }
   return { mission: record, template };
+}
+
+/**
+ * @spec mission-template#prohibited-classes (#813, D814, D830): the
+ * conditions a standing-payment instance meets before anything commits, each
+ * refused `dispatch_prohibited_class`: the template's retained consent is a
+ * human consent at the approval floor and never the Dispatcher's; the budget
+ * identity is the one pinned for the policy; the Intent carries a USD
+ * `max_budget` within the policy's per-instance maximum; the ceiling and the
+ * instance meet the workflow's conditions; and only the designated
+ * operation's `irreversible_action` predicate is waived. Returns the reason,
+ * or undefined.
+ */
+function standingPaymentAdmissionRefusal(
+  kernel: MissionKernel,
+  template: MissionTemplate,
+  terms: StandingPaymentTerms,
+  input: DispatchInput,
+  final: readonly AuthorityEntry[],
+): string | undefined {
+  const consent = template.consent_provenance;
+  if (
+    !consent ||
+    !isHumanFloorConsent(consent) ||
+    consent.principal.iss !== template.approver.iss ||
+    consent.principal.sub !== template.approver.sub
+  ) {
+    return `template ${template.id} carries no human consent at the approval floor; a standing payment is dispatched only under one`;
+  }
+  if (template.dispatchers.includes(consent.principal.sub) || template.recipients.agents.includes(consent.principal.sub)) {
+    return `template ${template.id} was consented by a Dispatcher or an Agent, not a human`;
+  }
+  const pinned = kernel.standingPayments.budgetBinding(template.dispatch_policy.id);
+  if (!pinned || pinned.owner !== terms.budget.owner || pinned.id !== terms.budget.id) {
+    return `the budget ${terms.budget.owner}/${terms.budget.id} is not the identity pinned for Dispatch Policy ${template.dispatch_policy.id}`;
+  }
+  const budget = maxBudgetRefusal(input.intent.max_budget, terms);
+  if (budget) return budget;
+  try {
+    assertStandingPaymentTemplateBounds(template);
+    assertStandingPaymentCeiling(terms, template.ceiling, "the Template Ceiling");
+    assertStandingPaymentCeiling(terms, final, "the instance Authority Set");
+  } catch (e) {
+    if (e instanceof StandingPaymentTermsError) return e.message;
+    throw e;
+  }
+  return standingPaymentPredicateRefusal(
+    (input.standingPayment as StandingPaymentDispatchOptions).mapping,
+    terms,
+    final,
+    input.dispatchProhibitedActions ?? [],
+  );
+}
+
+/**
+ * @spec mission-template#prohibited-classes, approval-governance#atomic-commitment
+ * (#813): inside the instance's creation transaction, at its creation instant:
+ * check the concurrency and rate bounds from the kernel-database accounting,
+ * count this dispatch, then run the Approval Governance gate over the whole
+ * instance and build, check and sign its record. A refusal throws before the
+ * instance is inserted, and the transaction rolls everything back. The
+ * returned `retain` records the admission and the record after the insert.
+ */
+function admitStandingPaymentInCallerTx(
+  kernel: MissionKernel,
+  args: {
+    template: MissionTemplate;
+    terms: StandingPaymentTerms;
+    mapping: ProhibitedPredicateMapping;
+    record: MissionRecord;
+    dispatchEventId: string;
+    assertBounds: () => void;
+  },
+): { retain: () => void } {
+  const { template, terms, record } = args;
+  args.assertBounds();
+  kernel.standingPayments.recordDispatchInCallerTx({
+    missionId: record.id,
+    templateId: template.id,
+    dispatchEventId: args.dispatchEventId,
+    at: record.created_at,
+  });
+  const classification: Record<string, string[]> = {};
+  for (const entry of template.ceiling) {
+    for (const action of entry.actions) {
+      const classes = args.mapping.classesOf(entry, action);
+      if (classes) classification[action] = [...new Set([...(classification[action] ?? []), ...classes])];
+    }
+  }
+  const rule = templateRecordingRuleFor(template.dispatch_policy, terms, classification);
+  const ruleRef = templateRecordingRuleRef(record.issuer, rule);
+  const maxBudget = record.intent.max_budget as NonNullable<MissionRecord["intent"]["max_budget"]>;
+  const gate = templateGovernanceGate(parseTemplateRecordingRule(rule.content), {
+    deciding: template.dispatch_policy,
+    approved_at: template.created_at,
+    authority: record.authority_set,
+    consumptionBound: true,
+    decided_at: record.created_at,
+  });
+  if (!gate.ok) {
+    throw new DispatchError(
+      "dispatch_prohibited_class",
+      `the standing payment's Approval Governance record cannot be committed: ${gate.reason}: ${gate.detail}`,
+    );
+  }
+  const basis = record.approval_basis as Extract<ApprovalBasis, { type: "template" }>;
+  const unsigned = buildTemplateRecord(record, ruleRef, template.dispatch_policy);
+  assertTemplateRecord(unsigned, basis, ruleRef, template.dispatch_policy);
+  const signed = signApprovalGovernanceRecord(unsigned, kernel.statusSigner());
+  const consent = template.consent_provenance as TemplateConsentProvenance;
+  return {
+    retain: () => {
+      kernel.standingPayments.recordAdmissionInCallerTx({
+        mission_id: record.id,
+        template_id: template.id,
+        dispatch_policy: template.dispatch_policy,
+        budget: { owner: terms.budget.owner, id: terms.budget.id },
+        max_budget: { amount: maxBudget.amount, currency: maxBudget.currency },
+        admitted_at: record.created_at,
+      });
+      kernel.templateApprovalRecords.retainInCallerTx(record.id, record.issuer, ruleRef, rule, {
+        approval_event_id: record.approval_event_id,
+        intent_hash: record.intent_hash,
+        authority: record.authority_set,
+        consumption_bound: { amount: maxBudget.amount, currency: maxBudget.currency },
+        deciding: template.dispatch_policy,
+        consent: {
+          template_id: template.id,
+          template_hash: template.template_hash,
+          principal: template.approver,
+          approved_at: template.created_at,
+          provenance: consent,
+        },
+        decided_at: record.created_at,
+      });
+      kernel.governanceRecords.retainInCallerTx(record.id, signed);
+    },
+  };
 }

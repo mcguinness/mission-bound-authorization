@@ -30,6 +30,7 @@ import { calculateJwkThumbprint, type CryptoKey, decodeJwt, exportJWK, type JWK,
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import type { DerivationReservationResult } from "./derivation-reservations.js";
 import type { MissionKernel } from "./kernel.js";
+import { assertNotStandingPaymentLineage } from "./standing-payment.js";
 import type { AuthorityEntry, MissionRecord } from "./types.js";
 
 export { AAT_TYP };
@@ -240,6 +241,12 @@ export async function deriveAttenuationRoot(
   if (input.delMaxDepth !== undefined && input.delMaxDepth < 0) {
     throw new Error("attenuation: del_max_depth MUST be >= 0");
   }
+  // @spec mission-template#prohibited-classes (#813, D830 ruling 3): an
+  // attenuation root carries authority onward for offline delegation, which
+  // a standing-payment lineage's budget accounting does not follow. Refused
+  // before any count.
+  const mission = kernel.get(input.missionId);
+  if (mission) assertNotStandingPaymentLineage(kernel, mission, "an attenuation root");
 
   // @spec control-plane#serialization — the artifact identity is minted BEFORE
   // the count, so the counted derivation and the artifact it pays for share
@@ -460,6 +467,11 @@ export async function deriveCrossOrgRoot(
   kid: string,
   input: CrossOrgRootInput,
 ): Promise<{ root: string; jti: string; tools: AATTools; actorMapping: { client_id: string; actor: CrossOrgRootInput["actor"]; version: string } }> {
+  // @spec mission-template#prohibited-classes (#813, D830 ruling 3): the
+  // Mission Issuer refuses any cross-organization derivation from a
+  // standing-payment lineage. Refused before any count.
+  const mission = kernel.get(input.missionId);
+  if (mission) assertNotStandingPaymentLineage(kernel, mission, "a cross-organization delegation root");
   // @spec control-plane#serialization — same reservation boundary as the
   // in-org root: artifact identity first, count and reservation together,
   // release on acceptance, and ONE in-flight owner per operation identity.
