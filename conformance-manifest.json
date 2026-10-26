@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ccf2b1c76732a049af05196b575623cf3e892a6b",
-    "content_sha256": "93ab66b6231d691996e3f8d012a649b5e1e20b47596b2eff953ac7dcb7899f78"
+    "revision": "f6e24a7cd68f09729c606e028cf62631fc3ec21b",
+    "content_sha256": "21d8e4e3f833c7e1db0807ae315558dc445d8516e5a650f7bc4e768d26f7c890"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -14890,7 +14890,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a delegated exchange from a client the AS does not authenticate by a method it relies on to identify the client is refused invalid_client, with no token issued and no derivation counted: a confidential client's client_id presented without its client authentication, with a DPoP key of the presenter's choosing, and a public client registered for no client authentication; the designated client that authenticates and proves its own key is issued the delegated token; a request that also carries an actor_token is refused the same way, an actor_token never taking the place of client authentication",
-    "local": "The reference AS refuses with HTTP 401, the status of the token endpoint's own client-authentication refusals. A confidential client's missing or failed authentication is refused by the token endpoint's client authentication (oidc-provider), before the exchange handler runs; a client registered with token_endpoint_auth_method none, which that step admits on its client_id alone, is refused by the delegated-exchange handler's first check. The reference refuses any actor_token at this exchange (D449, D470); its delegates authenticate by private_key_jwt, and no other method is exercised."
+    "local": "The reference AS refuses with HTTP 401, the status of the token endpoint's own client-authentication refusals. A confidential client's missing or failed authentication is refused by the token endpoint's client authentication (oidc-provider), before the exchange handler runs; a client registered with token_endpoint_auth_method none, which that step admits on its client_id alone, is refused by the delegated-exchange handler's first check. An authenticated client's actor_token is refused afterwards, by the handler (core.delegation.actor-token-refused); the reference's delegates authenticate by private_key_jwt, and no other method is exercised."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -14918,9 +14918,15 @@
      "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > an actor_token does not take the place of client authentication: a public client presenting one beside its client_id is refused invalid_client, issuing nothing and counting nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > an actor_token is refused after client authentication: the sub-agent's client_id with an actor_token and no client authentication is refused invalid_client, and the sub-agent authenticating with the same actor_token is refused invalid_request, neither issuing nor counting anything",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1718 (D845). Each refusal is proven by its own mutation, with the delegation-exchange suite run per mutant. Removing the handler's check of the registered method fails the public-client witness (a delegated token is issued to the public client on its client_id and its own DPoP key, which is what the reference did before #1718) and the actor_token witness (the request then reaches the reference's actor_token refusal, invalid_request, not invalid_client), and no other test. The confidential case is enforced by the token endpoint's client authentication, so no handler mutation reaches it: a temporary mutation of oidc-provider 9.10.0 lib/shared/client_auth.js that accepts a claimed client_id for a private_key_jwt client (the registered-method match skipped, and the assertion verified only when present) fails only the stolen-designation witness. Making the handler's check refuse every client fails the positive witness and the stolen-designation witness's control. The reference's own refusal of any actor_token at this exchange, from an authenticated delegate (D449, D470), is reference policy, not this row's clause; its test is cited on resource-access.delegate-eligibility.as-authenticates-delegate."
+   "notes": "#1718 (D845). Each refusal is proven by its own mutation, with the delegation-exchange suite run per mutant. Removing the handler's check of the registered method fails the public-client witness (a delegated token is issued to the public client on its client_id and its own DPoP key, which is what the reference did before #1718) and the actor_token witness (the request then reaches the reference's actor_token refusal, invalid_request, not invalid_client), and no other test. The confidential case is enforced by the token endpoint's client authentication, so no handler mutation reaches it: a temporary mutation of oidc-provider 9.10.0 lib/shared/client_auth.js that accepts a claimed client_id for a private_key_jwt client (the registered-method match skipped, and the assertion verified only when present) fails only the stolen-designation witness. Making the handler's check refuse every client fails the positive witness and the stolen-designation witness's control. The refusal of an authenticated delegate's actor_token is core.delegation.actor-token-refused's clause (D845, D859), not this row's. The order witness's unauthenticated request (the sub-agent's client_id and an actor_token) is the confidential client's case of this row's actor_token clause; the oidc-provider mutation above also fails it."
   },
   {
    "id": "core.delegation.delegate-authentication-insufficient",
@@ -14986,6 +14992,48 @@
     }
    ],
    "notes": "#1718 (D845). Proven by disabling the code it covers: removing the delegated-exchange handler's check of the registered method fails the witness, a delegated token being issued to the public client."
+  },
+  {
+   "id": "core.delegation.actor-token-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "Once it has so authenticated the client, the AS MUST refuse a request that carries an `actor_token` with `invalid_request` ({{Section 2.2.2 of RFC8693}}), issuing no token",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange from a client the AS has authenticated that carries an actor_token is refused invalid_request, with no token issued and no derivation counted; the refusal follows client authentication, so the same request from a client the AS does not authenticate, a confidential client presenting only its client_id or a public client, is refused invalid_client instead",
+    "local": "The reference also refuses an actor_token_type presented without an actor_token. The confidential client's leg of the order is enforced by the token endpoint's client authentication (oidc-provider), which runs before the exchange handler; the public client's leg by the handler's registered-method check, which precedes its actor_token refusal."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > the delegated exchange identifies the delegate by its client authentication: an actor_token is refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > an actor_token is refused after client authentication: the sub-agent's client_id with an actor_token and no client authentication is refused invalid_client, and the sub-agent authenticating with the same actor_token is refused invalid_request, neither issuing nor counting anything",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > an actor_token does not take the place of client authentication: a public client presenting one beside its client_id is refused invalid_client, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845, D859). Each witness is proven by its own mutation, with the delegation-exchange suite run per mutant. Removing the handler's actor_token refusal fails the first two witnesses (the authenticated sub-agent's request then passes the refusal), and no other test. Moving that refusal ahead of the handler's registered-method check fails the public-client witness (invalid_request, not invalid_client), and no other test. A temporary mutation of oidc-provider 9.10.0 lib/shared/client_auth.js that accepts a claimed client_id for a private_key_jwt client (the registered-method match skipped, and the assertion verified only when present) fails the order witness (its unauthenticated request reaches the actor_token refusal, invalid_request) and the stolen-designation witness, and no other test."
   },
   {
    "id": "core.delegation.redemption-evaluated-afresh",
@@ -68366,6 +68414,41 @@
     }
    ],
    "notes": "#1718 (D845). Proven by the mutations core.delegation.delegate-client-authenticated records: accepting a claimed client_id at the token endpoint fails the first witness, and removing the handler's registered-method check fails the second."
+  },
+  {
+   "id": "core.error-mapping.delegated-exchange-actor-token",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "error-mapping",
+   "text": "the AS has authenticated the requesting client, and the request carries an `actor_token` | `invalid_request` ({{Section 2.2.2 of RFC8693}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange from a client the AS has authenticated that carries an actor_token is refused with the error code invalid_request, with no token issued; a client the AS does not authenticate is refused invalid_client instead"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > the delegated exchange identifies the delegate by its client authentication: an actor_token is refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > an actor_token is refused after client authentication: the sub-agent's client_id with an actor_token and no client authentication is refused invalid_client, and the sub-agent authenticating with the same actor_token is refused invalid_request, neither issuing nor counting anything",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845, D859). Proven by the mutations core.delegation.actor-token-refused records: removing the handler's actor_token refusal fails both witnesses, and accepting a claimed client_id at the token endpoint fails the second."
   },
   {
    "id": "core.error-mapping.token-rar-exceeds-granted",
