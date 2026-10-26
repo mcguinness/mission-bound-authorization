@@ -1597,7 +1597,11 @@ provide.
 
 Where the comparison relation cannot decide (an unrecognized member, an
 incomparable value), the posture is conservative refusal, as each
-consuming rule of this document states.
+consuming rule of this document states. At the token endpoint, where
+the comparison cannot establish that a requested `authorization_details`
+entry is a subset, the AS MUST refuse the request with the
+`invalid_authorization_details` error code, as for an entry that
+exceeds the grant ({{error-mapping}}).
 
 An entry equal to its reference entry, byte-identical under the
 canonical form of {{canonicalization}}, is a subset of it for every
@@ -3383,6 +3387,7 @@ exchange rows of the third table.
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}) |
 | Token endpoint ({{subset}}, {{refresh-tokens}}): the requested RAR subset exceeds the Mission's granted authority, or, on refresh, the presented refresh grant | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
+| Token endpoint ({{subset}}): the comparison cannot establish that a requested RAR entry is a subset (an unrecognized member, an incomparable value) | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
 {: title="Failures not confined to one surface"}
 
 | Surface / failing input | Base OAuth error and optional detail |
