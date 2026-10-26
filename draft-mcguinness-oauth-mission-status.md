@@ -149,9 +149,9 @@ that build on the issuance profile. The capabilities are:
   extension point through which a companion profile MAY register a
   further `operation` value ({{lifecycle-operations}}).
 - **Revocation propagation** guidance
-  ({{revocation-enforcement-classes}}): a `mission_max_stale_seconds`
-  bound and how to size token lifetimes to the propagation mechanisms
-  in use.
+  ({{revocation-enforcement-classes}}): the `mission_max_stale_seconds`
+  ceiling on reliance on an observation of Mission state, and how to
+  size token lifetimes to the propagation mechanisms in use.
 - **authorization server metadata** members
   ({{as-metadata}}) advertising the endpoints above.
 
@@ -1655,15 +1655,13 @@ separate posture list:
   profile's own metadata.
 
 A deployment advertises `mission_max_stale_seconds` ({{as-metadata}}),
-the maximum interval it tolerates for a Mission state change to take
-effect, so a consumer can choose propagation mechanisms to match. The
-value bounds reliance on an observation of Mission state: the
-freshness cap of {{mission-status-caching}} applies it to a Mission
-Status response, and the issuer applies it to an introspection
+the ceiling, in seconds, on reliance on an observation of Mission
+state: the freshness cap of {{mission-status-caching}} applies it to a
+Mission Status response, and the issuer applies it to an introspection
 projection's `fresh_until` ({{introspection-projection}}). It does
 not bound a self-contained token, which a consumer relies on for its
 lifetime unless that lifetime is sized to the bound (below). When the
-member is absent, no propagation bound is declared: a consumer relies
+member is absent, no such ceiling is declared: a consumer relies
 on a self-contained token for its lifetime, and on a Mission Status
 response within the reliance bound of {{mission-status-caching}}. A
 fresh observation bounds only how stale the consumer's view of
@@ -1799,10 +1797,9 @@ through standard {{RFC8414}} discovery.
   `private_key_jwt`.
 
 `mission_max_stale_seconds`:
-: OPTIONAL. An integer. The maximum
-  tolerated interval, in seconds, for revocation propagation
-  ({{revocation-enforcement-classes}}): the ceiling on reliance on an
-  observation of Mission state. When absent, no bound is declared.
+: OPTIONAL. An integer. The ceiling, in seconds, on reliance on an
+  observation of Mission state ({{revocation-enforcement-classes}}).
+  When absent, no such ceiling is declared.
 
 `mission_historical_jwks_uri`:
 : CONDITIONAL. A string containing an `https` URL. The URL of the AS's
