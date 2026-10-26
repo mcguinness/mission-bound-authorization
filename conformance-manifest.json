@@ -31382,7 +31382,7 @@
    "id": "runtime.record-integrity.sequence-and-retention-floor",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "record-integrity",
-   "text": "The retention window declared in the Enforcement Scope Statement MUST be no shorter than the Mission's audit horizon",
+   "text": "The retention window declared in the Enforcement Scope Statement MUST be no shorter than the Mission's retention period as its Mission Substrate Binding declares it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -31394,11 +31394,12 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "records for one Mission carry a per-emitter sequence indicator, and the declared retention window is never shorter than the Mission's audit horizon"
+    "normative": "records for one Mission carry a per-emitter sequence indicator, and the declared retention window is never shorter than the Mission's retention period as its substrate binding declares it (the audit horizon, covering the Mission Record and its evidence, in the OAuth binding), nor than a longer period an adopted companion requires; the floor applies to every required record, not only the governance record"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Re-quoted for #854 (D814): the floor moved from the OAuth audit horizon to the substrate binding's declared retention period, with the audit horizon as its OAuth realization."
   },
   {
    "id": "runtime.record-integrity.sequence-not-reused-pdp",
