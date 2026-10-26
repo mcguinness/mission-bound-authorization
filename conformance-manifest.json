@@ -50421,7 +50421,7 @@
     },
     {
      "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
-     "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > renders that each payment requires an action-bound approval, and from whom, where the Template Ceiling sets requires_action_approval (#813)",
+     "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > renders that each payment requires an action-bound approval, and from whom, where every Template Ceiling entry that can authorize the payment sets requires_action_approval (#813)",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -50430,9 +50430,21 @@
      "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > renders that each payment requires an action-bound approval, and from whom, where the deployment's action-approval predicate names the payment (#813)",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > renders the action-bound approval per ceiling entry, and never as required for each payment, where only some entries that can authorize the payment set requires_action_approval (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813) > shows a payment authorized through the unrestricted ceiling entry as requiring no approval, and the dispatched instance carries that entry without requires_action_approval (#813)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Also homes Metering's statement that a standing-consent budget's consent renders it beside the per-instance bound (capacity-across-missions). Slice 3a (impl/813-standing-payment-admission at a7063aab): the consent page renders the designated operation and resource, each committed destination with its payee account, the per-payment bound, the budget with its limit and per-instance maximum, and the action-bound approval line in all three cases: none under the shipped predicate; required, from an Approver on the Access Request Service's approval surface, where the ceiling sets requires_action_approval; required, from the predicate's declared approver, where the deployment's action-approval predicate (ACTION_APPROVAL_POLICY) names the payment. Mutations: dropping the operation, destinations, per-payment bound, per-instance maximum or action-approval line each fails its test; ignoring the predicate or the ceiling constraint fails its case. Partial: the template-consent minimum is not asserted on the capability-on page, where its high-consequence statement becomes the standing-payment statement."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Also homes Metering's statement that a standing-consent budget's consent renders it beside the per-instance bound (capacity-across-missions). Slice 3a (impl/813-standing-payment-admission at a7063aab): the consent page renders the designated operation and resource, each committed destination with its payee account, the per-payment bound, the budget with its limit and per-instance maximum, and the action-bound approval line in all three cases: none under the shipped predicate; required, from an Approver on the Access Request Service's approval surface, where the ceiling sets requires_action_approval; required, from the predicate's declared approver, where the deployment's action-approval predicate (ACTION_APPROVAL_POLICY) names the payment. Mutations: dropping the operation, destinations, per-payment bound, per-instance maximum or action-approval line each fails its test; ignoring the predicate or the ceiling constraint fails its case. Partial: the template-consent minimum is not asserted on the capability-on page, where its high-consequence statement becomes the standing-payment statement. Owner review of #1712 (2026-10-26): the page renders 'required for each payment' only when the deployment predicate names the operation or every entry that can authorize it requires approval; a mixed ceiling renders per entry. Killed by the .some() regression, mixed-rendered-as-none, all-entries-never-universal, predicate-ignored and unrestricted-rendered-as-requiring mutants."
   },
   {
    "id": "template.standing-payment.one-currency",
