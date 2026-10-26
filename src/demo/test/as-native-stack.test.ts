@@ -785,6 +785,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       await stack?.decisionChannel.close();
       stack?.pdpClaims.close();
       stack?.writeReservations.close();
+      stack?.evidenceRetention.close();
       stack?.payments.db.close();
       stack?.kernel.db.close();
       fgaBootstrap?.mockRestore();

@@ -1394,8 +1394,9 @@ Harness Evidence records are subject to the record integrity and
 retention requirements of the runtime profile
 ({{I-D.draft-mcguinness-mission-runtime}}), imported here by
 reference: append-only integrity protection under a named mechanism, a
-per-Mission sequence indicator, no raw parameters in the record, and a
-retention window no shorter than the Mission's audit horizon.
+per-emitter sequence indicator for each Mission, no raw parameters in
+the record, and a retention window no shorter than the Mission's audit
+horizon.
 
 A Harness Evidence record is registrable on the Mission's
 transparency feed ({{I-D.draft-mcguinness-mission-audit}}). Its
@@ -1886,6 +1887,10 @@ exists.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Harness Evidence: the imported sequence indicator is per emitter for
+  each Mission, as the runtime profile scopes it. No requirement
+  changed (#821).
 
 - Work-Item Identity: the harness assigns a qualified work-item
   identifier (`work_item_issuer` and `work_item`), binds it to one

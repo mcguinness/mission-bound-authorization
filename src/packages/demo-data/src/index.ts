@@ -194,6 +194,18 @@ function reqNumber(file: string, obj: Record<string, unknown>, key: string, ctx:
 export interface TopologyKey {
   kid: string;
   alg: string;
+  /**
+   * @spec #831 C: the `kid`s this deployment's consumers trust for the key's
+   * role, when they differ from `kid` alone: during a rotation the operator
+   * adds the next generation's `kid` here before activating it, and removes a
+   * withdrawn one. The signer never reads it. Read through {@link trustedKids}.
+   */
+  trusted?: readonly string[];
+}
+
+/** The `kid`s consumers trust for a key's role: its `trusted` list, or its `kid` alone. */
+export function trustedKids(key: TopologyKey): readonly string[] {
+  return key.trusted ?? [key.kid];
 }
 
 /**
@@ -292,8 +304,14 @@ export interface Topology {
    * `pepWriteReservations.file` (#918) is the enforcing PEP's reservation and
    * retention store for keyed reversible writes: a separate file, opened
    * single-writer by that PEP alone, never shared with the PDP's.
+   * `pepEvidenceRetention.file` (#821) is the same PEP's evidence retention
+   * store: the records it retains and its per-emitter sequences.
    */
-  stores: { pdpIdempotencyClaims: { file: string }; pepWriteReservations: { file: string } };
+  stores: {
+    pdpIdempotencyClaims: { file: string };
+    pepWriteReservations: { file: string };
+    pepEvidenceRetention: { file: string };
+  };
 }
 
 function reqTxnChallenge(
@@ -319,9 +337,15 @@ function reqTxnChallenge(
 
 function reqKey(file: string, obj: Record<string, unknown>, key: string, ctx: string): TopologyKey {
   const k = asObject(file, obj[key], `${ctx}.${key}`);
+  const trusted =
+    k.trusted === undefined ? undefined : reqStringArray(file, k, "trusted", `${ctx}.${key}`);
+  if (trusted && (trusted.length === 0 || trusted.some((t) => t.length === 0))) {
+    throw new ConfigError(file, `${ctx}.${key}.trusted must list at least one non-empty kid`);
+  }
   return {
     kid: reqString(file, k, "kid", `${ctx}.${key}`),
     alg: reqString(file, k, "alg", `${ctx}.${key}`),
+    ...(trusted ? { trusted } : {}),
   };
 }
 
@@ -357,6 +381,18 @@ function loadTopology(): Topology {
     throw new ConfigError(
       file,
       "stores.pepWriteReservations.file must differ from stores.pdpIdempotencyClaims.file",
+    );
+  }
+  const retentionStore = asObject(file, stores.pepEvidenceRetention, "stores.pepEvidenceRetention");
+  const retentionFile = resolvePath(
+    dirname(CONFIG_DIR),
+    reqString(file, retentionStore, "file", "stores.pepEvidenceRetention"),
+  );
+  // #821: each durable store is its own single-writer file.
+  if (retentionFile === claimFile || retentionFile === reservationFile) {
+    throw new ConfigError(
+      file,
+      "stores.pepEvidenceRetention.file must differ from every other store's file",
     );
   }
   return {
@@ -411,12 +447,22 @@ function loadTopology(): Topology {
     stores: {
       pdpIdempotencyClaims: { file: claimFile },
       pepWriteReservations: { file: reservationFile },
+      pepEvidenceRetention: { file: retentionFile },
     },
   };
 }
 
 /** The validated deployment topology; consumers inject these values (no cycles). */
 export const TOPOLOGY: Topology = loadTopology();
+
+/**
+ * @spec #831 C2 (D825): the topology's keys as `topology.json` holds them
+ * now, read from disk afresh, for a consumer's reload of its trusted kids
+ * while it runs. {@link TOPOLOGY} is the file as it was at startup.
+ */
+export function readTopologyKeys(): Topology["keys"] {
+  return loadTopology().keys;
+}
 
 /** The default (pre-env-override) payments resource, from topology.json. */
 const DEFAULT_PAYMENTS_RESOURCE = TOPOLOGY.resources.payments;

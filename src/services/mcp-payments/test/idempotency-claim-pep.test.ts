@@ -39,6 +39,7 @@ import {
   CANONICAL_RESOURCE,
   Connectors,
   createEphemeralEvidenceKeys,
+  EvidenceRetentionStore,
   EvidenceStore,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
@@ -94,6 +95,8 @@ interface HarnessOptions {
   holdSettlement?: boolean;
   /** Replace the redemption store's answer (condition 6). */
   consumptionStatus?: (engineStatus: ConsumptionStatusFn) => ConsumptionStatusFn;
+  /** Write the PEP's evidence through a durable retention backend, as the composed stack does (#821). */
+  retention?: boolean;
 }
 
 async function harness(o: HarnessOptions = {}) {
@@ -155,7 +158,8 @@ async function harness(o: HarnessOptions = {}) {
     listUnresolved: () => channel.claims.listUnresolved(),
     reconcile: (id, resolution) => channel.claims.reconcile(id, resolution),
   };
-  const evidence = new EvidenceStore(keys.signing, keys.resolver);
+  const retention = o.retention ? new EvidenceRetentionStore({ retentionWindowSeconds: 3600, now }) : undefined;
+  const evidence = new EvidenceStore(keys.signing, keys.resolver, retention);
   const connectors = new Connectors(now);
   const decide: DecisionFn = channel.decide;
   let lastDecision: Record<string, unknown> | undefined;
@@ -191,6 +195,7 @@ async function harness(o: HarnessOptions = {}) {
     engine,
     connectors,
     evidence,
+    retention,
     claims,
     channel: claimChannel,
     redemption,
@@ -633,6 +638,41 @@ describe("evidence emission failures: a refusal before any effect, or a reported
       expect(emit).toHaveBeenCalled();
       expect(h.connectors.ledgerEntries()).toHaveLength(0);
       expect(retainedKinds(h)).toEqual({ decision: 0, refusal: 0, execution: 0 });
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("a storage failure retaining the permit's Decision Evidence before execution prevents the effect: the wire never reaches the connector (@spec runtime#evidence, #821)", async () => {
+    const h = await harness({ retention: true });
+    try {
+      const backend = h.retention;
+      if (!backend) throw new Error("no retention backend");
+      const original = backend.retain.bind(backend);
+      const retain = vi.spyOn(backend, "retain").mockImplementation((input) => {
+        if (input.kind === "decision") throw new Error("SQLITE_FULL: database or disk is full");
+        return original(input);
+      });
+      await expect(wire(h, key())).rejects.toThrow(/SQLITE_FULL/);
+
+      // The PDP permitted and emitted its record; the failure is the PEP's
+      // durable write of that record, the one write attempted.
+      const decided = h.lastDecision();
+      const permit = decided?.decision_evidence as { evidence_id: string; decision: string } | undefined;
+      expect(permit?.decision).toBe("permit");
+      expect(retain.mock.calls.map(([input]) => [input.kind, input.record_id])).toEqual([["decision", permit?.evidence_id]]);
+      const evaluationId = String(decided?.evaluation_id);
+
+      // No effect, no record of one, nothing redeemed, nothing settled.
+      expect(h.connectors.ledgerEntries()).toEqual([]);
+      expect(executions(h)).toEqual([]);
+      expect(retainedKinds(h)).toEqual({ decision: 0, refusal: 0, execution: 0 });
+      expect(backend.retained()).toEqual([]);
+      expect(await h.redemption.status(evaluationId, h.redemption.epoch)).toBe("unconsumed");
+      expect(h.settlements).toHaveLength(0);
+      // The claim is held unsettled, never completed: past the lease it is listed unresolved.
+      h.advance(PAST_LEASE_MS);
+      expect((await h.channel.listUnresolved()).map((u) => u.evaluation_id)).toContain(evaluationId);
     } finally {
       await h.close();
     }

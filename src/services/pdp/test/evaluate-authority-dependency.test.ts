@@ -36,14 +36,19 @@ const ISSUER = "https://as.test";
 const T0 = Date.parse("2026-10-25T12:00:00Z");
 const MISSION = "msn_dep_pdp";
 
-/** The shipped declaration, routed to the PDP, with an online check where asked. */
+/**
+ * The shipped declaration, routed to the PDP by direct evaluation alone (the
+ * lifecycle route's lag refusal is witnessed in its own file), with an
+ * online check where asked.
+ */
 function declaration(over: { direct?: "pdp" | "pep"; online_check?: boolean } = {}): AuthorityDependencyDeclaration {
-  const shipped = AUTHORITY_DEPENDENCIES[0] as AuthorityDependencyDeclaration;
+  // Direct evaluation alone runs no reconciler, so it states no reconciliation period.
+  const { external_change_bound: _bound, ...shipped } = AUTHORITY_DEPENDENCIES[0] as AuthorityDependencyDeclaration;
   const [parsed] = parseAuthorityDependencyDeclarations([
     {
       ...shipped,
       online_check: over.online_check ?? shipped.online_check,
-      enforcement: { ...shipped.enforcement, direct: over.direct ?? "pdp" },
+      enforcement: { direct: over.direct ?? "pdp", lifecycle: false },
     },
   ]);
   return parsed as AuthorityDependencyDeclaration;
