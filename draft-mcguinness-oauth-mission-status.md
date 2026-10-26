@@ -2098,7 +2098,7 @@ this document.
   Mission Lifecycle endpoint error response
 - Related Protocol Extension: Mission Status and Lifecycle for OAuth
   2.0
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{mission-status-errors}}
 
 - Error Name: `not_found`
@@ -2106,21 +2106,21 @@ this document.
   Mission Lifecycle endpoint error response
 - Related Protocol Extension: Mission Status and Lifecycle for OAuth
   2.0
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{mission-status-errors}}
 
 - Error Name: `conflict`
 - Error Usage Location: Mission Lifecycle endpoint error response
 - Related Protocol Extension: Mission Status and Lifecycle for OAuth
   2.0
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{mission-status-errors}}
 
 - Error Name: `stale_version`
 - Error Usage Location: Mission Lifecycle endpoint error response
 - Related Protocol Extension: Mission Status and Lifecycle for OAuth
   2.0
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{mission-status-errors}}
 
 - Error Name: `rate_limited`
@@ -2128,7 +2128,7 @@ this document.
   Mission Lifecycle endpoint error response
 - Related Protocol Extension: Mission Status and Lifecycle for OAuth
   2.0
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{mission-status-errors}}
 
 - Error Name: `unavailable`
@@ -2136,7 +2136,7 @@ this document.
   Mission Lifecycle endpoint error response
 - Related Protocol Extension: Mission Status and Lifecycle for OAuth
   2.0
-- Change Controller: IESG
+- Change Controller: IETF
 - Specification Document(s): this document, {{mission-status-errors}}
 
 ## Media Type Registration {#media-type-registration}
