@@ -260,9 +260,12 @@ describe("lifecycle-mediated enforcement of the declared dependency by the recon
     const m = approve(as, "dana");
     source = sourceWith({ dana: { status: "disabled" } });
     expect(mine(await reconciler().reconcile(), m)).toEqual([{ mission: m.id, operation: "suspend", change: "subject_disabled" }]);
+    expect(await statusOf(m.id)).toMatchObject({ id: m.id, state: "suspended" });
     source = sourceWith({ dana: { status: "deprovisioned" } });
     expect(mine(await reconciler().reconcile(), m)).toEqual([{ mission: m.id, operation: "revoke", change: "subject_deprovisioned" }]);
     expect(stateOf(m.id)).toMatchObject({ state: "terminated", reason: "revoked" });
+    expect(await statusOf(m.id)).toMatchObject({ id: m.id, state: "terminated", termination: { reason: "revoked" } });
+    expect(() => as.kernel.checkDerivation(m.id)).toThrow();
   });
 
   it("never revokes on an outage, a principal the source holds no record of, or a disabled Subject; an approver's or the client's departure changes nothing", async () => {
@@ -283,10 +286,12 @@ describe("lifecycle-mediated enforcement of the declared dependency by the recon
     expect(unknown.ok).toBe(true);
     expect(mine(unknown, m)).toEqual([]);
     expect(stateOf(m.id).state).toBe("active");
-    // The approver deprovisioned, and the client's identifier deprovisioned as a principal: neither is the recorded Subject.
-    source = sourceWith({ bob: { status: "deprovisioned" }, "ap-agent": { status: "deprovisioned" } });
-    expect(mine(await reconciler().reconcile(), m)).toEqual([]);
-    expect(stateOf(m.id).state).toBe("active");
+    // The approver and the client's identifier, disabled and then deprovisioned as principals: neither is the recorded Subject.
+    for (const status of ["disabled", "deprovisioned"]) {
+      source = sourceWith({ bob: { status }, "ap-agent": { status } });
+      expect(mine(await reconciler().reconcile(), m), status).toEqual([]);
+      expect(stateOf(m.id).state, status).toBe("active");
+    }
     expect((await decide(m.id)).decision).toBe(true);
     // A disabled Subject: suspend, never revoke.
     source = sourceWith({ hana: { status: "disabled" } });
@@ -637,6 +642,23 @@ const LIFECYCLE_ONLY = (() => {
 /** A decision under the shared assembly's reconciler, by a PDP holding the dependency as lifecycle-only. */
 const lifecycleOnlyDecide = (id: string, action = READ) => decide(id, action, { ...enforcement(), declaration: LIFECYCLE_ONLY });
 const resume = (id: string) => lifecycleRequest(ISSUER, consoleClient, { mission_id: id, operation: "resume", nonce: `nonce-rec-${crypto.randomUUID()}` });
+/** An authenticated read of the advertised Mission Status endpoint by a client holding mission_status: the reported Mission. */
+async function statusOf(id: string): Promise<Record<string, unknown>> {
+  const read = await readAnswer(
+    await fetch(`${ISSUER}${STATUS_ENDPOINT_PATH}`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        mission_id: id,
+        nonce: `nonce-rec-status-${crypto.randomUUID()}`,
+        client_assertion_type: CLIENT_ASSERTION_TYPE,
+        client_assertion: await lifecycleClientAssertion(ISSUER, readerClient),
+      }).toString(),
+    }),
+  );
+  expect(read.status, read.text).toBe(200);
+  return decodeStatusResponse(read.text).mission;
+}
 
 describe("an invalidation the reconciliation established holds under lifecycle-only enforcement, whatever the Mission state reads (@spec runtime#input-authority-dependency, #830)", () => {
   it("refuses a Mission resumed by an authorized Lifecycle request while its Subject is still disabled, as the issuance gate does", async () => {
@@ -805,21 +827,7 @@ describe("Mission Status reports a Mission active while the lifecycle-only PDP r
     source = new Error("identity source unreachable");
     nowMs = reconciledAt + LAG_MS;
     expect((await reconciler().reconcile()).ok).toBe(false);
-    // An authenticated read of the advertised Mission Status endpoint by a client holding mission_status.
-    const read = await readAnswer(
-      await fetch(`${ISSUER}${STATUS_ENDPOINT_PATH}`, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          mission_id: m.id,
-          nonce: `nonce-rec-status-${crypto.randomUUID()}`,
-          client_assertion_type: CLIENT_ASSERTION_TYPE,
-          client_assertion: await lifecycleClientAssertion(ISSUER, readerClient),
-        }).toString(),
-      }),
-    );
-    expect(read.status, read.text).toBe(200);
-    expect(decodeStatusResponse(read.text).mission).toMatchObject({ id: m.id, state: "active" });
+    expect(await statusOf(m.id)).toMatchObject({ id: m.id, state: "active" });
     const refused = await lifecycleOnlyDecide(m.id);
     expect(refused.decision).toBe(false);
     expect(refused.context.denial_reason).toBe("resource_policy");
@@ -838,6 +846,7 @@ describe("the AS terminates a deprovisioned Subject's Missions, identified by th
     const pass = await reconciler().reconcile();
     expect(mine(pass, m)).toEqual([{ mission: m.id, operation: "revoke", change: "subject_deprovisioned" }]);
     expect(stateOf(m.id)).toMatchObject({ state: "terminated", reason: "revoked" });
+    expect(await statusOf(m.id)).toMatchObject({ id: m.id, state: "terminated", termination: { reason: "revoked" } });
     expect(() => as.kernel.checkDerivation(m.id)).toThrow();
     source = sourceWith();
     await reconciler().reconcile();
