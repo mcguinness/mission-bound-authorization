@@ -31,7 +31,7 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   type BoundaryEvidenceKey,
@@ -1174,7 +1174,9 @@ export async function composeStack(opts: {
   };
 
   const runtimeDecisionPolicy = {
-    requiresActionApproval: (action: string) => action === "payments:remittance.send",
+    // @spec runtime#action-approval (#813): the one declaration the AS's
+    // standing-payment consent disclosure also reads.
+    requiresActionApproval: (action: string) => ACTION_APPROVAL_POLICY.actions.includes(action),
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
     stateSourcePlacement: stateSourcePlacement(statement),
     delegatePolicy: {

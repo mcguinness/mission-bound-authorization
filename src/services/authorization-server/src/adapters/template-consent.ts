@@ -20,6 +20,7 @@ import { verifiedActivationPolicy } from "../kernel/activation-policy.js";
 import type { CapabilitySourceResolver } from "../kernel/capability-binding.js";
 import { standingConsentLines, standingConsentMaximumOf } from "../kernel/standing-consent-limit.js";
 import { type StandingPaymentTerms, standingPaymentTermsOf } from "../kernel/standing-payment.js";
+import type { ActionApprovalPolicy } from "@mission/demo-data";
 import { contentDigest } from "./approval-render-revision.js";
 import { type DispatchPolicies, type TemplateProposalBody, templateCeiling } from "../kernel/template.js";
 
@@ -119,6 +120,8 @@ export function templateConsentDisclosure(
     capabilityResolver?: CapabilitySourceResolver;
     /** @spec mission-template#prohibited-classes (#813): the `standing-payment-dispatch` capability is on. */
     standingPayment?: boolean;
+    /** @spec runtime#action-approval (#813): the deployment's action-approval predicate. */
+    actionApprovalPolicy?: ActionApprovalPolicy;
   },
 ): { disclosure: TemplateConsentDisclosure } | { refusal: string } {
   const { body } = proposal;
@@ -137,7 +140,7 @@ export function templateConsentDisclosure(
   if (opts.standingPayment) {
     try {
       const terms = standingPaymentTermsOf(held as NonNullable<typeof held>);
-      standing = terms ? standingPaymentLines(terms, body) : [];
+      standing = terms ? standingPaymentLines(terms, body, opts.actionApprovalPolicy) : [];
     } catch (e) {
       return {
         refusal: `The Dispatch Policy ${body.dispatch_policy.id} states standing-payment terms that cannot be shown (${(e as Error).message}). This consent is refused.`,
@@ -204,7 +207,11 @@ export const STANDING_PAYMENT_STATEMENT =
  * instance and successor, so `max_active` concurrent instances can each draw
  * up to the per-instance maximum while the shared limit still binds them all.
  */
-export function standingPaymentLines(terms: StandingPaymentTerms, body: TemplateProposalBody): string[] {
+export function standingPaymentLines(
+  terms: StandingPaymentTerms,
+  body: TemplateProposalBody,
+  actionApproval?: ActionApprovalPolicy,
+): string[] {
   const destinations = Object.entries(terms.destinations)
     .map(([vendor, account]) => `${vendor} to account ${account}`)
     .join(", ");
@@ -216,8 +223,37 @@ export function standingPaymentLines(terms: StandingPaymentTerms, body: Template
     `Budget ${terms.budget.owner}/${terms.budget.id}: at most ${terms.budget.limit} ${terms.budget.currency} in total across every dispatched instance and its successors, retries and replacement credentials included; each instance's own max_budget is at most ${terms.budget.per_instance_max} ${terms.budget.currency}.`,
     `Up to ${body.max_active} instances may each draw up to ${terms.budget.per_instance_max} ${terms.budget.currency} at once, at most ${body.rate_per_min} dispatches per minute, always within the shared ${terms.budget.limit} ${terms.budget.currency} budget.`,
     `Approval Governance exceptions committed by this consent: ${exceptions || "none"}; recency ceiling ${terms.approval_governance.recency.ceilings.default} seconds, clock-skew allowance ${terms.approval_governance.recency.clock_skew_s} seconds.`,
+    actionApprovalLine(terms, body, actionApproval),
     "No instance creates a Child Mission, delegates, or is continued across an organization or a domain. Raising any limit needs a new template version and a fresh consent.",
   ];
+}
+
+/**
+ * @spec mission-template#prohibited-classes, runtime#action-approval (#813):
+ * whether each payment requires an action-bound approval, and from whom. It
+ * is required where the deployment's action-approval predicate names the
+ * designated operation, or where a Template Ceiling entry naming it carries
+ * the `requires_action_approval` Common Constraint (every instance entry
+ * then carries it too); the approver is the one the predicate declares.
+ */
+export function actionApprovalLine(
+  terms: StandingPaymentTerms,
+  body: TemplateProposalBody,
+  actionApproval?: ActionApprovalPolicy,
+): string {
+  const byPredicate = actionApproval?.actions.includes(terms.operation) === true;
+  const byConstraint = body.ceiling.some(
+    (e) => e.actions.includes(terms.operation) && e.constraints?.requires_action_approval === true,
+  );
+  if (!byPredicate && !byConstraint) {
+    return "Action-bound approval for each payment: none. Each payment executes under this standing consent and a fresh runtime decision, with no per-payment human approval.";
+  }
+  const why = [
+    ...(byPredicate ? [`the deployment's action-approval predicate names ${terms.operation}`] : []),
+    ...(byConstraint ? ["the Template Ceiling sets requires_action_approval"] : []),
+  ].join("; ");
+  const from = actionApproval?.approver ?? "an Approver the deployment does not name";
+  return `Action-bound approval for each payment: required, from ${from}, bound to that payment's exact parameters (${why}).`;
 }
 
 /**

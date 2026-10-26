@@ -26,6 +26,8 @@ import {
   USERS,
   APPROVAL_FLOOR,
   WRITE_ACTIONS,
+  ACTION_APPROVAL_POLICY,
+  type ActionApprovalPolicy,
   type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import { randomBytes } from "node:crypto";
@@ -1061,6 +1063,13 @@ export async function buildAuthorizationServer(opts: {
    * digest at consent and Dispatch verifies it before evaluating anything.
    */
   dispatchPolicies?: DispatchPolicies;
+  /**
+   * @spec runtime#action-approval, mission-template#prohibited-classes
+   * (#813): the deployment's action-approval predicate a standing-payment
+   * consent renders. Defaults to {@link ACTION_APPROVAL_POLICY}, the shipped
+   * declaration the runtime decision policy also reads.
+   */
+  actionApprovalPolicy?: ActionApprovalPolicy;
   /**
    * @spec mission#standing-consent-bases — the activation policies the kernel
    * evaluates for a policy-adjudicated child creation, keyed by policy `id`.
@@ -2103,6 +2112,7 @@ export async function buildAuthorizationServer(opts: {
     continuationGrantKid: continuationKeys.kid,
     templateStore,
     dispatchPolicies,
+    actionApprovalPolicy: opts.actionApprovalPolicy ?? ACTION_APPROVAL_POLICY,
     protectedEventSources,
     issuerEvidence,
     // @spec issuance-grant#effective-set-projection (#617 review 1) — the
