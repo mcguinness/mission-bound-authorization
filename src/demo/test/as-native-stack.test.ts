@@ -785,6 +785,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       await stack?.decisionChannel.close();
       stack?.pdpClaims.close();
       stack?.writeReservations.close();
+      stack?.evidenceRetention.close();
       stack?.payments.db.close();
       stack?.kernel.db.close();
       fgaBootstrap?.mockRestore();
@@ -1325,6 +1326,11 @@ describe("the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (
   afterAll(stubbed.teardown);
   it("mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience", () => {
     stubbed.topology();
+  });
+  it("publishes credential_carried as its only Mission-establishment mode: the AS-native target serves no externally established mode (@spec runtime#mission-binding, #956)", async () => {
+    const meta = (await (await fetch(new URL("/.well-known/oauth-protected-resource", CANONICAL_RESOURCE))).json()) as Json;
+    const statement = meta.enforcement_scope_statement as { mediated_scope: { mission_establishment_mode: unknown } };
+    expect(statement.mediated_scope.mission_establishment_mode).toBe("credential_carried");
   });
   it("runs exactly the D332 AS capability set, the issuance profile plus lifecycle-revoke and transaction-authorization, and advertises only that surface", async () => {
     await stubbed.capabilitySet();

@@ -27,6 +27,7 @@ import {
   createDecisionEvidenceEmitter,
   DECISION_EVIDENCE_MEDIA_TYPE,
   type DecisionEvidenceObject,
+  DecisionRequestRefused,
   evaluate as evaluateRequest,
   type EvaluateOptions,
   type EvaluationRequest,
@@ -244,8 +245,8 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
       const { emitter } = emitterFixture();
       const base = {
         mission: { id: "msn", issuer: "https://as.test", policy_view_id: "pv" }, subject: { id: "alice" },
-        resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, audience: RESOURCE,
-        evaluation_id: "evaluation", evaluated_at: NOW.toISOString(), evaluation_request_digest: canonicalDigest({ request: true }),
+        resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, action_class: "consequential_read" as const,
+        audience: RESOURCE, evaluation_id: "evaluation", evaluated_at: NOW.toISOString(), evaluation_request_digest: canonicalDigest({ request: true }),
       };
       const deny = { ...base, decision: "deny" as const };
       await expect(emitter.emit({ ...deny, denial_reason: "out_of_authority", authority_bound: "credential" })).resolves.toMatchObject({ authority_bound: "credential" });
@@ -506,7 +507,7 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
   it("records the applied class, a permit entry digest and one matching parameter binding for every action class", async () => {
     const { emitter } = emitterFixture();
     const claims = openTestClaims({ now: () => NOW });
-    for (const actionClass of [undefined, "consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration"]) {
+    for (const actionClass of ["consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration"] as const) {
       const request = req();
       request.context.action_class = actionClass;
       request.context.parameter_digest = canonicalDigest({ invoice_id: "inv-1" });
@@ -516,15 +517,22 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
       const decision = await evaluate(request, opts({ evidence: emitter, stateSourcePlacement: "pep" as const, claims }));
       expect(decision.decision, JSON.stringify(decision.context)).toBe(true);
       const record = decision.context.decision_evidence as DecisionEvidenceObject;
-      expect(record.action_class).toBe(actionClass ?? "consequential_read");
-      expect(record.class_source).toBe(actionClass ? "deployment" : "default");
+      expect(record.action_class).toBe(actionClass);
+      expect(record.class_source).toBe("deployment");
       expect(record.entry_digest).toMatch(/^sha-256:/);
       expect(record.parameter_digest).toBe((decision.context.conditions as { parameter_digest: string }).parameter_digest);
       expect(record.conditions).not.toHaveProperty("parameter_digest");
       expect(record).not.toHaveProperty("evaluation_request_digest");
       expect(Number.isFinite(Date.parse(record.conditions!.valid_until))).toBe(true);
-      if (["irreversible_action", "external_commitment", "privileged_administration"].includes(actionClass ?? "")) expect(record.conditions!.use_limit).toBe(1);
+      if (["irreversible_action", "external_commitment", "privileged_administration"].includes(actionClass)) expect(record.conditions!.use_limit).toBe(1);
     }
+    // @spec runtime#classification (#956, D814): a request with no class is
+    // never recorded under a default one; it is refused before evaluation.
+    const unclassified = req();
+    unclassified.context.action_class = undefined;
+    const refused = await evaluate(unclassified, opts({ evidence: emitter, stateSourcePlacement: "pep" as const, claims })).catch((e: unknown) => e);
+    expect(refused).toBeInstanceOf(DecisionRequestRefused);
+    expect((refused as DecisionRequestRefused).denial_reason).toBe("action_class_missing");
   });
 
   it("digests the evaluation request as submitted without a parameter binding on permit and deny, and omits absent credential", async () => {
@@ -543,14 +551,15 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
   // @spec authzen#evaluation-request-digest-input: the whole body as
   // submitted, before any receiver-side default. Member order does not change
   // the digest; an extension member and an explicit null each do.
-  it("covers the whole submitted body: order-independent, extension members and explicit null included, receiver defaults excluded", async () => {
+  it("covers the whole submitted body as submitted: order-independent, extension members and explicit null included", async () => {
     const { emitter } = emitterFixture();
     const recordFor = async (request: EvaluationRequest) =>
       (await evaluate(request, opts({ evidence: emitter }))).context.decision_evidence as DecisionEvidenceObject;
     const base = await recordFor(req());
-    // The PDP applied its default action class, and the digest is still over
-    // the body without it.
-    expect(base.class_source).toBe("default");
+    // @spec runtime#classification (#956, D814): the class is the one the
+    // request carried (the PDP applies no default), and the digest is over
+    // the body as submitted, that class included.
+    expect(base.class_source).toBe("deployment");
     expect(base.evaluation_request_digest).toBe(submittedDigest(req()));
     const r = req();
     const reordered = { context: r.context, action: r.action, resource: r.resource, subject: r.subject } as EvaluationRequest;
@@ -582,8 +591,8 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
     const { emitter } = emitterFixture();
     const input = {
       mission: { id: "msn", issuer: "https://as.test", policy_view_id: "pv" }, subject: { id: "alice" },
-      resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, audience: RESOURCE,
-      evaluation_id: "evaluation", decision: "permit" as const, evaluated_at: NOW.toISOString(),
+      resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, action_class: "consequential_read" as const,
+      audience: RESOURCE, evaluation_id: "evaluation", decision: "permit" as const, evaluated_at: NOW.toISOString(),
       entry_digest: canonicalDigest({ entry: true }), conditions: { valid_until: NOW.toISOString() },
     };
     await expect(emitter.emit({ ...input, parameter_digest: canonicalDigest({ amount: 1 }) })).rejects.toThrow("binding differs");
@@ -599,8 +608,8 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
     const { emitter } = emitterFixture();
     const input = {
       mission: { id: "msn", issuer: "https://as.test", policy_view_id: "pv" }, subject: { id: "alice" },
-      resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, audience: RESOURCE,
-      evaluation_id: "evaluation", decision: "permit" as const, evaluated_at: NOW.toISOString(),
+      resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, action_class: "consequential_read" as const,
+      audience: RESOURCE, evaluation_id: "evaluation", decision: "permit" as const, evaluated_at: NOW.toISOString(),
       entry_digest: canonicalDigest({ entry: true }), conditions: { valid_until: NOW.toISOString() },
     };
     await expect(emitter.emit(input)).rejects.toThrow("evaluation request digest");
@@ -609,6 +618,36 @@ describe("evaluate() emits the Decision Evidence it decided (@spec runtime-evide
     const record = await emitter.emit({ ...input, evaluation_request_digest: digest });
     expect(record.evaluation_request_digest).toBe(digest);
     expect(record).not.toHaveProperty("parameter_digest");
+  });
+
+  // @spec runtime-evidence#decision-evidence-object, runtime#classification
+  // (#956, D814): `action_class` is the class the PDP applied. The emitter
+  // manufactures none for an input without one, on a permit or a deny.
+  it("refuses to sign a record that names no action class, never defaulting one", async () => {
+    const { emitter } = emitterFixture();
+    const permit = {
+      mission: { id: "msn", issuer: "https://as.test", policy_view_id: "pv" }, subject: { id: "alice" },
+      resource: { type: "invoice", id: "inv-1" }, action: { name: "payments:invoice.read" }, audience: RESOURCE,
+      evaluation_id: "evaluation", decision: "permit" as const, evaluated_at: NOW.toISOString(),
+      evaluation_request_digest: canonicalDigest({ request: true }),
+      entry_digest: canonicalDigest({ entry: true }), conditions: { valid_until: NOW.toISOString() },
+    };
+    const deny = { ...permit, decision: "deny" as const, denial_reason: "out_of_authority" as const, entry_digest: undefined, conditions: undefined };
+    for (const input of [permit, deny]) {
+      await expect(emitter.emit(input), input.decision).rejects.toThrow("Decision Evidence requires the action class the PDP applied");
+      await expect(emitter.emit({ ...input, action_class: undefined }), input.decision).rejects.toThrow(
+        "Decision Evidence requires the action class the PDP applied",
+      );
+      await expect(emitter.emit({ ...input, action_class: "" as never }), input.decision).rejects.toThrow(
+        "Decision Evidence requires the action class the PDP applied",
+      );
+    }
+    // Control: the same inputs naming a class are signed, recorded as the deployment's.
+    for (const input of [permit, deny]) {
+      const record = await emitter.emit({ ...input, action_class: "consequential_read" });
+      expect(record.action_class, input.decision).toBe("consequential_read");
+      expect(record.class_source, input.decision).toBe("deployment");
+    }
   });
 
   it("evidence_id matches 1*64(ALPHA/DIGIT/-/_) and its random segment decodes to at least 128 bits", async () => {

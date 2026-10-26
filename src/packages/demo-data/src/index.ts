@@ -304,8 +304,14 @@ export interface Topology {
    * `pepWriteReservations.file` (#918) is the enforcing PEP's reservation and
    * retention store for keyed reversible writes: a separate file, opened
    * single-writer by that PEP alone, never shared with the PDP's.
+   * `pepEvidenceRetention.file` (#821) is the same PEP's evidence retention
+   * store: the records it retains and its per-emitter sequences.
    */
-  stores: { pdpIdempotencyClaims: { file: string }; pepWriteReservations: { file: string } };
+  stores: {
+    pdpIdempotencyClaims: { file: string };
+    pepWriteReservations: { file: string };
+    pepEvidenceRetention: { file: string };
+  };
 }
 
 function reqTxnChallenge(
@@ -377,6 +383,18 @@ function loadTopology(): Topology {
       "stores.pepWriteReservations.file must differ from stores.pdpIdempotencyClaims.file",
     );
   }
+  const retentionStore = asObject(file, stores.pepEvidenceRetention, "stores.pepEvidenceRetention");
+  const retentionFile = resolvePath(
+    dirname(CONFIG_DIR),
+    reqString(file, retentionStore, "file", "stores.pepEvidenceRetention"),
+  );
+  // #821: each durable store is its own single-writer file.
+  if (retentionFile === claimFile || retentionFile === reservationFile) {
+    throw new ConfigError(
+      file,
+      "stores.pepEvidenceRetention.file must differ from every other store's file",
+    );
+  }
   return {
     resources: {
       payments: reqString(file, resources, "payments", "resources"),
@@ -429,6 +447,7 @@ function loadTopology(): Topology {
     stores: {
       pdpIdempotencyClaims: { file: claimFile },
       pepWriteReservations: { file: reservationFile },
+      pepEvidenceRetention: { file: retentionFile },
     },
   };
 }

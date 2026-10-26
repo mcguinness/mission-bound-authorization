@@ -479,9 +479,18 @@ deployment establishes it in one of two modes:
   establishes a Mission in this mode only under a separately specified
   verified join ({{I-D.draft-mcguinness-mission-aauth}}).
 
-The mode each enforcement scope uses is part of its Enforcement
-Scope Statement ({{runtime-conformance}}). In either mode, the
-established Mission is the Mission every input of {{decision-inputs}}
+Each enforcement scope declares the modes it serves as
+`mission_establishment_mode` in its Enforcement Scope Statement
+({{runtime-conformance}}): `credential_carried`,
+`externally_established`, or a non-empty list of those values without
+duplicates where it serves both. A scope declares only the modes it
+actually serves. Declaring both creates no fallback: the binding
+profile's precedence decides which reference establishes the Mission
+(under the Mission Authority Server profile, a credential-carried
+reference governs), and a conflicting selector or an invalid
+credential is not rescued by an externally established reference.
+In either mode, the established Mission is the Mission every input of
+{{decision-inputs}}
 (authority, Resource policy, parameters, actor, time, state) is
 evaluated against, and the Mission reference the permit and the
 evidence record bind.
@@ -1174,15 +1183,16 @@ that digest immediately before acting
 
 - `parameter_digest` is `sha-256:` followed by the base64url, no
   padding, SHA-256 {{RFC6234}} of the JCS {{RFC8785}} serialization of
-  the normalized parameter object. It MUST be computed under the same
-  canonicalization rules the issuance profile defines (duplicate
-  member rejection, significant array order, byte-for-byte URI
-  comparison); this document does not define a second canonicalization.
-  It is a canonical-object digest under the substrate's default
-  commitment construction, which this document imports normatively
-  ({{I-D.draft-mcguinness-mission-substrate}}): the I-JSON
-  requirement and the reject-unknown-prefix rule apply to computing
-  and verifying it unchanged.
+  the normalized parameter object. It MUST be computed under the
+  substrate's default commitment construction, which this document
+  imports normatively ({{I-D.draft-mcguinness-mission-substrate}}): a
+  duplicate member is rejected at parse time, array order is
+  significant because JCS preserves it, a URI-valued parameter is
+  preserved unless the Operation Profile defines its normalization
+  ({{parameter-binding}}), and this document defines no second
+  canonicalization. It is a canonical-object digest under that
+  construction: the I-JSON requirement and the reject-unknown-prefix
+  rule apply to computing and verifying it unchanged.
 - Every parameter that influences the action's external effect (for
   example, the recipient, destination, amount, or target object) MUST
   enter the `parameter_digest`. A field the deployment excludes MUST be
@@ -1523,7 +1533,10 @@ identifier and issuer, the kernel's Mission Reference and Controller;
 the lifecycle state space with its only-`active`-permits rule, the
 kernel's governance gate; the immutable Approved Context, the
 approval-time fixity behind every anchor its records cite; and the
-Mission's audit horizon, which bounds the ordered governance record.
+Mission's retention period as its binding declares it (the audit
+horizon in the OAuth binding), which bounds the ordered governance
+record and is the floor for this document's records
+({{record-integrity}}).
 The kernel requires no particular integrity anchors: `intent_hash`
 and `authority_hash` are the OAuth binding's commitment to the
 Approved Context, supplied by the issuance profile, not by the
@@ -1666,7 +1679,7 @@ The nested declaration has this shape:
   "action_classes": ["irreversible_action"],
   "execution_paths": ["tool-gateway"],
   "pep_locations": ["tool-gateway"],
-  "mission_establishment_mode": "mission_claim"
+  "mission_establishment_mode": "credential_carried"
 }
 ~~~
 
@@ -1884,8 +1897,14 @@ A read that is already fully constrained by the token's audience,
 resource, and the resource server's object-level authorization, and
 that does not materially affect the resource set or disclosure risk,
 need not be classified a consequential read, and is then not
-separately PDP-gated by this profile. A deployment MUST NOT, however,
-use classification to evade the floor or a Resource-policy minimum, and
+separately PDP-gated by this profile. A request that does reach the
+PDP within a mediated scope with no action class established, where
+the Enforcement Scope Statement declares action classes, is a request
+fault: it is refused before evaluation, never evaluated under a class
+it was not assigned, and no class is recorded for it
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). A deployment
+MUST NOT, however, use classification to evade the floor or a
+Resource-policy minimum, and
 once an action is a consequential write or higher it MUST be gated and
 bound as the table requires.
 
@@ -2523,8 +2542,8 @@ The materialized policy view MUST satisfy three properties:
 
 - Reproducible: identical manifest inputs, including the compiler
   identity, produce a byte-identical manifest, and therefore an
-  identical `policy_view_id`, under the canonicalization rules of
-  {{I-D.draft-mcguinness-oauth-mission}}.
+  identical `policy_view_id`, under the substrate's default commitment
+  construction ({{I-D.draft-mcguinness-mission-substrate}}).
 - Identifiable: the view carries a `policy_view_id`, so PDP cache
   entries are addressable.
 - Bounded: materialization is faithful and does not enlarge the
@@ -2534,10 +2553,10 @@ The materialized policy view MUST satisfy three properties:
 The committed object is a canonical JSON manifest, never the engine
 binary itself: JCS canonicalization applies to the manifest, and an
 engine-native artifact enters the manifest only by digest, never
-directly. `policy_view_id` is the integrity-anchor encoded form
-({{I-D.draft-mcguinness-oauth-mission}}) of the SHA-256 {{RFC6234}} of
-the JCS {{RFC8785}} canonical bytes of that profile's domain-separated,
-issuer-bound integrity-anchor envelope with `typ` `mission-policy-view`:
+directly. `policy_view_id` is the `sha-256:` encoded SHA-256
+{{RFC6234}} of the JCS {{RFC8785}} canonical bytes of a
+domain-separated, issuer-bound envelope with `typ`
+`mission-policy-view`:
 
 ~~~
 SHA-256(JCS({
@@ -2644,7 +2663,14 @@ implementers of the same operation bind the same bytes:
 - default insertion and omitted-optional-field rules applied before
   canonicalization;
 - set-like array handling and any other canonicalization beyond the
-  issuance profile's rules;
+  substrate's default commitment construction;
+- the normalization of URI-valued parameters. Absent one, a URI-valued
+  parameter is preserved as presented. A defined normalization applies
+  identically before the commitment and at execution reverification
+  ({{execution-reverification}}); it never changes how authority
+  entries match resources
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) and never
+  rewrites an approved identifier;
 - exactly which fields enter the `parameter_digest`;
 - where Evaluation-Context Binding is claimed, the versioned descriptor
   of decision-relevant resource-resolved facts and their granularity
@@ -3430,7 +3456,8 @@ The following requirements apply to every record:
 - The Resource Server runtime profile MUST define the record's
   concrete serialization and canonicalization before storage and
   integrity protection. JSON records SHOULD use JCS {{RFC8785}} under
-  the issuance profile's canonicalization rules.
+  the substrate's default commitment construction
+  ({{I-D.draft-mcguinness-mission-substrate}}).
 - It MUST be append-only and integrity-protected; the enforcement
   scope MUST name the mechanism (a hash-linked log, signed segments, a
   transparency anchor, or equivalent). Where a JSON record is
@@ -3460,8 +3487,15 @@ The following requirements apply to every record:
   emitter: a value it cannot use leaves a detectable gap rather than
   being issued again.
 - The retention window declared in the Enforcement Scope Statement
-  MUST be no shorter than the Mission's audit horizon, as defined in
-  the Mission Record section of {{I-D.draft-mcguinness-oauth-mission}}.
+  MUST be no shorter than the Mission's retention period as its
+  Mission Substrate Binding declares it
+  ({{I-D.draft-mcguinness-mission-substrate}}, Section "Ordered
+  Governance Record"), nor shorter than any longer period a companion
+  the deployment adopts requires. That period is a floor for every
+  required record, not only for the governance record it is declared
+  for. The OAuth binding realizes it as the Mission's audit horizon
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Provenance and
+  Expiry"), which covers the Mission Record and its evidence.
 
 Export, transparency registration, and signing for portable
 verification run from the producer's durable store. They run
@@ -3474,8 +3508,8 @@ requires to be individually signed stays individually signed
 
 Digest encoding is uniform across this document family: every digest a
 family document defines uses the `sha-256:` prefixed base64url,
-no-padding encoding of the issuance profile's integrity-anchor rules
-({{I-D.draft-mcguinness-oauth-mission}}). The exceptions are externally
+no-padding encoding of the substrate's default commitment construction
+({{I-D.draft-mcguinness-mission-substrate}}). The exceptions are externally
 fixed encodings: the COSE hashed payload of the audit companion's
 Signed Statements ({{I-D.draft-mcguinness-mission-audit}}) carries the
 raw digest bytes the COSE hash-envelope mechanism requires, and the
@@ -4115,7 +4149,7 @@ the normalized parameter object is:
 
 The `parameter_digest` is `sha-256:` followed by the base64url,
 no-padding SHA-256 of the JCS {{RFC8785}} serialization of that object,
-under the issuance profile's canonicalization rules (no envelope; the
+under the substrate's default commitment construction (no envelope; the
 normalized parameter object is digested directly). The JCS canonical
 bytes are a single line with sorted member names and no whitespace:
 
@@ -4244,6 +4278,25 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Changes a requirement (#854, D814): the record retention floor is the
+  Mission's retention period as its Mission Substrate Binding declares
+  it, realized in the OAuth binding as the audit horizon (the Mission
+  Record and its evidence), and no shorter than a longer period an
+  adopted companion requires; it is a floor for every required record,
+  not only the governance record. Commitment construction,
+  canonicalization and digest encoding are imported from the
+  substrate's default commitment construction, OAuth references
+  remaining for OAuth-owned anchors. A URI-valued parameter is
+  preserved unless the Operation Profile defines its normalization,
+  applied identically at commitment and execution reverification.
+- Changes a requirement (#956, D814): a mediated request that reaches the
+  PDP with no action class established, where the Enforcement Scope
+  Statement declares classes, is a request fault refused before
+  evaluation and is never evaluated or recorded under a class it was not
+  assigned. `mission_establishment_mode` takes `credential_carried`,
+  `externally_established`, or a non-empty duplicate-free list of the
+  modes a scope serves; declaring both creates no fallback, the
+  binding's precedence deciding.
 - Runtime Enforcement Evidence (#821): durability is ordered around
   the effect. For a high-consequence action, the component that
   releases the effect releases it only after the permit's Decision

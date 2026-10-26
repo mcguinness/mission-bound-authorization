@@ -6,7 +6,7 @@
  */
 
 import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { IssuerKeys } from "@mission/core";
 import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
@@ -71,6 +71,7 @@ import {
   EVIDENCE_KEY_SET_LOCATION,
   evidenceKeySetLocation,
   EvidenceRetentionStore,
+  openEvidenceRetentionStore,
   EvidenceStore,
   type HttpMcpChannel,
   indeterminateClaimAlert,
@@ -223,12 +224,20 @@ export interface DemoStack {
   payments: PaymentsStore;
   evidence: EvidenceStore;
   /**
-   * @spec runtime-evidence#execution-evidence-object (Retention), #594 W4-8:
-   * the durable retention store behind `evidence`, and the deployment's
-   * published verification key sets. Exposed so an operator surface can read
-   * what is retained and which keys are still resolvable.
+   * @spec runtime-evidence#execution-evidence-object (Retention), #594 W4-8,
+   * #821: the durable retention store behind `evidence`, open single-writer
+   * on its configured file for this stack's lifetime: the records the PEP
+   * retains and its per-emitter sequences. Exposed so an operator surface can
+   * read what is retained. Close it with `evidenceRetention.close()`.
    */
   evidenceRetention: EvidenceRetentionStore;
+  /**
+   * @spec runtime-evidence#evidence-integrity-signing-keys (#821): the
+   * verification key sets this boot publishes, held in memory because every
+   * evidence key is generated per boot under a fixed kid (#831). Exposed so an
+   * operator surface can read which keys are still resolvable.
+   */
+  evidenceKeySets: EvidenceRetentionStore;
   /**
    * The deployment's receipt-issuer designation, or `undefined` where its
    * Enforcement Scope Statement claims no evidence capability, which is what
@@ -344,6 +353,25 @@ function withJoinAudienceAlias(statement: RuntimePosture, join: { issuer: string
   };
 }
 
+/**
+ * @spec runtime#mission-binding (#956, D814): `statement` declaring exactly the
+ * Mission-establishment modes this stack serves for the payments scope. The
+ * credential-carried mode is always served; the externally established mode
+ * only where the MAS-governed channel's baseline Join governs the payments
+ * resource. Declaring both creates no fallback: the MAS profile's precedence
+ * still lets a credential-carried reference govern. The AS-native target,
+ * which excludes the MAS, therefore declares `credential_carried` only.
+ */
+export function withServedEstablishmentModes(statement: RuntimePosture, servesExternal: boolean): RuntimePosture {
+  return {
+    ...statement,
+    mediated_scope: {
+      ...statement.mediated_scope,
+      mission_establishment_mode: servesExternal ? ["credential_carried", "externally_established"] : "credential_carried",
+    },
+  };
+}
+
 export async function composeStack(opts: {
   openfgaUrl: string;
   presharedKey: string;
@@ -376,6 +404,15 @@ export async function composeStack(opts: {
    * passes its own, as for `claimsFile`.
    */
   writeReservationsFile?: string;
+  /**
+   * @spec runtime-evidence#execution-evidence-object (Retention),
+   * runtime#record-integrity (#821): the PEP's evidence retention file.
+   * Defaults to a file beside `writeReservationsFile` when a caller names
+   * one, so a test's stacks never contend for one single-writer file and a
+   * restart on the same reservation file reopens the same evidence;
+   * otherwise to `topology.json` `stores.pepEvidenceRetention.file`.
+   */
+  evidenceRetentionFile?: string;
   /**
    * @spec runtime#input-resource-policy (#828): attach to a configured
    * Resource-policy store, or bootstrap a development one. No default
@@ -943,9 +980,12 @@ export async function composeStack(opts: {
   // identifier as an audience alias scoped to this issuer and the `at+jwt`
   // token profile (runtime-oauth#boundary-audience), declared in the
   // statement every consumer here reads and the resource publishes.
-  const statement = withJoinAudienceAlias(
-    opts.statement ?? RUNTIME_POSTURE,
-    masGovernedResources.includes(CANONICAL_RESOURCE) ? { issuer, alias: masJoin.join_resource } : undefined,
+  const statement = withServedEstablishmentModes(
+    withJoinAudienceAlias(
+      opts.statement ?? RUNTIME_POSTURE,
+      masGovernedResources.includes(CANONICAL_RESOURCE) ? { issuer, alias: masJoin.join_resource } : undefined,
+    ),
+    masGovernedResources.includes(CANONICAL_RESOURCE),
   );
   const boundary = paymentsBoundaryContext(statement);
   const pdpBoundary = (): string | undefined => {
@@ -1008,6 +1048,11 @@ export async function composeStack(opts: {
       audience: CANONICAL_RESOURCE,
       authorizesAudience: (audience) =>
         boundary.authorizesEvidence({ audience, kid: decisionEvidenceKey.kid, emitter: CANONICAL_RESOURCE, role: "pdp" }, "current"),
+      // @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+      // (#821, D814): the per-Mission Decision Evidence counters live in the
+      // PDP's own durable claim file, so a restarted PDP continues each
+      // stream rather than re-issuing a sequence a retained record carries.
+      sequences: pdpClaims.evidenceSequences(),
     },
     claims: pdpClaims,
     resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer), clients: issuerLocalClients(issuer) }),
@@ -1047,21 +1092,42 @@ export async function composeStack(opts: {
     owner: statement.mediated_scope.pep_locations[0] as string,
   });
   // @spec runtime-evidence#execution-evidence-object (Retention),
-  // #evidence-integrity-signing-keys (#594 W4-8): this deployment's durable
-  // retention store, and the key sets it publishes at its own key-set
-  // location. The window is the retention floor the runtime profile puts
-  // under every runtime-enforced deployment: the Mission audit horizon, since
-  // this deployment's statement claims no evidence capability and so declares
-  // no longer window of its own.
-  const evidenceRetention = new EvidenceRetentionStore({
-    retentionWindowSeconds: deploymentRetentionWindowSeconds(RUNTIME_SCOPE_CONFIG, AUDIT_HORIZON_SECONDS),
+  // runtime#record-integrity (#594 W4-8, #821, D814): this deployment's
+  // durable retention store, a single-writer SQLite file named in
+  // configuration and owned by the statement's PEP location. Every record the
+  // PEP retains and every sequence it allocates is written through it, so a
+  // restart keeps them and continues each emitter's stream. The window is the
+  // retention floor the runtime profile puts under every runtime-enforced
+  // deployment: the Mission audit horizon, since this deployment's statement
+  // claims no evidence capability and so declares no longer window of its own.
+  const retentionWindowSeconds = deploymentRetentionWindowSeconds(RUNTIME_SCOPE_CONFIG, AUDIT_HORIZON_SECONDS);
+  const evidenceRetentionFile =
+    opts.evidenceRetentionFile ??
+    (opts.writeReservationsFile
+      ? join(dirname(opts.writeReservationsFile), "pep-evidence-retention.sqlite")
+      : TOPOLOGY.stores.pepEvidenceRetention.file);
+  mkdirSync(dirname(evidenceRetentionFile), { recursive: true });
+  const evidenceRetention = openEvidenceRetentionStore({
+    file: evidenceRetentionFile,
+    owner: statement.mediated_scope.pep_locations[0] as string,
+    retentionWindowSeconds,
   });
+  // @spec runtime-evidence#evidence-integrity-signing-keys (#821): the key
+  // sets this boot publishes, in a store of their own and in memory. Every
+  // evidence key here is generated per boot under a fixed kid (#831), and a
+  // published kid is append-only: a durable key set would refuse the next
+  // boot's key under the same kid. So records and sequences survive a
+  // restart and the key sets do not: a record signed under an earlier boot's
+  // key cannot be verified after the restart until #831 gives evidence keys a
+  // durable identity, and a key's retirement anchor is not moved by the
+  // records retained in the other store.
+  const evidenceKeySets = new EvidenceRetentionStore({ retentionWindowSeconds });
   const heldKeys = [
     ...evidenceKeys.verification.filter((k) => k.role !== "pdp"),
     { ...decisionPoint.evidenceVerification, role: "pdp" as const },
   ];
   for (const key of heldKeys) {
-    evidenceRetention.publishKey({
+    evidenceKeySets.publishKey({
       location: EVIDENCE_KEY_SET_LOCATION,
       kid: key.kid,
       emitterId: key.emitterId,
@@ -1084,7 +1150,7 @@ export async function composeStack(opts: {
       for (const authorized of declared.evidence_keys) {
         const key = heldKeys.find((k) => k.kid === authorized.kid && k.emitterId === authorized.emitter && k.role === authorized.role);
         if (!key) continue;
-        evidenceRetention.publishKey({
+        evidenceKeySets.publishKey({
           location: evidenceKeySetLocation(declared.boundary),
           kid: key.kid,
           emitterId: key.emitterId,
@@ -1100,7 +1166,7 @@ export async function composeStack(opts: {
       name: "published-evidence-keys",
       roles: ["pdp", "pep", "executor"],
       audienceBound: true,
-      keys: (declared) => evidenceRetention.publishedVerificationKeys(evidenceKeySetLocation(declared)),
+      keys: (declared) => evidenceKeySets.publishedVerificationKeys(evidenceKeySetLocation(declared)),
     }),
   );
   // @spec runtime-evidence#decision-evidence-integrity (#853, D487): the
@@ -1133,7 +1199,7 @@ export async function composeStack(opts: {
   // issuer and receipt verification is unreachable for it. Switching the claim
   // on is a deployment assertion, gated on the producer and consumer duties
   // #594's W4-3/W4-4/W4-16 still own.
-  const receiptIssuerScope = deploymentReceiptIssuerScope(RUNTIME_SCOPE_CONFIG, evidenceRetention);
+  const receiptIssuerScope = deploymentReceiptIssuerScope(RUNTIME_SCOPE_CONFIG, evidenceKeySets);
   // The egress gate's OWN store (D32); the agent run's EgressGate writes here.
   // Egress stays on the pre-existing unsigned path (issue #649's deferred slice B).
   const egressEvidence = new EvidenceStore();
@@ -1304,6 +1370,9 @@ export async function composeStack(opts: {
     issuer,
     transaction: { engine, connectors, evidence },
     writeReservations,
+    // #821: a disposition record the transaction tier could not write is
+    // alerted on the declared operator sink, as an indeterminate claim is.
+    alerts: operatorAlerts,
     // AROP (RS side): validate a presented txn-token against the AS txn public
     // JWKS (published on /jwks under the as-txn kid) and issuer.
     ...(rsAsIssuer ? { asIssuer: rsAsIssuer } : {}),
@@ -1353,6 +1422,7 @@ export async function composeStack(opts: {
       await decisionChannel.close();
       pdpClaims.close();
       writeReservations.close();
+      evidenceRetention.close();
       if (opts.kernelStore) kernel.close();
     };
     try {
@@ -1429,6 +1499,7 @@ export async function composeStack(opts: {
     payments,
     evidence,
     evidenceRetention,
+    evidenceKeySets,
     ...(receiptIssuerScope ? { receiptIssuerScope } : {}),
     egressEvidence,
     ...(issuerEvidenceStore ? { issuerEvidence: issuerEvidenceStore } : {}),

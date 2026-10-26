@@ -27,6 +27,7 @@ import type { AuthorityEntry, MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { authorizationBinding, decisionCacheKey } from "../src/projections.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, resourcePolicyFixture } from "../src/test-support.js";
+import { withActionClass } from "./with-credential.js";
 
 const RS = "https://payments.test/mcp";
 const ACTION = "payments:invoice.read";
@@ -88,7 +89,7 @@ const credentialUnder = (r?: ResourceContractRef | null): CredentialAuthorityEnt
 const request = (
   presented: ResourceContractRef | null = V1,
   credential: ResourceContractRef | null = presented,
-): EvaluationRequest => ({
+): EvaluationRequest => withActionClass({
   subject: { id: "alice" },
   resource: {
     type: "invoice",

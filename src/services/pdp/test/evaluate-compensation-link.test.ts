@@ -310,6 +310,7 @@ describe("Decision Evidence records the validated compensation link (@spec runti
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1" },
       action: { name: REVERSE },
+      action_class: "consequential_read",
       audience: AUDIENCE,
       evaluation_id: "dec_compensating",
       decision: "deny",
