@@ -1706,7 +1706,11 @@ machine-readable carrier is additive. A
 three OPTIONAL boolean members, `narrowing`, `delegation`, and
 `projection`; an absent member leaves that capability undeclared by
 this carrier, falling through to the next carrier in the order
-above.
+above. For each capability, the first carrier in that order that
+declares the member governs, whether it declares `true` or `false`; a
+later carrier does not override it. A declared capability permits a
+transformation without requiring it, and waives no check this document
+requires and no local policy under which the AS refuses one.
 
 ### Policy-Language Types {#policy-language-types}
 
