@@ -1086,10 +1086,15 @@ describe("the AROP deferral initiation on a Mission that is not active (@spec mi
 
   it("an initiation refused under a suspended Mission succeeds after resume: the same request opens a deferral", async () => {
     const { id, requested } = await ownMission();
-    makeInactive(id, "suspended");
-    expect((await initiateOn(id, requested)).body.error).toBe("invalid_grant");
-    as.kernel.transition(id, "resume");
     const rows = deferralRows();
+    makeInactive(id, "suspended");
+    const refused = await initiateOn(id, requested);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_grant");
+    expect(refused.body.deferral_code).toBeUndefined();
+    expect(refused.body.access_token).toBeUndefined();
+    expect(deferralRows()).toBe(rows);
+    as.kernel.transition(id, "resume");
     const r = await initiateOn(id, requested);
     expect(r.status, JSON.stringify(r.body)).toBe(400);
     expect(r.body.error).toBe("authorization_pending");
