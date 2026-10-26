@@ -991,3 +991,22 @@ describe("RAS emits only the constraints keys the destination resource enforces 
     }
   });
 });
+
+describe("a trust anchor that resolves keys per grant (@spec #831 C2)", () => {
+  it("redeems a grant whose key the resolver returns, and refuses one it refuses or answers with another key", async () => {
+    const resolving = (resolveKey: NonNullable<Extract<RasConfig["trustedIssuers"][string], { resolveKey: unknown }>>["resolveKey"]) =>
+      ras({ trustedIssuers: { [AS_ISS]: { resolveKey } } });
+    const byKid = await resolving(async (header) => {
+      if (header.kid !== "as-token") throw new Error(`no key ${String(header.kid)}`);
+      return asKeys.publicKey;
+    });
+    expect((await byKid.redeem(await mintGrant(), clientJkt)).access_token).toBeTypeOf("string");
+    const refusing = await resolving(async () => {
+      throw new Error("unavailable");
+    });
+    await expect(refusing.redeem(await mintGrant(), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+    const other = await generateKeyPair("ES256", { extractable: true });
+    const wrong = await resolving(async () => other.publicKey);
+    await expect(wrong.redeem(await mintGrant(), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+});

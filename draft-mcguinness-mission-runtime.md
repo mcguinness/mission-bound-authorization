@@ -3359,13 +3359,24 @@ The detailed object schema is the Execution Evidence Object, defined
 by the runtime evidence companion
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
+Durability is ordered around the effect. For an action in the
+high-consequence classes, the component that releases the effect MUST
+NOT release it until the permit's Decision Evidence and the
+identifiers that recover the action's disposition (the evaluation
+identifier, and any idempotency claim or consumption reservation the
+action holds) are durably committed. If they cannot be committed,
+that component MUST refuse the action. A crash after an irreversible
+external effect is released and before its outcome is recorded leaves
+an unknown outcome, reconciled as below, with recovery under
+{{execution-capabilities}} and {{idempotency}}.
+
 Reconciliation is bounded in time by the reconciliation window,
 orphan-detection component, and alerting obligation the Enforcement
 Scope Statement declares ({{runtime-conformance}}): an
 execution-outcome record is expected for each decision within the
 window, and the named component detects orphaned evidence (a decision
-with no matching execution-outcome record within it) and sequence
-gaps in a Mission's records ({{record-integrity}}).
+with no matching execution-outcome record within it) and per-emitter
+sequence gaps in a Mission's records ({{record-integrity}}).
 
 An unknown outcome has an owner and a deadline, not only a window:
 the declared component MUST actively reconcile each unresolved
@@ -3459,9 +3470,22 @@ The following requirements apply to every record:
   across emitters; that ordering is best-effort, from the
   correlation members and each record's timestamps together
   ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+- An emitter MUST NOT reuse a sequence value for one Mission,
+  including across a restart and among replicas acting as that
+  emitter: a value it cannot use leaves a detectable gap rather than
+  being issued again.
 - The retention window declared in the Enforcement Scope Statement
   MUST be no shorter than the Mission's audit horizon, as defined in
   the Mission Record section of {{I-D.draft-mcguinness-oauth-mission}}.
+
+Export, transparency registration, and signing for portable
+verification run from the producer's durable store. They run
+asynchronously only as the audit companion's Registration
+Availability ({{I-D.draft-mcguinness-mission-audit}}) and the
+signer-outage rule of {{agent-isolated-evidence-emission}} permit,
+without losing a required record, and a record a composing profile
+requires to be individually signed stays individually signed
+({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 Digest encoding is uniform across this document family: every digest a
 family document defines uses the `sha-256:` prefixed base64url,
@@ -4243,6 +4267,20 @@ worked example shows the concrete record
   `externally_established`, or a non-empty duplicate-free list of the
   modes a scope serves; declaring both creates no fallback, the
   binding's precedence deciding.
+- Runtime Enforcement Evidence (#821): durability is ordered around
+  the effect. For a high-consequence action, the component that
+  releases the effect releases it only after the permit's Decision
+  Evidence and the identifiers that recover the action's disposition
+  are durably committed, and refuses the action when they cannot be. A
+  crash after an irreversible external effect is released and before
+  its outcome is recorded is an unknown outcome under the existing
+  reconciliation rules. An emitter never reuses a sequence value for
+  one Mission, across a restart or among its replicas; a value it
+  cannot use is a detectable gap. Export, transparency registration
+  and portable signing run from the producer's durable store under the
+  existing asynchronous rules, and orphan detection names per-emitter
+  sequence gaps.
+
 - Authority Dependencies: a deployment that makes reliance depend on an
   external authority remaining effective declares the dependency, its
   source, what it governs, invalidating changes, its staleness bound,

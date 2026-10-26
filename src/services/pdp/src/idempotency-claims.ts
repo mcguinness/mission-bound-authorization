@@ -45,6 +45,7 @@ import {
   type JsonValue,
 } from "@mission/core";
 import { afterCommit, type Database, DurableStoreError, openDurableStore, withTransaction } from "@mission/store";
+import type { DecisionEvidenceSequences } from "./decision-evidence.js";
 import { type BoundaryConsumer, lineageScopeDigests, versionInForceAt } from "./enforcement-boundary.js";
 import {
   type EnforcementScopeStatement,
@@ -327,6 +328,13 @@ const MIGRATIONS = [
   // generation each claim was made under. A row from before this column
   // holds NULL, and a NULL row never retransmits.
   "ALTER TABLE claims ADD COLUMN statement_version TEXT;",
+  // @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+  // (#821, D814): the PDP's Decision Evidence counters, one row per
+  // (Mission, emitter, role) key, so a restart continues each stream.
+  `CREATE TABLE evidence_sequences (
+    scope TEXT PRIMARY KEY,
+    next INTEGER NOT NULL
+  ) STRICT;`,
 ];
 
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
@@ -470,6 +478,32 @@ export class IdempotencyClaimDomain {
         const own = declared.find((v) => v.version === version.version);
         return own !== undefined && canonicalize(own as unknown as JsonValue) === canonicalize(version as unknown as JsonValue);
       },
+    };
+  }
+
+  /**
+   * @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+   * (#821, D814): this PDP's Decision Evidence sequence source, on the same
+   * durable, single-writer file as its claims, for the decision point to
+   * bind to its emitter (`DecisionEvidenceEmitterConfig.sequences`). Each
+   * position is committed before it is returned, so a reopened domain
+   * continues every stream and never re-issues a number a retained record
+   * already carries. A closed or failing domain throws, and the emission
+   * fails with it.
+   */
+  evidenceSequences(): DecisionEvidenceSequences {
+    return {
+      next: (key) =>
+        this.tx(() => {
+          const row = this.db.prepare("SELECT next FROM evidence_sequences WHERE scope = ?").get(key) as
+            | { next: number }
+            | undefined;
+          const next = row?.next ?? 0;
+          this.db
+            .prepare("INSERT INTO evidence_sequences (scope, next) VALUES (?, ?) ON CONFLICT(scope) DO UPDATE SET next = excluded.next")
+            .run(key, next + 1);
+          return next;
+        }),
     };
   }
 
