@@ -420,8 +420,9 @@ A shaper processes a request in the following order, which the
 remaining sections follow:
 
 1. Normalize and classify the task input.
-2. Separate facts the requester supplied, facts trusted context
-   supplied, and facts the shaper inferred.
+2. Separate facts the requester supplied, facts and constraints
+   trusted context supplied ({{context-constraints}}), and facts the
+   shaper inferred.
 3. Resolve candidate resources and actions against capability sources
    ({{capability-resolution}}).
 4. Apply deployment shaping policy, including any shaping ceiling and
@@ -666,6 +667,37 @@ emits a partial proposal only when both of the following hold:
 
 The Mission Issuer enforces its own ceiling whether or not a shaping
 ceiling is present.
+
+## Constraints from Trusted Context {#context-constraints}
+
+Trusted context can supply constraints the request does not state: a
+deployment policy, a preference the Subject recorded earlier, or a
+model's refusal to perform a step. Such a constraint narrows the
+proposal or is disclosed in it; it never widens it. When applicable
+constraints conflict, the more restrictive one governs: a Subject's
+preference can narrow deployment policy but never widen it, and an
+exception to deployment policy is the Mission Issuer's decision, not
+the shaper's. Resolving a conflict in the broadening direction is an
+ambiguity resolution ({{ambiguity}}).
+
+The shaper carries each constraint through the mechanism that matches
+what the constraint requires:
+
+| Constraint | Carried as |
+|---|---|
+| A prohibition | Exclusion of the authority it forbids, recorded in `excluded_authority`, or a refusal ({{refusal}}) |
+| A machine-enforceable bound | A structured constraint in the Authority Proposal, restated in `task_bounds` ({{authority-ceiling}}) |
+| Confirmation before an action | The entry's `requires_action_approval` constraint ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), enforced at the point of use ({{I-D.draft-mcguinness-mission-runtime}}, Section "Action-Bound Approval") |
+| A preference | `task_bounds` prose, which nothing enforces |
+
+A preference the Subject requires to hold is carried as a bound or a
+confirmation, not as prose. A model's refusal can remove a step from
+the proposal but never adds one ({{model-output}}). Shaping Evidence
+records each constraint and how the shaper carried it
+({{shaping-evidence}}). Whether a later change at the source affects
+an approved Mission is a declared authority dependency
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Authority
+Dependencies"), not something the evidence decides.
 
 ## Delegation and Child Missions {#delegation}
 
