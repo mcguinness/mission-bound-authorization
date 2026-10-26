@@ -1682,6 +1682,13 @@ the type's delegation policy permits the delegate
 the Mission Authority Set, so equality never restores an entry, or any
 part of one, that the presented token omits.
 
+A designation's `aud` names its redeemer ({{designation}}) and
+reassigns no entry's original approved audience: for a designation,
+the audience rules test the resource audiences associated with the
+entries it carries, never the designated client ({{token-response}}).
+Its redemption issues an entry only as the rules above permit,
+including their `narrowing` condition.
+
 The AS declares the capabilities through these carriers, in order of
 preference:
 
@@ -2672,6 +2679,15 @@ refuses with `invalid_target` a request whose audience is approved for
 none of the entries the token would carry, and one whose
 `authorization_details` ({{Section 6 of RFC9396}}) names an entry not
 approved for its audience.
+
+For a designation ({{designation}}), these rules test the resource
+audiences associated with the entries it carries, never the designated
+client its `aud` names ({{token-claims}}). A designation carries only a
+permitted subset of the presented token's entries ({{subset}},
+{{delegation-constraints}}), each keeping its original approved
+audience ({{transformation-capabilities}}). The delegated token issued
+at its redemption is subject to every rule of this section unchanged
+({{delegated-exchange}}).
 
 The AS returns the granted `authorization_details` in every token
 response, including refresh and Token Exchange responses
@@ -7459,6 +7475,12 @@ Cross-Domain:
   entries the token would carry, the request is refused with
   `invalid_target` (Declared Transformation Capabilities, Audience and
   Token Response; #1503, D620, D733).
+- A designation's `aud` names its redeemer and reassigns no entry's
+  original approved audience: the audience rules test the audiences
+  associated with the entries it carries, a permitted subset of the
+  presented token's, and the delegated token issued at its redemption
+  is subject to every audience rule (Audience and Token Response,
+  Declared Transformation Capabilities; #1717, D845).
 - The AS refuses, with `invalid_target`, a delegated Mission-bound
   token for an audience it has not established as a Mission-aware
   Resource Server that processes the `act` chain; routing and logging
