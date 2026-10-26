@@ -673,12 +673,18 @@ ceiling is present.
 Trusted context can supply constraints the request does not state: a
 deployment policy, a preference the Subject recorded earlier, or a
 model's refusal to perform a step. Such a constraint narrows the
-proposal or is disclosed in it; it never widens it. When applicable
-constraints conflict, the more restrictive one governs: a Subject's
-preference can narrow deployment policy but never widen it, and an
-exception to deployment policy is the Mission Issuer's decision, not
-the shaper's. Resolving a conflict in the broadening direction is an
-ambiguity resolution ({{ambiguity}}).
+proposal or is disclosed in it; it never widens it.
+
+The proposal satisfies every applicable mandatory constraint.
+Comparable bounds combine toward the narrower result. If the
+constraints cannot be satisfied together, the shaper requests
+clarification ({{clarifications}}), refuses ({{refusal}}), or produces
+an explicitly partial proposal under the existing rules
+({{ambiguity}}). A Subject's preference never widens deployment
+policy. An exception to deployment policy is the Mission Issuer's
+decision, and the Mission Issuer approves one only where the governing
+policy authorizes it; recording a broadening ambiguity resolution
+({{ambiguity}}) does not itself authorize an exception.
 
 The shaper carries each constraint through the mechanism that matches
 what the constraint requires:
@@ -1530,9 +1536,9 @@ constraints:
 Nothing enforces the overnight-flight preference; it guides which
 flight the agent selects. Had the Subject required it, the shaper would
 carry it as a bound. Had the request asked for business class, the
-travel policy would govern: the shaper excludes that authority, records
-it in `excluded_authority`, and leaves any exception to the Mission
-Issuer.
+travel policy would govern: the shaper excludes that authority and
+records it in `excluded_authority`. An exception is possible only
+where the travel policy authorizes the Mission Issuer to approve one.
 
 # Document History {#document-history}
 
@@ -1541,8 +1547,11 @@ Issuer.
 - Constraints from Trusted Context ({{context-constraints}})
   describes how the shaper carries a deployment policy, a preference
   the Subject recorded, or a model's refusal into the proposal: the
-  more restrictive governs, and each kind of constraint maps to the
-  mechanism that carries it. Shaping Evidence gains a
+  proposal satisfies every applicable mandatory constraint, comparable
+  bounds combine toward the narrower result, constraints that cannot
+  be satisfied together lead to clarification, refusal, or a partial
+  proposal, and each kind of constraint maps to the mechanism that
+  carries it. Shaping Evidence gains a
   `context_constraints` member among its recommended content, with an
   example. No requirement keyword is added or changed.
 
