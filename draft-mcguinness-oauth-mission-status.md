@@ -74,7 +74,6 @@ informative:
       org: "OpenID Foundation"
     date: 2025
     target: "https://openid.net/specs/openid-caep-1_0.html"
-
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-resource-access-00
