@@ -23073,6 +23073,12 @@
      "name": "MCP _meta Mission reference propagation > a malformed _meta reference (extra member) is refused with mission_reference_conflict",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: a malformed _meta Mission reference is refused (@spec authority-server#mcp-reference, authority-server#reference-tuple, #1694) > a _meta reference carrying an extra member, or not an object, is refused with mission_reference_conflict before any decision",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
    "notes": "Wire behavior landed with #557 (gateway PEP: header and _meta carriage, credential-governs conflict rule)."
@@ -23091,7 +23097,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "credential-carried claim, PEP-recorded binding, and propagated reference naming different Missions denies with mission_reference_conflict; no source is silently preferred except the credential-carried claim governing"
+    "normative": "credential-carried claim, PEP-recorded binding, and propagated reference naming different Missions denies with mission_reference_conflict; no source is silently preferred except the credential-carried claim governing; two carriages of the propagated reference on one request (the Mission-Reference field and the MCP `_meta` key) naming different Missions likewise deny, with neither preferred"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -23119,9 +23125,21 @@
      "name": "MCP _meta Mission reference propagation > a loaded view naming a different Mission issuer than the credential is refused with mission_reference_conflict",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the _meta Mission reference reaches the PEP (@spec authority-server#mcp-reference, #1694) > a _meta reference naming another Mission than the credential is refused with mission_reference_conflict before any decision",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the Mission-Reference field and the _meta key are one reference (@spec authority-server#reference-verification, #1694) > a field and a _meta key naming different Missions are refused with mission_reference_conflict in either order, recorded as a Refusal Record, never a silent pick-one",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1. #1503: a credential whose `mission.issuer` differs from its `iss` is now refused at validation (core.rs-enforcement.mission-issuer-equals-iss), so the binding-source arm is witnessed by a credential naming its own issuer and a loaded view under another; removing the PEP's view-issuer check fails that test."
+   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1. #1503: a credential whose `mission.issuer` differs from its `iss` is now refused at validation (core.rs-enforcement.mission-issuer-equals-iss), so the binding-source arm is witnessed by a credential naming its own issuer and a loaded view under another; removing the PEP's view-issuer check fails that test. #1694: over MCP on HTTP, a `_meta` reference naming another Mission than the credential, and a Mission-Reference field and `_meta` key naming different Missions (in either order, on a MAS-governed route where either one alone would join), are refused before any decision; these entries use a stub FGA and never skip."
   },
   {
    "id": "mas.reference.mcp-duplicate-keys",
@@ -23143,6 +23161,83 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Extra-member and non-string arms are enforced post-parse and tested (see reject-extra-data). The duplicate-member and repeated-key arms are UNENFORCED at this boundary: the MCP SDK owns the JSON parse and collapses duplicates before the server sees the object; implementing them requires access to the raw parse boundary (recorded honestly rather than claimed)."
+  },
+  {
+   "id": "mas.reference.mcp-key-honored",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mcp-reference",
+   "text": "A server that silently ignores this key is not a conforming Mission PEP",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the `_meta` propagation key on each tools/call reaches the enforcement path on every MCP transport the PEP serves, MCP over HTTP included, and is never dropped: a well-formed value is the request's selection assertion (on a MAS-governed route it selects the Mission, and it carries its work item to the PEP), and a malformed value, or one naming another Mission than the credential, is refused",
+    "local": "on MCP over HTTP the `_meta` key and a Mission-Reference field on the same request are one reference only when they agree on id, issuer and work item (both absent, or both present and equal); a malformed carriage, or two that disagree, is refused mission_reference_conflict before any decision, and a well-formed carriage never rescues a malformed one"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the _meta Mission reference reaches the PEP (@spec authority-server#mcp-reference, #1694) > a _meta reference alone selects the Mission on a MAS-governed route: an ordinary credential's joined read permits under that Mission",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the _meta Mission reference reaches the PEP (@spec authority-server#mcp-reference, #1694) > a _meta reference carries its work item to the PEP where the statement names the attacher",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the _meta Mission reference reaches the PEP (@spec authority-server#mcp-reference, #1694) > a _meta reference naming another Mission than the credential is refused with mission_reference_conflict before any decision",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: a malformed _meta Mission reference is refused (@spec authority-server#mcp-reference, authority-server#reference-tuple, #1694) > a _meta reference carrying an extra member, or not an object, is refused with mission_reference_conflict before any decision",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: a malformed _meta Mission reference is refused (@spec authority-server#mcp-reference, authority-server#reference-tuple, #1694) > a malformed _meta reference is not rescued by a well-formed Mission-Reference field: the governed read is refused with mission_reference_conflict",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the Mission-Reference field and the _meta key are one reference (@spec authority-server#reference-verification, #1694) > a field and a _meta key naming different Missions are refused with mission_reference_conflict in either order, recorded as a Refusal Record, never a silent pick-one",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the Mission-Reference field and the _meta key are one reference (@spec authority-server#reference-verification, #1694) > a field and a _meta key naming the same Mission but disagreeing on the work item, or on its presence, are refused with mission_reference_conflict",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "MCP _meta Mission reference propagation > a conflicting _meta reference is refused with mission_reference_conflict",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "MCP _meta Mission reference propagation > a malformed _meta reference (extra member) is refused with mission_reference_conflict",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1694: the HTTP MCP transport read only the Mission-Reference field and dropped a `_meta` reference without refusal; it now reads the key with the in-memory transport's closed parser and reconciles it with the field. Each HTTP entry fails with the `_meta` read disabled in mcp-http-transport.ts, and each mcp-channel.test.ts entry fails with the same read disabled in mcp-transport.ts (run against live OpenFGA). The HTTP entries use a stub FGA and never skip; the mcp-channel.test.ts entries auto-skip without OpenFGA. The duplicate-member and repeated-key arms stay with mas.reference.mcp-duplicate-keys."
   },
   {
    "id": "mas.reference.mcp-unsupported-refusal",
@@ -71479,9 +71574,15 @@
      "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with the Mission-Reference field ABSENT: the route requires a reference and the credential establishes no Mission of its own",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: a malformed _meta Mission reference is refused (@spec authority-server#mcp-reference, authority-server#reference-tuple, #1694) > a malformed _meta reference is not rescued by a well-formed Mission-Reference field: the governed read is refused with mission_reference_conflict",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "The reference PEP refuses both a malformed and a missing reference on the MAS-governed route with mission_reference_conflict (src/services/mcp-payments/src/pep.ts; the missing case mutation-checked against the former unknown_mission). The row level stays unit: the endpoint entries auto-skip without OpenFGA. Attribution conflicts are mas.reference.conflict-deny."
+   "notes": "The reference PEP refuses both a malformed and a missing reference on the MAS-governed route with mission_reference_conflict (src/services/mcp-payments/src/pep.ts; the missing case mutation-checked against the former unknown_mission). The row level stays unit: the endpoint entries auto-skip without OpenFGA. Attribution conflicts are mas.reference.conflict-deny. #1694: a malformed MCP `_meta` reference on a MAS-governed HTTP route is refused even beside a well-formed Mission-Reference field (stub FGA, never skips)."
   },
   {
    "id": "mas.submission.status-body-members",
