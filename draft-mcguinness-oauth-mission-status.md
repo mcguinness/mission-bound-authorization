@@ -602,9 +602,10 @@ The members are:
     transition that committed the termination. `version` is REQUIRED
     in every termination the Mission Issuer commits, and absent while
     a termination that takes effect without a request, such as
-    `expired`, is observed but not yet committed; it can be lower than
-    the response's current `version` when a later metadata-only change
-    commits. It is the audit reference for `revoked` and `completed`.
+    `expired`, is observed but not yet committed; once committed it
+    does not change, so a metadata-only change committed later leaves
+    it lower than the response's `version`. It is the audit reference
+    for `revoked` and `completed`.
   - `expires_at`: REQUIRED. The point at which the Mission itself
     expires, the
     Mission record's `expires_at`
@@ -626,7 +627,10 @@ The members are:
     monotonic per-Mission counter the Mission Issuer maintains,
     incremented on each committed lifecycle transition (the approval
     event is version 1) and each committed metadata-only change,
-    current as of the reported `state`. It orders observations of one
+    current as of the reported `state`. A deadline's or expiry's
+    transition, which takes effect without a request, advances
+    `version` only when committed; until then a response reports the
+    last committed value. It orders observations of one
     Mission across every surface that reports it, and a lifecycle
     request can guard on it with `expected_version` ({{idempotency}}).
   - Extension members: a companion profile MAY add further members to
