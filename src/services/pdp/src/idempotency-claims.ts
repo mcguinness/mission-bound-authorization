@@ -192,6 +192,30 @@ export interface ClaimDomainOptions {
    * A hook that throws is ignored, as `onIndeterminate` is.
    */
   onReservationHeld?: (reservation: HeldReservation) => void;
+  /**
+   * @spec metering#settlement-states (#816): told of every counter a
+   * `completed` settlement pushes past its limit when it commits a
+   * reservation that had been released (the money moved after all). The
+   * spend is committed regardless and never dropped; the deployment wires
+   * this to the alerting obligation its statement declares. A hook that
+   * throws is ignored.
+   */
+  onBudgetOverspend?: (overspend: BudgetOverspend) => void;
+}
+
+/** A counter pushed past its limit by a late `completed`, as the operator alert reports it. */
+export interface BudgetOverspend {
+  evaluation_id: string;
+  mission_id: string;
+  counter_scope: string;
+  counter_id: string;
+  /** The amount committed by the late settlement. */
+  amount: BudgetAmount;
+  /** The limit the reserving decision applied to this counter. */
+  limit: BudgetAmount;
+  /** The counter's reserved, held and committed total after the commit. */
+  used: BudgetAmount;
+  detected_at: string;
 }
 
 /**
@@ -490,6 +514,7 @@ const MIGRATIONS = [
     idempotency_key TEXT NOT NULL,
     mission_id TEXT NOT NULL,
     amount_minor INTEGER NOT NULL CHECK (amount_minor >= 0),
+    limit_minor INTEGER NOT NULL,
     state TEXT NOT NULL CHECK (state IN ('reserved', 'committed', 'released', 'held')),
     reserved_at_ms INTEGER NOT NULL,
     updated_at_ms INTEGER NOT NULL,
@@ -520,6 +545,8 @@ interface ReservationRow {
   idempotency_key: string;
   mission_id: string;
   amount_minor: number;
+  /** The counter's limit the reserving decision applied: an overspend is judged against it. */
+  limit_minor: number;
   state: ReservationState;
   reserved_at_ms: number;
   updated_at_ms: number;
@@ -841,11 +868,11 @@ export class IdempotencyClaimDomain {
         .run(counter.id, counter.scope, canonicalize(counter.key), currency, exponent, nowMs);
       this.db
         .prepare(
-          `INSERT INTO budget_reservations (evaluation_id, counter_id, scope_digest, idempotency_key, mission_id, amount_minor, state,
-             reserved_at_ms, updated_at_ms, cause)
-           VALUES (?, ?, ?, ?, ?, ?, 'reserved', ?, ?, 'reserved')`,
+          `INSERT INTO budget_reservations (evaluation_id, counter_id, scope_digest, idempotency_key, mission_id, amount_minor, limit_minor,
+             state, reserved_at_ms, updated_at_ms, cause)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?, 'reserved')`,
         )
-        .run(input.evaluationId, counter.id, input.scopeDigest, input.key, request.missionId, amountMinor, nowMs, nowMs);
+        .run(input.evaluationId, counter.id, input.scopeDigest, input.key, request.missionId, amountMinor, counter.limitMinor, nowMs, nowMs);
       this.db.prepare("UPDATE budget_counters SET reserved_minor = reserved_minor + ? WHERE counter_id = ?").run(amountMinor, counter.id);
       this.logReservation(input.evaluationId, counter.id, null, "reserved", "reserved", nowMs);
     }
@@ -870,9 +897,12 @@ export class IdempotencyClaimDomain {
   /**
    * Move one evaluation's reservations that are in one of `from` to `to`,
    * keeping each counter's totals in the same transaction, and log each move.
-   * A move into `held` queues the operator alert. Reservations in any other
-   * state are untouched, so every caller is idempotent: a duplicate
-   * settlement, a second sweep or a second listing changes nothing.
+   * A move into `held` queues the operator alert, and a released
+   * reservation committed after all (its effect happened) queues the
+   * overspend alert for each counter it pushes past the limit its decision
+   * applied. Reservations in any other state are untouched, so every caller
+   * is idempotent: a duplicate settlement, a second sweep or a second listing
+   * changes nothing.
    */
   private transitionReservations(
     evaluationId: string,
@@ -884,6 +914,7 @@ export class IdempotencyClaimDomain {
     const rows = (
       this.db.prepare("SELECT * FROM budget_reservations WHERE evaluation_id = ?").all(evaluationId) as ReservationRow[]
     ).filter((r) => from.includes(r.state));
+    const overspent: BudgetOverspend[] = [];
     for (const r of rows) {
       this.db
         .prepare("UPDATE budget_reservations SET state = ?, cause = ?, updated_at_ms = ? WHERE evaluation_id = ? AND counter_id = ?")
@@ -893,9 +924,47 @@ export class IdempotencyClaimDomain {
       if (out) this.db.prepare(`UPDATE budget_counters SET ${out} = ${out} - ? WHERE counter_id = ?`).run(r.amount_minor, r.counter_id);
       if (into) this.db.prepare(`UPDATE budget_counters SET ${into} = ${into} + ? WHERE counter_id = ?`).run(r.amount_minor, r.counter_id);
       this.logReservation(r.evaluation_id, r.counter_id, r.state, to, cause, nowMs);
+      if (r.state === "released" && to === "committed") {
+        const counter = this.counterRow(r.counter_id);
+        const used = counter ? counter.reserved_minor + counter.held_minor + counter.committed_minor : 0;
+        if (counter && used > r.limit_minor) {
+          const q = (minor: number): BudgetAmount => ({ amount: decimalOf(minor, counter.exponent), currency: counter.currency });
+          overspent.push({
+            evaluation_id: r.evaluation_id,
+            mission_id: r.mission_id,
+            counter_scope: counter.counter_scope,
+            counter_id: r.counter_id,
+            amount: q(r.amount_minor),
+            limit: q(r.limit_minor),
+            used: q(used),
+            detected_at: new Date(nowMs).toISOString(),
+          });
+        }
+      }
     }
     if (to === "held" && rows.length > 0) this.notifyHeld(evaluationId, rows, cause, nowMs);
+    if (overspent.length > 0) this.notifyOverspend(overspent);
     return rows;
+  }
+
+  /**
+   * @spec metering#settlement-states (#816): queue
+   * {@link ClaimDomainOptions.onBudgetOverspend} for after the enclosing
+   * transaction commits, once per overspent counter, as
+   * {@link notifyIndeterminate} does.
+   */
+  private notifyOverspend(overspent: readonly BudgetOverspend[]): void {
+    const hook = this.options.onBudgetOverspend;
+    if (!hook) return;
+    afterCommit(this.db, () => {
+      for (const o of overspent) {
+        try {
+          hook(o);
+        } catch {
+          /* the alert sink's failure never reaches the claim domain */
+        }
+      }
+    });
   }
 
   /**
@@ -945,6 +1014,13 @@ export class IdempotencyClaimDomain {
    * policy version, a restart, a timeout, an elapsed lease and the PEP's
    * `unredeemed` reconciliation never release one. A reservation in any
    * other state is refused unchanged.
+   *
+   * A `not_executed` answer is refused while the permit or its lease could
+   * still be used (until its `valid_until` plus the class's longest lease, the
+   * guard the PEP's `unredeemed` reconciliation has): no evidence available
+   * then establishes that the effect will not happen. Should a released
+   * reservation's permit complete after all, the `completed` settlement
+   * commits it anyway ({@link settleReservations}).
    */
   reconcileHeldReservation(evaluationId: string, resolution: HeldReservationResolution): HeldReservationResult {
     return this.tx(() => {
@@ -954,6 +1030,10 @@ export class IdempotencyClaimDomain {
       if (resolution.kind !== "not_executed" && resolution.kind !== "executed") return { accepted: false, reason: "unknown_resolution" };
       if (typeof resolution.reference !== "string" || resolution.reference.length === 0) return { accepted: false, reason: "no_reference" };
       if (!rows.some((r) => r.state === "held")) return { accepted: false, reason: `not_held_${rows[0]?.state}` };
+      if (resolution.kind === "not_executed") {
+        const claim = this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow | undefined;
+        if (claim && nowMs <= claim.valid_until_ms + this.leaseMaxMs(claim)) return { accepted: false, reason: "lease_not_elapsed" };
+      }
       const to = resolution.kind === "not_executed" ? "released" : "committed";
       this.transitionReservations(evaluationId, ["held"], to, `operator_reconciled:${resolution.kind}:${resolution.reference}`, nowMs);
       return { accepted: true, state: to };
@@ -1188,7 +1268,12 @@ export class IdempotencyClaimDomain {
    */
   private settleReservations(evaluationId: string, next: "completed" | "failed", outcome: string, nowMs: number): void {
     if (next === "completed") {
-      this.transitionReservations(evaluationId, ["reserved", "held"], "committed", `settled_${outcome}`, nowMs);
+      // The money moved: a reservation an operator released commits too,
+      // and the overspend alert fires for each counter it pushes past its
+      // limit. No other release can meet a later `completed`: an unpersisted
+      // claim is not settleable, an adopted evaluation has no claim row, and
+      // `suppressed` has already settled the claim.
+      this.transitionReservations(evaluationId, ["reserved", "held", "released"], "committed", `settled_${outcome}`, nowMs);
     } else if (outcome === "suppressed") {
       this.transitionReservations(evaluationId, ["reserved", "held"], "released", "settled_suppressed", nowMs);
     } else {
@@ -1287,6 +1372,19 @@ export class IdempotencyClaimDomain {
       .prepare("SELECT * FROM claims WHERE state != 'claimed' OR pdp_boot != ?")
       .all(this.boot) as ClaimRow[];
     for (const row of rows) this.advance(row, nowMs);
+    // @spec metering#settlement-states (#816): this boot's claims that never
+    // persisted a decision and that no evaluation still holds issued no
+    // permit. Their reservations are released here when the evaluation's own
+    // release could not run (the store failed with the persist), rather than
+    // staying charged until a retry adopts the claim or the PDP restarts.
+    const abandoned = this.db
+      .prepare("SELECT evaluation_id FROM claims WHERE state = 'claimed' AND decision_json IS NULL AND pdp_boot = ?")
+      .all(this.boot) as Array<{ evaluation_id: string }>;
+    for (const { evaluation_id } of abandoned) {
+      if (!this.inFlight.has(evaluation_id)) {
+        this.transitionReservations(evaluation_id, ["reserved"], "released", "abandoned_unpersisted", nowMs);
+      }
+    }
   }
 
   /** Apply what time and restart alone decide for one row; `undefined` when it was purged. */

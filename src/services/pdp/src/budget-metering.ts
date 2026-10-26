@@ -119,8 +119,17 @@ export interface MissionBudgetBinding {
 /** One metered operation: the action, and the phase of a compound action it is metered at. */
 export interface MeteredAction {
   action: string;
-  phase?: ActionPhase;
+  /** REQUIRED: the phase the action is charged at (`commit` for a payment). */
+  phase: ActionPhase;
 }
+
+/**
+ * @spec metering#metering (#816, decision h): the phases of a metered
+ * compound action its metered phase's charge covers. They charge nothing and
+ * are not refused; any other phase of the action that carries an amount
+ * (`compensate` included) is refused `constraint_unsupported`.
+ */
+export const COVERED_PHASES: ReadonlySet<ActionPhase> = new Set<ActionPhase>(["preflight", "prepare"]);
 
 /**
  * One declared budget: its owner and id (the shared counter's key), its
@@ -237,14 +246,14 @@ export function isMissionBudgetBinding(value: unknown): value is MissionBudgetBi
 /** Whether the declaration meters `action` at `phase`. A request that names no phase is metered whenever its action is. */
 export function metersAction(declaration: BudgetMeteringDeclaration, action: string, phase: ActionPhase | undefined): boolean {
   return declaration.metered_actions.some(
-    (m) => m.action === action && (m.phase === undefined || phase === undefined || m.phase === phase),
+    (m) => m.action === action && (phase === undefined || m.phase === phase),
   );
 }
 
 /**
- * Whether the declaration names `action` at any phase. The declared action's
- * unmetered phases (preflight and prepare of a payment committed at
- * `commit`) are covered by its metered phase's charge.
+ * Whether the declaration names `action` at any phase. Of the declared
+ * action's unmetered phases, only {@link COVERED_PHASES} are covered by its
+ * metered phase's charge.
  */
 export function declaresMeteredAction(declaration: BudgetMeteringDeclaration, action: string): boolean {
   return declaration.metered_actions.some((m) => m.action === action);
@@ -303,7 +312,8 @@ export function budgetMeteringFindings(statement: unknown): EnforcementScopeFind
         push(at, "entry must name an action");
         return;
       }
-      if (raw.phase !== undefined && !isActionPhase(raw.phase)) push(at, `phase ${String(raw.phase)} is not an action phase`);
+      if (raw.phase === undefined) push(at, "entry must name the phase the action is charged at");
+      else if (!isActionPhase(raw.phase)) push(at, `phase ${String(raw.phase)} is not an action phase`);
       if (Object.keys(raw).some((k) => k !== "action" && k !== "phase")) push(at, "entry carries a member other than action and phase");
       const id = `${raw.action}\u0000${String(raw.phase ?? "")}`;
       if (seen.has(id)) push(at, "duplicate metered action");

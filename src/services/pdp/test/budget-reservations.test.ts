@@ -24,7 +24,7 @@ import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openDurableStore } from "@mission/store";
+import { type Database, openDurableStore, setCommitGuard } from "@mission/store";
 import { describe, expect, it } from "vitest";
 import { canonicalDigest } from "@mission/core";
 import {
@@ -55,6 +55,7 @@ import {
   ClaimDomainConfigError,
   type ClaimRequester,
   type ConsumptionStatusFn,
+  type BudgetOverspend,
   type HeldReservation,
   type IdempotencyClaimDomain,
   openIdempotencyClaimDomain,
@@ -177,7 +178,7 @@ function budgetStatement(decl: unknown = declaration(), claimed = true): Enforce
 }
 
 /** A claim domain on its own file; `open` again is a PDP restart against the same file. */
-function domainOnFile(c: Clock, hooks: { held?: HeldReservation[] } = {}) {
+function domainOnFile(c: Clock, hooks: { held?: HeldReservation[]; overspent?: BudgetOverspend[] } = {}) {
   const file = join(mkdtempSync(join(tmpdir(), "budget-816-")), "claims.sqlite");
   const open = (statement: EnforcementScopeStatement = budgetStatement()) =>
     openIdempotencyClaimDomain({
@@ -187,6 +188,7 @@ function domainOnFile(c: Clock, hooks: { held?: HeldReservation[] } = {}) {
       now: c.now,
       settlementKeys,
       ...(hooks.held ? { onReservationHeld: (r: HeldReservation) => hooks.held?.push(r) } : {}),
+      ...(hooks.overspent ? { onBudgetOverspend: (o: BudgetOverspend) => hooks.overspent?.push(o) } : {}),
     });
   return { file, open };
 }
@@ -239,6 +241,8 @@ interface RequestOptions {
   amount?: string;
   currency?: string;
   phase?: string | null;
+  /** `context.compensates_evaluation_id`, for a compensate-phase request. */
+  compensates?: string;
   digest?: string;
 }
 
@@ -256,6 +260,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
       amount: { amount, currency: o.currency ?? "USD" },
       mission_state_observation: { state: "active", mode: "fresh", freshness_at: c.now().toISOString() },
       ...(o.phase === null ? {} : { action_phase: o.phase ?? "commit" }),
+      ...(o.compensates !== undefined ? { compensates_evaluation_id: o.compensates } : {}),
     },
   };
 }
@@ -550,6 +555,41 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       claims.close();
     });
 
+    it("when the store fails with the persist and the evaluation's own release, the next sweep in the same boot releases the unpersisted reservation (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      // Fault injection: every transaction on the claim file fails while `failing` is set.
+      let failing = false;
+      setCommitGuard((claims as unknown as { db: Database }).db, {
+        begin: () => {
+          if (failing) throw new Error("store failing");
+        },
+        beforeCommit: () => {},
+        settled: () => {},
+        afterCommit: () => {},
+      });
+      // The store starts failing after the claim reserved, before the permit is persisted.
+      const failsAfterClaim: DecisionEvidenceEmitter = {
+        emit: async (input) => {
+          failing = true;
+          return EMITTER.emit(input);
+        },
+      };
+      const v = view("msn_a", binding("msn_a"));
+      await expect(evaluate(request(c, { amount: "700.00" }), options(claims, c, v, { evidence: failsAfterClaim }))).rejects.toThrow(
+        /unavailable/,
+      );
+      failing = false;
+      // The evaluation's own release failed with the store: still charged.
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("700.00");
+      claims.sweep();
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("0.00");
+      expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("0.00");
+      expectPermit(await evaluate(request(c, { amount: "1000.00" }), options(claims, c, v)));
+      claims.close();
+    });
+
     it("a crash after the permit was issued leaves the reservation held across the restart, and the operator alert fires once (@spec metering#settlement-states, #816)", async () => {
       const c = clock();
       const alerts: HeldReservation[] = [];
@@ -695,6 +735,60 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       claims.close();
     });
 
+    it("an operator not_executed answer is refused while a restart-held permit can still be redeemed, and its later completed settlement commits the spend so the next instance's 1000.00 is quota_exceeded (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      let claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      // The PDP restarts one second later, well inside the permit's validity.
+      claims.close();
+      c.set(T0 + 1_000);
+      claims = open();
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.reconcileHeldReservation(a, { kind: "not_executed", reference: "bank-no-entry-yet" })).toEqual({
+        accepted: false,
+        reason: "lease_not_elapsed",
+      });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      // The wire completes under the permit and its evidence settles the claim.
+      expect(await claims.settle(REQUESTER, await executionRecord(a, "completed"))).toMatchObject({ accepted: true, state: "completed" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ held: { amount: "0.00" }, committed: { amount: "300.00" } });
+      const next = await evaluate(request(c, { missionId: "msn_b", amount: "1000.00" }), options(claims, c, view("msn_b", binding("msn_b"))));
+      expectDenied(next, "quota_exceeded");
+      expect(entry(next, "standing_consent")?.remaining.amount).toBe("700.00");
+      claims.close();
+    });
+
+    it("a completed settlement for a reservation the operator released after its lease commits it anyway and raises the overspend alert for the counter it pushes past its limit (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const overspent: BudgetOverspend[] = [];
+      const { open } = domainOnFile(c, { overspent });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      c.set(T0 + PAST_LEASE_MS);
+      claims.sweep();
+      expect(claims.reconcileHeldReservation(a, { kind: "not_executed", reference: "bank-statement-2026-10-25" })).toEqual({ accepted: true, state: "released" });
+      // The released headroom is spent by another instance before the late evidence arrives.
+      await permitted(claims, c, view("msn_b", binding("msn_b")), { amount: "1000.00" });
+      expect(overspent).toEqual([]);
+      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed"))).accepted).toBe(true);
+      // The money moved: the spend is committed, never dropped, and the shared counter is over its limit.
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "1000.00" }, committed: { amount: "300.00" } });
+      expect(overspent).toHaveLength(1);
+      expect(overspent[0]).toMatchObject({
+        evaluation_id: a,
+        mission_id: "msn_a",
+        counter_scope: "standing_consent",
+        counter_id: SHARED,
+        amount: { amount: "300.00", currency: "USD" },
+        limit: { amount: "1000.00", currency: "USD" },
+        used: { amount: "1300.00", currency: "USD" },
+      });
+      claims.close();
+    });
+
     it("operator reconciliation releases or commits a held reservation, a restart does not release it, and a reservation that is not held is refused unchanged (@spec metering#settlement-states, #816)", async () => {
       const c = clock();
       const { open } = domainOnFile(c);
@@ -828,6 +922,21 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       for (const [action, actionClass] of others) {
         expectPermit(await evaluate(request(c, { action, actionClass, phase: null, missionId: "msn_plain" }), options(unbound, c, view("msn_plain"))));
       }
+      unbound.close();
+    });
+
+    it("a compensate phase of the metered action carrying an amount is denied constraint_unsupported and reserves and claims nothing (@spec metering#metering, #816, decision h)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const compensate: RequestOptions = { phase: "compensate", compensates: "dec_committed_wire", amount: "300.00" };
+      const d = await evaluate(request(c, compensate), options(claims, c, view("msn_a", binding("msn_a"))));
+      expectDenied(d, "constraint_unsupported");
+      claims.close();
+      expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+      // Control: the same request under a Mission with no budget binding is permitted.
+      const unbound = open();
+      expectPermit(await evaluate(request(c, { ...compensate, missionId: "msn_plain" }), options(unbound, c, view("msn_plain"))));
       unbound.close();
     });
 
@@ -975,6 +1084,7 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
         ["unit without exponent", { ...declaration(), unit: { currency: "USD" } }],
         ["no metered action", { ...declaration(), metered_actions: [] }],
         ["unknown phase", { ...declaration(), metered_actions: [{ action: EXECUTE, phase: "settle" }] }],
+        ["metered action without a phase", { ...declaration(), metered_actions: [{ action: EXECUTE }] }],
         ["no budget", { ...declaration(), budgets: [] }],
         ["lineage counter scope", { ...declaration(), budgets: [{ ...declaration().budgets[0], counter_scope: "lineage" }] }],
         ["budget in another currency", { ...declaration(), budgets: [{ ...declaration().budgets[0], currency: "EUR" }] }],

@@ -128,6 +128,7 @@ export {
   type BudgetChargeRequest,
   type BudgetCounterState,
   type BudgetMetering,
+  type BudgetOverspend,
   type HeldReservation,
   type HeldReservationResolution,
   type HeldReservationResult,
@@ -137,6 +138,7 @@ export {
 export {
   BUDGET_METERING_EXTENSION,
   CLAIM_SETTLEMENT_INTAKE,
+  COVERED_PHASES,
   type BudgetAmount,
   type BudgetCounterScope,
   type BudgetDeclaration,
