@@ -1573,15 +1573,24 @@ separate posture list:
 
 A deployment advertises `mission_max_stale_seconds` ({{as-metadata}}),
 the maximum interval it tolerates for a Mission state change to take
-effect, so a consumer can size token lifetimes and choose propagation
-mechanisms to match. When the member is absent, no propagation bound
-is declared: a consumer MUST size reliance to token lifetime alone
-and MUST NOT assume a tighter bound.
+effect, so a consumer can choose propagation mechanisms to match. The
+value bounds reliance on an observation of Mission state: the
+freshness cap of {{mission-status-caching}} applies it to a Mission
+Status response, and the issuer applies it to an introspection
+projection's `fresh_until` ({{introspection-projection}}). It does
+not bound a self-contained token, which a consumer relies on for its
+lifetime unless that lifetime is sized to the bound (below). When the
+member is absent, no propagation bound is declared: a consumer relies
+on a self-contained token for its lifetime, and on a Mission Status
+response within the reliance bound of {{mission-status-caching}}. A
+fresh observation bounds only how stale the consumer's view of
+Mission state is; it does not bound reconciliation delay upstream of
+the issuer or effects already underway.
 
 Where the member is present, a status response's `mission.fresh_until`
 MUST NOT exceed the response's issuance time plus the advertised
-bound: the advertisement is the ceiling on every reliance window
-built from these surfaces. The 60-second value in this document's
+bound ({{mission-status-caching}}). The 60-second value in this
+document's
 examples is a tight deployment's choice, not a floor.
 
 Where a deployment needs Mission revocation to take effect but only
@@ -1705,8 +1714,8 @@ through standard {{RFC8414}} discovery.
 `mission_max_stale_seconds`:
 : OPTIONAL. An integer. The maximum
   tolerated interval, in seconds, for revocation propagation
-  ({{revocation-enforcement-classes}}). When absent, no bound is
-  declared, and a consumer sizes reliance to token lifetime alone.
+  ({{revocation-enforcement-classes}}): the ceiling on reliance on an
+  observation of Mission state. When absent, no bound is declared.
 {: newline="true"}
 
 `token_endpoint_auth_methods_supported` {{RFC8414}} describes the
@@ -2001,8 +2010,8 @@ Authorization Server Metadata" registry {{RFC8414}}:
 - Specification Document(s): this document, {{as-metadata}}
 
 - Metadata Name: `mission_max_stale_seconds`
-- Metadata Description: Maximum interval, in seconds, the deployment
-  tolerates for a Mission state change to take effect.
+- Metadata Description: Maximum interval, in seconds, a consumer may
+  rely on an observation of Mission state.
 - Change Controller: IESG
 - Specification Document(s): this document, {{as-metadata}}
 
