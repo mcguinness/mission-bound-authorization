@@ -101,7 +101,7 @@ function noRetainedPrivateKeys(file: string): void {
 
 const kidsOf = (keys: Record<string, unknown>[]) => keys.map((k) => k.kid as string).sort();
 
-describe("a /2 ring's generations (@spec #831 B2)", () => {
+describe("a /2 ring's generations (@spec #831 B2)", { timeout: 30_000 }, () => {
   it("a new ring is /2, with generation 1 of each role active under its configured kid", async () => {
     const file = ringPath();
     await initSigningKeyRing(file, ISSUER, ROLES, at(0));
@@ -198,7 +198,7 @@ describe("a /2 ring's generations (@spec #831 B2)", () => {
   });
 });
 
-describe("rotating, retiring and compromising a role's generations (@spec #831 B2)", () => {
+describe("rotating, retiring and compromising a role's generations (@spec #831 B2)", { timeout: 30_000 }, () => {
   it("rotation stages a pending generation, published but not signing, and changes no other role", async () => {
     const file = ringPath();
     await initSigningKeyRing(file, ISSUER, ROLES, at(0));

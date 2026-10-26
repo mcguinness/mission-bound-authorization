@@ -60,6 +60,34 @@ issuance gates, the PDP or the PEP's composed step the same declaration and
 identity-state resolver. Read by `@mission/demo-data`
 (`AUTHORITY_DEPENDENCIES`) through `@mission/core`'s strict reader.
 
+Under lifecycle-mediated enforcement (`enforcement.lifecycle`), the
+declaration also states `reconciliation_max_lag_seconds` and
+`lifecycle_operations`, the operation the authorization server's reconciler
+commits for each invalidating change: as shipped, `suspend` for a disabled
+Subject or a withdrawn delegation and `revoke` for a deprovisioned Subject.
+The PDP refuses the governed Missions' actions once the reconciler's last
+complete pass rests on an observation older than the lag bound, and refuses
+a Mission whose Subject that pass found no record of (`unresolved`, never a
+revocation). Without a direct route, the declared observation limits still
+hold: the pass's observation older than `max_staleness_seconds` refuses
+`stale`, a declared online check refuses on a failed latest read, and a
+permit expires at the earlier of the staleness and lag deadlines. Each
+complete pass also records the Missions whose Subject shows an applicable
+invalidation, mapped or not, and the PDP refuses them whatever their state
+reads until a later complete pass observes the invalidation gone (an
+unreachable source or an old observation never counts as that). A
+lifecycle-only declaration must map every invalidating change; with a direct
+route as well, a partial mapping is valid because direct evaluation refuses
+an unmapped change.
+`external_change_bound` is the deployment's claimed bound from an external
+change (`@spec runtime#state-freshness`): its `seconds`, start, end, work
+already started, the path, and the two periods the path names,
+`detection_period_seconds` and `reconciliation_period_seconds`. The reader
+requires the bound to cover one of each in sequence and the reconciliation
+period to be shorter than the lag bound; the authorization server refuses
+to start with a scheduled read or pass slower than declared. The matrix by
+principal role is in `docs/authority-dependencies.md`.
+
 The identity source is `identity.json`: each principal's optional `status`
 (`active`, `disabled` or `deprovisioned`; absent, `active`),
 `withdrawn_delegations` (the clients it no longer delegates to) and
@@ -70,8 +98,10 @@ the file without a restart.
   identity owner for `identity.json`'s status and delegations.
 - **Integrity.** Repository review and the strict readers, which refuse a
   declaration missing any element, an unknown member, a non-positive
-  staleness, an unknown invalidating change or authority source, and a
-  declaration with no enforcement route; and, in the identity source, an
+  staleness, an unknown invalidating change or authority source, a
+  declaration with no enforcement route, a lifecycle route without its lag
+  bound or operations, and a bound whose periods it does not cover; and, in
+  the identity source, an
   unknown status, a malformed list or instant, and a principal listed twice.
 - **Updating.** The declaration: edit, review, and restart. The identity
   source: edit it in place; the next resolver read observes the change, and

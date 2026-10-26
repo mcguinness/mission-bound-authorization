@@ -40,6 +40,17 @@ function installSignalHandlers(): void {
   }
 }
 installSignalHandlers();
+// @spec #831 C2 (D825): SIGUSR2 reloads the MAS kids the pilot trusts from
+// config/topology.json, so a key rotation reaches it running.
+process.on("SIGUSR2", () => {
+  if (!launched) return;
+  try {
+    launched.reloadTrust();
+    console.log("mas-pilot: trusted kids reloaded from topology.json");
+  } catch (err) {
+    console.error(`mas-pilot: trusted kids not reloaded: ${reason(err)}`);
+  }
+});
 
 async function main(): Promise<void> {
   const topology = process.argv[2];
