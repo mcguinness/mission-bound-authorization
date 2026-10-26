@@ -736,6 +736,11 @@ Mission Issuer (authorization server):
 Mission Client:
 : The client conformance role, defined in {{conformance}}.
 
+Mission-governed client:
+: A client that the deployment registers as Mission-governed ("a client
+  registered as Mission-governed"); {{authority-proposal}} states the
+  rule that registration triggers.
+
 Mission-aware Resource Server:
 : The resource server conformance role, defined in {{conformance}}.
 
@@ -954,7 +959,8 @@ The Mission Intent members are:
   protected resource (an OAuth resource per {{RFC8707}}-style indicators
   or a protected resource per {{RFC9728}}). It bounds which resources a
   derived Authority Set entry may name ({{authorization-derivation}})
-  and serves as a configured-mapping lookup key. It is not RFC 8707
+  and serves as a configured-mapping lookup key ({{derivation-modes}});
+  like `purpose`, the key alone grants no authority. It is not RFC 8707
   `resource` carriage: a client separately requests the audience of a
   given token with the standard `resource` parameter
   ({{token-response}}).
@@ -1417,12 +1423,12 @@ entries depend on whether an authority proposal was submitted:
   for a `scope`-only target ({{scope-projection}}), yields the
   candidate entries, which are then narrowed to policy.
 
-  The mapping is a lookup, not synthesis. Because no
-  `authorization_details` object was submitted, the AS refuses an Intent
-  that matches no configured mapping, or whose mapped candidates policy
-  narrows to nothing, with `access_denied` ({{error-mapping}}). Its
-  `error_description` can say whether no mapping matched or policy
-  narrowed the candidates to nothing.
+  The mapping is a lookup, not synthesis, and no key grants authority
+  by itself. Because no `authorization_details` object was submitted,
+  the AS refuses an Intent that matches no configured mapping, or whose
+  mapped candidates policy narrows to nothing, with `access_denied`
+  ({{error-mapping}}). Its `error_description` can say whether no
+  mapping matched or policy narrowed the candidates to nothing.
 
   Either mode is conforming. A deployment publishes its mapping space as
   deployment documentation. Eligibility can be scoped per Subject and
