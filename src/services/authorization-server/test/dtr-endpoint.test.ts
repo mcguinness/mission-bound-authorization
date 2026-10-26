@@ -529,6 +529,8 @@ describe("requested entries carrying an unsupported member on the deferral initi
     const count = () =>
       (as.deferrals.db.prepare("SELECT COUNT(*) AS n FROM deferrals").get() as { n: number }).n;
     const before = count();
+    const derivations = (): number => (as.kernel.get(missionId) as { derivation_count: number }).derivation_count;
+    const derivedBefore = derivations();
     const requested = subset(["payments:remittance.send"]);
     const res = await withStoredUnsupportedMember(as.kernel.db, missionId, () => initiate(requested));
     const body = (await res.json()) as {
@@ -543,6 +545,7 @@ describe("requested entries carrying an unsupported member on the deferral initi
     expect(body.deferral_code).toBeUndefined();
     expect(body.access_token).toBeUndefined();
     expect(count()).toBe(before);
+    expect(derivations()).toBe(derivedBefore);
   });
 });
 
