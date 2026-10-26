@@ -589,6 +589,125 @@
       ]
     },
     {
+      "id": "ev-res-05",
+      "description": "An https resource carrying a user name",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://agent@api.example/orders",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an http or https resource carries no userinfo subcomponent (RFC 9110 Section 4.2.4)",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-res-06",
+      "description": "An https resource carrying a user name and password",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://agent:secret@api.example/orders",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an http or https resource carries no userinfo subcomponent (RFC 9110 Section 4.2.4)",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-res-07",
+      "description": "An https resource carrying an empty userinfo",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://@api.example/orders",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an empty userinfo is still a userinfo subcomponent: the authority holds an @",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-res-08",
+      "description": "An http resource carrying userinfo, its scheme in upper case",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "HTTP://agent@api.example/orders",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the scheme is case-insensitive (RFC 3986 Section 3.1), so the value is an http URI carrying userinfo",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-res-09",
+      "description": "An https resource with an @ in its path",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders/a@b",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "an @ after the authority is path data, not userinfo"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
       "id": "ev-dlg-02",
       "description": "An empty allowed_delegates list; the delegation policy permits the delegate",
       "role": "authorization-server",

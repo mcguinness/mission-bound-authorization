@@ -836,6 +836,10 @@ export const REFUSAL_DENIAL_REASONS = Object.freeze({
     // (#815): a request whose `context.work_item` is present but not
     // exactly `{issuer, id}`, an unusable input refused before evaluation.
     "work_item_invalid",
+    // @spec runtime-evidence#pre-decision-refusal, authzen#pdp-consistency-checks
+    // (#956, D814): a mediated request with no action class established, where
+    // the Enforcement Scope Statement declares classes; recorded with no class.
+    "action_class_missing",
   ] as const),
 });
 export type PepRefusalDenialReason = (typeof REFUSAL_DENIAL_REASONS.pep)[number];

@@ -73,6 +73,7 @@ const denial = (missionId: string): DecisionEvidenceEmissionInput => {
     subject: { id: "alice" },
     resource: { type: "invoice", id: "inv-1" },
     action: { name: "payments:invoice.read" },
+    action_class: "consequential_read",
     audience: RESOURCE,
     evaluation_id,
     decision: "deny",
