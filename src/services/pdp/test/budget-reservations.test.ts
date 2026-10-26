@@ -500,13 +500,14 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
   });
 
   describe("settlement and recovery transitions (@spec metering#settlement-states)", () => {
-    it("a crash before the decision is persisted releases the reservation at the next boot, since no permit existed (@spec metering#settlement-states, #816)", async () => {
+    it("a crash before the decision is persisted releases the reservation at the next boot, since no permit existed, and the retry under the same key reserves once (@spec metering#settlement-states, metering#retry, #816)", async () => {
       const c = clock();
       const { open } = domainOnFile(c);
       let claims = open();
       const held = heldEmitter();
       const v = view("msn_a", binding("msn_a"));
-      const parked = evaluate(request(c, { amount: "700.00" }), options(claims, c, v, { evidence: held.emitter }));
+      const key = freshKey();
+      const parked = evaluate(request(c, { key, amount: "700.00" }), options(claims, c, v, { evidence: held.emitter }));
       await until(() => held.arrived() === 1);
       expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("700.00");
       expect(claims.listHeldReservations()).toEqual([]);
@@ -517,8 +518,10 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       claims = open();
       expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" } });
       expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("0.00");
-      // The whole limit is available again.
-      expectPermit(await evaluate(request(c, { amount: "1000.00" }), options(claims, c, v)));
+      // The retry under the same key adopts the abandoned claim and reserves once.
+      expectPermit(await evaluate(request(c, { key, amount: "700.00" }), options(claims, c, v)));
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("700.00");
+      expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("700.00");
       claims.close();
     });
 
