@@ -39,6 +39,7 @@ async function closeStack(stack: DemoStack): Promise<void> {
   await stack.masGovernedChannel?.close();
   stack.pdpClaims.close();
   stack.writeReservations.close();
+  stack.evidenceRetention.close();
   stack.payments.db.close();
   stack.kernel.db.close();
 }

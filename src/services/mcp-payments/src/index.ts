@@ -181,6 +181,7 @@ export {
   evidenceKeySetLocation,
   EVIDENCE_RETENTION_SCHEMA,
   EvidenceRetentionStore,
+  openEvidenceRetentionStore,
   publishedEvidenceJwk,
   type EvidenceRetentionOptions,
   type PublishEvidenceKeyInput,

@@ -42,7 +42,7 @@
 
 import { KeyObject } from "node:crypto";
 import { canonicalDigest, type JsonValue } from "@mission/core";
-import { type Database, openStore, type StoreOptions, withTransaction } from "@mission/store";
+import { type Database, openDurableStore, openStore, type StoreOptions, withTransaction } from "@mission/store";
 import {
   type EnforcementScopeStatement,
   retentionWindowSeconds,
@@ -197,6 +197,24 @@ CREATE TABLE IF NOT EXISTS evidence_sequences (
   next INTEGER NOT NULL
 ) STRICT;
 `;
+
+/**
+ * @spec runtime-evidence#execution-evidence-object (Retention),
+ * runtime#record-integrity (#821, D814): open the store on a durable,
+ * single-writer file named in configuration (`topology.json`
+ * `stores.pepEvidenceRetention.file`) and owned by this PEP. Every refusal is
+ * `openDurableStore`'s and is fatal: an absent, empty or in-memory file, a
+ * file another handle or process holds, a newer schema, or a file recorded
+ * for another owner. The retained records and the per-emitter sequences then
+ * survive a restart.
+ */
+export function openEvidenceRetentionStore(
+  options: Omit<EvidenceRetentionOptions, "store" | "db"> & { file: string | undefined; owner: string },
+): EvidenceRetentionStore {
+  const { file, owner, ...rest } = options;
+  const db = openDurableStore({ file, migrations: [EVIDENCE_RETENTION_SCHEMA], owner });
+  return new EvidenceRetentionStore({ ...rest, db });
+}
 
 const positive = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v > 0;
 const isObject = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
