@@ -313,11 +313,12 @@ describe("standing-payment dispatch metered end to end through the composed stac
     }
   });
 
-  it("refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)", async () => {
+  it("refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose reservation stays charged, held with the alert once the lease elapses, so a second instance's payment against the budget is quota_exceeded (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, owner ruling)", async () => {
     const stack = await compose(15022, newFiles());
     try {
       const templateId = await consentTemplate(stack);
       const instance = await dispatchInstance(stack, templateId);
+      const second = await dispatchInstance(stack, templateId);
       // Before the decision: the PDP compares the payee the PEP established
       // from the payments store with the committed destination.
       stack.payments.setInvoicePayeeAccount("inv-1", "acct-acme-999");
@@ -328,10 +329,10 @@ describe("standing-payment dispatch metered end to end through the composed stac
       expect(stack.pdpClaims.budgetCounter(instanceCounter(stack, instance))).toBeUndefined();
       // After the permit: the account changes between the decision and the
       // permit's use, without even a record version change, and execution
-      // reverification suppresses the permit before it is redeemed. The PEP
-      // sends its signed suppression, affirmative non-execution, and the PDP
-      // releases both reservations without settling the claim.
-      seedAcmeInvoices(stack, [["inv-4", "125.00"]]);
+      // reverification suppresses the permit before it is redeemed. This
+      // PEP's redemption store cannot durably cancel the permit, so it sends
+      // nothing and the reservation stays charged.
+      seedAcmeInvoices(stack, [["inv-4", "125.00"], ["inv-5", "125.00"]]);
       stack.onEnforce(({ tool, decision }) => {
         if (tool === "execute_wire_transfer" && decision.decision) {
           stack.payments.db.prepare("UPDATE invoices SET payee_account = ? WHERE id = ?").run("acct-acme-999", "inv-4");
@@ -341,25 +342,34 @@ describe("standing-payment dispatch metered end to end through the composed stac
       expect(suppressed).toEqual({ ok: false, refusal_reason: "target_drift" });
       const permit = commitDecisions(stack, instance).find((d) => d.decision === "permit");
       const evaluationId = String(permit?.evaluation_id);
-      expect(stack.pdpClaims.reservationsFor(evaluationId).map((r) => r.state)).toEqual(["released", "released"]);
-      // Past the lease, the declared reconciler resolves the unconsumed permit
-      // unredeemed, which confirms the non-execution: the release stands and
-      // no held alert fires.
+      expect(stack.pdpClaims.reservationsFor(evaluationId).map((r) => r.state)).toEqual(["reserved", "reserved"]);
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "125.00", held: "0.00", committed: "0.00" });
+      // Past the permit and its lease, the declared reconciler resolves the
+      // claim unredeemed; the reservation is held, with the alert, for an
+      // operator's reconciliation. The second instance's 125.00 does not fit
+      // the 75.00 left of the 200.00 budget.
       const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
       vi.useFakeTimers({ toFake: ["Date"] });
       try {
         vi.setSystemTime(Date.now() + 120_000);
         expect((await stack.reconciler.runOnce()).claims?.unredeemed).toContain(evaluationId);
-        const alerts = stderr.mock.calls.map(([chunk]) => String(chunk)).filter((line) => line.startsWith('{"type":"operator_alert"'));
-        expect(alerts.filter((line) => line.includes("budget_reservation_held"))).toEqual([]);
+        const alerts = stderr.mock.calls
+          .map(([chunk]) => String(chunk))
+          .filter((line) => line.startsWith('{"type":"operator_alert"'))
+          .map((line) => JSON.parse(line) as Record<string, unknown>);
+        expect(alerts).toEqual([
+          expect.objectContaining({ kind: "budget_reservation_held", evaluation_id: evaluationId, mission_id: instance, cause: "lease_elapsed" }),
+        ]);
+        expect(stack.pdpClaims.reservationsFor(evaluationId).map((r) => r.state)).toEqual(["held", "held"]);
+        expect(await wire(stack, second, "inv-5")).toMatchObject({ ok: false, denial_reason: "quota_exceeded" });
       } finally {
         vi.useRealTimers();
         stderr.mockRestore();
       }
-      expect(stack.pdpClaims.reservationsFor(evaluationId).map((r) => r.state)).toEqual(["released", "released"]);
       expect(wires(stack)).toEqual([]);
-      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "0.00" });
-      expect(totals(stack.pdpClaims.budgetCounter(instanceCounter(stack, instance)))).toEqual({ reserved: "0.00", held: "0.00", committed: "0.00" });
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "125.00", committed: "0.00" });
+      expect(totals(stack.pdpClaims.budgetCounter(instanceCounter(stack, instance)))).toEqual({ reserved: "0.00", held: "125.00", committed: "0.00" });
+      expect(stack.pdpClaims.budgetCounter(instanceCounter(stack, second))).toBeUndefined();
     } finally {
       await closeStack(stack);
     }

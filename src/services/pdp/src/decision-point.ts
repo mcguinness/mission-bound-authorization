@@ -46,7 +46,6 @@ import type {
   ConsumptionStatusFn,
   IdempotencyClaimDomain,
   RedeemingExecutionFn,
-  ReservationReleaseResult,
   SettlementResult,
   UnresolvedClaim,
 } from "./idempotency-claims.js";
@@ -68,15 +67,6 @@ export interface ClaimChannel {
   listUnresolved(): Promise<UnresolvedClaim[]>;
   /** Resolve one unresolved claim. */
   reconcile(evaluationId: string, resolution: ClaimResolution): Promise<SettlementResult>;
-  /**
-   * @spec metering#settlement-states (#813, #816, decision e): this
-   * requester's PEP-signed `suppressed` Execution Evidence for a budget-bound
-   * permit it refused before redeeming it, which releases the permit's
-   * budget reservations without settling its claim
-   * (`IdempotencyClaimDomain.releaseUnredeemed`). Absent on a channel whose
-   * PDP meters no budget (a remote PDP, decision f).
-   */
-  releaseUnredeemed?(record: unknown): Promise<ReservationReleaseResult>;
 }
 
 /** The channel a decision point without a claim domain offers: nothing settles. */
@@ -84,7 +74,6 @@ const NO_CLAIM_CHANNEL: ClaimChannel = {
   settle: async () => ({ accepted: false, reason: "no_claim_domain" }),
   listUnresolved: async () => [],
   reconcile: async () => ({ accepted: false, reason: "no_claim_domain" }),
-  releaseUnredeemed: async () => ({ accepted: false, reason: "no_claim_domain" }),
 };
 
 /**
@@ -97,19 +86,12 @@ export function claimChannelFor(
   claims: IdempotencyClaimDomain | undefined,
   requester: ClaimRequester,
   redeemingExecution?: RedeemingExecutionFn,
-  /**
-   * @spec metering#settlement-states (#813): the requester's read-only
-   * consumption status, the positive `unconsumed` answer a release on a
-   * suppression before redemption requires. Absent, no release is accepted.
-   */
-  consumptionStatus?: ConsumptionStatusFn,
 ): ClaimChannel {
   if (!claims) return NO_CLAIM_CHANNEL;
   return {
     settle: (record) => claims.settle(requester, record, redeemingExecution),
     listUnresolved: async () => claims.listUnresolved(requester),
     reconcile: (evaluationId, resolution) => claims.reconcile(requester, evaluationId, resolution, redeemingExecution),
-    releaseUnredeemed: (record) => claims.releaseUnredeemed(requester, record, consumptionStatus),
   };
 }
 
@@ -240,11 +222,7 @@ export interface DecisionPoint {
    */
   decideAs?: (requester: ClaimRequester, consumptionStatus?: ConsumptionStatusFn) => DecisionFn;
   /** @spec runtime#idempotency (#917): settlement and reconciliation for one authenticated requester. */
-  claimsFor?: (
-    requester: ClaimRequester,
-    redeemingExecution?: RedeemingExecutionFn,
-    consumptionStatus?: ConsumptionStatusFn,
-  ) => ClaimChannel;
+  claimsFor?: (requester: ClaimRequester, redeemingExecution?: RedeemingExecutionFn) => ClaimChannel;
   /**
    * @spec authzen#pdp-request consistency check 11 (#1276, D457): the decision
    * channel's seam for a target it refuses before evaluation (outside the
@@ -426,8 +404,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
   return {
     decide: bindDecide(bindings, unboundRequester()),
     decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),
-    claimsFor: (requester, redeemingExecution, consumptionStatus) =>
-      claimChannelFor(config.claims, requester, redeemingExecution, consumptionStatus),
+    claimsFor: (requester, redeemingExecution) => claimChannelFor(config.claims, requester, redeemingExecution),
     recordTargetRefusal: (request) => recordPdpRefusal(config.refusals, "operation_target_invalid", request),
     ...(config.evidence
       ? {
@@ -525,8 +502,7 @@ export function createEphemeralDecisionPoint(options: {
   return {
     decide: bindDecide(bindings, unboundRequester()),
     decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),
-    claimsFor: (requester, redeemingExecution, consumptionStatus) =>
-      claimChannelFor(claims, requester, redeemingExecution, consumptionStatus),
+    claimsFor: (requester, redeemingExecution) => claimChannelFor(claims, requester, redeemingExecution),
     recordTargetRefusal: (request) => recordPdpRefusal(refusals, "operation_target_invalid", request),
     evidenceVerification: { kid, publicKey, emitterId, audience },
     emitter,
