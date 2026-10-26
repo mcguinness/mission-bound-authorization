@@ -617,7 +617,9 @@ A consumer MUST verify, before honoring a response:
    `mission_status_signing_alg_values_supported` ({{as-metadata}}),
    rejecting `none` and any algorithm not listed;
 3. the JWS signature against a current `jwks_uri` entry for the
-   `issuer` AS;
+   `issuer` AS that the consumer's trusted configuration authorizes for
+   that AS's Mission Status responses; a key's presence in the
+   `jwks_uri` does not authorize it ({{historical-key-set}});
 4. `iss` equals the expected AS issuer URL, and `mission.issuer`
    equals `iss`;
 5. `aud` equals the `audience` the request named or, for a
@@ -2167,6 +2169,9 @@ Mission Termination Reasons registry
   explicit `jwks_uri` freshness, revalidate a stale set, refuse current
   reliance when that fails, and never verify a current reliance
   decision under a historical key (#831, D774, D780).
+- A consumer verifies a Mission Status response only under a key its
+  trusted configuration authorizes for that AS's Mission Status
+  responses, never under any key the `jwks_uri` carries (#831, D842).
 - A transition is durably committed before any response acknowledges
   it, and the OAuth binding's final issuance check is not extended to
   suspension.
