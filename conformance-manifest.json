@@ -38007,12 +38007,38 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "after an incorrect release, an authenticated correction establishing execution commits the reserved quantity whatever the claim's settlement window, reports any excess over the limit, and later reservations are refused while the counter has no headroom"
+    "normative": "after an incorrect release, an authenticated correction establishing execution commits the reserved quantity whatever the claim's settlement window, reports any excess over the limit, and later reservations are refused while the counter has no headroom",
+    "local": "In the reference, the correction works on the reservation, not the claim: a completed record verified as settlement verifies it, from the PEP and epoch the reserving permit was issued to, or an operator correction recording execution, commits a released reservation once whatever the claim's settlement window; a reservation released because no permit ever left the PDP is never committed (no_permit_issued)."
    },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, owner review of #1713 (2026-10-26). Witnessed by slice 2's correction path once it lands."
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > after an incorrect operator release and the claim's reconciliation window, the permit's own PEP's verified completed record commits the 300.00 once, reports the overspend, and further reservations are refused while no headroom remains (@spec metering#settlement-states, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > after an incorrect operator release and the claim's reconciliation window, an operator correction recording execution commits the 300.00 once (@spec metering#settlement-states, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > the PEP's verified completed record and the operator's executed correction together commit each released reservation once, in either order (@spec metering#settlement-states, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > a budget correction for an unknown evaluation, from another PEP or epoch, or for an evaluation that never issued a permit is refused and commits nothing (@spec metering#settlement-states, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#816, owner review of #1713 (2026-10-26, D846). The correction path (867781769) commits released spend after the window and reports the excess through onBudgetOverspend; the counters then refuse further reservations. Mutants K1 (PEP correction removed), K2 and K3 (PEP or epoch check dropped), K4 (not idempotent), K5 (operator executed refused on a released reservation), K6 (no-permit exclusion removed) and K7 (a conflicting record acknowledged) are each killed."
   },
   {
    "id": "metering.retry.key-reuse-reserves-nothing",
