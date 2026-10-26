@@ -39,6 +39,7 @@ export {
 export {
   createMediatedHarness,
   createStatusMediatedHarness,
+  type HarnessWorkItem,
   MediatedHarness,
   type MediatedHarnessOptions,
   type MediatedToolChannel,

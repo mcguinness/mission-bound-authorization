@@ -132,7 +132,11 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
       `  AS capabilities    issuance profile + ${[...authServer.capabilities].join(", ")}`,
       `  dev ordinary token ${authServer.devOrdinaryIssuance ? "served" : "not served"}`,
       `  signing keys       ${authServer.signingKeyMode === "ring" ? "key ring (kept across restarts)" : "ephemeral (new at every restart)"}`,
-      `  kernel store       ${options.kernelStore ? `${options.kernelStore.file} (kept across restarts)` : "in memory (lost at restart)"}`,
+      `  kernel store       ${
+        options.kernelStore
+          ? `${options.kernelStore.file} (kept across restarts; recovery witness ${options.kernelStore.witness})`
+          : "in memory (lost at restart)"
+      }`,
       `  resource audience  ${resourceChannel.url}  (HTTP MCP, DPoP verified on every request)`,
       `  PDP mode           ${stack.pdpMode}`,
       `  MAS join route     ${stack.masGovernedChannel ? "mounted" : "not mounted"}`,

@@ -55,6 +55,26 @@ export {
   toolsSubset,
   verifyAttenuationChain,
 } from "./attenuation-chain.js";
+export {
+  AuthorityDependencyConfigError,
+  type AuthorityDependencyDeclaration,
+  type AuthorityDependencyEnforcement,
+  AuthorityDependencyEvidence,
+  type AuthorityDependencyRefusal,
+  AuthorityDependencyResolver,
+  checkAuthorityDependency,
+  type DependencyEvaluation,
+  type DependencyFailure,
+  type DependencyPrincipal,
+  evaluateAuthorityDependency,
+  type GovernedAuthoritySource,
+  type IdentityStateRecord,
+  type InvalidatingChange,
+  type PrincipalStateObservation,
+  type PrincipalStateView,
+  type PrincipalStatus,
+  parseAuthorityDependencyDeclarations,
+} from "./authority-dependency.js";
 export type {
   AuthorityEntry,
   ChildFanoutControls,
@@ -248,6 +268,7 @@ export {
   MCP_REFERENCE_META_KEY,
   MISSION_REFERENCE_HEADER,
   type PropagatedMissionReference,
+  type PropagatedWorkItem,
   parseMcpReferenceMeta,
   parseMissionReferenceField,
 } from "./mission-reference.js";

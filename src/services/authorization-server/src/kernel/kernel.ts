@@ -172,6 +172,13 @@ import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { ContinuationStore } from "./continuation-store.js";
 import { DelegationFamilyStore } from "./delegation-family-store.js";
+import {
+  guardKernelStore,
+  type RecoveryGuard,
+  type RecoveryUncertainError,
+  refuseUnwitnessedOpen,
+  witnessSharesStoreTree,
+} from "./recovery-witness.js";
 import { newMissionId } from "./mission-id.js";
 import {
   assembleResourceContracts,
@@ -442,7 +449,11 @@ export class GateError extends Error {
       // operation identity was settled by an authoritative NON-acceptance and
       // its count was returned. That identity is TERMINAL: retrying it would
       // mint a second artifact for one operation, off a count nobody holds.
-      | "operation_refunded",
+      | "operation_refunded"
+      // @spec runtime#input-authority-dependency (#830, D798): a declared
+      // authority dependency the Mission relies on is not established. It
+      // refuses `invalid_grant` with no `mission_error`.
+      | "authority_dependency",
     message: string,
   ) {
     super(message);
@@ -572,6 +583,15 @@ export interface StatusObservationOptions {
    * absent, neither member is included and the response is unchanged.
    */
   joinDisclosure?: boolean;
+  /**
+   * @spec status#mission-status-response (#1682, D795): the authenticated
+   * caller holds the deployment's audit-or-correlation disclosure privilege,
+   * so the `mission` object also carries `authority_hash`. The provider
+   * decides it from the client's configured disclosure privileges, never from
+   * a Status-read or lifecycle grant or from join enrollment; absent, the
+   * member is omitted.
+   */
+  discloseProvenance?: boolean;
   nonce?: string;
   freshnessSeconds?: number;
   /**
@@ -686,6 +706,28 @@ export interface KernelOptions {
    * {@link MissionKernel.registerDurableSubscriber} instead.
    */
   onLifecycleCommit?: (commit: LifecycleCommit) => void;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): the issuance
+   * gates' check of a declared authority dependency, beside the `active`
+   * check: consulted at the approval decision ({@link prepareApproval},
+   * {@link approve}) and at every gate a derivation passes
+   * ({@link gateActive}, {@link gateDerivation}, {@link checkDerivation}),
+   * before any count is written. It reads a cached observation and does no
+   * I/O, so it never holds a transaction across a source read. A refusal
+   * names its cause, which the caller retains; the wire refusal is the
+   * gate's own (`access_denied` at the approval, `invalid_grant` at a
+   * derivation), with no new identifier. Absent, no dependency is gated.
+   */
+  authorityDependencyGate?: (
+    candidate: {
+      /** The Mission, once it exists; absent at the approval decision. */
+      mission?: { id: string; issuer: string };
+      subject: { iss: string; sub: string };
+      clientId: string;
+      authoritySource: string;
+    },
+    surface: "approval" | "derivation",
+  ) => { failure: string } | undefined;
   /**
    * @spec draft-mcguinness-oauth-mission#per-entry-enforcement,
    * child-delegation#fanout — the AS's actor-type ASSERTION registry: a map from
@@ -818,11 +860,20 @@ export interface KernelOptions {
    * default stays in-memory and single-process; a `file` names the OPT-IN
    * file-backed SINGLE-WRITER store that makes restart recovery of the durable
    * lifecycle outbox and the terminal tombstones observable. It authorizes no
-   * second writer: multi-process claiming and fencing stay behind #641's
-   * deployment trigger, and `packages/store` adds no busy timeout and no
-   * IMMEDIATE transaction mode.
+   * second writer: multi-process claiming stays behind #641's deployment
+   * trigger. Without a {@link recoveryWitness} the file takes no lock and no
+   * busy timeout; with one it is held exclusively (#250 step 3).
    */
   store?: StoreOptions;
+  /**
+   * @spec control-plane#rollback (#250 step 3): the recovery witness for a
+   * file-backed `store`, a file kept outside the database restore unit. With
+   * it, the kernel opens the store exclusively, admits it only when its
+   * recovery marker matches the witness exactly, and advances both on every
+   * write transaction ({@link guardKernelStore}). Without it, a restored
+   * older store is not detected.
+   */
+  recoveryWitness?: { file: string };
   /**
    * @spec control-plane#tombstones — the deployment's declared retention
    * horizons. The detailed tombstone horizon is their COMPOSED maximum; the
@@ -867,6 +918,8 @@ function derivationCapExhausted(id: string): GateError {
 
 export class MissionKernel {
   readonly db: Database;
+  /** @spec control-plane#rollback (#250 step 3): the commit guard of a witnessed store, else undefined. */
+  readonly recovery: RecoveryGuard | undefined;
   /**
    * @spec issuance-grant#effective-set-projection (#617 review 3) — the durable
    * Mission-bound grant index. Its own store handle, deliberately NOT this
@@ -1029,7 +1082,23 @@ export class MissionKernel {
       opts.issuer,
     );
     this.sourceResolver = opts.authoritySourceResolver ?? catalogAuthoritySourceResolver(this.sourceCatalog);
-    this.db = openStore(SCHEMA, opts.store ?? {});
+    // @spec control-plane#rollback (#250 step 3): a witnessed store is opened
+    // exclusively and admitted before anything below writes to it.
+    if (opts.recoveryWitness && !opts.store?.file) {
+      throw new Error("recoveryWitness needs a file-backed kernel store");
+    }
+    if (opts.recoveryWitness && opts.store?.file && witnessSharesStoreTree(opts.store.file, opts.recoveryWitness.file)) {
+      throw new Error("the recovery witness must be outside the store's directory, and the store outside the witness's");
+    }
+    this.db = openStore(SCHEMA, opts.recoveryWitness ? { ...opts.store, exclusive: true } : (opts.store ?? {}));
+    try {
+      if (opts.recoveryWitness && opts.store?.file) {
+        this.recovery = guardKernelStore(this.db, opts.store.file, opts.recoveryWitness.file);
+      } else if (opts.store?.file) refuseUnwitnessedOpen(this.db);
+    } catch (e) {
+      this.db.close();
+      throw e;
+    }
     migrateMissions(this.db);
     this.sourceBindings = new SourceBindingStore(this.db);
     reconcileSourceBindings(
@@ -1620,6 +1689,7 @@ export class MissionKernel {
       approver: input.approver,
     });
     this.assertAuthorityWithinSource(resolvedSource, authoritySet);
+    this.assertAuthorityDependency(input, resolvedSource);
     return {
       proposal,
       authoritySet,
@@ -1627,6 +1697,20 @@ export class MissionKernel {
       childActorProvenance: derived.childActorProvenance,
       resolvedSource,
     };
+  }
+
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): the approval
+   * decision's check of a declared authority dependency, for the Subject and
+   * client the new Mission would carry under its established source. Refuses
+   * `access_denied`, the approval decision's refusal, naming no cause.
+   */
+  private assertAuthorityDependency(input: ApproveInput, resolvedSource: AuthoritySourceResolution): void {
+    const refused = this.opts.authorityDependencyGate?.(
+      { subject: input.subject, clientId: input.clientId, authoritySource: resolvedSource.provenance.type },
+      "approval",
+    );
+    if (refused) throw new IntentError("access_denied", "the approval's declared authority dependency is not established");
   }
 
   /**
@@ -1700,6 +1784,9 @@ export class MissionKernel {
       );
     }
     this.assertAuthorityWithinSource(current, prepared.authoritySet);
+    // @spec runtime#input-authority-dependency (#830): checked again at the
+    // commit, as the source is: the observation can change during the grant save.
+    this.assertAuthorityDependency(input, current);
     return current;
   }
 
@@ -4285,6 +4372,21 @@ export class MissionKernel {
       }
       ancestor = fresh.parent;
     }
+    // @spec runtime#input-authority-dependency (#830, D798): beside the
+    // `active` check, the Mission's declared authority dependency, before any
+    // count is written.
+    const dependency = this.opts.authorityDependencyGate?.(
+      {
+        mission: { id: record.id, issuer: record.issuer },
+        subject: record.subject,
+        clientId: record.client_id,
+        authoritySource: record.authority_source.type,
+      },
+      "derivation",
+    );
+    if (dependency) {
+      throw new GateError("authority_dependency", `mission ${id}: its declared authority dependency is not established`);
+    }
     return record;
   }
 
@@ -4769,11 +4871,11 @@ export class MissionKernel {
         ...(opts.joinDisclosure
           ? { subject: { iss: record.subject.iss, sub: record.subject.sub }, client_id: record.client_id }
           : {}),
-        // @spec mission-status#mission-status-response (#702) — OPTIONAL,
-        // disclosed at the AS's discretion (issuance profile's introspection
-        // disclosure footing); this reference AS discloses it on every
-        // Status response.
-        authority_hash: record.authority_hash,
+        // @spec status#mission-status-response (#702; #1682, D795): OPTIONAL,
+        // disclosed only to a caller the AS authorizes for audit or
+        // correlation use, on the issuance profile's introspection
+        // disclosure footing.
+        ...(opts.discloseProvenance ? { authority_hash: record.authority_hash } : {}),
         state: record.state,
         // @spec status#mission-status-response: CONDITIONAL `termination`,
         // present exactly when `state` is `terminated`: its `reason`,
@@ -5224,7 +5326,9 @@ export class MissionKernel {
         issuer: record.issuer,
         missionId: record.id,
         terminalState: record.state,
-        ...(record.termination ? { terminationReason: record.termination.reason } : {}),
+        ...(record.termination
+          ? { terminationReason: record.termination.reason, termination: record.termination }
+          : {}),
         finalVersion: record.version,
         transitionAt: persisted.committed_at,
         commitEventId: persisted.event_id,
@@ -5245,6 +5349,17 @@ export class MissionKernel {
    */
   close(): void {
     this.db.close();
+    // @spec control-plane#rollback (#250 step 3): and the witness's lock.
+    this.recovery?.release();
+  }
+
+  /**
+   * @spec control-plane#rollback (#250 step 3): the uncertainty a witnessed
+   * kernel ran into at run time, if any. While it is set, every write refuses,
+   * and state-dependent service must refuse too.
+   */
+  recoveryUncertainty(): RecoveryUncertainError | undefined {
+    return this.recovery?.uncertainty;
   }
 
   private mustGet(id: string): MissionRecord {

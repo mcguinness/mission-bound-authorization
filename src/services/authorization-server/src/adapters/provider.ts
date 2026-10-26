@@ -310,6 +310,11 @@ function settleCountedDerivations(kernel: MissionKernel, ctx: { status: number }
   for (const missionId of counted) kernel.refundDerivation(missionId);
 }
 
+/** A request that reads no Mission state: discovery metadata or the key set (#250 step 3). */
+function isRecoveryDiagnostic(ctx: { method: string; path: string }): boolean {
+  return (ctx.method === "GET" || ctx.method === "HEAD") && (ctx.path === "/jwks" || ctx.path.startsWith("/.well-known/"));
+}
+
 /**
  * @spec mission#issuance-gating, status#mission-lifecycle-endpoint — map a
  * kernel {@link GateError} onto the `mission_error` diagnostic value, where
@@ -712,6 +717,13 @@ export interface LifecycleClientPolicy {
   /** Among `revoke`, `suspend`, `resume`, `complete` and `contain`. */
   operations?: readonly string[];
   missions?: LifecycleMissionScope;
+  /**
+   * @spec status#mission-status-response (#1682, D795): the disclosure
+   * privileges the deployment binds to this client. `provenance` admits
+   * `mission.authority_hash` on its Mission Status Responses, the audit or
+   * correlation use the profile authorizes. Absent, none: no grant confers it.
+   */
+  disclose?: readonly string[];
 }
 
 /** A client's lifecycle grants: the grant list alone, or with the deployment's policy for it. */
@@ -721,6 +733,12 @@ export type LifecycleClientGrants = readonly string[] | LifecycleClientPolicy;
 function lifecycleGrantList(entry: LifecycleClientGrants | undefined): readonly string[] {
   if (entry === undefined) return [];
   return "grants" in entry ? entry.grants : entry;
+}
+
+/** The disclosure privileges a client's lifecycle grants bind; a bare grant list binds none. */
+function lifecycleDisclosures(entry: LifecycleClientGrants | undefined): readonly string[] {
+  if (entry === undefined || !("grants" in entry)) return [];
+  return entry.disclose ?? [];
 }
 
 /** @spec status#lifecycle-authorization (#1535): whether a Mission lies within a client's Mission scope. */
@@ -1189,6 +1207,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
     for (const operation of "grants" in entry ? (entry.operations ?? []) : []) {
       if (!LIFECYCLE_GRANT_OPERATIONS.has(operation)) {
         throw new Error(`lifecycleClientGrants: ${clientId} names unknown operation ${operation}`);
+      }
+    }
+    // @spec status#mission-status-response (#1682): `provenance` is the one
+    // disclosure privilege a Mission Status Response honors.
+    for (const privilege of lifecycleDisclosures(entry)) {
+      if (privilege !== "provenance") {
+        throw new Error(`lifecycleClientGrants: ${clientId} names unknown disclosure privilege ${privilege}`);
       }
     }
   }
@@ -2765,6 +2790,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
     ctx.set("cache-control", "no-store");
   }
 
+  /**
+   * @spec control-plane#rollback (#250 step 3): answer 503
+   * `temporarily_unavailable` in place of any response but discovery metadata
+   * and the key set while the kernel is uncertain. True when it refused.
+   */
+  function refuseWhileUncertain(ctx: { method: string; path: string; status: number; body: unknown; set(field: string, value: string): void }): boolean {
+    if (!kernel.recoveryUncertainty() || isRecoveryDiagnostic(ctx)) return false;
+    ctx.status = 503;
+    ctx.body = {
+      error: "temporarily_unavailable",
+      error_description: "the authorization server's durable state is uncertain and must be reconciled before it serves again",
+    };
+    ctx.set("cache-control", "no-store");
+    return true;
+  }
+
   // @spec mission#issuance-gating (#250): THE RELEASE FENCE, the AS's final
   // decision to release a token. It must stay the first `provider.use` here.
   // Provider#use splices each middleware ahead of the route dispatcher in
@@ -2779,6 +2820,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
   provider.use(async (ctx, next) => {
     await next();
     fenceRelease(ctx);
+    // @spec control-plane#rollback (#250 step 3): uncertainty that began while
+    // this request was in flight (a write elsewhere, the request-path drain)
+    // still refuses its response, here where nothing awaits after.
+    refuseWhileUncertain(ctx);
   });
   // @spec #831 (role binding): the provider's keystore holds the access-token
   // key alone (`jwks`), so it signs nothing under another role's key. The
@@ -2794,6 +2839,16 @@ export function buildProvider(opts: AdapterOptions): Provider {
       ctx.set("cache-control", `max-age=${JWKS_MAX_AGE_SECONDS}`);
       if (opts.jwksRevision !== undefined) ctx.set("etag", `"${opts.jwksRevision}"`);
     }
+  });
+
+  // @spec control-plane#rollback (#250 step 3): a witnessed kernel whose durable
+  // state became uncertain while running (a witness write that failed, or a
+  // write that bypassed its guard) refuses every state-dependent request until
+  // it is reconciled offline. Only discovery metadata and the key set, which
+  // read no Mission state, still answer.
+  provider.use(async (ctx, next) => {
+    if (refuseWhileUncertain(ctx)) return;
+    await next();
   });
 
   // @spec derivation-limits#counted-operations (#935, D772): settles the
@@ -3980,6 +4035,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
 
   /**
+   * @spec status#mission-status-response (#1682, D795): whether the
+   * authenticated caller holds the deployment's audit-or-correlation
+   * disclosure privilege, `provenance`, in ONE place for every Mission Status
+   * Response this AS builds: both Status routes, the lifecycle confirmation
+   * and the discharge envelope. Read from the client's configured disclosure
+   * privileges only: the `mission_status` and `mission_lifecycle` grants and
+   * join enrollment confer none. An own property lookup, so no inherited name
+   * resolves a client.
+   */
+  const discloseProvenance = (principal: ServiceTokenPrincipal): boolean =>
+    Object.hasOwn(lifecycleClientGrants, principal.principal_id) &&
+    lifecycleDisclosures(lifecycleClientGrants[principal.principal_id]).includes("provenance");
+
+  /**
    * @spec authority-server#join-disclosure (#818; #1591, D708): whether the
    * authenticated caller is enrolled in the PDP role for the requested
    * enforcement scope, read from the deployment's enrollment configuration
@@ -4413,6 +4482,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // enrolled PDP's own enforcement scope; every other request leaves
           // the option out, so its response is unchanged.
           ...(joinDisclosureFor(principal, statusAudience) ? { joinDisclosure: true } : {}),
+          ...(discloseProvenance(principal) ? { discloseProvenance: true } : {}),
         });
         ctx.status = 200;
         ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
@@ -4531,6 +4601,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // @spec status#mission-status-response check 6: `sub` is the client.
           caller: principal.principal_id,
           ...(joinDisclosureFor(principal, audience) ? { joinDisclosure: true } : {}),
+          ...(discloseProvenance(principal) ? { discloseProvenance: true } : {}),
         });
         ctx.status = 200;
         ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
@@ -5025,6 +5096,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           request: discharge,
           nonce,
           mayReadStatus,
+          discloseProvenance: discloseProvenance(principal),
           // @spec control-plane#serialization — the discharge latch, the nonce
           // claim and the OBSERVATION (or receipt) the response reports commit
           // together; only the signature happens after.
@@ -5139,6 +5211,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             requester: principal.principal_id,
             actingParty: principal.principal_id,
             nonce,
+            ...(discloseProvenance(principal) ? { discloseProvenance: true } : {}),
           });
           lifecycleResponses.claimInCallerTx(nonceKey, {
             requestDigest: digest,
@@ -7906,6 +7979,12 @@ async function handleDischarge(input: {
    */
   mayReadStatus: (principal: ServiceTokenPrincipal) => boolean;
   /**
+   * @spec status#mission-status-response (#1682, D795): the caller holds the
+   * configured `provenance` disclosure privilege, so a Status envelope it
+   * receives carries `authority_hash`.
+   */
+  discloseProvenance: boolean;
+  /**
    * @spec control-plane#serialization — invoked INSIDE the latch transaction
    * with the material the response will be signed from (a Status observation
    * or a Discharge Receipt), so the committed outcome and its replayable
@@ -7991,6 +8070,7 @@ async function handleDischarge(input: {
         requester: principal.principal_id,
         nonce,
         dischargeResult: result,
+        ...(input.discloseProvenance ? { discloseProvenance: true } : {}),
       });
       input.claimResponse?.(
         {

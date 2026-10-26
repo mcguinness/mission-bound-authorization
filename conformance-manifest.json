@@ -11,16 +11,16 @@
     "content_sha256": "abc6086f27dc02ea41a48bccb7408faa0aeafdd8464d78a79af5c370084a70e5"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "d32da54c5957197b6a58a0afc954c0c3c68fb532",
-    "content_sha256": "80d0b4206e2ff928e869e5362a58ca6ef0d1dfab8bc01744d1fdfb16392b0b07"
+    "revision": "54bfc7d5077f7ab59f8ac7070b7dd09000854ebf",
+    "content_sha256": "0b573747ea2e4759c7ba509b832e0cb95e1b77b2b2f0e0fa7b18168efce498c5"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
     "content_sha256": "e0466f26a42dc89f7f1637996066ed8de81addad3a6190db9b7f814e21525036"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "d32da54c5957197b6a58a0afc954c0c3c68fb532",
-    "content_sha256": "0b0a65e4ad1b12bfd083a22370b0a0d891543193c4065b63c497c565dd98ce7c"
+    "revision": "54bfc7d5077f7ab59f8ac7070b7dd09000854ebf",
+    "content_sha256": "2589fb9ff1db587d07713a2638dbb74699dd5494bc9678facd31afd467455210"
    },
    "draft-mcguinness-mission-runtime.md": {
     "revision": "ded392623b2abb36646480f132774c9f741ec4e5",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "552acb8c415969604ed2053786be955198d52785",
-    "content_sha256": "9b28ebc8ab66892ab2387a801ecda192cbf802cd34c2ded22cd4d4e07bbe081d"
+    "revision": "dc2eabb1398ab0229f72b60f4bb7899b96039d0a",
+    "content_sha256": "510aa2b7589242e78495474cfbc6d6c8edb3d1aa21bcd1359cc98b2f07927e66"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -99,8 +99,8 @@
     "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "ce5d2a7b61f4d740a36a1ba3ea4f93e8f930eac5",
-    "content_sha256": "b982072b6f0ec4d3df56b6ca64c3c49e8db7ef85ce24bd5007ddd22452ba25dd"
+    "revision": "f0ae62b925829bb0c1095fa7eee1e87adc66471d",
+    "content_sha256": "c61c6cfc7f22764c8ffe5c89d2afca8f28ddb7a958187eab0634c777a3b6e223"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
@@ -155,8 +155,12 @@
     "content_sha256": "c7b1f59acd41bc0698559c4b9123aa7283d7599e73d635bc61b0fde0c1725e87"
    },
    "draft-mcguinness-oauth-mission-containment.md": {
-    "revision": "d4d2699d92097451df10fe7be7d1b507c43fc2bf",
-    "content_sha256": "437ffcf048e52ad43a7c044adb6a46af60a4c9f76faf6142da3794b6456844f6"
+    "revision": "b2e4e9571e1c7173a778eb52bb888483ac09d3f5",
+    "content_sha256": "665929b2d3917e67c8460beac4de5e21b3a974edc710a684d3d2ca1e7eab3555"
+   },
+   "draft-mcguinness-mission-harness.md": {
+    "revision": "1859f68af5307bc7ad368e3cd58383c8b42c7dd9",
+    "content_sha256": "d339ce2786b7f680f388cb23abe5df7a94e68d1ec6b73f4efd3b09d2ebaeefe1"
    }
   }
  },
@@ -173,7 +177,8 @@
    "PRODUCER",
    "RECEIPT-ISSUER",
    "RECEIPT-VERIFIER",
-   "orchestrator"
+   "orchestrator",
+   "harness"
   ],
   "strengths": [
    "MUST",
@@ -315,7 +320,10 @@
    "aauth-management.update-position",
    "aauth-management.delegation-tree",
    "device-authorization.carriage",
-   "core.dpop-nonce"
+   "core.dpop-nonce",
+   "runtime.authority-dependency",
+   "harness.work-item-attachment",
+   "runtime.work-item-attribution"
   ]
  },
  "profiles": [
@@ -4915,9 +4923,135 @@
      "name": "terminal tombstones and identifier nonreuse > records the terminal tombstone in the terminal transition's own transaction",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > an older backup restored under the witness is refused, and the witness is never lowered to match it",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > an older backup is refused the same way after a consumer observed the newer state",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > a lost witness is refused, and init does not recreate one over a store that has a marker",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: admission at boot (@spec control-plane#rollback, #250 step 3) > a witness behind its store, another store's witness and an unreadable witness are each refused",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: an intent left pending (@spec control-plane#rollback, #250 step 3) > an intent written before a commit that never happened: the kernel stops, the restart refuses, and abandon (not acknowledge) resumes the store as it was",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: an intent left pending (@spec control-plane#rollback, #250 step 3) > a commit whose witness was never finalized: the kernel stops, the restart refuses, and acknowledge (not abandon) resumes the committed state",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: one writer and every write guarded (@spec control-plane#rollback, #250 step 3) > a write that bypasses the guard stops the kernel at the next guarded transaction",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: one writer and every write guarded (@spec control-plane#rollback, #250 step 3) > a second kernel cannot open the store while one holds it, and reconciliation refuses while it is held",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store (@spec control-plane#rollback, #250 step 3) > a running AS whose kernel became uncertain answers every state-dependent request 503 temporarily_unavailable, and still serves discovery and the key set",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store (@spec control-plane#rollback, #250 step 3) > an AS whose kernel store does not match its witness does not build, and releases the store",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store (@spec control-plane#rollback, #250 step 3) > runs the code exchange, a refresh, a delegation handle, an async family and its refresh with every write guarded: nothing escapes, and the witness and the store advance together",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native launcher in process, OpenFGA client stubbed (D332) > refuses to start on a kernel store restored from before its recovery witness, and starts again once the witnessed store is back (#250 step 3)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: one writer and every write guarded (@spec control-plane#rollback, #250 step 3) > a witnessed store does not open without its witness, so nothing writes to it unwitnessed; a store that never had a witness still opens",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: a copied store cannot share the witness: the witness is fenced across store paths, and the copy is refused afterwards rather than lowering it",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: a mutating statement run through get, all, iterate, a chained builder or exec is guarded: the witness advances and nothing escapes",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: an escaped write is recorded in the witness, so a restart refuses until accept takes the store under a new generation",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > a witness rewritten underneath a running kernel stops it, the change is recorded over what is on disk, and accept never lowers the witness",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > a kernel stays stopped even when its uncertainty could not be recorded in the witness",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness.test.ts",
+     "name": "recovery witness: review fixes (@spec control-plane#rollback, #250 step 3) > review: a witness inside the store's directory tree, or a store inside the witness's, is refused by the kernel and by reconciliation",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store: review fixes (@spec control-plane#rollback, #250 step 3) > review: refuses a refresh whose kernel becomes uncertain during the final awaited drain, releasing no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store: review fixes (@spec control-plane#rollback, #250 step 3) > the kernel database holds exactly the tables the transaction inventory names (control-plane-deployment.md, Restore admission)",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. The rest of the invariant is unimplemented: the issuer does not refuse state-dependent service while a durable version or commit metadata is uncertain after an out-of-band restore, there is no fenced reconciliation policy that decides when it is certain again, and no retaining-consumer high-water mark is exercised here. No waiver of existing binding-level requirements."
+   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. With a recovery witness configured (#250 step 3, slice A), the kernel holds its store and its witness's lock exclusively (so a copied store cannot share the witness), and opens only when the store's recovery marker matches the witness, a file outside the database restore unit that every write transaction advances (intent before the commit, finalized after it): a restored older store, a lost, unreadable or foreign witness and an unresolved intent refuse to open, a witnessed store refuses to open without its witness, and a run-time witness or commit failure, a witness changed underneath it, or a write that bypassed the guard (every statement API that can write is guarded), stops every further write and is recorded in the witness, so a restart refuses until reconciled. Offline reconciliation under both locks acknowledges or abandons an intent, or accepts a store with a recorded uncertainty under a new generation, and never lowers the witness. The Authorization Server builds only on an admitted store (a shipped launcher requires the witness with MISSION_KERNEL_STORE, and `pnpm as-native` refuses to start on a restored older store), and while a running kernel is uncertain it answers every request but discovery metadata and the key set with 503 temporarily_unavailable, a request already in flight included (the release fence checks again after every await). The transaction inventory (control-plane-deployment.md) names every kernel table and how its writes are witnessed, and a test fails on a table it does not name. Not yet covered: a way back from an older store other than restoring the witnessed one, by invalidating authority under a new generation (slice B); the retaining-consumer high-water mark; and any topology beyond one writer on one host. The escape detector notices a bypassing write only at the next guarded transaction, after that write committed. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.tombstones",
@@ -10244,6 +10378,29 @@
     }
    ],
    "notes": "#1503 finding 14 (D620): termination triggered by policy itself stays a revocation. Mutation-proved: recording the scheduled deadline's termination as `completed` fails the deadline test; the child and successor remediations committing `complete` in place of `revoke` fail their remediation tests (`completed` for `revoked`); and a revoke transition recording `completed` fails step 8."
+  },
+  {
+   "id": "core.revocation.subject-deprovisioned-terminates",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "revocation",
+   "text": "When the AS establishes that the principal identified by a Mission's recorded `subject` ({{record-principal-members}}) has been deprovisioned, it SHOULD terminate that Mission with termination reason `revoked`",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when the AS establishes that the principal identified by a Mission's recorded subject (iss, sub) is deprovisioned, every Mission of that Subject not yet terminated, a suspended one included, is terminated with reason revoked and further issuance is refused; temporary disablement, a source outage or an unavailable lookup terminates nothing, nor does the departure or disablement of an Approver, owner or client who is not the recorded Subject; already-issued tokens are not recalled by the termination itself"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#830 Q-e (D798). todo until witnessed: #830's reference reconciler (Q-d) commits revoke on deprovisioning. A deployment that does not follow the rule documents why (deployment documentation, not separately witnessed)."
   },
   {
    "id": "core.issuance-gating.inactive-refused-by-grant",
@@ -19368,6 +19525,70 @@
     }
    ],
    "notes": "#1535 finding 17, item 4 (D805): a normative constraint on the Mission Status request; Error Responses already refused a malformed nonce at both endpoints, and the only syntax was Lifecycle's idempotency rule. Boundary witnesses at 0, 1, 255 and 256 code points, ASCII and outside the Basic Multilingual Plane (#1689 review: the bound counts code points, not UTF-16 units). Mutations of the shared bound (adapters/lifecycle-endpoint.ts wellFormedNonce): counting UTF-16 units instead of code points, an upper bound of 256 or 254 code points, and a lower bound admitting the empty string or refusing one code point, each fail the cited test at both endpoints."
+  },
+  {
+   "id": "status.response.authority-hash-disclosure",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "disclosed at the AS's discretion to a caller it authorizes for audit or correlation use",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Status Response, a Status read or a lifecycle confirmation, carries mission.authority_hash only for a caller the AS authorizes for audit or correlation use: a caller holding only the Status-read grant, the Status-read and lifecycle grants, or Join Disclosure enrollment receives none, an authorized caller receives the Mission's committed anchor, and a retransmitted confirmation replays the bytes first sent",
+    "local": "discloseProvenance (adapters/provider.ts) reads the client's configured disclose list for provenance; observeInCallerTx (kernel.ts) includes the member only when that option is set; both Status routes, the lifecycle confirmation and the discharge envelope pass it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > omits authority_hash from a Status read by a client holding the read grant, or the read and lifecycle grants, without the disclosure privilege",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > carries authority_hash, the Mission's committed anchor, on a Status read by a client holding the provenance privilege",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > gives a PDP enrolled for Join Disclosure its subject and client_id but not authority_hash, absent the privilege",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > omits authority_hash from a lifecycle confirmation to a client without the privilege, and its retransmit replays the same bytes",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-authority-hash-disclosure.test.ts",
+     "name": "authority_hash disclosure on Mission Status Responses (@spec status#mission-status-response, #1682, D795) > carries authority_hash on a lifecycle confirmation to a client with the privilege, and its retransmit replays the same bytes",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > discharges over HTTP, returning the signed discharge_result beside `mission`",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1682 (D795): the reference disclosed authority_hash on every Mission Status Response; it now honors a per-client provenance disclosure privilege and nothing else. Mutations: always disclosing fails the three omission tests and the discharge envelope's; never disclosing fails both carry tests; deriving it from the Status-read grant fails the omission tests; deriving it from the lifecycle grant fails the two tests whose caller holds that grant without the privilege; adding Join Disclosure enrollment fails only the enrolled-PDP test; dropping it at the lifecycle confirmation fails the lifecycle carry test. The discharge envelope is witnessed for the omission only."
   },
   {
    "id": "status.response.served-audience-aud",
@@ -31761,6 +31982,458 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "runtime.authority-dependency.declaration",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "A deployment that declares an authority dependency MUST state in its Enforcement Scope Statement ({{runtime-conformance}}):",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment declaring an authority dependency states the dependency, its authoritative source and the state an observation represents; what it governs; the invalidating changes; its maximum staleness, separately from the Mission-state freshness declaration; its enforcement route; and how reliance is restored and responsibility passes to a successor",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; a composition that enforces it states it under extensions.authority_dependencies (withAuthorityDependencies), and the statement's loader refuses a declaration missing any element"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/authority-dependency-declaration.test.ts",
+     "name": "the deployment's Enforcement Scope Statement declares its authority dependency (@spec runtime#input-authority-dependency, #830) > states every element the Runtime requires, the staleness bound apart from the Mission-state freshness declaration",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/authority-dependency-declaration.test.ts",
+     "name": "the deployment's Enforcement Scope Statement declares its authority dependency (@spec runtime#input-authority-dependency, #830) > refuses at load a declaration missing any element, or one that names no enforcement route or a non-positive staleness",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR A (D798). Mutation-proved: accepting a declaration with a missing member, and loading a statement without validating its declarations, each failed the refusal witness."
+  },
+  {
+   "id": "runtime.authority-dependency.reconciliation-lag-refuses",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "when upstream observation or reconciliation exceeds its declared bound, the deployment MUST refuse the actions the dependency governs until it is current again",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "under lifecycle-mediated enforcement, an action the dependency governs is refused while upstream observation or reconciliation exceeds its declared bound, even though the Mission state reads `active`"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes."
+  },
+  {
+   "id": "runtime.authority-dependency.refuse-when-not-established",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "The deployment MUST refuse an action governed by a declared dependency, through its declared enforcement route, when the dependency is known to be withdrawn, when an applicable invalidation has been observed, or when no acceptable authoritative observation remains",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where the PDP enforces a declared dependency, an action it governs is refused on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated in the PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) where the declaration routes direct evaluation to the PDP; a stale observation and a source that never answered are each a case of no acceptable observation remaining. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy on a known withdrawal of the delegation, and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy on an observed invalidation: the Subject disabled, or deprovisioned",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy once the observation is older than its bound, the source still answering: a stale observation",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > keeps serving through a source outage while the cached observation is within its validity, and refuses once no acceptable observation remains",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses through an outage within the observation's validity where the declaration requires an online check",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy when no observation was ever acceptable: the source never answered",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > permits while an observation within its bound shows the Subject active and the delegation held",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-resolver.test.ts",
+     "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > does not let an older read completing late replace a newer read's known withdrawal",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-resolver.test.ts",
+     "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > publishes reads that complete in issue order in that order, the newer last",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: dropping the PDP's check, the withdrawal check, the invalidation check, the staleness check, or the online check, accepting no observation, and letting an outage invalidate a still-valid observation, each failed its witness. D813 review (PR A): publishing an older read over a newer one failed the ordering witness."
+  },
+  {
+   "id": "runtime.authority-dependency.refuse-when-not-established-local",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "The deployment MUST refuse an action governed by a declared dependency, through its declared enforcement route, when the dependency is known to be withdrawn, when an applicable invalidation has been observed, or when no acceptable authoritative observation remains",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where a composed resource-policy step at the PEP or resource server enforces a declared dependency, an action it governs is refused there on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains, even when the PDP permits within Mission authority; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated as a composed resource-policy step in the payments PEP (services/mcp-payments/src/pep.ts) after the PDP's permit and before any obligation or effect, where the declaration routes direct evaluation to the PEP; the decision point evaluates no dependency then and permits within Mission authority. The PEP rechecks the dependency at every use of the permit, release included, on every dispatch path (reads, unkeyed and keyed reversible writes, the transaction tier): the `authority_dependency` use check refuses resource_policy once the ceiling the composed step carried from admission is reached, whatever a later read shows, and once a known withdrawal, an observed invalidation or a lost observation reaches the PEP; routed to the PDP, a PEP holding the dependency rechecks it at release too (D813)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on a known withdrawal though the PDP permits within Mission authority (D794), and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on an observed invalidation (the Subject disabled), on a stale observation, and when no acceptable observation remains",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > keeps serving through a source outage while the cached observation is within its validity",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > permits the read while an observation within its bound establishes the dependency",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's dependency ceiling and recheck hold at release on every dispatch path (@spec runtime#input-authority-dependency, #830, D813) > releases no effect once the observation the step relied on has passed its validity, on a read, an unkeyed write, a keyed write and the transaction tier",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's dependency ceiling and recheck hold at release on every dispatch path (@spec runtime#input-authority-dependency, #830, D813) > releases no effect when a known withdrawal reaches the PEP between admission and release, on every dispatch path",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a permit is held to the observation it was admitted on, and a PEP holding a dependency routed to the PDP rechecks it at release (@spec runtime#input-authority-dependency, #830, D813) > releases no effect after the admission observation's validity though a newer read re-established the dependency before release, on every dispatch path",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a permit is held to the observation it was admitted on, and a PEP holding a dependency routed to the PDP rechecks it at release (@spec runtime#input-authority-dependency, #830, D813) > refuses at release, routed to the PDP, a permit the PDP issued before a known withdrawal reached the PEP, on every dispatch path",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's ceiling on a read admitted at the edge of the observation's validity (@spec runtime#input-authority-dependency, #830, D813) > refuses a read admitted at 299 s of a 300 s validity and reaching release at 300 s",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation). #830 Q-d reference PR A (D798). Mutation-proved: dropping the PEP's composed step failed the refusal witnesses, and letting an outage invalidate a still-valid observation failed the outage witness. D813 review (PR A): removing the release check, skipping it on any one dispatch path (each of the four separately), not carrying the admission ceiling, refusing only past the ceiling rather than at it, not rechecking known invalidations at release, and not rechecking a PDP-routed dependency, each failed its witness."
+  },
+  {
+   "id": "runtime.authority-dependency.permit-cap",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "A permit issued in reliance on a dependency observation MUST expire no later than that observation's accepted validity",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit issued in reliance on a dependency observation expires no later than the observation's accepted validity, measured from the time the observation represents",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the observation's validity is a ceiling of the PDP's one permit-deadline calculation (authority_dependency_valid_until), measured from the time the observation represents. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > issues a permit that expires no later than the observation's accepted validity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-resolver.test.ts",
+     "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > dates an observation from when its read was issued, so a slow read does not renew an old state's validity",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR A (D798). Mutation-proved: dropping the ceiling, and measuring the validity from the decision instant instead of the observation, each failed the witness. D813 review (PR A): dating an observation from its read's completion failed the slow-read witness."
+  },
+  {
+   "id": "runtime.authority-dependency.evidence-distinguishes",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "Retained evidence of such a refusal, from whichever component enforces the dependency, distinguishes a known withdrawal, a stale observation and an unavailable source",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the PDP enforces a declared dependency, the retained evidence of its refusal records whether the dependency was known withdrawn, its observation stale, or its source unavailable",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the PDP records each refusal in the deployment's dependency evidence (AuthorityDependencyEvidence: enforcer, dependency, failure withdrawn, invalidated, stale or unavailable, Mission, subject, client, action, observation time); a deployment record, not a Runtime Evidence object (the wire form is #830 Q-c's). Source availability is the outcome of the latest-issued read that completed, so a late failure of an older read does not turn a stale observation into an unavailable source (D813)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > retains each refusal's cause so a known withdrawal, a stale observation and an unavailable source stay distinguishable",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy on a known withdrawal of the delegation, and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-resolver.test.ts",
+     "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > reports the source's availability from the latest-issued read that completed, not the last to complete",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: classifying every expired observation as stale, whether or not the source answered, failed the witness. D813 review (PR A): taking availability from the last read to complete failed the availability witness."
+  },
+  {
+   "id": "runtime.authority-dependency.evidence-distinguishes-local",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "Retained evidence of such a refusal, from whichever component enforces the dependency, distinguishes a known withdrawal, a stale observation and an unavailable source",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a composed resource-policy step at the PEP or resource server enforces a declared dependency, the retained evidence of its refusal records whether the dependency was known withdrawn, its observation stale, or its source unavailable",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the PEP's composed step records each refusal in the deployment's dependency evidence, as the PDP does, and disposes the permit suppressed with error resource_policy. A refusal at release is recorded too: a reached admission ceiling as stale, a known withdrawal as withdrawn (D813)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on an observed invalidation (the Subject disabled), on a stale observation, and when no acceptable observation remains",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on a known withdrawal though the PDP permits within Mission authority (D794), and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's dependency ceiling and recheck hold at release on every dispatch path (@spec runtime#input-authority-dependency, #830, D813) > releases no effect once the observation the step relied on has passed its validity, on a read, an unkeyed write, a keyed write and the transaction tier",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's dependency ceiling and recheck hold at release on every dispatch path (@spec runtime#input-authority-dependency, #830, D813) > releases no effect when a known withdrawal reaches the PEP between admission and release, on every dispatch path",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation). #830 Q-d reference PR A (D798). Mutation-proved: classifying every expired observation as stale failed the witness. D813 review (PR A): removing the release check failed both witnesses."
+  },
+  {
+   "id": "runtime.authority-dependency.mechanism-refusal-kept",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "A dependency enforced through an existing mechanism keeps that mechanism's refusal: an inactive Mission, contained authority, or a failed resource-policy condition",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where the PDP enforces a declared dependency through its Resource-policy step, a dependency not established refuses as that mechanism refuses, `resource_policy`, never a Mission-state code",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the reference enforces the dependency at the PDP through the Resource-policy step only, so an inactive Mission and contained authority keep their own existing refusals unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy on a known withdrawal of the delegation, and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy on an observed invalidation: the Subject disabled, or deprovisioned",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy once the observation is older than its bound, the source still answering: a stale observation",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy when no observation was ever acceptable: the source never answered",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: refusing stale_state instead failed the witnesses."
+  },
+  {
+   "id": "runtime.authority-dependency.mechanism-refusal-kept-local",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "input-authority-dependency",
+   "text": "A dependency enforced through an existing mechanism keeps that mechanism's refusal: an inactive Mission, contained authority, or a failed resource-policy condition",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where a composed resource-policy step at the PEP or resource server enforces a dependency, its refusal is that mechanism's failed resource-policy condition",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the PEP's composed step refuses resource_policy. A refusal at release is the same resource_policy (D813)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on a known withdrawal though the PDP permits within Mission authority (D794), and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on an observed invalidation (the Subject disabled), on a stale observation, and when no acceptable observation remains",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's dependency ceiling and recheck hold at release on every dispatch path (@spec runtime#input-authority-dependency, #830, D813) > releases no effect when a known withdrawal reaches the PEP between admission and release, on every dispatch path",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation). #830 Q-d reference PR A (D798). Mutation-proved: refusing out_of_authority instead failed the witnesses. D813 review (PR A): removing the release check failed the witness."
+  },
+  {
+   "id": "runtime.state-freshness.external-change-bound",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "state-freshness",
+   "text": "A deployment that claims a bound on how quickly an external authority change stops dependent actions ({{input-authority-dependency}}) MUST state it from the time the authoritative system records the change to the time a dependent action can no longer begin an effect, and MUST state separately how work already started is treated",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.authority-dependency"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment claiming an external-change bound states it from the authoritative system recording the change to a dependent action no longer beginning an effect, states how already-started work is treated, and accounts for detection, evaluation, state change, downstream reliance and permit validity"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes."
   },
   {
    "id": "authzen.conventions.required-when-known-no-inference",
@@ -63192,9 +63865,57 @@
      "name": "a carried child's own expiry at completion (@spec child-delegation#carryover-cas, child-delegation#child-state, #1674) > is excluded and recorded expired under a plan committing state changes, while its sibling carries",
      "level": "cross-component",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge state at a carryover's completion (@spec child-delegation#carryover-cas, child-delegation#carryover-no-reset, #919) > refuses a discharge after rendering that leaves the effective authority unchanged, under a plan that excludes only state changes",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > refuses the batch when the tombstone's detail is pruned, kept no termination, or does not exist",
+     "level": "cross-component",
+     "surface": "derivation"
     }
    ],
-   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses. #919 adds a suspension and a resume after rendering, containment after approval, a rendered record gone at completion, and a discharge after rendering. Containment and discharge are compared by the membership pass (the committed `containment_version` and `effective_authority_hash`); the conditional UPDATE's containment and discharge terms are bound to the row as read in that transaction, so they add nothing beside it, and dropping the discharge term changes no result. Proved by mutation: disabling the membership pass and the UPDATE check together fails the suspension, resume, record and state-only discharge witnesses; dropping only the `record_missing` divergence fails the record witness; dropping only the effective-authority comparison fails the state-only discharge witness, where the plan excludes the discharge's state change but not its narrowed authority. With both halves off, the containment and all-or-nothing discharge witnesses are still refused by another check, so they are not the halves' discriminating witnesses. #1674: a carried row is compared as observed through the expiry clock, so an old child whose own expiry arrived before completion diverges as `state_changed` though no transition was persisted: refused under all-or-nothing, excluded and recorded `expired` under a plan committing that class. A cascade row is compared as stored, since its outcome does not change. Proved by mutation: comparing carried rows as stored fails the exclusion witness; comparing every row as observed fails the rendered-cascade own-expiry witness."
+   "notes": "Two halves in one transaction: a per-row conditional UPDATE (`changes === 1`) binds the scalar committed inputs, and a descendant-set membership pass compares the whole current subtree against the manifest, which per-row CAS cannot do. Witnessed separately: a counter-only mutation with no version bump, a fan-out occupancy change, the termination of a rendered row, and a descendant created after approval. Under all-or-nothing each refuses the whole completion; under disclosed exclusions only a committed change class excludes and an uncommitted one still refuses. #919 adds a suspension and a resume after rendering, containment after approval, a rendered record gone at completion, and a discharge after rendering. Containment and discharge are compared by the membership pass: the committed `containment_version`, the committed `discharged_digests` as a set (#1673, D803) and `effective_authority_hash`; the conditional UPDATE binds the scalar inputs only. A latch on an entry containment already removed leaves the effective authority unchanged, so under a plan excluding only state changes only the discharge-set comparison refuses it; disabling that comparison fails its witness alone. Proved by mutation: disabling the membership pass and the UPDATE check together fails the suspension, resume, record and state-only discharge witnesses; dropping only the `record_missing` divergence fails the record witness; dropping only the effective-authority comparison fails the state-only discharge witness, where the plan excludes the discharge's state change but not its narrowed authority. With both halves off, the containment and all-or-nothing discharge witnesses are still refused by another check, so they are not the halves' discriminating witnesses. #1674: a carried row is compared as observed through the expiry clock, so an old child whose own expiry arrived before completion diverges as `state_changed` though no transition was persisted: refused under all-or-nothing, excluded and recorded `expired` under a plan committing that class. A cascade row is compared as stored, since its outcome does not change. Proved by mutation: comparing carried rows as stored fails the exclusion witness; comparing every row as observed fails the rendered-cascade own-expiry witness. #1675: a missing rendered row excluded under a plan committing `record_missing` must still be recorded; without a usable tombstone the completion is refused."
+  },
+  {
+   "id": "child-delegation.carryover.outcome-per-rendered-row",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-cas",
+   "text": "Each final outcome is recorded against its rendered row, not inferred from set equality over the subtree.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every rendered row has exactly one outcome in the final map and the authenticated Carryover Evidence, including a rendered row whose record no longer exists, or the completion is refused",
+    "local": "the reference records a rendered row its subtree walk did not reach from that row's tombstone, looked up by issuer and Mission identity: the terminal state and the termination committed at its terminal transition (kept on the tombstone since #1675). With no tombstone, a pruned one, or one written before the termination was kept, the batch is refused; no field is reconstructed from the commit time"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > is recorded once, from its tombstone, with the termination it committed, in the map and the signed evidence; the rest carries",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > refuses the batch when the tombstone's detail is pruned, kept no termination, or does not exist",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1675 (D803). Proved by mutation: not recording a rendered row the walk did not reach fails both witnesses; keeping no termination on the tombstone fails the recorded witness; skipping an unusable tombstone instead of refusing fails the refusal witness; pruning that keeps the termination fails the refusal witness's prune assertion. Under all-or-nothing a missing record refuses at the membership pass, before the map."
   },
   {
    "id": "child-delegation.carryover.generation-order",
@@ -63561,9 +64282,15 @@
      "name": "Child Mission Carryover exclusion modes (@spec child-delegation#carryover-cas) > cascades an unrendered descendant under disclosed exclusions and lists it explicitly in the authenticated map",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675) > is recorded once, from its tombstone, with the termination it committed, in the map and the signed evidence; the rest carries",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Signature verification, not payload construction: the retained Carryover Evidence is an ES256 compact JWS signed synchronously inside the completion transaction with the issuer's Status key, verified in-process against the issuer's public key and, at the wire, against the published `/jwks` document. Its payload carries `manifest_hash`, the qualified predecessor and successor references, the committed exclusion policy and the COMPLETE final map, with unrendered descendants listed explicitly."
+   "notes": "Signature verification, not payload construction: the retained Carryover Evidence is an ES256 compact JWS signed synchronously inside the completion transaction with the issuer's Status key, verified in-process against the issuer's public key and, at the wire, against the published `/jwks` document. Its payload carries `manifest_hash`, the qualified predecessor and successor references, the committed exclusion policy and the COMPLETE final map, with unrendered descendants listed explicitly. #1675: the complete map includes a rendered row whose record is gone, recorded from its tombstone; the witness checks the retained map and the signed evidence alike."
   },
   {
    "id": "child-delegation.carryover.observation-correlation",
@@ -80327,6 +81054,832 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Contextual twin of discovery.privacy-considerations.restrict-evidence-access: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
+   "id": "harness.work-item.agent-value-never-merged",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "A value the governed agent can supply, such as a tool argument or model output, never establishes, selects, or changes a work item, and the harness MUST NOT merge one into what it attaches.",
+   "role": "harness",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a tool argument or other agent-supplied value naming a work item, a work-item issuer or a Mission never changes the work item the harness attaches; the arguments pass through as arguments"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/agent/test/harness-work-item.test.ts",
+     "name": "the harness attaches its own work item (@spec harness#work-item-identity, #815) > attaches its work item in the propagated Mission reference on every call, and never from tool arguments",
+     "level": "unit",
+     "surface": "mission-reference"
+    }
+   ]
+  },
+  {
+   "id": "harness.work-item.attach-in-reference",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "the harness attaches the identifier to each governed request it originates for the item, in the Mission reference it propagates",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every governed call the harness originates for a work item carries the work item's work_item_issuer and work_item as members of the propagated Mission reference, beside the item's Mission identifier and issuer",
+    "local": "MediatedHarness takes its work item as configuration (MediatedHarnessOptions.workItem) and attaches it in the MCP params._meta reference key on every callTool."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/agent/test/harness-work-item.test.ts",
+     "name": "the harness attaches its own work item (@spec harness#work-item-identity, #815) > attaches its work item in the propagated Mission reference on every call, and never from tool arguments",
+     "level": "unit",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/agent/test/harness-work-item.test.ts",
+     "name": "harness to PEP to PDP to evidence over the real MCP channel (@spec harness#work-item-identity, authzen#context-work-item, #815) > the harness's work item reaches context.work_item, the permit's condition, Decision Evidence and Execution Evidence",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    }
+   ]
+  },
+  {
+   "id": "harness.work-item.retry-keeps-identifier",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "Retry: a retry or resumed dispatch keeps the identifier and is still a new continuation point",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a resumed submission carries the same work item as the work it resumes and is re-checked before it reaches the channel; a retry of queued work keeps the item's identifier"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/agent/test/harness-work-item.test.ts",
+     "name": "the harness attaches its own work item (@spec harness#work-item-identity, #815) > a resumed submission keeps the same work item, and is re-checked as a new continuation point",
+     "level": "unit",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "Resumed dispatch is witnessed at the harness boundary (a stale-lease refusal, then a fresh-lease submission under the same work item). The retry arm is not witnessed: the reference harness has no retry queue."
+  },
+  {
+   "id": "harness.work-item.concurrency-own-requests",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "Concurrency: concurrent work items, under one Mission or several, have distinct identifiers, and the harness attaches each only to the requests it originates for that item, under that item's Mission.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "concurrent work items each ride only their own calls, under their own Mission, never another item's or another Mission's"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/agent/test/harness-work-item.test.ts",
+     "name": "the harness attaches its own work item (@spec harness#work-item-identity, #815) > concurrent work items under one Mission or two attach distinct identifiers, each under its own Mission",
+     "level": "unit",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "The attaching arm is witnessed. Distinct identifiers are not: the reference harness receives its work item as configuration and does not itself assign identifiers, so distinctness rests on its caller."
+  },
+  {
+   "id": "harness.work-item.inheritance",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "a child governed by a different Mission receives its own identifier, bound to that Mission, never the parent's",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child created from a work item under the same Mission inherits its identifier; a child under a different Mission gets its own identifier bound to that Mission"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference harness creates no child node, job or sub-agent handle, so there is no path to witness."
+  },
+  {
+   "id": "harness.work-item.mapping-only-by-rebinding",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "Mapping: a work item's Mission does not change, except by explicit successor rebinding",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a work item is attached only under the Mission it was bound to, until an explicit successor rebinding moves it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "checkSupersessionContinuity decides whether rebinding may proceed; the reference performs no rebinding, so no path moves a work item between Missions to witness."
+  },
+  {
+   "id": "harness.work-item.members-together",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "Both are Strings, carried together or not at all, in the HTTP and MCP carriages alike.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a reference carrying one work-item member without the other, a non-String or empty member, or one past its bound is malformed in both the Mission-Reference field and the MCP _meta carriage; both members together parse as the work item",
+    "local": "Bounds are the reference's: work_item at most 256 characters and work_item_issuer at most 512, mirroring the tuple's own id and issuer bounds."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/mission-reference.test.ts",
+     "name": "the harness profile's work-item members on the reference tuple (@spec harness#work-item-identity, authority-server#reference-tuple, #815) > accepts work_item_issuer and work_item together, as Strings, in both carriages",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/mission-reference.test.ts",
+     "name": "the harness profile's work-item members on the reference tuple (@spec harness#work-item-identity, authority-server#reference-tuple, #815) > rejects one work-item member without the other, a non-String or empty one, and one past its bound",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ]
+  },
+  {
+   "id": "harness.work-item.pep-attacher-and-verified-reference",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "A PEP implementing this profile MUST take a work item only from these members, once the reference itself verifies, and only where the statement names the harness that `work_item_issuer` identifies as the attacher for the client the PEP authenticated on that request.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a work item reaches the decision request only from a verified reference and only when its work_item_issuer is the harness the statement names for the authenticated client; a verified reference whose work item names another harness, or arrives on another client's request, is not carried; a reference naming another Mission than the credential is refused before any decision"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > carries the work item the verified reference attaches as context.work_item, bound into the permit and recorded on Decision Evidence",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > does not carry a work item whose harness is not the attacher the statement names for the authenticated client",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > refuses a work item attached under another Mission on a call with this Mission's credential, before any decision (one client, two Missions)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The cross-Mission refusal is the authority-server reference verification (mission_reference_conflict), witnessed here with a work item attached."
+  },
+  {
+   "id": "harness.work-item.pep-never-from-arguments",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "It MUST NOT read a work item from tool arguments or any other value the agent supplies, and MUST NOT carry one it cannot attribute to that attacher.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a work_item tool argument never reaches the decision request, alone or beside an attachment, and a work item the PEP cannot attribute to the named attacher is not carried"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > never reads a work item from tool arguments: alone it is never carried, and beside an attachment the attachment governs",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > does not carry a work item whose harness is not the attacher the statement names for the authenticated client",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "harness.queue-item.work-item-stable-across-retries",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "queue-item",
+   "text": "It is the same across retries: `queue_item_id` names the attempt and `retry_of` the attempt before it, while `work_item` names the work every attempt performs.",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every attempt of queued work carries the same work_item, while queue_item_id names the attempt"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference harness has no queue."
+  },
+  {
+   "id": "harness.evidence.work-item-issuer-required-where-claimed",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "harness-evidence-object",
+   "text": "REQUIRED with `work_item` where the Enforcement Scope Statement claims work-item attribution for that work.",
+   "role": "harness",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.work-item-attribution"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Harness Evidence record about claimed work carries work_item_issuer beside work_item"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference emits no Harness Evidence."
+  },
+  {
+   "id": "harness.supersession.record-carries-work-item",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "supersession-continuity",
+   "text": "That record carries the item's qualified work-item identifier, and the rebinding is the only change to the item's Mission",
+   "role": "harness",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a mission_superseded record carries the qualified work-item identifier of the item it rebinds"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference performs no rebinding and emits no Harness Evidence."
+  },
+  {
+   "id": "authzen.context-work-item.pep-populates-from-attachment-only",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "The PEP populates `context.work_item` only from the harness's authenticated attachment: the work item a verified Mission reference carries, for the attacher the Enforcement Scope Statement declares for the authenticated client",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "context.work_item carries, as {issuer, id}, only a work item a verified Mission reference carried for the attacher the statement declares for the authenticated client, and never a value from tool arguments"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > carries the work item the verified reference attaches as context.work_item, bound into the permit and recorded on Decision Evidence",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > never reads a work item from tool arguments: alone it is never carried, and beside an attachment the attachment governs",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-work-item.malformed-refused",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "The PDP MUST refuse, before evaluation, a request whose `context.work_item` is present but not of that shape",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a present context.work_item that is not exactly an object with string issuer and id is refused before evaluation as the Refusal Record work_item_invalid, in any class: no decision, no evaluation_id, no Decision Evidence and no policy evaluation"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > refuses a malformed work item before evaluation as work_item_invalid, claimed or not: no decision, no evaluation_id, no Decision Evidence and no FGA check",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > records the work_item_invalid refusal as a PDP-signed Refusal Record over the request as submitted, with no evaluation_id",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Owner review at d0821947: a malformed member is an unusable input (D744's split), not the evaluated denial work_item_context_missing."
+  },
+  {
+   "id": "authzen.context-work-item.absent-denied-where-claimed",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "Where the deployment's Enforcement Scope Statement claims work-item attribution for the action's class, the PDP MUST deny with `work_item_context_missing` ({{runtime-denial-classification}}) a decision from which `context.work_item` is absent.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.work-item-attribution"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "in a class the PDP's own statement claims work-item attribution for, a decision with no context.work_item is the evaluated denial work_item_context_missing; the claim is the PDP's binding, and a claim an enforcement component supplies is stripped",
+    "local": "Witnessed only on the co-resident decision point createDecisionPoint builds, which binds workItemAttributedClasses and strips a value an enforcement component supplies. createEphemeralDecisionPoint takes no claimed-class configuration, and the remote PDP server neither binds nor strips it (a remote deployment would supply it through its own getOptions): neither path is verified, and no row claims it."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > on a class the statement claims work-item attribution for, denies work_item_context_missing with no work item and permits with one",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > the decision point applies its own claimed classes and strips any an enforcement component supplies",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-work-item.unclaimed-absence-relaxes-nothing",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "Elsewhere its absence relaxes nothing, and the deployment claims Mission-level attribution only.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "in a class no statement claims, a decision without context.work_item is decided as before, and one with it carries it",
+    "local": "Witnessed only on the co-resident decision point createDecisionPoint builds, which binds workItemAttributedClasses and strips a value an enforcement component supplies. createEphemeralDecisionPoint takes no claimed-class configuration, and the remote PDP server neither binds nor strips it (a remote deployment would supply it through its own getOptions): neither path is verified, and no row claims it."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > on a class no statement claims, carries a present work item into the permit's work_item condition and Decision Evidence, and permits without one",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-work-item.binding-and-cache-key",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "The member is part of the authorization binding and the cache key ({{projections}}), so no cached decision or resumed execution crosses work items",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "two requests differing only in their work item have different cache keys, so a retransmission returns a permit only to the same work item and another work item under the same key is never handed it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work item is part of the authorization binding and the cache key (@spec authzen#projections, authzen#context-work-item, #815) > two requests that differ only in their work item have different cache keys, and an identical one the same",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work item is part of the authorization binding and the cache key (@spec authzen#projections, authzen#context-work-item, #815) > a duplicate keyed dispatch of the same work item is the retransmission of its permit, and another work item under the same key never receives it",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "The resumed-execution arm is the PEP's work_item condition comparison (authzen.decision-conditions.work-item-compared-at-use)."
+  },
+  {
+   "id": "authzen.decision-conditions.work-item-required-equal",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "decision-conditions",
+   "text": "REQUIRED on a permit for a decision whose request carried `context.work_item` ({{context-work-item}}), and equal to it.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit for a decision whose request carried context.work_item carries conditions.work_item equal to it; a permit for one without carries none"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > on a class no statement claims, carries a present work item into the permit's work_item condition and Decision Evidence, and permits without one",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > on a class the statement claims work-item attribution for, denies work_item_context_missing with no work item and permits with one",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.decision-conditions.work-item-compared-at-use",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "decision-conditions",
+   "text": "At every use, the executing PEP MUST compare it with the work item it attributes to the request it is executing, and MUST NOT release an effect when they differ or when either is present without the other.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a permit whose work_item condition differs from the request's attributed work item, or is present without it, or absent beside it, releases no effect"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > item swap within one Mission: a permit decided for one work item is refused work_item_mismatch with zero effect when presented for another",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > refuses a permit bound to a work item for a request that carries none, and a permit bound to none for a request that carries one",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ]
+  },
+  {
+   "id": "authzen.decision-conditions.work-item-mismatch-carrier",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "decision-conditions",
+   "text": "Such a refusal is Execution Evidence `suppressed` / `work_item_mismatch`, not a PDP denial.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the refusal is recorded as Execution Evidence outcome suppressed with error work_item_mismatch"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > item swap within one Mission: a permit decided for one work item is refused work_item_mismatch with zero effect when presented for another",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "evidence.extensions.work-item-decision-evidence",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "REQUIRED on Decision Evidence when the decision request carried a well-formed work-item context, recorded as presented",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Decision Evidence carries work_item exactly as the request presented it, on a permit or a denial; a request with a malformed one is refused before evaluation and yields no Decision Evidence"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > on a class no statement claims, carries a present work item into the permit's work_item condition and Decision Evidence, and permits without one",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > refuses a malformed work item before evaluation as work_item_invalid, claimed or not: no decision, no evaluation_id, no Decision Evidence and no FGA check",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "evidence.extensions.work-item-execution-evidence",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "evidence-extensions",
+   "text": "on Execution Evidence when the request the disposition concerns carried one, recorded as the executing PEP attributed it",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a suppressed or completed Execution Evidence record carries the work item the executing PEP attributed to the request"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > a completed execution's Execution Evidence carries the request's work item",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > item swap within one Mission: a permit decided for one work item is refused work_item_mismatch with zero effect when presented for another",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The PEP suppression and executor completion records are witnessed. A late completion recorded by claim reconciliation copies the work item its Decision Evidence recorded and has no witness."
+  },
+  {
+   "id": "evidence.execution-error.work-item-mismatch",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`work_item_mismatch` (the permit's work-item condition differs from the work item the executing PEP attributes to the request, or one is present without the other)",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit suppressed for a work-item mismatch records error work_item_mismatch"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the permit's work_item condition at every use (@spec authzen#decision-conditions, runtime-evidence#evidence-extensions, #815) > item swap within one Mission: a permit decided for one work item is refused work_item_mismatch with zero effect when presented for another",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "harness.work-item.verification-is-not-attachment",
+   "spec": "draft-mcguinness-mission-harness.md",
+   "anchor": "work-item-identity",
+   "text": "verification alone never establishes the attachment",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a Mission reference that verifies against the credential's Mission still carries no work item into the decision unless its work_item_issuer is the attacher the statement declares for the authenticated client"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > does not carry a work item whose harness is not the attacher the statement names for the authenticated client",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.context-work-item.verified-reference-is-not-attachment",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-work-item",
+   "text": "A reference that verifies does not by itself establish that attachment, and the PEP never takes a work item from tool arguments or another value the agent supplies.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a verified reference whose work item is not the declared attacher's for the authenticated client, and a work_item tool argument, never reach context.work_item"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > does not carry a work item whose harness is not the attacher the statement names for the authenticated client",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/work-item-attribution.test.ts",
+     "name": "the PEP carries a work item only from the harness's verified attachment (@spec harness#work-item-identity, authzen#context-work-item, #815) > never reads a work item from tool arguments: alone it is never carried, and beside an attachment the attachment governs",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ]
+  },
+  {
+   "id": "authzen.failure-condition-coverage.work-item-invalid-unusable-input",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "`evaluation_context_invalid`, and `work_item_invalid` are PDP refusals before evaluation",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a malformed work-item context is carried as a Refusal Record work_item_invalid with no evaluation_id, never as a PDP denial reason or Decision Evidence"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > records the work_item_invalid refusal as a PDP-signed Refusal Record over the request as submitted, with no evaluation_id",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > refuses a malformed work item before evaluation as work_item_invalid, claimed or not: no decision, no evaluation_id, no Decision Evidence and no FGA check",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
+  },
+  {
+   "id": "evidence.refusal.work-item-invalid",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for one carrying a work-item context that is not well-formed (the harness profile, {{I-D.draft-mcguinness-mission-harness}}), `work_item_invalid`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "harness.work-item-attachment"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PDP's Refusal Record for a request with a malformed work-item context carries denial_reason work_item_invalid, signed over the request as submitted, with no evaluation_id"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-work-item.test.ts",
+     "name": "the work-item context at the PDP (@spec authzen#context-work-item, #815) > records the work_item_invalid refusal as a PDP-signed Refusal Record over the request as submitted, with no evaluation_id",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ]
   }
  ]
 }

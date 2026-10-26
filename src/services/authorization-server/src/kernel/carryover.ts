@@ -1345,6 +1345,18 @@ export function applyCarryoverInCallerTx(
     if ((record.containment?.containment_version ?? 0) !== entry.containment_version) {
       divergences.push({ childId: entry.child_id, class: "authority_narrowed", detail: "containment advanced" });
     }
+    // @spec child-delegation#carryover-cas (#1673, D803): the committed
+    // discharge state, compared as a set. It usually moves the effective
+    // authority too, but a latch on an entry containment already removed
+    // narrows nothing and is still a discharge the manifest did not commit.
+    const discharged = new Set(kernel.dischargedEntryDigests(record));
+    const committedDischarged = new Set(entry.discharged_digests ?? []);
+    if (
+      discharged.size !== committedDischarged.size ||
+      [...discharged].some((digest) => !committedDischarged.has(digest))
+    ) {
+      divergences.push({ childId: entry.child_id, class: "authority_narrowed", detail: "discharge state moved" });
+    }
     const effectiveHash = authorityHash(issuer, kernel.effectiveAuthoritySet(record) as never);
     if (effectiveHash !== entry.effective_authority_hash) {
       divergences.push({
@@ -1424,23 +1436,20 @@ export function applyCarryoverInCallerTx(
   // through. Two halves cover the spec's full input list, in this one
   // transaction. The CAS below binds the row to the manifest's committed SCALAR
   // inputs (state, lifecycle version, `authority_hash`, `derivation_count`,
-  // `expires_at`) and to the containment and discharge bytes the membership
-  // pass above just verified against the committed `containment_version` and
-  // `effective_authority_hash`. The membership pass owns the STRUCTURAL inputs
-  // the SQL predicate cannot recompute: effective authority, discharge state,
-  // fan-out occupancy, descendant-set membership, and any external meter or
-  // latch input. `derivation_count` is in the CAS precisely because
+  // `expires_at`). The membership pass above owns the inputs the SQL predicate
+  // cannot recompute: containment version, discharge state, effective
+  // authority, fan-out occupancy, descendant-set membership, and any external
+  // meter or latch input. `derivation_count` is in the CAS precisely because
   // `gateDerivation` moves it with no version increment.
   const carryEntries = manifest.entries.filter(
     (e) => e.outcome === "carry" && e.replacement && !excluded.has(e.child_id),
   );
   for (const entry of carryEntries) {
-    const record = current.get(entry.child_id) as MissionRecord;
     const changed = kernel.db
       .prepare(
         `UPDATE missions SET version = version
            WHERE id = ? AND version = ? AND state = ? AND authority_hash = ? AND derivation_count = ?
-             AND expires_at = ? AND IFNULL(containment_json, '') = ? AND IFNULL(discharged_json, '') = ?`,
+             AND expires_at = ?`,
       )
       .run(
         entry.child_id,
@@ -1449,8 +1458,6 @@ export function applyCarryoverInCallerTx(
         entry.authority_hash,
         entry.derivation_count,
         entry.expires_at,
-        record.containment ? JSON.stringify(record.containment) : "",
-        record.discharged ? JSON.stringify(record.discharged) : "",
       );
     if (changed.changes !== 1) {
       throw new CarryoverError(
@@ -1782,6 +1789,30 @@ export function applyCarryoverInCallerTx(
         ...(entry ? {} : { unrendered: true as const }),
       });
     }
+  }
+  // @spec child-delegation#carryover-cas (#1675, D803): each final outcome is
+  // recorded against its rendered row, so a rendered row the walk did not reach
+  // (its record is gone) is recorded from its tombstone, looked up by issuer
+  // and Mission identity: the terminal state and the termination it committed.
+  // With no tombstone, a pruned one, or one that kept no termination, its
+  // outcome cannot be recorded and the batch is refused; nothing is invented.
+  const recorded = new Set(map.map((row) => row.old_child.mission_id));
+  for (const entry of manifest.entries) {
+    if (recorded.has(entry.child_id)) continue;
+    const tombstone = kernel.tombstones.find(entry.issuer, entry.child_id);
+    if (!tombstone || tombstone.detailPruned || !tombstone.terminalState || !tombstone.termination) {
+      throw new CarryoverError(
+        "subtree_changed",
+        `the rendered row ${entry.child_id} is gone and its committed termination is not retained`,
+      );
+    }
+    map.push({
+      old_child: { issuer: entry.issuer, mission_id: entry.child_id },
+      outcome: "excluded",
+      reason: excluded.get(entry.child_id) ?? entry.reason ?? "record_missing",
+      terminal_state: tombstone.terminalState,
+      termination: tombstone.termination,
+    });
   }
 
   // The traversal owns the descent, so the post-supersession cascade has

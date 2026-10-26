@@ -16,6 +16,7 @@ import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
+  type KernelStoreConfig,
   APPROVAL_SUBJECT_HEADER,
   buildAuthorizationServer,
   type BuiltAs,
@@ -78,7 +79,7 @@ export interface IssuanceOnlyOptions {
    * `pnpm issuance-only` sets it from `MISSION_KERNEL_STORE`
    * (`kernelStoreFromEnv`), which requires a key ring; `close` closes it.
    */
-  kernelStore?: { file: string };
+  kernelStore?: KernelStoreConfig;
 }
 
 /**

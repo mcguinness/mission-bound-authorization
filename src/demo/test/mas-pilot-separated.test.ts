@@ -14,12 +14,12 @@
  * decision was reached.
  */
 
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { initSigningKeyRing } from "@mission/authorization-server";
+import { dirname, join } from "node:path";
+import { initSigningKeyRing, reconcileKernelRecovery } from "@mission/authorization-server";
 import { DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { CANONICAL_RESOURCE, type DecisionEvidence, type RefusalRecord } from "@mission/mcp-payments";
 import { type EvaluationRequest, type MissionView, policyViewId, privateKeyJwtClient } from "@mission/pdp";
@@ -30,6 +30,14 @@ import { newStatusClientKey } from "../src/mas-pilot/mas-as.js";
 import { type MasProcess, startMasProcess } from "../src/mas-pilot/mas-process.js";
 import { composeSeparatedMasPilot, type SeparatedMasPilot } from "../src/mas-pilot/separated.js";
 import { admin, call, estateToken, OPENFGA, openfgaReachable, READ_ACTIONS, relocateEstate } from "./mas-pilot-support.js";
+
+/** A kernel store's recovery witness, created before the MAS first starts on it (#250 step 3). */
+function kernelWitnessFor(storeFile: string, witnessFile: string): string {
+  mkdirSync(dirname(storeFile), { recursive: true });
+  mkdirSync(dirname(witnessFile), { recursive: true });
+  reconcileKernelRecovery({ storeFile, witnessFile, action: "init" });
+  return witnessFile;
+}
 
 const d = (await openfgaReachable()) ? describe : describe.skip;
 
@@ -186,11 +194,20 @@ beforeAll(async () => {
   const configPath = join(dir, "mas-pilot.json");
   const config = separatedConfig(ESTATE_PORT);
   writeFileSync(configPath, JSON.stringify(config));
-  const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id);
-  const reader = await newStatusClientKey(READER_CLIENT);
+  // Both run a PDP, whose policy view commits `authority_hash` (#1682):
+  // `reader` is the PDP the MAS has not enrolled for Join Disclosure.
+  const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id, { disclose: ["provenance"] });
+  const reader = await newStatusClientKey(READER_CLIENT, { disclose: ["provenance"] });
   pdpKey = pdp.privateJwk;
   readerKey = reader.privateJwk;
-  masOptions = { configPath, statusClients: [pdp.registration, reader.registration], keyRing, kernelStore: join(dir, "state", "kernel.db") };
+  const kernelStore = join(dir, "state", "kernel.db");
+  masOptions = {
+    configPath,
+    statusClients: [pdp.registration, reader.registration],
+    keyRing,
+    kernelStore,
+    kernelWitness: kernelWitnessFor(kernelStore, join(dir, "witness", "kernel.witness")),
+  };
   mas = await startMasProcess(masOptions);
   pilot = await composeSeparatedMasPilot({
     openfga: OPENFGA,

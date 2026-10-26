@@ -86,7 +86,7 @@ export {
   type UnresolvedMission,
 } from "./mission-status-resolver.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBound } from "./policy.js";
-export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, executionCapabilitiesFor, executionLeaseMaxSeconds, loadRuntimePosture, PostureConfigError, postureStalenessBound, reversibleWriteKeyControl, reversibleWritePermitMaxSeconds, stateSourcePlacement, type RuntimePosture, type StalenessBound, type StateSourcePlacement } from "./runtime-posture.js";
+export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, executionCapabilitiesFor, executionLeaseMaxSeconds, loadRuntimePosture, PostureConfigError, postureStalenessBound, reversibleWriteKeyControl, reversibleWritePermitMaxSeconds, stateSourcePlacement, type RuntimePosture, type StalenessBound, type StateSourcePlacement, withAuthorityDependencies } from "./runtime-posture.js";
 export { executionLeaseMs, permitDeadline, type PermitCeiling, type PermitDeadline, type PermitDeadlineInput } from "./permit-deadline.js";
 export {
   createDurationLeaseLedger,
@@ -260,3 +260,12 @@ export {
   type JoinMappingContract,
   type KernelDelegationPolicy,
 } from "./mas-join.js";
+export {
+  NO_WORK_ITEM_ATTRIBUTION,
+  parseWorkItem,
+  readWorkItemAttribution,
+  sameWorkItem,
+  WORK_ITEM_ATTRIBUTION_EXTENSION,
+  type WorkItemAttribution,
+  type WorkItemRef,
+} from "./work-item.js";

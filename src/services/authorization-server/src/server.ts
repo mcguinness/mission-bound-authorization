@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { initTelemetry } from "@mission/telemetry";
 import {
+  type KernelStoreConfig,
   buildAuthorizationServer,
   kernelStoreFromEnv,
   type SigningKeySource,
@@ -19,7 +20,7 @@ const { logger, shutdown } = initTelemetry("authorization-server");
 // @spec #250: MISSION_KERNEL_STORE=<absolute path> keeps the kernel across
 // restarts, and requires the key ring.
 let signingKeys: SigningKeySource;
-let kernelStore: { file: string } | undefined;
+let kernelStore: KernelStoreConfig | undefined;
 try {
   signingKeys = signingKeysFromEnv(process.env);
   kernelStore = kernelStoreFromEnv(process.env);

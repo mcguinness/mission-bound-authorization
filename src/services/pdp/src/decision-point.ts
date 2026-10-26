@@ -22,7 +22,7 @@
  */
 
 import { generateKeyPairSync, randomUUID } from "node:crypto";
-import type { EvaluationContextBindingDeclarations, ResourceContractDeclarations } from "@mission/core";
+import type { AuthorityDependencyEnforcement, EvaluationContextBindingDeclarations, ResourceContractDeclarations } from "@mission/core";
 import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "./decision-evidence.js";
 import type { DurationLeaseDomain } from "./duration-lease.js";
 import {
@@ -127,6 +127,13 @@ export interface DecisionPointConfig {
    */
   claims?: IdempotencyClaimDomain;
   /**
+   * @spec authzen#context-work-item (#815): the action classes this decision
+   * point's Enforcement Scope Statement claims work-item attribution for
+   * (`readWorkItemAttribution(statement).claimedClasses`), bound here for the
+   * reason the phased actions are. Absent, no class is claimed.
+   */
+  workItemAttributedClasses?: ReadonlySet<string>;
+  /**
    * @spec runtime#input-resource-policy (#828): this decision point's
    * independently administered Resource policy, bound here for the same
    * reason as the claim domain: an enforcement component that could supply
@@ -135,6 +142,13 @@ export interface DecisionPointConfig {
    * ephemeral decision point without one throws at each decision instead.
    */
   resourcePolicy?: ResourcePolicy;
+  /**
+   * @spec runtime#input-authority-dependency (#830): this decision point's
+   * declared authority dependency, bound here for the reason the Resource
+   * policy is: an enforcement component that could supply it could supply
+   * one that establishes every dependency. Absent, the PDP evaluates none.
+   */
+  authorityDependency?: AuthorityDependencyEnforcement;
   /**
    * @spec authzen#pdp-request consistency check 11 (#1276, D457): this
    * decision point's Refusal Record emission path for a request it refuses
@@ -203,7 +217,9 @@ export interface DecisionPoint {
 interface PointBindings {
   emitter: DecisionEvidenceEmitter | undefined;
   claims: IdempotencyClaimDomain | undefined;
+  workItemAttributedClasses?: ReadonlySet<string> | undefined;
   resourcePolicy: ResourcePolicy | undefined;
+  authorityDependency?: AuthorityDependencyEnforcement | undefined;
   refusals: PdpRefusalRecorder | undefined;
   resourceContracts?: ResourceContractDeclarations | undefined;
   durationLeases?: DurationLeaseDomain | undefined;
@@ -227,13 +243,25 @@ function bindDecide(
   requester: ClaimRequester,
   consumptionStatus?: ConsumptionStatusFn,
 ): DecisionFn {
-  const { emitter, claims, resourcePolicy, refusals, resourceContracts, durationLeases, phasedActions, evaluationContextBinding } =
-    bindings;
+  const {
+    emitter,
+    claims,
+    resourcePolicy,
+    authorityDependency,
+    refusals,
+    resourceContracts,
+    durationLeases,
+    phasedActions,
+    evaluationContextBinding,
+  } = bindings;
   return async (req, opts) => {
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
     delete forwarded.evidence;
     delete forwarded.claims;
+    delete forwarded.workItemAttributedClasses;
+    if (bindings.workItemAttributedClasses) forwarded.workItemAttributedClasses = bindings.workItemAttributedClasses;
     delete forwarded.resourcePolicy;
+    delete forwarded.authorityDependency;
     delete forwarded.requester;
     delete forwarded.consumptionStatus;
     delete forwarded.refusals;
@@ -245,6 +273,7 @@ function bindDecide(
     if (durationLeases) forwarded.durationLeases = durationLeases;
     if (claims) forwarded.claims = claims;
     if (resourcePolicy) forwarded.resourcePolicy = resourcePolicy;
+    if (authorityDependency) forwarded.authorityDependency = authorityDependency;
     if (refusals) forwarded.refusals = refusals;
     if (resourceContracts) forwarded.resourceContracts = resourceContracts;
     if (phasedActions) forwarded.phasedActions = phasedActions;
@@ -292,7 +321,9 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
   const bindings: PointBindings = {
     emitter,
     claims: config.claims,
+    workItemAttributedClasses: config.workItemAttributedClasses,
     resourcePolicy: config.resourcePolicy,
+    authorityDependency: config.authorityDependency,
     refusals: config.refusals,
     resourceContracts: config.resourceContracts,
     durationLeases: config.durationLeases,
@@ -350,6 +381,8 @@ export function createEphemeralDecisionPoint(options: {
    * the bound.
    */
   resourcePolicy?: ResourcePolicy;
+  /** @spec runtime#input-authority-dependency (#830): bound exactly as in {@link createDecisionPoint}. */
+  authorityDependency?: AuthorityDependencyEnforcement;
   /** @spec authzen#pdp-request consistency check 11 (#1276): bound exactly as in {@link createDecisionPoint}. */
   refusals?: PdpRefusalRecorder;
   /** @spec authzen#context-resource-contract (#249): bound exactly as in {@link createDecisionPoint}. */
@@ -369,6 +402,7 @@ export function createEphemeralDecisionPoint(options: {
     kid = "ephemeral-pdp",
     claims,
     resourcePolicy,
+    authorityDependency,
     refusals,
     authorizesAudience,
     resourceContracts,
@@ -387,6 +421,7 @@ export function createEphemeralDecisionPoint(options: {
     emitter,
     claims,
     resourcePolicy,
+    authorityDependency,
     refusals,
     resourceContracts,
     durationLeases,
