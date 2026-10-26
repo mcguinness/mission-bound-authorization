@@ -157,6 +157,7 @@ export {
 } from "./outcome-reconciler.js";
 export {
   CONSUMED_PERMIT_RETENTION_MARGIN_MS,
+  type ExecutionAttemptRecord,
   openEphemeralWriteReservationStore,
   openWriteReservationStore,
   type PaymentSchedule,
@@ -188,6 +189,7 @@ export {
   evidenceKeySetLocation,
   EVIDENCE_RETENTION_SCHEMA,
   EvidenceRetentionStore,
+  openEvidenceRetentionStore,
   publishedEvidenceJwk,
   type EvidenceRetentionOptions,
   type PublishEvidenceKeyInput,

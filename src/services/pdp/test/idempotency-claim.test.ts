@@ -230,7 +230,7 @@ function domainOnFile(c: Clock, statement: EnforcementScopeStatement = statement
  * through the same single-writer opener at the domain's schema version.
  */
 function rowsOf(file: string): Array<{ evaluation_id: string; state: string; decision_json: string | null }> {
-  const db = openDurableStore({ file, migrations: ["-- claims schema v1", "-- claims schema v2"], owner: CLAIM_OWNER });
+  const db = openDurableStore({ file, migrations: ["-- claims schema v1", "-- claims schema v2", "-- claims schema v3"], owner: CLAIM_OWNER });
   try {
     return db.prepare("SELECT evaluation_id, state, decision_json FROM claims ORDER BY claimed_at_ms").all() as Array<{
       evaluation_id: string;
@@ -767,7 +767,7 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       // A later build migrated the file one version further.
       openDurableStore({
         file,
-        migrations: ["-- claims schema v1", "-- claims schema v2", "CREATE TABLE claims_v3 (x INTEGER) STRICT"],
+        migrations: ["-- claims schema v1", "-- claims schema v2", "-- claims schema v3", "CREATE TABLE claims_v4 (x INTEGER) STRICT"],
         owner: CLAIM_OWNER,
       }).close();
       expect(() => openIdempotencyClaimDomain({ file, owner: CLAIM_OWNER, statement: statementWithPrivilegedAdministration() })).toThrow(/newer than this build/);

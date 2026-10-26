@@ -138,6 +138,7 @@ export {
   type DecisionEvidenceEmitter,
   type DecisionEvidenceEmitterConfig,
   type DecisionEvidenceObject,
+  type DecisionEvidenceSequences,
   type RuntimeActionClass,
   type RuntimeActionRef,
   type RuntimeCapabilitySource,

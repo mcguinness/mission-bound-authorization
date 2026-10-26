@@ -30741,9 +30741,15 @@
      "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after the effect and before outcome retention: the attempt's identifiers survive, the outcome stays undetermined rather than decided from an empty ledger, and nothing executes again",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Partial: recovery through a declared outcome lookup, a retransmission to a resource with durable idempotency, and a weaker connector are #817 steps 4 and 5 (two connectors and the recovery demonstration), which wait on #249 and #210. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the retry then executes and the duplicate_suppressed assertion fails."
+   "notes": "Partial: recovery through a declared outcome lookup, a retransmission to a resource with durable idempotency, and a weaker connector are #817 steps 4 and 5 (two connectors and the recovery demonstration), which wait on #249 and #210. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the retry then executes and the duplicate_suppressed assertion fails. Across SIGKILL (#821, #1709 review P2-2): a PEP killed after the connector committed and before any outcome was retained is followed by a fresh process in which neither reconciliation nor a retry under the same key executes the effect again; proved by dropping a prior boot's claim at restart (M10-3)."
   },
   {
    "id": "runtime.execution-capabilities.unknown-outcome-held-without-lookup",
@@ -30882,12 +30888,32 @@
    "surface": "evidence-emission",
    "assertion": "refusal",
    "observation": {
-    "normative": "when the PDP cannot sign or emit a required Decision Evidence record or PDP refusal record for a consequential action, it fails closed, or durably commits the record for signing and publication under the declared recovery bound; the record is never lost while the action proceeds"
+    "normative": "when the PDP cannot sign or emit a required Decision Evidence record or PDP refusal record for a consequential action, it fails closed, or durably commits the record for signing and publication under the declared recovery bound; the record is never lost while the action proceeds",
+    "local": "the PDP fails closed: a Decision Evidence record that cannot be sequenced or signed fails the decision; a pre-evaluation refusal stays refused when its Refusal Record cannot be recorded, and that record is not retried"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Twin of runtime.failure-modes.unemittable-evidence-fails-closed-or-commits-pep: the table's governing sentence binds a PDP or PEP, and each holder is witnessed on its own."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence-endpoint.test.ts",
+     "name": "a PDP that cannot emit a required record issues no decision (@spec runtime#failure-modes, #821) > a decision whose Decision Evidence cannot be emitted is not issued: evaluate() rejects when the sequence source is unreachable or the signature fails",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence-endpoint.test.ts",
+     "name": "a PDP that cannot emit a required record issues no decision (@spec runtime#failure-modes, #821) > a request the PDP refuses before evaluation stays refused when its Refusal Record cannot be recorded: no decision is issued",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence.test.ts",
+     "name": "the PDP's Decision Evidence sequence is durable and producer-owned (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > fails the emission closed when the durable source is unreachable: no record is signed",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The fail-closed branch only; nothing is committed for later signing. Proved by swallowing the emission failure (M8-2), returning a position when the source is unreachable (M8-3, M1-D), and letting a refused request continue (M8-4)."
   },
   {
    "id": "runtime.failure-modes.unemittable-evidence-fails-closed-or-commits-pep",
@@ -30906,12 +30932,32 @@
    "surface": "evidence-emission",
    "assertion": "refusal",
    "observation": {
-    "normative": "when the PEP cannot sign or emit a required refusal record for a consequential action (a Refusal Record, or Execution Evidence for a suppressed action), it fails closed, or durably commits the record for signing and publication under the declared recovery bound; the record is never silently dropped"
+    "normative": "when the PEP cannot sign or emit a required refusal record for a consequential action (a Refusal Record, or Execution Evidence for a suppressed action), it fails closed, or durably commits the record for signing and publication under the declared recovery bound; the record is never silently dropped",
+    "local": "on the transaction tier, a refusal whose suppressed record cannot be written still refuses and reports gap: emission_failed with one evidence_emission_failed operator alert; a Refusal Record that cannot be emitted rejects the call with nothing executed"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Twin of runtime.failure-modes.unemittable-evidence-fails-closed-or-commits-pdp."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-attempt.test.ts",
+     "name": "a transaction-tier disposition record that cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #821) > a refusal after the permit whose suppressed record cannot be written still refuses, says the record is missing, and alerts the operator once; nothing executes",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-attempt.test.ts",
+     "name": "a transaction-tier disposition record that cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #821) > the same holds at a reverification refusal and at a failed attempt write: each refusal carries the gap and one alert, and nothing executes",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a Refusal Record emission throws: the call rejects, nothing is recorded, and nothing executes",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Partial: the read and reversible-write paths still discard a failed suppression's result (server.ts withholdUnevidenced, refuseSingleUse, reservationUnavailable, actorUnkeyable, releaseRetained, and the read path's reverification outcomes); their refusal stands, so nothing proceeds, but the missing record is not surfaced. Follow-up: #1715. The transaction tier's exits are witnessed (#821 PR B item 5). Proved by dropping the gap (M5-1), the alert (M5-2), and the result at the connector-refusal, reverification and attempt-write exits (M5-3, M5-5, M5-6, M5-6r)."
   },
   {
    "id": "runtime.evidence.decision-and-refusal-must-produce-record",
@@ -31059,12 +31105,38 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the component that releases a high-consequence effect releases it only after the permit's Decision Evidence and the identifiers that recover the action's disposition (the evaluation identifier, and any idempotency claim or consumption reservation) are durably committed, so a restart after the release still finds them"
+    "normative": "the component that releases a high-consequence effect releases it only after the permit's Decision Evidence and the identifiers that recover the action's disposition (the evaluation identifier, and any idempotency claim or consumption reservation) are durably committed, so a restart after the release still finds them",
+    "local": "the transaction tier commits an attempt record (execution_id, op_key, evaluation_id, and the retained Decision Evidence's evidence_id and complete-object digest) to the PEP's write-reservation file before the connector call; the PEP retains the permit's Decision Evidence in its retention file before redemption; the idempotency claim is the PDP's claim file, persisted before the permit returns; the composition holds no consumption reservation"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The prose is placement-neutral: the Decision Evidence can be durable in its producer's store or in the releasing component's, and the row is cited under the releasing role. A witness restarts after the release and reopens the durable store (#821 PR B items 1 to 3)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-attempt.test.ts",
+     "name": "the transaction tier records each attempt before its effect (@spec runtime#evidence pre-effect durability, #821) > before the connector commits, the attempt's operation identity and its retained Decision Evidence are recorded in the PEP's durable file, and a reopened file still names them",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a storage failure retaining the permit's Decision Evidence before execution prevents the effect: the wire never reaches the connector (@spec runtime#evidence, #821)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after pre-effect persistence and before the effect: the attempt's identifiers and Decision Evidence survive, no outcome is invented, and nothing executes on reconciliation or a retry",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after the effect and before outcome retention: the attempt's identifiers survive, the outcome stays undetermined rather than decided from an empty ledger, and nothing executes again",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Witnessed at the releasing component, the PEP (#821 PR B items 2 and 3): at the instant the connector is called, the attempt record and the retained Decision Evidence are in the PEP's files, and reopened files still hold them; the Decision Evidence write precedes redemption, so its failure releases nothing. The restart clause is witnessed across SIGKILL, not a graceful close (#1709 review P2-2): the PEP is killed after the attempt record and before the effect, and after the effect and before any outcome is retained, and a fresh process finds the attempt's execution_id, op_key, evaluation_id and the retained Decision Evidence, while the PDP claim still refuses the key. Proved by disabling the attempt write (M3-1, M3-1r), naming another record in it (M3-3), skipping the durable Decision Evidence write (M8-6), swallowing a failed retention write (M3-R1), leaving the attempt insert uncommitted (M10-1a, M10-1b) and dropping a prior boot's claim at restart (M10-3). The connector ledger is the in-memory simulated external resource, disclosed in src/docs/initial-runtime-deployment.md."
   },
   {
    "id": "runtime.evidence.pre-effect-commit-failure-refuses",
@@ -31081,12 +31153,26 @@
    "surface": "resource-operation",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "when the pre-effect commit of the Decision Evidence or of the disposition identifiers fails, the releasing component refuses the high-consequence action and releases no effect"
+    "normative": "when the pre-effect commit of the Decision Evidence or of the disposition identifiers fails, the releasing component refuses the high-consequence action and releases no effect",
+    "local": "a failed attempt-record write refuses evidence_unavailable with a suppressed disposition; a failed Decision Evidence retention write rejects the call before redemption; neither reaches the connector"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "A witness fails the pre-effect write and observes the refusal with zero effects at the resource (#821 PR B item 3)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-attempt.test.ts",
+     "name": "the transaction tier records each attempt before its effect (@spec runtime#evidence pre-effect durability, #821) > an attempt record that cannot be written prevents the effect: the action is refused, nothing reaches the connector, and the disposition is recorded suppressed",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a storage failure retaining the permit's Decision Evidence before execution prevents the effect: the wire never reaches the connector (@spec runtime#evidence, #821)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Both pre-effect writes are failed in turn and the resource's ledger stays empty (#821 PR B item 3; 4ac4a125). Proved by ignoring the attempt-write failure (M3-2) and by swallowing the retention failure (M3-R1), with the retain-call and ledger zero-counts each shown load-bearing alone (M3-R2, M3-R3)."
   },
   {
    "id": "runtime.evidence.reconciliation-must-actively-reconcile",
@@ -31331,12 +31417,44 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a PDP emitter never issues a sequence value twice for one Mission, including after a restart and among replicas acting as that emitter; a value it cannot use leaves a detectable gap"
+    "normative": "a PDP emitter never issues a sequence value twice for one Mission, including after a restart and among replicas acting as that emitter; a value it cannot use leaves a detectable gap",
+    "local": "the PDP emitter takes each value from its claim file, committed before the record is signed, so a value a failed signing took is a gap; one PDP process holds the file, which refuses a second writer"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Twin of runtime.record-integrity.sequence-not-reused-pep: the duty binds every emitter, and each role is witnessed on its own. The restart clause is witnessed by reopening a file-backed store (#821 PR B item 1)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence-endpoint.test.ts",
+     "name": "the PDP's Decision Evidence sequence at the decision endpoint (@spec runtime#record-integrity, #821) > a PDP restarted on the same claim file continues each Mission's sequence, and no value is issued twice across a failed signing or the restart",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence.test.ts",
+     "name": "the PDP's Decision Evidence sequence is durable and producer-owned (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > continues a Mission's sequence across a PDP restart on the same claim file, re-issuing no number",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/pdp-evidence-sequence-stack.test.ts",
+     "name": "the composed stack's PDP keeps its Decision Evidence counters in its claim file (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > a PDP restarted on the shipped stack's claim file continues a Mission's Decision Evidence sequence where the stack left it",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses a second handle on a file another domain holds",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after pre-effect persistence and before the effect: the attempt's identifiers and Decision Evidence survive, no outcome is invented, and nothing executes on reconciliation or a retry",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Restart witnessed at the decision endpoint, below it and on the composed stack by reopening the claim file (#821, c62babc1), and across SIGKILL: a PDP killed mid-operation is followed by a fresh process whose next decision takes a value past every one the killed process signed (#1709 review P2-2). Replicas: the deployment runs one PDP, and its claim file refuses a second writer, so no replica allocates from it. Proved by dropping the committed position (M8-1, M1-B, M10-4), ignoring the configured source (M1-C) and unbinding it in the stack (M1-A)."
   },
   {
    "id": "runtime.record-integrity.sequence-not-reused-pep",
@@ -31355,12 +31473,38 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a PEP emitter never issues a sequence value twice for one Mission, including after a restart and among replicas acting as that emitter; a value it cannot use leaves a detectable gap"
+    "normative": "a PEP emitter never issues a sequence value twice for one Mission, including after a restart and among replicas acting as that emitter; a value it cannot use leaves a detectable gap",
+    "local": "the PEP's and executor's sequences are allocated from the PEP's retention file; a value whose record could not be retained is a gap; the file refuses a second writer"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Twin of runtime.record-integrity.sequence-not-reused-pdp. The restart clause is witnessed by reopening the PEP's file-backed retention store (#821 PR B item 2)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-attempt.test.ts",
+     "name": "the PEP's per-Mission sequence across a restart (@spec runtime#record-integrity, #821) > a PEP restarted on the same files continues its per-Mission sequence: no value is issued twice, a value it could not use stays a gap, and no second writer shares the store",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/durable-evidence-stack.test.ts",
+     "name": "the composed stack's PEP evidence retention across a restart (@spec runtime-evidence#execution-evidence-object, runtime#record-integrity, #821) > a restarted stack reopens the PEP's retention file with the first boot's records, and the PEP's per-Mission sequence continues past the values they carry",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after the effect and before outcome retention: the attempt's identifiers survive, the outcome stays undetermined rather than decided from an empty ledger, and nothing executes again",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Restart witnessed at the resource's transaction tier and on the composed stack by reopening the retention file (#821 PR B item 2), and across SIGKILL: after the PEP is killed, a fresh process's next record takes a value past every one the killed process signed (#1709 review P2-2). The stack keeps its published key sets in memory, because evidence keys are generated per boot under fixed kids (#831); records and sequences are what the file keeps. Proved by allocating in memory instead (M8-5, M10-5), wiring the stack's retention in memory (M2-1), and putting the per-boot key sets in the durable file (M2-2, which fails the restart at publishKey)."
   },
   {
    "id": "runtime.compromise-resistant.key-custody-condition",
@@ -40407,9 +40551,27 @@
      "name": "Decision Evidence per-(mission, emitter, role) sequence allocation > allocates a monotonically increasing sequence per role, independently per role, even under the SAME mission and emitter id",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence-endpoint.test.ts",
+     "name": "the PDP's Decision Evidence sequence at the decision endpoint (@spec runtime#record-integrity, #821) > a PDP restarted on the same claim file continues each Mission's sequence, and no value is issued twice across a failed signing or the restart",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/pdp-evidence-sequence-stack.test.ts",
+     "name": "the composed stack's PDP keeps its Decision Evidence counters in its claim file (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > a PDP restarted on the shipped stack's claim file continues a Mission's Decision Evidence sequence where the stack left it",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after pre-effect persistence and before the effect: the attempt's identifiers and Decision Evidence survive, no outcome is invented, and nothing executes on reconciliation or a retry",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Partial: the counter is the PDP emitter's own (#741), and monotonicity per (Mission, emitter) is asserted at the emission path and end to end through the real call sites. The row's cross-component level is not reached: gap detection and ordering across two independently running emitters have no second emitter in this deployment to order against, and the counter is in-memory per process, so it says nothing about ordering across a restart."
+   "notes": "Partial: the counter is the PDP emitter's own (#741), and monotonicity per (Mission, emitter) is asserted at the emission path, end to end through the real call sites, and across a restart that reopens the PDP's claim file at the decision endpoint and on the composed stack (#821). Still unasserted: cross-emitter ordering is never reconstructed from sequence alone, and gap detection by a verifier, which have no verifier or second independently running emitter in this deployment to order against."
   },
   {
    "id": "evidence.decision.denial-reason-unrecognized-and-split",
