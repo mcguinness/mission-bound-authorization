@@ -693,11 +693,21 @@ what the constraint requires:
 |---|---|
 | A prohibition | Exclusion of the authority it forbids, recorded in `excluded_authority`, or a refusal ({{refusal}}) |
 | A machine-enforceable bound | A structured constraint in the Authority Proposal, restated in `task_bounds` ({{authority-ceiling}}) |
-| Confirmation before an action | The entry's `requires_action_approval` constraint ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), enforced at the point of use ({{I-D.draft-mcguinness-mission-runtime}}, Section "Action-Bound Approval") |
+| Confirmation before an action | The entry's `requires_action_approval` constraint ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), which requires an action-bound approval at the point of use ({{I-D.draft-mcguinness-mission-runtime}}, Section "Action-Bound Approval"); the deployment's approval policy establishes who may give it |
 | A preference | `task_bounds` prose, which nothing enforces |
 
-A preference the Subject requires to hold is carried as a bound or a
-confirmation, not as prose. A model's refusal can remove a step from
+The `requires_action_approval` constraint requires an approval but
+does not name who gives it: an independent Approver or a policy
+authority can satisfy it. A confirmation the Subject must give
+therefore also needs an approval policy that requires the Subject's
+authenticated confirmation of the concrete action.
+
+A condition the Subject requires to hold is carried as a bound that
+enforces it, not as prose, and not as a confirmation: an approval at
+the point of use could permit an action the condition forbids. If no
+supported mechanism enforces a required condition, the shaper requests
+clarification, refuses, or produces an explicitly partial proposal
+under the existing rules. A model's refusal can remove a step from
 the proposal but never adds one ({{model-output}}). Shaping Evidence
 records each constraint and how the shaper carried it
 ({{shaping-evidence}}). Whether a later change at the source affects
@@ -1481,10 +1491,14 @@ the travel service's operation contract defines a `cabin` constraint
 
 The shaper proposes `flights.book` at `https://travel.example.com`
 with a `cabin` constraint of `economy` and the
-`requires_action_approval` constraint set to `true`. It restates both
-in `task_bounds`, with the overnight-flight preference
-({{context-constraints}}). Shaping Evidence records the three
-constraints:
+`requires_action_approval` constraint set to `true`. That constraint
+requires an approval before each booking; the deployment's trusted
+approval policy for `flights.book` requires the Subject's
+authenticated confirmation of the concrete itinerary, so the approval
+is the Subject's and no other approver can satisfy it. The shaper
+restates the cabin bound and the confirmation in `task_bounds`, with
+the overnight-flight preference ({{context-constraints}}). Shaping
+Evidence records the three constraints:
 
 ~~~ json
 {
@@ -1535,7 +1549,11 @@ constraints:
 
 Nothing enforces the overnight-flight preference; it guides which
 flight the agent selects. Had the Subject required it, the shaper would
-carry it as a bound. Had the request asked for business class, the
+carry it as a bound only if the travel service's operation contract
+defines one that enforces it, such as a departure-time window;
+otherwise it would request clarification or refuse, and never leave
+the condition to an approval at the point of use. Had the request
+asked for business class, the
 travel policy would govern: the shaper excludes that authority and
 records it in `excluded_authority`. An exception is possible only
 where the travel policy authorizes the Mission Issuer to approve one.
