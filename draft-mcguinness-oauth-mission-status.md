@@ -1408,7 +1408,10 @@ treats an absent, empty, longer, or non-string `nonce` as malformed
 
 The AS MUST deduplicate
 lifecycle requests by the
-triple (client, `mission_id`, `nonce`) for a bounded window. On a
+triple (client, `mission_id`, `nonce`) for a bounded window, the
+client being the acting party ({{lifecycle-authorization}}), whose
+authorization, delegation context included, is checked before every
+replay ({{lifecycle-processing}}). On a
 retransmit carrying a `nonce` already seen for that client and
 `mission_id`, together with request members identical to the
 original's, the AS MUST replay the original response rather than
