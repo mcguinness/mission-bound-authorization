@@ -445,6 +445,62 @@ describe("standing-payment dispatch metered end to end through the composed stac
     }
   });
 
+  it("raises the operator alert when a wired payment's lost settlement leaves its reservation held, and again when its late completed settlement commits the reservation an operator released and pushes the shared counter past its limit (@spec metering#settlement-states, #813, #816, D830 rulings 7 and 10)", async () => {
+    const stack = await compose(15028, newFiles());
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const alerts = () =>
+      stderr.mock.calls
+        .map(([chunk]) => String(chunk))
+        .filter((line) => line.startsWith('{"type":"operator_alert"'))
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+    try {
+      const templateId = await consentTemplate(stack);
+      const first = await dispatchInstance(stack, templateId);
+      const second = await dispatchInstance(stack, templateId);
+      seedAcmeInvoices(stack, [["inv-4", "125.00"]]);
+      // The first wire commits, and its settlement never reaches the PDP.
+      const lost = vi.spyOn(stack.pdpClaims, "settle").mockRejectedValue(new Error("settlement lost"));
+      const paid = await wire(stack, first, "inv-1");
+      lost.mockRestore();
+      expect(paid.ok, JSON.stringify(paid)).toBe(true);
+      const [permit] = commitDecisions(stack, first);
+      const evaluationId = String(permit?.evaluation_id);
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "125.00", held: "0.00", committed: "0.00" });
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(Date.now() + 120_000);
+      // Past the permit and its lease, unsettled: held, with the alert.
+      stack.pdpClaims.sweep();
+      expect(alerts()).toEqual([
+        expect.objectContaining({ kind: "budget_reservation_held", evaluation_id: evaluationId, mission_id: first, cause: "lease_elapsed" }),
+      ]);
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "125.00", committed: "0.00" });
+      // An operator wrongly answers that it never executed, and the second
+      // instance spends the headroom that frees.
+      expect(stack.pdpClaims.reconcileHeldReservation(evaluationId, { kind: "not_executed", reference: "operator-ticket-813" })).toEqual({
+        accepted: true,
+        state: "released",
+      });
+      expect((await wire(stack, second, "inv-4")).ok).toBe(true);
+      // The declared reconciler settles the first wire from its retained
+      // Execution Evidence: the spend commits anyway, past the limit.
+      expect((await stack.reconciler.runOnce()).claims?.settled).toContain(evaluationId);
+      expect(alerts()).toEqual([
+        expect.objectContaining({ kind: "budget_reservation_held", evaluation_id: evaluationId, mission_id: first, cause: "lease_elapsed" }),
+        expect.objectContaining({ kind: "budget_overspend", evaluation_id: evaluationId, mission_id: first, cause: "standing_consent_limit_exceeded" }),
+      ]);
+      expect(wires(stack)).toEqual([
+        ["inv-1", ACME_ACCOUNT, "125.00"],
+        ["inv-4", ACME_ACCOUNT, "125.00"],
+      ]);
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "250.00" });
+      expect(totals(stack.pdpClaims.budgetCounter(instanceCounter(stack, first)))).toEqual({ reserved: "0.00", held: "0.00", committed: "125.00" });
+    } finally {
+      vi.useRealTimers();
+      stderr.mockRestore();
+      await closeStack(stack);
+    }
+  });
+
   it("continues both counters in an expansion successor: its payment is metered on the dispatched instance's mission counter and on the shared counter (@spec metering#capacity-across-missions, mission-template#instance-composition, #813, #816)", async () => {
     const stack = await compose(15026, newFiles());
     try {
