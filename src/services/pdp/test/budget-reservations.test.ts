@@ -1345,7 +1345,7 @@ describe("the PDP-side budget binding and the committed destinations (@spec mete
     control.close();
   });
 
-  it("a metered payment whose parameters do not recompute to its parameter_digest, or name another vendor or amount than the request, is denied parameter_violation and reserves and claims nothing, so the payee compared is the one the permit binds (@spec authzen#parameter-digest, mission-template#standing-payment-exception, #813)", async () => {
+  it("a metered payment whose parameters do not recompute to its parameter_digest, or name another vendor, amount or currency than the request, is denied parameter_violation and reserves and claims nothing, so the payee compared is the one the permit binds (@spec authzen#parameter-digest, mission-template#standing-payment-exception, #813)", async () => {
     const c = clock();
     const { file, open } = domainOnFile(c);
     const claims = open();
@@ -1364,6 +1364,7 @@ describe("the PDP-side budget binding and the committed destinations (@spec mete
       ["a parameter_digest computed over another payee", { digest: boundElsewhere }],
       ["parameters naming another vendor than the request", { parameters: { vendor_id: "globex", payee_account: "acct-globex-001" } }],
       ["parameters naming another amount than the request", { parameters: { amount: { amount: "50.00", currency: "USD" } } }],
+      ["parameters naming another currency than the request", { parameters: { amount: { amount: "100.00", currency: "EUR" } } }],
     ];
     for (const [label, o] of cases) {
       const d = await evaluate(request(c, o), options(claims, c, v));
