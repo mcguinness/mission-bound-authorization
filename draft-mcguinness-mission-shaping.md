@@ -1538,6 +1538,14 @@ Issuer.
 
 \[\[ To be removed from the final specification ]]
 
+- Constraints from Trusted Context ({{context-constraints}})
+  describes how the shaper carries a deployment policy, a preference
+  the Subject recorded, or a model's refusal into the proposal: the
+  more restrictive governs, and each kind of constraint maps to the
+  mechanism that carries it. Shaping Evidence gains a
+  `context_constraints` member among its recommended content, with an
+  example. No requirement keyword is added or changed.
+
 - Authority Proposal describes entries that correspond across
   resource servers: each pinned to the same reference in its own
   vocabulary, with a pin the agent adds after approval binding the
