@@ -11832,7 +11832,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Mission-bound token response that neither first delivers a new Mission nor answers a delegated exchange carries mission_id and mission_expires_at; an AS that omits them records the departure (RFC 2119 Section 3)",
+    "normative": "a Mission-bound token response that neither first delivers a new Mission nor answers a delegated exchange carries mission_id and mission_expires_at",
     "local": "the reference takes the SHOULD up on the designation response; its refresh responses (the provider stamp is gated on authorization_code and the device grant) and its no-actor self-exchange (the async-delegation handle) carry neither, a recorded SHOULD departure, not a failure"
    },
    "level": "endpoint",
@@ -11864,7 +11864,7 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "a client takes the Mission identifier and expiry from the response members and never reads them from the access token's content; given a token whose mission claim differs from the response members, it acts on the response members"
+    "normative": "a client takes the Mission identifier and expiry from the response members and reads neither from the access token's content"
    },
    "level": "cross-component",
    "coverage": "todo",
